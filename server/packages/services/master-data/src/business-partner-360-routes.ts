@@ -32,7 +32,9 @@ export interface BusinessPartner360TelemetryEvent {
   readonly revealClass?: "tax" | "bank";
 }
 type MutableTelemetryFacts = {
-  -readonly [Key in keyof BusinessPartner360TelemetryEvent]?: BusinessPartner360TelemetryEvent[Key];
+  -readonly [
+    Key in keyof BusinessPartner360TelemetryEvent
+  ]?: BusinessPartner360TelemetryEvent[Key];
 };
 export function registerBusinessPartner360Routes(
   app: Application,
@@ -40,7 +42,12 @@ export function registerBusinessPartner360Routes(
     readonly authenticate: RequestHandler;
     readonly readContext: (response: Response) => VerifiedRequestContext;
     readonly service: BusinessPartner360Service;
-    readonly createComment?: (context: VerifiedRequestContext, businessPartnerId: string, text: string, idempotencyKey: string) => Promise<unknown>;
+    readonly createComment?: (
+      context: VerifiedRequestContext,
+      businessPartnerId: string,
+      text: string,
+      idempotencyKey: string,
+    ) => Promise<unknown>;
     readonly telemetry?: (event: BusinessPartner360TelemetryEvent) => void;
   },
 ) {
@@ -89,31 +96,61 @@ export function registerBusinessPartner360Routes(
       }
     };
   registerContractRoute(
-    app, contracts.summary,
+    app,
+    contracts.summary,
     options.authenticate,
     route("summary", (request, context) =>
       options.service.summary(query(request, context)),
     ),
   );
   registerContractRoute(
-    app, contracts.createComment,
+    app,
+    contracts.createComment,
     options.authenticate,
     route("comment-create", async (request, context) => {
       const coordinate = query(request, context);
-      if (coordinate.asOf) throw new MasterDataError(409, "BP_360_HISTORICAL_READ_ONLY", "Historical records are read-only");
+      if (coordinate.asOf)
+        throw new MasterDataError(
+          409,
+          "BP_360_HISTORICAL_READ_ONLY",
+          "Historical records are read-only",
+        );
       const summary = await options.service.summary(coordinate);
-      if (!summary.collaboration?.canComment) throw new MasterDataError(403, "BP_360_SECTION_FORBIDDEN", "Adding comments is not authorized");
-      if (!options.createComment) throw new MasterDataError(503, "BP_360_PROVIDER_UNAVAILABLE", "Comments are unavailable");
-      const value = body(request), content = text(value["text"], "text");
-      if (!content.trim() || content.length > 10000) throw new MasterDataError(400, "BP_360_SCOPE_INVALID", "Comment must contain 1 to 10000 characters");
-      return options.createComment(context, coordinate.businessPartnerId, content, uuid(value["idempotencyKey"], "idempotencyKey"));
+      if (!summary.collaboration?.canComment)
+        throw new MasterDataError(
+          403,
+          "BP_360_SECTION_FORBIDDEN",
+          "Adding comments is not authorized",
+        );
+      if (!options.createComment)
+        throw new MasterDataError(
+          503,
+          "BP_360_PROVIDER_UNAVAILABLE",
+          "Comments are unavailable",
+        );
+      const value = body(request),
+        content = text(value["text"], "text");
+      if (!content.trim() || content.length > 10000)
+        throw new MasterDataError(
+          400,
+          "BP_360_SCOPE_INVALID",
+          "Comment must contain 1 to 10000 characters",
+        );
+      return options.createComment(
+        context,
+        coordinate.businessPartnerId,
+        content,
+        uuid(value["idempotencyKey"], "idempotencyKey"),
+      );
     }),
   );
   registerContractRoute(
-    app, contracts.taxReveal,
+    app,
+    contracts.taxReveal,
     options.authenticate,
     route("tax-reveal", (request, context) =>
       options.service.revealTaxRegistration({
+        ...revealCoordinates(request),
         context,
         businessPartnerId: uuid(
           request.params["businessPartnerId"],
@@ -125,15 +162,20 @@ export function registerBusinessPartner360Routes(
         ),
         purpose: purpose(body(request)["purpose"]),
         revealId: uuid(body(request)["revealId"], "revealId"),
-        purposeExpiresAt: timestamp(body(request)["purposeExpiresAt"], "purposeExpiresAt"),
+        purposeExpiresAt: timestamp(
+          body(request)["purposeExpiresAt"],
+          "purposeExpiresAt",
+        ),
       }),
     ),
   );
   registerContractRoute(
-    app, contracts.bankReveal,
+    app,
+    contracts.bankReveal,
     options.authenticate,
     route("bank-reveal", (request, context) =>
       options.service.revealBankAccount({
+        ...revealCoordinates(request),
         context,
         businessPartnerId: uuid(
           request.params["businessPartnerId"],
@@ -145,12 +187,16 @@ export function registerBusinessPartner360Routes(
         ),
         purpose: purpose(body(request)["purpose"]),
         revealId: uuid(body(request)["revealId"], "revealId"),
-        purposeExpiresAt: timestamp(body(request)["purposeExpiresAt"], "purposeExpiresAt"),
+        purposeExpiresAt: timestamp(
+          body(request)["purposeExpiresAt"],
+          "purposeExpiresAt",
+        ),
       }),
     ),
   );
   registerContractRoute(
-    app, contracts.section,
+    app,
+    contracts.section,
     options.authenticate,
     route("section", (request, context) =>
       options.service.section({
@@ -233,11 +279,7 @@ function section(value: unknown, lens: unknown): BusinessPartner360SectionCode {
   return result as BusinessPartner360SectionCode;
 }
 function role(value: unknown): BusinessPartner360RoleLens {
-  if (
-    value !== "all" &&
-    value !== "supplier" &&
-    value !== "customer"
-  )
+  if (value !== "all" && value !== "supplier" && value !== "customer")
     throw invalid("roleLens is invalid");
   return value;
 }
@@ -295,7 +337,8 @@ function purpose(value: unknown) {
 }
 function timestamp(value: unknown, name: string) {
   const result = text(value, name);
-  if (!Number.isFinite(parseInstant(result))) throw invalid(`${name} is invalid`);
+  if (!Number.isFinite(parseInstant(result)))
+    throw invalid(`${name} is invalid`);
   return result;
 }
 function safeTelemetryFacts(
@@ -369,4 +412,27 @@ function safeTelemetryFacts(
 function safeDimension(value: unknown) {
   const result = String(value ?? "").toLowerCase();
   return /^[a-z][a-z0-9_.-]{0,63}$/.test(result) ? result : undefined;
+}
+
+function revealCoordinates(request: Request) {
+  const organization = request.query["operatingOrganizationId"],
+    company = request.query["companyCodeId"];
+  if (request.query["asOf"] !== undefined)
+    throw new MasterDataError(
+      409,
+      "BP_360_HISTORICAL_READ_ONLY",
+      "Historical records are read-only",
+    );
+  if ((organization === undefined) !== (company === undefined))
+    throw new MasterDataError(
+      400,
+      "BP_360_SCOPE_INVALID",
+      "Select an organization and company together",
+    );
+  return organization === undefined
+    ? {}
+    : {
+        operatingOrganizationId: uuid(organization, "operatingOrganizationId"),
+        companyCodeId: uuid(company, "companyCodeId"),
+      };
 }

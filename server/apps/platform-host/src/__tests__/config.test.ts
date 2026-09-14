@@ -2,6 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { loadConfig } from "../config/index.js";
 
 describe("loadConfig", () => {
+  function cloudStorage() {
+    process.env["S3_REGION"] = "eu-west-1";
+    process.env["S3_BUCKET_DOCUMENTS"] = "test-documents";
+    process.env["S3_BUCKET_ARTIFACTS"] = "test-artifacts";
+    process.env["S3_BUCKET_TRANSFERS"] = "test-transfers";
+    process.env["APP_S3_PROFILE"] = "test-app";
+    process.env["ARTIFACTS_WRITER_S3_PROFILE"] = "test-writer";
+  }
   const snapshot: Record<string, string | undefined> = {};
   const keys = [
     "PORT",
@@ -33,14 +41,21 @@ describe("loadConfig", () => {
     "REDIS_KEY_PREFIX",
     "REDIS_CONNECT_TIMEOUT_MS",
     "REDIS_MAX_RETRIES_PER_REQUEST",
+    "APP_S3_PROFILE",
+    "ARTIFACTS_WRITER_S3_PROFILE",
     "S3_ENDPOINT",
     "S3_PUBLIC_ENDPOINT",
     "S3_REGION",
     "S3_BUCKET",
+    "S3_BUCKET_DOCUMENTS",
+    "S3_BUCKET_ARTIFACTS",
+    "S3_BUCKET_TRANSFERS",
     "S3_ACCESS_KEY",
     "S3_SECRET_KEY",
     "APP_S3_ACCESS_KEY",
     "APP_S3_SECRET_KEY",
+    "ARTIFACTS_WRITER_S3_ACCESS_KEY",
+    "ARTIFACTS_WRITER_S3_SECRET_KEY",
     "S3_MULTIPART_PART_SIZE_MB",
     "S3_MULTIPART_QUEUE_SIZE",
     "S3_MAX_UPLOAD_MB",
@@ -112,7 +127,7 @@ describe("loadConfig", () => {
     "DOCPARSER_MAX_INPUT_BYTES",
     "DOCPARSER_MAX_TEXT_CHARS",
     "SEARCHCORE_URL",
-    "SEARCHCORE_MASTER_KEY",
+    "SEARCHCORE_API_KEY",
     "SEARCHCORE_DOCUMENT_INDEX",
     "SEARCHCORE_TIMEOUT_MS",
   );
@@ -237,10 +252,13 @@ describe("loadConfig", () => {
     });
     expect(config.objectStorage).toEqual({
       endpoint: undefined,
+      publicEndpoint: undefined,
       region: "us-east-1",
-      bucket: undefined,
+      buckets: undefined,
       accessKeyId: undefined,
       secretAccessKey: undefined,
+      artifactsWriterAccessKeyId: undefined,
+      artifactsWriterSecretAccessKey: undefined,
       multipartPartSizeMb: 5,
       multipartQueueSize: 4,
       maxUploadMb: 100,
@@ -249,6 +267,7 @@ describe("loadConfig", () => {
       tenantQuotaItems: 50_000,
       quotaReservationTtlSeconds: 1_800,
       quotaRetryAfterSeconds: 900,
+      scanStreamTimeoutMs: 300_000,
     });
     expect(config.contentExtraction).toEqual({
       baseUrl: undefined,
@@ -268,6 +287,8 @@ describe("loadConfig", () => {
       timeoutMs: 30_000,
       maxBytes: 104_857_600,
       onUnavailable: "fail-closed",
+      signatureMaxAgeMs: 172_800_000,
+      signatureCheckIntervalMs: 300_000,
     });
     expect(config.openTelemetry).toEqual({
       endpoint: undefined,
@@ -322,12 +343,14 @@ describe("loadConfig", () => {
 
   it("maps ENVIRONMENT=staging to env=staging", () => {
     process.env["ENVIRONMENT"] = "staging";
+    cloudStorage();
     const config = loadConfig();
     expect(config.env).toBe("staging");
   });
 
   it("falls back to production when NODE_ENV=production and ATHYPER_ENV unset", () => {
     process.env["NODE_ENV"] = "production";
+    cloudStorage();
     const config = loadConfig();
     expect(config.env).toBe("production");
   });
@@ -462,6 +485,7 @@ describe("loadConfig", () => {
 
   it("keeps BullMQ on a dedicated Redis endpoint outside local development", () => {
     process.env["ATHYPER_ENV"] = "production";
+    cloudStorage();
     process.env["REDIS_URL"] = "redis://cache:6379/0";
     process.env["REDIS_BULLMQ_URL"] = "redis://queues:6379/1";
     process.env["JOB_WORKER_CONCURRENCY"] = "24";
@@ -474,6 +498,7 @@ describe("loadConfig", () => {
 
   it("requires dedicated system database credentials for production workers", () => {
     process.env["ATHYPER_ENV"] = "production";
+    cloudStorage();
     process.env["MODE"] = "worker";
     process.env["DATABASE_URL"] = "postgresql://app@db/neon";
     expect(() => loadConfig()).toThrow("NEON_WORKER_DATABASE_URL");
@@ -487,32 +512,78 @@ describe("loadConfig", () => {
     process.env["S3_ENDPOINT"] = "http://localhost:9000";
     process.env["S3_PUBLIC_ENDPOINT"] = "https://objects.example.test";
     process.env["S3_REGION"] = "ap-southeast-1";
-    process.env["S3_BUCKET"] = "documents";
+    process.env["S3_BUCKET_DOCUMENTS"] = "documents";
+    process.env["S3_BUCKET_ARTIFACTS"] = "artifacts";
+    process.env["S3_BUCKET_TRANSFERS"] = "transfers";
     process.env["S3_ACCESS_KEY"] = "app";
     process.env["S3_SECRET_KEY"] = "secret";
+    process.env["ARTIFACTS_WRITER_S3_ACCESS_KEY"] = "writer";
+    process.env["ARTIFACTS_WRITER_S3_SECRET_KEY"] = "writer-secret";
     process.env["S3_MAX_UPLOAD_MB"] = "250";
 
     expect(loadConfig().objectStorage).toMatchObject({
       endpoint: "http://localhost:9000",
       publicEndpoint: "https://objects.example.test",
       region: "ap-southeast-1",
-      bucket: "documents",
+      buckets: {
+        documents: "documents",
+        artifacts: "artifacts",
+        transfers: "transfers",
+      },
       accessKeyId: "app",
       secretAccessKey: "secret",
       maxUploadMb: 250,
     });
   });
 
-  it("uses the scoped application S3 account outside local development", () => {
+  it("rejects legacy-only storage configuration", () => {
+    process.env["S3_BUCKET"] = "legacy";
+    expect(() => loadConfig()).toThrow("S3_BUCKET is retired");
+  });
+
+  it.each([
+    [],
+    ["ARTIFACTS_WRITER_S3_ACCESS_KEY"],
+    ["ARTIFACTS_WRITER_S3_SECRET_KEY"],
+  ])(
+    "requires explicit writer credentials for configured storage: %j",
+    (...keys) => {
+      process.env["S3_BUCKET_DOCUMENTS"] = "documents";
+      process.env["S3_BUCKET_ARTIFACTS"] = "artifacts";
+      process.env["S3_BUCKET_TRANSFERS"] = "transfers";
+      for (const key of keys) process.env[key] = "configured";
+      expect(() => loadConfig()).toThrow(
+        "ARTIFACTS_WRITER_S3_ACCESS_KEY and ARTIFACTS_WRITER_S3_SECRET_KEY",
+      );
+    },
+  );
+
+  it("requires all three object storage buckets when any is set", () => {
+    process.env["S3_BUCKET_DOCUMENTS"] = "documents";
+    expect(() => loadConfig()).toThrow(
+      "S3_BUCKET_DOCUMENTS, S3_BUCKET_ARTIFACTS, and S3_BUCKET_TRANSFERS",
+    );
+  });
+
+  it("uses separate renewable S3 profiles outside local development", () => {
     process.env["ATHYPER_ENV"] = "production";
-    process.env["APP_S3_ACCESS_KEY"] = "scoped-app";
-    process.env["APP_S3_SECRET_KEY"] = "scoped-secret";
-    process.env["S3_ACCESS_KEY"] = "root-user";
-    process.env["S3_SECRET_KEY"] = "root-secret";
-    expect(loadConfig().objectStorage).toMatchObject({
-      accessKeyId: "scoped-app",
-      secretAccessKey: "scoped-secret",
-    });
+    cloudStorage();
+    expect(loadConfig().objectStorage.credentialProfile).toBe("test-app");
+    expect(loadConfig().objectStorage.artifactsWriterCredentialProfile).toBe(
+      "test-writer",
+    );
+  });
+
+  it("fails closed for unprovisioned cloud storage without blocking local", () => {
+    expect(loadConfig().env).toBe("local");
+    process.env["ATHYPER_ENV"] = "staging";
+    expect(() => loadConfig()).toThrow("pending provisioning");
+    cloudStorage();
+    process.env["S3_ENDPOINT"] = "http://objectstorage:9000";
+    expect(() => loadConfig()).toThrow("regional Amazon S3 endpoints");
+    delete process.env["S3_ENDPOINT"];
+    process.env["ARTIFACTS_WRITER_S3_PROFILE"] = "test-app";
+    expect(() => loadConfig()).toThrow("separate APP_S3_PROFILE");
   });
 
   it("reads explicit OpenTelemetry configuration", () => {
@@ -575,6 +646,7 @@ describe("loadConfig", () => {
 
   it("requires the SES event queue outside local environments", () => {
     process.env["ATHYPER_ENV"] = "staging";
+    cloudStorage();
     process.env["EMAIL_PROVIDER"] = "ses";
     process.env["SES_REGION"] = "ap-southeast-1";
     process.env["SES_CONFIGURATION_SET"] = "athyper-transactional-stg";
@@ -644,7 +716,7 @@ describe("loadConfig", () => {
     process.env["DOCPARSER_URL"] = "http://docparser:9998";
     process.env["DOCPARSER_TIMEOUT_MS"] = "90000";
     process.env["SEARCHCORE_URL"] = "http://searchcore:7700";
-    process.env["SEARCHCORE_MASTER_KEY"] = "secret";
+    process.env["SEARCHCORE_API_KEY"] = "secret";
     process.env["SEARCHCORE_DOCUMENT_INDEX"] = "documents_v1";
     expect(loadConfig()).toMatchObject({
       contentExtraction: {
@@ -664,12 +736,16 @@ describe("loadConfig", () => {
     process.env["CLAMD_PORT"] = "3310";
     process.env["CLAMD_TIMEOUT_MS"] = "45000";
     process.env["CLAMD_MAX_BYTES"] = "20000000";
+    process.env["CLAMD_SIGNATURE_MAX_AGE_MS"] = "43200000";
+    process.env["CLAMD_SIGNATURE_CHECK_INTERVAL_MS"] = "60000";
     expect(loadConfig().malwareScanning).toEqual({
       host: "virusscan",
       port: 3310,
       timeoutMs: 45_000,
       maxBytes: 20_000_000,
       onUnavailable: "fail-closed",
+      signatureMaxAgeMs: 43_200_000,
+      signatureCheckIntervalMs: 60_000,
     });
   });
 

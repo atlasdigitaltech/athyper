@@ -1,4 +1,12 @@
 import {
+  businessPartnerCasePublicationIdentity,
+  assertCompanyCaseOperationBindings,
+} from "./business-partner-company-case-contract.js";
+import {
+  overlayLocalDefinitionPreview,
+  localDefinitionPreviewBaseline,
+} from "./local-definition-preview.js";
+import {
   PublicationContractError,
   type ActiveEntityProjection,
   type BusinessPartnerDefinitionProjection,
@@ -15,72 +23,480 @@ type Database = Record<string, never>;
 type Row = Record<string, unknown>;
 
 export class KyselyLocalProjectionRepository implements LocalProjectionRepository {
-  constructor(private readonly database: Kysely<Database>) {}
+  constructor(
+    private readonly database: Kysely<Database>,
+    private readonly preview = false,
+  ) {}
 
-  async stage(input: { readonly deployment: PublicationDeploymentBundle; readonly artifact: PublicationArtifactDocumentV1 }): Promise<AppliedReleaseProjection> {
-    assertArtifactCoordinates(input.deployment,input.artifact);
-    const envelope=input.artifact.envelope;
-    if(envelope.artifactKind==="entity_runtime" && envelope.payload.entityDescriptor.descriptorKind==="entity_case_runtime") {
-      const contract=envelope.payload.entityContract, base=envelope.payload.entityDescriptor.descriptor["caseContractBase"] as Record<string,unknown> | undefined;
-      if(!base || !contract.tenantId || envelope.targetPlane!=="neon") throw new Error("CASE_CONTRACT_COORDINATES_INVALID");
+  async stage(input: {
+    readonly deployment: PublicationDeploymentBundle;
+    readonly artifact: PublicationArtifactDocumentV1;
+  }): Promise<AppliedReleaseProjection> {
+    assertArtifactCoordinates(input.deployment, input.artifact);
+    const envelope = input.artifact.envelope;
+    if (
+      envelope.artifactKind === "entity_runtime" &&
+      envelope.payload.entityDescriptor.descriptorKind === "entity_case_runtime"
+    ) {
+      const contract = envelope.payload.entityContract,
+        base = envelope.payload.entityDescriptor.descriptor[
+          "caseContractBase"
+        ] as Record<string, unknown> | undefined;
+      if (!base || !contract.tenantId || envelope.targetPlane !== "neon")
+        throw new Error("CASE_CONTRACT_COORDINATES_INVALID");
+      const identity = businessPartnerCasePublicationIdentity(
+        contract.tenantId,
+        envelope.publicationKey,
+      );
+      if (
+        contract.entityCode !== identity.entityCode ||
+        envelope.payload.entityDescriptor.descriptor["entityCode"] !==
+          identity.entityCode ||
+        (!identity.operationScopeBindings.length &&
+          JSON.stringify(
+            envelope.payload.entityDescriptor.descriptor[
+              "operation_scope_bindings"
+            ],
+          ) !== "[]")
+      )
+        throw new Error("CASE_CONTRACT_REGISTERED_IDENTITY_MISMATCH");
+      if (identity.operationScopeBindings.length)
+        assertCompanyCaseOperationBindings(
+          envelope.payload.entityDescriptor.descriptor,
+          contract.entityId,
+        );
       // Serialize against activation; an exact replay is allowed after this deployment activated.
-      await sql`SELECT pg_advisory_xact_lock(hashtextextended(${envelope.publicationKey},0))`.execute(this.database);
-      const prior=(await sql<Row>`SELECT * FROM runtime_meta.entity_contract WHERE tenant_id=${contract.tenantId}::uuid AND entity_id=${contract.entityId}::uuid AND publication_key=${envelope.publicationKey} AND status='published'`.execute(this.database)).rows[0];
-      const replay=(await this.findByDeployment(input.deployment.deploymentId))?.status==="active" && prior?.["release_id"]===envelope.releaseId;
-      if(!replay && (!prior || prior["id"]!==base["id"] || prior["entity_contract_hash"]!==base["hash"] || Number(prior["release_no"])!==Number(base["releaseNo"]) || contract.releaseNo!==Number(base["releaseNo"])+1)) throw new Error("CASE_CONTRACT_SOURCE_CONFLICT");
+      await sql`SELECT pg_advisory_xact_lock(hashtextextended(${envelope.publicationKey},0))`.execute(
+        this.database,
+      );
+      const prior = (
+        await sql<Row>`SELECT * FROM runtime_meta.entity_contract WHERE tenant_id=${contract.tenantId}::uuid AND entity_id=${contract.entityId}::uuid AND publication_key=${envelope.publicationKey} AND status='published'`.execute(
+          this.database,
+        )
+      ).rows[0];
+      const replay =
+        (await this.findByDeployment(input.deployment.deploymentId))?.status ===
+          "active" && prior?.["release_id"] === envelope.releaseId;
+      if (!replay && base["id"] === null) {
+        if (
+          base["hash"] !== null ||
+          base["releaseNo"] !== 0 ||
+          (!identity.operationScopeBindings.length &&
+            contract.releaseNo !== 1) ||
+          contract.releaseNo < 1 ||
+          contract.entityCode !== identity.entityCode
+        )
+          throw new Error("CASE_CONTRACT_INITIAL_COORDINATES_INVALID");
+        // Any history blocks initialization, including retired/revoked contracts.
+        const history = (
+          await sql<Row>`SELECT id FROM runtime_meta.entity_contract WHERE tenant_id=${contract.tenantId}::uuid AND (entity_code=${identity.entityCode} OR publication_key=${envelope.publicationKey}) LIMIT 1`.execute(
+            this.database,
+          )
+        ).rows;
+        if (history.length) throw new Error("CASE_CONTRACT_SOURCE_CONFLICT");
+      } else if (
+        !replay &&
+        (!prior ||
+          prior["id"] !== base["id"] ||
+          prior["entity_contract_hash"] !== base["hash"] ||
+          Number(prior["release_no"]) !== Number(base["releaseNo"]) ||
+          contract.releaseNo !== Number(base["releaseNo"]) + 1)
+      )
+        throw new Error("CASE_CONTRACT_SOURCE_CONFLICT");
     }
 
-    const result=await sql<Row>`SELECT * FROM runtime_meta.fn_stage_release_projection(
+    const result =
+      await sql<Row>`SELECT * FROM runtime_meta.fn_stage_release_projection(
       ${envelope.publicationKey},${envelope.releaseId}::uuid,${envelope.releaseNo},${input.deployment.deploymentId}::uuid,
       ${input.deployment.artifactHash},${JSON.stringify(input.artifact.manifest)}::jsonb,${JSON.stringify(projectionJson(input.artifact))}::jsonb
     )`.execute(this.database);
-    return mapApplied(required(result.rows[0],"APPLIED_RELEASE_NOT_FOUND"));
+    return mapApplied(required(result.rows[0], "APPLIED_RELEASE_NOT_FOUND"));
   }
 
-  async verify(input:{readonly appliedReleaseId:string;readonly computedArtifactHash:string;readonly evidence:PublicationVerificationEvidence}):Promise<AppliedReleaseProjection>{
-    const result=await sql<Row>`SELECT * FROM runtime_meta.fn_verify_release(${input.appliedReleaseId}::uuid,${input.computedArtifactHash},${JSON.stringify(verificationJson(input.evidence))}::jsonb)`.execute(this.database);
-    return mapApplied(required(result.rows[0],"APPLIED_RELEASE_NOT_FOUND"));
+  async verify(input: {
+    readonly appliedReleaseId: string;
+    readonly computedArtifactHash: string;
+    readonly evidence: PublicationVerificationEvidence;
+  }): Promise<AppliedReleaseProjection> {
+    const result =
+      await sql<Row>`SELECT * FROM runtime_meta.fn_verify_release(${input.appliedReleaseId}::uuid,${input.computedArtifactHash},${JSON.stringify(verificationJson(input.evidence))}::jsonb)`.execute(
+        this.database,
+      );
+    return mapApplied(required(result.rows[0], "APPLIED_RELEASE_NOT_FOUND"));
   }
 
-  async activate(input:{readonly appliedReleaseId:string;readonly evidence?:Readonly<Record<string,unknown>>}):Promise<ActiveReleaseProjection>{
-    await sql`SELECT runtime_meta.fn_activate_release(${input.appliedReleaseId}::uuid,${JSON.stringify(input.evidence??{})}::jsonb)`.execute(this.database);
-    const release=await this.findById(input.appliedReleaseId);
-    if(!release||release.status!=="active"||!release.activatedAt)throw new Error("LOCAL_ACTIVATION_HEAD_MISMATCH");
-    return {...release,status:"active",activatedAt:release.activatedAt};
+  async activate(input: {
+    readonly appliedReleaseId: string;
+    readonly evidence?: Readonly<Record<string, unknown>>;
+  }): Promise<ActiveReleaseProjection> {
+    await sql`SELECT runtime_meta.fn_activate_release(${input.appliedReleaseId}::uuid,${JSON.stringify(input.evidence ?? {})}::jsonb)`.execute(
+      this.database,
+    );
+    const release = await this.findById(input.appliedReleaseId);
+    if (!release || release.status !== "active" || !release.activatedAt)
+      throw new Error("LOCAL_ACTIVATION_HEAD_MISMATCH");
+    return { ...release, status: "active", activatedAt: release.activatedAt };
   }
 
-  async findByDeployment(deploymentId:string):Promise<AppliedReleaseProjection|null>{const result=await sql<Row>`SELECT * FROM runtime_meta.applied_release WHERE deployment_id=${deploymentId}::uuid`.execute(this.database);return result.rows[0]?mapApplied(result.rows[0]):null;}
-
-  async findActive(publicationKey:string):Promise<ActiveReleaseProjection|null>{
-    const result=await sql<Row>`SELECT * FROM runtime_meta.fn_active_release(${publicationKey})`.execute(this.database);const row=result.rows[0];if(!row)return null;
-    return {id:string(row,"applied_release_id"),publicationKey,deploymentId:await this.deploymentId(string(row,"applied_release_id")),sourceReleaseId:string(row,"source_release_id"),sourceReleaseNo:number(row,"source_release_no"),artifactHash:string(row,"artifact_hash"),status:"active",stagedAt:await this.stagedAt(string(row,"applied_release_id")),activatedAt:date(row,"activated_at")};
+  async findByDeployment(
+    deploymentId: string,
+  ): Promise<AppliedReleaseProjection | null> {
+    const result =
+      await sql<Row>`SELECT * FROM runtime_meta.applied_release WHERE deployment_id=${deploymentId}::uuid`.execute(
+        this.database,
+      );
+    return result.rows[0] ? mapApplied(result.rows[0]) : null;
   }
 
-  async findActiveEntity(publicationKey:string):Promise<ActiveEntityProjection|null>{
-    const result=await sql<Row>`SELECT * FROM runtime_meta.fn_active_entity_descriptor(${publicationKey},'entity_runtime')`.execute(this.database);const row=result.rows[0];if(!row)return null;
-    const tenantId=nullableString(row,"tenant_id");return{entityContractId:string(row,"entity_contract_id"),entityDescriptorId:string(row,"entity_descriptor_id"),...(tenantId?{tenantId}:{}),entityId:string(row,"entity_id"),entityCode:string(row,"entity_code"),releaseId:string(row,"release_id"),releaseNo:number(row,"release_no"),contractHash:string(row,"contract_hash"),contract:object(row,"contract_json"),plane:string(row,"plane_code") as ActiveEntityProjection["plane"],descriptorKind:"entity_runtime",compiledHash:string(row,"compiled_hash"),descriptor:object(row,"compiled_json"),activatedAt:date(row,"activated_at")};
+  async findActive(
+    publicationKey: string,
+  ): Promise<ActiveReleaseProjection | null> {
+    const result =
+      await sql<Row>`SELECT * FROM runtime_meta.fn_active_release(${publicationKey})`.execute(
+        this.database,
+      );
+    const row = result.rows[0];
+    if (!row) return null;
+    return {
+      id: string(row, "applied_release_id"),
+      publicationKey,
+      deploymentId: await this.deploymentId(string(row, "applied_release_id")),
+      sourceReleaseId: string(row, "source_release_id"),
+      sourceReleaseNo: number(row, "source_release_no"),
+      artifactHash: string(row, "artifact_hash"),
+      status: "active",
+      stagedAt: await this.stagedAt(string(row, "applied_release_id")),
+      activatedAt: date(row, "activated_at"),
+    };
   }
 
-  async findActiveBusinessPartnerDefinition(publicationKey:string):Promise<BusinessPartnerDefinitionProjection|null>{
+  async findActiveEntity(
+    publicationKey: string,
+  ): Promise<ActiveEntityProjection | null> {
+    const result =
+      await sql<Row>`SELECT * FROM runtime_meta.fn_active_entity_descriptor(${publicationKey},'entity_runtime')`.execute(
+        this.database,
+      );
+    const row = result.rows[0];
+    if (!row) return null;
+    const tenantId = nullableString(row, "tenant_id");
+    return {
+      entityContractId: string(row, "entity_contract_id"),
+      entityDescriptorId: string(row, "entity_descriptor_id"),
+      ...(tenantId ? { tenantId } : {}),
+      entityId: string(row, "entity_id"),
+      entityCode: string(row, "entity_code"),
+      releaseId: string(row, "release_id"),
+      releaseNo: number(row, "release_no"),
+      contractHash: string(row, "contract_hash"),
+      contract: object(row, "contract_json"),
+      plane: string(row, "plane_code") as ActiveEntityProjection["plane"],
+      descriptorKind: "entity_runtime",
+      compiledHash: string(row, "compiled_hash"),
+      descriptor: object(row, "compiled_json"),
+      activatedAt: date(row, "activated_at"),
+    };
+  }
+
+  async findActiveBusinessPartnerDefinition(
+    publicationKey: string,
+  ): Promise<BusinessPartnerDefinitionProjection | null> {
     // The active projection function is the consumer-safe boundary. Do not join its
     // result back to the tenant-owned payload table: a release authored by Studio's
     // tenant must remain readable after it is verified and activated in this plane.
-    const result=await sql<Row>`SELECT * FROM runtime_meta.fn_active_business_partner_definition(${publicationKey})`.execute(this.database);const row=result.rows[0];if(!row)return null;
-    return{id:string(row,"id"),tenantId:string(row,"tenant_id"),revisionId:string(row,"revision_id"),releaseId:string(row,"release_id"),releaseNo:number(row,"release_no"),publicationKey:string(row,"publication_key"),plane:string(row,"plane_code") as BusinessPartnerDefinitionProjection["plane"],bundleCode:string(row,"bundle_code"),semanticVersion:string(row,"semantic_version"),bundleSchemaVersion:string(row,"bundle_schema_version"),bundleHash:string(row,"bundle_hash"),bundle:object(row,"bundle_json") as unknown as BusinessPartnerDefinitionProjection["bundle"],generatedAt:date(row,"generated_at")};
+    const result =
+      await sql<Row>`SELECT * FROM runtime_meta.fn_active_business_partner_definition(${publicationKey})`.execute(
+        this.database,
+      );
+    const row = result.rows[0];
+    if (!row) {
+      if (process.env.ATHYPER_LOCAL_PREVIEW_ROOT) {
+        const plane = (
+          await sql<{
+            name: string;
+          }>`SELECT current_database() AS name`.execute(this.database)
+        ).rows[0]?.name;
+        if (plane === "athyper_neon") {
+          const baseline = await localDefinitionPreviewBaseline(publicationKey);
+          return baseline && this.preview
+            ? overlayLocalDefinitionPreview(baseline)
+            : baseline;
+        }
+      }
+      return null;
+    }
+    const projection: BusinessPartnerDefinitionProjection = {
+      id: string(row, "id"),
+      tenantId: string(row, "tenant_id"),
+      revisionId: string(row, "revision_id"),
+      releaseId: string(row, "release_id"),
+      releaseNo: number(row, "release_no"),
+      publicationKey: string(row, "publication_key"),
+      plane: string(
+        row,
+        "plane_code",
+      ) as BusinessPartnerDefinitionProjection["plane"],
+      bundleCode: string(row, "bundle_code"),
+      semanticVersion: string(row, "semantic_version"),
+      bundleSchemaVersion: string(row, "bundle_schema_version"),
+      bundleHash: string(row, "bundle_hash"),
+      bundle: object(
+        row,
+        "bundle_json",
+      ) as unknown as BusinessPartnerDefinitionProjection["bundle"],
+      generatedAt: date(row, "generated_at"),
+    };
+    return this.preview
+      ? overlayLocalDefinitionPreview(projection)
+      : projection;
   }
 
-  async rollback(input:{readonly publicationKey:string;readonly targetAppliedReleaseId:string;readonly evidence?:Readonly<Record<string,unknown>>}):Promise<ActiveReleaseProjection>{
-    await sql`SELECT runtime_meta.fn_rollback_release(${input.publicationKey},${input.targetAppliedReleaseId}::uuid,${JSON.stringify(input.evidence??{})}::jsonb)`.execute(this.database);
-    const release=await this.findById(input.targetAppliedReleaseId);if(!release||release.status!=="active"||!release.activatedAt)throw new Error("LOCAL_ROLLBACK_HEAD_MISMATCH");return{...release,status:"active",activatedAt:release.activatedAt};
+  async rollback(input: {
+    readonly publicationKey: string;
+    readonly targetAppliedReleaseId: string;
+    readonly evidence?: Readonly<Record<string, unknown>>;
+  }): Promise<ActiveReleaseProjection> {
+    await sql`SELECT runtime_meta.fn_rollback_release(${input.publicationKey},${input.targetAppliedReleaseId}::uuid,${JSON.stringify(input.evidence ?? {})}::jsonb)`.execute(
+      this.database,
+    );
+    const release = await this.findById(input.targetAppliedReleaseId);
+    if (!release || release.status !== "active" || !release.activatedAt)
+      throw new Error("LOCAL_ROLLBACK_HEAD_MISMATCH");
+    return { ...release, status: "active", activatedAt: release.activatedAt };
   }
 
-  private async findById(id:string){const result=await sql<Row>`SELECT * FROM runtime_meta.applied_release WHERE id=${id}::uuid`.execute(this.database);return result.rows[0]?mapApplied(result.rows[0]):null;}
-  private async deploymentId(id:string){const result=await sql<Row>`SELECT deployment_id FROM runtime_meta.applied_release WHERE id=${id}::uuid`.execute(this.database);return string(required(result.rows[0],"APPLIED_RELEASE_NOT_FOUND"),"deployment_id");}
-  private async stagedAt(id:string){const result=await sql<Row>`SELECT staged_at FROM runtime_meta.applied_release WHERE id=${id}::uuid`.execute(this.database);return date(required(result.rows[0],"APPLIED_RELEASE_NOT_FOUND"),"staged_at");}
+  private async findById(id: string) {
+    const result =
+      await sql<Row>`SELECT * FROM runtime_meta.applied_release WHERE id=${id}::uuid`.execute(
+        this.database,
+      );
+    return result.rows[0] ? mapApplied(result.rows[0]) : null;
+  }
+  private async deploymentId(id: string) {
+    const result =
+      await sql<Row>`SELECT deployment_id FROM runtime_meta.applied_release WHERE id=${id}::uuid`.execute(
+        this.database,
+      );
+    return string(
+      required(result.rows[0], "APPLIED_RELEASE_NOT_FOUND"),
+      "deployment_id",
+    );
+  }
+  private async stagedAt(id: string) {
+    const result =
+      await sql<Row>`SELECT staged_at FROM runtime_meta.applied_release WHERE id=${id}::uuid`.execute(
+        this.database,
+      );
+    return date(
+      required(result.rows[0], "APPLIED_RELEASE_NOT_FOUND"),
+      "staged_at",
+    );
+  }
 }
 
-function assertArtifactCoordinates(deployment:PublicationDeploymentBundle,artifact:PublicationArtifactDocumentV1){const envelope=artifact.envelope;const payloadPlane=envelope.artifactKind==="entity_runtime"?envelope.payload.entityDescriptor.plane:envelope.artifactKind==="bank_directory"?envelope.targetPlane:envelope.payload.plane;if(envelope.targetPlane!==deployment.targetPlane||envelope.targetPlane!==payloadPlane)throw new PublicationContractError("ARTIFACT_PLANE_INVALID","Artifact target plane does not match deployment");if(envelope.releaseId!==deployment.sourceReleaseId||envelope.releaseNo!==deployment.sourceReleaseNo||envelope.publicationKey!==deployment.publicationKey)throw new PublicationContractError("ARTIFACT_COORDINATES_INVALID","Artifact release coordinates do not match deployment");if(artifact.manifest.targetPlane!==envelope.targetPlane||artifact.manifest.releaseId!==envelope.releaseId||artifact.manifest.artifactKind!==envelope.artifactKind)throw new PublicationContractError("ARTIFACT_COORDINATES_INVALID","Artifact manifest coordinates do not match envelope");}
-function projectionJson(artifact:PublicationArtifactDocumentV1){const envelope=artifact.envelope;if(envelope.artifactKind==="bank_directory"){const b=envelope.payload;return{applied_release_payload:{id:b.id,tenant_id:null,artifact_kind:"bank_directory",payload_schema_version:"1.0.0",payload_hash:b.contentHash,payload_json:b,coordinates:{release_id:b.id,release_no:b.version,publication_key:envelope.publicationKey,plane_code:envelope.targetPlane},generated_at:b.publishedAt}};}if(envelope.artifactKind==="business_partner_definition_bundle"){const b=envelope.payload;return{applied_release_payload:{id:b.id,tenant_id:b.tenantId,artifact_kind:envelope.artifactKind,payload_schema_version:b.bundleSchemaVersion,payload_hash:b.bundleHash,payload_json:b.bundle,coordinates:{revision_id:b.revisionId,release_id:b.releaseId,release_no:b.releaseNo,publication_key:b.publicationKey,plane_code:b.plane,bundle_code:b.bundleCode,semantic_version:b.semanticVersion,source_bundle_hash:b.sourceBundleHash,compile_report:b.compileReport},generated_at:b.generatedAt}};}const c=envelope.payload.entityContract,d=envelope.payload.entityDescriptor;return{contract:{id:c.id,tenant_id:c.tenantId??null,entity_id:c.entityId,entity_code:c.entityCode,release_id:c.releaseId,revision_id:c.revisionId,release_no:c.releaseNo,contract_schema_code:c.contractSchemaCode,contract_schema_version:c.contractSchemaVersion,contract_hash:c.contractHash,contract_json:c.contract,publication_key:c.publicationKey,signature_algorithm:c.signature.algorithm,signing_key_id:c.signature.keyId,signature:c.signature.signature,published_at:c.publishedAt},descriptor:{id:d.id,plane_code:d.plane,descriptor_kind:d.descriptorKind,descriptor_schema_version:d.descriptorSchemaVersion,source_contract_hash:d.sourceContractHash,compiled_hash:d.compiledHash,compiled_json:d.descriptor,compiler_version:d.compilerVersion,compatibility_level:d.compatibilityLevel,generated_at:d.generatedAt}};}
-function verificationJson(e:PublicationVerificationEvidence){return{signature_verified:e.signatureVerified,manifest_valid:e.manifestValid,runtime_compatible:e.runtimeCompatible,target_plane:e.targetPlane,...(e.contractHash?{contract_hash:e.contractHash}:{}),...(e.descriptorSourceHash?{descriptor_source_hash:e.descriptorSourceHash}:{}),...(e.contractSchemaVersion?{contract_schema_version:e.contractSchemaVersion}:{}),...(e.descriptorSchemaVersion?{descriptor_schema_version:e.descriptorSchemaVersion}:{}),...(e.payloadHash?{payload_hash:e.payloadHash}:{}),...(e.payloadSchemaVersion?{payload_schema_version:e.payloadSchemaVersion}:{}),...(e.definitionBundleHash?{definition_bundle_hash:e.definitionBundleHash}:{}),...(e.definitionBundleSchemaVersion?{definition_bundle_schema_version:e.definitionBundleSchemaVersion}:{}),...(e.signatureAlgorithm?{signature_algorithm:e.signatureAlgorithm}:{}),...(e.signingKeyId?{signing_key_id:e.signingKeyId}:{})};}
-function mapApplied(row:Row):AppliedReleaseProjection{const verifiedAt=nullableDate(row,"verified_at"),activatedAt=nullableDate(row,"activated_at"),failureCode=nullableString(row,"failure_code");return{id:string(row,"id"),publicationKey:string(row,"publication_key"),deploymentId:string(row,"deployment_id"),sourceReleaseId:string(row,"source_release_id"),sourceReleaseNo:number(row,"source_release_no"),artifactHash:string(row,"artifact_hash"),status:string(row,"status") as AppliedReleaseProjection["status"],stagedAt:date(row,"staged_at"),...(verifiedAt?{verifiedAt}:{}),...(activatedAt?{activatedAt}:{}),...(failureCode?{failureCode}:{})};}
-function required(row:Row|undefined,code:string):Row{if(!row)throw new Error(code);return row;}function string(row:Row,key:string):string{const value=row[key];if(typeof value!=="string")throw new Error(`PROJECTION_ROW_INVALID:${key}`);return value;}function nullableString(row:Row,key:string):string|undefined{const value=row[key];return typeof value==="string"?value:undefined;}function number(row:Row,key:string):number{const value=Number(row[key]);if(!Number.isSafeInteger(value))throw new Error(`PROJECTION_ROW_INVALID:${key}`);return value;}function date(row:Row,key:string):string{const value=row[key];const parsed=value instanceof Date?value:new Date(String(value));if(Number.isNaN(parsed.valueOf()))throw new Error(`PROJECTION_ROW_INVALID:${key}`);return parsed.toISOString();}function nullableDate(row:Row,key:string):string|undefined{return row[key]==null?undefined:date(row,key);}function object(row:Row,key:string):Readonly<Record<string,unknown>>{const value=row[key];return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{};}
+function assertArtifactCoordinates(
+  deployment: PublicationDeploymentBundle,
+  artifact: PublicationArtifactDocumentV1,
+) {
+  const envelope = artifact.envelope;
+  const payloadPlane =
+    envelope.artifactKind === "entity_runtime"
+      ? envelope.payload.entityDescriptor.plane
+      : envelope.artifactKind === "bank_directory"
+        ? envelope.targetPlane
+        : envelope.payload.plane;
+  if (
+    envelope.targetPlane !== deployment.targetPlane ||
+    envelope.targetPlane !== payloadPlane
+  )
+    throw new PublicationContractError(
+      "ARTIFACT_PLANE_INVALID",
+      "Artifact target plane does not match deployment",
+    );
+  if (
+    envelope.releaseId !== deployment.sourceReleaseId ||
+    envelope.releaseNo !== deployment.sourceReleaseNo ||
+    envelope.publicationKey !== deployment.publicationKey
+  )
+    throw new PublicationContractError(
+      "ARTIFACT_COORDINATES_INVALID",
+      "Artifact release coordinates do not match deployment",
+    );
+  if (
+    artifact.manifest.targetPlane !== envelope.targetPlane ||
+    artifact.manifest.releaseId !== envelope.releaseId ||
+    artifact.manifest.artifactKind !== envelope.artifactKind
+  )
+    throw new PublicationContractError(
+      "ARTIFACT_COORDINATES_INVALID",
+      "Artifact manifest coordinates do not match envelope",
+    );
+}
+function projectionJson(artifact: PublicationArtifactDocumentV1) {
+  const envelope = artifact.envelope;
+  if (envelope.artifactKind === "bank_directory") {
+    const b = envelope.payload;
+    return {
+      applied_release_payload: {
+        id: b.id,
+        tenant_id: null,
+        artifact_kind: "bank_directory",
+        payload_schema_version: "1.0.0",
+        payload_hash: b.contentHash,
+        payload_json: b,
+        coordinates: {
+          release_id: b.id,
+          release_no: b.version,
+          publication_key: envelope.publicationKey,
+          plane_code: envelope.targetPlane,
+        },
+        generated_at: b.publishedAt,
+      },
+    };
+  }
+  if (envelope.artifactKind === "business_partner_definition_bundle") {
+    const b = envelope.payload;
+    return {
+      applied_release_payload: {
+        id: b.id,
+        tenant_id: b.tenantId,
+        artifact_kind: envelope.artifactKind,
+        payload_schema_version: b.bundleSchemaVersion,
+        payload_hash: b.bundleHash,
+        payload_json: b.bundle,
+        coordinates: {
+          revision_id: b.revisionId,
+          release_id: b.releaseId,
+          release_no: b.releaseNo,
+          publication_key: b.publicationKey,
+          plane_code: b.plane,
+          bundle_code: b.bundleCode,
+          semantic_version: b.semanticVersion,
+          source_bundle_hash: b.sourceBundleHash,
+          compile_report: b.compileReport,
+        },
+        generated_at: b.generatedAt,
+      },
+    };
+  }
+  const c = envelope.payload.entityContract,
+    d = envelope.payload.entityDescriptor;
+  return {
+    contract: {
+      id: c.id,
+      tenant_id: c.tenantId ?? null,
+      entity_id: c.entityId,
+      entity_code: c.entityCode,
+      release_id: c.releaseId,
+      revision_id: c.revisionId,
+      release_no: c.releaseNo,
+      contract_schema_code: c.contractSchemaCode,
+      contract_schema_version: c.contractSchemaVersion,
+      contract_hash: c.contractHash,
+      contract_json: c.contract,
+      publication_key: c.publicationKey,
+      signature_algorithm: c.signature.algorithm,
+      signing_key_id: c.signature.keyId,
+      signature: c.signature.signature,
+      published_at: c.publishedAt,
+    },
+    descriptor: {
+      id: d.id,
+      plane_code: d.plane,
+      descriptor_kind: d.descriptorKind,
+      descriptor_schema_version: d.descriptorSchemaVersion,
+      source_contract_hash: d.sourceContractHash,
+      compiled_hash: d.compiledHash,
+      compiled_json: d.descriptor,
+      compiler_version: d.compilerVersion,
+      compatibility_level: d.compatibilityLevel,
+      generated_at: d.generatedAt,
+    },
+  };
+}
+function verificationJson(e: PublicationVerificationEvidence) {
+  return {
+    signature_verified: e.signatureVerified,
+    manifest_valid: e.manifestValid,
+    runtime_compatible: e.runtimeCompatible,
+    target_plane: e.targetPlane,
+    ...(e.contractHash ? { contract_hash: e.contractHash } : {}),
+    ...(e.descriptorSourceHash
+      ? { descriptor_source_hash: e.descriptorSourceHash }
+      : {}),
+    ...(e.contractSchemaVersion
+      ? { contract_schema_version: e.contractSchemaVersion }
+      : {}),
+    ...(e.descriptorSchemaVersion
+      ? { descriptor_schema_version: e.descriptorSchemaVersion }
+      : {}),
+    ...(e.payloadHash ? { payload_hash: e.payloadHash } : {}),
+    ...(e.payloadSchemaVersion
+      ? { payload_schema_version: e.payloadSchemaVersion }
+      : {}),
+    ...(e.definitionBundleHash
+      ? { definition_bundle_hash: e.definitionBundleHash }
+      : {}),
+    ...(e.definitionBundleSchemaVersion
+      ? { definition_bundle_schema_version: e.definitionBundleSchemaVersion }
+      : {}),
+    ...(e.signatureAlgorithm
+      ? { signature_algorithm: e.signatureAlgorithm }
+      : {}),
+    ...(e.signingKeyId ? { signing_key_id: e.signingKeyId } : {}),
+  };
+}
+function mapApplied(row: Row): AppliedReleaseProjection {
+  const verifiedAt = nullableDate(row, "verified_at"),
+    activatedAt = nullableDate(row, "activated_at"),
+    failureCode = nullableString(row, "failure_code");
+  return {
+    id: string(row, "id"),
+    publicationKey: string(row, "publication_key"),
+    deploymentId: string(row, "deployment_id"),
+    sourceReleaseId: string(row, "source_release_id"),
+    sourceReleaseNo: number(row, "source_release_no"),
+    artifactHash: string(row, "artifact_hash"),
+    status: string(row, "status") as AppliedReleaseProjection["status"],
+    stagedAt: date(row, "staged_at"),
+    ...(verifiedAt ? { verifiedAt } : {}),
+    ...(activatedAt ? { activatedAt } : {}),
+    ...(failureCode ? { failureCode } : {}),
+  };
+}
+function required(row: Row | undefined, code: string): Row {
+  if (!row) throw new Error(code);
+  return row;
+}
+function string(row: Row, key: string): string {
+  const value = row[key];
+  if (typeof value !== "string")
+    throw new Error(`PROJECTION_ROW_INVALID:${key}`);
+  return value;
+}
+function nullableString(row: Row, key: string): string | undefined {
+  const value = row[key];
+  return typeof value === "string" ? value : undefined;
+}
+function number(row: Row, key: string): number {
+  const value = Number(row[key]);
+  if (!Number.isSafeInteger(value))
+    throw new Error(`PROJECTION_ROW_INVALID:${key}`);
+  return value;
+}
+function date(row: Row, key: string): string {
+  const value = row[key];
+  const parsed = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(parsed.valueOf()))
+    throw new Error(`PROJECTION_ROW_INVALID:${key}`);
+  return parsed.toISOString();
+}
+function nullableDate(row: Row, key: string): string | undefined {
+  return row[key] == null ? undefined : date(row, key);
+}
+function object(row: Row, key: string): Readonly<Record<string, unknown>> {
+  const value = row[key];
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}

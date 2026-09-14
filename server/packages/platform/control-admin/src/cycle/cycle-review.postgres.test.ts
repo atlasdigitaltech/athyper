@@ -48,7 +48,10 @@ describe.runIf(enabled)(
         )
         .execute(admin);
       const ddl = readFileSync(
-        resolve(process.cwd(), "../../../db/ddl/common/control/03_tables.sql"),
+        resolve(
+          import.meta.dirname,
+          "../../../../../db/ddl/common/control/03_tables.sql",
+        ),
         "utf8",
       );
       await sql

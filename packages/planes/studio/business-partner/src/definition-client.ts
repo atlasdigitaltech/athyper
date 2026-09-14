@@ -10,6 +10,12 @@ export interface DefinitionDraft {
   readonly targetPlanes: readonly DefinitionPlane[];
 }
 export interface DefinitionRevision extends DefinitionDraft {
+  readonly preview?: {
+    readonly state: string;
+    readonly savedRevision: string;
+    readonly activeRevision?: string;
+    readonly error?: string;
+  };
   readonly id: string;
   readonly bundleCode: string;
   readonly semanticVersion: string;
@@ -26,6 +32,10 @@ export interface DefinitionPublication {
   readonly jobId: string;
 }
 const root = "/api/studio/business-partner-definitions";
+const preview = createOperation<DefinitionRevision, void>({
+  method: "GET",
+  path: "/api/studio/local-business-partner-preview",
+});
 const author = createOperation<DefinitionRevision, DefinitionDraft>({
   method: "POST",
   path: root,
@@ -47,6 +57,7 @@ const publish = createOperation<
 
 export function createBusinessPartnerDefinitionClient(http: HttpClient) {
   return Object.freeze({
+    preview: () => http.request(preview, {}),
     get: (revisionId: string) => http.request(get, { params: { revisionId } }),
     author: (body: DefinitionDraft, idempotencyKey: string) =>
       http.request(author, { body, idempotencyKey }),

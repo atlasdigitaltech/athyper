@@ -1,0 +1,15 @@
+# Next.js review application: generated service PORT=3000, not runtime API mode.
+http:
+  routers:
+    bp-operation-review:
+      {
+        rule: "Host(`neon.dev.athyper.test`) && (PathPrefix(`/mdg/operation-review`) || Path(`/api/governance/operation-review`))",
+        entryPoints: [web],
+        service: bp-operation-review,
+        priority: 200,
+      }
+  services:
+    bp-operation-review:
+      loadBalancer:
+        healthCheck: { path: /livez, interval: 10s, timeout: 3s }
+        servers: [{ url: http://bp-operation-review:3000 }]

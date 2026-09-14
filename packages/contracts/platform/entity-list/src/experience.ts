@@ -10,6 +10,8 @@ export interface EntityListHeaderV1 {
   readonly description?: EntityLocalizedTextV1;
 }
 export interface PublishedListActionV1 {
+  /** Applies only to navigation into a request, never to command execution. */
+  readonly entryPolicy?: "permission_only";
   readonly key: string;
   readonly label: EntityLocalizedTextV1;
   readonly placement: "primary" | "secondary";
@@ -302,6 +304,7 @@ export function parsePublishedListExperience(
       rules: Object.freeze(rules),
       scopes: Object.freeze(scopes),
       requiresPreflight: action.requiresPreflight,
+      ...(action.entryPolicy === undefined ? {} : { entryPolicy: choice(action.entryPolicy, ["permission_only"] as const) }),
     });
   });
   unique(actions.map((action) => action.key));

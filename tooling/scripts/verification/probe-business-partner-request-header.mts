@@ -1,0 +1,57 @@
+import assert from "node:assert/strict";
+import {writeFileSync} from "node:fs";
+import {chromium} from "@playwright/test";
+const browser=await chromium.launch({headless:true});
+const context=await browser.newContext({ignoreHTTPSErrors:true,storageState:"tests/e2e/.auth/dev/neon/catl.admin.json",viewport:{width:1600,height:1100}});
+const page=await context.newPage();
+const errors:string[]=[];page.on("pageerror",error=>errors.push(error.message));
+const id="740e21e1-39f2-42a3-af55-3998b5a154b5";
+try {
+ await page.goto(`https://neon.dev.athyper.test/mdg/business-partner/requests/${id}/edit`,{waitUntil:"domcontentloaded"});
+ await page.locator('input[name="name"]').waitFor({timeout:30000});
+ await page.getByRole("heading",{name:"Edit business partner request",exact:true}).waitFor();
+ assert.equal(await page.getByRole("heading",{level:1}).count(),1);
+ assert.equal(await page.getByRole("button",{name:"New request",exact:true}).count(),0);
+ assert.match(await page.locator('[aria-current="step"]').innerText(),/Details/);
+ const breadcrumb=page.locator('a').filter({hasText:"BPR-9E1035790BFA47C194C30E09CB23DF37"});
+ assert.ok(await breadcrumb.count()>0,"Breadcrumb uses the saved request number");
+ assert.equal(await page.getByRole("link",{name:"Close",exact:true}).count(),1);
+ assert.equal(await page.locator('.athyper-page-header__description').count(),0,"Instructional subtitle is replaced by context");
+ const row=page.locator('.athyper-page-header__supporting-row');
+ await row.waitFor();
+ assert.match(await row.innerText(),/Supplier/);
+ assert.match(await row.innerText(),/Saved at/);
+ await context.grantPermissions(["clipboard-read","clipboard-write"]);
+ await row.getByRole("button",{name:"Copy request number",exact:true}).click();
+ await row.getByRole("button",{name:"Copied",exact:true}).waitFor();
+ assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),"BPR-9E1035790BFA47C194C30E09CB23DF37");
+ const identity=await page.locator('.a-intake-identity').boundingBox(),status=await page.locator('.a-intake-save-status').boundingBox();
+ assert.ok(identity && status && Math.abs(identity.y+identity.height/2-status.y-status.height/2)<4,"Context and save status share a row");
+ await page.screenshot({path:"governance/policy/reports/business-partner-request-header-edit.dev.png"});
+ await page.setViewportSize({width:390,height:844});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),"No mobile horizontal overflow");
+ await page.setViewportSize({width:1600,height:1100});
+ await page.goto(`https://neon.dev.athyper.test/mdg/business-partner/requests/${id}`,{waitUntil:"domcontentloaded"});
+ await page.getByRole("heading",{name:"DEV Save draft verification 2026-09-13",exact:true}).waitFor();
+ assert.equal(await page.getByRole("heading",{level:1}).count(),1);
+ assert.equal(await page.getByRole("button",{name:"New request",exact:true}).count(),0);
+ await page.screenshot({path:"governance/policy/reports/business-partner-request-header-detail.dev.png"});
+ await page.goto("https://neon.dev.athyper.test/mdg/business-partner/new",{waitUntil:"domcontentloaded"});
+ await page.getByRole("heading",{name:"New business partner request",exact:true}).waitFor();
+ assert.equal(await page.getByRole("heading",{level:1}).count(),1);
+ assert.equal(await page.getByRole("link",{name:"Cancel",exact:true}).count(),1);
+ await page.getByText("Choose a role to begin.",{exact:true}).waitFor();
+ assert.equal(await page.locator(".athyper-page-header__description").count(),0);
+ for(const suffix of ["", "/manage"]) {
+  await page.goto(`https://neon.dev.athyper.test/mdg/business-partner${suffix}`,{waitUntil:"domcontentloaded"});
+  await page.getByRole("heading",{name:"Business Partners",exact:true}).waitFor();
+  const nav=page.locator(".a-management-navigation");await nav.waitFor();
+  assert.equal(await nav.evaluate(el=>getComputedStyle(el).borderRadius),"0px");
+  const h=await page.locator('[data-slot="page-header"]').boundingBox(),n=await nav.boundingBox();
+  assert.ok(h&&n&&n.y-h.y-h.height<=17,"Header/navigation gap is at most 16px");
+  await page.screenshot({path:`governance/policy/reports/business-partner-header-${suffix ? "manage" : "overview"}.dev.png`});
+ }
+ assert.deepEqual(errors,[]);
+ writeFileSync("governance/policy/reports/business-partner-request-header-live.dev.json",JSON.stringify({checkedAt:new Date().toISOString(),passed:true,mode:"live_read_only",newAndEditSingleHeader:true,editStartsAtDetails:true,requestNumberBreadcrumb:true},null,2)+"\n");
+ console.log("Live New/Edit header checks passed; no request mutations.");
+}finally{await context.close();await browser.close()}

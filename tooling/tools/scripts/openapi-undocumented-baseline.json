@@ -34,16 +34,6 @@
       ]
     },
     {
-      "source": "server/packages/platform/audit/src/audit-routes.ts",
-      "owner": "server/packages/platform/audit",
-      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
-      "expiresOn": "2026-10-06",
-      "reason": "Legacy raw Express adapter retained during contract-route migration; tracked as OpenAPI debt and not treated as documented.",
-      "operations": [
-        "GET /api/audit/status"
-      ]
-    },
-    {
       "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
       "owner": "server/packages/platform/collaboration",
       "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
@@ -115,9 +105,7 @@
       "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
       "expiresOn": "2026-10-06",
       "reason": "Legacy raw Express adapter retained during contract-route migration; tracked as OpenAPI debt and not treated as documented.",
-      "operations": [
-        "GET /api/search/documents"
-      ]
+      "operations": ["GET /api/search/documents"]
     },
     {
       "source": "server/packages/platform/workflow/src/workflow-routes.ts",

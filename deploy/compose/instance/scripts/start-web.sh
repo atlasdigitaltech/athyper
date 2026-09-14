@@ -23,4 +23,12 @@ export REDIS_URL SESSION_TOKEN_ENCRYPTION_KEY KEYCLOAK_CLIENT_SECRET KEYCLOAK_BA
 export KEYCLOAK_REALM KEYCLOAK_CLIENT_ID RUNTIME_API_URL PUBLIC_BASE_URL PUBLIC_WEB_URL
 export APP_ORIGIN ALLOWED_HOSTS NODE_ENV PORT
 unset redis_password session_key iam_secret
+# Source mode is restricted to the personal local DEV instance.
+if [ "${ATHYPER_LOCAL_SOURCE:-0}" = 1 ]; then
+  [ "${ATHYPER_DOMAIN_SUFFIX:-}" = dev.athyper.test ] || { echo "Source mode requires local DEV" >&2; exit 1; }
+  export NODE_ENV=development LOCAL_DEVELOPMENT_MANAGED=1
+  cd "${ATHYPER_SOURCE_CHECKOUT:?Source checkout is required}"
+  export LOCAL_DEV_ALLOWED_ORIGIN="$ATHYPER_APP_DOMAIN"
+  exec node "apps/${ATHYPER_APP_ID}/node_modules/next/dist/bin/next" dev "apps/${ATHYPER_APP_ID}" --hostname 0.0.0.0 --port 3000
+fi
 exec node "apps/${ATHYPER_APP_ID}/server.js"

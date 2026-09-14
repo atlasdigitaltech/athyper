@@ -43,6 +43,10 @@ export class KyselyBusinessPartnerOnboardingCycleCoordinator implements Business
   async advance(input: BusinessPartnerOnboardingCycleEvent, transaction: Tx): Promise<void> {
     if(input.eventCode==="business_partner.supplier.activated"&&input.request.targetBusinessPartnerId){await this.advanceForBusinessPartner({tenantId:input.tenantId,principalId:input.principalId,businessPartnerId:input.request.targetBusinessPartnerId,eventCode:input.eventCode,metadata:input.metadata},transaction);return;}
     if (input.request.kind !== "new_partner" || input.request.requestedRole !== "supplier") return;
+    // Internal draft persistence and preflight validation do not start onboarding.
+    // Submission runs in its own transaction and still requires a published template.
+    const internal = input.request.source.kind === "manual";
+    if (internal && ["business_partner.case.created", "business_partner.case.updated", "business_partner.case.validated"].includes(input.eventCode)) return;
     const template = (await sql<Row>`SELECT revision.*,type.code type_code,type.name type_name
       FROM control.cycle_type type
       JOIN control.cycle_template_revision revision ON revision.tenant_id=type.tenant_id AND revision.cycle_type_id=type.id
@@ -59,6 +63,8 @@ export class KyselyBusinessPartnerOnboardingCycleCoordinator implements Business
     const idempotencyKey = `business-partner-onboarding:${input.request.id}`;
     let run = (await sql<Row>`SELECT * FROM governance.cycle_run WHERE tenant_id=${input.tenantId}::uuid AND idempotency_key=${idempotencyKey} FOR UPDATE`.execute(transaction)).rows[0];
     if (!run) {
+      if (internal && input.eventCode !== "business_partner.case.submitted")
+        throw new MasterDataError(409, "BUSINESS_PARTNER_ONBOARDING_NOT_STARTED", "Submit the saved request before advancing onboarding.");
       const runId = randomUUID();
       const taskIds = new Map(tasks.map(task => [task.id, randomUUID()]));
       await sql`INSERT INTO governance.cycle_run(id,tenant_id,cycle_type_id,template_revision_id,template_revision_number,template_hash,code,name,started_at,owner_principal_id,idempotency_key,data,status,status_changed_at,status_changed_by,created_by,updated_at,updated_by)
@@ -121,7 +127,7 @@ export class KyselyBusinessPartnerOnboardingCycleCoordinator implements Business
 }
 
 function matches(taskCode: string, input: BusinessPartnerOnboardingCycleEvent): boolean {
-  if (taskCode === "INVITATION") return input.eventCode === "business_partner_invitation.supplier.accepted" || (input.eventCode === "business_partner.case.created" && input.request.registrationMode !== "self_service");
+  if (taskCode === "INVITATION") return input.eventCode === "business_partner_invitation.supplier.accepted" || ((input.eventCode === "business_partner.case.created" || (input.request.source.kind === "manual" && input.eventCode === "business_partner.case.submitted")) && input.request.registrationMode !== "self_service");
   if (taskCode === "REGISTRATION" || taskCode === "DUPLICATE_REVIEW") return input.eventCode === "business_partner.case.submitted";
   return taskCode === "QUALIFICATION" && input.eventCode === "business_partner.case.approved";
 }

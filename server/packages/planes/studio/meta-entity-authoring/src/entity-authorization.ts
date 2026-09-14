@@ -1,3 +1,4 @@
+import { compileEntityIntakeSurfaces } from "@athyper/contract-platform-entity-runtime";
 import {
   entityScopeResolvers,
   parseEntityAuthorizationRuntime,
@@ -70,10 +71,13 @@ export function compileEntityAuthorization(graph: MetaEntityGraph) {
         ];
       }),
   );
+  // Only validated presentation-only inputs are outside record field-policy coverage.
+  // Stored/projected/computed fields and unbound runtime fields still require coverage.
+  const intakeInputs = new Set(compileEntityIntakeSurfaces(graph as unknown as Record<string, unknown>).flatMap(s => s.sections.flatMap(section => section.fields.map(f => f.key))));
   return parseEntityAuthorizationProfile(profile, {
     entityCode: graph.entity.entityCode,
     fields: graph.fields
-      .filter((item) => item.status !== "deprecated")
+      .filter((item) => item.status !== "deprecated" && !(item.valueOrigin === "runtime" && intakeInputs.has(item.fieldKey)))
       .map((item) => item.fieldKey),
     operations,
   });

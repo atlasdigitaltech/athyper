@@ -27,7 +27,13 @@ export async function readBusinessPartner360ExplainabilitySection(
     : activity(input, tx);
 }
 async function requests(input: Input, tx: Tx) {
-  const ids=await authorizedCaseIds(input,tx),authorization=ids===undefined?sql`TRUE`:ids.length?sql`governed_case.id IN (${sql.join(ids.map(id=>sql`${id}::uuid`))})`:sql`FALSE`;
+  const ids = await authorizedCaseIds(input, tx),
+    authorization =
+      ids === undefined
+        ? sql`TRUE`
+        : ids.length
+          ? sql`governed_case.id IN (${sql.join(ids.map((id) => sql`${id}::uuid`))})`
+          : sql`FALSE`;
   const pageSize = Math.max(1, input.limit - 1),
     [rows, counts] = await Promise.all([
       sql<Row>`SELECT governed_case.id::text,governed_case.case_code request_no,governed_case.operation_code request_kind,COALESCE(snapshot.payload_json->>'sourceKind','governed_case') source_kind,snapshot.payload_json->>'requestedRole' requested_role,governed_case.status,NULLIF(workflow.cycle_run_id::text,'') workflow_request_id,governed_case.created_at,governed_case.created_by::text,workflow.submitted_at,workflow.submitted_by,workflow.approved_at,workflow.approved_by,materialized.completed_at applied_at,materialized.completed_by::text applied_by,materialized.result_code application_result_kind,NULL::text application_reason_code,COALESCE(evidence.items,'[]'::jsonb) evidence,COALESCE(materialized.items,'[]'::jsonb) materialization FROM document.entity_case governed_case JOIN snapshot.entity_snapshot snapshot ON snapshot.tenant_id=governed_case.tenant_id AND snapshot.snapshot_id=governed_case.current_snapshot_id LEFT JOIN LATERAL(SELECT max(subject.cycle_run_id::text) cycle_run_id,min(command.recorded_at)FILTER(WHERE command.command_code='entity.case.submit')submitted_at,min(command.recorded_by::text)FILTER(WHERE command.command_code='entity.case.submit')submitted_by,min(command.recorded_at)FILTER(WHERE command.command_code='entity.case.decision'AND command.after_status='approved')approved_at,min(command.recorded_by::text)FILTER(WHERE command.command_code='entity.case.decision'AND command.after_status='approved')approved_by FROM document.entity_case_command_evidence command LEFT JOIN governance.cycle_subject subject ON subject.tenant_id=command.tenant_id AND subject.entity_case_id=command.entity_case_id WHERE command.tenant_id=governed_case.tenant_id AND command.entity_case_id=governed_case.id)workflow ON true LEFT JOIN LATERAL(SELECT jsonb_agg(jsonb_build_object('id',item.id,'kind','command','classification','governed','verificationStatus',item.outcome,'snapshotId',item.result_snapshot_id,'createdAt',item.recorded_at)ORDER BY item.recorded_at,item.id)items FROM document.entity_case_command_evidence item WHERE item.tenant_id=governed_case.tenant_id AND item.entity_case_id=governed_case.id)evidence ON true LEFT JOIN LATERAL(SELECT max(item.completed_at)completed_at,max(item.completed_by::text)completed_by,max(item.result_code)result_code,jsonb_agg(jsonb_build_object('id',item.id,'childKind','authority','definitionFieldCode',item.materializer_code,'targetType',governed_case.entity_code,'targetId',governed_case.target_entity_id,'appliedAt',item.completed_at)ORDER BY item.attempt_no)FILTER(WHERE item.status='succeeded')items FROM document.entity_case_materialization item WHERE item.tenant_id=governed_case.tenant_id AND item.entity_case_id=governed_case.id)materialized ON true WHERE governed_case.tenant_id=${input.tenantId}::uuid AND governed_case.entity_code='master.business_partner'AND governed_case.target_entity_id=${input.businessPartnerId}::uuid AND ${authorization} AND governed_case.created_at<=${input.cursor.snapshotAt}::timestamptz ${after(input, "governed_case.created_at", "governed_case.id", "request")} ORDER BY governed_case.created_at DESC,governed_case.id DESC LIMIT ${pageSize + 1}`.execute(
@@ -40,7 +46,14 @@ async function requests(input: Input, tx: Tx) {
     page = rows.rows.slice(0, pageSize),
     last = page.at(-1),
     items = page.map(mapRequest);
-  if(ids)for(const id of ids)if(!(await input.authorizeCase!(id)))throw new MasterDataError(403,"BP_CHILD_AUTHORIZATION_CHANGED","Case authorization changed during aggregation");
+  if (ids)
+    for (const id of ids)
+      if (!(await input.authorizeCase!(id)))
+        throw new MasterDataError(
+          403,
+          "BP_CHILD_AUTHORIZATION_CHANGED",
+          "Case authorization changed during aggregation",
+        );
   return {
     items,
     summary: {
@@ -63,9 +76,21 @@ async function requests(input: Input, tx: Tx) {
   };
 }
 async function activity(input: Input, tx: Tx) {
+  const ids = await authorizedCaseIds(input, tx);
+  // A parent/context match must not admit an independently owned case event.
+  // Constrain before pagination so denied events cannot affect rows or cursors.
+  const authorization =
+    ids === undefined
+      ? sql`TRUE`
+      : sql`
+    (audit.entity_type <> 'entity_case' OR ${
+      ids.length
+        ? sql`audit.entity_id IN (${sql.join(ids.map((id) => sql`${id}::uuid`))})`
+        : sql`FALSE`
+    })`;
   const pageSize = Math.max(1, input.limit - 1),
     rows = (
-      await sql<Row>`SELECT audit.id::text,audit.event_code,audit.occurred_at,audit.actor_principal_id::text actor_id,'audit' source,audit.source_service,audit.request_id,audit.entity_type,audit.entity_id::text,audit.outcome::text,audit.changed_fields FROM audit.audit_log audit WHERE audit.tenant_id=${input.tenantId}::uuid AND audit.occurred_at<=${input.cursor.snapshotAt}::timestamptz AND(audit.event_code LIKE 'business_partner.%'OR audit.event_code LIKE 'entity.case.%')AND(audit.entity_type='business_partner'AND audit.entity_id=${input.businessPartnerId}::uuid OR audit.context->>'businessPartnerId'=${input.businessPartnerId} OR audit.entity_type='entity_case'AND EXISTS(SELECT 1 FROM document.entity_case governed_case WHERE governed_case.tenant_id=audit.tenant_id AND governed_case.id=audit.entity_id AND governed_case.entity_code='master.business_partner'AND governed_case.target_entity_id=${input.businessPartnerId}::uuid))${after(input, "audit.occurred_at", "audit.id", "audit")} ORDER BY audit.occurred_at DESC,audit.id DESC LIMIT ${pageSize + 1}`.execute(
+      await sql<Row>`SELECT audit.id::text,audit.event_code,audit.occurred_at,audit.actor_principal_id::text actor_id,'audit' source,audit.source_service,audit.request_id,audit.entity_type,audit.entity_id::text,audit.outcome::text,audit.changed_fields FROM audit.audit_log audit WHERE audit.tenant_id=${input.tenantId}::uuid AND ${authorization} AND audit.occurred_at<=${input.cursor.snapshotAt}::timestamptz AND(audit.event_code LIKE 'business_partner.%'OR audit.event_code LIKE 'entity.case.%')AND(audit.entity_type='business_partner'AND audit.entity_id=${input.businessPartnerId}::uuid OR audit.context->>'businessPartnerId'=${input.businessPartnerId} OR audit.entity_type='entity_case'AND EXISTS(SELECT 1 FROM document.entity_case governed_case WHERE governed_case.tenant_id=audit.tenant_id AND governed_case.id=audit.entity_id AND governed_case.entity_code='master.business_partner'AND governed_case.target_entity_id=${input.businessPartnerId}::uuid))${after(input, "audit.occurred_at", "audit.id", "audit")} ORDER BY audit.occurred_at DESC,audit.id DESC LIMIT ${pageSize + 1}`.execute(
         tx,
       )
     ).rows,
@@ -95,6 +120,14 @@ async function activity(input: Input, tx: Tx) {
         evidenceHref: evidenceHref(row, input.businessPartnerId),
       } satisfies BusinessPartner360RawActivity),
     );
+  if (ids)
+    for (const id of ids)
+      if (!(await input.authorizeCase!(id)))
+        throw new MasterDataError(
+          403,
+          "BP_CHILD_AUTHORIZATION_CHANGED",
+          "Case authorization changed during activity retrieval",
+        );
   return {
     items,
     ...(rows.length > pageSize && last
@@ -233,9 +266,26 @@ function jsonArray(value: unknown): Record<string, unknown>[] {
     : [];
 }
 
-async function authorizedCaseIds(input:Input,tx:Tx):Promise<string[]|undefined>{
- if(!input.authorizeCase)return undefined;
- const rows=(await sql<{id:string}>`SELECT id::text FROM document.entity_case WHERE tenant_id=${input.tenantId}::uuid AND entity_code='master.business_partner' AND target_entity_id=${input.businessPartnerId}::uuid ORDER BY id LIMIT 2001`.execute(tx)).rows;
- if(rows.length>2000)throw new MasterDataError(503,"BP_CHILD_AUTHORIZATION_CAPACITY","Case authorization exceeds its bounded capacity");
- const ids=[];for(const row of rows)if(await input.authorizeCase(row.id))ids.push(row.id);return ids;
+export async function authorizedCaseIds(
+  input: Pick<Input, "authorizeCase" | "tenantId" | "businessPartnerId">,
+  tx: Tx,
+): Promise<string[] | undefined> {
+  if (!input.authorizeCase) return undefined;
+  const rows = (
+    await sql<{
+      id: string;
+    }>`SELECT id::text FROM document.entity_case WHERE tenant_id=${input.tenantId}::uuid AND entity_code='master.business_partner' AND target_entity_id=${input.businessPartnerId}::uuid ORDER BY id LIMIT 2001`.execute(
+      tx,
+    )
+  ).rows;
+  if (rows.length > 2000)
+    throw new MasterDataError(
+      503,
+      "BP_CHILD_AUTHORIZATION_CAPACITY",
+      "Case authorization exceeds its bounded capacity",
+    );
+  const ids = [];
+  for (const row of rows)
+    if (await input.authorizeCase(row.id)) ids.push(row.id);
+  return ids;
 }

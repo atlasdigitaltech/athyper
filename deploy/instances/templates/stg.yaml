@@ -16,7 +16,7 @@ spec:
   providers:
     search: internal
     secrets: file
-    objectStorage: internal
+    objectStorage: external
     mail: external
     push: external
     scanner: internal

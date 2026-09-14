@@ -26,6 +26,13 @@ export function compileListExperience(
     defaultLocale,
     values: { [defaultLocale]: value },
   });
+  const entryPolicies = (config?.["operationEntryPolicies"] ?? {}) as Record<string, unknown>;
+  if (!entryPolicies || typeof entryPolicies !== "object" || Array.isArray(entryPolicies))
+    throw new TypeError("Request entry policies must be an object");
+  for (const [key, policy] of Object.entries(entryPolicies)) {
+    if (policy !== "permission_only" || !graph.operations.some(op => op.operationKey === key && op.status !== "deprecated" && op.inputSurfaceKey))
+      throw new TypeError("Request entry policy must reference an active operation with an input surface");
+  }
   const labels = (config?.["actionLabels"] ?? {}) as Record<string, unknown>;
   const routes = (config?.["routes"] ?? []) as {
     surfaceKey: string;
@@ -80,6 +87,7 @@ export function compileListExperience(
           : binding.interactionTarget,
         position: binding.position,
         operationKey: operation.operationKey,
+        ...(entryPolicies[operation.operationKey] === undefined ? {} : { entryPolicy: entryPolicies[operation.operationKey] }),
         targetSurfaceKey,
         permissions: (graph.operationPermissions ?? [])
           .filter(

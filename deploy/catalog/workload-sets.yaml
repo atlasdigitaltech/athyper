@@ -8,7 +8,29 @@ sets:
     activation: preset
     implementation: composed
     hostProfiles: [laptop-32, laptop-64, workstation-128]
-    services: [gateway, gateway-outage, db, dbpool-apps, dbpool-session, memorycache, objectstorage, objectstorage-init, iam, neon-web, mesh-web, studio-web, api, worker, scheduler, virusscan, docrender, docparser, searchcore, mailtrap]
+    services:
+      [
+        gateway,
+        gateway-outage,
+        db,
+        dbpool-apps,
+        dbpool-session,
+        memorycache,
+        objectstorage,
+        objectstorage-init,
+        iam,
+        neon-web,
+        mesh-web,
+        studio-web,
+        api,
+        worker,
+        scheduler,
+        virusscan,
+        docrender,
+        docparser,
+        searchcore,
+        mailtrap,
+      ]
     rationale: Per-instance application and data plane required for DEV parity and isolated QA/STG execution.
 
   - id: instance-operator-tools
@@ -16,7 +38,7 @@ sets:
     activation: explicit-profile
     implementation: composed
     hostProfiles: [laptop-32, laptop-64, workstation-128]
-    services: [memorycache-jobs, secretstore, dbconsole, queueconsole, analyticsboard]
+    services: [secretstore, dbconsole, queueconsole, analyticsboard]
     rationale: Optional stateful or privileged tools remain instance-scoped and loopback-only with explicit activation.
 
   - id: instance-telemetry-exporter

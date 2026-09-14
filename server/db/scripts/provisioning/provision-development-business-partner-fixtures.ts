@@ -20,8 +20,7 @@ export interface DevelopmentBusinessPartnerFixture {
   readonly actorCode: "athyper.admin" | "catl.admin";
   readonly code: string;
   readonly name: string;
-  readonly displayName: string;
-  readonly legalName: string;
+  readonly aliases: readonly [string, string];
   readonly countryCode: string;
   readonly status: "active" | "draft";
   readonly supplierId: string;
@@ -377,9 +376,9 @@ export async function provisionDevelopmentBusinessPartnerFixtures(options: {
       await client.query(
         `
         INSERT INTO master.business_partner (
-          id,tenant_id,code,name,display_name,legal_name,partner_category,
+          id,tenant_id,code,name,partner_category,
           registration_country_code,metadata,status,created_by
-        ) VALUES ($1::uuid,$2::uuid,$3,$4,$5,$6,'organization',$7,$8::jsonb,$9,$10::uuid)
+        ) VALUES ($1::uuid,$2::uuid,$3,$4,'organization',$5,$6::jsonb,$7,$8::uuid)
         ON CONFLICT DO NOTHING
       `,
         [
@@ -387,8 +386,6 @@ export async function provisionDevelopmentBusinessPartnerFixtures(options: {
           coordinate.tenantId,
           fixture.code,
           fixture.name,
-          fixture.displayName,
-          fixture.legalName,
           fixture.countryCode,
           metadata,
           fixture.status,
@@ -751,8 +748,8 @@ async function provisionDevelopmentBusinessPartner360Details(
       coordinate.tenantId,
       fixture.id,
       coordinate.actorId,
-      fixture.name,
-      fixture.displayName,
+      fixture.aliases[0],
+      fixture.aliases[1],
     ],
   );
   await client.query(
@@ -958,7 +955,7 @@ async function provisionDevelopmentBusinessPartner360Details(
       fixture.countryCode,
       profile.bankCode,
       profile.bankLabel,
-      fixture.legalName,
+      fixture.name,
       profile.accountType,
       profile.accountNumber,
       profile.accountLast4,
@@ -1262,9 +1259,9 @@ function partner(
   tenantCode: DevelopmentBusinessPartnerFixture["tenantCode"],
   actorCode: DevelopmentBusinessPartnerFixture["actorCode"],
   code: string,
+  tradingAlias: string,
+  searchAlias: string,
   name: string,
-  displayName: string,
-  legalName: string,
   countryCode: string,
   status: DevelopmentBusinessPartnerFixture["status"],
   organizationCodes: readonly string[],
@@ -1275,8 +1272,7 @@ function partner(
     actorCode,
     code,
     name,
-    displayName,
-    legalName,
+    aliases: Object.freeze([tradingAlias, searchAlias] as const),
     countryCode,
     status,
     supplierId: deterministicUuid(`supplier:${tenantCode}:${code}`),

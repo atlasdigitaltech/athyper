@@ -1,31 +1,80 @@
 http:
   routers:
-    bp-operation-review: { rule: "Host(`neon.dev.athyper.test`) && (PathPrefix(`/mdg/operation-review`) || Path(`/api/governance/operation-review`))", entryPoints: [web], service: bp-operation-review, priority: 200 }
-    bp-role-review: { rule: "Host(`neon.dev.athyper.test`) && (PathPrefix(`/mdg/authorization-review`) || Path(`/api/governance/named-role-review`))", entryPoints: [web], service: bp-role-review, priority: 200 }
-    iam: { rule: Host(`iam.dev.athyper.test`), entryPoints: [web], service: iam }
-    api: { rule: Host(`api.dev.athyper.test`), entryPoints: [web], service: api-failover }
-    neon: { rule: Host(`neon.dev.athyper.test`), entryPoints: [web], service: neon-failover }
-    neon-maintenance-preview: { rule: "Host(`neon.dev.athyper.test`) && PathPrefix(`/__maintenance-preview`)", entryPoints: [web], service: maintenance, priority: 10000 }
-    neon-outage-preview: { rule: "Host(`neon.dev.athyper.test`) && PathPrefix(`/__outage-preview`)", entryPoints: [web], service: outage, priority: 10000 }
-    mesh: { rule: Host(`mesh.dev.athyper.test`), entryPoints: [web], service: mesh-failover }
-    studio: { rule: Host(`studio.dev.athyper.test`), entryPoints: [web], service: studio-failover }
-    mail: { rule: Host(`mail.dev.athyper.test`), entryPoints: [web], service: mail }
-    minio: { rule: Host(`minio.dev.athyper.test`), entryPoints: [web], service: minio }
-    objects: { rule: Host(`objects.dev.athyper.test`), entryPoints: [web], service: objects }
-    fallback: { rule: PathPrefix(`/`), entryPoints: [web], service: problem, priority: 1 }
+    iam:
+      { rule: Host(`iam.dev.athyper.test`), entryPoints: [web], service: iam }
+    api:
+      {
+        rule: Host(`api.dev.athyper.test`),
+        entryPoints: [web],
+        service: api-failover,
+      }
+    neon:
+      {
+        rule: Host(`neon.dev.athyper.test`),
+        entryPoints: [web],
+        service: neon-failover,
+      }
+    neon-maintenance-preview:
+      {
+        rule: "Host(`neon.dev.athyper.test`) && PathPrefix(`/__maintenance-preview`)",
+        entryPoints: [web],
+        service: maintenance,
+        priority: 10000,
+      }
+    neon-outage-preview:
+      {
+        rule: "Host(`neon.dev.athyper.test`) && PathPrefix(`/__outage-preview`)",
+        entryPoints: [web],
+        service: outage,
+        priority: 10000,
+      }
+    mesh:
+      {
+        rule: Host(`mesh.dev.athyper.test`),
+        entryPoints: [web],
+        service: mesh-failover,
+      }
+    studio:
+      {
+        rule: Host(`studio.dev.athyper.test`),
+        entryPoints: [web],
+        service: studio-failover,
+      }
+    mail:
+      { rule: Host(`mail.dev.athyper.test`), entryPoints: [web], service: mail }
+    storage-console:
+      rule: 'Host(`objects.dev.athyper.test`) && (Path(`/console`) || PathPrefix(`/console/`))'
+      entryPoints: [web]
+      service: storage-console
+      priority: 200
+    objects-browser:
+      # Only unsigned browser navigation receives HTML; S3 clients keep the API.
+      rule: 'Host(`objects.dev.athyper.test`) && Path(`/`) && Method(`GET`) && HeaderRegexp(`Accept`, `text/html`) && !HeaderRegexp(`Authorization`, `.+`) && !QueryRegexp(`X-Amz-Signature`, `.*`) && !QueryRegexp(`Signature`, `.*`)'
+      entryPoints: [web]
+      service: objects-browser
+      priority: 100
+    objects:
+      {
+        rule: Host(`objects.dev.athyper.test`),
+        entryPoints: [web],
+        service: objects,
+      }
+    fallback:
+      {
+        rule: PathPrefix(`/`),
+        entryPoints: [web],
+        service: problem,
+        priority: 1,
+      }
   services:
-    bp-operation-review:
-      loadBalancer:
-        healthCheck: { path: /livez, interval: 10s, timeout: 3s }
-        servers: [{ url: http://bp-operation-review:3000 }]
-    bp-role-review:
-      loadBalancer:
-        healthCheck: { path: /livez, interval: 10s, timeout: 3s }
-        servers: [{ url: http://bp-role-review:3000 }]
-    api-failover: { failover: { healthCheck: {}, service: api, fallback: problem } }
-    neon-failover: { failover: { healthCheck: {}, service: neon, fallback: outage } }
-    mesh-failover: { failover: { healthCheck: {}, service: mesh, fallback: outage } }
-    studio-failover: { failover: { healthCheck: {}, service: studio, fallback: outage } }
+    api-failover:
+      { failover: { healthCheck: {}, service: api, fallback: problem } }
+    neon-failover:
+      { failover: { healthCheck: {}, service: neon, fallback: outage } }
+    mesh-failover:
+      { failover: { healthCheck: {}, service: mesh, fallback: outage } }
+    studio-failover:
+      { failover: { healthCheck: {}, service: studio, fallback: outage } }
     iam: { loadBalancer: { servers: [{ url: http://iam:8080 }] } }
     api:
       loadBalancer:
@@ -44,8 +93,11 @@ http:
         healthCheck: { path: /, interval: 10s, timeout: 3s }
         servers: [{ url: http://studio-web:3000 }]
     mail: { loadBalancer: { servers: [{ url: http://mailtrap:8025 }] } }
-    minio: { loadBalancer: { servers: [{ url: http://objectstorage:9001 }] } }
     objects: { loadBalancer: { servers: [{ url: http://objectstorage:9000 }] } }
+    objects-browser:
+      { loadBalancer: { servers: [{ url: http://gateway-outage:8083 }] } }
+    storage-console:
+      { loadBalancer: { servers: [{ url: http://gateway-outage:8083 }] } }
     outage:
       loadBalancer:
         healthCheck: { path: /healthz, interval: 10s, timeout: 3s }

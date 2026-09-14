@@ -16,7 +16,7 @@
     "@athyper/server-foundation": "workspace:*",
     "@aws-sdk/client-sqs": "^3.1117.0",
     "@aws-sdk/client-sesv2": "^3.1117.0",
-    "nodemailer": "^9.0.5",
+    "nodemailer": "^9.1.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

@@ -69,10 +69,10 @@ GRANT ALL PRIVILEGES ON ops.record_import_session,ops.record_import_chunk,ops.re
 REVOKE ALL ON ops.record_transfer_retention_policy FROM PUBLIC;
 GRANT SELECT ON ops.record_transfer_retention_policy TO athyperapp;
 GRANT ALL PRIVILEGES ON ops.record_transfer_retention_policy TO athyperadmin;
-REVOKE ALL ON FUNCTION ops.record_transfer_cleanup_candidates(timestamptz,integer) FROM PUBLIC;
-REVOKE ALL ON FUNCTION ops.acknowledge_record_transfer_cleanup(uuid,text,uuid,text,text,timestamptz) FROM PUBLIC;
+REVOKE ALL ON FUNCTION ops.record_transfer_cleanup_candidates(text,timestamptz,integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION ops.acknowledge_record_transfer_cleanup(text,uuid,text,uuid,text,text,timestamptz) FROM PUBLIC;
 REVOKE ALL ON FUNCTION ops.record_transfer_stuck_counts(timestamptz,integer) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION ops.record_transfer_cleanup_candidates(timestamptz,integer),ops.acknowledge_record_transfer_cleanup(uuid,text,uuid,text,text,timestamptz),ops.record_transfer_stuck_counts(timestamptz,integer) TO athyperapp,athyperadmin;
+GRANT EXECUTE ON FUNCTION ops.record_transfer_cleanup_candidates(text,timestamptz,integer),ops.acknowledge_record_transfer_cleanup(text,uuid,text,uuid,text,text,timestamptz),ops.record_transfer_stuck_counts(timestamptz,integer) TO athyperapp,athyperadmin;
 REVOKE ALL ON ops.control_runtime_command_submission,ops.control_runtime_command_approval_request,
  ops.control_runtime_command_approval_decision,ops.control_runtime_command_history FROM PUBLIC;
 REVOKE ALL ON FUNCTION ops.trg_guard_control_runtime_evidence() FROM PUBLIC;

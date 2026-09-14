@@ -36,7 +36,7 @@ for (const plane of ["neon", "mesh", "studio"]) {
     await db.query(
       readFileSync(
         root +
-          "/server/db/migrations/20260907_atlas_conversation_runtime_access.sql",
+          "/server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260907_atlas_conversation_runtime_access.sql",
         "utf8",
       ),
     );

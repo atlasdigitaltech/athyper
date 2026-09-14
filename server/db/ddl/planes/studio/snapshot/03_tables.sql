@@ -457,9 +457,10 @@ CREATE TABLE snapshot.business_partner_case_contract_revision (
     tenant_id uuid NOT NULL,
     entity_id uuid NOT NULL,
     publication_key text NOT NULL,
-    previous_contract_id uuid NOT NULL,
-    previous_contract_hash text NOT NULL CHECK (previous_contract_hash ~ '^[a-f0-9]{64}$'),
-    previous_release_no bigint NOT NULL CHECK (previous_release_no > 0),
+    previous_contract_id uuid,
+    previous_contract_hash text CHECK (previous_contract_hash ~ '^[a-f0-9]{64}$'),
+    previous_release_no bigint NOT NULL CHECK (previous_release_no >= 0),
+    CHECK ((previous_contract_id IS NULL AND previous_contract_hash IS NULL AND previous_release_no = 0) OR (previous_contract_id IS NOT NULL AND previous_contract_hash IS NOT NULL AND previous_release_no > 0)),
     contract_json jsonb NOT NULL CHECK (
         jsonb_typeof(contract_json) = 'object'
         AND pg_column_size(contract_json) <= 262144

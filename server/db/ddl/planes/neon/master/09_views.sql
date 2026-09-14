@@ -362,11 +362,9 @@ WITH supplier_role AS (
     bp.tenant_id,
     bp.code,
     bp.name,
-    bp.display_name,
     bp.partner_category,
     bp.ownership_class,
     bp.legal_classification,
-    bp.legal_name,
     bp.legal_form,
     NULL::text AS registration_no,
     bp.registration_country_code,
@@ -429,7 +427,7 @@ WITH supplier_role AS (
     COALESCE(sr.supplier_active_scope_count, 0) + COALESCE(cr.customer_active_scope_count, 0) AS active_scope_count,
     COALESCE(sr.supplier_blocked_scope_count, 0) + COALESCE(cr.customer_blocked_scope_count, 0) AS blocked_scope_count,
     COALESCE(sr.supplier_blocked_scope_count, 0) > 0 OR COALESCE(cr.customer_blocked_scope_count, 0) > 0 OR sr.supplier_status::text = 'suspended' OR cr.customer_status::text = 'suspended' AS is_blocked,
-    lower(concat_ws(' '::text, bp.code, bp.name, bp.display_name, bp.legal_name, sr.supplier_code, sr.supplier_type, cr.customer_code, cr.customer_type, array_to_string(COALESCE((SELECT array_agg(alias.alias_name ORDER BY alias.is_primary DESC,alias.alias_name)
+    lower(concat_ws(' '::text, bp.code, bp.name, sr.supplier_code, sr.supplier_type, cr.customer_code, cr.customer_type, array_to_string(COALESCE((SELECT array_agg(alias.alias_name ORDER BY alias.is_primary DESC,alias.alias_name)
       FROM master.business_partner_alias alias
       WHERE alias.tenant_id=bp.tenant_id AND alias.business_partner_id=bp.id
         AND alias.status='active' AND alias.effective_from<=CURRENT_DATE

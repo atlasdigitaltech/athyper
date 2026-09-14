@@ -118,6 +118,9 @@ CREATE INDEX attachment_derivative_ready_idx
 CREATE INDEX attachment_derivative_pending_idx
     ON document.attachment_derivative (created_at)
     WHERE status IN ('pending', 'failed') AND attempt_count < 5;
+CREATE INDEX attachment_derivative_scan_pending_idx
+    ON document.attachment_derivative (tenant_id, id)
+    WHERE status = 'ready' AND scanned_at IS NULL;
 
 -- multipart_upload_part indexes
 CREATE INDEX multipart_upload_part_upload_idx

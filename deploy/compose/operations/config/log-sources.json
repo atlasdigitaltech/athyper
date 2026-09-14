@@ -1,0 +1,6 @@
+{
+  "instances": [
+    { "instance": "dev", "environment": "development" },
+    { "instance": "qa", "environment": "testing" }
+  ]
+}

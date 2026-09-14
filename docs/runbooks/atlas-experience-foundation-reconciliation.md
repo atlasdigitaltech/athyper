@@ -25,8 +25,9 @@ application's authoring-role selection or install a published agent profile.
 
 ## Forward migration
 
-`20260910_experience_foundation.sql` is registered once in each plane's migration
-manifest. It runs atomically and serializes concurrent executions with a
+`20260910_experience_foundation.sql` is now retained under
+`server/db/scripts/operations/upgrades/legacy-baseline-20260914/`, outside automatic
+startup manifests. Fresh installations use canonical DDL. The legacy upgrade runs atomically and serializes concurrent executions with a
 transaction advisory lock. It constructs temporary expected tables from the
 canonical blocks, then compares existing tables before creating anything
 persistent.
@@ -61,16 +62,17 @@ pnpm --dir server/db run db:verify:ddl-model
 The integration command creates its own randomly named, labelled PostgreSQL
 container with no network and temporary database storage. It accepts no deployed
 test target. It runs the full Studio, Neon and Mesh foundation manifests, tests
-absent and partially installed schemas, restores schema-only DEV copies into the
+absent and partially installed schemas, constructs pinned legacy schemas in the
 isolated target, and exercises grants/RLS/lifecycle behavior with synthetic rows.
-Cleanup removes only the container with the matching test label. DEV is accessed
-only by schema-only `pg_dump`; no data is exported and no live migration is run.
+Cleanup removes only the container with the matching test label. It does not access
+DEV/QA or export their schemas/data.
 
-For this pending migration, `db:generate:experience-foundation` regenerates it
-from the marked canonical blocks and `db:verify:experience-foundation` detects
-divergence. Once a migration has shipped, preserve it and deliver subsequent
-changes through a new migration; do not regenerate a deployed migration to
-silently alter its checksum.
+`db:generate:experience-foundation` writes a new unapplied candidate under
+`~/.athyper/candidates/sql-upgrade-<id>/`. `db:verify:experience-foundation` validates
+canonical blocks and foundation coverage. Neither rewrites the retained legacy SQL.
+Review new candidates before adding a genuinely new post-baseline upgrade. Preserve
+existing migration checksums. The integration test still exercises the frozen
+legacy upgrade against isolated older schemas.
 
 See the [PostgreSQL verification receipt](../architecture/business-partner/evidence/atlas-f1-experience-foundation-20260910.json).
 QA rollout remains part of its normal reviewed deployment/migration sequence;

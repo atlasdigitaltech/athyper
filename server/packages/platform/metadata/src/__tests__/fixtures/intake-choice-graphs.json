@@ -1,0 +1,325 @@
+{
+  "business_partner": {
+    "contractSchema": "athyper.meta-entity-contract/2.1",
+    "entity": {
+      "entityCode": "business_partner"
+    },
+    "fields": [
+      {
+        "id": "889c2cdf-dbd2-5e4c-8e2a-ea9cc7bf3538",
+        "fieldKey": "requested_role",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "max_length": 127
+        },
+        "valueOrigin": "runtime",
+        "writeMode": "mutable",
+        "cardinality": "one",
+        "validationSpec": {
+          "schema_version": 1,
+          "rules": [
+            {
+              "code": "allowed_choices",
+              "kind": "allowed_values",
+              "parameters": {
+                "values": [
+                  "supplier",
+                  "customer"
+                ]
+              }
+            }
+          ]
+        },
+        "status": "active"
+      }
+    ],
+    "operations": [],
+    "surfaceSections": [
+      {
+        "id": "3476f9e7-afe9-54ae-8ced-3ecfdc457389",
+        "entitySurfaceId": "3c2034e6-3410-5627-8676-9a6f32d87767",
+        "sectionKey": "role",
+        "title": "Choose a role",
+        "position": 0,
+        "columnCount": 1
+      }
+    ],
+    "surfaceFieldBindings": [
+      {
+        "id": "dd030024-3640-5185-874f-445546fc0027",
+        "entitySurfaceId": "3c2034e6-3410-5627-8676-9a6f32d87767",
+        "entitySurfaceSectionId": "3476f9e7-afe9-54ae-8ced-3ecfdc457389",
+        "entityFieldId": "889c2cdf-dbd2-5e4c-8e2a-ea9cc7bf3538",
+        "bindingKey": "requested_role",
+        "position": 0,
+        "labelOverride": "Requested role",
+        "widgetKey": "choice_cards",
+        "displayConfig": {
+          "required": true,
+          "options": [
+            {
+              "value": "supplier",
+              "label": "Supplier",
+              "description": "We buy from them."
+            },
+            {
+              "value": "customer",
+              "label": "Customer",
+              "description": "We sell to them."
+            }
+          ]
+        },
+        "status": "active"
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "3c2034e6-3410-5627-8676-9a6f32d87767",
+        "surfaceKey": "intake_partner",
+        "surfaceKind": "form",
+        "title": "Partner",
+        "layoutKind": "flow",
+        "layoutConfig": {
+          "renderer": "intake",
+          "columns": 1
+        },
+        "status": "active"
+      }
+    ]
+  },
+  "supplier_invoice": {
+    "contractSchema": "athyper.meta-entity-contract/2.1",
+    "entity": {
+      "entityCode": "supplier_invoice"
+    },
+    "fields": [
+      {
+        "id": "2ec9ee25-785f-5fd2-8bb7-cfcf34062276",
+        "fieldKey": "invoice_type",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "max_length": 127
+        },
+        "valueOrigin": "runtime",
+        "writeMode": "mutable",
+        "cardinality": "one",
+        "validationSpec": {
+          "schema_version": 1,
+          "rules": [
+            {
+              "code": "allowed_choices",
+              "kind": "allowed_values",
+              "parameters": {
+                "values": [
+                  "standard",
+                  "credit_note",
+                  "debit_note",
+                  "advance",
+                  "retention_release",
+                  "final",
+                  "self_billed"
+                ]
+              }
+            }
+          ]
+        },
+        "status": "active"
+      },
+      {
+        "id": "364cd756-8048-5527-8f40-0de9a3dda701",
+        "fieldKey": "invoice_basis",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "max_length": 127
+        },
+        "valueOrigin": "runtime",
+        "writeMode": "mutable",
+        "cardinality": "one",
+        "validationSpec": {
+          "schema_version": 1,
+          "rules": [
+            {
+              "code": "allowed_choices",
+              "kind": "allowed_values",
+              "parameters": {
+                "values": [
+                  "purchase_order",
+                  "contract",
+                  "non_po"
+                ]
+              }
+            }
+          ]
+        },
+        "status": "active"
+      },
+      {
+        "id": "6f52f9cf-3a83-5fc9-82ec-fb2622a1c4c4",
+        "fieldKey": "supplier_relationship",
+        "dataType": "string",
+        "typeConfig": {
+          "kind": "string",
+          "max_length": 127
+        },
+        "valueOrigin": "runtime",
+        "writeMode": "mutable",
+        "cardinality": "one",
+        "validationSpec": {
+          "schema_version": 1,
+          "rules": [
+            {
+              "code": "allowed_choices",
+              "kind": "allowed_values",
+              "parameters": {
+                "values": [
+                  "existing",
+                  "one_time"
+                ]
+              }
+            }
+          ]
+        },
+        "status": "active"
+      }
+    ],
+    "operations": [],
+    "surfaceSections": [
+      {
+        "id": "c3756659-ec42-5a29-8bd4-d51a90950dfa",
+        "entitySurfaceId": "b5843d01-a538-5dfe-8f24-726b86ed1507",
+        "sectionKey": "type",
+        "title": "Commercial purpose",
+        "position": 0,
+        "columnCount": 1
+      },
+      {
+        "id": "becbfdd9-d92c-56d7-8f74-1ca4c3847c9b",
+        "entitySurfaceId": "b5843d01-a538-5dfe-8f24-726b86ed1507",
+        "sectionKey": "basis",
+        "title": "Commitment and supplier",
+        "position": 10,
+        "columnCount": 1
+      }
+    ],
+    "surfaceFieldBindings": [
+      {
+        "id": "5060a26e-45a9-5dcd-8573-9d100706dc82",
+        "entitySurfaceId": "b5843d01-a538-5dfe-8f24-726b86ed1507",
+        "entitySurfaceSectionId": "c3756659-ec42-5a29-8bd4-d51a90950dfa",
+        "entityFieldId": "2ec9ee25-785f-5fd2-8bb7-cfcf34062276",
+        "bindingKey": "invoice_type",
+        "position": 0,
+        "labelOverride": "Invoice type",
+        "widgetKey": "choice_cards",
+        "displayConfig": {
+          "required": true,
+          "options": [
+            {
+              "value": "standard",
+              "label": "Standard",
+              "description": "Regular supplier invoice."
+            },
+            {
+              "value": "credit_note",
+              "label": "Credit note",
+              "description": "Credit against an earlier invoice."
+            },
+            {
+              "value": "debit_note",
+              "label": "Debit note"
+            },
+            {
+              "value": "advance",
+              "label": "Advance"
+            },
+            {
+              "value": "retention_release",
+              "label": "Retention release"
+            },
+            {
+              "value": "final",
+              "label": "Final"
+            },
+            {
+              "value": "self_billed",
+              "label": "Self-billed"
+            }
+          ]
+        },
+        "status": "active"
+      },
+      {
+        "id": "511ff134-7e8e-55bf-8051-830c4585d59e",
+        "entitySurfaceId": "b5843d01-a538-5dfe-8f24-726b86ed1507",
+        "entitySurfaceSectionId": "becbfdd9-d92c-56d7-8f74-1ca4c3847c9b",
+        "entityFieldId": "364cd756-8048-5527-8f40-0de9a3dda701",
+        "bindingKey": "invoice_basis",
+        "position": 0,
+        "labelOverride": "Invoice basis",
+        "widgetKey": "choice_cards",
+        "displayConfig": {
+          "required": true,
+          "options": [
+            {
+              "value": "purchase_order",
+              "label": "PO-Based",
+              "description": "Reference an existing purchase order."
+            },
+            {
+              "value": "contract",
+              "label": "Contract-Based",
+              "description": "Reference an existing contract."
+            },
+            {
+              "value": "non_po",
+              "label": "Non-PO",
+              "description": "No purchase order or contract reference."
+            }
+          ]
+        },
+        "status": "active"
+      },
+      {
+        "id": "0785ec87-2def-5a28-82e0-9fc73a5a043e",
+        "entitySurfaceId": "b5843d01-a538-5dfe-8f24-726b86ed1507",
+        "entitySurfaceSectionId": "becbfdd9-d92c-56d7-8f74-1ca4c3847c9b",
+        "entityFieldId": "6f52f9cf-3a83-5fc9-82ec-fb2622a1c4c4",
+        "bindingKey": "supplier_relationship",
+        "position": 10,
+        "labelOverride": "Supplier relationship",
+        "widgetKey": "choice_cards",
+        "displayConfig": {
+          "required": true,
+          "options": [
+            {
+              "value": "existing",
+              "label": "Existing supplier"
+            },
+            {
+              "value": "one_time",
+              "label": "One-time supplier"
+            }
+          ]
+        },
+        "status": "active"
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "b5843d01-a538-5dfe-8f24-726b86ed1507",
+        "surfaceKey": "intake_classification",
+        "surfaceKind": "form",
+        "title": "Invoice classification",
+        "layoutKind": "flow",
+        "layoutConfig": {
+          "renderer": "intake",
+          "columns": 2
+        },
+        "status": "active"
+      }
+    ]
+  }
+}

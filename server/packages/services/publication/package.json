@@ -4,12 +4,22 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./kysely-publication-authority-work": "./src/kysely-publication-authority-work.ts",
+    "./kysely-authority-repository": "./src/kysely-authority-repository.ts",
+    "./kysely-local-projection-repository": "./src/kysely-local-projection-repository.ts",
+    "./publication-artifact-loader": "./src/publication-artifact-loader.ts",
+    "./publication-orchestrator": "./src/publication-orchestrator.ts",
+    "./business-partner-foundation-definition": "./src/business-partner-foundation-definition.ts",
+    "./business-partner-definition-compiler": "./src/business-partner-definition-compiler.ts",
+    "./business-partner-case-contract-service": "./src/business-partner-case-contract-service.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
+    "test:integration:publication-authority-repository": "pnpm exec tsx src/__tests__/integration/publication-authority-repository.mjs",
+    "test:integration:case-contract-publication": "tsx src/__tests__/integration/business-partner-case-contract-publication.ts",
     "test:integration:three-plane": "pnpm exec tsx src/__tests__/integration/three-plane-local-projection.mjs",
     "test:integration:bank-directory": "tsx src/__tests__/integration/bank-directory.mjs"
   },
@@ -28,9 +38,9 @@
   "devDependencies": {
     "@athyper/server-platform-audit": "workspace:*",
     "@types/node": "^25.6.0",
-    "@types/pg": "^8.11.10",
-    "pg": "^8.13.0",
-    "tsx": "^4.19.2",
+    "@types/pg": "^8.20.0",
+    "pg": "^8.20.0",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   }

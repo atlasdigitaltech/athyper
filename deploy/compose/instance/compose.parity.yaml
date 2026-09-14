@@ -32,9 +32,11 @@ x-runtime-common: &runtime-common
     docrender: { condition: service_healthy }
     docparser: { condition: service_healthy }
     searchcore: { condition: service_healthy }
+    searchcore-key-init: { condition: service_completed_successfully }
   volumes:
     - ./scripts/start-runtime.sh:/athyper/bin/start-runtime.sh:ro
-  networks: [app, data]
+    - searchcore-key:/run/searchcore:ro
+  networks: [app, data, document-services]
   security_opt: [no-new-privileges:true]
   cap_drop: [ALL]
   init: true
@@ -45,10 +47,12 @@ services:
     image: ${ATHYPER_IMAGE_NEON_WEB:-ghcr.io/atlasdigitaltech/athyper-neon-web:dev}
     environment:
       ATHYPER_APP_ID: neon
+      ATHYPER_DOMAIN_SUFFIX: ${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
       ATHYPER_APP_DOMAIN: neon.${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
       ATHYPER_IAM_CLIENT_ID: neon-web
       ATHYPER_IAM_SECRET_FILE: /run/secrets/neon-iam-client-secret
-    secrets: [session-token-encryption-key, neon-iam-client-secret, redis-password]
+    secrets:
+      [session-token-encryption-key, neon-iam-client-secret, redis-password]
     mem_limit: 512m
     cpus: 0.75
 
@@ -57,10 +61,12 @@ services:
     image: ${ATHYPER_IMAGE_MESH_WEB:-ghcr.io/atlasdigitaltech/athyper-mesh-web:dev}
     environment:
       ATHYPER_APP_ID: mesh
+      ATHYPER_DOMAIN_SUFFIX: ${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
       ATHYPER_APP_DOMAIN: mesh.${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
       ATHYPER_IAM_CLIENT_ID: mesh-web
       ATHYPER_IAM_SECRET_FILE: /run/secrets/mesh-iam-client-secret
-    secrets: [session-token-encryption-key, mesh-iam-client-secret, redis-password]
+    secrets:
+      [session-token-encryption-key, mesh-iam-client-secret, redis-password]
     mem_limit: 512m
     cpus: 0.75
 
@@ -69,17 +75,28 @@ services:
     image: ${ATHYPER_IMAGE_STUDIO_WEB:-ghcr.io/atlasdigitaltech/athyper-studio-web:dev}
     environment:
       ATHYPER_APP_ID: studio
+      ATHYPER_DOMAIN_SUFFIX: ${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
       ATHYPER_APP_DOMAIN: studio.${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
       ATHYPER_IAM_CLIENT_ID: studio-web
       ATHYPER_IAM_SECRET_FILE: /run/secrets/studio-iam-client-secret
-    secrets: [session-token-encryption-key, studio-iam-client-secret, redis-password]
+    secrets:
+      [session-token-encryption-key, studio-iam-client-secret, redis-password]
     mem_limit: 512m
     cpus: 0.75
 
+  # Private metrics listener; the application /metrics on port 4000 stays loopback-only.
   api:
     <<: *runtime-common
+    networks:
+      app: {}
+      data: {}
+      document-services: {}
+      ops: {}
+      platform-observability:
+        aliases: ["api-${ATHYPER_INSTANCE:-dev}"]
     environment:
       MODE: api
+      PROCESS_METRICS_PORT: "9464"
       ATLAS_AGENT_ENABLED: ${ATLAS_AGENT_ENABLED:-false}
       ATLAS_CONVERSATION_PERSISTENCE_ENABLED: ${ATLAS_CONVERSATION_PERSISTENCE_ENABLED:-false}
       ATLAS_AGENT_TOOLS_ENABLED: ${ATLAS_AGENT_TOOLS_ENABLED:-false}
@@ -101,7 +118,8 @@ services:
       - runtime-iam-client-secret
       - objectstorage-app-access-key
       - objectstorage-app-secret-key
-      - search-master-key
+      - objectstorage-artifacts-writer-access-key
+      - objectstorage-artifacts-writer-secret-key
       - vapid-subject
       - vapid-public-key
       - vapid-private-key
@@ -129,6 +147,8 @@ services:
     networks:
       app: {}
       data: {}
+      document-services: {}
+      ops: {}
       platform-observability:
         aliases: ["worker-${ATHYPER_INSTANCE:-dev}"]
     secrets:
@@ -138,12 +158,19 @@ services:
       - runtime-iam-client-secret
       - objectstorage-app-access-key
       - objectstorage-app-secret-key
-      - search-master-key
+      - objectstorage-artifacts-writer-access-key
+      - objectstorage-artifacts-writer-secret-key
       - vapid-subject
       - vapid-public-key
       - vapid-private-key
     healthcheck:
-      test: [CMD, node, -e, "const fs=require('fs');const s=fs.statSync('/tmp/athyper-worker.heartbeat');if(Date.now()-s.mtimeMs>45000)process.exit(1)"]
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "const fs=require('fs');const s=fs.statSync('/tmp/athyper-worker.heartbeat');if(Date.now()-s.mtimeMs>45000)process.exit(1)",
+        ]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -163,6 +190,8 @@ services:
     networks:
       app: {}
       data: {}
+      document-services: {}
+      ops: {}
       platform-observability:
         aliases: ["scheduler-${ATHYPER_INSTANCE:-dev}"]
     secrets:
@@ -172,9 +201,16 @@ services:
       - runtime-iam-client-secret
       - objectstorage-app-access-key
       - objectstorage-app-secret-key
-      - search-master-key
+      - objectstorage-artifacts-writer-access-key
+      - objectstorage-artifacts-writer-secret-key
     healthcheck:
-      test: [CMD, node, -e, "const fs=require('fs');const s=fs.statSync('/tmp/athyper-scheduler.heartbeat');if(Date.now()-s.mtimeMs>45000)process.exit(1)"]
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "const fs=require('fs');const s=fs.statSync('/tmp/athyper-scheduler.heartbeat');if(Date.now()-s.mtimeMs>45000)process.exit(1)",
+        ]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -254,34 +290,70 @@ services:
     cpus: 1.0
 
   virusscan:
-    image: clamav/clamav:1.5.2
+    image: ${ATHYPER_IMAGE_VIRUSSCAN:-athyper/clamav:1.5.2-zip-limit-1}
+    build:
+      context: ../../config/virusscan
+    entrypoint: [/bin/sh, /athyper/bin/start-clamav.sh]
     restart: unless-stopped
+    # The malware-scanning adapter parses clamd's VERSION build date (no timezone field) as UTC;
+    # pin the container's clock so that assumption holds regardless of the host's local timezone.
+    environment:
+      TZ: UTC
+      # Report engine inspection limits as detections where supported.
+      # The local engine patch makes ZIP truncation report this limit too.
+      CLAMD_CONF_AlertExceedsMax: "yes"
+      CLAMD_CONF_StreamMaxLength: 100M
+      CLAMD_CONF_MaxFileSize: 100M
+      CLAMD_CONF_MaxScanSize: 400M
+      CLAMD_CONF_MaxRecursion: "17"
+      # FreshClam can update before clamd's socket exists during image startup.
+      # Periodic self-check provides reload recovery even if that notification fails.
+      CLAMD_CONF_SelfCheck: "60"
+      FRESHCLAM_CHECKS: "24"
     volumes:
       - virusscan-data:/var/lib/clamav
-    # Signatures require outbound connectivity. Only the scanner joins this
-    # dedicated egress network; port 3310 remains private on the data network.
-    networks: [data, signature-egress]
+      - ./scripts/start-clamav.sh:/athyper/bin/start-clamav.sh:ro
+    # Untrusted-file scanning must not share the database/search network.
+    # FreshClam retains dedicated outbound access. clamd listens on both interfaces;
+    # this is not a signature-domain allowlist. No host port is published here.
+    networks: [document-services, signature-egress]
     healthcheck:
-      test: [CMD-SHELL, "echo PING | nc -w 3 127.0.0.1 3310 | grep -q PONG && find /var/lib/clamav -maxdepth 1 -name 'daily.c?d' -mtime -2 -print | grep -q ."]
+      test:
+        [
+          CMD-SHELL,
+          "echo PING | nc -w 3 127.0.0.1 3310 | grep -q PONG && find /var/lib/clamav -maxdepth 1 -name 'daily.c?d' -mtime -2 -print | grep -q .",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 120s
     stop_grace_period: 15s
     security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp, /run, /var/log/clamav]
+    # Root prepares signature/log ownership and runtime config; upstream daemons
+    # drop to clamav. The wrapper redirects config mutations into /tmp.
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID, DAC_OVERRIDE, FOWNER]
     mem_limit: 1280m
     cpus: 1.0
 
   docrender:
-    image: gotenberg/gotenberg:8.31.0
+    image: ${ATHYPER_IMAGE_GOTENBERG:-athyper/gotenberg:8.37.0-hardened}
+    build: { context: ../../config/gotenberg }
     restart: unless-stopped
     command:
       - gotenberg
       - --api-timeout=120s
-      - --libreoffice-auto-start
-      - --libreoffice-restart-after=50
-      - --chromium-allow-list=file:///tmp.*
-    networks: [data]
+      - --libreoffice-disable-routes=true
+      # Only uploaded HTML/assets are needed; block all remote fetch mechanisms.
+      - --chromium-allow-list=^file:///tmp/.*
+      - --chromium-deny-list=^https?://.*
+      - --api-disable-download-from=true
+      - --api-download-from-deny-list=.*
+      - --webhook-deny-list=.*
+      - --pdfengines-disable-routes=true
+    networks: [document-services]
     healthcheck:
       test: [CMD, curl, -f, http://127.0.0.1:3000/health]
       interval: 30s
@@ -290,29 +362,49 @@ services:
       start_period: 30s
     stop_grace_period: 15s
     security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp, "/home/gotenberg:uid=1001,gid=1001,mode=0700"]
+    # Verified locally: starts and renders (chromium + libreoffice) with no capabilities at all.
+    cap_drop: [ALL]
     init: true
     mem_limit: 512m
     cpus: 1.0
 
   docparser:
-    image: apache/tika:3.0.0.0-full@sha256:82698af9bacf3dbd80ba7a18cc69d06596af107169fddcb8a067f6bb1bd10426
+    image: ${ATHYPER_IMAGE_TIKA:-athyper/tika:4.0.0-hardened}
+    build: { context: ../../config/tika }
     restart: unless-stopped
-    networks: [data]
+    networks: [document-services]
     healthcheck:
-      test: [CMD, wget, -q, --spider, http://127.0.0.1:9998/]
+      test:
+        [
+          CMD,
+          wget,
+          -q,
+          -T,
+          "5",
+          -t,
+          "1",
+          -O,
+          /dev/null,
+          http://127.0.0.1:9998/tika,
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 20s
     stop_grace_period: 10s
     security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
     cap_drop: [ALL]
     init: true
     mem_limit: 768m
     cpus: 1.0
 
   searchcore:
-    image: getmeili/meilisearch:v1.13
+    image: ${ATHYPER_IMAGE_MEILISEARCH:-athyper/meilisearch:1.13.3-hardened}
+    build: { context: ../../config/meilisearch }
     restart: unless-stopped
     entrypoint: [/bin/sh, /athyper/bin/start-search.sh]
     environment:
@@ -320,6 +412,7 @@ services:
       MEILI_MAX_INDEXING_MEMORY: 512MiB
       MEILI_HTTP_ADDR: 0.0.0.0:7700
       MEILI_LOG_LEVEL: INFO
+      MEILI_NO_ANALYTICS: "true"
     secrets: [search-master-key]
     volumes:
       - searchcore-data:/meili_data
@@ -333,33 +426,43 @@ services:
       start_period: 20s
     stop_grace_period: 20s
     security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+    # The deployed entrypoint reads a host-owned 0600 Compose secret. The bare image
+    # starts without capabilities, but this mount requires DAC_OVERRIDE for that read.
+    cap_drop: [ALL]
+    cap_add: [DAC_OVERRIDE]
     init: true
     mem_limit: 1024m
     cpus: 1.0
 
-  mailtrap:
-    image: axllent/mailpit:v1.30.6
-    restart: unless-stopped
-    environment:
-      MP_SMTP_BIND_ADDR: 0.0.0.0:1025
-      MP_UI_BIND_ADDR: 0.0.0.0:8025
-      MP_MAX_MESSAGES: "500"
-    networks: [app]
-    healthcheck:
-      test: [CMD-SHELL, wget -q --spider http://127.0.0.1:8025/livez]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+  # One-shot bootstrap: mints (or reconciles) the scoped Meilisearch API key that
+  # api/worker/scheduler use at runtime, so the master key is limited to searchcore and this initializer.
+  # Writes the key to the searchcore-key volume for start-runtime.sh to read.
+  searchcore-key-init:
+    image: ${ATHYPER_IMAGE_SEARCHCORE_KEY_INIT:-athyper/searchcore-key-init:1}
+    build:
+      context: ../../config/searchcore-key-init
+    restart: "no"
+    depends_on:
+      searchcore: { condition: service_healthy }
+    entrypoint: [/bin/sh, /athyper/bin/provision-search-key.sh]
+    secrets: [search-master-key]
+    volumes:
+      - searchcore-key:/run/searchcore
+      - ./scripts/provision-search-key.sh:/athyper/bin/provision-search-key.sh:ro
+    networks: [data]
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
-    init: true
-    mem_limit: 256m
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 128m
     cpus: 0.25
 
 volumes:
   virusscan-data: {}
   searchcore-data: {}
+  searchcore-key: {}
 
 secrets:
   vapid-subject:
@@ -380,3 +483,9 @@ secrets:
     file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/runtime-iam-client-secret
   search-master-key:
     file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/search-master-key
+
+# Only application runtimes and document processors belong here. Parsers receive
+# untrusted files and must not share the database/search network.
+networks:
+  document-services:
+    internal: true

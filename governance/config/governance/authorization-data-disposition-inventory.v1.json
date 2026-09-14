@@ -4,40 +4,40 @@
   "policyHash": "7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285",
   "source": "governance/config/governance/authorization-data-disposition-policy.v1.json",
   "summary": {
-    "discoveredTables": 695,
+    "discoveredTables": 737,
     "externalObjects": 12,
     "exactTableOverrides": 15,
     "exactRuntimeTableOverrides": 1,
-    "schemaDefaultedTables": 679,
+    "schemaDefaultedTables": 721,
     "byDataClass": {
-      "ai_governance_and_runtime": 24,
+      "ai_governance_and_runtime": 29,
       "audit_log": 17,
       "authentication_authority": 1,
-      "authorization_authority": 20,
+      "authorization_authority": 21,
       "authorization_cache": 1,
-      "business_master_transactional": 145,
+      "business_master_transactional": 148,
       "business_scope_context_non_authorizing": 2,
       "business_workflow_transactional": 10,
       "database_backup_object": 1,
-      "ddl_catalog_reference": 112,
-      "derived_projection": 20,
-      "derived_runtime_projection": 12,
-      "document_metadata": 164,
+      "ddl_catalog_reference": 126,
+      "derived_projection": 23,
+      "derived_runtime_projection": 13,
+      "document_metadata": 166,
       "document_object": 2,
       "event_outbox_inbox": 21,
       "event_stream": 1,
       "governance_audit": 11,
-      "identity_desired_state_authority": 10,
+      "identity_desired_state_authority": 11,
       "identity_projection": 3,
       "ledger_regulatory": 16,
-      "mesh_owned": 41,
+      "mesh_owned": 43,
       "mesh_owned_document_object": 1,
       "mesh_provisioning_ledger": 1,
-      "metadata_authority": 30,
+      "metadata_authority": 32,
       "operational_log": 1,
       "operational_state_and_evidence": 20,
       "provisioning_ledger": 1,
-      "published_definition_authority": 8,
+      "published_definition_authority": 16,
       "secret": 1,
       "session_token": 2,
       "tenant_business_context_non_authorizing": 1,
@@ -57,25 +57,25 @@
       "migrate_after_fiscal_calendar_period_rule": 1,
       "migrate_as_context_only": 2,
       "migrate_as_relationship_context_only": 1,
-      "migrate_authority_without_provider_credentials": 10,
+      "migrate_authority_without_provider_credentials": 11,
       "migrate_exact_stable_ids": 1,
-      "migrate_in_declared_fk_order": 157,
-      "migrate_in_exact_plane_boundary": 20,
+      "migrate_in_declared_fk_order": 160,
+      "migrate_in_exact_plane_boundary": 21,
       "migrate_or_immutable_archive": 44,
-      "migrate_policy_and_audit_archive_runtime": 24,
-      "migrate_published_artifacts_and_release_history": 8,
-      "migrate_published_authority_and_rebuild_projections": 30,
+      "migrate_policy_and_audit_archive_runtime": 29,
+      "migrate_published_artifacts_and_release_history": 16,
+      "migrate_published_authority_and_rebuild_projections": 32,
       "migrate_with_attachment_metadata": 1,
       "migrate_with_document_metadata": 1,
       "migrate_with_mesh_exchange_metadata_in_mesh_boundary": 1,
-      "migrate_with_referenced_objects": 164,
-      "provision_and_migrate_in_mesh_db_only": 41,
+      "migrate_with_referenced_objects": 166,
+      "provision_and_migrate_in_mesh_db_only": 43,
       "rebind_or_rotate_never_export": 1,
-      "rebuild_from_authoritative_data": 20,
-      "rebuild_from_published_authority": 12,
+      "rebuild_from_authoritative_data": 23,
+      "rebuild_from_published_authority": 13,
       "recreate_empty_in_mesh_then_rebuild_from_executed_manifest": 1,
       "recreate_empty_then_rebuild_from_executed_manifest": 1,
-      "recreate_from_approved_seed": 112,
+      "recreate_from_approved_seed": 126,
       "retain_encrypted_backups_then_rebind_to_plane_specific_backup_policy": 1,
       "retain_or_archive_under_log_and_legal_hold_policy": 1,
       "retain_or_expire_under_observability_policy_without_business_replay": 1,
@@ -111,7 +111,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 4
+          "line": 5
         }
       ],
       "decisionSource": "schema_default",
@@ -129,7 +129,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 272
+          "line": 278
         }
       ],
       "decisionSource": "schema_default",
@@ -147,7 +147,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 333
+          "line": 339
         }
       ],
       "decisionSource": "schema_default",
@@ -165,7 +165,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 397
+          "line": 404
         }
       ],
       "decisionSource": "schema_default",
@@ -183,7 +183,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 417
+          "line": 424
         }
       ],
       "decisionSource": "schema_default",
@@ -201,7 +201,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 511
+          "line": 520
         }
       ],
       "decisionSource": "schema_default",
@@ -219,7 +219,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 28
+          "line": 29
         }
       ],
       "decisionSource": "schema_default",
@@ -237,7 +237,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 52
+          "line": 53
         }
       ],
       "decisionSource": "schema_default",
@@ -255,7 +255,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 438
+          "line": 445
         }
       ],
       "decisionSource": "schema_default",
@@ -273,7 +273,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 461
+          "line": 470
         }
       ],
       "decisionSource": "schema_default",
@@ -291,7 +291,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 489
+          "line": 498
         }
       ],
       "decisionSource": "schema_default",
@@ -309,7 +309,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 182
+          "line": 184
         }
       ],
       "decisionSource": "schema_default",
@@ -327,7 +327,25 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 80
+          "line": 81
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ai_governance_and_runtime",
+      "disposition": "migrate_policy_and_audit_archive_runtime",
+      "retention": "AI governance, conversation, and audit retention policy",
+      "evidence": "policy revision, tenant counts, content hashes, and credential-reference validation",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "ai.atlas_experience_release",
+      "schema": "ai",
+      "table": "atlas_experience_release",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/ai/03_tables.sql",
+          "line": 645
         }
       ],
       "decisionSource": "schema_default",
@@ -345,7 +363,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 515
+          "line": 524
         }
       ],
       "decisionSource": "schema_default",
@@ -363,7 +381,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 531
+          "line": 540
         }
       ],
       "decisionSource": "schema_default",
@@ -381,7 +399,61 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 545
+          "line": 554
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ai_governance_and_runtime",
+      "disposition": "migrate_policy_and_audit_archive_runtime",
+      "retention": "AI governance, conversation, and audit retention policy",
+      "evidence": "policy revision, tenant counts, content hashes, and credential-reference validation",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "ai.atlas_learning_candidate",
+      "schema": "ai",
+      "table": "atlas_learning_candidate",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/ai/03_tables.sql",
+          "line": 672
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ai_governance_and_runtime",
+      "disposition": "migrate_policy_and_audit_archive_runtime",
+      "retention": "AI governance, conversation, and audit retention policy",
+      "evidence": "policy revision, tenant counts, content hashes, and credential-reference validation",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "ai.atlas_learning_candidate_event",
+      "schema": "ai",
+      "table": "atlas_learning_candidate_event",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/ai/03_tables.sql",
+          "line": 53
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ai_governance_and_runtime",
+      "disposition": "migrate_policy_and_audit_archive_runtime",
+      "retention": "AI governance, conversation, and audit retention policy",
+      "evidence": "policy revision, tenant counts, content hashes, and credential-reference validation",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "ai.atlas_learning_inbox",
+      "schema": "ai",
+      "table": "atlas_learning_inbox",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/ai/03_tables.sql",
+          "line": 32
         }
       ],
       "decisionSource": "schema_default",
@@ -399,7 +471,25 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 561
+          "line": 570
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ai_governance_and_runtime",
+      "disposition": "migrate_policy_and_audit_archive_runtime",
+      "retention": "AI governance, conversation, and audit retention policy",
+      "evidence": "policy revision, tenant counts, content hashes, and credential-reference validation",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "ai.atlas_provider_usage",
+      "schema": "ai",
+      "table": "atlas_provider_usage",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/ai/03_tables.sql",
+          "line": 630
         }
       ],
       "decisionSource": "schema_default",
@@ -417,7 +507,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 244
+          "line": 246
         }
       ],
       "decisionSource": "schema_default",
@@ -435,7 +525,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/ai/03_tables.sql",
-          "line": 4
+          "line": 5
         }
       ],
       "decisionSource": "exact_table_override",
@@ -453,7 +543,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 95
+          "line": 96
         }
       ],
       "decisionSource": "schema_default",
@@ -471,7 +561,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 113
+          "line": 114
         }
       ],
       "decisionSource": "schema_default",
@@ -489,7 +579,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 122
+          "line": 123
         }
       ],
       "decisionSource": "schema_default",
@@ -507,7 +597,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 154
+          "line": 155
         }
       ],
       "decisionSource": "schema_default",
@@ -525,7 +615,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 137
+          "line": 138
         }
       ],
       "decisionSource": "schema_default",
@@ -543,7 +633,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ai/03_tables.sql",
-          "line": 592
+          "line": 601
         }
       ],
       "decisionSource": "schema_default",
@@ -932,6 +1022,24 @@
       "approvalStatus": "pending"
     },
     {
+      "id": "authz.management_receipt",
+      "schema": "authz",
+      "table": "management_receipt",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/authz/13_management.sql",
+          "line": 33
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "authorization_authority",
+      "disposition": "migrate_in_exact_plane_boundary",
+      "retention": "authorization policy and decision-evidence retention",
+      "evidence": "plane identity, source/target epochs, row counts, and canonical checksums",
+      "approvalStatus": "pending"
+    },
+    {
       "id": "authz.override",
       "schema": "authz",
       "table": "override",
@@ -1155,7 +1263,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1785
+          "line": 1793
         }
       ],
       "decisionSource": "schema_default",
@@ -1173,7 +1281,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1755
+          "line": 1763
         }
       ],
       "decisionSource": "schema_default",
@@ -1191,7 +1299,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1721
+          "line": 1729
         }
       ],
       "decisionSource": "schema_default",
@@ -1209,7 +1317,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1685
+          "line": 1693
         }
       ],
       "decisionSource": "schema_default",
@@ -1227,7 +1335,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 938
+          "line": 946
         }
       ],
       "decisionSource": "schema_default",
@@ -1263,7 +1371,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/control/03_tables.sql",
-          "line": 190
+          "line": 192
         }
       ],
       "decisionSource": "schema_default",
@@ -1281,7 +1389,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 809
+          "line": 817
         }
       ],
       "decisionSource": "schema_default",
@@ -1299,7 +1407,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 405
+          "line": 413
         }
       ],
       "decisionSource": "schema_default",
@@ -1317,7 +1425,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2497
+          "line": 2505
         }
       ],
       "decisionSource": "schema_default",
@@ -1335,7 +1443,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2410
+          "line": 2418
         }
       ],
       "decisionSource": "schema_default",
@@ -1353,7 +1461,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 206
+          "line": 208
         }
       ],
       "decisionSource": "schema_default",
@@ -1371,7 +1479,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1116
+          "line": 1124
         }
       ],
       "decisionSource": "schema_default",
@@ -1389,7 +1497,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1200
+          "line": 1208
         }
       ],
       "decisionSource": "schema_default",
@@ -1407,7 +1515,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1158
+          "line": 1166
         }
       ],
       "decisionSource": "schema_default",
@@ -1425,7 +1533,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1050
+          "line": 1058
         }
       ],
       "decisionSource": "schema_default",
@@ -1443,7 +1551,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2318
+          "line": 2326
         }
       ],
       "decisionSource": "exact_table_override",
@@ -1451,6 +1559,24 @@
       "disposition": "migrate_after_fiscal_calendar_period_rule",
       "retention": "active and historical company fiscal-year assignments retained",
       "evidence": "tenant/company/effective-year coverage checksum and zero overlap proof",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "control.connector_health_job",
+      "schema": "control",
+      "table": "connector_health_job",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/control/14_admin_integrations.sql",
+          "line": 84
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned contract history retained according to metadata policy",
+      "evidence": "contract/catalog version, row count, and canonical checksum",
       "approvalStatus": "pending"
     },
     {
@@ -1497,7 +1623,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 984
+          "line": 994
         }
       ],
       "decisionSource": "schema_default",
@@ -1515,7 +1641,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1022
+          "line": 1032
         }
       ],
       "decisionSource": "schema_default",
@@ -1533,7 +1659,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1920
+          "line": 1928
         }
       ],
       "decisionSource": "schema_default",
@@ -1551,7 +1677,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1868
+          "line": 1876
         }
       ],
       "decisionSource": "schema_default",
@@ -1569,7 +1695,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 343
+          "line": 347
         }
       ],
       "decisionSource": "schema_default",
@@ -1587,7 +1713,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2359
+          "line": 2367
         }
       ],
       "decisionSource": "schema_default",
@@ -1605,7 +1731,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2451
+          "line": 2459
         }
       ],
       "decisionSource": "schema_default",
@@ -1767,7 +1893,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/control/03_tables.sql",
-          "line": 195
+          "line": 197
         }
       ],
       "decisionSource": "schema_default",
@@ -1785,7 +1911,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1356
+          "line": 1364
         }
       ],
       "decisionSource": "exact_table_override",
@@ -1803,7 +1929,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1448
+          "line": 1456
         }
       ],
       "decisionSource": "exact_table_override",
@@ -1821,7 +1947,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2581
+          "line": 2589
         }
       ],
       "decisionSource": "schema_default",
@@ -1839,7 +1965,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2549
+          "line": 2557
         }
       ],
       "decisionSource": "schema_default",
@@ -1857,7 +1983,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 776
+          "line": 780
         }
       ],
       "decisionSource": "schema_default",
@@ -1875,7 +2001,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 817
+          "line": 824
         }
       ],
       "decisionSource": "schema_default",
@@ -1893,7 +2019,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1937
+          "line": 1945
         }
       ],
       "decisionSource": "exact_table_override",
@@ -1911,7 +2037,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1999
+          "line": 2007
         }
       ],
       "decisionSource": "exact_table_override",
@@ -1929,7 +2055,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 456
+          "line": 464
         }
       ],
       "decisionSource": "schema_default",
@@ -1947,7 +2073,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 507
+          "line": 515
         }
       ],
       "decisionSource": "schema_default",
@@ -1965,7 +2091,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1285
+          "line": 1293
         }
       ],
       "decisionSource": "schema_default",
@@ -2001,7 +2127,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 644
+          "line": 652
         }
       ],
       "decisionSource": "schema_default",
@@ -2019,7 +2145,61 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 939
+          "line": 949
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned contract history retained according to metadata policy",
+      "evidence": "contract/catalog version, row count, and canonical checksum",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "control.lookup_publication_receipt",
+      "schema": "control",
+      "table": "lookup_publication_receipt",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/control/14_admin_integrations.sql",
+          "line": 22
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned contract history retained according to metadata policy",
+      "evidence": "contract/catalog version, row count, and canonical checksum",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "control.lookup_revision",
+      "schema": "control",
+      "table": "lookup_revision",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/control/14_admin_integrations.sql",
+          "line": 20
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned contract history retained according to metadata policy",
+      "evidence": "contract/catalog version, row count, and canonical checksum",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "control.lookup_tenant_revision",
+      "schema": "control",
+      "table": "lookup_tenant_revision",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/control/14_admin_integrations.sql",
+          "line": 21
         }
       ],
       "decisionSource": "schema_default",
@@ -2037,7 +2217,25 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 960
+          "line": 970
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned contract history retained according to metadata policy",
+      "evidence": "contract/catalog version, row count, and canonical checksum",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "control.lookup_value_reference",
+      "schema": "control",
+      "table": "lookup_value_reference",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/control/14_admin_integrations.sql",
+          "line": 24
         }
       ],
       "decisionSource": "schema_default",
@@ -2055,7 +2253,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2260
+          "line": 2268
         }
       ],
       "decisionSource": "schema_default",
@@ -2073,7 +2271,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2289
+          "line": 2297
         }
       ],
       "decisionSource": "schema_default",
@@ -2091,7 +2289,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2220
+          "line": 2228
         }
       ],
       "decisionSource": "schema_default",
@@ -2109,7 +2307,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2060
+          "line": 2068
         }
       ],
       "decisionSource": "schema_default",
@@ -2127,7 +2325,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2094
+          "line": 2102
         }
       ],
       "decisionSource": "schema_default",
@@ -2145,7 +2343,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2189
+          "line": 2197
         }
       ],
       "decisionSource": "schema_default",
@@ -2163,7 +2361,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2120
+          "line": 2128
         }
       ],
       "decisionSource": "schema_default",
@@ -2181,7 +2379,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 2157
+          "line": 2165
         }
       ],
       "decisionSource": "schema_default",
@@ -2217,7 +2415,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/control/03_tables.sql",
-          "line": 139
+          "line": 141
         }
       ],
       "decisionSource": "schema_default",
@@ -2235,7 +2433,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1039
+          "line": 1049
         }
       ],
       "decisionSource": "schema_default",
@@ -2253,7 +2451,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1099
+          "line": 1109
         }
       ],
       "decisionSource": "schema_default",
@@ -2271,7 +2469,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1070
+          "line": 1080
         }
       ],
       "decisionSource": "schema_default",
@@ -2289,7 +2487,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1142
+          "line": 1152
         }
       ],
       "decisionSource": "schema_default",
@@ -2307,7 +2505,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 136
+          "line": 138
         }
       ],
       "decisionSource": "schema_default",
@@ -2325,15 +2523,15 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/control/03_tables.sql",
-          "line": 38
+          "line": 40
         },
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 38
+          "line": 40
         },
         {
           "path": "server/db/ddl/planes/studio/control/03_tables.sql",
-          "line": 38
+          "line": 40
         }
       ],
       "decisionSource": "schema_default",
@@ -2351,15 +2549,15 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/control/03_tables.sql",
-          "line": 119
-        },
-        {
-          "path": "server/db/ddl/planes/neon/control/03_tables.sql",
           "line": 121
         },
         {
+          "path": "server/db/ddl/planes/neon/control/03_tables.sql",
+          "line": 123
+        },
+        {
           "path": "server/db/ddl/planes/studio/control/03_tables.sql",
-          "line": 119
+          "line": 121
         }
       ],
       "decisionSource": "schema_default",
@@ -2377,7 +2575,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 845
+          "line": 853
         }
       ],
       "decisionSource": "schema_default",
@@ -2395,7 +2593,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 882
+          "line": 890
         }
       ],
       "decisionSource": "schema_default",
@@ -2413,7 +2611,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 731
+          "line": 739
         }
       ],
       "decisionSource": "schema_default",
@@ -2431,7 +2629,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 784
+          "line": 792
         }
       ],
       "decisionSource": "schema_default",
@@ -2449,7 +2647,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 682
+          "line": 690
         }
       ],
       "decisionSource": "schema_default",
@@ -2467,7 +2665,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1322
+          "line": 1332
         }
       ],
       "decisionSource": "schema_default",
@@ -2485,7 +2683,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1210
+          "line": 1220
         }
       ],
       "decisionSource": "schema_default",
@@ -2503,7 +2701,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1329
+          "line": 1339
         }
       ],
       "decisionSource": "schema_default",
@@ -2521,7 +2719,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1242
+          "line": 1252
         }
       ],
       "decisionSource": "schema_default",
@@ -2539,7 +2737,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1278
+          "line": 1288
         }
       ],
       "decisionSource": "schema_default",
@@ -2557,7 +2755,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1313
+          "line": 1323
         }
       ],
       "decisionSource": "schema_default",
@@ -2575,7 +2773,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1827
+          "line": 1835
         }
       ],
       "decisionSource": "schema_default",
@@ -2593,7 +2791,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1242
+          "line": 1250
         }
       ],
       "decisionSource": "schema_default",
@@ -2611,7 +2809,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/control/03_tables.sql",
-          "line": 338
+          "line": 340
         }
       ],
       "decisionSource": "schema_default",
@@ -2629,7 +2827,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 559
+          "line": 567
         }
       ],
       "decisionSource": "schema_default",
@@ -2647,7 +2845,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 601
+          "line": 609
         }
       ],
       "decisionSource": "schema_default",
@@ -2665,7 +2863,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/control/03_tables.sql",
-          "line": 288
+          "line": 290
         }
       ],
       "decisionSource": "schema_default",
@@ -2683,7 +2881,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 172
+          "line": 174
         }
       ],
       "decisionSource": "schema_default",
@@ -2701,7 +2899,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1396
+          "line": 1406
         }
       ],
       "decisionSource": "schema_default",
@@ -2719,7 +2917,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1348
+          "line": 1358
         }
       ],
       "decisionSource": "schema_default",
@@ -2737,7 +2935,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/control/03_tables.sql",
-          "line": 229
+          "line": 231
         }
       ],
       "decisionSource": "schema_default",
@@ -2817,7 +3015,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 274
+          "line": 276
         }
       ],
       "decisionSource": "schema_default",
@@ -2835,7 +3033,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1527
+          "line": 1535
         }
       ],
       "decisionSource": "schema_default",
@@ -2853,7 +3051,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1569
+          "line": 1577
         }
       ],
       "decisionSource": "schema_default",
@@ -2871,7 +3069,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1470
+          "line": 1478
         }
       ],
       "decisionSource": "schema_default",
@@ -2889,7 +3087,25 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1587
+          "line": 1595
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned contract history retained according to metadata policy",
+      "evidence": "contract/catalog version, row count, and canonical checksum",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "control.tenant_module_entitlement_override",
+      "schema": "control",
+      "table": "tenant_module_entitlement_override",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/control/03_tables.sql",
+          "line": 1503
         }
       ],
       "decisionSource": "schema_default",
@@ -2907,7 +3123,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 900
+          "line": 909
         }
       ],
       "decisionSource": "schema_default",
@@ -2943,7 +3159,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1423
+          "line": 1433
         }
       ],
       "decisionSource": "schema_default",
@@ -2997,7 +3213,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/control/03_tables.sql",
-          "line": 1639
+          "line": 1647
         }
       ],
       "decisionSource": "schema_default",
@@ -3015,7 +3231,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/control/03_tables.sql",
-          "line": 139
+          "line": 141
         }
       ],
       "decisionSource": "schema_default",
@@ -4165,7 +4381,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_tables.sql",
-          "line": 81
+          "line": 83
         }
       ],
       "decisionSource": "schema_default",
@@ -4183,7 +4399,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_tables.sql",
-          "line": 117
+          "line": 119
         }
       ],
       "decisionSource": "schema_default",
@@ -4201,7 +4417,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/document/03_tables.sql",
-          "line": 100
+          "line": 102
         }
       ],
       "decisionSource": "schema_default",
@@ -4670,6 +4886,42 @@
         {
           "path": "server/db/ddl/planes/neon/document/03_tables.sql",
           "line": 5000
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "document_metadata",
+      "disposition": "migrate_with_referenced_objects",
+      "retention": "document class and legal-hold policy",
+      "evidence": "metadata count/checksum plus object existence, size, and content hash",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "document.mesh_profile_change_case",
+      "schema": "document",
+      "table": "mesh_profile_change_case",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/neon/document/03_tables.sql",
+          "line": 5688
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "document_metadata",
+      "disposition": "migrate_with_referenced_objects",
+      "retention": "document class and legal-hold policy",
+      "evidence": "metadata count/checksum plus object existence, size, and content hash",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "document.mesh_profile_change_resolution",
+      "schema": "document",
+      "table": "mesh_profile_change_resolution",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/neon/document/03_tables.sql",
+          "line": 5663
         }
       ],
       "decisionSource": "schema_default",
@@ -7061,7 +7313,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2168
+          "line": 2143
         }
       ],
       "decisionSource": "schema_default",
@@ -7079,7 +7331,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2329
+          "line": 2304
         }
       ],
       "decisionSource": "schema_default",
@@ -7097,7 +7349,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2235
+          "line": 2210
         }
       ],
       "decisionSource": "schema_default",
@@ -7115,7 +7367,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2125
+          "line": 2100
         }
       ],
       "decisionSource": "schema_default",
@@ -7133,7 +7385,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2286
+          "line": 2261
         }
       ],
       "decisionSource": "schema_default",
@@ -7187,7 +7439,25 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 1291
+          "line": 1261
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "business_master_transactional",
+      "disposition": "migrate_in_declared_fk_order",
+      "retention": "business and statutory retention policy",
+      "evidence": "stable-ID map, key ranges, row counts, and canonical checksums",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "master.bank_account_company_usage",
+      "schema": "master",
+      "table": "bank_account_company_usage",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/neon/master/15_bank_account_company_usage.sql",
+          "line": 10
         }
       ],
       "decisionSource": "schema_default",
@@ -7205,7 +7475,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 1445
+          "line": 1420
         }
       ],
       "decisionSource": "schema_default",
@@ -7223,7 +7493,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 1389
+          "line": 1364
         }
       ],
       "decisionSource": "schema_default",
@@ -7234,14 +7504,32 @@
       "approvalStatus": "pending"
     },
     {
-      "id": "master.bank_party",
+      "id": "master.bank_account_usage",
       "schema": "master",
-      "table": "bank_party",
+      "table": "bank_account_usage",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/neon/master/15_bank_account_company_usage.sql",
+          "line": 2
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "business_master_transactional",
+      "disposition": "migrate_in_declared_fk_order",
+      "retention": "business and statutory retention policy",
+      "evidence": "stable-ID map, key ranges, row counts, and canonical checksums",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "master.bank_provisional_reference",
+      "schema": "master",
+      "table": "bank_provisional_reference",
       "objectKind": "table",
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 1244
+          "line": 1245
         }
       ],
       "decisionSource": "schema_default",
@@ -7259,7 +7547,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4261
+          "line": 4236
         }
       ],
       "decisionSource": "schema_default",
@@ -7277,7 +7565,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4301
+          "line": 4276
         }
       ],
       "decisionSource": "schema_default",
@@ -7313,7 +7601,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2384
+          "line": 2359
         }
       ],
       "decisionSource": "schema_default",
@@ -7331,7 +7619,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 1881
+          "line": 1856
         }
       ],
       "decisionSource": "schema_default",
@@ -7349,7 +7637,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2072
+          "line": 2047
         }
       ],
       "decisionSource": "schema_default",
@@ -7367,7 +7655,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4719
+          "line": 4694
         }
       ],
       "decisionSource": "schema_default",
@@ -7385,7 +7673,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4582
+          "line": 4557
         }
       ],
       "decisionSource": "schema_default",
@@ -7403,7 +7691,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4634
+          "line": 4609
         }
       ],
       "decisionSource": "schema_default",
@@ -7421,7 +7709,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4750
+          "line": 4725
         }
       ],
       "decisionSource": "schema_default",
@@ -7439,7 +7727,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4803
+          "line": 4778
         }
       ],
       "decisionSource": "schema_default",
@@ -7457,7 +7745,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4540
+          "line": 4515
         }
       ],
       "decisionSource": "schema_default",
@@ -7475,7 +7763,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4676
+          "line": 4651
         }
       ],
       "decisionSource": "schema_default",
@@ -7565,7 +7853,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2568
+          "line": 2543
         }
       ],
       "decisionSource": "schema_default",
@@ -7583,7 +7871,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2588
+          "line": 2563
         }
       ],
       "decisionSource": "schema_default",
@@ -7601,7 +7889,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4089
+          "line": 4064
         }
       ],
       "decisionSource": "schema_default",
@@ -7619,7 +7907,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4163
+          "line": 4138
         }
       ],
       "decisionSource": "schema_default",
@@ -7637,7 +7925,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4212
+          "line": 4187
         }
       ],
       "decisionSource": "schema_default",
@@ -7655,7 +7943,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 5026
+          "line": 5001
         }
       ],
       "decisionSource": "schema_default",
@@ -7673,7 +7961,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 5002
+          "line": 4977
         }
       ],
       "decisionSource": "schema_default",
@@ -7709,7 +7997,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3901
+          "line": 3876
         }
       ],
       "decisionSource": "schema_default",
@@ -7727,7 +8015,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4029
+          "line": 4004
         }
       ],
       "decisionSource": "schema_default",
@@ -7799,7 +8087,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4868
+          "line": 4843
         }
       ],
       "decisionSource": "schema_default",
@@ -7853,7 +8141,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4833
+          "line": 4808
         }
       ],
       "decisionSource": "schema_default",
@@ -7871,7 +8159,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4502
+          "line": 4477
         }
       ],
       "decisionSource": "schema_default",
@@ -7961,7 +8249,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4982
+          "line": 4957
         }
       ],
       "decisionSource": "schema_default",
@@ -8033,7 +8321,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2034
+          "line": 2009
         }
       ],
       "decisionSource": "schema_default",
@@ -8051,7 +8339,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2611
+          "line": 2586
         }
       ],
       "decisionSource": "schema_default",
@@ -8141,7 +8429,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3151
+          "line": 3126
         }
       ],
       "decisionSource": "schema_default",
@@ -8159,7 +8447,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3335
+          "line": 3310
         }
       ],
       "decisionSource": "schema_default",
@@ -8177,7 +8465,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3359
+          "line": 3334
         }
       ],
       "decisionSource": "schema_default",
@@ -8195,7 +8483,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3200
+          "line": 3175
         }
       ],
       "decisionSource": "schema_default",
@@ -8231,7 +8519,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3299
+          "line": 3274
         }
       ],
       "decisionSource": "schema_default",
@@ -8303,7 +8591,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2735
+          "line": 2710
         }
       ],
       "decisionSource": "schema_default",
@@ -8321,7 +8609,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2778
+          "line": 2753
         }
       ],
       "decisionSource": "schema_default",
@@ -8339,7 +8627,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4939
+          "line": 4914
         }
       ],
       "decisionSource": "schema_default",
@@ -8357,7 +8645,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3978
+          "line": 3953
         }
       ],
       "decisionSource": "schema_default",
@@ -8375,7 +8663,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2708
+          "line": 2683
         }
       ],
       "decisionSource": "schema_default",
@@ -8393,7 +8681,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2631
+          "line": 2606
         }
       ],
       "decisionSource": "schema_default",
@@ -8411,7 +8699,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2651
+          "line": 2626
         }
       ],
       "decisionSource": "schema_default",
@@ -8429,7 +8717,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3052
+          "line": 3027
         }
       ],
       "decisionSource": "schema_default",
@@ -8447,7 +8735,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3085
+          "line": 3060
         }
       ],
       "decisionSource": "schema_default",
@@ -8465,7 +8753,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3028
+          "line": 3003
         }
       ],
       "decisionSource": "schema_default",
@@ -8519,7 +8807,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4906
+          "line": 4881
         }
       ],
       "decisionSource": "schema_default",
@@ -8645,7 +8933,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 5067
+          "line": 5042
         }
       ],
       "decisionSource": "schema_default",
@@ -8681,7 +8969,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3580
+          "line": 3555
         }
       ],
       "decisionSource": "schema_default",
@@ -8699,7 +8987,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3665
+          "line": 3640
         }
       ],
       "decisionSource": "schema_default",
@@ -8717,7 +9005,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3767
+          "line": 3742
         }
       ],
       "decisionSource": "schema_default",
@@ -8735,7 +9023,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3700
+          "line": 3675
         }
       ],
       "decisionSource": "schema_default",
@@ -8753,7 +9041,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3802
+          "line": 3777
         }
       ],
       "decisionSource": "schema_default",
@@ -8771,7 +9059,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3853
+          "line": 3828
         }
       ],
       "decisionSource": "schema_default",
@@ -8789,7 +9077,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2896
+          "line": 2871
         }
       ],
       "decisionSource": "schema_default",
@@ -8807,7 +9095,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2672
+          "line": 2647
         }
       ],
       "decisionSource": "schema_default",
@@ -8825,7 +9113,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2927
+          "line": 2902
         }
       ],
       "decisionSource": "schema_default",
@@ -8843,7 +9131,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2954
+          "line": 2929
         }
       ],
       "decisionSource": "schema_default",
@@ -8861,7 +9149,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2979
+          "line": 2954
         }
       ],
       "decisionSource": "schema_default",
@@ -8879,7 +9167,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 1496
+          "line": 1471
         }
       ],
       "decisionSource": "schema_default",
@@ -8897,7 +9185,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 1560
+          "line": 1535
         }
       ],
       "decisionSource": "schema_default",
@@ -8915,7 +9203,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 1646
+          "line": 1621
         }
       ],
       "decisionSource": "schema_default",
@@ -8933,7 +9221,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 1825
+          "line": 1800
         }
       ],
       "decisionSource": "schema_default",
@@ -8951,7 +9239,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2416
+          "line": 2391
         }
       ],
       "decisionSource": "schema_default",
@@ -8969,7 +9257,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2460
+          "line": 2435
         }
       ],
       "decisionSource": "schema_default",
@@ -8987,7 +9275,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2482
+          "line": 2457
         }
       ],
       "decisionSource": "schema_default",
@@ -9005,7 +9293,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3114
+          "line": 3089
         }
       ],
       "decisionSource": "schema_default",
@@ -9167,7 +9455,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3940
+          "line": 3915
         }
       ],
       "decisionSource": "schema_default",
@@ -9203,7 +9491,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4354
+          "line": 4329
         }
       ],
       "decisionSource": "schema_default",
@@ -9221,7 +9509,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4449
+          "line": 4424
         }
       ],
       "decisionSource": "schema_default",
@@ -9239,7 +9527,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 4403
+          "line": 4378
         }
       ],
       "decisionSource": "schema_default",
@@ -9275,7 +9563,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3429
+          "line": 3404
         }
       ],
       "decisionSource": "schema_default",
@@ -9293,7 +9581,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3463
+          "line": 3438
         }
       ],
       "decisionSource": "schema_default",
@@ -9311,7 +9599,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3485
+          "line": 3460
         }
       ],
       "decisionSource": "schema_default",
@@ -9329,7 +9617,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3528
+          "line": 3503
         }
       ],
       "decisionSource": "schema_default",
@@ -9347,7 +9635,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3547
+          "line": 3522
         }
       ],
       "decisionSource": "schema_default",
@@ -9394,6 +9682,24 @@
       "approvalStatus": "pending"
     },
     {
+      "id": "master.saved_view_default",
+      "schema": "master",
+      "table": "saved_view_default",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/master/19_entity_saved_views.sql",
+          "line": 2
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "business_master_transactional",
+      "disposition": "migrate_in_declared_fk_order",
+      "retention": "business and statutory retention policy",
+      "evidence": "stable-ID map, key ranges, row counts, and canonical checksums",
+      "approvalStatus": "pending"
+    },
+    {
       "id": "master.shift_type",
       "schema": "master",
       "table": "shift_type",
@@ -9401,7 +9707,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2807
+          "line": 2782
         }
       ],
       "decisionSource": "schema_default",
@@ -9419,7 +9725,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2520
+          "line": 2495
         }
       ],
       "decisionSource": "schema_default",
@@ -9437,7 +9743,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3002
+          "line": 2977
         }
       ],
       "decisionSource": "schema_default",
@@ -9455,7 +9761,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 1994
+          "line": 1969
         }
       ],
       "decisionSource": "schema_default",
@@ -9599,7 +9905,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/control/03_tables.sql",
-          "line": 1461
+          "line": 1471
         }
       ],
       "decisionSource": "schema_default",
@@ -9653,7 +9959,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3384
+          "line": 3359
         }
       ],
       "decisionSource": "schema_default",
@@ -9671,7 +9977,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 3249
+          "line": 3224
         }
       ],
       "decisionSource": "schema_default",
@@ -9689,7 +9995,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2833
+          "line": 2808
         }
       ],
       "decisionSource": "schema_default",
@@ -9707,7 +10013,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-          "line": 2861
+          "line": 2836
         }
       ],
       "decisionSource": "schema_default",
@@ -9743,7 +10049,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/03_tables.sql",
-          "line": 1021
+          "line": 996
         }
       ],
       "decisionSource": "schema_default",
@@ -9761,7 +10067,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/03_tables.sql",
-          "line": 1130
+          "line": 1107
         }
       ],
       "decisionSource": "schema_default",
@@ -9779,7 +10085,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/03_tables.sql",
-          "line": 1187
+          "line": 1164
         }
       ],
       "decisionSource": "schema_default",
@@ -9797,7 +10103,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/03_tables.sql",
-          "line": 1104
+          "line": 1081
         }
       ],
       "decisionSource": "schema_default",
@@ -9815,7 +10121,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1901
+          "line": 1980
         }
       ],
       "decisionSource": "schema_default",
@@ -9833,7 +10139,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1753
+          "line": 1832
         }
       ],
       "decisionSource": "schema_default",
@@ -9844,14 +10150,32 @@
       "approvalStatus": "pending"
     },
     {
-      "id": "mesh.bank_party",
+      "id": "mesh.bank_provisional_reference",
       "schema": "mesh",
-      "table": "bank_party",
+      "table": "bank_provisional_reference",
       "objectKind": "table",
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/03_tables.sql",
-          "line": 979
+          "line": 980
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "mesh_owned",
+      "disposition": "provision_and_migrate_in_mesh_db_only",
+      "retention": "Mesh business/document retention policy",
+      "evidence": "Mesh database identity, counts/checksums, and zero-row Neon proof",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "mesh.business_partner_delivery_acknowledgement",
+      "schema": "mesh",
+      "table": "business_partner_delivery_acknowledgement",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/mesh/mesh/03_tables.sql",
+          "line": 1276
         }
       ],
       "decisionSource": "schema_default",
@@ -9869,7 +10193,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1931
+          "line": 2010
         }
       ],
       "decisionSource": "schema_default",
@@ -10031,7 +10355,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 378
+          "line": 376
         }
       ],
       "decisionSource": "schema_default",
@@ -10049,7 +10373,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/03_tables.sql",
-          "line": 1235
+          "line": 1212
         }
       ],
       "decisionSource": "schema_default",
@@ -10067,7 +10391,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/03_tables.sql",
-          "line": 1213
+          "line": 1190
         }
       ],
       "decisionSource": "schema_default",
@@ -10265,7 +10589,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1858
+          "line": 1937
         }
       ],
       "decisionSource": "schema_default",
@@ -10355,7 +10679,25 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 316
+          "line": 314
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "mesh_owned",
+      "disposition": "provision_and_migrate_in_mesh_db_only",
+      "retention": "Mesh business/document retention policy",
+      "evidence": "Mesh database identity, counts/checksums, and zero-row Neon proof",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "mesh.network_discovery_receipt",
+      "schema": "mesh",
+      "table": "network_discovery_receipt",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
+          "line": 1694
         }
       ],
       "decisionSource": "schema_default",
@@ -10373,7 +10715,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/03_tables.sql",
-          "line": 1270
+          "line": 1247
         }
       ],
       "decisionSource": "schema_default",
@@ -10409,7 +10751,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1508
+          "line": 1506
         }
       ],
       "decisionSource": "schema_default",
@@ -10427,7 +10769,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 217
+          "line": 215
         }
       ],
       "decisionSource": "schema_default",
@@ -10445,7 +10787,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1482
+          "line": 1480
         }
       ],
       "decisionSource": "schema_default",
@@ -10463,7 +10805,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
-          "line": 1594
+          "line": 1593
         }
       ],
       "decisionSource": "schema_default",
@@ -10482,6 +10824,42 @@
         {
           "path": "server/db/ddl/planes/studio/metadata/03_tables.sql",
           "line": 3
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "metadata_authority",
+      "disposition": "migrate_published_authority_and_rebuild_projections",
+      "retention": "published metadata and governance history retention",
+      "evidence": "release hashes, source counts, and projection rebuild parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "metadata.entity_baseline_import",
+      "schema": "metadata",
+      "table": "entity_baseline_import",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/12_baseline_import.sql",
+          "line": 2
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "metadata_authority",
+      "disposition": "migrate_published_authority_and_rebuild_projections",
+      "retention": "published metadata and governance history retention",
+      "evidence": "release hashes, source counts, and projection rebuild parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "metadata.entity_baseline_import_revocation",
+      "schema": "metadata",
+      "table": "entity_baseline_import_revocation",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/12_baseline_import.sql",
+          "line": 23
         }
       ],
       "decisionSource": "schema_default",
@@ -11309,7 +11687,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ops/03_tables.sql",
-          "line": 522
+          "line": 523
         }
       ],
       "decisionSource": "schema_default",
@@ -11345,7 +11723,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/common/ops/03_tables.sql",
-          "line": 539
+          "line": 540
         }
       ],
       "decisionSource": "schema_default",
@@ -11627,6 +12005,78 @@
       "approvalStatus": "pending"
     },
     {
+      "id": "publication.bank_directory_authority",
+      "schema": "publication",
+      "table": "bank_directory_authority",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/publication/11_bank_directory.sql",
+          "line": 2
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "published_definition_authority",
+      "disposition": "migrate_published_artifacts_and_release_history",
+      "retention": "published release and deployment evidence retention",
+      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "publication.bank_directory_release_link",
+      "schema": "publication",
+      "table": "bank_directory_release_link",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/publication/11_bank_directory.sql",
+          "line": 31
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "published_definition_authority",
+      "disposition": "migrate_published_artifacts_and_release_history",
+      "retention": "published release and deployment evidence retention",
+      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "publication.bank_directory_review",
+      "schema": "publication",
+      "table": "bank_directory_review",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/publication/11_bank_directory.sql",
+          "line": 21
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "published_definition_authority",
+      "disposition": "migrate_published_artifacts_and_release_history",
+      "retention": "published release and deployment evidence retention",
+      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "publication.business_partner_case_contract_release_link",
+      "schema": "publication",
+      "table": "business_partner_case_contract_release_link",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/publication/03_tables.sql",
+          "line": 168
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "published_definition_authority",
+      "disposition": "migrate_published_artifacts_and_release_history",
+      "retention": "published release and deployment evidence retention",
+      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
+      "approvalStatus": "pending"
+    },
+    {
       "id": "publication.business_partner_definition_release_link",
       "schema": "publication",
       "table": "business_partner_definition_release_link",
@@ -11699,6 +12149,60 @@
       "approvalStatus": "pending"
     },
     {
+      "id": "publication.entity_authorization_successor_link",
+      "schema": "publication",
+      "table": "entity_authorization_successor_link",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/13_authorization_successor.sql",
+          "line": 26
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "published_definition_authority",
+      "disposition": "migrate_published_artifacts_and_release_history",
+      "retention": "published release and deployment evidence retention",
+      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "publication.entity_authorization_successor_payload",
+      "schema": "publication",
+      "table": "entity_authorization_successor_payload",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/13_authorization_successor.sql",
+          "line": 12
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "published_definition_authority",
+      "disposition": "migrate_published_artifacts_and_release_history",
+      "retention": "published release and deployment evidence retention",
+      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "publication.entity_baseline_release_link",
+      "schema": "publication",
+      "table": "entity_baseline_release_link",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/12_baseline_import.sql",
+          "line": 55
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "published_definition_authority",
+      "disposition": "migrate_published_artifacts_and_release_history",
+      "retention": "published release and deployment evidence retention",
+      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
+      "approvalStatus": "pending"
+    },
+    {
       "id": "publication.entity_release_link",
       "schema": "publication",
       "table": "entity_release_link",
@@ -11707,6 +12211,24 @@
         {
           "path": "server/db/ddl/planes/studio/publication/03_tables.sql",
           "line": 35
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "published_definition_authority",
+      "disposition": "migrate_published_artifacts_and_release_history",
+      "retention": "published release and deployment evidence retention",
+      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "publication.entity_runtime_restoration_link",
+      "schema": "publication",
+      "table": "entity_runtime_restoration_link",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/14_runtime_restoration.sql",
+          "line": 14
         }
       ],
       "decisionSource": "schema_default",
@@ -11861,6 +12383,24 @@
       "approvalStatus": "pending"
     },
     {
+      "id": "runtime_meta.experience_surface_projection",
+      "schema": "runtime_meta",
+      "table": "experience_surface_projection",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/runtime_meta/03_tables.sql",
+          "line": 351
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "derived_runtime_projection",
+      "disposition": "rebuild_from_published_authority",
+      "retention": "discard after certified rebuild unless held as rollout evidence",
+      "evidence": "applied release hashes, epoch parity, and authoritative source comparison",
+      "approvalStatus": "pending"
+    },
+    {
       "id": "runtime_meta.mfa_credential_projection",
       "schema": "runtime_meta",
       "table": "mfa_credential_projection",
@@ -11948,6 +12488,150 @@
       "disposition": "rebuild_from_published_authority",
       "retention": "discard after certified rebuild unless held as rollout evidence",
       "evidence": "applied release hashes, epoch parity, and authoritative source comparison",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "shared.bank_branch",
+      "schema": "shared",
+      "table": "bank_branch",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/shared/03_bank_directory.sql",
+          "line": 16
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned catalog history retained outside runtime tables",
+      "evidence": "catalog version, seed checksum, and generated-client parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "shared.bank_branch_version",
+      "schema": "shared",
+      "table": "bank_branch_version",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/shared/03_bank_directory.sql",
+          "line": 33
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned catalog history retained outside runtime tables",
+      "evidence": "catalog version, seed checksum, and generated-client parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "shared.bank_directory_activation",
+      "schema": "shared",
+      "table": "bank_directory_activation",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/shared/03_bank_directory.sql",
+          "line": 75
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned catalog history retained outside runtime tables",
+      "evidence": "catalog version, seed checksum, and generated-client parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "shared.bank_directory_release",
+      "schema": "shared",
+      "table": "bank_directory_release",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/shared/03_bank_directory.sql",
+          "line": 2
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned catalog history retained outside runtime tables",
+      "evidence": "catalog version, seed checksum, and generated-client parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "shared.bank_directory_source_record",
+      "schema": "shared",
+      "table": "bank_directory_source_record",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/shared/03_bank_directory.sql",
+          "line": 65
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned catalog history retained outside runtime tables",
+      "evidence": "catalog version, seed checksum, and generated-client parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "shared.bank_identifier",
+      "schema": "shared",
+      "table": "bank_identifier",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/shared/03_bank_directory.sql",
+          "line": 48
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned catalog history retained outside runtime tables",
+      "evidence": "catalog version, seed checksum, and generated-client parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "shared.bank_institution",
+      "schema": "shared",
+      "table": "bank_institution",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/shared/03_bank_directory.sql",
+          "line": 12
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned catalog history retained outside runtime tables",
+      "evidence": "catalog version, seed checksum, and generated-client parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "shared.bank_institution_version",
+      "schema": "shared",
+      "table": "bank_institution_version",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/shared/03_bank_directory.sql",
+          "line": 22
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned catalog history retained outside runtime tables",
+      "evidence": "catalog version, seed checksum, and generated-client parity",
       "approvalStatus": "pending"
     },
     {
@@ -12185,6 +12869,24 @@
       "approvalStatus": "pending"
     },
     {
+      "id": "snapshot.bank_directory_revision",
+      "schema": "snapshot",
+      "table": "bank_directory_revision",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/publication/11_bank_directory.sql",
+          "line": 6
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "derived_projection",
+      "disposition": "rebuild_from_authoritative_data",
+      "retention": "discard after certified rebuild unless held as evidence",
+      "evidence": "rebuild version and authoritative source-count comparison",
+      "approvalStatus": "pending"
+    },
+    {
       "id": "snapshot.bom",
       "schema": "snapshot",
       "table": "bom",
@@ -12211,6 +12913,24 @@
         {
           "path": "server/db/ddl/planes/neon/snapshot/03_tables.sql",
           "line": 142
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "derived_projection",
+      "disposition": "rebuild_from_authoritative_data",
+      "retention": "discard after certified rebuild unless held as evidence",
+      "evidence": "rebuild version and authoritative source-count comparison",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "snapshot.business_partner_case_contract_revision",
+      "schema": "snapshot",
+      "table": "business_partner_case_contract_revision",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/snapshot/03_tables.sql",
+          "line": 455
         }
       ],
       "decisionSource": "schema_default",
@@ -12434,7 +13154,7 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/neon/snapshot/03_tables.sql",
-          "line": 213
+          "line": 217
         }
       ],
       "decisionSource": "schema_default",
@@ -12471,6 +13191,24 @@
         {
           "path": "server/db/ddl/planes/mesh/snapshot/03_tables.sql",
           "line": 64
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "derived_projection",
+      "disposition": "rebuild_from_authoritative_data",
+      "retention": "discard after certified rebuild unless held as evidence",
+      "evidence": "rebuild version and authoritative source-count comparison",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "snapshot.subscription_plan_entitlement",
+      "schema": "snapshot",
+      "table": "subscription_plan_entitlement",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/snapshot/03_tables.sql",
+          "line": 128
         }
       ],
       "decisionSource": "schema_default",
@@ -12569,6 +13307,24 @@
         {
           "path": "server/db/ddl/planes/studio/trustiam/03_tables.sql",
           "line": 66
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "identity_desired_state_authority",
+      "disposition": "migrate_authority_without_provider_credentials",
+      "retention": "identity governance, provisioning, and reconciliation evidence retention",
+      "evidence": "authority tenant counts, desired-state hashes, and provider credential-reference audit",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "trustiam.identity_replay_approval",
+      "schema": "trustiam",
+      "table": "identity_replay_approval",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/trustiam/12_identity_replay_approval.sql",
+          "line": 2
         }
       ],
       "decisionSource": "schema_default",

@@ -125,7 +125,7 @@ test("favourites shares bookmarks, persists removal and Undo, preserves rows on 
     await act(async () => release?.());
     assert.match(
       dom.window.document.body.textContent!,
-      /Keep your go-to records close/,
+      /No favourites yet/,
     );
     assert.equal(
       dom.window.document.querySelector("a")!.getAttribute("href"),

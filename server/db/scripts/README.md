@@ -25,8 +25,8 @@ separate from full SQL parity and runtime qualification. See
 
 The recovered Atlas experience-release and runtime surface-projection tables are
 covered by `db:verify:experience-foundation` and
-`test:integration:experience-foundation`. Their pending forward migration is
-generated from the marked canonical blocks with
+`test:integration:experience-foundation`. Unapplied upgrade candidates are
+generated outside the checkout from the marked canonical blocks with
 `db:generate:experience-foundation`; shipped migrations remain immutable.
 See `docs/runbooks/atlas-experience-foundation-reconciliation.md` for behavior,
 preflight differences and isolated PostgreSQL verification.
@@ -64,8 +64,9 @@ before any repair. Trigger suspension and hash updates commit atomically.
 The common/plane AI files are canonical foundation DDL. Do not use the retired
 live-catalog generator named in older file headers. For the experience tables,
 run `db:verify:experience-foundation` to check the marked canonical blocks against
-the pending upgrade. `db:generate:experience-foundation` regenerates that pending
-migration only; never rewrite a migration after deployment.
+canonical blocks and foundation coverage. `db:generate:experience-foundation`
+writes a new candidate under `~/.athyper/candidates/`; retained legacy upgrades
+remain immutable and are tested separately.
 
 The experience upgrade accepts either the complete current catalog or the exact
 pinned legacy catalog. It upgrades the known JSON/local-plane checks atomically
@@ -97,3 +98,11 @@ comparison, not an audit of cluster role memberships or external authorization.
 and recovery plus catalog security/literal changes in its own PostgreSQL 16.13
 container with networking disabled and temporary database storage. It does not
 connect to development or QA databases.
+
+## Migration organization
+
+Canonical fresh-install SQL and retained upgrades are classified in
+[the migration inventory](../migrations/README.md). Run
+`pnpm --dir server/db db:verify:migration-layout` to validate paths, immutable
+upgrade checksums and plane manifests. Reference-permission repair SQL lives in
+`operations/repair/reference-permissions/` and is only invoked explicitly.

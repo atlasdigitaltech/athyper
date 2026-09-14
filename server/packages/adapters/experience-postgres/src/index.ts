@@ -1,7 +1,21 @@
 import { createHash } from "node:crypto";
-import { ExperienceAccessError } from "@athyper/server-platform-experience";
+import { ExperienceAccessError } from "@athyper/server-contract-experience";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceIdentityRecord, ExperienceLocalePolicyRecord, ExperienceNetworkAccountRecord, ExperienceOperatingOrganizationRecord, ExperiencePlaneRepository, ExperienceProfileRecord, ExperienceSurfaceProjectionRecord, ExperienceSurfaceReleaseRecord, ExperienceWorkContextRecord, PersonalSurfaceArrangementRecord, RouteSlugRedirectRecord } from "@athyper/server-platform-experience/ports";
+import type {
+  ExperienceCatalogRecord,
+  ExperienceFeatureRecord,
+  ExperienceIdentityRecord,
+  ExperienceLocalePolicyRecord,
+  ExperienceNetworkAccountRecord,
+  ExperienceOperatingOrganizationRecord,
+  ExperiencePlaneRepository,
+  ExperienceProfileRecord,
+  ExperienceSurfaceProjectionRecord,
+  ExperienceSurfaceReleaseRecord,
+  ExperienceWorkContextRecord,
+  PersonalSurfaceArrangementRecord,
+  RouteSlugRedirectRecord,
+} from "@athyper/server-contract-experience";
 import { sql, type Kysely } from "kysely";
 
 type Database = Kysely<Record<string, never>>;
@@ -12,26 +26,51 @@ export type ExperienceDatabaseRunner = <Result>(
 
 /** DDL-native experience persistence. The supplied database must be the exact physical plane selected by the host. */
 export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepository {
-  constructor(private readonly database: Database, private readonly runner?: ExperienceDatabaseRunner) {}
+  constructor(
+    private readonly database: Database,
+    private readonly runner?: ExperienceDatabaseRunner,
+  ) {}
 
-  private withContext<Result>(context: VerifiedRequestContext, work: (database: Database) => Promise<Result>): Promise<Result> {
+  private withContext<Result>(
+    context: VerifiedRequestContext,
+    work: (database: Database) => Promise<Result>,
+  ): Promise<Result> {
     if (this.runner) return this.runner(context, work);
     const scoped = async (transaction: Database) => {
-      await sql`SELECT set_config('app.current_tenant_id',${context.tenantId},true), set_config('app.current_principal_id',${context.principalId},true)`.execute(transaction);
+      await sql`SELECT set_config('app.current_tenant_id',${context.tenantId},true), set_config('app.current_principal_id',${context.principalId},true)`.execute(
+        transaction,
+      );
       return work(transaction);
     };
-    return this.database.isTransaction ? scoped(this.database) : this.database.transaction().execute(scoped);
+    return this.database.isTransaction
+      ? work(this.database)
+      : this.database.transaction().execute(scoped);
   }
 
-  async readIdentity(context: VerifiedRequestContext, at: Date): Promise<ExperienceIdentityRecord | undefined> {
+  async readIdentity(
+    context: VerifiedRequestContext,
+    at: Date,
+  ): Promise<ExperienceIdentityRecord | undefined> {
     return this.withContext(context, async (database) => {
-    const result = await sql<{
-      tenantCode: string; tenantDisplayName: string; tenantCountryCode:string|null;tenantLogoAssetRef:string|null;
-      tenantStatus: string; tenantRealmKey: string; subscriptionPlanId: string | null; tenantRevision: string;
-      principalCode: string; principalDisplayName: string; principalSecondaryLabel: string | null;
-      principalStatus: string; principalAuthEpoch: number; principalRevision: string; identityBindingActive: boolean;
-      membershipActive: boolean; membershipRevision: string | null;
-    }>`
+      const result = await sql<{
+        tenantCode: string;
+        tenantDisplayName: string;
+        tenantCountryCode: string | null;
+        tenantLogoAssetRef: string | null;
+        tenantStatus: string;
+        tenantRealmKey: string;
+        subscriptionPlanId: string | null;
+        tenantRevision: string;
+        principalCode: string;
+        principalDisplayName: string;
+        principalSecondaryLabel: string | null;
+        principalStatus: string;
+        principalAuthEpoch: number;
+        principalRevision: string;
+        identityBindingActive: boolean;
+        membershipActive: boolean;
+        membershipRevision: string | null;
+      }>`
       SELECT t.code AS "tenantCode", COALESCE(NULLIF(btrim(t.display_name),''), t.name, t.code) AS "tenantDisplayName",
              tp.country_code::text AS "tenantCountryCode",tp.logo_asset_ref AS "tenantLogoAssetRef",
              t.status::text AS "tenantStatus", t.realm_key AS "tenantRealmKey",
@@ -60,15 +99,49 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       WHERE t.id = ${context.tenantId}::uuid
       LIMIT 1
     `.execute(database);
-    const row = result.rows[0];
-    if (!row) return undefined;
-    return { tenantCode: row.tenantCode, tenantDisplayName: row.tenantDisplayName, ...(row.tenantCountryCode?{tenantCountryCode:row.tenantCountryCode.trim().toUpperCase()}:{}),...(row.tenantLogoAssetRef?{tenantLogoAssetRef:row.tenantLogoAssetRef}:{}),tenantStatus: row.tenantStatus, tenantRealmKey: row.tenantRealmKey, ...(row.subscriptionPlanId ? { subscriptionPlanId: row.subscriptionPlanId } : {}), tenantRevision: row.tenantRevision, principalCode: row.principalCode, principalDisplayName: row.principalDisplayName, ...(row.principalSecondaryLabel ? { principalSecondaryLabel: row.principalSecondaryLabel } : {}), principalStatus: row.principalStatus, principalAuthEpoch: row.principalAuthEpoch, principalRevision: row.principalRevision, identityBindingActive: row.identityBindingActive, membershipActive: row.membershipActive, ...(row.membershipRevision ? { membershipRevision: row.membershipRevision } : {}) };
+      const row = result.rows[0];
+      if (!row) return undefined;
+      return {
+        tenantCode: row.tenantCode,
+        tenantDisplayName: row.tenantDisplayName,
+        ...(row.tenantCountryCode
+          ? { tenantCountryCode: row.tenantCountryCode.trim().toUpperCase() }
+          : {}),
+        ...(row.tenantLogoAssetRef
+          ? { tenantLogoAssetRef: row.tenantLogoAssetRef }
+          : {}),
+        tenantStatus: row.tenantStatus,
+        tenantRealmKey: row.tenantRealmKey,
+        ...(row.subscriptionPlanId
+          ? { subscriptionPlanId: row.subscriptionPlanId }
+          : {}),
+        tenantRevision: row.tenantRevision,
+        principalCode: row.principalCode,
+        principalDisplayName: row.principalDisplayName,
+        ...(row.principalSecondaryLabel
+          ? { principalSecondaryLabel: row.principalSecondaryLabel }
+          : {}),
+        principalStatus: row.principalStatus,
+        principalAuthEpoch: row.principalAuthEpoch,
+        principalRevision: row.principalRevision,
+        identityBindingActive: row.identityBindingActive,
+        membershipActive: row.membershipActive,
+        ...(row.membershipRevision
+          ? { membershipRevision: row.membershipRevision }
+          : {}),
+      };
     });
   }
 
-  async readProfile(context: VerifiedRequestContext): Promise<ExperienceProfileRecord> {
+  async readProfile(
+    context: VerifiedRequestContext,
+  ): Promise<ExperienceProfileRecord> {
     return this.withContext(context, async (database) => {
-    const result = await sql<{ tenant: Record<string, unknown> | null; principal: Record<string, unknown> | null; revision: string }>`
+      const result = await sql<{
+        tenant: Record<string, unknown> | null;
+        principal: Record<string, unknown> | null;
+        revision: string;
+      }>`
       SELECT CASE WHEN tp.id IS NULL THEN NULL ELSE jsonb_build_object(
                'localeCode', tp.locale_code, 'languageCode', tp.language_code, 'timezoneCode', tp.timezone_code,
                'dateFormat', tp.date_format, 'numberFormat', tp.number_format, 'weekStart', tp.week_start, 'weekendDays', tp.weekend_days) END AS tenant,
@@ -83,23 +156,58 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       WHERE t.id = ${context.tenantId}::uuid
       LIMIT 1
     `.execute(database);
-    const row = result.rows[0];
-    return { ...(row?.tenant ? { tenant: row.tenant } : {}), ...(row?.principal ? { principal: row.principal } : {}), revision: row?.revision ?? "profile:missing" };
+      const row = result.rows[0];
+      return {
+        ...(row?.tenant ? { tenant: row.tenant } : {}),
+        ...(row?.principal ? { principal: row.principal } : {}),
+        revision: row?.revision ?? "profile:missing",
+      };
     });
   }
 
-  async readEntitlementRevision(context: VerifiedRequestContext, at: Date): Promise<string> {
-    return this.withContext(context, async database => {
-      const row = (await sql<{revision:string|null}>`SELECT control.effective_tenant_entitlement(${context.tenantId}::uuid,${at}::timestamptz)->>'revision' AS revision`.execute(database)).rows[0];
+  async readEntitlementRevision(
+    context: VerifiedRequestContext,
+    at: Date,
+  ): Promise<string> {
+    return this.withContext(context, async (database) => {
+      const row = (
+        await sql<{
+          revision: string | null;
+        }>`SELECT control.effective_tenant_entitlement(${context.tenantId}::uuid,${at}::timestamptz)->>'revision' AS revision`.execute(
+          database,
+        )
+      ).rows[0];
       return row?.revision ?? "no_effective_plan";
     });
   }
 
-  async readCatalog(context: VerifiedRequestContext, subscriptionPlanId: string): Promise<ExperienceCatalogRecord | undefined> {
+  async readCatalog(
+    context: VerifiedRequestContext,
+    subscriptionPlanId: string,
+  ): Promise<ExperienceCatalogRecord | undefined> {
     return this.withContext(context, async (database) => {
-    const [planResult, associationResult, permissionResult] = await Promise.all([
-      sql<{ active: boolean; revision: string }>`SELECT is_active AS active, COALESCE(updated_at, created_at)::text AS revision FROM control.subscription_plan WHERE id = ${subscriptionPlanId}::uuid LIMIT 1`.execute(database),
-      sql<{ workspaceCode: string; workspaceName: string; workspaceIconKey: string | null; workspaceSortOrder: number; workspaceSharedInfrastructure: boolean; moduleId: string; moduleCode: string; moduleName: string; moduleIconKey: string | null; moduleSortOrder: number; primary: boolean; revision: string }>`
+      const [planResult, associationResult, permissionResult] =
+        await Promise.all([
+          sql<{
+            active: boolean;
+            revision: string;
+          }>`SELECT is_active AS active, COALESCE(updated_at, created_at)::text AS revision FROM control.subscription_plan WHERE id = ${subscriptionPlanId}::uuid LIMIT 1`.execute(
+            database,
+          ),
+          sql<{
+            workspaceCode: string;
+            workspaceName: string;
+            workspaceIconKey: string | null;
+            workspaceSortOrder: number;
+            workspaceSharedInfrastructure: boolean;
+            moduleId: string;
+            moduleCode: string;
+            moduleName: string;
+            moduleIconKey: string | null;
+            moduleSortOrder: number;
+            primary: boolean;
+            revision: string;
+          }>`
         SELECT w.code AS "workspaceCode", w.name AS "workspaceName", w.icon_key AS "workspaceIconKey", w.sort_order AS "workspaceSortOrder", w.is_shared_infrastructure AS "workspaceSharedInfrastructure",
                m.id::text AS "moduleId", m.code AS "moduleCode", m.name AS "moduleName", m.icon_key AS "moduleIconKey",
                wm.sort_order AS "moduleSortOrder", wm.is_primary AS primary,
@@ -111,31 +219,63 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
         WHERE effective.value->>'planId' = ${subscriptionPlanId}
         ORDER BY w.sort_order, w.code, wm.sort_order, m.code
       `.execute(database),
-      sql<{ code: string; moduleId: string; revision: string }>`
+          sql<{ code: string; moduleId: string; revision: string }>`
         SELECT p.canonical_code AS code, p.module_id::text AS "moduleId", COALESCE(p.updated_at, p.created_at)::text AS revision
         FROM authz.permission p WHERE p.status = 'published' ORDER BY p.canonical_code
       `.execute(database),
-    ]);
-    const plan = planResult.rows[0];
-    if (!plan) return undefined;
-    return {
-      planActive: plan.active, planRevision: plan.revision,
-      associations: associationResult.rows.map((row) => ({ workspaceCode: row.workspaceCode, workspaceName: row.workspaceName, ...(row.workspaceIconKey ? { workspaceIconKey: row.workspaceIconKey } : {}), workspaceSortOrder: row.workspaceSortOrder, workspaceSharedInfrastructure: row.workspaceSharedInfrastructure, moduleId: row.moduleId, moduleCode: row.moduleCode, moduleName: row.moduleName, ...(row.moduleIconKey ? { moduleIconKey: row.moduleIconKey } : {}), moduleSortOrder: row.moduleSortOrder, primary: row.primary, revision: row.revision })),
-      permissions: permissionResult.rows,
-    };
+        ]);
+      const plan = planResult.rows[0];
+      if (!plan) return undefined;
+      return {
+        planActive: plan.active,
+        planRevision: plan.revision,
+        associations: associationResult.rows.map((row) => ({
+          workspaceCode: row.workspaceCode,
+          workspaceName: row.workspaceName,
+          ...(row.workspaceIconKey
+            ? { workspaceIconKey: row.workspaceIconKey }
+            : {}),
+          workspaceSortOrder: row.workspaceSortOrder,
+          workspaceSharedInfrastructure: row.workspaceSharedInfrastructure,
+          moduleId: row.moduleId,
+          moduleCode: row.moduleCode,
+          moduleName: row.moduleName,
+          ...(row.moduleIconKey ? { moduleIconKey: row.moduleIconKey } : {}),
+          moduleSortOrder: row.moduleSortOrder,
+          primary: row.primary,
+          revision: row.revision,
+        })),
+        permissions: permissionResult.rows,
+      };
     });
   }
 
-  async readFeatureRevision(context: VerifiedRequestContext, at: Date): Promise<string> {
-    return createHash("sha256").update(JSON.stringify(await this.readFeatures(context, at))).digest("hex");
+  async readFeatureRevision(
+    context: VerifiedRequestContext,
+    at: Date,
+  ): Promise<string> {
+    return createHash("sha256")
+      .update(JSON.stringify(await this.readFeatures(context, at)))
+      .digest("hex");
   }
 
-  async readFeatures(context: VerifiedRequestContext, at: Date): Promise<readonly ExperienceFeatureRecord[]> {
+  async readFeatures(
+    context: VerifiedRequestContext,
+    at: Date,
+  ): Promise<readonly ExperienceFeatureRecord[]> {
     return this.withContext(context, async (database) => {
-    const result = await sql<{
-      id: string; code: string; moduleId: string | null; kind: "release_gate" | "kill_switch" | "experiment";
-      cohortStrategy: ExperienceFeatureRecord["cohortStrategy"]; defaultEnabled: boolean; rolloutPct: number | null; overrideEnabled: boolean | null; metadata: Record<string, unknown>; revision: string;
-    }>`
+      const result = await sql<{
+        id: string;
+        code: string;
+        moduleId: string | null;
+        kind: "release_gate" | "kill_switch" | "experiment";
+        cohortStrategy: ExperienceFeatureRecord["cohortStrategy"];
+        defaultEnabled: boolean;
+        rolloutPct: number | null;
+        overrideEnabled: boolean | null;
+        metadata: Record<string, unknown>;
+        revision: string;
+      }>`
       SELECT f.id::text AS id, f.code, f.module_id::text AS "moduleId", f.flag_kind AS kind,
              f.cohort_strategy AS "cohortStrategy", f.default_enabled AS "defaultEnabled", f.rollout_pct AS "rolloutPct", o.is_enabled AS "overrideEnabled",
              f.metadata, concat_ws(':', f.cohort_revision::text, COALESCE(f.updated_at, f.created_at)::text, COALESCE(o.updated_at, o.created_at)::text) AS revision
@@ -145,14 +285,40 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       WHERE f.is_active AND f.effective_from <= ${at} AND (f.effective_until IS NULL OR f.effective_until > ${at})
       ORDER BY f.code
     `.execute(database);
-    return result.rows.map((row) => ({ id: row.id, code: row.code, ...(row.moduleId ? { moduleId: row.moduleId } : {}), kind: row.kind, cohortStrategy: row.cohortStrategy, defaultEnabled: row.defaultEnabled, ...(row.rolloutPct === null ? {} : { rolloutPct: row.rolloutPct }), ...(row.overrideEnabled === null ? {} : { overrideEnabled: row.overrideEnabled }), metadata: row.metadata, revision: row.revision }));
+      return result.rows.map((row) => ({
+        id: row.id,
+        code: row.code,
+        ...(row.moduleId ? { moduleId: row.moduleId } : {}),
+        kind: row.kind,
+        cohortStrategy: row.cohortStrategy,
+        defaultEnabled: row.defaultEnabled,
+        ...(row.rolloutPct === null ? {} : { rolloutPct: row.rolloutPct }),
+        ...(row.overrideEnabled === null
+          ? {}
+          : { overrideEnabled: row.overrideEnabled }),
+        metadata: row.metadata,
+        revision: row.revision,
+      }));
     });
   }
 
-  async readWorkContexts(context: VerifiedRequestContext): Promise<readonly ExperienceWorkContextRecord[]> {
+  async readWorkContexts(
+    context: VerifiedRequestContext,
+  ): Promise<readonly ExperienceWorkContextRecord[]> {
     if (context.planeKey !== "neon") return [];
     return this.withContext(context, async (database) => {
-    const result = await sql<{ companyCodeId:string; companyCode:string; companyDisplayName:string; legalEntityId:string; legalEntityCode:string; legalEntityName:string; logoAssetRef:string|null;countryCode:string|null; functionalCurrency:string; revision:string }>`
+      const result = await sql<{
+        companyCodeId: string;
+        companyCode: string;
+        companyDisplayName: string;
+        legalEntityId: string;
+        legalEntityCode: string;
+        legalEntityName: string;
+        logoAssetRef: string | null;
+        countryCode: string | null;
+        functionalCurrency: string;
+        revision: string;
+      }>`
       SELECT c.id::text AS "companyCodeId", c.code AS "companyCode", COALESCE(NULLIF(btrim(c.display_name),''),c.name,c.code) AS "companyDisplayName",
              le.id::text AS "legalEntityId", le.code AS "legalEntityCode", COALESCE(NULLIF(btrim(le.display_name),''),le.name,le.code) AS "legalEntityName",le.logo_asset_ref AS "logoAssetRef",
              COALESCE(c.country_code,le.registration_country_code)::text AS "countryCode", c.functional_currency::text AS "functionalCurrency",
@@ -160,18 +326,49 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       FROM master.company_code c JOIN master.legal_entity le ON le.tenant_id=c.tenant_id AND le.id=c.legal_entity_id AND le.status='active'
       WHERE c.tenant_id=${context.tenantId}::uuid AND c.status='active' ORDER BY c.code,c.id
     `.execute(database);
-    return result.rows.map((row)=>({ companyCodeId:row.companyCodeId,companyCode:row.companyCode,companyDisplayName:row.companyDisplayName,legalEntityId:row.legalEntityId,legalEntityCode:row.legalEntityCode,legalEntityName:row.legalEntityName,...(row.logoAssetRef?{logoAssetRef:row.logoAssetRef}:{}),...(row.countryCode?{countryCode:row.countryCode.trim().toUpperCase()}:{}),functionalCurrency:row.functionalCurrency.trim(),revision:row.revision }));
+      return result.rows.map((row) => ({
+        companyCodeId: row.companyCodeId,
+        companyCode: row.companyCode,
+        companyDisplayName: row.companyDisplayName,
+        legalEntityId: row.legalEntityId,
+        legalEntityCode: row.legalEntityCode,
+        legalEntityName: row.legalEntityName,
+        ...(row.logoAssetRef ? { logoAssetRef: row.logoAssetRef } : {}),
+        ...(row.countryCode
+          ? { countryCode: row.countryCode.trim().toUpperCase() }
+          : {}),
+        functionalCurrency: row.functionalCurrency.trim(),
+        revision: row.revision,
+      }));
     });
   }
 
-  async readOperatingOrganizations(context: VerifiedRequestContext, at: Date): Promise<readonly ExperienceOperatingOrganizationRecord[]> {
+  async readOperatingOrganizations(
+    context: VerifiedRequestContext,
+    at: Date,
+  ): Promise<readonly ExperienceOperatingOrganizationRecord[]> {
     if (context.planeKey !== "neon") return [];
     return this.withContext(context, async (database) => {
-    const result = await sql<{
-      id:string;code:string;displayName:string;domain:string;parentId:string|null;path:string[];
-      procurementProfileConfigured:boolean;salesProfileConfigured:boolean;leadCompanyCodeId:string|null;bookingCompanyCodeId:string|null;invoicingCompanyCodeId:string|null;defaultCurrency:string|null;
-      companyCodeId:string;participationRole:string;effectiveFrom:string;effectiveUntil:string|null;organizationRevision:string;assignmentRevision:string;
-    }>`
+      const result = await sql<{
+        id: string;
+        code: string;
+        displayName: string;
+        domain: string;
+        parentId: string | null;
+        path: string[];
+        procurementProfileConfigured: boolean;
+        salesProfileConfigured: boolean;
+        leadCompanyCodeId: string | null;
+        bookingCompanyCodeId: string | null;
+        invoicingCompanyCodeId: string | null;
+        defaultCurrency: string | null;
+        companyCodeId: string;
+        participationRole: string;
+        effectiveFrom: string;
+        effectiveUntil: string | null;
+        organizationRevision: string;
+        assignmentRevision: string;
+      }>`
       WITH RECURSIVE hierarchy AS (
         SELECT organization.id, organization.parent_operating_organization_id,
                ARRAY[COALESCE(NULLIF(btrim(organization.display_name),''),organization.name,organization.code)]::text[] AS path,
@@ -208,23 +405,76 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
         LEFT JOIN master.sales_organization_profile sales ON sales.tenant_id=organization.tenant_id AND sales.operating_organization_id=organization.id
        ORDER BY hierarchy.path,organization.code,assignment.participation_role,company.code
     `.execute(database);
-    const organizations=new Map<string,ExperienceOperatingOrganizationRecord>();
-    for(const row of result.rows){
-      const current=organizations.get(row.id);
-      const assignment={companyCodeId:row.companyCodeId,participationRole:row.participationRole,effectiveFrom:row.effectiveFrom,...(row.effectiveUntil?{effectiveUntil:row.effectiveUntil}:{}),revision:row.assignmentRevision};
-      if(current){organizations.set(row.id,{...current,assignments:Object.freeze([...current.assignments,assignment]),revision:`${current.revision}:${row.assignmentRevision}`});continue;}
-      organizations.set(row.id,Object.freeze({id:row.id,code:row.code,displayName:row.displayName,domain:row.domain,...(row.parentId?{parentId:row.parentId}:{}),path:Object.freeze([...row.path]),procurementProfileConfigured:row.procurementProfileConfigured,salesProfileConfigured:row.salesProfileConfigured,...(row.leadCompanyCodeId?{leadCompanyCodeId:row.leadCompanyCodeId}:{}),...(row.bookingCompanyCodeId?{bookingCompanyCodeId:row.bookingCompanyCodeId}:{}),...(row.invoicingCompanyCodeId?{invoicingCompanyCodeId:row.invoicingCompanyCodeId}:{}),...(row.defaultCurrency?{defaultCurrency:row.defaultCurrency.trim()}:{}),assignments:Object.freeze([assignment]),revision:`${row.organizationRevision}:${row.assignmentRevision}`}));
-    }
-    return Object.freeze([...organizations.values()]);
+      const organizations = new Map<
+        string,
+        ExperienceOperatingOrganizationRecord
+      >();
+      for (const row of result.rows) {
+        const current = organizations.get(row.id);
+        const assignment = {
+          companyCodeId: row.companyCodeId,
+          participationRole: row.participationRole,
+          effectiveFrom: row.effectiveFrom,
+          ...(row.effectiveUntil ? { effectiveUntil: row.effectiveUntil } : {}),
+          revision: row.assignmentRevision,
+        };
+        if (current) {
+          organizations.set(row.id, {
+            ...current,
+            assignments: Object.freeze([...current.assignments, assignment]),
+            revision: `${current.revision}:${row.assignmentRevision}`,
+          });
+          continue;
+        }
+        organizations.set(
+          row.id,
+          Object.freeze({
+            id: row.id,
+            code: row.code,
+            displayName: row.displayName,
+            domain: row.domain,
+            ...(row.parentId ? { parentId: row.parentId } : {}),
+            path: Object.freeze([...row.path]),
+            procurementProfileConfigured: row.procurementProfileConfigured,
+            salesProfileConfigured: row.salesProfileConfigured,
+            ...(row.leadCompanyCodeId
+              ? { leadCompanyCodeId: row.leadCompanyCodeId }
+              : {}),
+            ...(row.bookingCompanyCodeId
+              ? { bookingCompanyCodeId: row.bookingCompanyCodeId }
+              : {}),
+            ...(row.invoicingCompanyCodeId
+              ? { invoicingCompanyCodeId: row.invoicingCompanyCodeId }
+              : {}),
+            ...(row.defaultCurrency
+              ? { defaultCurrency: row.defaultCurrency.trim() }
+              : {}),
+            assignments: Object.freeze([assignment]),
+            revision: `${row.organizationRevision}:${row.assignmentRevision}`,
+          }),
+        );
+      }
+      return Object.freeze([...organizations.values()]);
     });
   }
 
-  async readNetworkAccounts(context: VerifiedRequestContext): Promise<readonly ExperienceNetworkAccountRecord[]> {
+  async readNetworkAccounts(
+    context: VerifiedRequestContext,
+  ): Promise<readonly ExperienceNetworkAccountRecord[]> {
     if (context.planeKey !== "mesh") return [];
     return this.withContext(context, async (database) => {
       const result = await sql<{
-        id:string;code:string;displayName:string;legalName:string|null;role:"buyer"|"supplier"|"both";
-        countryCode:string|null;defaultCurrency:string|null;logoAssetRef:string|null;canonicalPartyId:string|null;fromNeon:boolean;revision:string;
+        id: string;
+        code: string;
+        displayName: string;
+        legalName: string | null;
+        role: "buyer" | "supplier" | "both";
+        countryCode: string | null;
+        defaultCurrency: string | null;
+        logoAssetRef: string | null;
+        canonicalPartyId: string | null;
+        fromNeon: boolean;
+        revision: string;
       }>`
         SELECT account.id::text AS id, account.account_code AS code,
                account.display_name AS "displayName", account.legal_name AS "legalName",
@@ -243,27 +493,74 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
          WHERE account.tenant_id=${context.tenantId}::uuid AND account.status='active'
          ORDER BY account.network_role,account.display_name,account.account_code
       `.execute(database);
-      return Object.freeze(result.rows.map((row)=>Object.freeze({id:row.id,code:row.code,displayName:row.displayName,...(row.legalName?{legalName:row.legalName}:{}),role:row.role,...(row.countryCode?{countryCode:row.countryCode.trim().toUpperCase()}:{}),...(row.defaultCurrency?{defaultCurrency:row.defaultCurrency.trim().toUpperCase()}:{}),...(row.logoAssetRef?{logoAssetRef:row.logoAssetRef}:{}),...(row.canonicalPartyId?{canonicalPartyId:row.canonicalPartyId}:{}),source:row.fromNeon?"neon_projection" as const:"mesh" as const,revision:row.revision})));
+      return Object.freeze(
+        result.rows.map((row) =>
+          Object.freeze({
+            id: row.id,
+            code: row.code,
+            displayName: row.displayName,
+            ...(row.legalName ? { legalName: row.legalName } : {}),
+            role: row.role,
+            ...(row.countryCode
+              ? { countryCode: row.countryCode.trim().toUpperCase() }
+              : {}),
+            ...(row.defaultCurrency
+              ? { defaultCurrency: row.defaultCurrency.trim().toUpperCase() }
+              : {}),
+            ...(row.logoAssetRef ? { logoAssetRef: row.logoAssetRef } : {}),
+            ...(row.canonicalPartyId
+              ? { canonicalPartyId: row.canonicalPartyId }
+              : {}),
+            source: row.fromNeon
+              ? ("neon_projection" as const)
+              : ("mesh" as const),
+            revision: row.revision,
+          }),
+        ),
+      );
     });
   }
 
-  async readLocalePolicy(context: VerifiedRequestContext): Promise<ExperienceLocalePolicyRecord> {
-    return this.withContext(context, (database) => readTenantLocalePolicy(database, context));
+  async readLocalePolicy(
+    context: VerifiedRequestContext,
+  ): Promise<ExperienceLocalePolicyRecord> {
+    return this.withContext(context, (database) =>
+      readTenantLocalePolicy(database, context),
+    );
   }
 
-  async updateLocalePolicy(context: VerifiedRequestContext, policy: Omit<ExperienceLocalePolicyRecord,"revision">): Promise<ExperienceLocalePolicyRecord> {
+  async updateLocalePolicy(
+    context: VerifiedRequestContext,
+    policy: Omit<ExperienceLocalePolicyRecord, "revision">,
+  ): Promise<ExperienceLocalePolicyRecord> {
     return this.withContext(context, async (database) => {
       const write = async (transaction: Database) => {
         await lockLocaleTenant(transaction, context);
-        const requested = (policy.catalogs ?? []).map(({localeCode}) => localeCode);
-        const registered = await sql<{localeCode:string}>`
+        const requested = (policy.catalogs ?? []).map(
+          ({ localeCode }) => localeCode,
+        );
+        const registered = await sql<{ localeCode: string }>`
           SELECT locale_code AS "localeCode" FROM control.ui_locale_catalog
-          WHERE locale_code=ANY(${requested}::text[]) FOR SHARE`.execute(transaction);
-        const available = new Set(registered.rows.map(row => row.localeCode));
-        if (requested.some(code => !available.has(code)) || policy.enabledLocales.some(code => !available.has(code))) {
-          throw new ExperienceAccessError(503, "EXPERIENCE_EXACT_PLANE_CATALOG_UNAVAILABLE", "The target plane is missing requested locale catalogs");
+          WHERE locale_code=ANY(${requested}::text[]) FOR SHARE`.execute(
+          transaction,
+        );
+        const available = new Set(registered.rows.map((row) => row.localeCode));
+        if (
+          requested.some((code) => !available.has(code)) ||
+          policy.enabledLocales.some((code) => !available.has(code))
+        ) {
+          throw new ExperienceAccessError(
+            503,
+            "EXPERIENCE_EXACT_PLANE_CATALOG_UNAVAILABLE",
+            "The target plane is missing requested locale catalogs",
+          );
         }
-        const governance = Object.fromEntries((policy.catalogs ?? []).map(({localeCode, ...catalog}) => [localeCode, catalog]));
+        const governance = Object.fromEntries(
+          (policy.catalogs ?? []).map(({ localeCode, ...catalog }) => [
+            localeCode,
+            catalog,
+          ]),
+        );
         // This upsert also locks the tenant profile, serializing concurrent policy replacements.
         // Catalog review choices belong to this tenant; never mutate the shared plane catalog.
         await sql`
@@ -272,13 +569,17 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
           ON CONFLICT ON CONSTRAINT tenant_profile_tenant_uq DO UPDATE
           SET enabled_locale_codes=EXCLUDED.enabled_locale_codes,default_locale_code=EXCLUDED.default_locale_code,
               fallback_locale_code=EXCLUDED.fallback_locale_code,locale_catalog_governance=EXCLUDED.locale_catalog_governance,
-              updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(transaction);
+              updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(
+          transaction,
+        );
         // Separate statements are required: PostgreSQL cannot update the same row twice in a CTE.
         // Clear the partial unique-index choices before assigning the replacement default.
         await sql`
           UPDATE master.tenant_locale_activation
              SET is_default=false,is_fallback=false,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid
-           WHERE tenant_id=${context.tenantId}::uuid AND (is_default OR is_fallback)`.execute(transaction);
+           WHERE tenant_id=${context.tenantId}::uuid AND (is_default OR is_fallback)`.execute(
+          transaction,
+        );
         await sql`
           INSERT INTO master.tenant_locale_activation(tenant_id,locale_code,enabled,is_default,is_fallback,created_by)
           SELECT ${context.tenantId}::uuid,catalog.locale_code,
@@ -288,114 +589,348 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
             FROM control.ui_locale_catalog catalog
           ON CONFLICT (tenant_id,locale_code) DO UPDATE
           SET enabled=EXCLUDED.enabled,is_default=EXCLUDED.is_default,is_fallback=EXCLUDED.is_fallback,
-              updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(transaction);
+              updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(
+          transaction,
+        );
         return readTenantLocalePolicy(transaction, context);
       };
-      return database.isTransaction ? write(database) : database.transaction().execute(write);
+      return database.isTransaction
+        ? write(database)
+        : database.transaction().execute(write);
     });
   }
 
-  async updatePrincipalLocale(context: VerifiedRequestContext, localeCode: string, expectedPolicyRevision: string): Promise<void> {
+  async updatePrincipalLocale(
+    context: VerifiedRequestContext,
+    localeCode: string,
+    expectedPolicyRevision: string,
+  ): Promise<void> {
     await this.withContext(context, async (database) => {
       const write = async (transaction: Database) => {
         // Serialize with policy replacement, then verify the policy used by service validation.
         await lockLocaleTenant(transaction, context);
         const current = await readTenantLocalePolicy(transaction, context);
         if (current.revision !== expectedPolicyRevision) {
-          throw new ExperienceAccessError(409, "EXPERIENCE_LOCALE_POLICY_CHANGED", "Locale policy changed; reload before selecting a locale");
+          throw new ExperienceAccessError(
+            409,
+            "EXPERIENCE_LOCALE_POLICY_CHANGED",
+            "Locale policy changed; reload before selecting a locale",
+          );
         }
         await sql`
           INSERT INTO master.principal_ui_profile(tenant_id,principal_id,locale_code,language_code,created_by)
           VALUES(${context.tenantId}::uuid,${context.principalId}::uuid,${localeCode},${new Intl.Locale(localeCode).language},${context.principalId}::uuid)
           ON CONFLICT ON CONSTRAINT principal_ui_profile_tenant_principal_uq DO UPDATE
-          SET locale_code=EXCLUDED.locale_code,language_code=EXCLUDED.language_code,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(transaction);
+          SET locale_code=EXCLUDED.locale_code,language_code=EXCLUDED.language_code,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(
+          transaction,
+        );
       };
-      return database.isTransaction ? write(database) : database.transaction().execute(write);
+      return database.isTransaction
+        ? write(database)
+        : database.transaction().execute(write);
     });
   }
 
-  async saveSurfaceDraft(context: VerifiedRequestContext, input: Readonly<{ targetPlane: "studio" | "neon" | "mesh"; surfaceKey: string; layer: "shared" | "tenant"; definition: Readonly<Record<string, unknown>>; contentHash: string; source: "human" | "atlas"; expectedContentHash?: string }>): Promise<ExperienceSurfaceReleaseRecord> {
+  async saveSurfaceDraft(
+    context: VerifiedRequestContext,
+    input: Readonly<{
+      targetPlane: "studio" | "neon" | "mesh";
+      surfaceKey: string;
+      layer: "shared" | "tenant";
+      definition: Readonly<Record<string, unknown>>;
+      contentHash: string;
+      source: "human" | "atlas";
+      expectedContentHash?: string;
+    }>,
+  ): Promise<ExperienceSurfaceReleaseRecord> {
     return this.withContext(context, async (database) => {
-      const existing = await sql<{ id: string; revision: number; contentHash:string }>`SELECT id::text AS id,revision::int AS revision,content_hash AS "contentHash" FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${input.targetPlane} AND surface_key=${input.surfaceKey} AND layer=${input.layer} AND status='draft' FOR UPDATE`.execute(database);
+      const existing = await sql<{
+        id: string;
+        revision: number;
+        contentHash: string;
+      }>`SELECT id::text AS id,revision::int AS revision,content_hash AS "contentHash" FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${input.targetPlane} AND surface_key=${input.surfaceKey} AND layer=${input.layer} AND status='draft' FOR UPDATE`.execute(
+        database,
+      );
       const current = existing.rows[0];
-      if(current&&input.expectedContentHash!==undefined&&current.contentHash!==input.expectedContentHash)throw Object.assign(new Error("Surface draft changed after it was loaded"),{code:"EXPERIENCE_SURFACE_DRAFT_CONFLICT"});
-      const revision=current?.revision??(await sql<{revision:number}>`SELECT COALESCE(MAX(revision),0)::int+1 AS revision FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${input.targetPlane} AND surface_key=${input.surfaceKey} AND layer=${input.layer}`.execute(database)).rows[0]!.revision;
-      const definition={...input.definition,revision},contentHash=createHash("sha256").update(JSON.stringify(definition)).digest("hex");
+      if (
+        current &&
+        input.expectedContentHash !== undefined &&
+        current.contentHash !== input.expectedContentHash
+      )
+        throw Object.assign(
+          new Error("Surface draft changed after it was loaded"),
+          { code: "EXPERIENCE_SURFACE_DRAFT_CONFLICT" },
+        );
+      const revision =
+        current?.revision ??
+        (
+          await sql<{
+            revision: number;
+          }>`SELECT COALESCE(MAX(revision),0)::int+1 AS revision FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${input.targetPlane} AND surface_key=${input.surfaceKey} AND layer=${input.layer}`.execute(
+            database,
+          )
+        ).rows[0]!.revision;
+      const definition = { ...input.definition, revision },
+        contentHash = createHash("sha256")
+          .update(JSON.stringify(definition))
+          .digest("hex");
       const result = current
-        ? await sql<SurfaceReleaseRow>`UPDATE control.experience_surface_release SET definition=${JSON.stringify(definition)}::jsonb,content_hash=${contentHash},source=${input.source},validation_report='{"valid":true,"issues":[]}'::jsonb,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND id=${current.id}::uuid RETURNING id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt"`.execute(database)
-        : await sql<SurfaceReleaseRow>`INSERT INTO control.experience_surface_release(tenant_id,target_plane,surface_key,layer,revision,status,definition,content_hash,source,created_by) VALUES(${context.tenantId}::uuid,${input.targetPlane},${input.surfaceKey},${input.layer},${revision},'draft',${JSON.stringify(definition)}::jsonb,${contentHash},${input.source},${context.principalId}::uuid) RETURNING id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt"`.execute(database);
+        ? await sql<SurfaceReleaseRow>`UPDATE control.experience_surface_release SET definition=${JSON.stringify(definition)}::jsonb,content_hash=${contentHash},source=${input.source},validation_report='{"valid":true,"issues":[]}'::jsonb,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND id=${current.id}::uuid RETURNING id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt"`.execute(
+            database,
+          )
+        : await sql<SurfaceReleaseRow>`INSERT INTO control.experience_surface_release(tenant_id,target_plane,surface_key,layer,revision,status,definition,content_hash,source,created_by) VALUES(${context.tenantId}::uuid,${input.targetPlane},${input.surfaceKey},${input.layer},${revision},'draft',${JSON.stringify(definition)}::jsonb,${contentHash},${input.source},${context.principalId}::uuid) RETURNING id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt"`.execute(
+            database,
+          );
       return surfaceRelease(result.rows[0]!);
     });
   }
 
-  async listSurfaceReleases(context:VerifiedRequestContext,input:Readonly<{targetPlane:"studio"|"neon"|"mesh";surfaceKey:string}>):Promise<readonly ExperienceSurfaceReleaseRecord[]>{return this.withContext(context,async(database)=>(await sql<SurfaceReleaseRow>`SELECT id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt" FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${input.targetPlane} AND surface_key=${input.surfaceKey} ORDER BY revision DESC,created_at DESC LIMIT 50`.execute(database)).rows.map(surfaceRelease));}
+  async listSurfaceReleases(
+    context: VerifiedRequestContext,
+    input: Readonly<{
+      targetPlane: "studio" | "neon" | "mesh";
+      surfaceKey: string;
+    }>,
+  ): Promise<readonly ExperienceSurfaceReleaseRecord[]> {
+    return this.withContext(context, async (database) =>
+      (
+        await sql<SurfaceReleaseRow>`SELECT id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt" FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${input.targetPlane} AND surface_key=${input.surfaceKey} ORDER BY revision DESC,created_at DESC LIMIT 50`.execute(
+          database,
+        )
+      ).rows.map(surfaceRelease),
+    );
+  }
 
-  async rollbackSurfaceRelease(context:VerifiedRequestContext,releaseId:string):Promise<ExperienceSurfaceReleaseRecord|undefined>{return this.withContext(context,async(database)=>{const selected=(await sql<SurfaceReleaseRow>`SELECT id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt" FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND id=${releaseId}::uuid LIMIT 1`.execute(database)).rows[0];if(!selected)return undefined;await sql`UPDATE control.experience_surface_release SET status='retired',updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${selected.targetPlane} AND surface_key=${selected.surfaceKey} AND layer=${selected.layer} AND status='draft'`.execute(database);const revision=(await sql<{revision:number}>`SELECT COALESCE(MAX(revision),0)::int+1 AS revision FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${selected.targetPlane} AND surface_key=${selected.surfaceKey} AND layer=${selected.layer}`.execute(database)).rows[0]!.revision;const definition={...selected.definition,revision};const contentHash=createHash("sha256").update(JSON.stringify(definition)).digest("hex");const row=(await sql<SurfaceReleaseRow>`INSERT INTO control.experience_surface_release(tenant_id,target_plane,surface_key,layer,revision,status,definition,content_hash,source,created_by) VALUES(${context.tenantId}::uuid,${selected.targetPlane},${selected.surfaceKey},${selected.layer},${revision},'draft',${JSON.stringify(definition)}::jsonb,${contentHash},'human',${context.principalId}::uuid) RETURNING id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt"`.execute(database)).rows[0]!;return surfaceRelease(row);});}
-
-  async publishSurfaceRelease(context: VerifiedRequestContext, releaseId: string): Promise<ExperienceSurfaceReleaseRecord | undefined> {
+  async rollbackSurfaceRelease(
+    context: VerifiedRequestContext,
+    releaseId: string,
+  ): Promise<ExperienceSurfaceReleaseRecord | undefined> {
     return this.withContext(context, async (database) => {
-      const selected = await sql<SurfaceReleaseRow>`SELECT id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt" FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND id=${releaseId}::uuid FOR UPDATE`.execute(database);
+      const selected = (
+        await sql<SurfaceReleaseRow>`SELECT id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt" FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND id=${releaseId}::uuid LIMIT 1`.execute(
+          database,
+        )
+      ).rows[0];
+      if (!selected) return undefined;
+      await sql`UPDATE control.experience_surface_release SET status='retired',updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${selected.targetPlane} AND surface_key=${selected.surfaceKey} AND layer=${selected.layer} AND status='draft'`.execute(
+        database,
+      );
+      const revision = (
+        await sql<{
+          revision: number;
+        }>`SELECT COALESCE(MAX(revision),0)::int+1 AS revision FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${selected.targetPlane} AND surface_key=${selected.surfaceKey} AND layer=${selected.layer}`.execute(
+          database,
+        )
+      ).rows[0]!.revision;
+      const definition = { ...selected.definition, revision };
+      const contentHash = createHash("sha256")
+        .update(JSON.stringify(definition))
+        .digest("hex");
+      const row = (
+        await sql<SurfaceReleaseRow>`INSERT INTO control.experience_surface_release(tenant_id,target_plane,surface_key,layer,revision,status,definition,content_hash,source,created_by) VALUES(${context.tenantId}::uuid,${selected.targetPlane},${selected.surfaceKey},${selected.layer},${revision},'draft',${JSON.stringify(definition)}::jsonb,${contentHash},'human',${context.principalId}::uuid) RETURNING id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt"`.execute(
+          database,
+        )
+      ).rows[0]!;
+      return surfaceRelease(row);
+    });
+  }
+
+  async publishSurfaceRelease(
+    context: VerifiedRequestContext,
+    releaseId: string,
+  ): Promise<ExperienceSurfaceReleaseRecord | undefined> {
+    return this.withContext(context, async (database) => {
+      const selected =
+        await sql<SurfaceReleaseRow>`SELECT id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt" FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND id=${releaseId}::uuid FOR UPDATE`.execute(
+          database,
+        );
       const release = selected.rows[0];
       if (!release) return undefined;
       if (release.status === "published") return surfaceRelease(release);
       if (release.status !== "draft") return undefined;
-      await sql`UPDATE control.experience_surface_release SET status='retired',updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${release.targetPlane} AND surface_key=${release.surfaceKey} AND layer=${release.layer} AND status='published'`.execute(database);
-      const published = await sql<SurfaceReleaseRow>`UPDATE control.experience_surface_release SET status='published',published_at=clock_timestamp(),published_by=${context.principalId}::uuid,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND id=${releaseId}::uuid RETURNING id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt"`.execute(database);
+      await sql`UPDATE control.experience_surface_release SET status='retired',updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${release.targetPlane} AND surface_key=${release.surfaceKey} AND layer=${release.layer} AND status='published'`.execute(
+        database,
+      );
+      const published =
+        await sql<SurfaceReleaseRow>`UPDATE control.experience_surface_release SET status='published',published_at=clock_timestamp(),published_by=${context.principalId}::uuid,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND id=${releaseId}::uuid RETURNING id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt"`.execute(
+          database,
+        );
       return surfaceRelease(published.rows[0]!);
     });
   }
 
-  async applySurfaceProjection(context: VerifiedRequestContext, release: ExperienceSurfaceReleaseRecord): Promise<void> {
+  async applySurfaceProjection(
+    context: VerifiedRequestContext,
+    release: ExperienceSurfaceReleaseRecord,
+  ): Promise<void> {
     await this.withContext(context, async (database) => {
-      const already = await sql<{ present: boolean }>`SELECT EXISTS(SELECT 1 FROM runtime_meta.experience_surface_projection WHERE tenant_id=${context.tenantId}::uuid AND source_release_id=${release.id}::uuid AND status='active') AS present`.execute(database);
+      const already = await sql<{
+        present: boolean;
+      }>`SELECT EXISTS(SELECT 1 FROM runtime_meta.experience_surface_projection WHERE tenant_id=${context.tenantId}::uuid AND source_release_id=${release.id}::uuid AND status='active') AS present`.execute(
+        database,
+      );
       if (already.rows[0]?.present) return;
-      await sql`UPDATE runtime_meta.experience_surface_projection SET status='retired',retired_at=clock_timestamp(),retired_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND surface_key=${release.surfaceKey} AND layer=${release.layer} AND status='active'`.execute(database);
-      await sql`INSERT INTO runtime_meta.experience_surface_projection(tenant_id,plane_code,surface_key,layer,source_release_id,source_revision,definition,content_hash,applied_by) VALUES(${context.tenantId}::uuid,${context.planeKey},${release.surfaceKey},${release.layer},${release.id}::uuid,${release.revision},${JSON.stringify(release.definition)}::jsonb,${release.contentHash},${context.principalId}::uuid) ON CONFLICT(tenant_id,source_release_id) DO NOTHING`.execute(database);
+      await sql`UPDATE runtime_meta.experience_surface_projection SET status='retired',retired_at=clock_timestamp(),retired_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND surface_key=${release.surfaceKey} AND layer=${release.layer} AND status='active'`.execute(
+        database,
+      );
+      await sql`INSERT INTO runtime_meta.experience_surface_projection(tenant_id,plane_code,surface_key,layer,source_release_id,source_revision,definition,content_hash,applied_by) VALUES(${context.tenantId}::uuid,${context.planeKey},${release.surfaceKey},${release.layer},${release.id}::uuid,${release.revision},${JSON.stringify(release.definition)}::jsonb,${release.contentHash},${context.principalId}::uuid) ON CONFLICT(tenant_id,source_release_id) DO NOTHING`.execute(
+        database,
+      );
     });
   }
 
-  async readSurfaceProjections(context: VerifiedRequestContext, surfaceKey: string): Promise<readonly ExperienceSurfaceProjectionRecord[]> {
-    return this.withContext(context, async (database) => (await sql<{ surfaceKey: string; layer: "shared" | "tenant"; sourceReleaseId: string; sourceRevision: number; definition: Record<string, unknown>; contentHash: string }>`SELECT surface_key AS "surfaceKey",layer,source_release_id::text AS "sourceReleaseId",source_revision::int AS "sourceRevision",definition,content_hash AS "contentHash" FROM runtime_meta.experience_surface_projection WHERE tenant_id=${context.tenantId}::uuid AND plane_code=${context.planeKey} AND surface_key=${surfaceKey} AND status='active' ORDER BY CASE layer WHEN 'shared' THEN 1 ELSE 2 END`.execute(database)).rows);
+  async readSurfaceProjections(
+    context: VerifiedRequestContext,
+    surfaceKey: string,
+  ): Promise<readonly ExperienceSurfaceProjectionRecord[]> {
+    return this.withContext(
+      context,
+      async (database) =>
+        (
+          await sql<{
+            surfaceKey: string;
+            layer: "shared" | "tenant";
+            sourceReleaseId: string;
+            sourceRevision: number;
+            definition: Record<string, unknown>;
+            contentHash: string;
+          }>`SELECT surface_key AS "surfaceKey",layer,source_release_id::text AS "sourceReleaseId",source_revision::int AS "sourceRevision",definition,content_hash AS "contentHash" FROM runtime_meta.experience_surface_projection WHERE tenant_id=${context.tenantId}::uuid AND plane_code=${context.planeKey} AND surface_key=${surfaceKey} AND status='active' ORDER BY CASE layer WHEN 'shared' THEN 1 ELSE 2 END`.execute(
+            database,
+          )
+        ).rows,
+    );
   }
 
-  async readPersonalSurfaceArrangement(context: VerifiedRequestContext, surfaceKey: string): Promise<PersonalSurfaceArrangementRecord | undefined> {
-    return this.withContext(context, async (database) => (await sql<PersonalSurfaceArrangementRecord>`SELECT surface_key AS "surfaceKey",base_revision::int AS "baseRevision",arrangement FROM master.principal_surface_arrangement WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid AND plane_code=${context.planeKey} AND surface_key=${surfaceKey} LIMIT 1`.execute(database)).rows[0]);
+  async readPersonalSurfaceArrangement(
+    context: VerifiedRequestContext,
+    surfaceKey: string,
+  ): Promise<PersonalSurfaceArrangementRecord | undefined> {
+    return this.withContext(
+      context,
+      async (database) =>
+        (
+          await sql<PersonalSurfaceArrangementRecord>`SELECT surface_key AS "surfaceKey",base_revision::int AS "baseRevision",arrangement FROM master.principal_surface_arrangement WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid AND plane_code=${context.planeKey} AND surface_key=${surfaceKey} LIMIT 1`.execute(
+            database,
+          )
+        ).rows[0],
+    );
   }
 
-  async savePersonalSurfaceArrangement(context: VerifiedRequestContext, input: PersonalSurfaceArrangementRecord): Promise<PersonalSurfaceArrangementRecord> {
+  async savePersonalSurfaceArrangement(
+    context: VerifiedRequestContext,
+    input: PersonalSurfaceArrangementRecord,
+  ): Promise<PersonalSurfaceArrangementRecord> {
     return this.withContext(context, async (database) => {
-      const result=await sql<PersonalSurfaceArrangementRecord>`INSERT INTO master.principal_surface_arrangement(tenant_id,principal_id,plane_code,surface_key,base_revision,arrangement,created_by) VALUES(${context.tenantId}::uuid,${context.principalId}::uuid,${context.planeKey},${input.surfaceKey},${input.baseRevision},${JSON.stringify(input.arrangement)}::jsonb,${context.principalId}::uuid) ON CONFLICT(tenant_id,principal_id,plane_code,surface_key) DO UPDATE SET base_revision=EXCLUDED.base_revision,arrangement=EXCLUDED.arrangement,updated_at=clock_timestamp(),updated_by=EXCLUDED.created_by RETURNING surface_key AS "surfaceKey",base_revision::int AS "baseRevision",arrangement`.execute(database);
+      const result =
+        await sql<PersonalSurfaceArrangementRecord>`INSERT INTO master.principal_surface_arrangement(tenant_id,principal_id,plane_code,surface_key,base_revision,arrangement,created_by) VALUES(${context.tenantId}::uuid,${context.principalId}::uuid,${context.planeKey},${input.surfaceKey},${input.baseRevision},${JSON.stringify(input.arrangement)}::jsonb,${context.principalId}::uuid) ON CONFLICT(tenant_id,principal_id,plane_code,surface_key) DO UPDATE SET base_revision=EXCLUDED.base_revision,arrangement=EXCLUDED.arrangement,updated_at=clock_timestamp(),updated_by=EXCLUDED.created_by RETURNING surface_key AS "surfaceKey",base_revision::int AS "baseRevision",arrangement`.execute(
+          database,
+        );
       return result.rows[0]!;
     });
   }
 
-  async deletePersonalSurfaceArrangement(context: VerifiedRequestContext, surfaceKey: string): Promise<void> {
-    await this.withContext(context, async (database) => { await sql`DELETE FROM master.principal_surface_arrangement WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid AND plane_code=${context.planeKey} AND surface_key=${surfaceKey}`.execute(database); });
+  async deletePersonalSurfaceArrangement(
+    context: VerifiedRequestContext,
+    surfaceKey: string,
+  ): Promise<void> {
+    await this.withContext(context, async (database) => {
+      await sql`DELETE FROM master.principal_surface_arrangement WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid AND plane_code=${context.planeKey} AND surface_key=${surfaceKey}`.execute(
+        database,
+      );
+    });
   }
 
-  async readRouteSlugRedirect(context: VerifiedRequestContext, sourcePath: string, at: Date): Promise<RouteSlugRedirectRecord | undefined> {
-    return this.withContext(context, async (database) => (await sql<RouteSlugRedirectRecord>`SELECT source_path AS "sourcePath",target_path AS "targetPath",redirect_status AS "redirectStatus" FROM control.route_slug_history WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${context.planeKey} AND source_path=${sourcePath} AND status='active' AND effective_from<=${at} AND (effective_until IS NULL OR effective_until>${at}) LIMIT 1`.execute(database)).rows[0]);
+  async readRouteSlugRedirect(
+    context: VerifiedRequestContext,
+    sourcePath: string,
+    at: Date,
+  ): Promise<RouteSlugRedirectRecord | undefined> {
+    return this.withContext(
+      context,
+      async (database) =>
+        (
+          await sql<RouteSlugRedirectRecord>`SELECT source_path AS "sourcePath",target_path AS "targetPath",redirect_status AS "redirectStatus" FROM control.route_slug_history WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${context.planeKey} AND source_path=${sourcePath} AND status='active' AND effective_from<=${at} AND (effective_until IS NULL OR effective_until>${at}) LIMIT 1`.execute(
+            database,
+          )
+        ).rows[0],
+    );
   }
 
-  async registerRouteSlugRedirect(context: VerifiedRequestContext, input: Readonly<{ catalogKind: "workspace" | "module" | "entity"; catalogCode: string; sourcePath: string; targetPath: string; redirectStatus: 301 | 308; sourceReleaseId: string }>): Promise<RouteSlugRedirectRecord> {
+  async registerRouteSlugRedirect(
+    context: VerifiedRequestContext,
+    input: Readonly<{
+      catalogKind: "workspace" | "module" | "entity";
+      catalogCode: string;
+      sourcePath: string;
+      targetPath: string;
+      redirectStatus: 301 | 308;
+      sourceReleaseId: string;
+    }>,
+  ): Promise<RouteSlugRedirectRecord> {
     return this.withContext(context, async (database) => {
-      const reverse = await sql<{ present:boolean }>`SELECT EXISTS(SELECT 1 FROM control.route_slug_history WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${context.planeKey} AND source_path=${input.targetPath} AND target_path=${input.sourcePath} AND status='active') AS present`.execute(database);
-      if(reverse.rows[0]?.present)throw Object.assign(new Error("Route redirect would create a loop"),{code:"EXPERIENCE_ROUTE_REDIRECT_LOOP"});
-      await sql`UPDATE control.route_slug_history SET status='retired',effective_until=clock_timestamp() WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${context.planeKey} AND source_path=${input.sourcePath} AND status='active'`.execute(database);
-      const result=await sql<RouteSlugRedirectRecord>`INSERT INTO control.route_slug_history(tenant_id,target_plane,catalog_kind,catalog_code,source_path,target_path,redirect_status,source_release_id,created_by) VALUES(${context.tenantId}::uuid,${context.planeKey},${input.catalogKind},${input.catalogCode},${input.sourcePath},${input.targetPath},${input.redirectStatus},${input.sourceReleaseId}::uuid,${context.principalId}::uuid) RETURNING source_path AS "sourcePath",target_path AS "targetPath",redirect_status AS "redirectStatus"`.execute(database);
+      const reverse = await sql<{
+        present: boolean;
+      }>`SELECT EXISTS(SELECT 1 FROM control.route_slug_history WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${context.planeKey} AND source_path=${input.targetPath} AND target_path=${input.sourcePath} AND status='active') AS present`.execute(
+        database,
+      );
+      if (reverse.rows[0]?.present)
+        throw Object.assign(new Error("Route redirect would create a loop"), {
+          code: "EXPERIENCE_ROUTE_REDIRECT_LOOP",
+        });
+      await sql`UPDATE control.route_slug_history SET status='retired',effective_until=clock_timestamp() WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${context.planeKey} AND source_path=${input.sourcePath} AND status='active'`.execute(
+        database,
+      );
+      const result =
+        await sql<RouteSlugRedirectRecord>`INSERT INTO control.route_slug_history(tenant_id,target_plane,catalog_kind,catalog_code,source_path,target_path,redirect_status,source_release_id,created_by) VALUES(${context.tenantId}::uuid,${context.planeKey},${input.catalogKind},${input.catalogCode},${input.sourcePath},${input.targetPath},${input.redirectStatus},${input.sourceReleaseId}::uuid,${context.principalId}::uuid) RETURNING source_path AS "sourcePath",target_path AS "targetPath",redirect_status AS "redirectStatus"`.execute(
+          database,
+        );
       return result.rows[0]!;
     });
   }
 }
 
-interface SurfaceReleaseRow { readonly id: string; readonly targetPlane: "studio" | "neon" | "mesh"; readonly surfaceKey: string; readonly layer: "shared" | "tenant"; readonly revision: number; readonly status: "draft" | "published" | "retired"; readonly definition: Record<string, unknown>; readonly contentHash: string; readonly source: "human" | "atlas"; readonly publishedAt: string | null; }
-function surfaceRelease(row: SurfaceReleaseRow): ExperienceSurfaceReleaseRecord { return Object.freeze({ id: row.id,targetPlane:row.targetPlane,surfaceKey:row.surfaceKey,layer:row.layer,revision:row.revision,status:row.status,definition:Object.freeze(row.definition),contentHash:row.contentHash,source:row.source,...(row.publishedAt?{publishedAt:row.publishedAt}:{}) }); }
+interface SurfaceReleaseRow {
+  readonly id: string;
+  readonly targetPlane: "studio" | "neon" | "mesh";
+  readonly surfaceKey: string;
+  readonly layer: "shared" | "tenant";
+  readonly revision: number;
+  readonly status: "draft" | "published" | "retired";
+  readonly definition: Record<string, unknown>;
+  readonly contentHash: string;
+  readonly source: "human" | "atlas";
+  readonly publishedAt: string | null;
+}
+function surfaceRelease(
+  row: SurfaceReleaseRow,
+): ExperienceSurfaceReleaseRecord {
+  return Object.freeze({
+    id: row.id,
+    targetPlane: row.targetPlane,
+    surfaceKey: row.surfaceKey,
+    layer: row.layer,
+    revision: row.revision,
+    status: row.status,
+    definition: Object.freeze(row.definition),
+    contentHash: row.contentHash,
+    source: row.source,
+    ...(row.publishedAt ? { publishedAt: row.publishedAt } : {}),
+  });
+}
 
 /** Read governance and activation from one MVCC snapshot, including tenant-specific review gates. */
-async function readTenantLocalePolicy(database: Database, context: VerifiedRequestContext): Promise<ExperienceLocalePolicyRecord> {
+async function readTenantLocalePolicy(
+  database: Database,
+  context: VerifiedRequestContext,
+): Promise<ExperienceLocalePolicyRecord> {
   const result = await sql<{
     catalogs: NonNullable<ExperienceLocalePolicyRecord["catalogs"]>;
-    activations: {localeCode:string;enabled:boolean;isDefault:boolean;isFallback:boolean}[];
+    activations: {
+      localeCode: string;
+      enabled: boolean;
+      isDefault: boolean;
+      isFallback: boolean;
+    }[];
     revision: string;
   }>`
     SELECT
@@ -422,19 +957,38 @@ async function readTenantLocalePolicy(database: Database, context: VerifiedReque
   const row = result.rows[0]!;
   return {
     catalogs: row.catalogs,
-    enabledLocales: row.activations.filter((activation) => activation.enabled).map((activation) => activation.localeCode),
-    defaultLocale: row.activations.find((activation) => activation.isDefault)?.localeCode ?? "en",
-    fallbackLocale: row.activations.find((activation) => activation.isFallback)?.localeCode ?? "en",
+    enabledLocales: row.activations
+      .filter((activation) => activation.enabled)
+      .map((activation) => activation.localeCode),
+    defaultLocale:
+      row.activations.find((activation) => activation.isDefault)?.localeCode ??
+      "en",
+    fallbackLocale:
+      row.activations.find((activation) => activation.isFallback)?.localeCode ??
+      "en",
     revision: row.revision || "locale-policy:default",
   };
 }
 
-async function lockLocaleTenant(database: Database, context: VerifiedRequestContext): Promise<void> {
+async function lockLocaleTenant(
+  database: Database,
+  context: VerifiedRequestContext,
+): Promise<void> {
   // Runtime roles can read tenants but cannot UPDATE-lock them. A transaction advisory
   // lock also serializes the first policy write before a tenant profile exists.
-  await sql`SELECT pg_advisory_xact_lock(hashtextextended(${"experience-locale-policy:" + context.tenantId.toLowerCase()},0))`.execute(database);
-  const result = await sql<{id:string}>`SELECT id FROM master.tenant WHERE id=${context.tenantId}::uuid`.execute(database);
+  await sql`SELECT pg_advisory_xact_lock(hashtextextended(${"experience-locale-policy:" + context.tenantId.toLowerCase()},0))`.execute(
+    database,
+  );
+  const result = await sql<{
+    id: string;
+  }>`SELECT id FROM master.tenant WHERE id=${context.tenantId}::uuid`.execute(
+    database,
+  );
   if (!result.rows.length) {
-    throw new ExperienceAccessError(403, "EXPERIENCE_TENANT_NOT_FOUND", "The tenant is not available in the target plane");
+    throw new ExperienceAccessError(
+      403,
+      "EXPERIENCE_TENANT_NOT_FOUND",
+      "The tenant is not available in the target plane",
+    );
   }
 }

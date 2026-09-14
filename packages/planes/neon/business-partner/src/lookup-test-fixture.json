@@ -1,0 +1,285 @@
+{
+  "descriptor": {
+    "schemaVersion": 1,
+    "plane": "neon",
+    "entity": {
+      "code": "business_partner",
+      "label": "Business Partner",
+      "pluralLabel": "Business Partners",
+      "identityField": "code",
+      "detailRouteTemplate": "/mdg/business-partner/:recordId"
+    },
+    "revision": {
+      "release": 2,
+      "descriptorHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "surfaceHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "surface": {
+      "key": "default_list",
+      "title": "Business Partners",
+      "header": {
+        "title": {
+          "defaultLocale": "ms",
+          "values": {
+            "ms": "Rakan Perniagaan",
+            "en": "Business Partners"
+          }
+        },
+        "description": {
+          "defaultLocale": "ms",
+          "values": {
+            "ms": "Direktori rakan yang dibenarkan."
+          }
+        }
+      },
+      "description": "Scoped partners",
+      "defaultState": {
+        "filters": [],
+        "sort": [
+          {
+            "field": "code",
+            "direction": "asc"
+          }
+        ],
+        "columns": [
+          "code",
+          "name",
+          "status"
+        ],
+        "density": "comfortable",
+        "mode": "table"
+      },
+      "supportedModes": [
+        "table",
+        "compact"
+      ],
+      "search": {
+        "minimumQueryLength": 1
+      },
+      "filterPresentation": {
+        "quickFields": [
+          {
+            "field": "status",
+            "defaultOperator": "eq"
+          }
+        ],
+        "source": "metadata",
+        "allowUserPinning": true
+      }
+    },
+    "fields": [
+      {
+        "key": "code",
+        "label": "Business Partner Code",
+        "valueKind": "string",
+        "semanticRole": "identity",
+        "defaultVisible": true,
+        "defaultOrder": 0,
+        "filterOperators": [
+          "contains",
+          "eq"
+        ],
+        "sortable": true,
+        "groupable": false,
+        "aggregations": []
+      },
+      {
+        "key": "name",
+        "label": "Display Name",
+        "valueKind": "string",
+        "semanticRole": "title",
+        "defaultVisible": true,
+        "defaultOrder": 1,
+        "filterOperators": [
+          "contains"
+        ],
+        "sortable": true,
+        "groupable": false,
+        "aggregations": []
+      },
+      {
+        "key": "status",
+        "label": "Status",
+        "valueKind": "enum",
+        "semanticRole": "status",
+        "filterOptions": [
+          {
+            "value": "active",
+            "label": "Active"
+          },
+          {
+            "value": "draft",
+            "label": "Draft"
+          }
+        ],
+        "defaultVisible": true,
+        "defaultOrder": 2,
+        "filterOperators": [
+          "eq",
+          "in"
+        ],
+        "sortable": true,
+        "groupable": true,
+        "aggregations": []
+      }
+    ],
+    "actions": [
+      {
+        "key": "create_request",
+        "label": "Legacy label",
+        "localizedLabel": {
+          "defaultLocale": "ms",
+          "values": {
+            "ms": "Permohonan baharu"
+          }
+        },
+        "placement": "primary",
+        "selection": "none",
+        "execution": "navigate",
+        "state": "enabled",
+        "href": "/requests/new",
+        "requiresPreflight": false,
+        "supportsAllMatching": false
+      },
+      {
+        "key": "restricted",
+        "label": "Restricted action",
+        "placement": "secondary",
+        "selection": "none",
+        "execution": "navigate",
+        "state": "hidden",
+        "requiresPreflight": false,
+        "supportsAllMatching": false
+      },
+      {
+        "key": "context_action",
+        "label": "Select context",
+        "placement": "secondary",
+        "selection": "none",
+        "execution": "navigate",
+        "state": "disabled",
+        "disabledReason": {
+          "code": "context_required",
+          "messageKey": "entity.action.context_required"
+        },
+        "disabledMessage": {
+          "defaultLocale": "en",
+          "values": {
+            "en": "Choose an organization first."
+          }
+        },
+        "requiresPreflight": false,
+        "supportsAllMatching": false
+      }
+    ],
+    "dataOperations": {
+      "export": {
+        "currentPage": {
+          "state": "enabled",
+          "requiresPreflight": false,
+          "requiresApproval": false
+        },
+        "selected": {
+          "state": "enabled",
+          "requiresPreflight": false,
+          "requiresApproval": false
+        },
+        "filtered": {
+          "state": "hidden",
+          "requiresPreflight": false,
+          "requiresApproval": false
+        },
+        "all": {
+          "state": "hidden",
+          "requiresPreflight": false,
+          "requiresApproval": false
+        },
+        "formats": [
+          "csv",
+          "json",
+          "ndjson"
+        ],
+        "defaultFormat": "csv",
+        "exportableFields": [
+          "code",
+          "name",
+          "status"
+        ],
+        "asynchronousThreshold": 5000
+      },
+      "import": {
+        "create": {
+          "state": "hidden",
+          "requiresPreflight": false,
+          "requiresApproval": false
+        },
+        "update": {
+          "state": "hidden",
+          "requiresPreflight": false,
+          "requiresApproval": false
+        },
+        "upsert": {
+          "state": "hidden",
+          "requiresPreflight": false,
+          "requiresApproval": false
+        },
+        "downloadTemplate": {
+          "state": "hidden",
+          "requiresPreflight": false,
+          "requiresApproval": false
+        },
+        "formats": [
+          "csv",
+          "json"
+        ],
+        "defaultFormat": "csv",
+        "importableFields": [],
+        "maxFileBytes": 1024,
+        "maxRows": 100,
+        "draftOnly": false
+      }
+    },
+    "scope": {
+      "status": "ready",
+      "labels": [
+        {
+          "key": "organization",
+          "label": "Operating organization",
+          "value": "Operations"
+        }
+      ],
+      "fingerprint": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "limits": {
+      "defaultPageSize": 10,
+      "allowedPageSizes": [
+        10,
+        25
+      ],
+      "maxSortLevels": 1,
+      "countMode": "none"
+    }
+  },
+  "page": {
+    "schemaVersion": 1,
+    "descriptorHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "scopeFingerprint": "1111111111111111111111111111111111111111111111111111111111111111",
+    "queryHash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "rows": [
+      {
+        "id": "A-id",
+        "values": {
+          "code": "A",
+          "name": "A Partner",
+          "status": "active"
+        }
+      }
+    ],
+    "pagination": {
+      "pageSize": 1,
+      "hasNext": false,
+      "hasPrevious": false,
+      "countMode": "none"
+    }
+  }
+}

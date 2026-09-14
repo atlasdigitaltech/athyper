@@ -1,0 +1,141 @@
+{
+  "validation": {
+    "deterministic": true,
+    "contractHash": "2d3a459a36cc42d4006c73a70f848a234591a04ac1ae26ef33186bc3f938a827",
+    "issues": []
+  },
+  "tests": {
+    "contractHash": "2d3a459a36cc42d4006c73a70f848a234591a04ac1ae26ef33186bc3f938a827",
+    "passed": true,
+    "results": [
+      {
+        "key": "company_storage_owner",
+        "passed": true
+      },
+      {
+        "key": "no_direct_writes",
+        "passed": true
+      },
+      {
+        "key": "no_generic_reads",
+        "passed": true
+      }
+    ]
+  },
+  "compiled": {
+    "schema": "athyper.entity-runtime-descriptor/1.0",
+    "compiler": {
+      "name": "@athyper/meta-entity-compiler",
+      "version": "1.0.0"
+    },
+    "contractHash": "2d3a459a36cc42d4006c73a70f848a234591a04ac1ae26ef33186bc3f938a827",
+    "descriptorHash": "307b48c3ca884dc2f8f696493d97c00431052153ff91d8ec33d94a03f6e42ff1",
+    "descriptor": {
+      "classProfiles": [],
+      "entity": {
+        "entityClass": "process",
+        "entityCode": "business_partner_company_setup_request",
+        "ownershipModel": "tenant"
+      },
+      "fieldPolicyBindings": [],
+      "fields": [
+        {
+          "cardinality": "one",
+          "dataType": "string",
+          "fieldKey": "status",
+          "id": "358d780c-cad3-4253-a70c-6e0846b3ba44",
+          "storagePath": "status",
+          "typeConfig": {
+            "kind": "string"
+          },
+          "valueOrigin": "stored",
+          "writeMode": "read_only"
+        },
+        {
+          "cardinality": "one",
+          "dataType": "uuid",
+          "fieldKey": "id",
+          "id": "54425f91-f1ac-4f5f-b006-181949a159d5",
+          "storagePath": "id",
+          "typeConfig": {
+            "kind": "uuid"
+          },
+          "valueOrigin": "stored",
+          "writeMode": "read_only"
+        },
+        {
+          "cardinality": "one",
+          "dataType": "uuid",
+          "fieldKey": "owner_company_code_id",
+          "id": "a4b820e8-44b8-4183-a479-565f3439d311",
+          "storagePath": "owner_company_code_id",
+          "typeConfig": {
+            "kind": "uuid"
+          },
+          "valueOrigin": "stored",
+          "writeMode": "read_only"
+        },
+        {
+          "cardinality": "one",
+          "dataType": "uuid",
+          "fieldKey": "target_entity_id",
+          "id": "1aec6d83-16e3-4820-8435-3a6765d0c337",
+          "storagePath": "target_entity_id",
+          "typeConfig": {
+            "kind": "uuid"
+          },
+          "valueOrigin": "stored",
+          "writeMode": "read_only"
+        },
+        {
+          "cardinality": "one",
+          "dataType": "uuid",
+          "fieldKey": "tenant_id",
+          "id": "9cf00b66-8c72-4850-b12c-ce81795966eb",
+          "storagePath": "tenant_id",
+          "typeConfig": {
+            "kind": "uuid"
+          },
+          "valueOrigin": "stored",
+          "writeMode": "read_only"
+        }
+      ],
+      "flowSteps": [],
+      "flows": [],
+      "keyFields": [],
+      "keys": [],
+      "lifecycleBindings": [],
+      "lifecycleOperationBindings": [],
+      "numberingBindings": [],
+      "operationPermissions": [],
+      "operationRules": [],
+      "operationScopeBindings": [],
+      "operations": [],
+      "policyBindings": [],
+      "relationFields": [],
+      "relationTargets": [],
+      "relations": [],
+      "runtimeProfiles": [
+        {
+          "apiExposure": "catalog_only",
+          "backingKind": "table",
+          "id": "a2f63503-7ac7-45dd-8b7d-b9593bf5959b",
+          "profileKey": "default",
+          "readMode": "none",
+          "storageObject": "entity_case",
+          "storagePlane": "neon",
+          "storageSchema": "document",
+          "tenantFieldKey": "tenant_id",
+          "writeMode": "none"
+        }
+      ],
+      "searchFields": [],
+      "searchProfiles": [],
+      "surfaceFieldBindings": [],
+      "surfaceOperations": [],
+      "surfaceSections": [],
+      "surfaces": []
+    }
+  },
+  "published": false
+}

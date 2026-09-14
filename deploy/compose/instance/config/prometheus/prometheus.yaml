@@ -5,13 +5,28 @@ alerting:
   alertmanagers:
     - static_configs: [{ targets: [alertmanager:9093] }]
 rule_files:
+  - /etc/prometheus/redis-alerts.yml
   - /etc/prometheus/business-partner-rules.yaml
+  - /etc/prometheus/record-transfer-alerts.yml
+  - /etc/prometheus/business-partner-case-alerts.yml
+  - /etc/prometheus/api-alerts.yml
 scrape_configs:
   - job_name: prometheus
     static_configs: [{ targets: [127.0.0.1:9090] }]
   - job_name: redis
-    static_configs: [{ targets: [memorycache-exporter:9121] }]
+    static_configs:
+      [
+        {
+          targets: [memorycache-exporter:9121],
+          labels: { service: memorycache },
+        },
+      ]
   - job_name: athyper-runtime-processes
     metrics_path: /metrics
     static_configs:
       - targets: [worker:9464, scheduler:9464]
+  - job_name: athyper-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: [api:9464]
+        labels: { service: api }

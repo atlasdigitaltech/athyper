@@ -2295,7 +2295,7 @@ export const DEFAULT_EXPERIENCE_SURFACES = Object.freeze([
       {
         "id": "module.bp",
         "type": "shortcut",
-        "title": "Business Partner Management",
+        "title": "Business Partners",
         "body": "Create and govern supplier, customer, and partner master data.",
         "visual": {
           "kind": "icon",
@@ -2474,7 +2474,7 @@ export const DEFAULT_EXPERIENCE_SURFACES = Object.freeze([
       "workspaceCode": "mdg",
       "moduleCode": "bp"
     },
-    "title": "Business Partner Management",
+    "title": "Business Partners",
     "visual": {
       "kind": "icon",
       "key": "contact"
@@ -2483,7 +2483,7 @@ export const DEFAULT_EXPERIENCE_SURFACES = Object.freeze([
       {
         "id": "module.summary",
         "type": "text",
-        "text": "Business Partner Management is ready for published entity experiences."
+        "text": "Business Partners is ready for published entity experiences."
       }
     ]
   },

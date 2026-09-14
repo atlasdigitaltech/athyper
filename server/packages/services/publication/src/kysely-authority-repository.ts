@@ -151,7 +151,7 @@ export class KyselyPublicationAuthorityRepository implements PublicationAuthorit
       await sql<Row>`SELECT d.*,a.artifact_uri,a.content_hash,a.signature_algorithm,a.signing_key_id,a.signature,r.release_key,r.id AS source_release_id,r.release_no
       FROM publication.deployment d JOIN publication.artifact a ON a.id=d.artifact_id JOIN publication.release r ON r.id=a.publication_release_id
       WHERE d.status IN ('pending','dispatched','received','staged','verified')
-      ORDER BY d.updated_at,d.id LIMIT ${safeLimit}`.execute(this.database);
+      ORDER BY d.created_at,d.id LIMIT ${safeLimit}`.execute(this.database);
     return result.rows.map(mapDeployment);
   }
   async transitionDeployment(input: {

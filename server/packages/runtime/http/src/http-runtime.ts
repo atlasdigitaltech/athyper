@@ -20,7 +20,7 @@ export interface HttpRuntimeOptions {
   /** Host startup gate; dependencies are checked only after initialization completes. */
   readonly isReady?: () => boolean;
   readonly jsonLimit?: string;
-  /** Trusted exact-route overrides; other routes retain the global JSON limit. */
+  /** Trusted route overrides; :id matches a UUID segment only. Other routes retain the global JSON limit. */
   readonly jsonRouteLimits?: readonly {readonly method: "POST" | "PUT" | "PATCH"; readonly path: string; readonly maxBytes: number}[];
   readonly configure?: (application: Application) => void;
   readonly exposeErrorDetails?: boolean;
@@ -122,7 +122,7 @@ export function createHttpApplication(options: HttpRuntimeOptions = {}): Applica
   const routeParsers = new Map<string, ReturnType<typeof express.json>>();
   for (const limit of options.jsonRouteLimits ?? []) {
     const key = `${limit.method} ${limit.path}`;
-    if (!["POST", "PUT", "PATCH"].includes(limit.method) || !/^\/api\/[A-Za-z0-9/_-]+$/.test(limit.path) || limit.path.endsWith("/") || !Number.isSafeInteger(limit.maxBytes) || limit.maxBytes < 1 || routeParsers.has(key)) throw new TypeError("Invalid or duplicate JSON route limit");
+    if (!["POST", "PUT", "PATCH"].includes(limit.method) || !/^\/api\/[A-Za-z0-9/_-]+$/.test(limit.path.replace(/\/:id(?=\/|$)/g, "/id")) || limit.path.endsWith("/") || !Number.isSafeInteger(limit.maxBytes) || limit.maxBytes < 1 || routeParsers.has(key)) throw new TypeError("Invalid or duplicate JSON route limit");
     routeParsers.set(key, express.json({limit:limit.maxBytes,verify:captureBody}));
   }
   app.use((request, response, next) => {
@@ -131,7 +131,9 @@ export function createHttpApplication(options: HttpRuntimeOptions = {}): Applica
       next();
       return;
     }
-    (routeParsers.get(`${request.method} ${request.path.replace(/\/$/, "")}`) ?? parseJson)(request, response, next);
+    const routePath=request.path.replace(/\/$/, "");
+    const uuidTemplate=routePath.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|$)/gi,"/:id");
+    (routeParsers.get(`${request.method} ${routePath}`) ?? routeParsers.get(`${request.method} ${uuidTemplate}`) ?? parseJson)(request, response, next);
   });
   app.use((request, response, next) => {
     const requestId = headerValue(request, "x-request-id") ?? randomUUID();

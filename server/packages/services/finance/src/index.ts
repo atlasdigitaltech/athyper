@@ -19,6 +19,7 @@ export * from "./ledger/kysely-gl-balance-repository.js";
 export * from "./ledger/cross-book-posting-service.js";
 export * from "./ledger/kysely-cross-book-repository.js";
 export * from "./ledger/commitment-service.js";
+export * from "./ledger/business-partner-journal-activity.js";
 export * from "./ledger/kysely-commitment-repository.js";
 export * from "./tax/tax-calculation-service.js";
 export * from "./tax/tax-credit-service.js";
@@ -33,4 +34,7 @@ export * from "./numbering/kysely-numbering-repository.js";
 export * from "./external-workforce/service-sheet-source-service.js";
 export * from "./external-workforce/kysely-service-sheet-source-repository.js";
 /** Finance implementations execute only against the Neon business plane. */
-export const financeFoundation = { executionPlane: "neon", routesEnabledByDefault: false } as const;
+export const financeFoundation = {
+  executionPlane: "neon",
+  routesEnabledByDefault: false,
+} as const;

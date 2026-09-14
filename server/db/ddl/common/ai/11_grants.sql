@@ -407,3 +407,13 @@ GRANT SELECT,INSERT ON ai.atlas_learning_candidate TO athyperapp;
 GRANT UPDATE(handed_off_at) ON ai.atlas_learning_candidate TO athyperapp;
 GRANT ALL ON ai.atlas_learning_candidate TO athyperadmin;
 -- END ATLAS F4 LEARNING COMMON
+
+-- Compatibility for installations that provision the legacy runtime role.
+-- The conversation participant guards call both helpers as the runtime role.
+-- These functions enforce transaction-local tenant, principal and plane scope.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+    GRANT EXECUTE ON FUNCTION ai.fn_atlas_conversation_access(uuid,uuid,boolean) TO athyper_runtime;
+    GRANT EXECUTE ON FUNCTION ai.fn_is_atlas_conversation(uuid,uuid) TO athyper_runtime;
+  END IF;
+END $$;

@@ -1,0 +1,105 @@
+{
+  "contractSchema": "athyper.meta-entity-contract/2.1",
+  "entity": {
+    "entityCode": "business_partner_company_setup_request",
+    "entityClass": "process",
+    "ownershipModel": "tenant"
+  },
+  "runtimeProfiles": [
+    {
+      "id": "a2f63503-7ac7-45dd-8b7d-b9593bf5959b",
+      "profileKey": "default",
+      "backingKind": "table",
+      "storagePlane": "neon",
+      "storageSchema": "document",
+      "storageObject": "entity_case",
+      "tenantFieldKey": "tenant_id",
+      "apiExposure": "catalog_only",
+      "readMode": "none",
+      "writeMode": "none"
+    }
+  ],
+  "fields": [
+    {
+      "id": "54425f91-f1ac-4f5f-b006-181949a159d5",
+      "fieldKey": "id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "storagePath": "id",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "9cf00b66-8c72-4850-b12c-ce81795966eb",
+      "fieldKey": "tenant_id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "storagePath": "tenant_id",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "a4b820e8-44b8-4183-a479-565f3439d311",
+      "fieldKey": "owner_company_code_id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "storagePath": "owner_company_code_id",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "1aec6d83-16e3-4820-8435-3a6765d0c337",
+      "fieldKey": "target_entity_id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "storagePath": "target_entity_id",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "358d780c-cad3-4253-a70c-6e0846b3ba44",
+      "fieldKey": "status",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "storagePath": "status",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    }
+  ],
+  "operations": [],
+  "tests": [
+    {
+      "key": "company_storage_owner",
+      "assertion": "path_equals",
+      "path": "fields.2.storagePath",
+      "expected": "owner_company_code_id"
+    },
+    {
+      "key": "no_generic_reads",
+      "assertion": "path_equals",
+      "path": "runtimeProfiles.0.readMode",
+      "expected": "none"
+    },
+    {
+      "key": "no_direct_writes",
+      "assertion": "path_equals",
+      "path": "runtimeProfiles.0.writeMode",
+      "expected": "none"
+    }
+  ]
+}

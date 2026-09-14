@@ -451,6 +451,8 @@ CREATE TABLE document.attachment_derivative (
     last_error_code      text,
     last_error_message   text,
     generated_at         timestamptz,
+    scanned_at           timestamptz,
+    scan_status          text,
     created_at           timestamptz                             NOT NULL DEFAULT now(),
     created_by           uuid                                    NOT NULL,
     updated_at           timestamptz,
@@ -466,6 +468,8 @@ CREATE TABLE document.attachment_derivative (
     CONSTRAINT attachment_derivative_sha256_chk CHECK (sha256 IS NULL OR sha256 ~ '^[a-f0-9]{64}$'),
     CONSTRAINT attachment_derivative_dimensions_chk CHECK ((width IS NULL) = (height IS NULL)),
     CONSTRAINT attachment_derivative_attempt_chk CHECK (attempt_count >= 0),
+    CONSTRAINT attachment_derivative_scan_status_chk
+        CHECK (scan_status IS NULL OR scan_status IN ('clean', 'quarantined')),
     CONSTRAINT attachment_derivative_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL)),
     CONSTRAINT attachment_derivative_idempotency_uq

@@ -67,6 +67,10 @@ export interface LocalAudit {
 }
 
 export class KyselyBusinessPartnerAccountBankRepository {
+  async intakeOrganization(tenantId:string,organizationId:string,tx:Tx){
+    return one(await sql<Row>`SELECT id FROM master.operating_organization WHERE tenant_id=${tenantId}::uuid AND id=${organizationId}::uuid AND status='active'`.execute(tx));
+  }
+
   async configureCompanyUsage(input: {tenantId:string;principalId:string;linkId:string;companyCodeId:string;effectiveFrom:string;effectiveUntil?:string;purpose:string;primary:boolean}, tx:Tx) {
     const link=one(await sql<Row>`SELECT * FROM master.bank_account_link WHERE tenant_id=${input.tenantId}::uuid AND id=${input.linkId}::uuid AND owner_type='business_partner' FOR UPDATE`.execute(tx));
     if(!link)throw missing("NEON_BANK_LINK_NOT_FOUND","Partner account was not found");
@@ -524,6 +528,26 @@ export function createBusinessPartnerAccountBankLinkageService(options: {
         await options.audit?.record({eventCode:"business_partner.bank_usage.assigned",action:"assign",outcome:"success",tenantId:input.context.tenantId,entityType:"bank_account_link",entityId:input.linkId,actor:{kind:"user",principalId:input.context.principalId},metadata:{companyCodeId:input.companyCodeId,purpose:input.purpose}},tx);
         return usage;
       });
+    },
+    async protectIntakeValue(input:{context:VerifiedRequestContext;operatingOrganizationId:string;kind:"tax"|"certificate"|"bank";value:string;bankCountryCode?:string;accountIdType?:string}){
+      context(input.context);
+      if(!["tax","certificate","bank"].includes(input.kind)||!input.value.trim()||input.value.length>(input.kind==="tax"?128:256)||/[\u0000-\u001f]/.test(input.value))throw invalid("Invalid protected registration value");
+      const decision=await options.authorizer.authorize({context:input.context,permissionCode:"neon.relationship.entity_case.create",resource:{tenantId:input.context.tenantId,operatingOrganizationId:input.operatingOrganizationId,governedWorkflow:true}});
+      if(!decision.allowed)throw forbidden("FORBIDDEN","Request creation authority is required");
+      await options.transactions.run("neon",actor(input.context),async tx=>{
+        const row=await options.repository.intakeOrganization(input.context.tenantId,input.operatingOrganizationId,tx);
+        if(!row)throw invalid("An active authorized operating organization is required");
+      });
+      if(!options.secrets?.put)throw new NeonAccountBankLinkageError(503,"NEON_PROTECTED_STORE_UNAVAILABLE","Protected registration is unavailable");
+      let value=input.value.trim();
+      if(input.kind==="bank"){
+        if(!/^[A-Z]{2}$/.test(input.bankCountryCode??"")||!["iban","local_account"].includes(input.accountIdType??"")||value.length>64)throw invalid("Bank country, identifier type and bounded account identifier are required");
+        if(input.accountIdType==="iban")try{value=normalizeBankIdentifier({accountIdentifier:value,accountIdType:"iban",bankCountryCode:input.bankCountryCode!}).identifier}catch(error){throw invalid((error as Error).message)}
+      }
+      const token=`${input.kind}:${randomUUID()}`;
+      await options.secrets.put(`protected-values/${input.context.tenantId}/${token}`,new TextEncoder().encode(value));
+      await options.transactions.run("neon",actor(input.context),async tx=>{await options.audit?.record({eventCode:"business_partner.intake_value.protected",action:"register",outcome:"success",tenantId:input.context.tenantId,entityType:"business_partner",actor:{kind:"user",principalId:input.context.principalId},requestId:input.context.requestId,metadata:{kind:input.kind,operatingOrganizationId:input.operatingOrganizationId,protected:true}},tx);});
+      return {protectedValueToken:token,valueHash:hash(value),maskedValue:value.length>4?"••••"+value.slice(-4):"••••"};
     },
     async registerProtectedBankAccount(input:{context:VerifiedRequestContext;businessPartnerId:string;companyCodeId:string;accountHolderName:string;accountIdentifier:string;accountIdType:string;currencyCode:string;bankName:string;bankCountryCode:string;bic?:string;clearingScheme?:string;branchCode?:string;idempotencyKey:string}){
       context(input.context);key(input.idempotencyKey);

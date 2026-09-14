@@ -5,8 +5,7 @@ import {
 
 const sources = ["internal", "portal", "mesh", "import", "api"] as const;
 const commonIdentity = [
-  "partner.displayName",
-  "partner.legalName",
+  "partner.name",
   "partner.countryCode",
   "partner.category",
 ];
@@ -16,13 +15,6 @@ const organizationIdentity = [
   "partner.taxIdentifiers",
   "partner.addresses",
   "partner.contacts",
-];
-const personIdentity = [
-  "person.firstName",
-  "person.lastName",
-  "person.personalEmail",
-  "person.phone",
-  "person.consent",
 ];
 const countryOptions = [
   { value: "GB", label: "United Kingdom" },
@@ -82,26 +74,8 @@ const supplierRequestForm = {
           label: "Registered name",
           widget: "text",
           required: true,
-          maxLength: 255,
+          maxLength: 320,
           autoComplete: "organization",
-        },
-        {
-          key: "legalName",
-          path: "legalName",
-          target: "canonical",
-          label: "Legal name",
-          widget: "text",
-          required: true,
-          maxLength: 255,
-        },
-        {
-          key: "displayName",
-          path: "displayName",
-          target: "canonical",
-          label: "Display name",
-          widget: "text",
-          required: false,
-          maxLength: 255,
         },
         {
           key: "registrationCountryCode",
@@ -333,44 +307,6 @@ export function createBusinessPartnerFoundationDefinition(
       ],
       ["scope.operatingOrganizationId", "scope.companyCodeId"],
     ),
-    "workforce.new": schema("workforce", "new_partner", personIdentity, [
-      "scope.legalEntityId",
-      "scope.companyCodeId",
-      "scope.orgUnitId",
-      "employment.startDate",
-    ]),
-    "workforce.add": schema(
-      "workforce",
-      "add_workforce",
-      ["targetBusinessPartnerId", ...personIdentity],
-      [
-        "scope.legalEntityId",
-        "scope.companyCodeId",
-        "scope.orgUnitId",
-        "employment.startDate",
-      ],
-    ),
-    "workforce.change": schema(
-      "workforce",
-      "change_employment",
-      [
-        "targetBusinessPartnerId",
-        "employment.changeKind",
-        "employment.effectiveFrom",
-      ],
-      ["scope.legalEntityId", "scope.companyCodeId", "scope.orgUnitId"],
-    ),
-    "workforce.offboard": schema(
-      "workforce",
-      "offboard",
-      [
-        "targetBusinessPartnerId",
-        "offboarding.exitDate",
-        "offboarding.reasonCode",
-        "offboarding.resourceChecklist",
-      ],
-      ["scope.legalEntityId"],
-    ),
     "partner.amend": schema(
       "governance",
       "amend_partner",
@@ -424,25 +360,9 @@ export function createBusinessPartnerFoundationDefinition(
           "employment.compensation",
         ],
       },
-      person: {
-        category: "person",
-        visible: [
-          ...personIdentity,
-          "person.preferredName",
-          "employment.startDate",
-        ],
-        restricted: [
-          "person.identityEvidence",
-          "person.dateOfBirth",
-          "person.nationalIdentifiers",
-          "employment.compensation",
-        ],
-        prohibited: ["bankVerification", "supplier.qualification"],
-      },
       portal: {
         write: [
           ...organizationIdentity,
-          ...personIdentity,
           "evidence.references",
         ],
         read: ["requestNo", "status", "validationSummary", "returnReasons"],
@@ -451,8 +371,8 @@ export function createBusinessPartnerFoundationDefinition(
     },
     validationDeclarations: [
       validation(
-        "BP_LEGAL_NAME_REQUIRED",
-        "partner.legalName",
+        "BP_NAME_REQUIRED",
+        "partner.name",
         "required",
         "organization",
       ),
@@ -461,18 +381,6 @@ export function createBusinessPartnerFoundationDefinition(
         "partner.countryCode",
         "iso-3166-alpha2",
         "organization",
-      ),
-      validation(
-        "BP_PERSON_NAME_REQUIRED",
-        "person.firstName",
-        "required",
-        "person",
-      ),
-      validation(
-        "BP_PERSON_CONSENT_REQUIRED",
-        "person.consent",
-        "consent-current",
-        "person",
       ),
       validation(
         "BP_SUPPLIER_SCOPE_REQUIRED",
@@ -485,18 +393,6 @@ export function createBusinessPartnerFoundationDefinition(
         "scope.operatingOrganizationId",
         "uuid",
         "customer",
-      ),
-      validation(
-        "BP_WORKFORCE_EMPLOYER_REQUIRED",
-        "scope.legalEntityId",
-        "uuid",
-        "workforce",
-      ),
-      validation(
-        "BP_WORKFORCE_DATE_REQUIRED",
-        "employment.startDate",
-        "effective-date",
-        "workforce",
       ),
       validation(
         "BP_EVIDENCE_POLICY_REQUIRED",
@@ -514,19 +410,11 @@ export function createBusinessPartnerFoundationDefinition(
     duplicateRules: {
       organization: {
         match: [
-          "normalizedLegalName+countryCode",
+          "normalizedName+countryCode",
           "registrationNumber+countryCode",
           "taxIdentifierHash+countryCode",
         ],
         resolution: "steward_review",
-        categoryChange: "forbidden",
-      },
-      person: {
-        match: [
-          "normalizedName+personalEmailHash",
-          "nationalIdentifierHash+countryCode",
-        ],
-        resolution: "privacy_bound_steward_review",
         categoryChange: "forbidden",
       },
     },
@@ -538,7 +426,6 @@ export function createBusinessPartnerFoundationDefinition(
           "identity",
           "role",
           "organizationScope",
-          "employmentScope",
           "classification",
           "contacts",
           "evidence",
@@ -546,7 +433,6 @@ export function createBusinessPartnerFoundationDefinition(
         ],
         conditionalVisibility: [
           { field: "organizationScope", categories: ["organization"] },
-          { field: "employmentScope", roles: ["workforce"] },
           { field: "bankVerification", operations: ["supplier.bank"] },
         ],
       },
@@ -570,24 +456,13 @@ export function createBusinessPartnerFoundationDefinition(
           "decision",
         ],
       },
-      workforceReview: {
-        version: "2.0.0",
-        sections: [
-          "person",
-          "employment",
-          "assignment",
-          "consent",
-          "rightToWork",
-          "backgroundEvidence",
-        ],
-      },
     },
     viewDescriptors: {
       neonRequestList: {
         version: "2.0.0",
         columns: [
           "requestNo",
-          "displayName",
+          "name",
           "journey",
           "operation",
           "source",
@@ -634,7 +509,6 @@ export function createBusinessPartnerFoundationDefinition(
           "companyConfiguration",
           "qualification",
           "credit",
-          "workforce",
           "bankVerification",
           "readinessWithoutRisk",
           "sourceProvenance",
@@ -669,7 +543,7 @@ export function createBusinessPartnerFoundationDefinition(
           allowedJourneys:
             source === "mesh"
               ? ["supplier", "customer"]
-              : ["supplier", "customer", "workforce"],
+              : ["supplier", "customer"],
           requiredProvenance:
             source === "internal"
               ? ["principalId"]
@@ -752,27 +626,6 @@ export function createBusinessPartnerFoundationDefinition(
           "data_governance_owner",
         ],
       },
-      workforce: {
-        version: "3.0.1",
-        stages: [
-          stage("hr_review", "HR review", 240),
-          stage("hiring_manager", "Hiring manager", 240),
-          stage(
-            "compliance_privacy",
-            "Privacy compliance",
-            480,
-            "parallel",
-            "all",
-          ),
-        ],
-        sod: {
-          makerCannotDecide: true,
-          applicantCannotDecide: true,
-          mfaAtDecision: true,
-          restrictedEvidencePurposeRequired: true,
-        },
-        escalation: ["stage_owner", "hr_business_partner", "privacy_officer"],
-      },
       governance: {
         version: "3.0.1",
         stages: [
@@ -801,14 +654,6 @@ export function createBusinessPartnerFoundationDefinition(
         required: ["legal_identity", "tax_or_consent"],
         conditional: { "customer.credit": ["credit_evidence"] },
       },
-      workforce: {
-        required: ["consent", "identity", "right_to_work"],
-        conditional: {
-          "workforce.new": ["background_policy_result"],
-          "workforce.offboard": ["resource_checklist"],
-        },
-        purposeBound: true,
-      },
     },
     readinessGates: {
       supplier: [
@@ -826,13 +671,6 @@ export function createBusinessPartnerFoundationDefinition(
         "CREDIT_REVIEW_CURRENT",
         "NO_PROHIBITIVE_BLOCK",
       ],
-      workforce: [
-        "BUSINESS_PARTNER_ACTIVE",
-        "EMPLOYEE_ACTIVE",
-        "EMPLOYMENT_EFFECTIVE",
-        "PRIMARY_ASSIGNMENT_EFFECTIVE",
-        "ONBOARDING_COMPLETE",
-      ],
     },
     reasonCodeCatalog: {
       BP_VALIDATION_FAILED: "Payload validation failed",
@@ -843,7 +681,6 @@ export function createBusinessPartnerFoundationDefinition(
       BP_SLA_ESCALATED: "Workflow SLA was escalated",
       SUPPLIER_NOT_READY: "Supplier readiness gates failed",
       CUSTOMER_NOT_READY: "Customer readiness gates failed",
-      WORKFORCE_NOT_READY: "Workforce readiness gates failed",
       BP_DEFINITION_INCOMPATIBLE:
         "Definition is incompatible with the local runtime",
     },
@@ -1045,13 +882,6 @@ const partner360Sections = Object.freeze([
     discoverableWhenDenied: false,
   },
   {
-    code: "workforce",
-    routes: ["/api/neon/business-partners/:id/360/workforce"],
-    permission: "neon.relationship.business_partner_workforce.read",
-    fieldPermissions: ["neon.relationship.business_partner_person.read"],
-    discoverableWhenDenied: false,
-  },
-  {
     code: "requests",
     routes: ["/api/neon/business-partners/:id/360/requests"],
     permission: "neon.relationship.entity_case.read",
@@ -1103,7 +933,7 @@ const partner360CompletenessPacks = Object.freeze([
     requirements: [
       requirement(
         "organization.legal_name",
-        "partner.legalName",
+        "partner.name",
         "identity",
         "required",
         "amend_partner",
@@ -1274,82 +1104,5 @@ const partner360CompletenessPacks = Object.freeze([
       ),
     ],
   },
-  {
-    code: "person_base",
-    version: 1,
-    category: "person",
-    scope: "global",
-    requirements: [
-      requirement(
-        "person.name",
-        "person.name",
-        "identity",
-        "required",
-        "amend_partner",
-        "Complete personal identity",
-      ),
-      requirement(
-        "person.contact",
-        "contact.primary",
-        "contacts",
-        "recommended",
-        "amend_partner",
-        "Add primary contact",
-        true,
-      ),
-      requirement(
-        "person.identifier",
-        "person.identifier.verified_presence",
-        "identifiers-tax",
-        "recommended",
-        "amend_partner",
-        "Add verified identity",
-        true,
-      ),
-    ],
-  },
-  {
-    code: "workforce_active",
-    version: 1,
-    category: "person",
-    role: "workforce",
-    scope: "workforce",
-    requirements: [
-      requirement(
-        "workforce.role",
-        "role.workforce",
-        "roles-scope",
-        "required",
-        "add_role",
-        "Add workforce role",
-      ),
-      requirement(
-        "workforce.employment",
-        "employment.active",
-        "workforce",
-        "required",
-        "change_employment",
-        "Add active employment",
-        true,
-      ),
-      requirement(
-        "workforce.assignment",
-        "assignment.active",
-        "workforce",
-        "required",
-        "change_employment",
-        "Add active assignment",
-        true,
-      ),
-      requirement(
-        "workforce.onboarding",
-        "onboarding.complete",
-        "workforce",
-        "recommended",
-        "change_employment",
-        "Complete onboarding",
-        true,
-      ),
-    ],
-  },
+
 ]);

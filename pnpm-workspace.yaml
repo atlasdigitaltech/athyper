@@ -1,4 +1,5 @@
 packages:
+  - "governance/config/governance"
   - "deploy/stackctl"
   - "apps/*"
   - "packages/domain/*/*"

@@ -55,9 +55,7 @@ test("P1 accepts only complete measured qualification plus eight durable approva
         "supplier",
         "customer",
         "dual_role",
-        "person_workforce",
-        "external_worker",
-        "mesh_linked",
+            "mesh_linked",
       ],
     },
     performance: {

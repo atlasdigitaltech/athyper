@@ -13,7 +13,11 @@ export function createBusinessPartnerStoredScopes(
     async resolve(input) {
       if (
         input.context.planeKey !== "neon" ||
-        !["business_partner", "entity_case"].includes(input.entityCode)
+        ![
+          "business_partner",
+          "entity_case",
+          "business_partner_company_setup_request",
+        ].includes(input.entityCode)
       )
         return { state: "invalid" };
       return database.transaction().execute(async (tx) => {
@@ -24,10 +28,35 @@ export function createBusinessPartnerStoredScopes(
         await sql`SELECT set_config('app.current_tenant_id',${input.context.tenantId},true),set_config('app.current_principal_id',${input.context.principalId},true)`.execute(
           tx,
         );
+        const companyPilot =
+          input.entityCode === "business_partner_company_setup_request";
+        if (companyPilot && input.resolver !== "company.record.v1")
+          return { state: "invalid" as const };
         let coordinates = { ...input.coordinates };
         if (input.target === "existing") {
           if (!input.recordId) return { state: "invalid" as const };
-          if (input.entityCode === "entity_case") {
+          if (companyPilot) {
+            // This entity is independently owned. Neither its parent BP nor a
+            // caller-selected company substitutes for the persisted owner.
+            const row = (
+              await sql<{
+                company_id: string | null;
+                organization_id: string | null;
+              }>`
+              SELECT owned.owner_company_code_id::text company_id,
+                     snapshot.payload_json->>'operatingOrganizationId' organization_id
+              FROM document.entity_case owned
+              JOIN snapshot.entity_snapshot snapshot ON snapshot.tenant_id=owned.tenant_id
+                AND snapshot.snapshot_id=owned.current_snapshot_id
+              WHERE owned.tenant_id=${input.context.tenantId}::uuid AND owned.id=${input.recordId}::uuid
+                AND owned.entity_code='master.business_partner_company_setup_request'
+                AND owned.owner_company_code_id IS NOT NULL
+                AND snapshot.payload_json->>'companyCodeId'=owned.owner_company_code_id::text
+            `.execute(tx)
+            ).rows[0];
+            if (!row?.company_id) return { state: "invalid" as const };
+            coordinates = { companyCodeId: row.company_id };
+          } else if (input.entityCode === "entity_case") {
             const row = (
               await sql<{
                 organization_id: string | null;
@@ -55,6 +84,10 @@ export function createBusinessPartnerStoredScopes(
         }
         const org = coordinates.operatingOrganizationId,
           company = coordinates.companyCodeId;
+        // Collection discovery uses company ownership alone. Organization is a
+        // creation prerequisite, not an extra owner of every company-owned row.
+        if (companyPilot && input.target === "proposed" && (!org || !company))
+          return { state: "invalid" as const };
         const supported: Record<string, readonly string[]> = {
           "tenant.record.v1": [],
           "organization.record.v1": ["operatingOrganizationId"],

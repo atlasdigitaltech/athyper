@@ -1,8 +1,34 @@
 {
-  "name": "@athyper/platform-icons", "version": "0.0.0", "private": true, "type": "module",
-  "main": "./src/index.tsx", "types": "./src/index.tsx", "sideEffects": false,
-  "exports": { ".": "./src/index.tsx", "./check": "./src/check.tsx", "./close": "./src/close.tsx", "./menu": "./src/menu.tsx", "./warning": "./src/warning.tsx", "./info": "./src/info.tsx", "./user": "./src/user.tsx", "./home": "./src/home.tsx", "./chevron-down": "./src/chevron-down.tsx", "./list-controls": "./src/list-controls.tsx", "./shell-icons": "./src/shell-icons.tsx" },
-  "scripts": { "typecheck": "tsc --noEmit" },
-  "peerDependencies": { "react": "^19.2.5" },
-  "devDependencies": { "@athyper/config": "workspace:*", "@types/react": "^19.2.14", "react": "^19.2.5", "typescript": "^6.0.3" }
+  "name": "@athyper/platform-icons",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.tsx",
+    "./check": "./src/check.tsx",
+    "./close": "./src/close.tsx",
+    "./menu": "./src/menu.tsx",
+    "./warning": "./src/warning.tsx",
+    "./info": "./src/info.tsx",
+    "./user": "./src/user.tsx",
+    "./home": "./src/home.tsx",
+    "./chevron-down": "./src/chevron-down.tsx",
+    "./list-controls": "./src/list-controls.tsx",
+    "./shell-icons": "./src/shell-icons.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "^19.2.5"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@types/react": "^19.2.14",
+    "react": "^19.2.5",
+    "typescript": "^6.0.3"
+  }
 }

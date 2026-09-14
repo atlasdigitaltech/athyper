@@ -513,52 +513,118 @@ it("never falls back to a legacy allow for an explicitly deferred target operati
   const s = setup();
   const deferred = { ...profile, deferredOperations: ["deferred_action"] };
   const wrapped = createEntityBackendAuthorizer({
-    ...s.options, profile: deferred,
-    rollout: { ...s.options.rollout, release: { ...s.options.rollout.release, profileHash: entityAuthorizationProfileHash(deferred) } },
+    ...s.options,
+    profile: deferred,
+    rollout: {
+      ...s.options.rollout,
+      release: {
+        ...s.options.rollout.release,
+        profileHash: entityAuthorizationProfileHash(deferred),
+      },
+    },
   });
-  expect(await wrapped.authorize({ ...request, resource: { ...request.resource, operationKey: "deferred_action" } })).toEqual({ allowed: false, reason: "entity_authorization_unavailable" });
+  expect(
+    await wrapped.authorize({
+      ...request,
+      resource: { ...request.resource, operationKey: "deferred_action" },
+    }),
+  ).toEqual({ allowed: false, reason: "entity_authorization_deferred" });
   expect(s.preflight).not.toHaveBeenCalled();
 });
 
 it("requires both source and target authority for an explicit permission transition", async () => {
   const sourcePermissionCode = "neon.relationship.business_partner.legacy_read";
   const targetPermissionCode = request.permissionCode;
-  for (const sourceAllowed of [false, true]) for (const targetAllowed of [false, true]) {
-    const authorize = vi.fn(async (input: AuthorizationRequest) => ({
-      allowed: input.permissionCode === sourcePermissionCode ? sourceAllowed : targetAllowed,
-      reason: "test_decision",
-    }));
-    const s = setup({authority: {authorize}, permissionTransitions: [{
-      operationKey: "read", sourcePermissionCode, targetPermissionCode,
-    }]});
-    const result = await s.wrapped.authorize({...request, permissionCode: sourcePermissionCode});
-    expect(result.allowed).toBe(sourceAllowed && targetAllowed);
-    expect(authorize.mock.calls.some(([input]) => input.permissionCode === targetPermissionCode)).toBe(true);
-  }
+  for (const sourceAllowed of [false, true])
+    for (const targetAllowed of [false, true]) {
+      const authorize = vi.fn(async (input: AuthorizationRequest) => ({
+        allowed:
+          input.permissionCode === sourcePermissionCode
+            ? sourceAllowed
+            : targetAllowed,
+        reason: "test_decision",
+      }));
+      const s = setup({
+        authority: { authorize },
+        permissionTransitions: [
+          {
+            operationKey: "read",
+            sourcePermissionCode,
+            targetPermissionCode,
+          },
+        ],
+      });
+      const result = await s.wrapped.authorize({
+        ...request,
+        permissionCode: sourcePermissionCode,
+      });
+      expect(result.allowed).toBe(sourceAllowed && targetAllowed);
+      expect(
+        authorize.mock.calls.some(
+          ([input]) => input.permissionCode === targetPermissionCode,
+        ),
+      ).toBe(true);
+    }
 });
 it("rejects unregistered, mismatched and duplicate capability transitions", async () => {
   const sourcePermissionCode = "neon.relationship.business_partner.legacy_read";
-  const transition = {operationKey: "read", sourcePermissionCode, targetPermissionCode: request.permissionCode};
-  expect(await setup().wrapped.authorize({...request, permissionCode: sourcePermissionCode,
-    resource: {...request.resource, permissionTransitions: [transition]}})).toMatchObject({
-    allowed: false, reason: "entity_authorization_binding_mismatch",
+  const transition = {
+    operationKey: "read",
+    sourcePermissionCode,
+    targetPermissionCode: request.permissionCode,
+  };
+  expect(
+    await setup().wrapped.authorize({
+      ...request,
+      permissionCode: sourcePermissionCode,
+      resource: { ...request.resource, permissionTransitions: [transition] },
+    }),
+  ).toMatchObject({
+    allowed: false,
+    reason: "entity_authorization_binding_mismatch",
   });
-  expect(() => setup({permissionTransitions: [{...transition, targetPermissionCode: "other"}]})).toThrow("ENTITY_BACKEND_TRANSITION_MISMATCH");
-  expect(() => setup({permissionTransitions: [transition, transition]})).toThrow("ENTITY_BACKEND_TRANSITION_MISMATCH");
+  expect(() =>
+    setup({
+      permissionTransitions: [{ ...transition, targetPermissionCode: "other" }],
+    }),
+  ).toThrow("ENTITY_BACKEND_TRANSITION_MISMATCH");
+  expect(() =>
+    setup({ permissionTransitions: [transition, transition] }),
+  ).toThrow("ENTITY_BACKEND_TRANSITION_MISMATCH");
 });
 
 it("authorizes collection export fields through directory independently of export authority", async () => {
-  const exportOperation = profile.operations.find(o => o.key === "export")!;
-  const field = profile.fieldPolicies.find(p => p.readOperation === profile.recordReadOperation && p.queryUses.includes("export") && p.representation === "plain")!.fields[0]!;
+  const exportOperation = profile.operations.find((o) => o.key === "export")!;
+  const field = profile.fieldPolicies.find(
+    (p) =>
+      p.readOperation === profile.recordReadOperation &&
+      p.queryUses.includes("export") &&
+      p.representation === "plain",
+  )!.fields[0]!;
   const seen: string[] = [];
   let directoryAllowed = true;
   const s = setup({
-    authority: {authorize: async input => { const key = String(input.resource?.operationKey); seen.push(key); return {allowed: key !== profile.directory.operation || directoryAllowed}; }},
-    target: () => ({operationKey:"export",phase:"execute",fieldUses:[{field,use:"export"}]}),
+    authority: {
+      authorize: async (input) => {
+        const key = String(input.resource?.operationKey);
+        seen.push(key);
+        return key !== profile.directory.operation || directoryAllowed
+          ? { allowed: true }
+          : { allowed: false, reason: "missing_permission" };
+      },
+    },
+    target: () => ({
+      operationKey: "export",
+      phase: "execute",
+      fieldUses: [{ field, use: "export" }],
+    }),
   });
-  const input = {...request,permissionCode:exportOperation.permissionCode};
+  const input = { ...request, permissionCode: exportOperation.permissionCode };
   expect((await s.wrapped.authorize(input)).allowed).toBe(true);
   expect(seen).toContain(profile.directory.operation);
   directoryAllowed = false;
-  expect(await s.wrapped.authorize(input)).toMatchObject({allowed:false,reason:"entity_field_use_denied"});
+  expect(await s.wrapped.authorize(input)).toMatchObject({
+    allowed: false,
+    reason: "entity_field_use_denied",
+  });
 });

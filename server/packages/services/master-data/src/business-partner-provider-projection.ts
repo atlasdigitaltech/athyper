@@ -37,7 +37,7 @@ const identity = fields(
   "identity_read",
   P.identity,
   "items.*.",
-  `${common} kind code displayName legalName category ownershipClass legalClassification legalForm registrationCountryCode incorporationDate websiteUrl lifecycleStatus industryDomainCode industryCodeId industryCode industryName assignmentKind primary verified sourceSystemCode externalEntityCode externalId externalCode`,
+  `${common} kind code name category ownershipClass legalClassification legalForm registrationCountryCode incorporationDate websiteUrl lifecycleStatus industryDomainCode industryCodeId industryCode industryName assignmentKind primary verified sourceSystemCode externalEntityCode externalId externalCode`,
 );
 const contact = fields(
   "contacts_read",
@@ -250,7 +250,7 @@ export const businessPartnerProviderPolicies: Readonly<
       "identity_read",
       P.identity,
       "items.*.parent.",
-      "id code displayName",
+      "id code name",
     ),
     fields("identity_read", P.identity, "items.*.", "aliases.*"),
   ),
@@ -469,7 +469,8 @@ export async function projectBusinessPartnerProvider(input: {
         !field.path
           .split(".")
           .every(
-            (token: string) => token === "*" || /^[a-zA-Z][a-zA-Z0-9_]*$/.test(token),
+            (token: string) =>
+              token === "*" || /^[a-zA-Z][a-zA-Z0-9_]*$/.test(token),
           ),
     )
   )
@@ -542,11 +543,21 @@ export async function projectBusinessPartnerProvider(input: {
             input.section === "comments" ? P.comment : P.attachment,
           resource: {
             tenantId: input.query.context.tenantId,
-            entityCode: resourceCode,
+            // Document capabilities use independent resource grants, not BP operation bindings.
             resourceCode,
+            resourceId: id,
             recordId: id,
           },
         });
+        if (
+          !decision.allowed &&
+          decision.reason === "entity_authorization_unavailable"
+        )
+          throw new MasterDataError(
+            503,
+            "BP_PROVIDER_AUTHORIZATION_UNAVAILABLE",
+            "Independent document authorization is unavailable",
+          );
         if (!decision.allowed) return undefined;
       }
       const row = value as Record<string, unknown>,
@@ -603,7 +614,9 @@ export async function projectBusinessPartnerProvider(input: {
           ...scope,
           tenantId: input.query.context.tenantId,
           businessPartnerId: input.query.businessPartnerId,
-          operationKey: field.operation,
+          // Provider selection is not a legacy IAM operation-binding coordinate.
+          // The backend maps this hint to the independently checked native binding.
+          providerOperationKey: field.operation,
           providerFieldPath: path,
         },
       });

@@ -1,3 +1,4 @@
+import { linkRequestCaptureDocuments } from "./business-partner-request-capture.js";
 import { createHash, randomUUID } from "node:crypto";
 import type {
   BusinessPartnerAggregate,
@@ -31,22 +32,59 @@ const EMPTY_COUNTS = Object.freeze({
  * Persistence and commands are exclusively owned by document.entity_case.
  */
 export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerRequestRepository<Tx> {
-  async matchesGovernedImportCreation(input: Parameters<NonNullable<BusinessPartnerRequestRepository<Tx>["matchesGovernedImportCreation"]>>[0], transaction: Tx): Promise<boolean> {
-    const {command,context,existing,schema}=input;
-    if(command.kind!=="new_partner"||command.source.kind!=="import"||Object.keys(command.source).length!==1||command.registrationMode!=="integration"||existing.tenantId!==context.tenantId||existing.createdBy!==context.principalId)return false;
-    const payload=casePayload(command,existing.requestNo);
-    const rows=await sql`SELECT 1 FROM document.entity_case c
+  constructor(
+    private readonly entityCode:
+      | "master.business_partner"
+      | "master.business_partner_company_setup_request" = "master.business_partner",
+  ) {}
+
+  private readOne(
+    tx: Tx,
+    tenantId: string,
+    column: "c.id" | "c.idempotency_key",
+    value: string,
+  ) {
+    return readOne(tx, tenantId, column, value, this.entityCode);
+  }
+
+  async matchesGovernedImportCreation(
+    input: Parameters<
+      NonNullable<
+        BusinessPartnerRequestRepository<Tx>["matchesGovernedImportCreation"]
+      >
+    >[0],
+    transaction: Tx,
+  ): Promise<boolean> {
+    const { command, context, existing, schema } = input;
+    if (
+      command.kind !== "new_partner" ||
+      command.source.kind !== "import" ||
+      Object.keys(command.source).length !== 1 ||
+      command.registrationMode !== "integration" ||
+      existing.tenantId !== context.tenantId ||
+      existing.createdBy !== context.principalId
+    )
+      return false;
+    const payload = casePayload(command, existing.requestNo);
+    const rows = await sql`SELECT 1 FROM document.entity_case c
       JOIN document.entity_case_command_evidence e ON e.tenant_id=c.tenant_id AND e.entity_case_id=c.id
       JOIN snapshot.entity_snapshot s ON s.tenant_id=e.tenant_id AND s.snapshot_id=e.result_snapshot_id
       WHERE c.tenant_id=${context.tenantId}::uuid AND c.id=${existing.id}::uuid
         AND c.idempotency_key=${command.idempotencyKey} AND c.created_by=${context.principalId}::uuid
-        AND c.form_template_release_id=${schema.releaseId??null}::uuid
+        AND c.form_template_release_id=${schema.releaseId ?? null}::uuid
         AND e.command_code='entity.case.draft.write' AND e.before_version=0
-        AND s.payload_json=${JSON.stringify(payload)}::jsonb`.execute(transaction);
-    return rows.rows.length===1;
+        AND s.payload_json=${JSON.stringify(payload)}::jsonb`.execute(
+      transaction,
+    );
+    return rows.rows.length === 1;
   }
   async findByIdempotencyKey(tenantId: string, key: string, transaction: Tx) {
-    const row = await readOne(transaction, tenantId, "c.idempotency_key", key);
+    const row = await this.readOne(
+      transaction,
+      tenantId,
+      "c.idempotency_key",
+      key,
+    );
     return row ? mapCase(row) : null;
   }
 
@@ -54,11 +92,24 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     input: Parameters<BusinessPartnerRequestRepository<Tx>["create"]>[0],
     transaction: Tx,
   ) {
+    if (
+      this.entityCode === "master.business_partner_company_setup_request" &&
+      (input.command.kind !== "configure_company" ||
+        input.command.source.kind !== "manual" ||
+        !input.command.companyCodeId ||
+        !input.command.operatingOrganizationId ||
+        !input.command.targetBusinessPartnerId)
+    )
+      throw new MasterDataError(
+        400,
+        "BP_COMPANY_PILOT_COMMAND_INVALID",
+        "Company setup requires a manual configure_company request with company, organization and target BP",
+      );
     const contract = (
       await sql<Row>`SELECT id,entity_contract_hash,release_id,release_no
         FROM runtime_meta.entity_contract
        WHERE tenant_id=${input.tenantId}::uuid
-         AND entity_code='master.business_partner' AND status='published'
+         AND entity_code=${this.entityCode} AND status='published'
        ORDER BY release_no DESC,id DESC LIMIT 1`.execute(transaction)
     ).rows[0];
     if (!contract)
@@ -196,8 +247,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
       });
     if (meshResolution) {
       const mapping: Record<string, string> = {
-        displayName: "displayName",
-        legalName: "legalName",
+        legalName: "name",
         legalForm: "legalForm",
         countryCode: "registrationCountryCode",
         incorporationDate: "incorporationDate",
@@ -261,7 +311,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     await executeCaseCommand(async () =>
       sql`SELECT * FROM document.command_entity_case_draft(
         ${input.tenantId}::uuid,${caseId}::uuid,0::bigint,NULL::uuid,
-        ${input.requestNo},'master.business_partner',${input.command.kind},
+        ${input.requestNo},${this.entityCode},${input.command.kind},
         ${input.command.targetBusinessPartnerId ?? null}::uuid,
         ${`business-partner-case:${input.requestNo}`},${text(contract, "id")}::uuid,
         ${text(contract, "entity_contract_hash")},${input.schema.releaseId}::uuid,
@@ -269,31 +319,48 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         ${input.command.idempotencyKey},${input.createdBy}::uuid,NULL::uuid
       )`.execute(transaction),
     );
+    await linkRequestCaptureDocuments({tenantId:input.tenantId,principalId:input.createdBy,caseId,extensions:input.command.extensions??{}},transaction);
     if (meshResolution)
       await sql`INSERT INTO document.mesh_profile_change_case(tenant_id,resolution_id,entity_case_id) VALUES(${input.tenantId}::uuid,${String(meshResolution["id"])}::uuid,${caseId}::uuid)`.execute(
         transaction,
       );
-    const row = await readOne(transaction, input.tenantId, "c.id", caseId);
+    const row = await this.readOne(transaction, input.tenantId, "c.id", caseId);
     if (!row) throw new Error("BUSINESS_PARTNER_CASE_CREATE_FAILED");
     return mapCase(row);
   }
 
   async get(tenantId: string, caseId: string, transaction: Tx) {
-    const row = await readOne(transaction, tenantId, "c.id", caseId);
+    const row = await this.readOne(transaction, tenantId, "c.id", caseId);
     return row ? mapCase(row) : null;
   }
 
   async getView(tenantId: string, caseId: string, transaction: Tx) {
-    const row = await readOne(transaction, tenantId, "c.id", caseId);
+    const row = await this.readOne(transaction, tenantId, "c.id", caseId);
     if (!row) return null;
     const request = mapCase(row);
-    const findings = await readFindings(transaction, tenantId, caseId, nullable(row["validation_evaluation_id"]));
-    const previous = (await sql<Row>`SELECT prior.id,prior.version_number,body.payload_json
+    const findings = await readFindings(
+      transaction,
+      tenantId,
+      caseId,
+      nullable(row["validation_evaluation_id"]),
+    );
+    const validationRunRow = (await sql<Row>`SELECT v.evaluation_id,v.evaluated_at,v.evaluated_snapshot_id,i.version_number,
+      (evaluated.payload_json IS DISTINCT FROM current.payload_json) stale
+      FROM document.entity_case_validation v
+      JOIN snapshot.entity_snapshot_identity i ON i.tenant_id=v.tenant_id AND i.id=v.evaluated_snapshot_id
+      JOIN snapshot.entity_snapshot evaluated ON evaluated.tenant_id=v.tenant_id AND evaluated.snapshot_id=v.evaluated_snapshot_id
+      JOIN snapshot.entity_snapshot current ON current.tenant_id=v.tenant_id AND current.snapshot_id=${text(row, "current_snapshot_id")}::uuid
+      WHERE v.tenant_id=${tenantId}::uuid AND v.entity_case_id=${caseId}::uuid AND v.evaluation_id=${nullable(row["validation_evaluation_id"]) ?? null}::uuid LIMIT 1`.execute(transaction)).rows[0];
+    const previous = (
+      await sql<Row>`SELECT prior.id,prior.version_number,body.payload_json
       FROM snapshot.entity_snapshot_identity current
       JOIN snapshot.entity_snapshot_identity prior ON prior.tenant_id=current.tenant_id
         AND prior.id=current.previous_snapshot_id AND prior.entity_id=current.entity_id AND prior.entity_type=current.entity_type
       JOIN snapshot.entity_snapshot body ON body.tenant_id=prior.tenant_id AND body.snapshot_id=prior.id
-      WHERE current.tenant_id=${tenantId}::uuid AND current.id=${text(row, "current_snapshot_id")}::uuid`.execute(transaction)).rows[0];
+      WHERE current.tenant_id=${tenantId}::uuid AND current.id=${text(row, "current_snapshot_id")}::uuid`.execute(
+        transaction,
+      )
+    ).rows[0];
     const workflowRow = request.workflowRequestId
       ? await readWorkflow(transaction, tenantId, caseId)
       : undefined;
@@ -307,7 +374,11 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
           ),
         }
       : undefined;
-    const onboardingCycle = await readOnboardingCycle(transaction, tenantId, caseId);
+    const onboardingCycle = await readOnboardingCycle(
+      transaction,
+      tenantId,
+      caseId,
+    );
     const materializationProof =
       request.status === "applied"
         ? await readMaterializationProof(transaction, tenantId, caseId, request)
@@ -315,9 +386,21 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     return {
       request,
       validationFindings: findings,
-      validationCurrent: Boolean(row["validation_snapshot_id"] && row["validation_snapshot_id"] === row["current_snapshot_id"]),
+      ...(validationRunRow ? {validationRun: {evaluationId:text(validationRunRow,"evaluation_id"),evaluatedAt:date(validationRunRow["evaluated_at"]),snapshotId:text(validationRunRow,"evaluated_snapshot_id"),requestVersion:Number(validationRunRow["version_number"]),stale:validationRunRow["stale"] === true}} : {}),
+      validationCurrent: Boolean(
+        row["validation_snapshot_id"] &&
+        row["validation_snapshot_id"] === row["current_snapshot_id"],
+      ),
       snapshotId: text(row, "current_snapshot_id"),
-      ...(previous ? { previousSnapshot: { id: text(previous, "id"), revision: Number(previous["version_number"]), payload: object(previous["payload_json"]) } } : {}),
+      ...(previous
+        ? {
+            previousSnapshot: {
+              id: text(previous, "id"),
+              revision: Number(previous["version_number"]),
+              payload: object(previous["payload_json"]),
+            },
+          }
+        : {}),
       ...(workflow ? { workflow } : {}),
       ...(onboardingCycle ? { onboardingCycle } : {}),
       ...(materializationProof ? { materializationProof } : {}),
@@ -335,8 +418,12 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
           JOIN snapshot.entity_snapshot s ON s.tenant_id=c.tenant_id AND s.snapshot_id=c.current_snapshot_id
           LEFT JOIN document.business_partner_invitation i ON i.tenant_id=c.tenant_id AND i.entity_case_id=c.id
          WHERE c.tenant_id=${query.tenantId}::uuid
-           AND c.entity_code='master.business_partner'
-           AND NULLIF(s.payload_json->>'operatingOrganizationId','')::uuid=${query.operatingOrganizationId}::uuid
+           AND c.entity_code=${this.entityCode}
+           AND ${
+             this.entityCode === "master.business_partner_company_setup_request"
+               ? sql`c.owner_company_code_id=${query.companyCodeId ?? null}::uuid`
+               : sql`NULLIF(s.payload_json->>'operatingOrganizationId','')::uuid=${query.operatingOrganizationId ?? null}::uuid`
+           }
            ${query.beforeCreatedAt ? sql`AND c.created_at<${query.beforeCreatedAt}::timestamptz` : sql``}
       )
       SELECT * FROM cases
@@ -377,7 +464,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
       sql<Row>`SELECT a.*,o.code operating_organization_code,o.name operating_organization_name FROM master.business_partner_operating_organization_assignment a JOIN master.operating_organization o ON o.tenant_id=a.tenant_id AND o.id=a.operating_organization_id WHERE a.tenant_id=${tenantId}::uuid AND a.business_partner_id=${businessPartnerId}::uuid ORDER BY a.created_at,a.id`.execute(
         transaction,
       ),
-      sql<Row>`SELECT ${sql.raw(CASE_SELECT)} FROM document.entity_case c JOIN snapshot.entity_snapshot s ON s.tenant_id=c.tenant_id AND s.snapshot_id=c.current_snapshot_id LEFT JOIN document.business_partner_invitation i ON i.tenant_id=c.tenant_id AND i.entity_case_id=c.id WHERE c.tenant_id=${tenantId}::uuid AND c.entity_code='master.business_partner' AND (c.target_entity_id=${businessPartnerId}::uuid OR EXISTS(SELECT 1 FROM document.entity_case_command_evidence e WHERE e.tenant_id=c.tenant_id AND e.entity_case_id=c.id AND e.command_code='entity.case.materialize' AND e.result_evidence->>'businessPartnerId'=${businessPartnerId})) ORDER BY c.created_at DESC`.execute(
+      sql<Row>`SELECT ${sql.raw(CASE_SELECT)} FROM document.entity_case c JOIN snapshot.entity_snapshot s ON s.tenant_id=c.tenant_id AND s.snapshot_id=c.current_snapshot_id LEFT JOIN document.business_partner_invitation i ON i.tenant_id=c.tenant_id AND i.entity_case_id=c.id WHERE c.tenant_id=${tenantId}::uuid AND c.entity_code=${this.entityCode} AND (c.target_entity_id=${businessPartnerId}::uuid OR EXISTS(SELECT 1 FROM document.entity_case_command_evidence e WHERE e.tenant_id=c.tenant_id AND e.entity_case_id=c.id AND e.command_code='entity.case.materialize' AND e.result_evidence->>'businessPartnerId'=${businessPartnerId})) ORDER BY c.created_at DESC`.execute(
         transaction,
       ),
     ]);
@@ -394,8 +481,6 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         id: text(bp, "id"),
         code: text(bp, "code"),
         name: text(bp, "name"),
-        ...optionalValue(bp, "display_name", "displayName"),
-        ...optionalValue(bp, "legal_name", "legalName"),
         partnerCategory: text(bp, "partner_category"),
         ...optionalValue(bp, "legal_form", "legalForm"),
         ...optionalValue(
@@ -457,13 +542,13 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     input: Parameters<BusinessPartnerRequestRepository<Tx>["patch"]>[0],
     transaction: Tx,
   ) {
-    const current = await readOne(
+    const current = await this.readOne(
       transaction,
       input.tenantId,
       "c.id",
       input.requestId,
     );
-    if (!current || mapCase(current).rowVersion !== input.expectedVersion)
+    if (!current)
       return null;
     if (object(current["payload_json"])["meshChangeResolutionId"])
       throw new MasterDataError(
@@ -472,8 +557,10 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         "Create a new comparison and resolution to change field decisions",
       );
     const payload = {
-      ...object(current["payload_json"]),
-      ...input.proposedPayload,
+      ...Object.fromEntries(Object.entries({
+        ...object(current["payload_json"]), ...input.proposedPayload,
+      }).filter(([, value]) => value !== null)),
+      ...(input.extensions !== undefined ? {relationshipProposals:input.extensions} : {}),
       ...preserved(object(current["payload_json"]), [
         "expectedBusinessPartnerVersion",
         "priorStatus",
@@ -490,7 +577,20 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         ? { requestedRole: input.requestedRole }
         : {}),
     };
+
     const key = `case-patch:${input.requestId}:${input.expectedVersion}:${hash(payload).slice(0, 24)}`;
+    if (mapCase(current).rowVersion !== input.expectedVersion) {
+      // A lost response can be retried only while the exact accepted result is still current.
+      const replay = (await sql<Row>`SELECT id FROM document.entity_case_command_evidence
+        WHERE tenant_id=${input.tenantId}::uuid AND entity_case_id=${input.requestId}::uuid
+          AND command_code='entity.case.draft.write' AND idempotency_key=${key}
+          AND recorded_by=${input.updatedBy}::uuid AND outcome='accepted'
+          AND after_version=${mapCase(current).rowVersion}::bigint
+          AND result_snapshot_id=${text(current,"current_snapshot_id")}::uuid`.execute(transaction)).rows[0];
+      if (!replay || mapCase(current).status !== "draft") return null;
+      return mapCase(current);
+    }
+    await linkRequestCaptureDocuments({tenantId:input.tenantId,principalId:input.updatedBy,caseId:input.requestId,extensions:object((payload as Row)["relationshipProposals"])},transaction);
     await executeCaseCommand(async () =>
       sql`SELECT * FROM document.command_entity_case_draft(
         ${input.tenantId}::uuid,${input.requestId}::uuid,${input.expectedVersion}::bigint,
@@ -503,7 +603,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         ${input.updatedBy}::uuid,NULL::uuid
       )`.execute(transaction),
     );
-    const row = await readOne(
+    const row = await this.readOne(
       transaction,
       input.tenantId,
       "c.id",
@@ -516,7 +616,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     input: Parameters<BusinessPartnerRequestRepository<Tx>["patch"]>[0],
     transaction: Tx,
   ) {
-    const current = await readOne(
+    const current = await this.readOne(
       transaction,
       input.tenantId,
       "c.id",
@@ -559,7 +659,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         ${input.updatedBy}::uuid,NULL::uuid
       )`.execute(transaction),
     );
-    const row = await readOne(
+    const row = await this.readOne(
       transaction,
       input.tenantId,
       "c.id",
@@ -584,7 +684,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         ${JSON.stringify(input.result.changeImpact)}::jsonb,${key},${input.evaluatedBy}::uuid,NULL::uuid
       )`.execute(transaction),
     );
-    const row = await readOne(
+    const row = await this.readOne(
       transaction,
       input.tenantId,
       "c.id",
@@ -597,6 +697,8 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     input: Parameters<BusinessPartnerRequestRepository<Tx>["submit"]>[0],
     transaction: Tx,
   ) {
+    const captureCase=await this.readOne(transaction,input.tenantId,"c.id",input.requestId);
+    if(captureCase && mapCase(captureCase).status!=="pending_approval")await linkRequestCaptureDocuments({tenantId:input.tenantId,principalId:input.submittedBy,caseId:input.requestId,extensions:object(object(captureCase["payload_json"])["relationshipProposals"])},transaction);
     const result = await lifecycle(transaction, {
       tenantId: input.tenantId,
       caseId: input.requestId,
@@ -608,7 +710,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
       correlationId: input.correlationId,
     });
     if (result.replayed) {
-      const row = await readOne(
+      const row = await this.readOne(
           transaction,
           input.tenantId,
           "c.id",
@@ -680,6 +782,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         activeStage = stage;
         activeItem = (
           await createStageWorkItems(transaction, {
+            caseEntityCode: this.entityCode,
             tenantId: input.tenantId,
             requestId: input.requestId,
             workflowId,
@@ -693,7 +796,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     }
     if (!activeStage || !activeItem)
       throw new Error("BUSINESS_PARTNER_WORKFLOW_ROUTE_EMPTY");
-    const row = await readOne(
+    const row = await this.readOne(
       transaction,
       input.tenantId,
       "c.id",
@@ -737,7 +840,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
       object(currentWorkflow["outcome"])["decisionFingerprint"] ===
       input.decisionFingerprint
     ) {
-      const replayRow = await readOne(
+      const replayRow = await this.readOne(
         transaction,
         input.tenantId,
         "c.id",
@@ -826,6 +929,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
               : undefined;
         if (next && nextDefinition) {
           const items = await createStageWorkItems(transaction, {
+            caseEntityCode: this.entityCode,
             tenantId: input.tenantId,
             requestId: input.command.requestId,
             workflowId: input.command.workflowRequestId,
@@ -860,7 +964,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         }
       }
     }
-    const row = await readOne(
+    const row = await this.readOne(
       transaction,
       input.tenantId,
       "c.id",
@@ -882,14 +986,15 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     input: Parameters<BusinessPartnerRequestRepository<Tx>["apply"]>[0],
     transaction: Tx,
   ) {
-    const current = await readOne(
+    const current = await this.readOne(
       transaction,
       input.tenantId,
       "c.id",
       input.command.requestId,
     );
     if (!current) return null;
-    if(current["operation_code"]==="activate_supplier")return applySupplierActivationCase(input,current,transaction);
+    if (current["operation_code"] === "activate_supplier")
+      return applySupplierActivationCase(input, current, transaction);
     const change = [
       "change_bank",
       "deactivate",
@@ -913,7 +1018,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
       )
     ).rows[0];
     if (!raw) return null;
-    const row = await readOne(
+    const row = await this.readOne(
       transaction,
       input.tenantId,
       "c.id",
@@ -965,45 +1070,249 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
   }
 }
 
-async function applySupplierActivationCase(input:Parameters<BusinessPartnerRequestRepository<Tx>["apply"]>[0],current:Row,transaction:Tx){
-  const request=mapCase(current),payload=request.proposedPayload,activation=object(payload["activation"]),businessPartnerId=request.targetBusinessPartnerId,operatingOrganizationId=request.operatingOrganizationId,companyCodeId=request.companyCodeId,businessDate=String(activation["businessDate"]??"");
-  if(!businessPartnerId||!operatingOrganizationId||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(businessDate))throw new MasterDataError(409,"SUPPLIER_ACTIVATION_CASE_SCOPE_INVALID","Activation case requires a target, operating organization and business date");
-  const key=`activation-case:${request.id}`,prior=(await sql<Row>`SELECT evidence.*,supplier.id::text role_id,c.result_snapshot_id::text FROM document.supplier_activation_evidence evidence JOIN master.supplier supplier ON supplier.tenant_id=evidence.tenant_id AND supplier.id=evidence.supplier_id JOIN document.entity_case c ON c.tenant_id=evidence.tenant_id AND c.id=${request.id}::uuid WHERE evidence.tenant_id=${input.tenantId}::uuid AND evidence.idempotency_key=${key}`.execute(transaction)).rows[0];
-  if(prior){const row=await readOne(transaction,input.tenantId,"c.id",request.id);if(!row)return null;return activationResult(mapCase(row),prior,input.applicationFingerprint,true);}
-  if(request.status!=="approved"||request.rowVersion!==input.command.expectedVersion)throw new MasterDataError(409,"SUPPLIER_ACTIVATION_CASE_NOT_APPROVED","An independently approved activation case at the expected version is required");
-  const repository=new KyselyBusinessPartnerEligibilityRepository(),raw=await repository.resolve({tenantId:input.tenantId,businessPartnerId,role:"supplier",operatingOrganizationId,...(companyCodeId?{companyCodeId}:{}),operationCode:companyCodeId?"payment":"purchasing",businessDate},transaction);
-  if(!raw)throw new MasterDataError(404,"BUSINESS_PARTNER_NOT_FOUND","Business Partner was not found");
-  const reasons=raw.reasons.filter(reason=>reason.code!=="ROLE_INACTIVE"),decision={...raw,eligible:!reasons.some(reason=>reason.severity==="blocking"),reasons},readiness={...decision,decisionFingerprint:createHash("sha256").update(JSON.stringify({tenantId:input.tenantId,...decision})).digest("hex")};
-  if(!readiness.eligible)throw new MasterDataError(409,"SUPPLIER_ACTIVATION_READINESS_FAILED",`Supplier activation is blocked: ${reasons.filter(reason=>reason.severity==="blocking").map(reason=>reason.code).join(",")}`);
-  const expected=String(activation["readinessFingerprint"]??"");if(expected&&expected!==readiness.decisionFingerprint)throw new MasterDataError(409,"SUPPLIER_ACTIVATION_READINESS_CHANGED","Supplier readiness changed after the activation case was proposed");
-  const commandFingerprint=createHash("sha256").update(JSON.stringify({caseId:request.id,businessPartnerId,operatingOrganizationId,companyCodeId:companyCodeId??null,businessDate,readinessFingerprint:readiness.decisionFingerprint})).digest("hex"),evidence=await repository.activateSupplier({tenantId:input.tenantId,businessPartnerId,operatingOrganizationId,...(companyCodeId?{companyCodeId}:{}),businessDate,idempotencyKey:key,activatedBy:input.appliedBy,readiness,commandFingerprint},transaction);
-  if(!evidence)throw new MasterDataError(409,"SUPPLIER_ACTIVATION_STATE_CONFLICT","Supplier is no longer in an activatable state");
-  const snapshot=(await sql<Row>`SELECT snapshot.fn_capture_entity('master.business_partner',${businessPartnerId}::uuid,${String(payload["businessPartnerCode"]??request.requestNo)},1,${String(current["entity_contract_hash"])} ,1,'supplier.activation.materialized','version',${JSON.stringify({...payload,activation:{...activation,readinessFingerprint:readiness.decisionFingerprint,activationEvidenceId:evidence.id}})}::jsonb,${input.correlationId??null}::uuid,NULL,NULL,NULL,'legal','neon-business-partner')::text result_snapshot_id`.execute(transaction)).rows[0];if(!snapshot)throw new Error("SUPPLIER_ACTIVATION_SNAPSHOT_FAILED");const snapshotId=text(snapshot,"result_snapshot_id"),materializationId=randomUUID(),nextVersion=request.rowVersion+1;
-  await sql`INSERT INTO document.entity_case_materialization(id,tenant_id,entity_case_id,attempt_no,source_snapshot_id,result_snapshot_id,materializer_code,materializer_version,request_fingerprint,status,result_code,started_at,completed_at,requested_by,completed_by) VALUES(${materializationId}::uuid,${input.tenantId}::uuid,${request.id}::uuid,1,${String(current["decision_snapshot_id"])}::uuid,${snapshotId}::uuid,'neon.supplier_activation','1',${input.applicationFingerprint},'succeeded','SUPPLIER_ACTIVATED',now(),now(),${input.appliedBy}::uuid,${input.appliedBy}::uuid)`.execute(transaction);
-  await sql`UPDATE document.entity_case SET target_entity_id=${businessPartnerId}::uuid,result_snapshot_id=${snapshotId}::uuid,status='materialized',row_version=${nextVersion},updated_at=now(),updated_by=${input.appliedBy}::uuid WHERE tenant_id=${input.tenantId}::uuid AND id=${request.id}::uuid AND status='approved' AND row_version=${request.rowVersion}`.execute(transaction);
-  await sql`INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,result_code,result_snapshot_id,result_evidence,recorded_by) VALUES(${input.tenantId}::uuid,${request.id}::uuid,'entity.case.materialize',${input.command.idempotencyKey},${input.applicationFingerprint},${request.rowVersion},${request.rowVersion},${nextVersion},'approved','materialized','accepted','SUPPLIER_ACTIVATED',${snapshotId}::uuid,${JSON.stringify({activationEvidenceId:evidence.id,readinessFingerprint:readiness.decisionFingerprint,businessPartnerId,supplierId:evidence.supplierId})}::jsonb,${input.appliedBy}::uuid)`.execute(transaction);
-  await sql`INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(${input.tenantId}::uuid,'governed-entity-case','entity.case.materialized',${`entity-case:${request.id}:v${nextVersion}:supplier-activation`},'document.entity_case',${request.id}::uuid,'entity_case',${request.id}::uuid,${nextVersion},${input.appliedBy}::uuid,'neon-business-partner',${input.correlationId??null}::uuid,${input.tenantId},${JSON.stringify({caseId:request.id,businessPartnerId,supplierId:evidence.supplierId,activationEvidenceId:evidence.id,readinessFingerprint:readiness.decisionFingerprint,resultSnapshotId:snapshotId,status:"materialized",resultKind:"supplier_activated"})}::jsonb,${input.appliedBy}::uuid)`.execute(transaction);
-  const updated=await readOne(transaction,input.tenantId,"c.id",request.id);return updated?activationResult(mapCase(updated),{...evidence,role_id:evidence.supplierId,result_snapshot_id:snapshotId},input.applicationFingerprint,false):null;
+async function applySupplierActivationCase(
+  input: Parameters<BusinessPartnerRequestRepository<Tx>["apply"]>[0],
+  current: Row,
+  transaction: Tx,
+) {
+  const request = mapCase(current),
+    payload = request.proposedPayload,
+    activation = object(payload["activation"]),
+    businessPartnerId = request.targetBusinessPartnerId,
+    operatingOrganizationId = request.operatingOrganizationId,
+    companyCodeId = request.companyCodeId,
+    businessDate = String(activation["businessDate"] ?? "");
+  if (
+    !businessPartnerId ||
+    !operatingOrganizationId ||
+    !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(businessDate)
+  )
+    throw new MasterDataError(
+      409,
+      "SUPPLIER_ACTIVATION_CASE_SCOPE_INVALID",
+      "Activation case requires a target, operating organization and business date",
+    );
+  const key = `activation-case:${request.id}`,
+    prior = (
+      await sql<Row>`SELECT evidence.*,supplier.id::text role_id,c.result_snapshot_id::text FROM document.supplier_activation_evidence evidence JOIN master.supplier supplier ON supplier.tenant_id=evidence.tenant_id AND supplier.id=evidence.supplier_id JOIN document.entity_case c ON c.tenant_id=evidence.tenant_id AND c.id=${request.id}::uuid WHERE evidence.tenant_id=${input.tenantId}::uuid AND evidence.idempotency_key=${key}`.execute(
+        transaction,
+      )
+    ).rows[0];
+  if (prior) {
+    const row = await readOne(transaction, input.tenantId, "c.id", request.id);
+    if (!row) return null;
+    return activationResult(
+      mapCase(row),
+      prior,
+      input.applicationFingerprint,
+      true,
+    );
+  }
+  if (
+    request.status !== "approved" ||
+    request.rowVersion !== input.command.expectedVersion
+  )
+    throw new MasterDataError(
+      409,
+      "SUPPLIER_ACTIVATION_CASE_NOT_APPROVED",
+      "An independently approved activation case at the expected version is required",
+    );
+  const repository = new KyselyBusinessPartnerEligibilityRepository(),
+    raw = await repository.resolve(
+      {
+        tenantId: input.tenantId,
+        businessPartnerId,
+        role: "supplier",
+        operatingOrganizationId,
+        ...(companyCodeId ? { companyCodeId } : {}),
+        operationCode: companyCodeId ? "payment" : "purchasing",
+        businessDate,
+      },
+      transaction,
+    );
+  if (!raw)
+    throw new MasterDataError(
+      404,
+      "BUSINESS_PARTNER_NOT_FOUND",
+      "Business Partner was not found",
+    );
+  const reasons = raw.reasons.filter(
+      (reason) => reason.code !== "ROLE_INACTIVE",
+    ),
+    decision = {
+      ...raw,
+      eligible: !reasons.some((reason) => reason.severity === "blocking"),
+      reasons,
+    },
+    readiness = {
+      ...decision,
+      decisionFingerprint: createHash("sha256")
+        .update(JSON.stringify({ tenantId: input.tenantId, ...decision }))
+        .digest("hex"),
+    };
+  if (!readiness.eligible)
+    throw new MasterDataError(
+      409,
+      "SUPPLIER_ACTIVATION_READINESS_FAILED",
+      `Supplier activation is blocked: ${reasons
+        .filter((reason) => reason.severity === "blocking")
+        .map((reason) => reason.code)
+        .join(",")}`,
+    );
+  const expected = String(activation["readinessFingerprint"] ?? "");
+  if (expected && expected !== readiness.decisionFingerprint)
+    throw new MasterDataError(
+      409,
+      "SUPPLIER_ACTIVATION_READINESS_CHANGED",
+      "Supplier readiness changed after the activation case was proposed",
+    );
+  const commandFingerprint = createHash("sha256")
+      .update(
+        JSON.stringify({
+          caseId: request.id,
+          businessPartnerId,
+          operatingOrganizationId,
+          companyCodeId: companyCodeId ?? null,
+          businessDate,
+          readinessFingerprint: readiness.decisionFingerprint,
+        }),
+      )
+      .digest("hex"),
+    evidence = await repository.activateSupplier(
+      {
+        tenantId: input.tenantId,
+        businessPartnerId,
+        operatingOrganizationId,
+        ...(companyCodeId ? { companyCodeId } : {}),
+        businessDate,
+        idempotencyKey: key,
+        activatedBy: input.appliedBy,
+        readiness,
+        commandFingerprint,
+      },
+      transaction,
+    );
+  if (!evidence)
+    throw new MasterDataError(
+      409,
+      "SUPPLIER_ACTIVATION_STATE_CONFLICT",
+      "Supplier is no longer in an activatable state",
+    );
+  const snapshot = (
+    await sql<Row>`SELECT snapshot.fn_capture_entity('master.business_partner',${businessPartnerId}::uuid,${String(payload["businessPartnerCode"] ?? request.requestNo)},1,${String(current["entity_contract_hash"])} ,1,'supplier.activation.materialized','version',${JSON.stringify({ ...payload, activation: { ...activation, readinessFingerprint: readiness.decisionFingerprint, activationEvidenceId: evidence.id } })}::jsonb,${input.correlationId ?? null}::uuid,NULL,NULL,NULL,'legal','neon-business-partner')::text result_snapshot_id`.execute(
+      transaction,
+    )
+  ).rows[0];
+  if (!snapshot) throw new Error("SUPPLIER_ACTIVATION_SNAPSHOT_FAILED");
+  const snapshotId = text(snapshot, "result_snapshot_id"),
+    materializationId = randomUUID(),
+    nextVersion = request.rowVersion + 1;
+  await sql`INSERT INTO document.entity_case_materialization(id,tenant_id,entity_case_id,attempt_no,source_snapshot_id,result_snapshot_id,materializer_code,materializer_version,request_fingerprint,status,result_code,started_at,completed_at,requested_by,completed_by) VALUES(${materializationId}::uuid,${input.tenantId}::uuid,${request.id}::uuid,1,${String(current["decision_snapshot_id"])}::uuid,${snapshotId}::uuid,'neon.supplier_activation','1',${input.applicationFingerprint},'succeeded','SUPPLIER_ACTIVATED',now(),now(),${input.appliedBy}::uuid,${input.appliedBy}::uuid)`.execute(
+    transaction,
+  );
+  await sql`UPDATE document.entity_case SET target_entity_id=${businessPartnerId}::uuid,result_snapshot_id=${snapshotId}::uuid,status='materialized',row_version=${nextVersion},updated_at=now(),updated_by=${input.appliedBy}::uuid WHERE tenant_id=${input.tenantId}::uuid AND id=${request.id}::uuid AND status='approved' AND row_version=${request.rowVersion}`.execute(
+    transaction,
+  );
+  await sql`INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,result_code,result_snapshot_id,result_evidence,recorded_by) VALUES(${input.tenantId}::uuid,${request.id}::uuid,'entity.case.materialize',${input.command.idempotencyKey},${input.applicationFingerprint},${request.rowVersion},${request.rowVersion},${nextVersion},'approved','materialized','accepted','SUPPLIER_ACTIVATED',${snapshotId}::uuid,${JSON.stringify({ activationEvidenceId: evidence.id, readinessFingerprint: readiness.decisionFingerprint, businessPartnerId, supplierId: evidence.supplierId })}::jsonb,${input.appliedBy}::uuid)`.execute(
+    transaction,
+  );
+  await sql`INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(${input.tenantId}::uuid,'governed-entity-case','entity.case.materialized',${`entity-case:${request.id}:v${nextVersion}:supplier-activation`},'document.entity_case',${request.id}::uuid,'entity_case',${request.id}::uuid,${nextVersion},${input.appliedBy}::uuid,'neon-business-partner',${input.correlationId ?? null}::uuid,${input.tenantId},${JSON.stringify({ caseId: request.id, businessPartnerId, supplierId: evidence.supplierId, activationEvidenceId: evidence.id, readinessFingerprint: readiness.decisionFingerprint, resultSnapshotId: snapshotId, status: "materialized", resultKind: "supplier_activated" })}::jsonb,${input.appliedBy}::uuid)`.execute(
+    transaction,
+  );
+  const updated = await readOne(
+    transaction,
+    input.tenantId,
+    "c.id",
+    request.id,
+  );
+  return updated
+    ? activationResult(
+        mapCase(updated),
+        {
+          ...evidence,
+          role_id: evidence.supplierId,
+          result_snapshot_id: snapshotId,
+        },
+        input.applicationFingerprint,
+        false,
+      )
+    : null;
 }
 
-function activationResult(request:BusinessPartnerRequest,row:Row,fingerprint:string,replayed:boolean){return{request,case:request,materialization:{businessPartnerId:request.targetBusinessPartnerId!,resultKind:"supplier_activated" as const,partnerRole:"supplier" as const,roleId:String(row["role_id"]??row["supplierId"]),supplierId:String(row["role_id"]??row["supplierId"]),activationEvidenceId:String(row["id"]),snapshotId:String(row["result_snapshot_id"]),applicationFingerprint:fingerprint,extensionMaterializationCounts:request.extensionSummary.counts},replayed};}
+function activationResult(
+  request: BusinessPartnerRequest,
+  row: Row,
+  fingerprint: string,
+  replayed: boolean,
+) {
+  return {
+    request,
+    case: request,
+    materialization: {
+      businessPartnerId: request.targetBusinessPartnerId!,
+      resultKind: "supplier_activated" as const,
+      partnerRole: "supplier" as const,
+      roleId: String(row["role_id"] ?? row["supplierId"]),
+      supplierId: String(row["role_id"] ?? row["supplierId"]),
+      activationEvidenceId: String(row["id"]),
+      snapshotId: String(row["result_snapshot_id"]),
+      applicationFingerprint: fingerprint,
+      extensionMaterializationCounts: request.extensionSummary.counts,
+    },
+    replayed,
+  };
+}
 
 async function readOnboardingCycle(tx: Tx, tenantId: string, caseId: string) {
-  const run = (await sql<Row>`SELECT run.* FROM governance.cycle_subject subject
+  const run = (
+    await sql<Row>`SELECT run.* FROM governance.cycle_subject subject
     JOIN governance.cycle_run run ON run.tenant_id=subject.tenant_id AND run.id=subject.cycle_run_id
    WHERE subject.tenant_id=${tenantId}::uuid AND subject.entity_case_id=${caseId}::uuid AND subject.is_primary
-   ORDER BY run.created_at DESC LIMIT 1`.execute(tx)).rows[0];
+   ORDER BY run.created_at DESC LIMIT 1`.execute(tx)
+  ).rows[0];
   if (!run) return undefined;
   const [tasks, subjects] = await Promise.all([
-    sql<Row>`SELECT id,code,name,status,completion_mode,started_at,completed_at,completion_evidence FROM governance.cycle_task WHERE tenant_id=${tenantId}::uuid AND cycle_run_id=${text(run,"id")}::uuid ORDER BY created_at,id`.execute(tx),
-    sql<Row>`SELECT subject_role,is_primary,entity_case_id,external_reference FROM governance.cycle_subject WHERE tenant_id=${tenantId}::uuid AND cycle_run_id=${text(run,"id")}::uuid ORDER BY is_primary DESC,created_at,id`.execute(tx),
+    sql<Row>`SELECT task.id,task.code,task.name,task.status,task.completion_mode,task.started_at,task.completed_at,task.completion_evidence
+      FROM governance.cycle_task task
+      JOIN control.cycle_template_revision revision ON revision.tenant_id=task.tenant_id AND revision.id=${text(run, "template_revision_id")}::uuid
+      WHERE task.tenant_id=${tenantId}::uuid AND task.cycle_run_id=${text(run, "id")}::uuid
+      ORDER BY array_position(revision.topological_task_ids,task.task_template_id) NULLS LAST,task.created_at,task.id`.execute(
+      tx,
+    ),
+    sql<Row>`SELECT subject_role,is_primary,entity_case_id,external_reference FROM governance.cycle_subject WHERE tenant_id=${tenantId}::uuid AND cycle_run_id=${text(run, "id")}::uuid ORDER BY is_primary DESC,created_at,id`.execute(
+      tx,
+    ),
   ]);
   return {
-    runId: text(run, "id"), code: text(run, "code"), name: text(run, "name"), status: text(run, "status"),
-    template: { code: "BP_SUPPLIER_ONBOARDING", version: Number(run["template_revision_number"]), hash: text(run, "template_hash"), releaseId: text(run, "template_revision_id") },
-    ...optionalDate(run, "started_at", "startedAt"), ...optionalDate(run, "completed_at", "completedAt"),
-    tasks: tasks.rows.map(row => ({ id:text(row,"id"),code:text(row,"code"),name:text(row,"name"),status:text(row,"status"),completionMode:text(row,"completion_mode") as "manual"|"system"|"hybrid",...optionalDate(row,"started_at","startedAt"),...optionalDate(row,"completed_at","completedAt"),completionEvidence:object(row["completion_evidence"]) })),
-    subjects: subjects.rows.map(row => ({ role:text(row,"subject_role"),primary:Boolean(row["is_primary"]),...optionalValue(row,"entity_case_id","entityCaseId"),...optionalValue(row,"external_reference","externalReference") })),
+    runId: text(run, "id"),
+    code: text(run, "code"),
+    name: text(run, "name"),
+    status: text(run, "status"),
+    template: {
+      code: "BP_SUPPLIER_ONBOARDING",
+      version: Number(run["template_revision_number"]),
+      hash: text(run, "template_hash"),
+      releaseId: text(run, "template_revision_id"),
+    },
+    ...optionalDate(run, "started_at", "startedAt"),
+    ...optionalDate(run, "completed_at", "completedAt"),
+    tasks: tasks.rows.map((row) => ({
+      id: text(row, "id"),
+      code: text(row, "code"),
+      name: text(row, "name"),
+      status: text(row, "status"),
+      completionMode: text(row, "completion_mode") as
+        "manual" | "system" | "hybrid",
+      ...optionalDate(row, "started_at", "startedAt"),
+      ...optionalDate(row, "completed_at", "completedAt"),
+      completionEvidence: object(row["completion_evidence"]),
+    })),
+    subjects: subjects.rows.map((row) => ({
+      role: text(row, "subject_role"),
+      primary: Boolean(row["is_primary"]),
+      ...optionalValue(row, "entity_case_id", "entityCaseId"),
+      ...optionalValue(row, "external_reference", "externalReference"),
+    })),
   };
 }
 
@@ -1045,19 +1354,25 @@ async function readOne(
   tenantId: string,
   column: "c.id" | "c.idempotency_key",
   value: string,
+  entityCode = "master.business_partner",
 ) {
   return (
     (
       await sql<Row>`SELECT ${sql.raw(CASE_SELECT)} FROM document.entity_case c
       JOIN snapshot.entity_snapshot s ON s.tenant_id=c.tenant_id AND s.snapshot_id=c.current_snapshot_id
       LEFT JOIN document.business_partner_invitation i ON i.tenant_id=c.tenant_id AND i.entity_case_id=c.id
-     WHERE c.tenant_id=${tenantId}::uuid AND c.entity_code='master.business_partner'
+     WHERE c.tenant_id=${tenantId}::uuid AND c.entity_code=${entityCode}
        AND ${sql.raw(column)}=${value} LIMIT 1`.execute(tx)
     ).rows[0] ?? null
   );
 }
 
-async function readFindings(tx: Tx, tenantId: string, caseId: string, evaluationId: string | undefined) {
+async function readFindings(
+  tx: Tx,
+  tenantId: string,
+  caseId: string,
+  evaluationId: string | undefined,
+) {
   const rows = (
     await sql<Row>`SELECT v.* FROM document.entity_case_validation v
       WHERE v.tenant_id=${tenantId}::uuid AND v.entity_case_id=${caseId}::uuid
@@ -1200,7 +1515,9 @@ function mapCase(row: Row): BusinessPartnerRequest {
     source,
     registrationMode: String(
       row["invitation_registration_mode"] ??
-        (["mesh", "import", "api"].includes(source.kind) ? "integration" : "direct"),
+        (["mesh", "import", "api"].includes(source.kind)
+          ? "integration"
+          : "direct"),
     ) as BusinessPartnerRequest["registrationMode"],
     ...optionalValue(row, "invitation_id", "invitationId"),
     ...optionalValue(row, "applicant_principal_id", "applicantPrincipalId"),
@@ -1314,7 +1631,7 @@ function sourceFromPayload(
       ...(payloadHash ? { payloadHash } : {}),
     };
   }
-  if (channel === "import" || channel === "api") return {kind: channel};
+  if (channel === "import" || channel === "api") return { kind: channel };
   if (channel === "invitation" || channel === "customer_onboarding")
     return { kind: "portal" };
   return { kind: "manual" };
@@ -1327,19 +1644,22 @@ function casePayload(
   requestNo: string,
   targetIdentity?: Row,
 ) {
-  const proposed = command.proposedPayload;
+  const proposed = command.draftCapture
+    ? Object.fromEntries(Object.entries(command.proposedPayload).filter(([, value]) => value !== null))
+    : command.proposedPayload;
   const role = command.requestedRole;
   const external =
     command.source.kind === "portal" || command.source.kind === "mesh";
   const channel =
-    command.source.kind === "import" || command.source.kind === "api" ? command.source.kind :
-    command.source.kind === "mesh"
-      ? "mesh_proposal"
-      : command.source.kind === "portal"
-        ? role === "customer"
-          ? "customer_onboarding"
-          : "invitation"
-        : "internal";
+    command.source.kind === "import" || command.source.kind === "api"
+      ? command.source.kind
+      : command.source.kind === "mesh"
+        ? "mesh_proposal"
+        : command.source.kind === "portal"
+          ? role === "customer"
+            ? "customer_onboarding"
+            : "invitation"
+          : "internal";
   const code = String(
     proposed["businessPartnerCode"] ??
       proposed["partnerCode"] ??
@@ -1348,16 +1668,12 @@ function casePayload(
   );
   const name = String(
     proposed["name"] ??
-      proposed["legalName"] ??
-      proposed["displayName"] ??
       code,
   );
   const immutableTargetIdentity = targetIdentity
     ? {
         businessPartnerCode: text(targetIdentity, "code"),
         name: text(targetIdentity, "name"),
-        ...optionalValue(targetIdentity, "display_name", "displayName"),
-        ...optionalValue(targetIdentity, "legal_name", "legalName"),
         ...optionalValue(targetIdentity, "legal_form", "legalForm"),
         ...optionalValue(
           targetIdentity,
@@ -1376,15 +1692,27 @@ function casePayload(
       }
     : {};
   const ownershipClass = String(
-    targetIdentity?.["ownership_class"] ?? proposed["ownershipClass"] ?? (external ? "external" : "internal"),
+    targetIdentity?.["ownership_class"] ??
+      proposed["ownershipClass"] ??
+      (external ? "external" : "internal"),
   );
   // Freeze the role subtype in the draft that is validated and approved. SQL
   // consumes this explicit value instead of applying its general/corporate fallback.
-  const commercialRoleDefaults = role && ["new_partner", "add_supplier", "add_customer"].includes(command.kind)
-    ? role === "supplier"
-      ? { supplierType: proposed["supplierType"] ?? (ownershipClass === "internal" ? "intercompany" : "general") }
-      : { customerType: proposed["customerType"] ?? (ownershipClass === "internal" ? "intercompany" : "corporate") }
-    : {};
+  const commercialRoleDefaults =
+    role &&
+    ["new_partner", "add_supplier", "add_customer"].includes(command.kind)
+      ? role === "supplier"
+        ? {
+            supplierType:
+              proposed["supplierType"] ??
+              (ownershipClass === "internal" ? "intercompany" : "general"),
+          }
+        : {
+            customerType:
+              proposed["customerType"] ??
+              (ownershipClass === "internal" ? "intercompany" : "corporate"),
+          }
+      : {};
   return {
     ...proposed,
     ...commercialRoleDefaults,
@@ -1392,8 +1720,8 @@ function casePayload(
       ? { relationshipProposals: command.extensions }
       : {}),
     businessPartnerCode: code,
-    name,
-    ownershipClass,
+    ...(!command.draftCapture || proposed["name"] != null ? { name } : {}),
+    ...(!command.draftCapture || proposed["ownershipClass"] != null ? { ownershipClass } : {}),
     ...immutableTargetIdentity,
     ...(role
       ? {
@@ -1410,7 +1738,10 @@ function casePayload(
           ),
         }
       : {}),
-    registrationChannel: command.source.kind === "import" || command.source.kind === "api" ? channel : String(proposed["registrationChannel"] ?? channel),
+    registrationChannel:
+      command.source.kind === "import" || command.source.kind === "api"
+        ? channel
+        : String(proposed["registrationChannel"] ?? channel),
     ...(command.operatingOrganizationId
       ? { operatingOrganizationId: command.operatingOrganizationId }
       : {}),
@@ -1438,6 +1769,9 @@ function extensionCounts(payload: Readonly<Record<string, unknown>>) {
     contactPersons: items(extensions["contactPersons"]),
     contactChannels: items(extensions["contactChannels"]),
     identifiers: items(extensions["identifiers"]),
+    ...(items(extensions["aliases"])?{aliases:items(extensions["aliases"])}:{}),
+    ...(items(extensions["governanceRelations"])?{governanceRelations:items(extensions["governanceRelations"])}:{}),
+    ...(items(extensions["relationships"])?{relationships:items(extensions["relationships"])}:{}),
     taxRegistrations: items(extensions["taxRegistrations"]),
     classifications: items(extensions["classifications"]),
     certifications: items(extensions["certifications"]),
@@ -1498,7 +1832,7 @@ async function readWorkflowStages(
   workflowId: string,
 ) {
   const rows = (
-    await sql<Row>`SELECT s.id,s.stage_no,s.stage_code,s.name,s.mode,s.quorum,s.status,s.outcome,s.started_at,s.completed_at,i.id work_item_id,i.status work_item_status,i.row_version,i.assignee_principal_id,i.claimant_principal_id,i.due_at,i.priority,i.outcome work_item_outcome,i.completed_at work_item_completed_at FROM document.workflow_stage s LEFT JOIN document.work_item i ON i.tenant_id=s.tenant_id AND i.payload->>'workflowStageId'=s.id::text WHERE s.tenant_id=${tenantId}::uuid AND s.workflow_request_id=${workflowId}::uuid ORDER BY s.stage_no,i.created_at,i.id`.execute(
+    await sql<Row>`SELECT s.id,s.stage_no,s.stage_code,s.name,s.mode,s.quorum,s.status,s.outcome,s.started_at,s.completed_at,i.id work_item_id,i.status work_item_status,i.row_version,i.assignee_principal_id,i.claimant_principal_id,i.due_at,i.priority,i.outcome work_item_outcome,i.completed_at work_item_completed_at,reviewer.name reviewer_name FROM document.workflow_stage s LEFT JOIN document.work_item i ON i.tenant_id=s.tenant_id AND i.payload->>'workflowStageId'=s.id::text LEFT JOIN master.principal reviewer ON reviewer.tenant_id=i.tenant_id AND reviewer.id=COALESCE(i.claimant_principal_id,i.assignee_principal_id) WHERE s.tenant_id=${tenantId}::uuid AND s.workflow_request_id=${workflowId}::uuid ORDER BY s.stage_no,i.created_at,i.id`.execute(
       tx,
     )
   ).rows;
@@ -1560,6 +1894,7 @@ async function readWorkflowStages(
               }
             : {}),
           ...(nullable(item["due_at"]) ? { dueAt: date(item["due_at"]) } : {}),
+          ...optionalValue(item, "reviewer_name", "ownerDisplayName"),
           priority: text(item, "priority"),
           ...(typeof outcome["decision"] === "string"
             ? { decision: outcome["decision"] }
@@ -1704,6 +2039,7 @@ function stageDefinition(
 async function createStageWorkItems(
   tx: Tx,
   input: {
+    caseEntityCode?: string;
     tenantId: string;
     requestId: string;
     workflowId: string;
@@ -1739,7 +2075,11 @@ async function createStageWorkItems(
             }
           : {}),
         eligibilityEvidence: {
-          permissionCode: "neon.relationship.entity_case.decide",
+          permissionCode:
+            input.caseEntityCode ===
+            "master.business_partner_company_setup_request"
+              ? "neon.relationship.bp_company_setup_request.decide"
+              : "neon.relationship.entity_case.decide",
           approverPrincipalIds: [
             ...input.definition.approverPrincipalIds,
           ].sort(),

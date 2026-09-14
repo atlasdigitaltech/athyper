@@ -22,11 +22,11 @@ it("composes a working API signer without enabling compile or dispatch workers",
     token: "fixture",
     workspaceId: "fixture",
   });
-  container.adapters.objectStorage = {
+  container.adapters.objectStorageArtifacts = {
     head: async () => ({}),
     putIfAbsent: async () => ({ created: true }),
   } as never;
-  container.adapters.objectStorageBucket = "fixture";
+  container.adapters.objectStorageArtifactsBucket = "fixture";
   const keys = generateKeyPairSync("ed25519");
   const resolve = vi.fn(async (reference: string) => ({
     bytes: Buffer.from(

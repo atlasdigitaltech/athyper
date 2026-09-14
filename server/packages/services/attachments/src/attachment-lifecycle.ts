@@ -101,6 +101,13 @@ export interface AttachmentLifecycleOptions<T> {
   readonly seriesRepository?: SeriesRepository<T>;
   readonly legalHoldRepository?: LegalHoldRepository<T>;
   readonly now?: () => Date;
+  /** Overall deadline for downloading and scanning one attachment during finalize(). Default 5 minutes. */
+  readonly scanStreamTimeoutMs?: number;
+}
+
+export interface AttachmentFinalizeOptions {
+  /** Aborting releases the in-flight download/scan stream instead of leaving it to idle out. */
+  readonly signal?: AbortSignal;
 }
 
 export interface AttachmentLifecycle {
@@ -108,6 +115,7 @@ export interface AttachmentLifecycle {
   finalize(
     identity: AttachmentIdentity,
     contentType: string,
+    options?: AttachmentFinalizeOptions,
   ): Promise<AttachmentRecord>;
   status(identity: AttachmentIdentity): Promise<AttachmentRecord>;
   createAuthorizedDownload(
@@ -131,6 +139,8 @@ export interface AttachmentLifecycle {
     identity: AttachmentIdentity,
     control: DerivativeRebuildControl,
   ): Promise<void>;
+  /** Releases any in-flight finalize() download/scan streams (e.g. on process shutdown). */
+  close(): void;
 }
 
 export function createAttachmentLifecycle<T>(
@@ -138,6 +148,8 @@ export function createAttachmentLifecycle<T>(
 ): AttachmentLifecycle {
   const uploadTtl = options.uploadUrlTtlSeconds ?? 900;
   const now = options.now ?? (() => new Date());
+  const scanStreamTimeoutMs = options.scanStreamTimeoutMs ?? 5 * 60 * 1_000;
+  const activeScanOperations = new Set<AbortController>();
   return {
     async stage(input) {
       validUpload(input);
@@ -225,7 +237,7 @@ export function createAttachmentLifecycle<T>(
       };
     },
 
-    async finalize(identity, contentType) {
+    async finalize(identity, contentType, finalizeOptions) {
       const current = await options.transactions.run(
         identity.planeKey,
         identity,
@@ -251,19 +263,30 @@ export function createAttachmentLifecycle<T>(
       const destinationKey = activeKey(identity);
       let saved: AttachmentRecord;
       let integrity: { sizeBytes: number; sha256: string };
+      // Bounds the download+scan phase to timeout / caller abort / process shutdown, and — via
+      // this signal reaching storage.getStream() — releases the underlying S3 stream on any of
+      // those, rather than leaving it idling on a connection nobody is still waiting on.
+      const deadline = createStreamDeadline(
+        scanStreamTimeoutMs,
+        finalizeOptions?.signal,
+        activeScanOperations,
+      );
       try {
         if (!(await options.storage.exists(current.storageKey)))
           throw new AttachmentConflictError(
             "Attachment upload is not available",
           );
         await options.storage.copy(current.storageKey, destinationKey);
-        const source = await options.storage.getStream(destinationKey);
+        const source = await options.storage.getStream(destinationKey, {
+          signal: deadline.signal,
+        });
         const measured = measure(source, current.sizeBytes);
         const scan = await options.scanner.scan({
           content: measured.content,
           contentType,
           fileName: current.fileName ?? current.id,
           sizeBytes: current.sizeBytes,
+          signal: deadline.signal,
         });
         if (scan.status !== "clean") {
           await options.transactions.run(
@@ -343,8 +366,16 @@ export function createAttachmentLifecycle<T>(
           },
         );
       } catch (error) {
+        // Dispose before awaiting cleanup: dispose() aborts this call's deadline signal, which is
+        // the same signal getStream() was given, so it releases the S3 stream immediately. If
+        // storage.delete() were awaited first, a stalled delete (or the failure having nothing to
+        // do with the deadline at all, e.g. quarantine) would leave the stream open until the
+        // timeout separately fires later.
+        deadline.dispose();
         await options.storage.delete(destinationKey).catch(() => undefined);
         throw error;
+      } finally {
+        deadline.dispose();
       }
       if (saved.storageKey !== destinationKey) {
         await options.storage.delete(destinationKey).catch(() => undefined);
@@ -623,6 +654,12 @@ export function createAttachmentLifecycle<T>(
         },
       );
     },
+
+    close() {
+      for (const controller of activeScanOperations) {
+        controller.abort(new Error("Attachment lifecycle is shutting down"));
+      }
+    },
   };
 }
 
@@ -646,6 +683,47 @@ function awaitingUpload(record: AttachmentRecord, now: Date): void {
     throw new AttachmentConflictError("Attachment is not awaiting upload");
   if (record.expiresAt && parseInstant(record.expiresAt) <= now.getTime())
     throw new AttachmentConflictError("Attachment upload has expired");
+}
+
+interface StreamDeadline {
+  readonly signal: AbortSignal;
+  readonly dispose: () => void;
+}
+
+/**
+ * One combined AbortSignal covering the finalize() download+scan phase's timeout, an optional
+ * caller-supplied abort, and process shutdown — mirroring the ClamAV adapter's own deadline
+ * pattern so the same signal can reach both storage.getStream() and scanner.scan(), and release
+ * the underlying S3 stream regardless of which of the three actually fires.
+ */
+function createStreamDeadline(
+  timeoutMs: number,
+  externalSignal: AbortSignal | undefined,
+  activeOperations: Set<AbortController>,
+): StreamDeadline {
+  const timeout = new AbortController();
+  const timer = setTimeout(
+    () =>
+      timeout.abort(
+        new Error(`Attachment scan stream exceeded ${timeoutMs} ms`),
+      ),
+    timeoutMs,
+  );
+  timer.unref();
+  const shutdown = new AbortController();
+  activeOperations.add(shutdown);
+  const signal = AbortSignal.any([
+    timeout.signal,
+    shutdown.signal,
+    ...(externalSignal ? [externalSignal] : []),
+  ]);
+  const dispose = () => {
+    // Settle any losing read/scan wait before removing this operation's cancellation source.
+    shutdown.abort();
+    clearTimeout(timer);
+    activeOperations.delete(shutdown);
+  };
+  return { signal, dispose };
 }
 
 function measure(source: AsyncIterable<Uint8Array>, expectedBytes?: number) {

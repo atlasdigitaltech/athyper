@@ -50,6 +50,7 @@ CREATE TABLE document.work_item (
 CREATE TABLE document.entity_case (
     id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
     case_code text NOT NULL, entity_code text NOT NULL, operation_code text NOT NULL,
+    owner_company_code_id uuid,
     target_entity_id uuid, pre_materialization_ref text,
     entity_contract_id uuid NOT NULL, entity_contract_hash char(64) NOT NULL,
     form_template_release_id uuid, form_template_release_no bigint, form_template_hash char(64),
@@ -67,6 +68,7 @@ CREATE TABLE document.entity_case (
     CONSTRAINT entity_case_status_chk CHECK(status IN('draft','submitted','in_review','approved','rejected','materializing','materialized','cancelled','conflicted')),
     CONSTRAINT entity_case_version_chk CHECK(row_version>=1), CONSTRAINT entity_case_idempotency_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
     CONSTRAINT entity_case_status_pair_chk CHECK((status_changed_at IS NULL)=(status_changed_by IS NULL)), CONSTRAINT entity_case_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL)),
+    CONSTRAINT entity_case_company_pilot_owner_chk CHECK ((entity_code='master.business_partner_company_setup_request') = (owner_company_code_id IS NOT NULL)),
     CONSTRAINT entity_case_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id),
     CONSTRAINT entity_case_contract_fk FOREIGN KEY(tenant_id,entity_contract_id) REFERENCES runtime_meta.entity_contract(tenant_id,id) ON DELETE RESTRICT,
     CONSTRAINT entity_case_current_snapshot_fk FOREIGN KEY(tenant_id,current_snapshot_id) REFERENCES snapshot.entity_snapshot_identity(tenant_id,id) ON DELETE RESTRICT,

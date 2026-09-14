@@ -1,10 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
@@ -14,6 +9,7 @@ import {
   classifyArtifact,
   classifyReferenceAccess,
   isStrongAuthorizationObjectName,
+  isAuthorizationDataLabel,
   renderAuthorizationInventoryMarkdown,
   serializeAuthorizationInventory,
   stripSourceComments,
@@ -24,8 +20,41 @@ import { verifyAuthorizationInventory } from "./verify-authorization-inventory.j
 
 const temporaryRoots: string[] = [];
 
+test("event and advisory-lock labels are not unknown tables", () => {
+  for (const source of [
+    "`control.entitlement:${id}`",
+    "`control.entitlement.updated`",
+    "sql`VALUES (id, 'control.entitlement', id)`",
+  ]) {
+    assert.equal(
+      isAuthorizationDataLabel(
+        source,
+        source.indexOf("control.entitlement"),
+        "control.entitlement",
+      ),
+      true,
+    );
+  }
+  for (const source of [
+    "db.selectFrom('control.entitlement')",
+    "db.selectFrom(['other.table', 'control.entitlement'])",
+    "SELECT * FROM control.entitlement",
+    "INSERT INTO control.entitlement VALUES (1)",
+  ]) {
+    assert.equal(
+      isAuthorizationDataLabel(
+        source,
+        source.indexOf("control.entitlement"),
+        "control.entitlement",
+      ),
+      false,
+    );
+  }
+});
+
 after(() => {
-  for (const root of temporaryRoots) rmSync(root, { recursive: true, force: true });
+  for (const root of temporaryRoots)
+    rmSync(root, { recursive: true, force: true });
 });
 
 function makeRegistry(
@@ -68,16 +97,21 @@ function makeRegistry(
   };
 }
 
-function makeRepository(
-  source: string,
-  registry = makeRegistry(),
-): string {
+function makeRepository(source: string, registry = makeRegistry()): string {
   const root = mkdtempSync(join(tmpdir(), "athyper-authorization-inventory-"));
   temporaryRoots.push(root);
-  mkdirSync(join(root, "governance", "config", "governance"), { recursive: true });
+  mkdirSync(join(root, "governance", "config", "governance"), {
+    recursive: true,
+  });
   mkdirSync(join(root, "src"), { recursive: true });
   writeFileSync(
-    join(root, "governance", "config", "governance", "authorization-source-registry.v1.json"),
+    join(
+      root,
+      "governance",
+      "config",
+      "governance",
+      "authorization-source-registry.v1.json",
+    ),
     `${JSON.stringify(registry, null, 2)}\n`,
     "utf8",
   );
@@ -88,11 +122,23 @@ function makeRepository(
 }
 
 test("artifact classification distinguishes routes, UI, seeds, and test harnesses", () => {
-  assert.equal(classifyArtifact("server/packages/services/iam/routes/operator.routes.ts"), "route");
+  assert.equal(
+    classifyArtifact("server/packages/services/iam/routes/operator.routes.ts"),
+    "route",
+  );
   assert.equal(classifyArtifact("apps/neon/app/page.tsx"), "ui");
-  assert.equal(classifyArtifact("server/db/seed/platform/017_permission.sql"), "seed");
-  assert.equal(classifyArtifact("packages/example/src/__tests__/reader.test.ts"), "test");
-  assert.equal(classifyArtifact("packages/example/src/test-harness/reader.ts"), "test");
+  assert.equal(
+    classifyArtifact("server/db/seed/platform/017_permission.sql"),
+    "seed",
+  );
+  assert.equal(
+    classifyArtifact("packages/example/src/__tests__/reader.test.ts"),
+    "test",
+  );
+  assert.equal(
+    classifyArtifact("packages/example/src/test-harness/reader.ts"),
+    "test",
+  );
 });
 
 test("reference access recognizes SQL and Kysely writers without treating reads as writes", () => {
@@ -101,15 +147,27 @@ test("reference access recognizes SQL and Kysely writers without treating reads 
   const select = 'db.selectFrom("master.auth_group").selectAll()';
   const definition = "CREATE TABLE master.auth_group (id uuid);";
   assert.equal(
-    classifyReferenceAccess(insert, insert.indexOf("master.auth_group"), "master.auth_group"),
+    classifyReferenceAccess(
+      insert,
+      insert.indexOf("master.auth_group"),
+      "master.auth_group",
+    ),
     "insert",
   );
   assert.equal(
-    classifyReferenceAccess(update, update.indexOf("master.auth_group"), "master.auth_group"),
+    classifyReferenceAccess(
+      update,
+      update.indexOf("master.auth_group"),
+      "master.auth_group",
+    ),
     "update",
   );
   assert.equal(
-    classifyReferenceAccess(select, select.indexOf("master.auth_group"), "master.auth_group"),
+    classifyReferenceAccess(
+      select,
+      select.indexOf("master.auth_group"),
+      "master.auth_group",
+    ),
     "read",
   );
   assert.equal(
@@ -124,13 +182,28 @@ test("reference access recognizes SQL and Kysely writers without treating reads 
 
 test("strong discovery does not classify keyword-only business role/group tables as IAM", () => {
   assert.equal(isStrongAuthorizationObjectName("master.auth_group"), true);
-  assert.equal(isStrongAuthorizationObjectName("master.permission_decision"), true);
+  assert.equal(
+    isStrongAuthorizationObjectName("master.permission_decision"),
+    true,
+  );
   assert.equal(isStrongAuthorizationObjectName("master.pay_group"), false);
   assert.equal(isStrongAuthorizationObjectName("master.tax_group"), false);
-  assert.equal(isStrongAuthorizationObjectName("control.posting_role_alias"), false);
-  assert.equal(isStrongAuthorizationObjectName("master.party_contact_role"), false);
-  assert.equal(isStrongAuthorizationObjectName("master.legal_entity_identity_binding"), false);
-  assert.equal(isStrongAuthorizationObjectName("shared.plan_permission_access_uq"), false);
+  assert.equal(
+    isStrongAuthorizationObjectName("control.posting_role_alias"),
+    false,
+  );
+  assert.equal(
+    isStrongAuthorizationObjectName("master.party_contact_role"),
+    false,
+  );
+  assert.equal(
+    isStrongAuthorizationObjectName("master.legal_entity_identity_binding"),
+    false,
+  );
+  assert.equal(
+    isStrongAuthorizationObjectName("shared.plan_permission_access_uq"),
+    false,
+  );
 });
 
 test("comment stripping preserves line numbers and removes commented sources", () => {
@@ -158,39 +231,52 @@ test("registry validation rejects duplicate identities and missing ownership", (
     sourceOfTruth: false,
     disposition: "keep",
   };
-  const failures = validateRegistry(makeRegistry([
-    object,
-    { ...object, id: "authorization.group.duplicate", owner: "platform-iam" },
-  ]));
+  const failures = validateRegistry(
+    makeRegistry([
+      object,
+      { ...object, id: "authorization.group.duplicate", owner: "platform-iam" },
+    ]),
+  );
   assert.ok(failures.some((failure) => failure.includes("no owner")));
-  assert.ok(failures.some((failure) => failure.includes("Duplicate qualified object name")));
+  assert.ok(
+    failures.some((failure) =>
+      failure.includes("Duplicate qualified object name"),
+    ),
+  );
 });
 
 test("unknown authorization writer is exposed while business group/role names are ignored", () => {
-  const root = makeRepository([
-    'db.insertInto("master.auth_shadow").values(row);',
-    'db.insertInto("master.pay_group").values(row);',
-    'db.selectFrom("control.posting_role_alias").selectAll();',
-  ].join("\n"));
+  const root = makeRepository(
+    [
+      'db.insertInto("master.auth_shadow").values(row);',
+      'db.insertInto("master.pay_group").values(row);',
+      'db.selectFrom("control.posting_role_alias").selectAll();',
+    ].join("\n"),
+  );
   const inventory = buildAuthorizationInventory(root);
   assert.equal(inventory.gates.unknownWriters.length, 1);
-  assert.equal(inventory.gates.unknownWriters[0]?.qualifiedName, "master.auth_shadow");
+  assert.equal(
+    inventory.gates.unknownWriters[0]?.qualifiedName,
+    "master.auth_shadow",
+  );
   assert.equal(inventory.gates.unknownSources.length, 1);
   assert.equal(inventory.summary.authorizationFiles, 3);
 });
 
 test("reviewed writer has an exact owner and disposition and clears writer gates", () => {
-  const registry = makeRegistry([{
-    id: "authorization.shadow",
-    database: "neon",
-    qualifiedName: "master.auth_shadow",
-    kind: "table",
-    authorityClass: "authorization",
-    owner: "platform-iam",
-    planes: ["neon"],
-    sourceOfTruth: false,
-    disposition: "replace",
-  }]);
+  const registry = makeRegistry([
+    {
+      id: "authorization.shadow",
+      database: "neon",
+      qualifiedName: "master.auth_shadow",
+      kind: "table",
+      authorityClass: "authorization",
+      owner: "platform-iam",
+      planes: ["neon"],
+      sourceOfTruth: false,
+      disposition: "replace",
+    },
+  ]);
   const root = makeRepository(
     'db.insertInto("master.auth_shadow").values(row);',
     registry,
@@ -229,25 +315,27 @@ test("reviewed drift moves from unknown to a certification-blocking known anomal
 });
 
 test("capture-source registry and DDL must match exactly in both directions", () => {
-  const registry = makeRegistry([{
-    id: "identity.tenant",
-    database: "neon",
-    qualifiedName: "master.tenant",
-    kind: "table",
-    authorityClass: "identity",
-    owner: "platform-iam",
-    planes: ["studio", "neon"],
-    sourceOfTruth: true,
-    disposition: "keep",
-  }]);
+  const registry = makeRegistry([
+    {
+      id: "identity.tenant",
+      database: "neon",
+      qualifiedName: "master.tenant",
+      kind: "table",
+      authorityClass: "identity",
+      owner: "platform-iam",
+      planes: ["studio", "neon"],
+      sourceOfTruth: true,
+      disposition: "keep",
+    },
+  ]);
   registry.captureSourceObjectIds.neon.push("identity.tenant");
   const root = makeRepository("", registry);
   writeFileSync(
     join(root, "src", "capture-sources-neon.sql"),
-    "INSERT INTO control.authorization_capture_source\n"
-      + "  (source_schema, source_table, source_class, primary_key_columns, tenant_column, key_columns, change_scope)\n"
-      + "VALUES ('master', 'tenant', 'identity', ARRAY['id'], 'id', '{}', 'tenant; PII redacted')\n"
-      + "ON CONFLICT (source_schema, source_table) DO UPDATE SET source_class = EXCLUDED.source_class;\n",
+    "INSERT INTO control.authorization_capture_source\n" +
+      "  (source_schema, source_table, source_class, primary_key_columns, tenant_column, key_columns, change_scope)\n" +
+      "VALUES ('master', 'tenant', 'identity', ARRAY['id'], 'id', '{}', 'tenant; PII redacted')\n" +
+      "ON CONFLICT (source_schema, source_table) DO UPDATE SET source_class = EXCLUDED.source_class;\n",
     "utf8",
   );
   const matching = buildAuthorizationInventory(root);
@@ -258,54 +346,50 @@ test("capture-source registry and DDL must match exactly in both directions", ()
 
   writeFileSync(
     join(root, "src", "capture-sources-neon.sql"),
-    "INSERT INTO control.authorization_capture_source\n"
-      + "  (source_schema, source_table, source_class, primary_key_columns, tenant_column, key_columns, change_scope)\n"
-      + "VALUES ('master', 'tenant', 'identity', ARRAY['id'], 'id', '{}', 'tenant')\n"
-      + "ON CONFLICT (source_schema, source_table) DO UPDATE SET source_class = EXCLUDED.source_class;\n"
-      + "INSERT INTO control.authorization_capture_source\n"
-      + "  (source_schema, source_table, source_class, primary_key_columns, tenant_column, key_columns, change_scope)\n"
-      + "VALUES ('master', 'tenant', 'identity', ARRAY['id'], 'id', '{}', 'tenant')\n"
-      + "ON CONFLICT (source_schema, source_table) DO UPDATE SET source_class = EXCLUDED.source_class;\n",
+    "INSERT INTO control.authorization_capture_source\n" +
+      "  (source_schema, source_table, source_class, primary_key_columns, tenant_column, key_columns, change_scope)\n" +
+      "VALUES ('master', 'tenant', 'identity', ARRAY['id'], 'id', '{}', 'tenant')\n" +
+      "ON CONFLICT (source_schema, source_table) DO UPDATE SET source_class = EXCLUDED.source_class;\n" +
+      "INSERT INTO control.authorization_capture_source\n" +
+      "  (source_schema, source_table, source_class, primary_key_columns, tenant_column, key_columns, change_scope)\n" +
+      "VALUES ('master', 'tenant', 'identity', ARRAY['id'], 'id', '{}', 'tenant')\n" +
+      "ON CONFLICT (source_schema, source_table) DO UPDATE SET source_class = EXCLUDED.source_class;\n",
     "utf8",
   );
   const duplicated = buildAuthorizationInventory(root);
-  assert.deepEqual(
-    duplicated.gates.duplicateCaptureSources,
-    ["neon:master.tenant:2"],
-  );
+  assert.deepEqual(duplicated.gates.duplicateCaptureSources, [
+    "neon:master.tenant:2",
+  ]);
 
   writeFileSync(
     join(root, "src", "capture-sources-neon.sql"),
-    "INSERT INTO control.authorization_capture_source\n"
-      + "  (source_schema, source_table, source_class, primary_key_columns, tenant_column, key_columns, change_scope)\n"
-      + "VALUES ('master', 'principal', 'identity', ARRAY['id'], 'tenant_id', '{}', 'principal')\n"
-      + "ON CONFLICT (source_schema, source_table) DO UPDATE SET source_class = EXCLUDED.source_class;\n",
+    "INSERT INTO control.authorization_capture_source\n" +
+      "  (source_schema, source_table, source_class, primary_key_columns, tenant_column, key_columns, change_scope)\n" +
+      "VALUES ('master', 'principal', 'identity', ARRAY['id'], 'tenant_id', '{}', 'principal')\n" +
+      "ON CONFLICT (source_schema, source_table) DO UPDATE SET source_class = EXCLUDED.source_class;\n",
     "utf8",
   );
   const drifted = buildAuthorizationInventory(root);
-  assert.deepEqual(
-    drifted.gates.unknownCaptureSources,
-    ["neon:master.principal"],
-  );
-  assert.deepEqual(
-    drifted.gates.staleCaptureSourceRegistrations,
-    ["neon:master.tenant"],
-  );
+  assert.deepEqual(drifted.gates.unknownCaptureSources, [
+    "neon:master.principal",
+  ]);
+  assert.deepEqual(drifted.gates.staleCaptureSourceRegistrations, [
+    "neon:master.tenant",
+  ]);
 
   writeFileSync(join(root, "src", "capture-sources-neon.sql"), "", "utf8");
   writeFileSync(
     join(root, "src", "capture-sources-mesh.sql"),
-    "INSERT INTO mesh_control.authorization_capture_source\n"
-      + "  (source_schema, source_table, source_kind, primary_key_columns, scope_kind, scope_columns, redacted_columns, notes)\n"
-      + "VALUES ('master', 'tenant', 'identity', ARRAY['id'], 'global', '{}', '{}', 'wrong plane')\n"
-      + "ON CONFLICT (source_schema, source_table) DO UPDATE SET source_kind = EXCLUDED.source_kind;\n",
+    "INSERT INTO mesh_control.authorization_capture_source\n" +
+      "  (source_schema, source_table, source_kind, primary_key_columns, scope_kind, scope_columns, redacted_columns, notes)\n" +
+      "VALUES ('master', 'tenant', 'identity', ARRAY['id'], 'global', '{}', '{}', 'wrong plane')\n" +
+      "ON CONFLICT (source_schema, source_table) DO UPDATE SET source_kind = EXCLUDED.source_kind;\n",
     "utf8",
   );
   const crossPlane = buildAuthorizationInventory(root);
-  assert.deepEqual(
-    crossPlane.gates.crossPlaneCaptureSources,
-    ["master.tenant:registry=neon:ddl=mesh"],
-  );
+  assert.deepEqual(crossPlane.gates.crossPlaneCaptureSources, [
+    "master.tenant:registry=neon:ddl=mesh",
+  ]);
 });
 
 test("Keycloak Admin REST writers require an exact owned operation set", () => {
@@ -334,10 +418,9 @@ test("Keycloak Admin REST writers require an exact owned operation set", () => {
   const drifted = buildAuthorizationInventory(root);
   assert.equal(drifted.keycloakRestWriters[0]?.classification, "unclassified");
   assert.equal(drifted.gates.unknownKeycloakRestWriters.length, 1);
-  assert.deepEqual(
-    drifted.gates.staleKeycloakRestWriterRules,
-    ["keycloak.demo-user-writer:POST:user"],
-  );
+  assert.deepEqual(drifted.gates.staleKeycloakRestWriterRules, [
+    "keycloak.demo-user-writer:POST:user",
+  ]);
 });
 
 test("Keycloak user lifecycle, group membership, and mapper writes are classified", () => {
@@ -404,14 +487,38 @@ test("verification separates structural drift from owned known anomalies", () =>
     registry,
   );
   const inventory = buildAuthorizationInventory(root);
-  mkdirSync(join(root, "governance", "policy", "reports", "authorization", "inventories"), { recursive: true });
+  mkdirSync(
+    join(
+      root,
+      "governance",
+      "policy",
+      "reports",
+      "authorization",
+      "inventories",
+    ),
+    { recursive: true },
+  );
   writeFileSync(
-    join(root, "governance", "config", "governance", "authorization-inventory.v1.json"),
+    join(
+      root,
+      "governance",
+      "config",
+      "governance",
+      "authorization-inventory.v1.json",
+    ),
     serializeAuthorizationInventory(inventory),
     "utf8",
   );
   writeFileSync(
-    join(root, "governance", "policy", "reports", "authorization", "inventories", "authorization-source-inventory.md"),
+    join(
+      root,
+      "governance",
+      "policy",
+      "reports",
+      "authorization",
+      "inventories",
+      "authorization-source-inventory.md",
+    ),
     renderAuthorizationInventoryMarkdown(inventory),
     "utf8",
   );
@@ -422,7 +529,10 @@ test("verification separates structural drift from owned known anomalies", () =>
   assert.deepEqual(knownOnly.artifactDriftFailures, []);
   assert.deepEqual(knownOnly.structuralGateFailures, []);
   assert.equal(knownOnly.inventory.gates.knownSourceAnomalies.length, 1);
-  assert.equal(knownOnly.inventory.gates.zeroMeshNeonBoundaryFindings.length, 1);
+  assert.equal(
+    knownOnly.inventory.gates.zeroMeshNeonBoundaryFindings.length,
+    1,
+  );
   assert.equal(knownOnly.knownAnomalyFailures.length, 2);
 
   writeFileSync(

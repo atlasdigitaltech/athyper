@@ -103,7 +103,7 @@ describe("experience effective-access projection", () => {
     const infrastructureModuleId="30000000-0000-4000-8000-000000000002";
     const repo=repository({async readCatalog(){return{planActive:true,planRevision:"plan:shared",associations:[
       {workspaceCode:"core",workspaceName:"Core Platform",workspaceSortOrder:1,workspaceSharedInfrastructure:true,moduleId:infrastructureModuleId,moduleCode:"iam",moduleName:"Identity & Access Management",moduleSortOrder:1,primary:true,revision:"catalog:core"},
-      {workspaceCode:"mdg",workspaceName:"Master Data Governance",workspaceSortOrder:10,workspaceSharedInfrastructure:false,moduleId,moduleCode:"bp",moduleName:"Business Partner Management",moduleSortOrder:1,primary:true,revision:"catalog:mdg"},
+      {workspaceCode:"mdg",workspaceName:"Master Data Governance",workspaceSortOrder:10,workspaceSharedInfrastructure:false,moduleId,moduleCode:"bp",moduleName:"Business Partners",moduleSortOrder:1,primary:true,revision:"catalog:mdg"},
     ],permissions:[{code:"platform.identity.read",moduleId:infrastructureModuleId,revision:"permission:core"},{code:"finance.invoice.read",moduleId,revision:"permission:bp"}]};}});
     const result=await service(repo).bootstrap({...context,permissions:{...context.permissions,allowed:["platform.identity.read","finance.invoice.read"]}});
     expect(result.workspaces.map((workspace)=>workspace.code)).toEqual(["mdg"]);

@@ -14,3 +14,32 @@ services:
     environment: *capture
   scheduler:
     environment: *capture
+
+  mailtrap:
+    image: ${ATHYPER_IMAGE_MAILPIT:-axllent/mailpit:v1.31.1@sha256:98b916bd3c8d61f7633a52d3ea2f58d00620cb01ca57ab59edde68c347a95365}
+    restart: unless-stopped
+    environment:
+      MP_SMTP_BIND_ADDR: 0.0.0.0:1025
+      MP_UI_BIND_ADDR: 0.0.0.0:8025
+      MP_MAX_MESSAGES: "500"
+      MP_DATABASE: /data/mailpit.db
+    volumes: [mailtrap-data:/data]
+    networks:
+      app: {}
+      ops: {}
+      platform-observability:
+        aliases: ["mailtrap-${ATHYPER_INSTANCE:-dev}"]
+    healthcheck:
+      test: [CMD-SHELL, wget -q --spider http://127.0.0.1:8025/livez]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    init: true
+    mem_limit: 256m
+    cpus: 0.25
+
+volumes:
+  mailtrap-data: {}

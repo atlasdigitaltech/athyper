@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "purpose": "Excluded workspace packages with test files must be retired or reactivated through package consolidation; they are not run by test:repo.",
-  "activeWorkspacePackageCount": 176,
+  "activeWorkspacePackageCount": 177,
   "rootTests": [
     {
       "path": "deploy/compose/tests/structure.test.mjs",
@@ -208,6 +208,10 @@
       "runner": "test:foundation"
     },
     {
+      "path": "tests/foundation/atlas-record-question.test.ts",
+      "runner": "test:foundation"
+    },
+    {
       "path": "tests/foundation/attachment-client-coordinate.test.ts",
       "runner": "test:foundation"
     },
@@ -336,6 +340,10 @@
       "runner": "test:policy"
     },
     {
+      "path": "tooling/scripts/policy/format-changed.test.mjs",
+      "runner": "test:policy"
+    },
+    {
       "path": "tooling/scripts/policy/frontend-spine-governance.test.mjs",
       "runner": "test:policy"
     },
@@ -357,6 +365,18 @@
     },
     {
       "path": "tooling/scripts/policy/meta-entity-rollout-gate.test.ts",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/run-static-policies.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-ci-entrypoints.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-ci-realm.test.mjs",
       "runner": "test:policy"
     },
     {
@@ -396,11 +416,23 @@
       "runner": "test:operations"
     },
     {
+      "path": "tooling/scripts/verification/atlas-baseline-adoption.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/atlas-f6-pilot.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "tooling/scripts/verification/atlas-foundation-baseline.test.mjs",
       "runner": "test:operations"
     },
     {
       "path": "tooling/scripts/verification/atlas-inference-readiness.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/atlas-mesh-baseline.test.mjs",
       "runner": "test:operations"
     },
     {
@@ -436,6 +468,10 @@
       "runner": "test:operations"
     },
     {
+      "path": "tooling/scripts/verification/ci-integrity-evidence.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "tooling/scripts/verification/entity-authorization/accepted-operation-selection.test.mjs",
       "runner": "test:operations"
     },
@@ -449,6 +485,26 @@
     },
     {
       "path": "tooling/scripts/verification/entity-authorization/authenticated-role-review.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/case-runtime-correction.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/combined-successor.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/compile-target-assignments.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/exact-release-execution-gate.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/governed-import-selection.test.mjs",
       "runner": "test:operations"
     },
     {
@@ -468,7 +524,27 @@
       "runner": "test:operations"
     },
     {
+      "path": "tooling/scripts/verification/entity-authorization/successor-difference-review.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/target-read-grants.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "tooling/scripts/verification/inspect-master-data-environment.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/isolated-execution/case-bindings.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/isolated-execution/import-policy.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/isolated-execution/release-boundary.test.mjs",
       "runner": "test:operations"
     },
     {

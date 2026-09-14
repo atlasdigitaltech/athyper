@@ -6,7 +6,7 @@ const proposal=JSON.parse(readFileSync('governance/policy/reports/business-partn
 const persisted=JSON.parse(readFileSync('governance/policy/reports/business-partner-combined-persisted-approval.dev.json','utf8'));
 const head=JSON.parse(readFileSync('governance/policy/reports/business-partner-combined-head.dev.json','utf8'));
 const lit=v=>"'"+String(v).replaceAll("'","''")+"'";
-let migration=readFileSync('server/db/migrations/20260910_authorization_successor_materializer.sql','utf8').replace(/COMMIT;\s*$/,'');
+let migration=readFileSync('server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql','utf8').replace(/COMMIT;\s*$/,'');
 const sql=migration+`
 SET LOCAL app.current_tenant_id='44444444-4444-4444-8444-444444444444';
 SET LOCAL app.current_principal_id='81cd1978-2df5-5c9a-938a-2f8c291aea13';

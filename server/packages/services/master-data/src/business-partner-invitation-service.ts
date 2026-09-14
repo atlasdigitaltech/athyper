@@ -36,8 +36,8 @@ export interface BusinessPartnerInvitationServiceOptions<Transaction> {
 }
 
 const templates = Object.freeze({
-  supplier: Object.freeze({ journeyKind: "supplier", requestedRole: "supplier", approvedFields: Object.freeze(["legalName", "registrationNumber", "taxIdentifiers", "addresses", "contacts", "bankEvidence"]), approvedActions: ["accept", "status", "correct", "evidence", "submit"] as const }),
-  customer: Object.freeze({ journeyKind: "customer", requestedRole: "customer", approvedFields: Object.freeze(["legalName", "registrationNumber", "taxIdentifiers", "addresses", "contacts"]), approvedActions: ["accept", "status", "correct", "evidence", "submit"] as const }),
+  supplier: Object.freeze({ journeyKind: "supplier", requestedRole: "supplier", approvedFields: Object.freeze(["name", "registrationNumber", "taxIdentifiers", "addresses", "contacts", "bankEvidence"]), approvedActions: ["accept", "status", "correct", "evidence", "submit"] as const }),
+  customer: Object.freeze({ journeyKind: "customer", requestedRole: "customer", approvedFields: Object.freeze(["name", "registrationNumber", "taxIdentifiers", "addresses", "contacts"]), approvedActions: ["accept", "status", "correct", "evidence", "submit"] as const }),
   candidate: Object.freeze({ journeyKind: "candidate", requestedRole: "workforce", approvedFields: Object.freeze(["firstName", "lastName", "preferredName", "personalEmail", "phone", "startDate", "identityEvidence"]), approvedActions: ["accept", "status", "correct", "evidence", "submit"] as const }),
 } as const);
 

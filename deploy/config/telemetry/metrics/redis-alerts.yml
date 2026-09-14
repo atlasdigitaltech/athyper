@@ -1,7 +1,6 @@
 groups:
   - name: memorycache
     rules:
-
       # -----------------------------------------------------------------------
       # Memory pressure — warn at 80%, critical at 95%
       # With noeviction policy, Redis rejects writes when full.
@@ -18,9 +17,9 @@ groups:
         annotations:
           summary: "Redis memory usage above 80%"
           description: >
-            Redis is using {{ $value | humanizePercentage }} of its maxmemory (100 MB).
+            Redis is using {{ $value | humanizePercentage }} of its configured maxmemory.
             With noeviction policy, writes will be rejected at 100%.
-            Consider increasing MEMORYCACHE_MEMORY_LIMIT or pruning stale keys.
+            Consider increasing REDIS_MAXMEMORY_MB within the container budget, or pruning stale keys.
 
       - alert: RedisMemoryCritical
         expr: >
@@ -39,7 +38,7 @@ groups:
 
       # -----------------------------------------------------------------------
       # Rejected connections — any rejection means the client connection
-      # limit (maxclients=5000) was hit.
+      # limit (maxclients) was hit.
       # -----------------------------------------------------------------------
       - alert: RedisRejectedConnections
         expr: increase(redis_rejected_connections_total{service="memorycache"}[5m]) > 0
@@ -51,14 +50,14 @@ groups:
           summary: "Redis is rejecting connections"
           description: >
             {{ $value }} connection(s) were rejected in the last 5 minutes.
-            Current maxclients is 5000. Check for connection leaks in api
-            or web BFF, or raise the maxclients limit in cache.conf.
+            Check redis_config_maxclients and investigate connection leaks in api
+            or web BFF before changing the connection limit.
 
       # -----------------------------------------------------------------------
-      # High connected clients — warn at 2000 (40% of maxclients=5000)
+      # High connected clients — warn at 80% of the configured limit
       # -----------------------------------------------------------------------
       - alert: RedisHighClientCount
-        expr: redis_connected_clients{service="memorycache"} > 2000
+        expr: redis_connected_clients{service="memorycache"} / redis_config_maxclients{service="memorycache"} > 0.80
         for: 5m
         labels:
           severity: warning
@@ -66,7 +65,7 @@ groups:
         annotations:
           summary: "Redis connected client count is high"
           description: >
-            {{ $value }} clients currently connected (maxclients=5000).
+            {{ $value | humanizePercentage }} of the configured client limit is in use.
             Investigate for connection pool misconfiguration or leaks.
 
       # -----------------------------------------------------------------------
@@ -106,3 +105,17 @@ groups:
             Cache miss rate is {{ $value | humanizePercentage }} over the last 5 minutes.
             This may indicate TTLs are too short for the access pattern, or that
             the cache was recently flushed / restarted.
+
+      - alert: RedisRejectedWrites
+        expr: increase(redis_errors_total{service="memorycache",err="OOM"}[5m]) > 0
+        labels: { severity: critical, service: memorycache }
+        annotations:
+          summary: "Redis rejected commands because maxmemory was reached"
+          description: "Check session creation and job enqueue failures; retain noeviction."
+
+      - alert: RedisExporterDown
+        expr: up{service="memorycache"} == 0
+        for: 1m
+        labels: { severity: critical, service: memorycache }
+        annotations:
+          summary: "Redis monitoring is unavailable"

@@ -1,4 +1,8 @@
 "use client";
+import {
+  EntitySectionNavigation,
+  useEntitySectionScroll,
+} from "./section-navigation";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { EntityRecord360PanelV1 } from "@athyper/contract-platform-entity-runtime";
 
@@ -36,9 +40,6 @@ export function EntityRecord360Panel({
   const root = useRef<HTMLDivElement>(null),
     tabsRoot = useRef<HTMLDivElement>(null),
     id = useId();
-  const observerCallback = useRef(onObserve);
-  observerCallback.current = onObserve;
-  const scrollingTo = useRef<string | undefined>(undefined);
   const rail = panel.sections.flatMap(
     (key) => sections.find((item) => item.key === key) ?? [],
   );
@@ -56,82 +57,20 @@ export function EntityRecord360Panel({
     observer.observe(tabsRoot.current);
     return () => observer.disconnect();
   }, []);
-  useEffect(() => {
-    if (
-      !root.current ||
-      (navigationRevision === 0 &&
-        tab.provider === "360" &&
-        activeSection === rail[0]?.key)
-    )
-      return;
-    const target =
-      tab.provider === "360"
-        ? Array.from(
-            root.current.querySelectorAll<HTMLElement>("[data-record-section]"),
-          ).find((element) => element.dataset.recordSection === activeSection)
-        : root.current.querySelector<HTMLElement>("[role=tabpanel]");
-    if (!target) return;
-    scrollingTo.current = activeSection;
-    const frame = requestAnimationFrame(() => {
-      target.scrollIntoView({ block: "start", behavior: "instant" });
-      if (navigationRevision > 0) target.focus({ preventScroll: true });
-    });
-    // Preserve the selected heading while earlier lazy sections change height.
-    // Any deliberate user interaction releases the anchor immediately.
-    const release = () => {
-      scrollingTo.current = undefined;
-    };
-    const observer =
-      typeof ResizeObserver === "undefined"
-        ? undefined
-        : new ResizeObserver(() => {
-            if (scrollingTo.current === activeSection)
-              target.scrollIntoView({ block: "start", behavior: "instant" });
-          });
-    const content = root.current.querySelector(".a-record-360__sections");
-    if (content) observer?.observe(content);
-    for (const event of ["wheel", "touchstart", "pointerdown", "keydown"])
-      document.addEventListener(event, release, {
-        capture: true,
-        passive: true,
-      });
-    return () => {
-      cancelAnimationFrame(frame);
-      observer?.disconnect();
-      scrollingTo.current = undefined;
-      for (const event of ["wheel", "touchstart", "pointerdown", "keydown"])
-        document.removeEventListener(event, release, true);
-    };
-    // Only explicit navigation scrolls/focuses; scroll-spy updates do neither.
-  }, [navigationRevision, activeTab, signature]);
-  useEffect(() => {
-    if (tab.provider !== "360" || !root.current) return;
-    let frame = 0;
-    const update = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        if (scrollingTo.current || !root.current) return;
-        const threshold =
-          (tabsRoot.current?.getBoundingClientRect().bottom ?? 0) + 24;
-        const elements = Array.from(
-          root.current.querySelectorAll<HTMLElement>("[data-record-section]"),
-        );
-        const current =
-          elements
-            .filter(
-              (element) => element.getBoundingClientRect().top <= threshold,
-            )
-            .at(-1) ?? elements[0];
-        if (current?.dataset.recordSection)
-          observerCallback.current(current.dataset.recordSection);
-      });
-    };
-    document.addEventListener("scroll", update, true);
-    return () => {
-      document.removeEventListener("scroll", update, true);
-      cancelAnimationFrame(frame);
-    };
-  }, [activeTab, signature]);
+  useEntitySectionScroll({
+    root,
+    attribute: "data-record-section",
+    contentSelector: ".a-record-360__sections",
+    activeSection,
+    navigationRevision,
+    scopeKey: `${activeTab}:${signature}`,
+    enabled: tab.provider === "360",
+    initialSection: rail[0]?.key,
+    onObserve,
+    getThreshold: () =>
+      (tabsRoot.current?.getBoundingClientRect().bottom ?? 0) + 24,
+    fallbackSelector: "[role=tabpanel]",
+  });
   return (
     <div ref={root} className="a-record-360">
       <div
@@ -193,45 +132,13 @@ export function EntityRecord360Panel({
       >
         {tab.provider === "360" ? (
           <>
-            <nav className="a-record-360__rail" aria-label="360 sections">
-              <label className="a-record-360__picker">
-                Section
-                <select
-                  value={activeSection}
-                  onChange={(event) =>
-                    onNavigate(event.target.value, overviewTab.key)
-                  }
-                >
-                  {rail.map((item) => (
-                    <option key={item.key} value={item.key}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="a-record-360__links">
-                {rail.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    aria-current={
-                      activeSection === item.key ? "location" : undefined
-                    }
-                    onClick={() => onNavigate(item.key, overviewTab.key)}
-                  >
-                    <span>{item.label}</span>
-                    {item.count === undefined ? null : (
-                      <small>{item.count}</small>
-                    )}
-                    {item.status ? (
-                      <small className="a-record-360__section-status">
-                        {item.status}
-                      </small>
-                    ) : null}
-                  </button>
-                ))}
-              </div>
-            </nav>
+            <EntitySectionNavigation
+              className="a-record-360__rail"
+              label="360 sections"
+              sections={rail}
+              activeSection={activeSection}
+              onNavigate={(key) => onNavigate(key, overviewTab.key)}
+            />
             <div className="a-record-360__sections">
               {rail.map((item, index) => (
                 <ProgressiveSection

@@ -32,12 +32,10 @@ describe("WP12 Business Partner definitions", () => {
     expect(bundle).toMatchObject({
       fieldPolicies: {
         organization: expect.anything(),
-        person: expect.anything(),
       },
       workflowDefinitions: {
         supplier: expect.anything(),
         customer: expect.anything(),
-        workforce: expect.anything(),
       },
       meshSafeSchemas: { organizationProfile: expect.anything() },
       formDescriptors: {
@@ -72,7 +70,6 @@ describe("WP12 Business Partner definitions", () => {
         "banking",
         "qualifications-certificates",
         "credit",
-        "workforce",
         "requests",
         "activity",
         "business-activity",
@@ -84,8 +81,6 @@ describe("WP12 Business Partner definitions", () => {
         "supplier_payable",
         "customer_scope",
         "customer_credit",
-        "person_base",
-        "workforce_active",
       ];
     expect(descriptor).toMatchObject({
       version: "1.0.0",
@@ -384,15 +379,7 @@ describe("WP12 Business Partner definitions", () => {
     });
     await expect(
       consumer.workflow({ kind: "add_workforce" }),
-    ).resolves.toMatchObject({
-      code: "neon.business_partner.workforce.onboarding",
-      stageCode: "hr_review",
-      stages: [
-        expect.objectContaining({ code: "hr_review", routed: true }),
-        expect.objectContaining({ code: "hiring_manager", routed: true }),
-        expect.objectContaining({ code: "compliance_privacy", routed: true }),
-      ],
-    });
+    ).rejects.toMatchObject({code: "BUSINESS_PARTNER_DEFINITION_ROLE_REQUIRED"});
     await expect(
       consumer.workflow({
         kind: "new_partner",

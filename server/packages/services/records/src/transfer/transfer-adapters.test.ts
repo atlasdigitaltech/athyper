@@ -1,16 +1,151 @@
 import type { MalwareScanner } from "@athyper/server-contract-malware-scanning";
 import type { ObjectStorage } from "@athyper/server-contract-object-storage";
-import { describe,expect,it,vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createObjectStorageImportWorkbookIntake } from "./transfer-adapters.js";
 import { createXlsxTemplate } from "./xlsx-workbook-codec.js";
 
-function memoryStorage():ObjectStorage&{objects:Map<string,Uint8Array>}{
-  const objects=new Map<string,Uint8Array>();
-  return{objects,put:async(key,body)=>{objects.set(key,typeof body==="string"?new TextEncoder().encode(body):body);},get:async key=>{const value=objects.get(key);if(!value)throw new Error("missing");return value;},delete:async key=>{objects.delete(key);},exists:async key=>objects.has(key),createDownloadUrl:async key=>`https://objects.test/download/${key}`,createUploadUrl:async key=>`https://objects.test/upload/${key}`,copy:async(source,destination)=>{const value=objects.get(source);if(!value)throw new Error("missing");objects.set(destination,value);}};
+function memoryStorage(): ObjectStorage & { objects: Map<string, Uint8Array> } {
+  const objects = new Map<string, Uint8Array>();
+  return {
+    objects,
+    put: async (key, body) => {
+      objects.set(
+        key,
+        typeof body === "string" ? new TextEncoder().encode(body) : body,
+      );
+    },
+    get: async (key) => {
+      const value = objects.get(key);
+      if (!value) throw new Error("missing");
+      return value;
+    },
+    delete: async (key) => {
+      objects.delete(key);
+    },
+    exists: async (key) => objects.has(key),
+    createDownloadUrl: async (key) => `https://objects.test/download/${key}`,
+    createUploadUrl: async (key) => `https://objects.test/upload/${key}`,
+    copy: async (source, destination) => {
+      const value = objects.get(source);
+      if (!value) throw new Error("missing");
+      objects.set(destination, value);
+    },
+  };
 }
 
-describe("object-storage workbook intake",()=>{
-  it("reserves a tenant/session-scoped quarantine key and parses only after a clean scan",async()=>{const storage=memoryStorage(),scanner:MalwareScanner={scan:vi.fn(async()=>({status:"clean" as const,scanner:"test",scannedAt:new Date().toISOString(),durationMs:1}))},intake=createObjectStorageImportWorkbookIntake(storage,scanner),bytes=await createXlsxTemplate({entityCode:"party",descriptorHash:"hash",fields:[{key:"code",label:"Code",required:true,example:"example"}]});const prepared=await intake.prepareUpload({tenantId:"tenant-1",sessionId:"session-1",fileName:"party.xlsx",sizeBytes:bytes.byteLength,maxBytes:1_000_000});expect(prepared.uploadUrl).toContain("record-transfers/tenant-1/imports/session-1/quarantine/source.upload");storage.objects.set("record-transfers/tenant-1/imports/session-1/quarantine/source.upload",bytes);const rows=await intake.read({tenantId:"tenant-1",sessionId:"session-1",fileName:"party.xlsx",sizeBytes:bytes.byteLength,maxBytes:1_000_000,maxRows:10,allowedFields:["code"]});expect(rows).toEqual([{code:"example"}]);expect(scanner.scan).toHaveBeenCalledOnce();});
-  it("uses the same quarantined path for genuine CSV files",async()=>{const storage=memoryStorage(),scanner:MalwareScanner={scan:vi.fn(async()=>({status:"clean" as const,scanner:"test",scannedAt:new Date().toISOString(),durationMs:1}))},intake=createObjectStorageImportWorkbookIntake(storage,scanner),bytes=new TextEncoder().encode('code,name\r\n"BP,1",Partner\r\n');storage.objects.set("record-transfers/tenant-1/imports/session-2/quarantine/source.upload",bytes);await expect(intake.read({tenantId:"tenant-1",sessionId:"session-2",fileName:"party.csv",sizeBytes:bytes.byteLength,maxBytes:1_000_000,maxRows:10,allowedFields:["code","name"]})).resolves.toEqual([{code:"BP,1",name:"Partner"}]);expect(scanner.scan).toHaveBeenCalledWith(expect.objectContaining({contentType:"text/csv",fileName:"party.csv"}));});
-  it("fails closed when malware scanning is unavailable",async()=>{const storage=memoryStorage(),scanner:MalwareScanner={scan:async()=>{throw new Error("offline");}},intake=createObjectStorageImportWorkbookIntake(storage,scanner),bytes=await createXlsxTemplate({entityCode:"party",descriptorHash:"hash",fields:[{key:"code",label:"Code",required:true}]});storage.objects.set("record-transfers/tenant-1/imports/session-1/quarantine/source.upload",bytes);await expect(intake.read({tenantId:"tenant-1",sessionId:"session-1",fileName:"party.xlsx",sizeBytes:bytes.byteLength,maxBytes:1_000_000,maxRows:10,allowedFields:["code"]})).rejects.toMatchObject({statusCode:503,code:"IMPORT_FILE_SCAN_UNAVAILABLE"});});
+describe("object-storage workbook intake", () => {
+  it("reserves a plane/tenant/session-scoped quarantine key and parses only after a clean scan", async () => {
+    const storage = memoryStorage(),
+      scanner: MalwareScanner = {
+        scan: vi.fn(async () => ({
+          status: "clean" as const,
+          scanner: "test",
+          scannedAt: new Date().toISOString(),
+          durationMs: 1,
+        })),
+      },
+      intake = createObjectStorageImportWorkbookIntake(storage, scanner),
+      bytes = await createXlsxTemplate({
+        entityCode: "party",
+        descriptorHash: "hash",
+        fields: [
+          { key: "code", label: "Code", required: true, example: "example" },
+        ],
+      });
+    const prepared = await intake.prepareUpload({
+      planeKey: "neon",
+      tenantId: "tenant-1",
+      sessionId: "session-1",
+      fileName: "party.xlsx",
+      sizeBytes: bytes.byteLength,
+      maxBytes: 1_000_000,
+    });
+    expect(prepared.uploadUrl).toContain(
+      "record-transfers/neon/tenant-1/imports/session-1/quarantine/source.upload",
+    );
+    storage.objects.set(
+      "record-transfers/neon/tenant-1/imports/session-1/quarantine/source.upload",
+      bytes,
+    );
+    const rows = await intake.read({
+      planeKey: "neon",
+      tenantId: "tenant-1",
+      sessionId: "session-1",
+      fileName: "party.xlsx",
+      sizeBytes: bytes.byteLength,
+      maxBytes: 1_000_000,
+      maxRows: 10,
+      allowedFields: ["code"],
+    });
+    expect(rows).toEqual([{ code: "example" }]);
+    expect(scanner.scan).toHaveBeenCalledOnce();
+  });
+  it("uses the same quarantined path for genuine CSV files", async () => {
+    const storage = memoryStorage(),
+      scanner: MalwareScanner = {
+        scan: vi.fn(async () => ({
+          status: "clean" as const,
+          scanner: "test",
+          scannedAt: new Date().toISOString(),
+          durationMs: 1,
+        })),
+      },
+      intake = createObjectStorageImportWorkbookIntake(storage, scanner),
+      bytes = new TextEncoder().encode('code,name\r\n"BP,1",Partner\r\n');
+    storage.objects.set(
+      "record-transfers/neon/tenant-1/imports/session-2/quarantine/source.upload",
+      bytes,
+    );
+    await expect(
+      intake.read({
+        planeKey: "neon",
+        tenantId: "tenant-1",
+        sessionId: "session-2",
+        fileName: "party.csv",
+        sizeBytes: bytes.byteLength,
+        maxBytes: 1_000_000,
+        maxRows: 10,
+        allowedFields: ["code", "name"],
+      }),
+    ).resolves.toEqual([{ code: "BP,1", name: "Partner" }]);
+    expect(scanner.scan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contentType: "text/csv",
+        fileName: "party.csv",
+      }),
+    );
+  });
+  it("fails closed when malware scanning is unavailable", async () => {
+    const storage = memoryStorage(),
+      scanner: MalwareScanner = {
+        scan: async () => {
+          throw new Error("offline");
+        },
+      },
+      intake = createObjectStorageImportWorkbookIntake(storage, scanner),
+      bytes = await createXlsxTemplate({
+        entityCode: "party",
+        descriptorHash: "hash",
+        fields: [{ key: "code", label: "Code", required: true }],
+      });
+    storage.objects.set(
+      "record-transfers/neon/tenant-1/imports/session-1/quarantine/source.upload",
+      bytes,
+    );
+    await expect(
+      intake.read({
+        planeKey: "neon",
+        tenantId: "tenant-1",
+        sessionId: "session-1",
+        fileName: "party.xlsx",
+        sizeBytes: bytes.byteLength,
+        maxBytes: 1_000_000,
+        maxRows: 10,
+        allowedFields: ["code"],
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 503,
+      code: "IMPORT_FILE_SCAN_UNAVAILABLE",
+    });
+  });
 });

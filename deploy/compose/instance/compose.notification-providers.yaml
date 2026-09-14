@@ -1,3 +1,7 @@
+# stackctl selects this overlay for external notification providers.
+# Staging provider.env validation requires EMAIL_PROVIDER=ses; SMTP rollback is
+# not a supported stackctl deployment mode. A future rollback must add provider
+# validation and required-secret checks before mounting SMTP credentials.
 x-notification-provider-environment: &notification-provider-environment
   ATHYPER_ENV: staging
   EMAIL_PROVIDER: ${EMAIL_PROVIDER:-ses}
@@ -11,28 +15,10 @@ x-notification-provider-environment: &notification-provider-environment
   SES_EVENT_VISIBILITY_TIMEOUT_SECONDS: ${SES_EVENT_VISIBILITY_TIMEOUT_SECONDS:-60}
   SES_EVENT_MAX_MESSAGES: ${SES_EVENT_MAX_MESSAGES:-10}
   SES_EVENT_FAILURE_BACKOFF_MS: ${SES_EVENT_FAILURE_BACKOFF_MS:-1000}
-  VAPID_SUBJECT_FILE: /run/secrets/vapid-subject
-  VAPID_PUBLIC_KEY_FILE: /run/secrets/vapid-public-key
-  VAPID_PRIVATE_KEY_FILE: /run/secrets/vapid-private-key
-
-x-notification-provider-secrets: &notification-provider-secrets
-  - vapid-subject
-  - vapid-public-key
-  - vapid-private-key
 
 services:
   api:
     environment: *notification-provider-environment
-    secrets: *notification-provider-secrets
 
   worker:
     environment: *notification-provider-environment
-    secrets: *notification-provider-secrets
-
-secrets:
-  vapid-subject:
-    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:?set ATHYPER_INSTANCE}/secrets/vapid-subject
-  vapid-public-key:
-    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:?set ATHYPER_INSTANCE}/secrets/vapid-public-key
-  vapid-private-key:
-    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:?set ATHYPER_INSTANCE}/secrets/vapid-private-key

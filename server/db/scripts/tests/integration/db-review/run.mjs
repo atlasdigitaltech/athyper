@@ -36,7 +36,7 @@ try {
   if (!supplied) {
     await docker('run', '-d', '--name', container, '--network', 'none', '--tmpfs', '/var/lib/postgresql/data', '-e', 'POSTGRES_HOST_AUTH_METHOD=trust', 'postgres:16.13-bookworm');
     for (let attempts = 0; ; attempts++) {
-      try { await docker('exec', container, 'pg_isready', '-U', 'postgres'); break; }
+      try { await docker('exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres'); break; }
       catch (e) { if (attempts >= 30) throw e; await new Promise(r => setTimeout(r, 500)); }
     }
   }
@@ -52,12 +52,12 @@ try {
       CREATE FUNCTION shared.current_tenant_id_soft() RETURNS uuid LANGUAGE sql STABLE AS 'SELECT NULL::uuid';
       GRANT SELECT ON master.mv_company_postable_account TO PUBLIC;`);
     for (let attempt=0;attempt<2;attempt++) for (const migration of ['20260910_saved_view_runtime_grants.sql','20260910_account_cache_isolation.sql','20260910_saved_view_legacy_grant_cleanup.sql']) {
-      await sql('grants',await file(`migrations/${migration}`));
+      await sql('grants',await file(`scripts/operations/upgrades/legacy-baseline-20260914/${migration}`));
     }
     assert.equal(await sql('grants', "SELECT count(*) FROM pg_class c, LATERAL aclexplode(c.relacl) a WHERE c.oid='master.mv_company_postable_account'::regclass AND a.grantee=0"),'0');
     await sql('grants', 'CREATE ROLE athyperapp NOLOGIN; CREATE ROLE athyper_runtime NOLOGIN; GRANT SELECT,INSERT,UPDATE ON master.saved_view_default TO athyper_runtime; GRANT SELECT ON master.mv_company_postable_account TO athyperapp;');
     for (let attempt=0;attempt<2;attempt++) for (const migration of ['20260910_saved_view_runtime_grants.sql','20260910_account_cache_isolation.sql','20260910_saved_view_legacy_grant_cleanup.sql']) {
-      await sql('grants',await file(`migrations/${migration}`));
+      await sql('grants',await file(`scripts/operations/upgrades/legacy-baseline-20260914/${migration}`));
     }
     assert.equal(await sql('grants', "SELECT has_table_privilege('athyperapp','master.saved_view_default','SELECT,INSERT,UPDATE') AND has_table_privilege('athyperapp','master.v_company_postable_account','SELECT') AND NOT has_table_privilege('athyperapp','master.mv_company_postable_account','SELECT') AND NOT has_table_privilege('athyper_runtime','master.saved_view_default','SELECT,INSERT,UPDATE')"),'t');
     await docker('exec',container,'dropdb','-U','postgres','athyper_grants');
@@ -72,7 +72,7 @@ try {
   await docker('exec',container,'createdb','-U','postgres','athyper_preflight');
   await sql('preflight', `CREATE SCHEMA ai; CREATE TABLE ai.ai_agent_call(id uuid PRIMARY KEY,outcome text NOT NULL,usage_source text NOT NULL);
     INSERT INTO ai.ai_agent_call VALUES('a0000000-0000-4000-8000-000000000001','completed','unavailable');`);
-  const usagePreflight = await file('migrations/20260910_ai_call_usage_preflight.sql');
+  const usagePreflight = await file('scripts/operations/upgrades/legacy-baseline-20260914/20260910_ai_call_usage_preflight.sql');
   await assert.rejects(sql('preflight',usagePreflight), error => {
     assert.match(error.message,/AI_CALL_USAGE_INCOMPATIBLE: found 1 incompatible/);
     assert.match(error.message,/a0000000-0000-4000-8000-000000000001/);
@@ -91,9 +91,12 @@ try {
   await sql('preflight', "DELETE FROM ai.ai_agent_call;");
   for (let attempt=0;attempt<2;attempt++) await sql('preflight',usagePreflight);
   assert.equal(await sql('preflight',"SELECT convalidated FROM pg_constraint WHERE conname='ai_agent_call_aac_completed_usage_chk'"),'t');
-  // Simulate absent names before the real manifest-driven deployment.
+  // Historical upgrade fixture: repair deliberately missing constraints explicitly.
+  // Empty current manifests must not act as a legacy schema repair path.
   for (const plane of ['studio','neon','mesh']) await sql(plane,'ALTER TABLE ai.ai_agent_call DROP CONSTRAINT ai_agent_call_aac_completed_usage_chk;');
   await sql('mesh','ALTER TABLE mesh.network_relationship_capability DROP CONSTRAINT network_relationship_capability_approval_chk;');
+  for (const plane of ['studio','neon','mesh']) await sql(plane, usagePreflight);
+  await sql('mesh', await file('scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_capability_constraint_preflight.sql')); 
   pass('AI compatibility diagnostics, rollback, and repeatable missing-constraint repair');
   // Exercise both fresh definitions and actual upgrades from the vulnerable views.
   for (let upgrade = 0; upgrade < 2; upgrade++) {
@@ -103,11 +106,11 @@ try {
           ALTER VIEW document.active_comment RESET (security_invoker,security_barrier);
           DROP TABLE master.saved_view_default;`);
         for (const migration of ['20260908_entity_saved_views.sql','20260908_entity_standard_view_defaults.sql','20260910_saved_view_runtime_grants.sql','20260910_tenant_view_isolation.sql']) {
-          await sql(plane, await file(`migrations/${migration}`));
+          await sql(plane, await file(`scripts/operations/upgrades/legacy-baseline-20260914/${migration}`));
         }
       }
       await sql('neon', 'DROP VIEW master.v_company_postable_account; GRANT SELECT ON master.mv_company_postable_account TO athyperapp;');
-      await sql('neon', await file('migrations/20260910_account_cache_isolation.sql'));
+      await sql('neon', await file('scripts/operations/upgrades/legacy-baseline-20260914/20260910_account_cache_isolation.sql'));
     }
     for (const plane of ['studio','neon','mesh']) {
       await sql(plane, await file('scripts/tests/integration/db-review/tenant-isolation.sql'));
@@ -115,8 +118,8 @@ try {
     await sql('neon', await file('scripts/tests/integration/db-review/account-isolation.sql'));
     pass(`${upgrade ? 'upgraded' : 'fresh'} tenant view isolation and application saved defaults`);
   }
-  // The deployment entrypoint must execute every newly registered migration.
-  // These four historical migrations are already represented by fresh DDL.
+  // The startup entrypoint supports empty post-baseline manifests.
+  // Historical upgrades are exercised explicitly above and below.
   await docker('cp', resolve(root, 'migrations'), `${container}:/tmp/review-migrations`);
   await docker('cp', resolve(root, 'runtime/run-forward-migrations.sh'), `${container}:/tmp/review-forward.sh`);
   await docker('exec', container, 'sh', '-c', 'printf test > /tmp/review-password');
@@ -141,7 +144,7 @@ try {
     await sql(plane, await file('scripts/tests/integration/db-review/tenant-isolation.sql'));
   }
   await sql('neon',await file('scripts/tests/integration/db-review/account-isolation.sql'));
-  pass('forward deployment manifests applied and safely skipped on second run');
+  pass('empty startup manifests preserve the foundation on two runs');
   for (const [plane, path] of [['mesh', 'mesh.sql'], ['mesh', 'bank.sql'], ['studio', 'studio.sql']]) {
     await sql(plane, await file(`scripts/tests/integration/db-review/${path}`));
     pass(path);
@@ -151,10 +154,10 @@ try {
   const before = new Map();
   for (const plane of ['studio', 'mesh']) before.set(plane, await sql(plane, fingerprint));
   for (let attempt=0; attempt<2; attempt++) {
-    for (const plane of ['studio', 'neon', 'mesh']) await sql(plane, await file('migrations/20260910_ai_call_usage_constraint.sql'));
-    await sql('studio', await file('migrations/20260910_identity_replay_context_hardening.sql'));
-    await sql('mesh', await file('migrations/20260910_mesh_command_hardening.sql'));
-    await sql('mesh', await file('migrations/20260910_mesh_discovery_current_status.sql'));
+    for (const plane of ['studio', 'neon', 'mesh']) await sql(plane, await file('scripts/operations/upgrades/legacy-baseline-20260914/20260910_ai_call_usage_constraint.sql'));
+    await sql('studio', await file('scripts/operations/upgrades/legacy-baseline-20260914/20260910_identity_replay_context_hardening.sql'));
+    await sql('mesh', await file('scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_command_hardening.sql'));
+    await sql('mesh', await file('scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_discovery_current_status.sql'));
   }
   for (const plane of ['studio', 'mesh']) assert.equal(await sql(plane, fingerprint), before.get(plane), `${plane} migration function parity`);
   pass('upgrade/fresh function parity and repeated migration application');
@@ -163,8 +166,8 @@ try {
   await sql('mesh', `DROP FUNCTION mesh.command_retrieve_bank_protected_token(uuid,integer,text,text,uuid);
     ALTER TABLE mesh.bank_disclosure_purpose RENAME TO review_saved_bank_disclosure_purpose;
     ALTER TABLE mesh.bank_account_retrieval_evidence RENAME TO review_saved_bank_retrieval_evidence;`);
-  await sql('mesh', await file('migrations/20260910_mesh_command_hardening.sql'));
-  await sql('mesh', await file('migrations/20260910_mesh_discovery_current_status.sql'));
+  await sql('mesh', await file('scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_command_hardening.sql'));
+  await sql('mesh', await file('scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_discovery_current_status.sql'));
   assert.equal(await sql('mesh', "SELECT to_regprocedure('mesh.command_retrieve_bank_protected_token(uuid,integer,text,text,uuid)') IS NULL;"), 't');
   await sql('mesh', `ALTER TABLE mesh.review_saved_bank_disclosure_purpose RENAME TO bank_disclosure_purpose;
     ALTER TABLE mesh.review_saved_bank_retrieval_evidence RENAME TO bank_account_retrieval_evidence;` +
@@ -173,13 +176,13 @@ try {
      GRANT EXECUTE ON FUNCTION mesh.command_retrieve_bank_protected_token(uuid,integer,text,text,uuid) TO athyper_protected_value_retriever;`);
   pass('pre-G4 upgrade repairs discovery without installing protected retrieval');
   // Recreate the pre-receipt discovery command to verify genuine legacy retries.
-  const old = await file('migrations/20260906_mesh_exchange_readiness.sql');
+  const old = await file('scripts/operations/upgrades/legacy-baseline-20260914/20260906_mesh_exchange_readiness.sql');
   await sql('mesh', definition(old, 'mesh.command_discover_network_relationship') + '\nDROP TABLE mesh.network_discovery_receipt;');
   const legacyCall = `SELECT * FROM mesh.command_discover_network_relationship('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000002',NULL,NULL,'Legacy discovery','review-legacy-discovery','20000000-0000-4000-8000-000000000001')`;
   const original = (await sql('mesh', `${context}\nSET TIME ZONE 'Etc/GMT+12';\n${legacyCall};`)).split('|');
   assert.equal(original.at(-1), 'f');
-  await sql('mesh', await file('migrations/20260910_mesh_command_hardening.sql'));
-  await sql('mesh', await file('migrations/20260910_mesh_discovery_current_status.sql'));
+  await sql('mesh', await file('scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_command_hardening.sql'));
+  await sql('mesh', await file('scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_discovery_current_status.sql'));
   const replay = (await sql('mesh', `${context}\nSET TIME ZONE 'Etc/GMT-14';\n${legacyCall};`)).split('|');
   assert.deepEqual(replay.slice(0,3), original.slice(0,3));
   assert.equal(replay.at(-1), 't');

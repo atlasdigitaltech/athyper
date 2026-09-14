@@ -3,6 +3,7 @@ import {
   EntityFavourites,
   EntityFavouritesRuntime,
 } from "./overview-favourites";
+import { useOverviewMessage } from "./overview-messages";
 import React, { useEffect, useState, type ReactNode } from "react";
 import {
   encodeListLocationState,
@@ -79,13 +80,14 @@ export function EntityOverview({
   shortcuts,
   records,
   favouritesPanel,
-  recentTitle = "Recently updated",
+  recentTitle,
   recentHref,
   scopeLabel,
   loading,
   error,
   onRefresh,
 }: EntityOverviewProps) {
+  const message = useOverviewMessage();
   const numbered = focus.filter((item) => item.count !== undefined);
   const actionable = numbered.filter((item) => item.count! > 0);
   // Counts in different queues may overlap. Do not add them and claim a record total.
@@ -201,8 +203,8 @@ export function EntityOverview({
       ) : null}
       <div className="a-entity-pulse__workspace">
         <Panel
-          title="Focus"
-          description="A little direction for your next step."
+          title={message("entity.overview.focus.title")}
+          description={message("entity.overview.focus.description")}
           icon={<ClipboardCheckIcon size={19} />}
           className="a-entity-pulse__focus"
         >
@@ -244,23 +246,20 @@ export function EntityOverview({
           ) : (
             <EmptyState
               icon={<CircleCheckIcon size={25} />}
-              title="Room to focus"
-              description="Your available work queues will appear here. Explore your records to get started."
+              title={message("entity.overview.focus.empty")}
+              description={message("entity.overview.focus.emptyDescription")}
             />
           )}
         </Panel>
         <Panel
-          title="Continue your work"
-          description="Useful routes, always within reach."
+          title={message("entity.overview.shortcuts.title")}
+          description={message("entity.overview.shortcuts.description")}
           icon={<StarIcon size={19} />}
         >
           {shortcuts.length ? (
             <div className="a-entity-pulse__shortcuts">
-              {shortcuts.map((item, index) => (
+              {shortcuts.map((item) => (
                 <a href={item.href} key={item.key}>
-                  <span className="a-entity-pulse__shortcut-number">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
                   <span className="a-entity-pulse__row-copy">
                     <strong>{item.label}</strong>
                     {item.description ? (
@@ -274,25 +273,25 @@ export function EntityOverview({
           ) : (
             <EmptyState
               icon={<LayoutIcon size={25} />}
-              title="Your starting point"
-              description="Available record views will appear here."
+              title={message("entity.overview.shortcuts.empty")}
+              description={message("entity.overview.shortcuts.emptyDescription")}
             />
           )}
         </Panel>
       </div>
       <div className="a-entity-pulse__workspace a-entity-pulse__record-panels">
         <Panel
-          title={recentTitle}
+          title={recentTitle ?? message("entity.overview.recent.title")}
           description={
-            recentTitle === "Recently updated"
-              ? "The latest record updates in your current scope."
-              : "A quick way into your available records."
+            !recentTitle || recentTitle === message("entity.overview.recent.title")
+              ? message("entity.overview.recent.description")
+              : message("entity.overview.recent.previewDescription")
           }
           icon={<HistoryIcon size={19} />}
           action={
             recentHref ? (
               <a className="a-entity-pulse__text-link" href={recentHref}>
-                View records
+                {message("entity.overview.viewRecords")}
                 <ChevronRightIcon size={15} />
               </a>
             ) : undefined
@@ -354,12 +353,12 @@ export function EntityOverview({
             <EmptyState
               icon={<HistoryIcon size={26} />}
               title={
-                error ? "Records couldn’t be loaded" : "A fresh starting point"
+                error ? message("entity.overview.recent.error") : message("entity.overview.recent.empty")
               }
               description={
                 error
-                  ? "Refresh to try loading your latest records again."
-                  : "Records will appear here when they’re available in your selected scope."
+                  ? message("entity.overview.recent.errorDescription")
+                  : message("entity.overview.recent.emptyDescription")
               }
             />
           )}
@@ -495,6 +494,7 @@ export function EntityOverviewRuntime({
   readonly scopeCoordinate?: EntityListScopeCoordinateV1;
 }) {
   const locale = useOptionalI18n()?.localization.uiLocale;
+  const message = useOverviewMessage();
   const sections = application.navigation ?? [];
   const collection =
     sections.find(
@@ -653,7 +653,7 @@ export function EntityOverviewRuntime({
             key: collection.key,
             label: label(collection),
             href: href(),
-            description: "Search, filter, and explore records",
+            description: message("entity.overview.searchRecords"),
           },
         ]
       : []),
@@ -661,7 +661,7 @@ export function EntityOverviewRuntime({
       key: view.key,
       label: label(view),
       href: href(view.key),
-      description: "Jump into this view",
+      description: message("entity.overview.openView"),
     })),
   ];
   const updated = data ? overviewUpdatedField(data.descriptor) : undefined;
@@ -714,7 +714,7 @@ export function EntityOverviewRuntime({
           />
         ) : undefined
       }
-      recentTitle={updated ? "Recently updated" : "Record preview"}
+      recentTitle={updated ? undefined : message("entity.overview.recent.preview")}
       recentHref={collection ? href() : undefined}
       scopeLabel={application.scope.labels
         .map((item) => item.value)

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_release20_isolated_transfer_grant_proposal",
+  "environment": "isolated_qualification_only",
+  "sharedDevGrantChanges": [],
+  "preservePriorIsolatedRevocations": true,
+  "restoreSnapshotsIntoSharedDev": false,
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "plane": "neon",
+  "releaseId": "21bec59b-86fb-441c-93b2-5027f2999d0b",
+  "artifactHash": "81d8d9737fd50aecdcbb164ec958cd3a41b6e6d7515f79531340a04a8ea1be50",
+  "runtimeImage": "sha256:3fbbbaa376286770d3d8f0563cc72015f67aabfcc4fe4223531fd8005317143c",
+  "account": "catl.admin",
+  "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+  "roleId": "8f0adf2d-c506-4d74-8290-4bc537d78678",
+  "groupId": "2db6b81a-94fb-4448-88b6-bfba7660627b",
+  "assignmentId": "f5cd0a35-ebaf-4269-a94a-a57e4308e0e0",
+  "code": "bp.r20.transfer.qualification.20260911",
+  "scopeTargetId": "1d8314f6-8541-57cf-8748-679cbe318bc8",
+  "scopeKind": "tenant",
+  "propagation": "exact",
+  "effectiveFrom": "2026-09-11T06:30:00Z",
+  "effectiveUntil": "2026-09-11T10:30:00Z",
+  "permissions": [
+    {
+      "id": "01a087c3-4587-7c85-8beb-e83e9872f598",
+      "code": "neon.relationship.bp_target.export"
+    },
+    {
+      "id": "01a087c3-4587-7f94-9891-95324d5ab6fa",
+      "code": "neon.relationship.bp_target.import"
+    }
+  ],
+  "conditions": {
+    "normalAuthenticatedSession": true,
+    "domainAuthorizationStillRequired": true,
+    "mfa": "Existing workflow step-up remains mandatory for approval/application; this grant does not bypass it.",
+    "separationOfDuties": "catl.owner independently approves; catl.admin cannot approve its own requests.",
+    "import": "Creates governed draft requests only; no direct master-data writes.",
+    "export": "Published summary fields only; test output stays in isolated storage.",
+    "cleanup": "Revoke these new memberships/assignments after qualification; never restore earlier revoked test grants."
+  },
+  "approvalRequired": true,
+  "approvals": [],
+  "activationAuthorized": false,
+  "proposalRevision": "9036305ffb91b11c7f71f8ea2bcef8263283986a0e84dc6bcabfc1ab2de5d83f"
+}

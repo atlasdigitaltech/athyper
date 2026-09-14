@@ -21,3 +21,23 @@ Administrative identity does not imply application entitlement or bypass tenant 
 ## Rollout consequence
 
 Rollout selects exactly one of `legacy`, `shadow`, or `enforce`; decisions are never unioned. The initial mode is `legacy` for every plane. Shadow writes through the legacy writer and records a v2 preview. Enforce uses only the exact-plane v2 repository and fails closed unless its writer-switch evidence is qualified.
+
+## Verified by
+
+- `pnpm policy:plane-boundaries`, `pnpm policy:server-boundaries`, and
+  `pnpm policy:server-rebuild-boundaries` check package ownership and import direction.
+  The rebuild and server checks use syntax-aware module extraction; repository
+  `.require(plane)` calls are not dependency declarations.
+- `pnpm inventory:authorization:check` checks exact source registration, ownership,
+  unknown writers, and generated artifact freshness. Reviewed source registration
+  is not approval to activate a policy or grant.
+- `pnpm inventory:authorization-data-disposition:check` checks the DDL-derived
+  disposition artifacts. It does not qualify live database contents.
+- Runtime selection and evaluation live in `server/packages/platform/iam/src/shadow-authorizer.ts`
+  and `permission-authorizer.ts`; exact-plane repository selection lives in
+  `server/packages/foundation/src/transaction`. Tests in those packages and the host
+  composition cover runtime behavior; static policy success alone proves neither
+  tenant isolation nor authorization equivalence.
+
+Run these checks against the candidate tree and record its commit and dirty status.
+Do not treat historical local check results as qualification of a later candidate.

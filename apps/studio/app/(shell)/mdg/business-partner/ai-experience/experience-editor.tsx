@@ -1,133 +1,8 @@
 "use client";
-
-import {
-  createAtlasExperienceAdminClient,
-  type AtlasExperienceDefinition,
-  type AtlasExperienceRelease,
-} from "@athyper/platform-shell";
-import React, { useEffect, useMemo, useState, type ReactNode } from "react";
-
-const DEFAULT_DEFINITION = Object.freeze<AtlasExperienceDefinition>({
-  schema: "atlas-experience-definition/1",
-  scope: "home",
-  widgets: [
-    {
-      code: "home.recommendations",
-      kind: "recommendations",
-      title: "Recommended for you",
-      enabled: true,
-      planes: ["neon", "mesh", "studio"],
-      order: 10,
-    },
-    {
-      code: "home.quick-actions",
-      kind: "quick-actions",
-      title: "Quick actions",
-      enabled: true,
-      planes: ["neon", "mesh", "studio"],
-      order: 20,
-    },
-    {
-      code: "home.workspaces",
-      kind: "workspaces",
-      title: "Workspaces",
-      enabled: true,
-      planes: ["neon", "mesh", "studio"],
-      order: 30,
-    },
-    {
-      code: "home.recent",
-      kind: "recent",
-      title: "Recently opened",
-      enabled: true,
-      planes: ["neon", "mesh", "studio"],
-      order: 40,
-    },
-  ],
-  searchSources: [
-    {
-      code: "mdg.navigation",
-      kind: "navigation",
-      label: "MDG navigation",
-      enabled: true,
-      planes: ["neon", "mesh", "studio"],
-      routePrefix: "/mdg",
-    },
-    {
-      code: "business-partner.records",
-      kind: "record",
-      label: "Business Partner records",
-      enabled: true,
-      planes: ["neon"],
-      permissionCode: "master.business_partner.read",
-      entityCode: "business_partner",
-      routePrefix: "/mdg/business-partner",
-    },
-    {
-      code: "business-partner.knowledge",
-      kind: "knowledge",
-      label: "Business Partner governed knowledge",
-      enabled: true,
-      planes: ["neon", "mesh", "studio"],
-      permissionCode: "ai.agent.tools.read",
-      entityCode: "business_partner",
-    },
-  ],
-  prompts: [
-    {
-      code: "bp.find-supplier",
-      label: "Find a supplier",
-      prompt: "Find a supplier and show the governed source records",
-      enabled: true,
-      planes: ["neon", "mesh"],
-      agentCode: "business-partner-guide",
-    },
-    {
-      code: "bp.review-duplicates",
-      label: "Review duplicate candidates",
-      prompt:
-        "Show business partner duplicate candidates that need my attention",
-      enabled: true,
-      planes: ["neon"],
-      agentCode: "business-partner-steward",
-    },
-    {
-      code: "bp.explain-publication",
-      label: "Explain publication",
-      prompt: "Explain how an approved business partner change is published",
-      enabled: true,
-      planes: ["studio", "mesh"],
-      agentCode: "business-partner-guide",
-    },
-  ],
-  agents: [
-    {
-      code: "business-partner-guide",
-      name: "Business Partner Guide",
-      description:
-        "Permission-aware answers grounded in governed Business Partner sources.",
-      enabled: true,
-      planes: ["neon", "mesh", "studio"],
-      publicModelId: "atlas-fast",
-      dataClass: "internal",
-      promptRevision: "prompt-r1",
-      toolCodes: ["records_query"],
-    },
-    {
-      code: "business-partner-steward",
-      name: "Business Partner Steward",
-      description:
-        "Steward assistance with governed previews for approved Business Partner tools.",
-      enabled: true,
-      planes: ["neon"],
-      publicModelId: "atlas-fast",
-      dataClass: "confidential",
-      promptRevision: "prompt-r1",
-      toolCodes: ["records_query", "business_partner_update"],
-    },
-  ],
-});
-
+import React, { useMemo } from "react";
+import { createAtlasExperienceAdminClient } from "@athyper/platform-shell";
+import { useAtlasExperienceEditor } from "./use-atlas-experience-editor";
+import { ConfigSection, ConfigRow } from "./experience-config-fields";
 export function AtlasExperienceEditor() {
   const client = useMemo(() => createAtlasExperienceAdminClient(), []);
   return <AtlasExperienceEditorForm client={client} />;
@@ -138,101 +13,19 @@ export function AtlasExperienceEditorForm({
 }: {
   readonly client: ReturnType<typeof createAtlasExperienceAdminClient>;
 }) {
-  const [definition, setDefinition] = useState(DEFAULT_DEFINITION),
-    [release, setRelease] = useState<AtlasExperienceRelease | null>(null),
-    [status, setStatus] = useState<
-      "loading" | "ready" | "saving" | "publishing" | "error"
-    >("loading"),
-    [message, setMessage] = useState<string>(),
-    [loadFailed, setLoadFailed] = useState(false),
-    [loadAttempt, setLoadAttempt] = useState(0);
-  useEffect(() => {
-    setStatus("loading");
-    setLoadFailed(false);
-    setMessage(undefined);
-    let active = true;
-    const controller = new AbortController();
-    void client
-      .draft(controller.signal)
-      .then((value) => {
-        if (!active) return;
-        if (value) {
-          setRelease(value);
-          setDefinition(value.definition);
-        }
-        setStatus("ready");
-      })
-      .catch(() => {
-        if (!active) return;
-        setStatus("error");
-        setLoadFailed(true);
-        setMessage(
-          "The saved draft could not be loaded. Retry before editing or publishing.",
-        );
-      });
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [client, loadAttempt]);
-  const update = <K extends "widgets" | "searchSources" | "prompts" | "agents">(
-    key: K,
-    index: number,
-    change: Record<string, unknown>,
-  ) =>
-    setDefinition((current) => ({
-      ...current,
-      [key]: current[key].map((item, itemIndex) =>
-        itemIndex === index ? { ...item, ...change } : item,
-      ),
-    }));
-  async function save() {
-    setStatus("saving");
-    setMessage(undefined);
-    try {
-      const saved = await client.saveDraft(
-        definition,
-        release?.status === "draft" ? release.revision : undefined,
-      );
-      setRelease(saved);
-      setDefinition(saved.definition);
-      setStatus("ready");
-      setMessage(`Draft revision ${saved.revision} saved.`);
-    } catch {
-      setStatus("error");
-      setMessage(
-        "The draft was not saved. Refresh if another administrator published a newer revision.",
-      );
-    }
-  }
-  async function publish() {
-    setStatus("publishing");
-    setMessage(undefined);
-    try {
-      const saved = await client.saveDraft(
-        definition,
-        release?.status === "draft" ? release.revision : undefined,
-      );
-      setRelease(saved);
-      setDefinition(saved.definition);
-      const published = await client.publish(definition.scope, saved.revision);
-      setRelease(published);
-      setStatus("ready");
-      setMessage(
-        `Revision ${published.revision} published in Studio. Neon and Mesh activate it after signed publication reconciliation.`,
-      );
-    } catch {
-      setStatus("error");
-      setMessage(
-        "Publication was not completed. The previous published revision remains active.",
-      );
-    }
-  }
-  const busy =
-    status === "loading" ||
-    status === "saving" ||
-    status === "publishing" ||
-    loadFailed;
+  const {
+    definition,
+    release,
+    status,
+    message,
+    loadFailed,
+    setLoadAttempt,
+    update,
+    save,
+    publish,
+    busy,
+  } = useAtlasExperienceEditor(client);
+
   return (
     <div className="atlas-config">
       <div className="athyper-landing__status">
@@ -472,48 +265,5 @@ export function AtlasExperienceEditorForm({
         </button>
       </div>
     </div>
-  );
-}
-
-function ConfigSection({
-  title,
-  description,
-  children,
-}: {
-  readonly title: string;
-  readonly description: string;
-  readonly children: ReactNode;
-}) {
-  return (
-    <section className="atlas-config__section">
-      <header>
-        <h2>{title}</h2>
-        <p>{description}</p>
-      </header>
-      <div>{children}</div>
-    </section>
-  );
-}
-function ConfigRow({
-  enabled,
-  onEnabled,
-  code,
-  children,
-}: {
-  readonly enabled: boolean;
-  readonly onEnabled: (enabled: boolean) => void;
-  readonly code: string;
-  readonly children: ReactNode;
-}) {
-  return (
-    <label className="atlas-config__row">
-      <input
-        type="checkbox"
-        checked={enabled}
-        onChange={(event) => onEnabled(event.currentTarget.checked)}
-      />
-      <strong>{code}</strong>
-      {children}
-    </label>
   );
 }

@@ -4,7 +4,13 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./list-experience": "./src/list-experience.ts",
+    "./learning-inbox": "./src/learning-inbox.ts",
+    "./kysely-authoring-repository": "./src/kysely-authoring-repository.ts",
+    "./authoring-service": "./src/authoring-service.ts",
+    "./learning-publication": "./src/learning-publication.ts",
+    "./deterministic": "./src/deterministic.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -16,7 +22,7 @@
     "@athyper/server-contract-jobs": "workspace:*",
     "@athyper/server-contract-metadata": "workspace:*",
     "@athyper/server-contract-meta-entity-authoring": "workspace:*",
-    "express": "^5.1.0",
+    "express": "^5.2.1",
     "kysely": "^0.28.17",
     "@athyper/contract-platform-entity-list": "workspace:*",
     "@athyper/contract-platform-entity-runtime": "workspace:*"

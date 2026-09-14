@@ -24,13 +24,12 @@ describe("Identity record cards", () => {
     const html = render({
       id: "bp-1",
       kind: "canonical",
-      displayName: "Northwind Supplies",
       code: "CATL-BP-001",
-      legalName: "Northwind Industrial Supplies Ltd",
+      name: "Northwind Industrial Supplies Ltd",
     });
-    expect(html).toContain("Northwind Supplies");
+    expect(html).toContain("Northwind Industrial Supplies Ltd");
     expect(html).toContain("CATL-BP-001");
-    expect(html).toContain("Legal name");
+    expect(html).toContain("Registered name");
     expect(html).not.toContain("External ID");
     expect(html).not.toContain("Classification ID");
   });
@@ -51,24 +50,51 @@ describe("Identity record cards", () => {
     expect(html).toContain("4659");
     expect(html).toContain("Wholesale of other machinery and equipment");
     expect(html).toContain("<details>");
-    expect(html).not.toContain("Legal name");
+    expect(html).not.toContain("Registered name");
     expect(html).not.toContain("Aliases");
     expect(html).not.toContain("External ID");
   });
   it("renders external reference details without empty partner fields", () => {
-    const profile = JSON.parse(readFileSync(new URL("../../../../../../../server/db/scripts/provisioning/config/business-partner-record-presentation.v1.json", import.meta.url), "utf8")).recordPresentation.related.find((entry: {source: string}) => entry.source === "external-reference.v1");
-    const html = renderToStaticMarkup(<RelatedRecord profile={profile} hideScope values={{
-      id: "reference-1",
-      kind: "external_reference",
-      sourceSystemCode: "athyper_mesh",
-      externalEntityCode: "partner",
-      externalId: "remote-1",
-    }} />);
+    const profile = JSON.parse(
+      readFileSync(
+        new URL(
+          "../../../../../../../server/db/scripts/provisioning/config/business-partner-record-presentation.v1.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ).recordPresentation.related.find(
+      (entry: { source: string }) => entry.source === "external-reference.v1",
+    );
+    const html = renderToStaticMarkup(
+      <RelatedRecord
+        profile={profile}
+        hideScope
+        values={{
+          id: "reference-1",
+          kind: "external_reference",
+          sourceSystemCode: "athyper_mesh",
+          externalEntityCode: "partner",
+          externalId: "remote-1",
+        }}
+      />,
+    );
     expect(html).toContain("External reference");
     expect(html).toContain("Athyper Mesh");
     expect(html).toContain("remote-1");
-    expect(html).not.toContain("Legal name");
+    expect(html).not.toContain("Registered name");
     expect(html).not.toContain("Aliases");
     expect(html).not.toContain("Classification ID");
   });
+});
+it("offers tax reveal only when the provider authorizes it", () => {
+  const show = (revealable: boolean) =>
+    render({
+      id: "tax",
+      kind: "tax",
+      maskedValue: "••••",
+      revealable,
+    } as CommonSectionItem);
+  expect(show(true)).toContain("Reveal for approved purpose");
+  expect(show(false)).not.toContain("Reveal for approved purpose");
 });

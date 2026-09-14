@@ -17,14 +17,15 @@ export type ListDrawerKey = typeof LIST_DRAWERS[number]["key"];
 export const listDrawer = (key: ListDrawerKey) => LIST_DRAWERS.find(item => item.key === key)!;
 
 /** Mounted for one open session: visited sections retain drafts; closing discards them. */
-export function ListDrawerHost({ active, onSelect, onOpenChange, descriptor, sections }: {
+export function ListDrawerHost({ active, onSelect, onOpenChange, descriptor, sections, allowedKeys }: {
   readonly active: ListDrawerKey; readonly onSelect: (key: ListDrawerKey) => void;
   readonly onOpenChange: (open: boolean) => void; readonly descriptor: EntityListDescriptorV1;
   readonly sections: Record<ListDrawerKey, ReactNode>;
+  readonly allowedKeys?: readonly ListDrawerKey[];
 }) {
   const selector = useRef<HTMLSpanElement>(null);
   const [visited, setVisited] = useState<readonly ListDrawerKey[]>([active]);
-  const options = LIST_DRAWERS.filter(item => item.available(descriptor));
+  const options = LIST_DRAWERS.filter(item => item.available(descriptor) && (!allowedKeys || allowedKeys.includes(item.key)));
   const current = options.find(item => item.key === active) ?? options[0]!;
   const { Icon } = current;
   const select = (key: ListDrawerKey) => { setVisited(keys => keys.includes(key) ? keys : [...keys, key]); onSelect(key); selector.current?.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')?.focus(); };

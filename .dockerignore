@@ -18,6 +18,7 @@
 **/build
 **/.turbo
 **/.next
+**/.next-*
 **/*.log
 **/coverage
 **/.playwright

@@ -54,14 +54,15 @@ random_base64_32() { openssl rand -base64 32 | tr -d '\r\n'; }
 
 for name in \
   analytics-db-password grafana-admin-password infisical-auth-secret \
-  infisical-db-password infisical-encryption-key jobs-redis-password \
+  infisical-db-password infisical-encryption-key \
   iam-admin-password iam-db-password mesh-iam-client-secret minio-root-password \
-  neon-iam-client-secret objectstorage-app-secret-key postgres-password redis-password \
+  neon-iam-client-secret objectstorage-app-secret-key objectstorage-artifacts-writer-secret-key postgres-password redis-password \
   runtime-db-password runtime-iam-client-secret search-master-key \
   studio-iam-client-secret worker-db-password; do
   random_urlsafe > "$staging/$name"
 done
 openssl rand -hex 10 > "$staging/objectstorage-app-access-key"
+openssl rand -hex 10 > "$staging/objectstorage-artifacts-writer-access-key"
 random_base64_32 > "$staging/session-token-encryption-key"
 
 if [[ "$preserve_stg_vapid" == "false" ]]; then
@@ -78,7 +79,7 @@ NODE
 fi
 
 chmod 600 "$staging"/*
-expected=24
+expected=25
 count="$(find "$staging" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')"
 [[ "$count" == "$expected" ]] || { echo "Expected $expected secrets, generated $count" >&2; exit 1; }
 if [[ "$preserve_stg_vapid" == "true" ]]; then

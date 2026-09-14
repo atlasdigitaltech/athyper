@@ -1,6 +1,6 @@
 # Atlas automatic briefs — BP-AI-08 first slice
 
-Status: implemented behind a default-off shell rollout option. BP-AI-08's release exit gate remains open. This slice does not enable a deployment.
+Status: controller implementation remains behind a default-off shell rollout option. A bounded Redis owner-evidence cache primitive was added on 2026-09-10; it is not integrated with a qualified owner revision resolver or deployed. BP-AI-08's release exit gate remains open.
 
 ## Rollout and use
 
@@ -26,7 +26,7 @@ Focused React tests cover default-off rollout, user opt-in, StrictMode, saved-st
 
 Still required before completing BP-AI-08:
 
-- Bounded Redis evidence cache with complete owner revision/rule/descriptor coordinates, live disclosure reauthorization, TTL/size/count admission and invalidation. The existing reuse policy is a prerequisite, not an enabled cache. A parent record revision alone cannot invalidate related readiness evidence.
+- Integrate and qualify the bounded Redis evidence cache with complete owner revision/rule/descriptor coordinates. The primitive now implements live disclosure reauthorization, TTL/size/count admission and invalidation fencing; 14 focused tests and a live Redis probe passed. A parent record revision alone cannot invalidate related readiness evidence. See the [integration contract and release checklist](../runbooks/bp-ai-release-completion.md).
 - Distributed request coordination and overload behavior, including retry after cancellation and process failure.
 - Redis dataset/RSS/persistence measurements and session-continuity qualification before allocating AI cache capacity on the shared session service.
 - Authenticated browser and pinned live-model measurements at an agreed dataset size: evidence p95 <2 s, first useful text p95 <5 s and ordinary brief completion <15 s. These remain proposed targets; unit-test durations do not establish acceptance.

@@ -4,13 +4,15 @@ global:
   scrape_timeout: 10s
 
 rule_files:
-  - recording-rules.yml
-  - governance-alerts.yml
   - redis-alerts.yml
-  - document-registry-alerts.yml
-  - api-alerts.yml
   - record-transfer-alerts.yml
   - business-partner-alerts.yml
+  - business-partner-case-alerts.yml
+  - api-alerts.yml
+  # recording-rules.yml, governance-alerts.yml and document-registry-alerts.yml
+  # were removed: their metrics (gov_*, fin_doc_registry_*,
+  # athyper_http_requests_total, athyper_queue_jobs) are not emitted anywhere in
+  # current code. See docs/operations/observability-followups-20260912.md.
   # NOTE: document-registry-slo.yml is a specification document, not Prometheus-native.
   # It uses a custom recording_rules/slos YAML format. Do not add it to rule_files.
 
@@ -46,7 +48,7 @@ scrape_configs:
   - job_name: athyper_api
     metrics_path: /metrics
     static_configs:
-      - targets: ["api:3000"]
+      - targets: ["api:9464"]
         labels:
           service: api
           component: cache_metrics

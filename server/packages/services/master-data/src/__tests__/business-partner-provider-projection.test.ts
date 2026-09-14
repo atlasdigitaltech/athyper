@@ -146,11 +146,131 @@ it("closes unknown providers and authorization outages", async () => {
   ).rejects.toMatchObject({ code: "BP_PROVIDER_AUTHORIZATION_UNAVAILABLE" });
 });
 
-it("declares every BP section and keeps independent attachment admission separate",async()=>{
- const {BUSINESS_PARTNER_360_SECTION_CODES}=await import("@athyper/server-contract-master-data");
- const {businessPartnerProviderPolicies}=await import("../business-partner-provider-projection.js");
- expect(Object.keys(businessPartnerProviderPolicies).sort()).toEqual([...BUSINESS_PARTNER_360_SECTION_CODES].sort());
- const resources:unknown[]=[];
- const result=await projectBusinessPartnerProvider({query,section:"attachments",data:{items:[{id:"file",fileName:"secret.txt"}]},authorizer:{authorize:async request=>{resources.push(request.resource);return request.resource?.["resourceCode"]==="document.attachment"?{allowed:false,reason:"denied"}:{allowed:true};}}});
- expect(result).toEqual({items:[]});expect(resources).toEqual([{tenantId:"tenant",entityCode:"document.attachment",resourceCode:"document.attachment",recordId:"file"}]);
+it("declares every BP section and keeps independent attachment admission separate", async () => {
+  const { BUSINESS_PARTNER_360_SECTION_CODES } =
+    await import("@athyper/server-contract-master-data");
+  const { businessPartnerProviderPolicies } =
+    await import("../business-partner-provider-projection.js");
+  expect(Object.keys(businessPartnerProviderPolicies).sort()).toEqual(
+    [...BUSINESS_PARTNER_360_SECTION_CODES].sort(),
+  );
+  const resources: unknown[] = [];
+  const result = await projectBusinessPartnerProvider({
+    query,
+    section: "attachments",
+    data: { items: [{ id: "file", fileName: "secret.txt" }] },
+    authorizer: {
+      authorize: async (request) => {
+        resources.push(request.resource);
+        return request.resource?.["resourceCode"] === "document.attachment"
+          ? { allowed: false, reason: "denied" }
+          : { allowed: true };
+      },
+    },
+  });
+  expect(result).toEqual({ items: [] });
+  expect(resources).toEqual([
+    {
+      tenantId: "tenant",
+      resourceId: "file",
+      resourceCode: "document.attachment",
+      recordId: "file",
+    },
+  ]);
 });
+
+it("omits deferred summary fields while keeping allowed contact fields", async () => {
+  const { businessPartnerSummaryFieldPolicy } =
+    await import("../business-partner-provider-projection.js");
+  const result = await projectBusinessPartnerProvider({
+    query,
+    section: "summary",
+    policy: businessPartnerSummaryFieldPolicy,
+    data: {
+      primaryContact: {
+        id: "contact",
+        displayName: "Visible name",
+        email: "hidden@example.test",
+        phone: "hidden",
+      },
+    },
+    authorizer: {
+      authorize: async (request) =>
+        request.resource?.["providerOperationKey"] === "contact_sensitive_read"
+          ? { allowed: false, reason: "entity_authorization_deferred" }
+          : { allowed: true },
+    },
+  });
+  expect(result).toEqual({
+    primaryContact: { id: "contact", displayName: "Visible name" },
+  });
+});
+
+it.each(["comments", "attachments"])(
+  "does not report an independent %s authorization outage as an empty provider",
+  async (section) => {
+    const authorize = vi.fn(async () => ({
+      allowed: false as const,
+      reason: "entity_authorization_unavailable" as const,
+    }));
+    await expect(
+      projectBusinessPartnerProvider({
+        query,
+        section,
+        data: {
+          items: [
+            {
+              id: "independent-child",
+              fileName: "private.pdf",
+              body: "Private comment",
+            },
+          ],
+        },
+        authorizer: { authorize },
+      }),
+    ).rejects.toMatchObject({ code: "BP_PROVIDER_AUTHORIZATION_UNAVAILABLE" });
+    expect(authorize).toHaveBeenCalledTimes(1);
+  },
+);
+
+it.each(["comments", "attachments"])(
+  "checks each populated %s child independently even when parent fields are allowed",
+  async (section) => {
+    const decisions: string[] = [];
+    const result = await projectBusinessPartnerProvider({
+      query,
+      section,
+      data: {
+        items: [
+          {
+            id: "allowed-child",
+            fileName: "visible.pdf",
+            body: "Visible comment",
+          },
+          {
+            id: "denied-child",
+            fileName: "private.pdf",
+            body: "Private comment",
+          },
+        ],
+      },
+      authorizer: {
+        authorize: async (request) => {
+          if (request.resource?.["resourceCode"]) {
+            const id = String(request.resource["recordId"]);
+            decisions.push(id);
+            return id === "allowed-child"
+              ? { allowed: true }
+              : { allowed: false, reason: "denied" };
+          }
+          return { allowed: true };
+        },
+      },
+    });
+    expect(decisions).toEqual(["allowed-child", "denied-child"]);
+    expect(result).toMatchObject({ items: [{ id: "allowed-child" }] });
+    expect(JSON.stringify(result)).not.toMatch(
+      /denied-child|private\.pdf|Private comment/,
+    );
+  },
+);

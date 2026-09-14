@@ -1,0 +1,10 @@
+{
+  "measuredAt": "2026-09-12T19:27:31.715Z",
+  "fixture": "Isolated production compact lookup; React external; 500 local choices",
+  "fullChooserDeferred": true,
+  "eagerChunks": 3,
+  "eagerRawBytes": 121843,
+  "eagerGzipBytes": 37072,
+  "localSearchP95Milliseconds": 0.0414,
+  "limits": "Search timing excludes browser rendering. Bundle numbers are an isolated fixture, not a deployed application or a before/after baseline."
+}

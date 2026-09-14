@@ -1,3 +1,5 @@
+import { parseEntityIntakeSurfaces } from "@athyper/contract-platform-entity-runtime";
+import { parseEntityIntakeFlows } from "@athyper/contract-platform-entity-runtime";
 import { parseEntityAuthorizationRuntime } from "@athyper/server-contract-metadata";
 import { parseEntityAiDescriptor } from "@athyper/server-contract-metadata";
 import { parseEntityAuthorizationProfile } from "@athyper/server-contract-metadata";
@@ -37,6 +39,9 @@ export function parseEntityRuntimeDescriptor(row: RuntimeDescriptorRow): EntityR
     const permission = action.permissions.find(item => item.plane === planeKey);
     if (permission && operations[action.operationKey]?.permissionCode !== permission.permissionCode) throw new TypeError("List action must reference a published operation with its exact plane permission");
   }
+  const intakeSurfaces = parseEntityIntakeSurfaces(value["intakeSurfaces"] ?? []);
+  const intakeFlows = parseEntityIntakeFlows(value["intakeFlows"] ?? []);
+  for (const flow of intakeFlows) if (!operations[flow.entryOperation] || !operations[flow.completionOperation]) throw new TypeError("Intake references an unpublished operation");
   const recordPresentation = value["recordPresentation"] === undefined ? undefined : parseEntityRecordPresentation(value["recordPresentation"]);
   const authorization = value["authorization"] === undefined ? undefined : parseEntityAuthorizationProfile(value["authorization"], {
     entityCode: row.entity_code, planeKey, fields: fields.map(field => field.key), operations,
@@ -75,6 +80,8 @@ export function parseEntityRuntimeDescriptor(row: RuntimeDescriptorRow): EntityR
       ...(storage["statusField"] ? { statusField: identifier(storage["statusField"], "storage.statusField") } : {}),
     },
     fields,
+    ...(intakeFlows.length ? {intakeFlows} : {}),
+    ...(intakeSurfaces.length ? {intakeSurfaces} : {}),
     ...(authorization ? { authorization } : {}),
     ...(authorizationRuntime ? { authorizationRuntime } : {}),
     ...(ai ? { ai } : {}),

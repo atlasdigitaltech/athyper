@@ -23,10 +23,12 @@ export const BUSINESS_PARTNER_360_SECTION_CODES = Object.freeze([
   "attachments",
 ] as const);
 
-export type BusinessPartner360SectionCode = typeof BUSINESS_PARTNER_360_SECTION_CODES[number];
+export type BusinessPartner360SectionCode =
+  (typeof BUSINESS_PARTNER_360_SECTION_CODES)[number];
 export type BusinessPartner360RoleLens = "all" | "supplier" | "customer";
-export type BusinessPartner360PartyCategory = "organization" | "person";
-export type BusinessPartner360SectionState = "ready" | "empty" | "partial" | "stale" | "unavailable";
+export type BusinessPartner360PartyCategory = "organization";
+export type BusinessPartner360SectionState =
+  "ready" | "empty" | "partial" | "stale" | "unavailable";
 export type BusinessPartner360SectionAuthorization = "granted" | "restricted";
 
 export const BUSINESS_PARTNER_360_PERMISSIONS = Object.freeze({
@@ -53,15 +55,29 @@ export const BUSINESS_PARTNER_360_PERMISSIONS = Object.freeze({
   amend: "neon.relationship.business_partner_amend.create",
 } as const);
 
-export type BusinessPartner360Permission = typeof BUSINESS_PARTNER_360_PERMISSIONS[keyof typeof BUSINESS_PARTNER_360_PERMISSIONS];
+export type BusinessPartner360Permission =
+  (typeof BUSINESS_PARTNER_360_PERMISSIONS)[keyof typeof BUSINESS_PARTNER_360_PERMISSIONS];
 
 export const BUSINESS_PARTNER_360_COMPLETENESS_PACK_CODES = Object.freeze([
-  "organization_base", "supplier_scope", "supplier_payable", "customer_scope",
-  "customer_credit", "person_base", "workforce_active",
+  "organization_base",
+  "supplier_scope",
+  "supplier_payable",
+  "customer_scope",
+  "customer_credit",
 ] as const);
-export type BusinessPartner360CompletenessPackCode = typeof BUSINESS_PARTNER_360_COMPLETENESS_PACK_CODES[number];
-export type BusinessPartner360CompletenessActionCode = "amend_partner" | "add_role" | "assign_organization" | "configure_company" | "change_bank" | "lifecycle" | "qualification" | "certification";
-export type BusinessPartner360RequirementState = "satisfied" | "restricted_satisfied" | "missing";
+export type BusinessPartner360CompletenessPackCode =
+  (typeof BUSINESS_PARTNER_360_COMPLETENESS_PACK_CODES)[number];
+export type BusinessPartner360CompletenessActionCode =
+  | "amend_partner"
+  | "add_role"
+  | "assign_organization"
+  | "configure_company"
+  | "change_bank"
+  | "lifecycle"
+  | "qualification"
+  | "certification";
+export type BusinessPartner360RequirementState =
+  "satisfied" | "restricted_satisfied" | "missing";
 
 export interface BusinessPartner360RequirementDefinition {
   readonly code: string;
@@ -92,7 +108,10 @@ export interface BusinessPartner360Scope {
   readonly asOf: string;
 }
 
-export type BusinessPartner360PublicScope = Omit<BusinessPartner360Scope, "tenantId">;
+export type BusinessPartner360PublicScope = Omit<
+  BusinessPartner360Scope,
+  "tenantId"
+>;
 
 export interface BusinessPartner360Query {
   readonly context: VerifiedRequestContext;
@@ -135,27 +154,41 @@ export interface BusinessPartner360SectionManifest {
   readonly reasonCode?: BusinessPartner360ReasonCode;
   readonly lastChangedAt?: string;
   readonly redactionClass?: "none" | "masked" | "presence_only";
-  readonly actions?: readonly Readonly<{ code: string; href: string; permission: BusinessPartner360Permission }> [];
+  readonly actions?: readonly Readonly<{
+    code: string;
+    href: string;
+    permission: BusinessPartner360Permission;
+  }>[];
 }
 
 export interface BusinessPartner360Summary {
-  readonly collaboration?: Readonly<{canComment:boolean}>;
-  readonly directoryScope?:"tenant"|"organization"|"company"|"organization_company";readonly recordHeader?: import("@athyper/contract-platform-entity-runtime").EntityRecordHeaderV1;
+  readonly collaboration?: Readonly<{ canComment: boolean }>;
+  readonly directoryScope?:
+    "tenant" | "organization" | "company" | "organization_company";
+  readonly recordHeader?: import("@athyper/contract-platform-entity-runtime").EntityRecordHeaderV1;
   readonly schemaVersion: typeof BUSINESS_PARTNER_360_SCHEMA_VERSION;
   readonly asOf: string;
   readonly generatedAt: string;
   readonly businessPartnerVersion: number;
-  readonly definition: Readonly<{ code: "business_partner.onboarding"; version: string; hash: string }>;
+  readonly definition: Readonly<{
+    code: "business_partner.onboarding";
+    version: string;
+    hash: string;
+  }>;
   readonly scope: BusinessPartner360PublicScope;
   readonly identity: Readonly<{
     id: string;
     code: string;
     category: BusinessPartner360PartyCategory;
-    displayName: string;
-    legalName?: string;
+    name: string;
     lifecycleStatus: string;
   }>;
-  readonly roles: readonly Readonly<{ id: string; code: "supplier" | "customer"; roleCode?: string; status: string }>[];
+  readonly roles: readonly Readonly<{
+    id: string;
+    code: "supplier" | "customer";
+    roleCode?: string;
+    status: string;
+  }>[];
   readonly primaryAddress?: BusinessPartner360AddressSummary;
   readonly primaryContact?: BusinessPartner360ContactSummary;
   readonly identifiers: readonly BusinessPartner360MaskedIdentifierSummary[];
@@ -203,14 +236,18 @@ export interface BusinessPartner360MaskedIdentifierSummary {
 }
 
 export interface BusinessPartner360CompletenessSummary {
-  readonly status: "complete" | "incomplete" | "not_applicable" | "definition_unavailable";
+  readonly status:
+    "complete" | "incomplete" | "not_applicable" | "definition_unavailable";
   readonly percent: number;
   readonly requiredCount: number;
   readonly completeCount: number;
   readonly restrictedCount: number;
   readonly required: readonly BusinessPartner360RequirementResult[];
   readonly recommended: readonly BusinessPartner360RequirementResult[];
-  readonly packs: readonly Readonly<{ code: BusinessPartner360CompletenessPackCode; version: number }> [];
+  readonly packs: readonly Readonly<{
+    code: BusinessPartner360CompletenessPackCode;
+    version: number;
+  }>[];
   readonly readOnly: boolean;
   readonly missing: readonly Readonly<{
     code: string;
@@ -243,8 +280,8 @@ export interface BusinessPartner360RequirementResult {
 }
 
 export interface BusinessPartner360OpenWorkSummary {
-  readonly activeRequestCount: number;
-  readonly returnedRequestCount: number;
+  readonly activeRequestCount?: number;
+  readonly returnedRequestCount?: number;
   readonly expiringQualificationCount: number;
   readonly expiringCertificateCount: number;
   readonly pendingBankVerificationCount: number;
@@ -256,7 +293,10 @@ export interface BusinessPartner360ActivitySummary {
   readonly category: string;
   readonly eventCode: string;
   readonly title: string;
-  readonly source: Readonly<{ plane: "neon" | "mesh" | "studio"; service: string }>;
+  readonly source: Readonly<{
+    plane: "neon" | "mesh" | "studio";
+    service: string;
+  }>;
 }
 
 export interface BusinessPartner360Section<T> {
@@ -286,7 +326,8 @@ export const BUSINESS_PARTNER_360_REASON_CODES = Object.freeze([
   "BP_360_CURSOR_STALE",
 ] as const);
 
-export type BusinessPartner360ReasonCode = typeof BUSINESS_PARTNER_360_REASON_CODES[number];
+export type BusinessPartner360ReasonCode =
+  (typeof BUSINESS_PARTNER_360_REASON_CODES)[number];
 
 export interface BusinessPartner360SafeError {
   readonly status: 400 | 403 | 404 | 409 | 503;
@@ -298,11 +339,28 @@ export interface BusinessPartner360SafeError {
 export interface BusinessPartner360Service {
   /** Read-only workflow readiness. Execution separately validates purpose,
    * child ownership and replay claims before returning a restricted value. */
-  preflightReveal?(query: BusinessPartner360Query & {readonly kind: "bank" | "tax"; readonly historical?: boolean}): Promise<"allowed" | "workflow_blocked" | "not_applicable">;
+  preflightReveal?(
+    query: BusinessPartner360Query & {
+      readonly kind: "bank" | "tax";
+      readonly historical?: boolean;
+    },
+  ): Promise<"allowed" | "workflow_blocked" | "not_applicable">;
   summary(query: BusinessPartner360Query): Promise<BusinessPartner360Summary>;
-  section<T=unknown>(query:BusinessPartner360PageQuery&{readonly sectionCode:BusinessPartner360SectionCode}):Promise<BusinessPartner360Section<T>>;
-  revealTaxRegistration(command:import("./business-partner-360-sections.js").BusinessPartner360TaxRevealCommand):Promise<import("./business-partner-360-sections.js").BusinessPartner360TaxRevealResult>;
-  revealBankAccount(command:import("./business-partner-360-commercial-controls.js").BusinessPartner360BankRevealCommand):Promise<import("./business-partner-360-commercial-controls.js").BusinessPartner360BankRevealResult>;
+  section<T = unknown>(
+    query: BusinessPartner360PageQuery & {
+      readonly sectionCode: BusinessPartner360SectionCode;
+    },
+  ): Promise<BusinessPartner360Section<T>>;
+  revealTaxRegistration(
+    command: import("./business-partner-360-sections.js").BusinessPartner360TaxRevealCommand,
+  ): Promise<
+    import("./business-partner-360-sections.js").BusinessPartner360TaxRevealResult
+  >;
+  revealBankAccount(
+    command: import("./business-partner-360-commercial-controls.js").BusinessPartner360BankRevealCommand,
+  ): Promise<
+    import("./business-partner-360-commercial-controls.js").BusinessPartner360BankRevealResult
+  >;
 }
 
 export interface BusinessPartner360SectionDefinition {
@@ -321,26 +379,163 @@ const allCategories = ["organization"] as const;
 const allRoles = ["supplier", "customer"] as const;
 const route = (name: string) => `/api/neon/business-partners/:id/360/${name}`;
 
-export const BUSINESS_PARTNER_360_SECTION_DEFINITIONS: readonly BusinessPartner360SectionDefinition[] = Object.freeze([
-  definition("overview", [], allCategories, allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.record),
-  definition("identity", [route("identity")], allCategories, allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.identity),
-  definition("contacts", [route("contacts")], allCategories, allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.contact),
-  definition("addresses", [route("addresses")], allCategories, allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.address),
-  definition("identifiers-tax", [route("identifiers")], allCategories, allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.identifierMasked, [BUSINESS_PARTNER_360_PERMISSIONS.taxMasked]),
-  definition("governance", [route("governance")], ["organization"], allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.identity),
-  definition("roles-scope", [route("roles")], allCategories, allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.record),
-  definition("supplier-company", [route("company-configuration")], ["organization"], ["supplier"], false, BUSINESS_PARTNER_360_PERMISSIONS.record),
-  definition("customer-company", [route("company-configuration")], ["organization"], ["customer"], false, BUSINESS_PARTNER_360_PERMISSIONS.record),
-  definition("banking", [route("banking")], ["organization"], ["supplier"], true, BUSINESS_PARTNER_360_PERMISSIONS.bankMasked, [BUSINESS_PARTNER_360_PERMISSIONS.bankReveal]),
-  definition("qualifications-certificates", [route("qualifications"), route("certificates")], ["organization"], allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.qualification, [BUSINESS_PARTNER_360_PERMISSIONS.certificate, BUSINESS_PARTNER_360_PERMISSIONS.attachment]),
-  definition("credit", [route("credit")], ["organization"], ["customer"], false, BUSINESS_PARTNER_360_PERMISSIONS.credit),
-  definition("requests", [route("requests")], allCategories, allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.request),
-  definition("activity", [route("activity")], allCategories, allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.activity),
-  definition("business-activity", [route("business-activity")], allCategories, ["supplier", "customer"], false, BUSINESS_PARTNER_360_PERMISSIONS.record),
-  definition("comments", [route("comments")], allCategories, allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.comment),
-  definition("attachments", [route("attachments")], allCategories, allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.attachment, [BUSINESS_PARTNER_360_PERMISSIONS.certificate]),
-  definition("network", [route("network")], allCategories, ["supplier", "customer"], false, BUSINESS_PARTNER_360_PERMISSIONS.network),
-]);
+export const BUSINESS_PARTNER_360_SECTION_DEFINITIONS: readonly BusinessPartner360SectionDefinition[] =
+  Object.freeze([
+    definition(
+      "overview",
+      [],
+      allCategories,
+      allRoles,
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.record,
+    ),
+    definition(
+      "identity",
+      [route("identity")],
+      allCategories,
+      allRoles,
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.identity,
+    ),
+    definition(
+      "contacts",
+      [route("contacts")],
+      allCategories,
+      allRoles,
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.contact,
+    ),
+    definition(
+      "addresses",
+      [route("addresses")],
+      allCategories,
+      allRoles,
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.address,
+    ),
+    definition(
+      "identifiers-tax",
+      [route("identifiers")],
+      allCategories,
+      allRoles,
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.identifierMasked,
+      [
+        BUSINESS_PARTNER_360_PERMISSIONS.taxMasked,
+        BUSINESS_PARTNER_360_PERMISSIONS.taxReveal,
+      ],
+    ),
+    definition(
+      "governance",
+      [route("governance")],
+      ["organization"],
+      allRoles,
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.identity,
+    ),
+    definition(
+      "roles-scope",
+      [route("roles")],
+      allCategories,
+      allRoles,
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.record,
+    ),
+    definition(
+      "supplier-company",
+      [route("company-configuration")],
+      ["organization"],
+      ["supplier"],
+      false,
+      BUSINESS_PARTNER_360_PERMISSIONS.record,
+    ),
+    definition(
+      "customer-company",
+      [route("company-configuration")],
+      ["organization"],
+      ["customer"],
+      false,
+      BUSINESS_PARTNER_360_PERMISSIONS.record,
+    ),
+    definition(
+      "banking",
+      [route("banking")],
+      ["organization"],
+      ["supplier"],
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.bankMasked,
+      [BUSINESS_PARTNER_360_PERMISSIONS.bankReveal],
+    ),
+    definition(
+      "qualifications-certificates",
+      [route("qualifications"), route("certificates")],
+      ["organization"],
+      allRoles,
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.qualification,
+      [
+        BUSINESS_PARTNER_360_PERMISSIONS.certificate,
+        BUSINESS_PARTNER_360_PERMISSIONS.attachment,
+      ],
+    ),
+    definition(
+      "credit",
+      [route("credit")],
+      ["organization"],
+      ["customer"],
+      false,
+      BUSINESS_PARTNER_360_PERMISSIONS.credit,
+    ),
+    definition(
+      "requests",
+      [route("requests")],
+      allCategories,
+      allRoles,
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.request,
+    ),
+    definition(
+      "activity",
+      [route("activity")],
+      allCategories,
+      allRoles,
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.activity,
+    ),
+    definition(
+      "business-activity",
+      [route("business-activity")],
+      allCategories,
+      ["supplier", "customer"],
+      false,
+      BUSINESS_PARTNER_360_PERMISSIONS.record,
+    ),
+    definition(
+      "comments",
+      [route("comments")],
+      allCategories,
+      allRoles,
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.comment,
+    ),
+    definition(
+      "attachments",
+      [route("attachments")],
+      allCategories,
+      allRoles,
+      true,
+      BUSINESS_PARTNER_360_PERMISSIONS.attachment,
+      [BUSINESS_PARTNER_360_PERMISSIONS.certificate],
+    ),
+    definition(
+      "network",
+      [route("network")],
+      allCategories,
+      ["supplier", "customer"],
+      false,
+      BUSINESS_PARTNER_360_PERMISSIONS.network,
+    ),
+  ]);
 
 const forbiddenPhase1Keys = new Set([
   "risk",
@@ -359,8 +554,26 @@ export function assertBusinessPartner360Phase1Contract(value: unknown): void {
   visit(value, "$", new Set<object>());
 }
 
-function definition(code: BusinessPartner360SectionCode, routes: readonly string[], categories: readonly BusinessPartner360PartyCategory[], roles: readonly ("supplier" | "customer")[], global: boolean, permission: BusinessPartner360Permission, fieldPermissions: readonly BusinessPartner360Permission[] = []): BusinessPartner360SectionDefinition {
-  return Object.freeze({ ...(code === "banking" ? {visibleAcrossRoles: true} : {}), code, routes: Object.freeze([...routes]), categories: Object.freeze([...categories]), roles: Object.freeze([...roles]), global, permission, fieldPermissions: Object.freeze([...fieldPermissions]), discoverableWhenDenied: false });
+function definition(
+  code: BusinessPartner360SectionCode,
+  routes: readonly string[],
+  categories: readonly BusinessPartner360PartyCategory[],
+  roles: readonly ("supplier" | "customer")[],
+  global: boolean,
+  permission: BusinessPartner360Permission,
+  fieldPermissions: readonly BusinessPartner360Permission[] = [],
+): BusinessPartner360SectionDefinition {
+  return Object.freeze({
+    ...(code === "banking" ? { visibleAcrossRoles: true } : {}),
+    code,
+    routes: Object.freeze([...routes]),
+    categories: Object.freeze([...categories]),
+    roles: Object.freeze([...roles]),
+    global,
+    permission,
+    fieldPermissions: Object.freeze([...fieldPermissions]),
+    discoverableWhenDenied: false,
+  });
 }
 
 function visit(value: unknown, path: string, seen: Set<object>): void {
@@ -373,7 +586,8 @@ function visit(value: unknown, path: string, seen: Set<object>): void {
   }
   for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
     const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
-    if (forbiddenPhase1Keys.has(normalized)) throw new TypeError(`BP_360_PHASE1_RISK_FIELD_FORBIDDEN:${path}.${key}`);
+    if (forbiddenPhase1Keys.has(normalized))
+      throw new TypeError(`BP_360_PHASE1_RISK_FIELD_FORBIDDEN:${path}.${key}`);
     visit(item, `${path}.${key}`, seen);
   }
 }

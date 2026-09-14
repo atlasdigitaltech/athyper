@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { ClipboardCheckIcon } from "@athyper/platform-icons";
 import { PageFrame, PageHeader } from "@athyper/platform-shell";
 import { BusinessPartnerOperationsWorkspace } from "@athyper/product-studio-business-partner";
-import qualification from "../../../../../../../governance/config/governance/business-partner-v1-qualification.v1.json";
-import releaseQualification from "../../../../../../../governance/config/governance/business-partner-r8-qualification.v1.json";
+import qualification from "@athyper/governance-qualification-data/business-partner-v1";
+import releaseQualification from "@athyper/governance-qualification-data/business-partner-r8";
 
 export const metadata: Metadata = { title: "Business Partner Operations" };
 

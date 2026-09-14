@@ -2,9 +2,9 @@ import type { BusinessPartnerDefinitionBundleV1,PublicationCanonicalizer,Publica
 import { parseBusinessPartnerDefinitionBundle,BusinessPartnerDefinitionError } from "./business-partner-definition-service.js";
 
 export const BUSINESS_PARTNER_DEFINITION_COMPILER_VERSION="2.0.0";
-export const BUSINESS_PARTNER_DEFINITION_REQUEST_KEYS=Object.freeze(["supplier.new","supplier.add","supplier.qualify","supplier.company","supplier.bank","customer.new","customer.add","customer.credit","customer.company","workforce.new","workforce.add","workforce.change","workforce.offboard"] as const);
+export const BUSINESS_PARTNER_DEFINITION_REQUEST_KEYS=Object.freeze(["supplier.new","supplier.add","supplier.qualify","supplier.company","supplier.bank","customer.new","customer.add","customer.credit","customer.company"] as const);
 const sources=["internal","portal","mesh","import","api"] as const;
-const journeys=["supplier","customer","workforce"] as const;
+const journeys=["supplier","customer"] as const;
 
 export interface BusinessPartnerDefinitionCompileReport {readonly schema:"athyper.business-partner-definition-compile-report.v1";readonly compilerVersion:string;readonly plane:PublicationPlane;readonly sourceBundleHash:string;readonly compiledBundleHash:string;readonly requestSchemaKeys:readonly string[];readonly mappingSources:readonly string[];readonly workflowJourneys:readonly string[];readonly omittedSections:readonly string[];readonly deterministic:true;readonly compatible:true;}
 
@@ -22,7 +22,7 @@ export function validateCompleteBusinessPartnerDefinition(value:unknown):Busines
  if(BUSINESS_PARTNER_DEFINITION_REQUEST_KEYS.some(key=>!requests.includes(key)))throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_REQUEST_MATRIX_INCOMPLETE");
  for(const source of sources)if(!(source in bundle.mappingContracts))throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_MAPPING_MATRIX_INCOMPLETE",source);
  for(const journey of journeys)if(!(journey in bundle.workflowDefinitions)||!(journey in bundle.evidencePolicies)||!(journey in bundle.readinessGates))throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_POLICY_MATRIX_INCOMPLETE",journey);
- if(!("organization" in bundle.fieldPolicies)||!("person" in bundle.fieldPolicies)||!("organization" in bundle.duplicateRules)||!("person" in bundle.duplicateRules))throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_PARTY_POLICY_INCOMPLETE");
+ if(!("organization" in bundle.fieldPolicies)||!("organization" in bundle.duplicateRules))throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_PARTY_POLICY_INCOMPLETE");
  if(!("organizationProfile" in bundle.meshSafeSchemas)||!("selectiveAcceptance" in bundle.meshSafeSchemas))throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_MESH_SCHEMA_INCOMPLETE");
  if(!Object.keys(bundle.reasonCodeCatalog).length)throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_REASON_CATALOG_EMPTY");
  return bundle;

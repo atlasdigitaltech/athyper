@@ -30,3 +30,6 @@ REVOKE ALL ON FUNCTION publication.trg_validate_business_partner_definition_rele
 
 REVOKE ALL ON publication.business_partner_case_contract_release_link FROM PUBLIC;
 GRANT SELECT, INSERT ON publication.business_partner_case_contract_release_link TO athyper_publication_service;
+
+REVOKE ALL ON FUNCTION publication.fn_prepare_document_collection_release(uuid,jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION publication.fn_prepare_document_collection_release(uuid,jsonb) TO athyper_publication_service;

@@ -1,6 +1,15 @@
-import { readBusinessPartnerShadowConfig, type BusinessPartnerShadowConfig } from "../composition/business-partner-authorization-shadow.js";
-import { parseProviderVerificationKeys, type ProviderVerificationKey } from "@athyper/server-service-master-data";
-import { parseBusinessPartnerMetricsTargets, type BusinessPartnerMetricsTarget } from "../monitoring/business-partner-metrics.js";
+import {
+  readBusinessPartnerShadowConfig,
+  type BusinessPartnerShadowConfig,
+} from "../composition/business-partner-authorization-shadow.js";
+import {
+  parseProviderVerificationKeys,
+  type ProviderVerificationKey,
+} from "@athyper/server-service-master-data";
+import {
+  parseBusinessPartnerMetricsTargets,
+  type BusinessPartnerMetricsTarget,
+} from "../monitoring/business-partner-metrics.js";
 
 export interface HostConfig {
   businessPartnerAuthorizationShadow?: BusinessPartnerShadowConfig;
@@ -82,9 +91,19 @@ export interface HostConfig {
     endpoint: string | undefined;
     publicEndpoint: string | undefined;
     region: string;
-    bucket: string | undefined;
+    buckets:
+      | {
+          documents: string;
+          artifacts: string;
+          transfers: string;
+        }
+      | undefined;
     accessKeyId: string | undefined;
     secretAccessKey: string | undefined;
+    credentialProfile?: string;
+    artifactsWriterCredentialProfile?: string;
+    artifactsWriterAccessKeyId: string | undefined;
+    artifactsWriterSecretAccessKey: string | undefined;
     multipartPartSizeMb: number;
     multipartQueueSize: number;
     maxUploadMb: number;
@@ -93,6 +112,7 @@ export interface HostConfig {
     tenantQuotaItems: number;
     quotaReservationTtlSeconds: number;
     quotaRetryAfterSeconds: number;
+    scanStreamTimeoutMs: number;
   };
   malwareScanning: {
     host: string | undefined;
@@ -100,6 +120,8 @@ export interface HostConfig {
     timeoutMs: number;
     maxBytes: number;
     onUnavailable: "fail-closed";
+    signatureMaxAgeMs: number;
+    signatureCheckIntervalMs: number;
   };
   openTelemetry: {
     endpoint: string | undefined;
@@ -237,8 +259,15 @@ export function loadConfig(): HostConfig {
   const verificationKeyJson = process.env["MASTER_DATA_VERIFICATION_KEYS_JSON"];
   let masterDataVerificationKeys: readonly ProviderVerificationKey[] = [];
   if (verificationKeyJson !== undefined) {
-    try { masterDataVerificationKeys = parseProviderVerificationKeys(JSON.parse(verificationKeyJson)); }
-    catch { throw new Error("Invalid MASTER_DATA_VERIFICATION_KEYS_JSON: configure scoped Ed25519 public keys with valid UTC key windows"); }
+    try {
+      masterDataVerificationKeys = parseProviderVerificationKeys(
+        JSON.parse(verificationKeyJson),
+      );
+    } catch {
+      throw new Error(
+        "Invalid MASTER_DATA_VERIFICATION_KEYS_JSON: configure scoped Ed25519 public keys with valid UTC key windows",
+      );
+    }
   }
   const rawEnv = process.env["ATHYPER_ENV"] ?? process.env["ENVIRONMENT"];
   const env = (["local", "staging", "production"] as const).includes(
@@ -249,21 +278,47 @@ export function loadConfig(): HostConfig {
       ? "production"
       : "local";
   const notificationCapture = readBoolean("NOTIFICATION_CAPTURE", false);
-  if (notificationCapture && (env !== "local" || (rawEnv !== "local"))) {
-    throw new Error("NOTIFICATION_CAPTURE requires explicit ATHYPER_ENV=local (including isolated QA)");
+  if (notificationCapture && (env !== "local" || rawEnv !== "local")) {
+    throw new Error(
+      "NOTIFICATION_CAPTURE requires explicit ATHYPER_ENV=local (including isolated QA)",
+    );
   }
-  const localContactDeliveryKey = process.env["LOCAL_CONTACT_CHALLENGE_DELIVERY_KEY"]?.trim();
-  if (localContactDeliveryKey && (env !== "local" || !notificationCapture || Buffer.from(localContactDeliveryKey,"base64").length !== 32)) throw new Error("Local delivery key requires local capture and 32 bytes");
-  const localChallengeEnabled = readBoolean("LOCAL_CONTACT_CHALLENGE_ENABLED", false);
-  const localContactChallenge = localChallengeEnabled ? {
-    environment: env, capture: notificationCapture,
-    tenantId: "44444444-4444-4444-8444-444444444444",
-    privateKeyPem: process.env["LOCAL_CONTACT_CHALLENGE_PRIVATE_KEY"] ?? "",
-    keyId: process.env["LOCAL_CONTACT_CHALLENGE_KEY_ID"] ?? "local-contact-challenge-v1",
-    pageUrl: "https://neon.dev.athyper.test/contact-verification.html",
-  } : undefined;
-  if (localContactChallenge && (env !== "local" || !notificationCapture || !localContactChallenge.privateKeyPem || !masterDataVerificationKeys.length || !localContactDeliveryKey)) {
-    throw new Error("Local contact challenges require local capture, private key and verifier trust");
+  const localContactDeliveryKey =
+    process.env["LOCAL_CONTACT_CHALLENGE_DELIVERY_KEY"]?.trim();
+  if (
+    localContactDeliveryKey &&
+    (env !== "local" ||
+      !notificationCapture ||
+      Buffer.from(localContactDeliveryKey, "base64").length !== 32)
+  )
+    throw new Error("Local delivery key requires local capture and 32 bytes");
+  const localChallengeEnabled = readBoolean(
+    "LOCAL_CONTACT_CHALLENGE_ENABLED",
+    false,
+  );
+  const localContactChallenge = localChallengeEnabled
+    ? {
+        environment: env,
+        capture: notificationCapture,
+        tenantId: "44444444-4444-4444-8444-444444444444",
+        privateKeyPem: process.env["LOCAL_CONTACT_CHALLENGE_PRIVATE_KEY"] ?? "",
+        keyId:
+          process.env["LOCAL_CONTACT_CHALLENGE_KEY_ID"] ??
+          "local-contact-challenge-v1",
+        pageUrl: "https://neon.dev.athyper.test/contact-verification.html",
+      }
+    : undefined;
+  if (
+    localContactChallenge &&
+    (env !== "local" ||
+      !notificationCapture ||
+      !localContactChallenge.privateKeyPem ||
+      !masterDataVerificationKeys.length ||
+      !localContactDeliveryKey)
+  ) {
+    throw new Error(
+      "Local contact challenges require local capture, private key and verifier trust",
+    );
   }
   const mode = process.env["MODE"] ?? "api";
 
@@ -425,7 +480,33 @@ export function loadConfig(): HostConfig {
   }
   const s3Endpoint = process.env["S3_ENDPOINT"]?.trim();
   const s3PublicEndpoint = process.env["S3_PUBLIC_ENDPOINT"]?.trim();
-  const s3Bucket = process.env["S3_BUCKET"]?.trim();
+  const s3BucketDocuments = process.env["S3_BUCKET_DOCUMENTS"]?.trim();
+  const s3BucketArtifacts = process.env["S3_BUCKET_ARTIFACTS"]?.trim();
+  const s3BucketTransfers = process.env["S3_BUCKET_TRANSFERS"]?.trim();
+  const s3BucketsPresent = [
+    s3BucketDocuments,
+    s3BucketArtifacts,
+    s3BucketTransfers,
+  ].filter(Boolean).length;
+  if (process.env["S3_BUCKET"]?.trim() && s3BucketsPresent === 0)
+    throw new Error(
+      "S3_BUCKET is retired; configure S3_BUCKET_DOCUMENTS, S3_BUCKET_ARTIFACTS, and S3_BUCKET_TRANSFERS",
+    );
+  if (s3BucketsPresent > 0 && s3BucketsPresent < 3)
+    throw new Error(
+      "Object storage requires S3_BUCKET_DOCUMENTS, S3_BUCKET_ARTIFACTS, and S3_BUCKET_TRANSFERS to all be set",
+    );
+  const s3Buckets =
+    s3BucketDocuments && s3BucketArtifacts && s3BucketTransfers
+      ? {
+          documents: s3BucketDocuments,
+          artifacts: s3BucketArtifacts,
+          transfers: s3BucketTransfers,
+        }
+      : undefined;
+  const s3CredentialProfile = process.env["APP_S3_PROFILE"]?.trim();
+  const s3WriterCredentialProfile =
+    process.env["ARTIFACTS_WRITER_S3_PROFILE"]?.trim();
   const s3AccessKeyId =
     process.env["APP_S3_ACCESS_KEY"]?.trim() ??
     (env === "local" ? process.env["S3_ACCESS_KEY"]?.trim() : undefined);
@@ -436,7 +517,49 @@ export function loadConfig(): HostConfig {
     throw new Error(
       "Object storage requires both APP_S3_ACCESS_KEY and APP_S3_SECRET_KEY",
     );
+  const s3ArtifactsWriterAccessKeyId =
+    process.env["ARTIFACTS_WRITER_S3_ACCESS_KEY"]?.trim();
+  const s3ArtifactsWriterSecretAccessKey =
+    process.env["ARTIFACTS_WRITER_S3_SECRET_KEY"]?.trim();
+  if (
+    (s3Buckets !== undefined &&
+      !s3WriterCredentialProfile &&
+      (!s3ArtifactsWriterAccessKeyId || !s3ArtifactsWriterSecretAccessKey)) ||
+    Boolean(s3ArtifactsWriterAccessKeyId) !==
+      Boolean(s3ArtifactsWriterSecretAccessKey)
+  )
+    throw new Error(
+      "Object storage requires both ARTIFACTS_WRITER_S3_ACCESS_KEY and ARTIFACTS_WRITER_S3_SECRET_KEY",
+    );
   const s3Region = process.env["S3_REGION"]?.trim() || "us-east-1";
+  if (
+    (s3CredentialProfile && s3AccessKeyId) ||
+    (s3WriterCredentialProfile && s3ArtifactsWriterAccessKeyId)
+  )
+    throw new Error(
+      "S3 profiles and static credentials are mutually exclusive",
+    );
+  if (env !== "local") {
+    if (!s3Buckets || !process.env["S3_REGION"]?.trim())
+      throw new Error(
+        "STG/PROD storage is pending provisioning: configure all three S3 buckets and S3_REGION",
+      );
+    if (s3Endpoint || s3PublicEndpoint)
+      throw new Error(
+        "STG/PROD uses regional Amazon S3 endpoints; remove S3_ENDPOINT and S3_PUBLIC_ENDPOINT",
+      );
+    if (
+      !s3CredentialProfile ||
+      !s3WriterCredentialProfile ||
+      s3CredentialProfile === s3WriterCredentialProfile
+    )
+      throw new Error(
+        "STG/PROD requires separate APP_S3_PROFILE and ARTIFACTS_WRITER_S3_PROFILE identities",
+      );
+    if (new Set(Object.values(s3Buckets)).size !== 3)
+      throw new Error("STG/PROD requires three distinct S3 buckets");
+  }
+
   const s3MultipartPartSizeMb = readPositiveInteger(
     "S3_MULTIPART_PART_SIZE_MB",
     5,
@@ -466,6 +589,12 @@ export function loadConfig(): HostConfig {
     "ATTACHMENT_QUOTA_RETRY_AFTER_SECONDS",
     900,
   );
+  // Overall deadline for finalize()'s download+scan phase; releases the underlying S3 stream on
+  // expiry rather than leaving it idle indefinitely.
+  const attachmentScanStreamTimeoutMs = readPositiveInteger(
+    "ATTACHMENT_SCAN_TIMEOUT_MS",
+    5 * 60 * 1_000,
+  );
   const clamdHost = process.env["CLAMD_HOST"]?.trim();
   const clamdPort = readPositiveInteger("CLAMD_PORT", 3310);
   if (clamdPort > 65_535) throw new Error("CLAMD_PORT must not exceed 65535");
@@ -477,6 +606,15 @@ export function loadConfig(): HostConfig {
   const clamdOnUnavailable = readChoice("CLAMD_ON_UNAVAILABLE", "fail-closed", [
     "fail-closed",
   ] as const);
+  // Application-level check, independent of the deploy-side signature-file-age container healthcheck.
+  const clamdSignatureMaxAgeMs = readPositiveInteger(
+    "CLAMD_SIGNATURE_MAX_AGE_MS",
+    2 * 24 * 60 * 60 * 1_000,
+  );
+  const clamdSignatureCheckIntervalMs = readPositiveInteger(
+    "CLAMD_SIGNATURE_CHECK_INTERVAL_MS",
+    5 * 60 * 1_000,
+  );
   const otlpEndpoint = process.env["OTEL_EXPORTER_OTLP_ENDPOINT"]?.trim();
   const otelServiceName =
     process.env["OTEL_SERVICE_NAME"]?.trim() ||
@@ -518,8 +656,17 @@ export function loadConfig(): HostConfig {
       "SMTP configuration requires SMTP_HOST, SMTP_FROM, and both or neither of SMTP_USER and SMTP_PASS",
     );
   }
-  if (notificationCapture && (emailProvider !== "smtp" || !smtpHost || !["mailtrap", "localhost", "127.0.0.1", "::1"].includes(smtpHost) || smtpUser || smtpPassword)) {
-    throw new Error("NOTIFICATION_CAPTURE requires unauthenticated local Mailpit SMTP and EMAIL_PROVIDER=smtp");
+  if (
+    notificationCapture &&
+    (emailProvider !== "smtp" ||
+      !smtpHost ||
+      !["mailtrap", "localhost", "127.0.0.1", "::1"].includes(smtpHost) ||
+      smtpUser ||
+      smtpPassword)
+  ) {
+    throw new Error(
+      "NOTIFICATION_CAPTURE requires unauthenticated local Mailpit SMTP and EMAIL_PROVIDER=smtp",
+    );
   }
   if (emailProvider === "smtp" && (!smtpHost || !smtpFromAddress)) {
     throw new Error("EMAIL_PROVIDER=smtp requires SMTP_HOST and SMTP_FROM");
@@ -653,17 +800,20 @@ export function loadConfig(): HostConfig {
     5_000_000,
   );
   const searchBaseUrl = process.env["SEARCHCORE_URL"]?.trim();
-  const searchApiKey = process.env["SEARCHCORE_MASTER_KEY"]?.trim();
+  const searchApiKey = process.env["SEARCHCORE_API_KEY"]?.trim();
   if (Boolean(searchBaseUrl) !== Boolean(searchApiKey))
     throw new Error(
-      "Search requires both SEARCHCORE_URL and SEARCHCORE_MASTER_KEY",
+      "Search requires both SEARCHCORE_URL and SEARCHCORE_API_KEY",
     );
   const searchIndexUid =
     process.env["SEARCHCORE_DOCUMENT_INDEX"]?.trim() || "documents";
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(searchIndexUid))
     throw new Error("SEARCHCORE_DOCUMENT_INDEX is invalid");
   const searchTimeoutMs = readPositiveInteger("SEARCHCORE_TIMEOUT_MS", 10_000);
-  const publicationAuthoringEnabled = readBoolean("PUBLICATION_AUTHORING_ENABLED", false);
+  const publicationAuthoringEnabled = readBoolean(
+    "PUBLICATION_AUTHORING_ENABLED",
+    false,
+  );
   const publicationApiEnabled = readBoolean("PUBLICATION_API_ENABLED", false);
   const publicationCompileEnabled = readBoolean(
     "PUBLICATION_COMPILE_ENABLED",
@@ -705,7 +855,16 @@ export function loadConfig(): HostConfig {
     process.env["PUBLICATION_PRIVATE_KEY_REFERENCE"]?.trim();
   const publicationPublicKeyReference =
     process.env["PUBLICATION_PUBLIC_KEY_REFERENCE"]?.trim();
-  if (publicationAuthoringEnabled && (!publicationApiEnabled || !publicationSigningKeyId || !publicationPrivateKeyReference || !publicationPublicKeyReference)) throw new Error("Publication authoring requires API enablement and signing key references");
+  if (
+    publicationAuthoringEnabled &&
+    (!publicationApiEnabled ||
+      !publicationSigningKeyId ||
+      !publicationPrivateKeyReference ||
+      !publicationPublicKeyReference)
+  )
+    throw new Error(
+      "Publication authoring requires API enablement and signing key references",
+    );
   const publicationRuntimeVersion =
     process.env["PUBLICATION_RUNTIME_VERSION"]?.trim() ||
     process.env["SERVICE_VERSION"]?.trim() ||
@@ -741,9 +900,11 @@ export function loadConfig(): HostConfig {
 
   const config: HostConfig = {
     masterDataVerificationKeys,
-    ...(localContactDeliveryKey ? {localContactDeliveryKey} : {}),
+    ...(localContactDeliveryKey ? { localContactDeliveryKey } : {}),
     ...(localContactChallenge ? { localContactChallenge } : {}),
-    businessPartnerMetricsTargets: parseBusinessPartnerMetricsTargets(process.env["BUSINESS_PARTNER_METRICS_TARGETS"]),
+    businessPartnerMetricsTargets: parseBusinessPartnerMetricsTargets(
+      process.env["BUSINESS_PARTNER_METRICS_TARGETS"],
+    ),
     port,
     logLevel: process.env["LOG_LEVEL"] ?? "info",
     shutdownTimeoutMs,
@@ -762,7 +923,9 @@ export function loadConfig(): HostConfig {
       connectionString: rawMeshDatabaseUrl || undefined,
       poolMax: meshPoolMax,
     },
-    businessPartnerAuthorizationShadow: readBusinessPartnerShadowConfig(process.env),
+    businessPartnerAuthorizationShadow: readBusinessPartnerShadowConfig(
+      process.env,
+    ),
     businessPartner360: {
       meshLiveBaseUrl: bp360MeshLiveBaseUrl || undefined,
       meshLiveCredentialReference:
@@ -820,9 +983,18 @@ export function loadConfig(): HostConfig {
       endpoint: s3Endpoint || undefined,
       publicEndpoint: s3PublicEndpoint || undefined,
       region: s3Region,
-      bucket: s3Bucket || undefined,
+      buckets: s3Buckets,
+      ...(s3CredentialProfile
+        ? { credentialProfile: s3CredentialProfile }
+        : {}),
+      ...(s3WriterCredentialProfile
+        ? { artifactsWriterCredentialProfile: s3WriterCredentialProfile }
+        : {}),
       accessKeyId: s3AccessKeyId || undefined,
       secretAccessKey: s3SecretAccessKey || undefined,
+      artifactsWriterAccessKeyId: s3ArtifactsWriterAccessKeyId || undefined,
+      artifactsWriterSecretAccessKey:
+        s3ArtifactsWriterSecretAccessKey || undefined,
       multipartPartSizeMb: s3MultipartPartSizeMb,
       multipartQueueSize: s3MultipartQueueSize,
       maxUploadMb: s3MaxUploadMb,
@@ -831,6 +1003,7 @@ export function loadConfig(): HostConfig {
       tenantQuotaItems: attachmentTenantQuotaItems,
       quotaReservationTtlSeconds: attachmentQuotaReservationTtlSeconds,
       quotaRetryAfterSeconds: attachmentQuotaRetryAfterSeconds,
+      scanStreamTimeoutMs: attachmentScanStreamTimeoutMs,
     },
     malwareScanning: {
       host: clamdHost || undefined,
@@ -838,6 +1011,8 @@ export function loadConfig(): HostConfig {
       timeoutMs: clamdTimeoutMs,
       maxBytes: clamdMaxBytes,
       onUnavailable: clamdOnUnavailable,
+      signatureMaxAgeMs: clamdSignatureMaxAgeMs,
+      signatureCheckIntervalMs: clamdSignatureCheckIntervalMs,
     },
     openTelemetry: {
       endpoint: otlpEndpoint || undefined,
@@ -962,7 +1137,10 @@ export function loadConfig(): HostConfig {
         "WAVE0_CONTROL_ADMIN_CYCLE_CONFIG_ENABLED",
         false,
       ),
-      controlAdminParametersEnabled: readBoolean("WAVE0_CONTROL_ADMIN_PARAMETERS_ENABLED", false),
+      controlAdminParametersEnabled: readBoolean(
+        "WAVE0_CONTROL_ADMIN_PARAMETERS_ENABLED",
+        false,
+      ),
       controlAdminLocalCatalogReadsEnabled: readBoolean(
         "WAVE0_CONTROL_ADMIN_LOCAL_CATALOG_READS_ENABLED",
         false,
@@ -991,8 +1169,12 @@ export function loadConfig(): HostConfig {
         "BUSINESS_PARTNER_MESH_RECONCILIATION_ENABLED",
         false,
       ),
-      authorizationWriterConnectionsPath: process.env["AUTHORIZATION_WRITER_CONNECTIONS_PATH"]?.trim() || undefined,
-      authorizationManagementPolicyPath: process.env["AUTHORIZATION_MANAGEMENT_POLICY_PATH"]?.trim() || undefined,
+      authorizationWriterConnectionsPath:
+        process.env["AUTHORIZATION_WRITER_CONNECTIONS_PATH"]?.trim() ||
+        undefined,
+      authorizationManagementPolicyPath:
+        process.env["AUTHORIZATION_MANAGEMENT_POLICY_PATH"]?.trim() ||
+        undefined,
       authorizationManagementRoutesEnabled: readBoolean(
         "AUTHORIZATION_MANAGEMENT_ROUTES_ENABLED",
         false,
@@ -1020,7 +1202,8 @@ export function loadConfig(): HostConfig {
       ),
     },
     atlas: {
-      localInferenceConfigPath: process.env["ATLAS_LOCAL_INFERENCE_CONFIG_PATH"]?.trim() || undefined,
+      localInferenceConfigPath:
+        process.env["ATLAS_LOCAL_INFERENCE_CONFIG_PATH"]?.trim() || undefined,
       enabled: readBoolean("ATLAS_AGENT_ENABLED", false),
       toolsEnabled: readBoolean("ATLAS_AGENT_TOOLS_ENABLED", false),
       mutationsEnabled: readBoolean("ATLAS_AGENT_MUTATIONS_ENABLED", false),

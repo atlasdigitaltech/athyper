@@ -246,10 +246,6 @@ CREATE UNIQUE INDEX business_partner_code_uq
 CREATE INDEX business_partner_name_idx
     ON master.business_partner (tenant_id, lower(name));
 
-CREATE INDEX business_partner_legal_name_idx
-    ON master.business_partner (tenant_id, lower(legal_name))
-    WHERE legal_name IS NOT NULL;
-
 CREATE INDEX business_partner_parent_idx
     ON master.business_partner (tenant_id, parent_business_partner_id)
     WHERE parent_business_partner_id IS NOT NULL;

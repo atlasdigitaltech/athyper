@@ -5,10 +5,7 @@ datasources:
     access: proxy
     url: http://metrics:9090
     isDefault: true
-  - name: Loki
-    type: loki
-    access: proxy
-    url: http://logging:3100
+  # Logs are collected and queried in shared operations Grafana.
   - name: Tempo
     type: tempo
     access: proxy

@@ -9,13 +9,12 @@ export interface BusinessPartnerDuplicateCandidate {
   readonly id: string;
   readonly code: string;
   readonly name: string;
-  readonly legalName?: string;
 }
 
 export interface BusinessPartnerDuplicateCandidateReader<Transaction> {
-  findExactLegalName(input: {
+  findExactName(input: {
     readonly tenantId: string;
-    readonly legalName: string;
+    readonly name: string;
     readonly excludeBusinessPartnerId?: string;
     readonly limit: number;
   }, transaction: Transaction): Promise<readonly BusinessPartnerDuplicateCandidate[]>;
@@ -29,19 +28,16 @@ export interface BusinessPartnerRequestValidatorOptions<Transaction> {
 
 const ruleDefinitions = Object.freeze([
   { code: "role.ownership_subtype.compatible", severity: "error", fieldPath: "$.ownershipClass" },
-  { code: "identity.legal_name.required", severity: "error", fieldPath: "$.legalName" },
+  { code: "identity.name.required", severity: "error", fieldPath: "$.name" },
   { code: "role.requested.required", severity: "error", fieldPath: "$.requestedRole" },
   { code: "role.request_kind.compatible", severity: "error", fieldPath: "$.requestKind" },
   { code: "role.target.required", severity: "error", fieldPath: "$.targetBusinessPartnerId" },
   { code: "organization.operating.required", severity: "error", fieldPath: "$.operatingOrganizationId" },
-  { code: "workforce.scope.required", severity: "error", fieldPath: "$.legalEntityId" },
-  { code: "workforce.identity.required", severity: "error", fieldPath: "$.firstName" },
   { code: "source.mesh.pin.required", severity: "error", fieldPath: "$.source" },
   { code: "identity.registration_country.format", severity: "error", fieldPath: "$.registrationCountryCode" },
-  { code: "identity.legal_name.duplicate", severity: "warning", fieldPath: "$.legalName" },
+  { code: "identity.name.duplicate", severity: "warning", fieldPath: "$.name" },
   { code: "lifecycle.reason.required", severity: "error", fieldPath: "$.reasonCode" },
   { code: "lifecycle.dependencies.required", severity: "error", fieldPath: "$.dependencies" },
-  { code: "customer.person.policy", severity: "error", fieldPath: "$.partnerCategory" },
   { code: "customer.sales_scope.required", severity: "error", fieldPath: "$.operatingOrganizationId" },
   { code: "customer.authority_fields.prohibited", severity: "error", fieldPath: "$.proposedPayload" },
   { code: "supplier.qualification_type.required", severity: "error", fieldPath: "$.qualificationTypeCode" },
@@ -59,7 +55,7 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
   const createEvaluationId = options.createEvaluationId ?? randomUUID;
   const now = options.now ?? (() => new Date());
   const validate = async ({ context, request }: { context: Parameters<BusinessPartnerRequestValidator<Transaction>["validate"]>[0]["context"]; request: Pick<BusinessPartnerRequest, "kind" | "source" | "requestedRole" | "operatingOrganizationId" | "companyCodeId" | "targetBusinessPartnerId" | "proposedPayload"> }, transaction: Transaction) => {
-      const legalName = stringValue(request.proposedPayload, "legalName", "legal_name", "name");
+      const name = stringValue(request.proposedPayload, "name");
       const registrationCountryCode = stringValue(request.proposedPayload, "registrationCountryCode", "registration_country_code");
       const isNew = request.kind === "new_partner";
       const customer=request.requestedRole==="customer";
@@ -95,17 +91,17 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
         && Boolean(request.source.projectionId) && Number.isSafeInteger(request.source.version) && (request.source.version ?? 0) > 0
         && /^[a-f0-9]{64}$/.test(request.source.payloadHash ?? "")
       );
-      const candidates = isNew && legalName
-        ? await options.duplicates.findExactLegalName({
+      const candidates = isNew && name
+        ? await options.duplicates.findExactName({
             tenantId: context.tenantId,
-            legalName,
+            name,
             ...(request.targetBusinessPartnerId ? { excludeBusinessPartnerId: request.targetBusinessPartnerId } : {}),
             limit: 10,
           }, transaction)
         : [];
       const findings: BusinessPartnerRequestValidationFinding[] = [
         createsCommercialRole ? finding("role.ownership_subtype.compatible","error","$."+subtypeField,ownershipSubtypeCompatible,"BUSINESS_PARTNER_OWNERSHIP_ROLE_MISMATCH",{ownershipClass:ownershipClass??null,subtype}) : skipped("role.ownership_subtype.compatible","error","$."+subtypeField,"ROLE_NOT_CREATED"),
-        isNew ? finding("identity.legal_name.required", "error", "$.legalName", Boolean(legalName), "LEGAL_NAME_REQUIRED", { valuePresent: Boolean(legalName) }) : skipped("identity.legal_name.required", "error", "$.legalName", "EXISTING_IDENTITY_REUSED"),
+        isNew ? finding("identity.name.required", "error", "$.name", Boolean(name), "NAME_REQUIRED", { valuePresent: Boolean(name) }) : skipped("identity.name.required", "error", "$.name", "EXISTING_IDENTITY_REUSED"),
         roleless ? skipped("role.requested.required", "error", "$.requestedRole", "ROLE_NOT_APPLICABLE") : finding("role.requested.required", "error", "$.requestedRole", Boolean(request.requestedRole), "REQUESTED_ROLE_REQUIRED", { requestedRole: request.requestedRole ?? null }),
         finding("role.request_kind.compatible", "error", "$.requestKind", roleKindCompatible, "REQUEST_KIND_ROLE_MISMATCH", { requestKind: request.kind, requestedRole: request.requestedRole ?? null }),
         finding("role.target.required", "error", "$.targetBusinessPartnerId", isNew ? !request.targetBusinessPartnerId : Boolean(request.targetBusinessPartnerId), "TARGET_BUSINESS_PARTNER_REQUIRED", { requestKind: request.kind, targetBusinessPartnerId: request.targetBusinessPartnerId ?? null }),
@@ -119,9 +115,9 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
         registrationCountryCode
           ? finding("identity.registration_country.format", "error", "$.registrationCountryCode", /^[A-Z]{2}$/.test(registrationCountryCode), "REGISTRATION_COUNTRY_INVALID", { registrationCountryCode })
           : skipped("identity.registration_country.format", "error", "$.registrationCountryCode", "REGISTRATION_COUNTRY_NOT_PROVIDED"),
-        isNew && legalName
-          ? finding("identity.legal_name.duplicate", "warning", "$.legalName", candidates.length === 0, "LEGAL_NAME_DUPLICATE_CANDIDATE", { candidateIds: candidates.map(candidate => candidate.id), candidateCount: candidates.length, matchMethod: "exact_legal_name_case_insensitive", sourceEntity: "master.business_partner" })
-          : skipped("identity.legal_name.duplicate", "warning", "$.legalName", "LEGAL_NAME_NOT_AVAILABLE"),
+        isNew && name
+          ? finding("identity.name.duplicate", "warning", "$.name", candidates.length === 0, "NAME_DUPLICATE_CANDIDATE", { candidateIds: candidates.map(candidate => candidate.id), candidateCount: candidates.length, matchMethod: "exact_name_or_alias_case_insensitive", sourceEntity: "master.business_partner" })
+          : skipped("identity.name.duplicate", "warning", "$.name", "NAME_NOT_AVAILABLE"),
         ...(relationshipRulesApply?[finding("relationship.primary_address.required","error","$.relationshipProposals.addresses",addresses.length>0&&primaryAddresses.length===1,"PRIMARY_ADDRESS_REQUIRED",{addressCount:addresses.length,primaryCount:primaryAddresses.length}),finding("relationship.primary_contact.required","error","$.relationshipProposals.contactPersons",contactPersons.length>0&&primaryContacts.length===1&&primaryChannels.length>=1,"PRIMARY_CONTACT_REQUIRED",{contactCount:contactPersons.length,primaryContactCount:primaryContacts.length,primaryChannelCount:primaryChannels.length})]:[]),
         lifecycle ? finding("lifecycle.reason.required","error","$.reasonCode",/^[A-Z][A-Z0-9_.-]{2,126}$/.test(stringValue(request.proposedPayload,"reasonCode","reason_code")??""),"LIFECYCLE_REASON_REQUIRED",{}) : skipped("lifecycle.reason.required","error","$.reasonCode","LIFECYCLE_REASON_NOT_APPLICABLE"),
         lifecycle ? finding("lifecycle.dependencies.required","error","$.dependencies",lifecycleDependenciesValid,"LIFECYCLE_DEPENDENCY_EVIDENCE_REQUIRED",{requiredDependencyCodes}) : skipped("lifecycle.dependencies.required","error","$.dependencies","LIFECYCLE_DEPENDENCIES_NOT_APPLICABLE"),
@@ -136,7 +132,7 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
         valid,
         findings,
         validationSummary: { outcome: valid ? "passed" : "failed", counts, ruleset: businessPartnerRequestRuleset },
-        duplicateSummary: { matchMethod: "exact_legal_name_case_insensitive", sourceEntity: "master.business_partner", sourceField: "legal_name_or_name", scored: false, exactLegalNameCandidateCount: candidates.length, requiresResolution: candidates.length > 0, candidates },
+        duplicateSummary: { matchMethod: "exact_name_or_alias_case_insensitive", sourceEntity: "master.business_partner", sourceField: "name_or_alias", scored: false, exactNameCandidateCount: candidates.length, requiresResolution: candidates.length > 0, candidates },
         changeImpact: lifecycle ? {
           requestKind: request.kind,
           targetBusinessPartnerId: request.targetBusinessPartnerId ?? null,

@@ -21,7 +21,7 @@ async function run(command,args,input=''){
 }
 const docker=(...args)=>run('docker',args);
 const sql=(database,input)=>run('docker',['exec','-i',container,'psql','-X','-qAt','-U','postgres','-d',database,'-v','ON_ERROR_STOP=1','-f','-'],input);
-const migration=readFileSync(resolve(databaseRoot,'migrations',migrationName),'utf8');
+const migration=readFileSync(resolve(databaseRoot,'scripts/operations/upgrades/legacy-baseline-20260914',migrationName),'utf8');
 const pass=name=>{report.checks.push({name,passed:true});console.log(`PASS ${name}`);};
 const tenantA='10000000-0000-4000-8000-000000000001',tenantB='10000000-0000-4000-8000-000000000002',actor='20000000-0000-4000-8000-000000000001';
 const releaseInsert=(tenant,scope='home')=>`INSERT INTO ai.atlas_experience_release(tenant_id,scope,revision,definition,content_hash,created_by) VALUES('${tenant}','${scope}',1,'{"schema":"atlas-experience-definition/1","scope":"${scope}"}',repeat('a',64),'${actor}');`;

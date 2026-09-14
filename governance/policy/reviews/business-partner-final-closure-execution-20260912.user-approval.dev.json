@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "decision": "approved",
+  "proposalRevision": "209dc2e06de6fbfddbe2837def200a9f176273b2199fb375a00f4f4568ed77ed",
+  "approvedAt": "2026-09-12T09:39:20.495Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "approved",
+    "respondingTo": "Closure window through18:00 MYT, no deployment changes"
+  },
+  "effectiveUntil": "2026-09-12T10:00:00.000Z",
+  "activationAuthorized": false,
+  "compatibilityRetirementAuthorized": false,
+  "dispositionAcceptanceAuthorized": false
+}

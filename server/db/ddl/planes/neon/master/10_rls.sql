@@ -852,18 +852,6 @@ $$;
 
 ALTER TABLE master.person ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.person FORCE ROW LEVEL SECURITY;
-ALTER TABLE master.person_business_partner_legacy_link ENABLE ROW LEVEL SECURITY;
-ALTER TABLE master.person_business_partner_legacy_link FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_read ON master.person_business_partner_legacy_link
-    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY seed_read ON master.person_business_partner_legacy_link
-    FOR SELECT TO CURRENT_USER USING (true);
-DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
-        CREATE POLICY admin_read ON master.person_business_partner_legacy_link
-            FOR SELECT TO athyperadmin USING (true);
-    END IF;
-END $$;
 ALTER TABLE master.person_sensitive_profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.person_sensitive_profile FORCE ROW LEVEL SECURITY;
 ALTER TABLE master.site ENABLE ROW LEVEL SECURITY;

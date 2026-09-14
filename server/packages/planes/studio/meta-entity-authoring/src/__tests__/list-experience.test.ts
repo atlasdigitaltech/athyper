@@ -110,3 +110,10 @@ it("validates navigation workflow membership and count registration at publicati
   expect(()=>compileListExperience({...configured,flowSteps:[]},list,["my_reviews"])).toThrow(/workflow/);
   expect(()=>compileListExperience({...configured,flows:[]},list,["my_reviews"])).toThrow(/workflow/);
 });
+it("compiles an explicit request-entry rule while preserving joined permission and execution scopes", () => {
+  const configured = { ...surface, layoutConfig: { experience: { ...surface.layoutConfig.experience, operationEntryPolicies: { onboard: "permission_only" } } } };
+  const action = compileListExperience(graph, configured).actions[0]!;
+  const baseline = compileListExperience(graph, surface).actions[0]!;
+  expect(action).toEqual({ ...baseline, entryPolicy: "permission_only" });
+  expect(() => compileListExperience(graph, { ...configured, layoutConfig: { experience: { ...configured.layoutConfig.experience, operationEntryPolicies: { missing: "permission_only" } } } })).toThrow(/entry policy/);
+});

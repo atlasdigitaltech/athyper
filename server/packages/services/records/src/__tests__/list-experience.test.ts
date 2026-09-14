@@ -53,7 +53,12 @@ const descriptor: EntityRuntimeDescriptor = {
       writableOn: [],
     },
   ],
-  operations: { request_create: { code: "request_create", permissionCode: "request.create" } },
+  operations: {
+    request_create: {
+      code: "request_create",
+      permissionCode: "request.create",
+    },
+  },
   listPresentation: { experience },
 };
 const context = {
@@ -117,7 +122,12 @@ describe("published list header and action authority", () => {
     expect(authorizer.authorize).toHaveBeenCalledWith({
       context,
       permissionCode: "request.create",
-      observation: { entityCode: "partner", operationKey: "request_create", surface: "action", phase: "discover" },
+      observation: {
+        entityCode: "partner",
+        operationKey: "request_create",
+        surface: "action",
+        phase: "discover",
+      },
       resource: {
         tenantId: "tenant",
         entityCode: "partner",
@@ -176,9 +186,21 @@ describe("published list header and action authority", () => {
     );
     expect(result[0]).toMatchObject({
       state: "disabled",
-      disabledReason: { code: "context_required" },
+      disabledReason: { code: "CONTEXT_REQUIRED" },
     });
     expect(result[0]).not.toHaveProperty("href");
+    const compiled = compileEntityListDescriptor(
+      context,
+      descriptor,
+      descriptor.fields,
+      undefined,
+      scope,
+      undefined,
+      result,
+    );
+    expect(() =>
+      parseEntityListDescriptor(JSON.parse(JSON.stringify(compiled))),
+    ).not.toThrow();
   });
   it("never treats unresolved capability or lifecycle rules as permission grants", async () => {
     const rule = {
@@ -195,7 +217,7 @@ describe("published list header and action authority", () => {
         scope,
       ),
     ).toMatchObject([
-      { state: "disabled", disabledReason: { code: "preflight_required" } },
+      { state: "disabled", disabledReason: { code: "PREFLIGHT_REQUIRED" } },
     ]);
     expect(
       await effectiveListActions(
@@ -308,37 +330,160 @@ it("requires the declared relation resolver provenance, not just a coordinate", 
 });
 
 describe("entity section navigation", () => {
-  const navigationDescriptor = (change: Record<string, unknown> = {}): EntityRuntimeDescriptor => ({ ...descriptor, listPresentation: { experience: parsePublishedListExperience({ ...experience, navigation: [{ ...experience.actions[0], placement: "direct", kind: "review", workflowKey: "review_flow", attentionCountKey: "my_reviews", ...change }] }) } });
+  const navigationDescriptor = (
+    change: Record<string, unknown> = {},
+  ): EntityRuntimeDescriptor => ({
+    ...descriptor,
+    listPresentation: {
+      experience: parsePublishedListExperience({
+        ...experience,
+        navigation: [
+          {
+            ...experience.actions[0],
+            placement: "direct",
+            kind: "review",
+            workflowKey: "review_flow",
+            attentionCountKey: "my_reviews",
+            ...change,
+          },
+        ],
+      }),
+    },
+  });
   it("requires explicit review workflow and unique destinations", () => {
-    expect(() => navigationDescriptor({ workflowKey: undefined })).toThrow(/workflow/);
-    expect(() => parsePublishedListExperience({ ...experience, routes: [...experience.routes, {surfaceKey:"duplicate",href:"/requests/new"}] })).toThrow(/Duplicate/);
+    expect(() => navigationDescriptor({ workflowKey: undefined })).toThrow(
+      /workflow/,
+    );
+    expect(() =>
+      parsePublishedListExperience({
+        ...experience,
+        routes: [
+          ...experience.routes,
+          { surfaceKey: "duplicate", href: "/requests/new" },
+        ],
+      }),
+    ).toThrow(/Duplicate/);
   });
   it("resolves counts only after authorization and preserves unknown on failure", async () => {
     const { effectiveEntityNavigation } = await import("../list-experience.js");
     const count = vi.fn(async () => 3);
-    const sections = await effectiveEntityNavigation(authorizer,context,navigationDescriptor(),scope,{my_reviews:count});
+    const sections = await effectiveEntityNavigation(
+      authorizer,
+      context,
+      navigationDescriptor(),
+      scope,
+      { my_reviews: count },
+    );
     expect(sections[0]?.attentionCount).toBe(3);
-    expect(count).toHaveBeenCalledWith({context,descriptor:navigationDescriptor(),scope});
-    expect((await effectiveEntityNavigation(authorizer,context,navigationDescriptor(),scope,{}))[0]?.attentionCount).toBeUndefined();
-    expect((await effectiveEntityNavigation(authorizer,context,navigationDescriptor(),scope,{my_reviews:async()=>{throw new Error("Unavailable");}}))[0]?.attentionCount).toBeUndefined();
+    expect(count).toHaveBeenCalledWith({
+      context,
+      descriptor: navigationDescriptor(),
+      scope,
+    });
+    expect(
+      (
+        await effectiveEntityNavigation(
+          authorizer,
+          context,
+          navigationDescriptor(),
+          scope,
+          {},
+        )
+      )[0]?.attentionCount,
+    ).toBeUndefined();
+    expect(
+      (
+        await effectiveEntityNavigation(
+          authorizer,
+          context,
+          navigationDescriptor(),
+          scope,
+          {
+            my_reviews: async () => {
+              throw new Error("Unavailable");
+            },
+          },
+        )
+      )[0]?.attentionCount,
+    ).toBeUndefined();
     count.mockClear();
-    expect(await effectiveEntityNavigation({authorize:async()=>({allowed:false,reason:"permission_denied"})} as Authorizer,context,navigationDescriptor(),scope,{my_reviews:count})).toEqual([]);
+    expect(
+      await effectiveEntityNavigation(
+        {
+          authorize: async () => ({
+            allowed: false,
+            reason: "permission_denied",
+          }),
+        } as Authorizer,
+        context,
+        navigationDescriptor(),
+        scope,
+        { my_reviews: count },
+      ),
+    ).toEqual([]);
     expect(count).not.toHaveBeenCalled();
   });
   it("hides sections needing unresolved evidence and re-evaluates changed context", async () => {
     const { effectiveEntityNavigation } = await import("../list-experience.js");
-    expect(await effectiveEntityNavigation(authorizer,context,navigationDescriptor({requiresPreflight:true}),scope)).toEqual([]);
-    expect(await effectiveEntityNavigation(authorizer,{...context,permissions:{...context.permissions,operationBindings:[]}},navigationDescriptor(),scope)).toEqual([]);
+    expect(
+      await effectiveEntityNavigation(
+        authorizer,
+        context,
+        navigationDescriptor({ requiresPreflight: true }),
+        scope,
+      ),
+    ).toEqual([]);
+    expect(
+      await effectiveEntityNavigation(
+        authorizer,
+        {
+          ...context,
+          permissions: { ...context.permissions, operationBindings: [] },
+        },
+        navigationDescriptor(),
+        scope,
+      ),
+    ).toEqual([]);
   });
 });
 
-it("resolves application access independently of master-record read access without exposing columns",async()=>{
-  const {createEntityListService}=await import("../entity-list-service.js");
-  const {parseEntityApplicationDescriptor}=await import("@athyper/contract-platform-entity-list");
-  const appDescriptor={...descriptor,listPresentation:{experience:parsePublishedListExperience({...experience,application:{key:"partner",basePath:"/requests/new",defaultSectionKey:"review"},navigation:[{...experience.actions[0],key:"review",placement:"direct",kind:"review",workflowKey:"flow",content:{kind:"task_list",entityCode:"partner_request"}}]})}};
-  const execute=vi.fn();
-  const service=createEntityListService({metadata:{getEntityDescriptor:async()=>appDescriptor} as never,authorizer,listExecutor:{execute} as never,collectionScopes:{resolve:async()=>scope}});
-  const result=parseEntityApplicationDescriptor(await service.applicationDescriptor(context,"partner"));
+it("resolves application access independently of master-record read access without exposing columns", async () => {
+  const { createEntityListService } = await import("../entity-list-service.js");
+  const { parseEntityApplicationDescriptor } =
+    await import("@athyper/contract-platform-entity-list");
+  const appDescriptor = {
+    ...descriptor,
+    listPresentation: {
+      experience: parsePublishedListExperience({
+        ...experience,
+        application: {
+          key: "partner",
+          basePath: "/requests/new",
+          defaultSectionKey: "review",
+        },
+        navigation: [
+          {
+            ...experience.actions[0],
+            key: "review",
+            placement: "direct",
+            kind: "review",
+            workflowKey: "flow",
+            content: { kind: "task_list", entityCode: "partner_request" },
+          },
+        ],
+      }),
+    },
+  };
+  const execute = vi.fn();
+  const service = createEntityListService({
+    metadata: { getEntityDescriptor: async () => appDescriptor } as never,
+    authorizer,
+    listExecutor: { execute } as never,
+    collectionScopes: { resolve: async () => scope },
+  });
+  const result = parseEntityApplicationDescriptor(
+    await service.applicationDescriptor(context, "partner"),
+  );
   expect(result.navigation?.[0]?.content?.entityCode).toBe("partner_request");
   expect(result).not.toHaveProperty("fields");
   expect(result.surface).not.toHaveProperty("defaultState");
@@ -346,11 +491,74 @@ it("resolves application access independently of master-record read access witho
 });
 
 it("admits directory navigation without widening governed actions", async () => {
-  const scoped: Authorizer = { authorize: vi.fn(async ({ resource }) => resource
-    ? { allowed: false as const, reason: "scope_not_contained" }
-    : { allowed: true as const }) };
-  const directory = { ...descriptor, directoryScope: { schemaVersion: 1 as const, mode: "tenant" as const } };
-  expect(await effectiveListActions(scoped, context, directory, scope)).toHaveLength(0);
-  expect(await effectiveListActions(scoped, context, directory, scope, true)).toHaveLength(1);
-  expect(await effectiveListActions(scoped, context, descriptor, scope, true)).toHaveLength(0);
+  const scoped: Authorizer = {
+    authorize: vi.fn(async ({ resource }) =>
+      resource
+        ? { allowed: false as const, reason: "scope_not_contained" }
+        : { allowed: true as const },
+    ),
+  };
+  const directory = {
+    ...descriptor,
+    directoryScope: { schemaVersion: 1 as const, mode: "tenant" as const },
+  };
+  expect(
+    await effectiveListActions(scoped, context, directory, scope),
+  ).toHaveLength(0);
+  expect(
+    await effectiveListActions(scoped, context, directory, scope, true),
+  ).toHaveLength(1);
+  expect(
+    await effectiveListActions(scoped, context, descriptor, scope, true),
+  ).toHaveLength(0);
+});
+
+it("publishes exact resolver requirements without interpreting directory filters", () => {
+  const workContext = {
+    schemaVersion: 1 as const,
+    resolver: "platform.document_relationship.v1",
+    requiredCoordinates: ["operatingOrganizationId" as const],
+  };
+  const compiled = compileEntityListDescriptor(
+    context,
+    descriptor,
+    descriptor.fields,
+    undefined,
+    { status: "context_required", labels: [], workContext },
+  );
+  expect(
+    parseEntityListDescriptor(JSON.parse(JSON.stringify(compiled))).scope,
+  ).toMatchObject({ status: "context_required", workContext });
+  const changed = compileEntityListDescriptor(
+    context,
+    descriptor,
+    descriptor.fields,
+    undefined,
+    {
+      status: "context_required",
+      labels: [],
+      workContext: { ...workContext, requiredCoordinates: ["companyCodeId"] },
+    },
+  );
+  expect(changed.scope.fingerprint).not.toBe(compiled.scope.fingerprint);
+});
+
+it("permission-only request entry requires its installed operation permission but no scope or write preflight", async () => {
+  const entry = withAction({ requiresPreflight: true });
+  const authorized = withAction({ requiresPreflight: true, entryPolicy: "permission_only" });
+  const authorize = vi.fn<Authorizer["authorize"]>(async () => ({ allowed: true as const }));
+  expect(await effectiveListActions({ authorize }, context, authorized, { ...scope, authorizationResource: {} })).toMatchObject([{ state: "enabled", requiresPreflight: false }]);
+  expect(authorize.mock.calls[0]![0]).not.toHaveProperty("resource");
+  expect(authorized.listPresentation!.experience!.actions[0]!.requiresPreflight).toBe(true);
+  expect(await effectiveListActions({ authorize: async () => ({ allowed: false, reason: "permission_missing" }) } as Authorizer, context, authorized, scope)).toEqual([]);
+  expect(await effectiveListActions({ authorize }, { ...context, permissions: { operationBindings: [] } } as unknown as VerifiedRequestContext, authorized, scope)).toEqual([]);
+  expect(await effectiveListActions({ authorize }, context, entry, scope)).toMatchObject([{ state: "disabled" }]);
+});
+it("request entry can omit an organization even when the installed command requires it", async () => {
+  const scopes = [{ plane: "neon", scopeKind: "operating_organization", coordinateSource: "relation_resolver", resolverKey: "organization.record.v1", decisionMode: "entity_resource" }];
+  const scopedContext = { ...context, permissions: { ...context.permissions, operationBindings: [{ ...context.permissions.operationBindings![0]!, requiredScopeKinds: ["operating_organization"] }] } } as VerifiedRequestContext;
+  const noOrganization = { ...scope, authorizationResource: {} };
+  const navigate = withAction({ scopes, entryPolicy: "permission_only" });
+  expect(await effectiveListActions(authorizer, scopedContext, navigate, noOrganization)).toMatchObject([{ state: "enabled" }]);
+  expect(await effectiveListActions(authorizer, scopedContext, withAction({ scopes }), noOrganization)).toMatchObject([{ state: "disabled", disabledReason: { code: "CONTEXT_REQUIRED" } }]);
 });

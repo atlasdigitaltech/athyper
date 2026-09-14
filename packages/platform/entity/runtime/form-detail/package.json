@@ -18,7 +18,10 @@
     "@athyper/platform-shell-app-foundation": "workspace:*",
     "@athyper/platform-ui": "workspace:*",
     "@athyper/platform-icons": "workspace:*",
-    "@athyper/platform-i18n": "workspace:*"
+    "@athyper/platform-i18n": "workspace:*",
+    "@athyper/platform-entity-list-view": "workspace:*",
+    "@athyper/platform-api-client": "workspace:*",
+    "@athyper/contract-platform-entity-list": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"

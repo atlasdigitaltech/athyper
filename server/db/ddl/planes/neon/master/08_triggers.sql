@@ -646,7 +646,7 @@ $$;
 -- Canonical business-partner identity and thin commercial roles.
 CREATE TRIGGER trg_business_partner_05_normalize
 BEFORE INSERT OR UPDATE OF
-    code, name, display_name, legal_name, legal_form,
+    code, name, legal_form,
     registration_country_code, website_url, description
 ON master.business_partner
 FOR EACH ROW EXECUTE FUNCTION master.trg_normalize_counterparty();
@@ -1260,9 +1260,6 @@ CREATE TRIGGER trg_person_status_changed
 BEFORE UPDATE OF status ON master.person
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-CREATE TRIGGER trg_person_business_partner_legacy_link_immutable
-BEFORE INSERT OR UPDATE OR DELETE ON master.person_business_partner_legacy_link
-FOR EACH ROW EXECUTE FUNCTION master.trg_reject_person_business_partner_legacy_link_mutation();
 
 CREATE TRIGGER trg_site_hierarchy
 BEFORE INSERT OR UPDATE OF tenant_id, company_code_id, parent_site_id

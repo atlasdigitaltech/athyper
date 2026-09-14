@@ -6,6 +6,8 @@
 
 **Scope:** Business Partner, supplier, customer, internal employee, external workforce, Studio meta-entity authoring, Governance cycles, MESH document exchange, NEON materialization, immutable snapshots, and retirement of redundant request storage.
 
+**Companion flow review (2026-09-14):** [Governed case flow: cycles, workflows, communications, and generated documents](governed-case-communications-and-documents.md) maps the current source implementation, the ten-task review/approval example, notification channels, PDF generation, and the remaining orchestration bindings. Its current-source findings distinguish implemented relationships from the target schema sketches in this ADR.
+
 ## 1. Executive decision
 
 Athyper will use one shared lifecycle pattern for supplier, customer, and workforce data collection:

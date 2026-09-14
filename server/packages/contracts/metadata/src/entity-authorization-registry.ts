@@ -24,6 +24,9 @@ export interface EntityAuthorizationRuntimeRegistration {
 }
 export function createEntityAuthorizationRuntimeRegistry(
   registrations: readonly EntityAuthorizationRuntimeRegistration[],
+  capabilities: {
+    readonly sourceConstraints?: (...args: never[]) => unknown;
+  } = {},
 ) {
   const entries = new Map<string, EntityAuthorizationRuntimeRegistration>();
   const key = (plane: string, entity: string, operation: string) =>
@@ -57,6 +60,13 @@ export function createEntityAuthorizationRuntimeRegistry(
     qualify(profileRaw: unknown, runtimeRaw: unknown): void {
       const profile = parseEntityAuthorizationProfile(profileRaw);
       const runtime = parseEntityAuthorizationRuntime(runtimeRaw, profile);
+      if (
+        runtime.schemaVersion === 2 &&
+        typeof capabilities.sourceConstraints !== "function"
+      )
+        throw new TypeError(
+          "Canonical read source-constraint verifier unavailable",
+        );
       const unresolved: string[] = [];
       for (const binding of runtime.bindings) {
         const entry = entries.get(
@@ -83,7 +93,10 @@ export function createEntityAuthorizationRuntimeRegistry(
         )
           unresolved.push(binding.operation);
       }
-      if (unresolved.length) throw new TypeError(`Unqualified authorization runtime binding: ${unresolved.join(", ")}`);
+      if (unresolved.length)
+        throw new TypeError(
+          `Unqualified authorization runtime binding: ${unresolved.join(", ")}`,
+        );
     },
   });
 }

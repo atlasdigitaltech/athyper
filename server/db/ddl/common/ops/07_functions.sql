@@ -203,7 +203,10 @@ BEGIN
   RETURN NEW;
 END $$;
 
-CREATE OR REPLACE FUNCTION ops.record_transfer_cleanup_candidates(p_now timestamptz DEFAULT clock_timestamp(),p_limit integer DEFAULT 500)
+DROP FUNCTION IF EXISTS ops.record_transfer_cleanup_candidates(timestamptz,integer);
+DROP FUNCTION IF EXISTS ops.acknowledge_record_transfer_cleanup(uuid,text,uuid,text,text,timestamptz);
+
+CREATE OR REPLACE FUNCTION ops.record_transfer_cleanup_candidates(p_plane_code text,p_now timestamptz DEFAULT clock_timestamp(),p_limit integer DEFAULT 500)
 RETURNS TABLE(tenant_id uuid,transfer_kind text,transfer_id uuid,artifact_kind text,object_key text)
 LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,ops AS $$
   WITH import_policy AS (
@@ -213,7 +216,7 @@ LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,ops AS $$
     SELECT e.*,coalesce(p.export_artifact_days,30) artifact_days
     FROM ops.record_export_request e LEFT JOIN ops.record_transfer_retention_policy p USING(tenant_id)
   ), candidates(tenant_id,transfer_kind,transfer_id,artifact_kind,object_key) AS (
-    SELECT tenant_id,'import'::text,id,'source'::text,format('record-transfers/%s/imports/%s/quarantine/source.upload',tenant_id,id)
+    SELECT tenant_id,'import'::text,id,'source'::text,format('record-transfers/%s/%s/imports/%s/quarantine/source.upload',p_plane_code,tenant_id,id)
     FROM import_policy WHERE source_purged_at IS NULL AND (
       (status IN('committed','cancelled','failed') AND coalesce(completed_at,cancelled_at,created_at)<p_now-make_interval(days=>source_days))
       OR (status NOT IN('committed','cancelled','failed') AND created_at<p_now-make_interval(days=>abandoned_days)))
@@ -226,11 +229,11 @@ LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,ops AS $$
   ) SELECT * FROM candidates ORDER BY transfer_kind,transfer_id,artifact_kind LIMIT greatest(1,least(p_limit,5000));
 $$;
 
-CREATE OR REPLACE FUNCTION ops.acknowledge_record_transfer_cleanup(p_tenant_id uuid,p_transfer_kind text,p_transfer_id uuid,p_artifact_kind text,p_object_key text,p_purged_at timestamptz DEFAULT clock_timestamp())
+CREATE OR REPLACE FUNCTION ops.acknowledge_record_transfer_cleanup(p_plane_code text,p_tenant_id uuid,p_transfer_kind text,p_transfer_id uuid,p_artifact_kind text,p_object_key text,p_purged_at timestamptz DEFAULT clock_timestamp())
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ops AS $$
 DECLARE v_changed bigint:=0;
 BEGIN
-  IF p_transfer_kind='import' AND p_artifact_kind='source' AND p_object_key=format('record-transfers/%s/imports/%s/quarantine/source.upload',p_tenant_id,p_transfer_id) THEN
+  IF p_transfer_kind='import' AND p_artifact_kind='source' AND p_object_key=format('record-transfers/%s/%s/imports/%s/quarantine/source.upload',p_plane_code,p_tenant_id,p_transfer_id) THEN
     UPDATE ops.record_import_session SET source_purged_at=p_purged_at,chunks_purged_at=p_purged_at,
       status=CASE WHEN status IN('committed','cancelled','failed') THEN status ELSE 'cancelled' END,
       cancelled_at=CASE WHEN status IN('committed','cancelled','failed') THEN cancelled_at ELSE p_purged_at END,

@@ -5,11 +5,10 @@ import { useBusinessPartner360 } from "../business-partner-360-context";
 import { sectionLabel } from "../section-registry";
 
 export function IdentityHeader() {
-  const { summary, section, selectSection } =
-    useBusinessPartner360();
+  const { summary, section, selectSection } = useBusinessPartner360();
   // Older summary versions remain readable; actions require the new server-resolved header.
   const base: EntityRecordHeaderV1 = summary.recordHeader ?? {
-    title: summary.identity.displayName,
+    title: summary.identity.name,
     code: summary.identity.code,
     entityLabel: "Business Partner",
     iconKey: "contact",
@@ -29,19 +28,20 @@ export function IdentityHeader() {
   const actionHandlers = useBusinessPartnerActionHandlers();
   const header = {
     ...base,
-    context: [{ key: "ownership", label: "Partner-wide data", value: "Identity and shared master data" }, { key: "transaction", label: "Transaction context", value: summary.scope.operatingOrganizationId || summary.scope.companyCodeId ? "Selected organization/company · view or change below" : "No organization or company selected" }],
+    context: [],
     sections: [],
   };
   return (
     <EntityRecordHeader
       header={header}
       actionHandlers={actionHandlers}
-      breadcrumbLabel={header.code && header.code !== header.title
-        ? `${header.title} (${header.code})`
-        : header.title}
+      breadcrumbLabel={
+        header.code && header.code !== header.title
+          ? `${header.title} (${header.code})`
+          : header.title
+      }
       activeSection={section}
       onSelectSection={selectSection}
-
     />
   );
 }

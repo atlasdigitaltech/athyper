@@ -65,3 +65,6 @@ export * from "./verification-authority.js";
 
 export * from "./master-data-authority.js";
 export { createBusinessPartnerAtlasInsightOwner } from "./business-partner-atlas-insights.js";
+export * from "./business-partner-company-pilot.js";
+
+export { validateProfileIntake } from "./business-partner-intake-profile.js";

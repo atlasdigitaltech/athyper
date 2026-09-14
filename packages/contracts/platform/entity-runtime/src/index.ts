@@ -29,3 +29,18 @@ export * from "./record-360-panel";
 
 export * from "./related-presentation";
 export * from "./access-decision";
+
+export * from "./intake";
+export * from "./intake-surface";
+
+export * from "./intake-surface-authoring";
+
+export * from "./entity-lookup";
+
+export * from "./lookup-options";
+
+export * from "./intake-data-values";
+
+export * from "./recent-choice";
+
+export * from "./validation-messages";

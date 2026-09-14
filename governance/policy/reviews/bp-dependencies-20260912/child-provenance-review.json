@@ -1,0 +1,453 @@
+{
+  "changeSetId": "bab653ec-e2a2-4dfe-9b00-d4e00611f9d9",
+  "revision": 2,
+  "graph": {
+    "keys": [
+      {
+        "id": "9fe86e5f-4772-54f4-84b6-32c2315682ae",
+        "keyKey": "primary",
+        "status": "active",
+        "keyKind": "primary",
+        "nullSemantics": "not_allowed",
+        "uniquenessScope": "global"
+      }
+    ],
+    "flows": [],
+    "tests": [
+      {
+        "key": "no_direct_writes",
+        "path": "runtimeProfiles.0.writeMode",
+        "expected": "none",
+        "assertion": "path_equals"
+      },
+      {
+        "key": "organization_coordinate",
+        "path": "surfaces.0.layoutConfig.collectionRelationship.scope.contextRef",
+        "expected": "operatingOrganizationId",
+        "assertion": "path_equals"
+      },
+      {
+        "key": "independent_read",
+        "path": "surfaces.0.layoutConfig.authorization.operations.1.requiresParentRead",
+        "expected": false,
+        "assertion": "path_equals"
+      }
+    ],
+    "entity": {
+      "entityCode": "business_partner_request",
+      "entityClass": "process",
+      "ownershipModel": "tenant"
+    },
+    "fields": [
+      {
+        "id": "593f105d-fab8-5576-9470-ad0ce94f043e",
+        "status": "active",
+        "dataType": "datetime",
+        "fieldKey": "created_at",
+        "writeMode": "read_only",
+        "typeConfig": {
+          "kind": "datetime"
+        },
+        "cardinality": "one",
+        "storagePath": "created_at",
+        "valueOrigin": "stored",
+        "dataClassification": "internal"
+      },
+      {
+        "id": "eb1ed178-f3d7-5d20-b4a5-538027fe05ee",
+        "status": "active",
+        "dataType": "datetime",
+        "fieldKey": "updated_at",
+        "writeMode": "read_only",
+        "typeConfig": {
+          "kind": "datetime"
+        },
+        "cardinality": "one",
+        "storagePath": "updated_at",
+        "valueOrigin": "stored",
+        "dataClassification": "internal"
+      },
+      {
+        "id": "7be99d38-2386-5ff4-9022-e3481baee818",
+        "status": "active",
+        "dataType": "string",
+        "fieldKey": "case_code",
+        "writeMode": "read_only",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "storagePath": "case_code",
+        "valueOrigin": "stored",
+        "dataClassification": "internal"
+      },
+      {
+        "id": "7ca581d4-3c73-5f71-96dd-a0704490da68",
+        "status": "active",
+        "dataType": "string",
+        "fieldKey": "operation_code",
+        "writeMode": "read_only",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "storagePath": "operation_code",
+        "valueOrigin": "stored",
+        "dataClassification": "internal"
+      },
+      {
+        "id": "829b4d0e-c913-507b-96f9-06570889f30d",
+        "status": "active",
+        "dataType": "string",
+        "fieldKey": "status",
+        "writeMode": "read_only",
+        "typeConfig": {
+          "kind": "string"
+        },
+        "cardinality": "one",
+        "storagePath": "status",
+        "valueOrigin": "stored",
+        "dataClassification": "internal"
+      },
+      {
+        "id": "deff4b3a-60a7-5878-a300-172501242489",
+        "status": "active",
+        "dataType": "uuid",
+        "fieldKey": "id",
+        "writeMode": "read_only",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "storagePath": "id",
+        "valueOrigin": "stored",
+        "dataClassification": "internal"
+      },
+      {
+        "id": "ffbc533c-0027-5cef-b267-5c3441862779",
+        "status": "active",
+        "dataType": "uuid",
+        "fieldKey": "tenant_id",
+        "writeMode": "read_only",
+        "typeConfig": {
+          "kind": "uuid"
+        },
+        "cardinality": "one",
+        "storagePath": "tenant_id",
+        "valueOrigin": "stored",
+        "dataClassification": "internal"
+      }
+    ],
+    "surfaces": [
+      {
+        "id": "af75bb43-2dd6-5fa7-bba7-9f3906588dc3",
+        "title": "Review & Approval",
+        "status": "active",
+        "isDefault": true,
+        "layoutKind": "grid",
+        "surfaceKey": "review_approval",
+        "surfaceKind": "list",
+        "layoutConfig": {
+          "defaultState": {
+            "sort": [
+              {
+                "field": "created_at",
+                "direction": "desc"
+              }
+            ]
+          },
+          "authorization": {
+            "planeKey": "neon",
+            "surfaces": [
+              {
+                "key": "review_approval",
+                "level": "tab",
+                "operation": "discover"
+              }
+            ],
+            "directory": {
+              "operation": "discover",
+              "population": "ownership"
+            },
+            "ownership": "organization.record.v1",
+            "entityCode": "business_partner_request",
+            "operations": [
+              {
+                "key": "discover",
+                "scope": "organization.record.v1",
+                "effect": "read",
+                "target": "collection",
+                "permissionCode": "neon.relationship.entity_case.read",
+                "requiresPreflight": false,
+                "requiresParentRead": false
+              },
+              {
+                "key": "read",
+                "scope": "organization.record.v1",
+                "effect": "read",
+                "target": "existing",
+                "permissionCode": "neon.relationship.entity_case.read",
+                "requiresPreflight": false,
+                "requiresParentRead": false
+              }
+            ],
+            "fieldPolicies": [
+              {
+                "key": "request_summary",
+                "fields": [
+                  "id",
+                  "case_code",
+                  "operation_code",
+                  "status",
+                  "created_at",
+                  "updated_at"
+                ],
+                "queryUses": [
+                  "filter",
+                  "sort",
+                  "search"
+                ],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": []
+              },
+              {
+                "key": "tenant_identity",
+                "fields": [
+                  "tenant_id"
+                ],
+                "queryUses": [],
+                "readOperation": "read",
+                "representation": "plain",
+                "writeOperations": []
+              }
+            ],
+            "relationships": [],
+            "schemaVersion": 1,
+            "recordReadOperation": "read"
+          },
+          "supportedModes": [
+            "table",
+            "compact"
+          ],
+          "collectionRelationship": {
+            "scope": {
+              "fieldRef": "current_snapshot.organization",
+              "contextRef": "operatingOrganizationId"
+            },
+            "subject": {
+              "value": "master.business_partner",
+              "fieldRef": "subject_entity"
+            },
+            "sourceRef": "entity_case",
+            "schemaVersion": 1
+          }
+        }
+      }
+    ],
+    "flowSteps": [],
+    "keyFields": [
+      {
+        "id": "1b1cc2ab-3f19-5f10-803a-57e1d61e2f1b",
+        "position": 1,
+        "entityKeyId": "9fe86e5f-4772-54f4-84b6-32c2315682ae",
+        "entityFieldId": "deff4b3a-60a7-5878-a300-172501242489"
+      }
+    ],
+    "relations": [],
+    "operations": [
+      {
+        "id": "eb050590-59ae-5ef2-98e9-fe3246048c5d",
+        "label": "Discover",
+        "status": "active",
+        "requiresMfa": false,
+        "operationKey": "discover",
+        "executionMode": "synchronous",
+        "operationKind": "read",
+        "auditEventCode": "business_partner_request.discover",
+        "permissionCode": "neon.relationship.entity_case.read",
+        "idempotencyMode": "none"
+      },
+      {
+        "id": "3361842f-f2d7-591d-9f0c-786718997e2d",
+        "label": "Read",
+        "status": "active",
+        "requiresMfa": false,
+        "operationKey": "read",
+        "executionMode": "synchronous",
+        "operationKind": "read",
+        "auditEventCode": "business_partner_request.read",
+        "permissionCode": "neon.relationship.entity_case.read",
+        "idempotencyMode": "none"
+      }
+    ],
+    "searchFields": [],
+    "classProfiles": [],
+    "contractSchema": "athyper.meta-entity-contract/2.1",
+    "operationRules": [],
+    "policyBindings": [],
+    "relationFields": [],
+    "searchProfiles": [],
+    "relationTargets": [],
+    "runtimeProfiles": [
+      {
+        "id": "38cacb52-4213-576b-8c9b-bf946df65c81",
+        "readMode": "generic",
+        "writeMode": "none",
+        "createMode": "form_only",
+        "profileKey": "default",
+        "apiExposure": "api",
+        "backingKind": "table",
+        "storagePlane": "neon",
+        "storageObject": "entity_case",
+        "storageSchema": "document",
+        "tenantFieldKey": "tenant_id",
+        "concurrencyMode": "none"
+      }
+    ],
+    "surfaceSections": [],
+    "lifecycleBindings": [],
+    "numberingBindings": [],
+    "surfaceOperations": [],
+    "fieldPolicyBindings": [],
+    "operationPermissions": [
+      {
+        "id": "6cd7445b-04c1-51db-8996-e276c367af79",
+        "status": "active",
+        "targetPlane": "neon",
+        "permissionCode": "neon.relationship.entity_case.read",
+        "permissionKind": "entity_operation",
+        "entityOperationId": "3361842f-f2d7-591d-9f0c-786718997e2d"
+      },
+      {
+        "id": "b203cc53-fa9f-53be-afc2-1df7650d87da",
+        "status": "active",
+        "targetPlane": "neon",
+        "permissionCode": "neon.relationship.entity_case.read",
+        "permissionKind": "entity_operation",
+        "entityOperationId": "eb050590-59ae-5ef2-98e9-fe3246048c5d"
+      }
+    ],
+    "surfaceFieldBindings": [
+      {
+        "id": "61de19d7-c233-52e7-81cb-cabb5cfba742",
+        "status": "active",
+        "position": 1,
+        "bindingKey": "case_code",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "7be99d38-2386-5ff4-9022-e3481baee818",
+        "labelOverride": "Case code",
+        "entitySurfaceId": "af75bb43-2dd6-5fa7-bba7-9f3906588dc3",
+        "showRequiredIndicator": true
+      },
+      {
+        "id": "99fc9213-7d42-50f0-b8af-1aa21188d4dc",
+        "status": "active",
+        "position": 4,
+        "bindingKey": "created_at",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "593f105d-fab8-5576-9470-ad0ce94f043e",
+        "labelOverride": "Created at",
+        "entitySurfaceId": "af75bb43-2dd6-5fa7-bba7-9f3906588dc3",
+        "showRequiredIndicator": true
+      },
+      {
+        "id": "5d6e7a45-7cab-5a5b-b941-9cdf479f411b",
+        "status": "active",
+        "position": 0,
+        "bindingKey": "id",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": false
+        },
+        "entityFieldId": "deff4b3a-60a7-5878-a300-172501242489",
+        "labelOverride": "Id",
+        "entitySurfaceId": "af75bb43-2dd6-5fa7-bba7-9f3906588dc3",
+        "showRequiredIndicator": true
+      },
+      {
+        "id": "a4709372-40c0-5403-921a-511229c40d8c",
+        "status": "active",
+        "position": 2,
+        "bindingKey": "operation_code",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "7ca581d4-3c73-5f71-96dd-a0704490da68",
+        "labelOverride": "Operation code",
+        "entitySurfaceId": "af75bb43-2dd6-5fa7-bba7-9f3906588dc3",
+        "showRequiredIndicator": true
+      },
+      {
+        "id": "766793d2-4a43-5139-8560-772dbeefce46",
+        "status": "active",
+        "position": 3,
+        "bindingKey": "status",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "829b4d0e-c913-507b-96f9-06570889f30d",
+        "labelOverride": "Status",
+        "entitySurfaceId": "af75bb43-2dd6-5fa7-bba7-9f3906588dc3",
+        "showRequiredIndicator": true
+      },
+      {
+        "id": "129a300d-14c3-5e83-a727-818cc4c36707",
+        "status": "active",
+        "position": 5,
+        "bindingKey": "updated_at",
+        "columnSpan": 12,
+        "displayConfig": {
+          "defaultVisible": true
+        },
+        "entityFieldId": "eb1ed178-f3d7-5d20-b4a5-538027fe05ee",
+        "labelOverride": "Updated at",
+        "entitySurfaceId": "af75bb43-2dd6-5fa7-bba7-9f3906588dc3",
+        "showRequiredIndicator": true
+      }
+    ],
+    "operationScopeBindings": [
+      {
+        "id": "9f4b9578-7c20-548b-9c19-35d4f44ded96",
+        "status": "active",
+        "scopeKind": "operating_organization",
+        "bindingKey": "discover_organization",
+        "resolverKey": "platform.document_relationship.v1",
+        "targetPlane": "neon",
+        "decisionMode": "collection",
+        "coordinateSource": "relation_resolver",
+        "entityOperationId": "eb050590-59ae-5ef2-98e9-fe3246048c5d",
+        "missingValueBehavior": "deny"
+      },
+      {
+        "id": "024941e8-56d4-5744-8309-867d955b8652",
+        "status": "active",
+        "scopeKind": "operating_organization",
+        "bindingKey": "read_organization",
+        "resolverKey": "platform.document_relationship.v1",
+        "targetPlane": "neon",
+        "decisionMode": "collection",
+        "coordinateSource": "relation_resolver",
+        "entityOperationId": "3361842f-f2d7-591d-9f0c-786718997e2d",
+        "missingValueBehavior": "deny"
+      }
+    ],
+    "lifecycleOperationBindings": []
+  },
+  "nativeContractHash": "27e2132ce6b729ddae3ddacd9c2d14da5911558cc6cd18cf5cc63f5e4c2d709c",
+  "previousNativeContractHash": "e6cfa1a5eda2b7667c19d35d5bd43dd433725829f3ed7c661d7785640de6dcda",
+  "policyUnchanged": true,
+  "changes": [
+    "new draft-local identifiers",
+    "compiler adds native release provenance required by operation binding projection"
+  ],
+  "approvals": []
+}

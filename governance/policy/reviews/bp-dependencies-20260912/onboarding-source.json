@@ -1,0 +1,1953 @@
+{
+  "id": "0bf6281b-0740-436c-8de5-c42963be2835",
+  "bundle": {
+    "schema": "athyper.business-partner-definition-bundle.v1",
+    "bundleCode": "business_partner.onboarding",
+    "fieldPolicies": {
+      "person": {
+        "visible": [
+          "person.firstName",
+          "person.lastName",
+          "person.personalEmail",
+          "person.phone",
+          "person.consent",
+          "person.preferredName",
+          "employment.startDate"
+        ],
+        "category": "person",
+        "prohibited": [
+          "bankVerification",
+          "supplier.qualification"
+        ],
+        "restricted": [
+          "person.identityEvidence",
+          "person.dateOfBirth",
+          "person.nationalIdentifiers",
+          "employment.compensation"
+        ]
+      },
+      "portal": {
+        "read": [
+          "requestNo",
+          "status",
+          "validationSummary",
+          "returnReasons"
+        ],
+        "write": [
+          "partner.displayName",
+          "partner.legalName",
+          "partner.countryCode",
+          "partner.category",
+          "partner.registrationNumber",
+          "partner.taxIdentifiers",
+          "partner.addresses",
+          "partner.contacts",
+          "person.firstName",
+          "person.lastName",
+          "person.personalEmail",
+          "person.phone",
+          "person.consent",
+          "evidence.references"
+        ],
+        "prohibited": [
+          "workflow.decision",
+          "readiness.override",
+          "masterData"
+        ]
+      },
+      "organization": {
+        "visible": [
+          "partner.displayName",
+          "partner.legalName",
+          "partner.countryCode",
+          "partner.category",
+          "partner.registrationNumber",
+          "partner.taxIdentifiers",
+          "partner.addresses",
+          "partner.contacts",
+          "partner.legalForm",
+          "partner.incorporationDate",
+          "partner.websiteUrl",
+          "partner.industryCodes"
+        ],
+        "category": "organization",
+        "prohibited": [
+          "person.identityEvidence",
+          "person.dateOfBirth",
+          "employment.compensation"
+        ],
+        "restricted": [
+          "partner.taxIdentifiers"
+        ]
+      }
+    },
+    "duplicateRules": {
+      "person": {
+        "match": [
+          "normalizedName+personalEmailHash",
+          "nationalIdentifierHash+countryCode"
+        ],
+        "resolution": "privacy_bound_steward_review",
+        "categoryChange": "forbidden"
+      },
+      "organization": {
+        "match": [
+          "normalizedLegalName+countryCode",
+          "registrationNumber+countryCode",
+          "taxIdentifierHash+countryCode"
+        ],
+        "resolution": "steward_review",
+        "categoryChange": "forbidden"
+      }
+    },
+    "readinessGates": {
+      "customer": [
+        "BUSINESS_PARTNER_ACTIVE",
+        "SALES_ASSIGNMENT_EFFECTIVE",
+        "COMPANY_PROFILE_COMPLETE",
+        "CREDIT_REVIEW_CURRENT",
+        "NO_PROHIBITIVE_BLOCK"
+      ],
+      "supplier": [
+        "BUSINESS_PARTNER_ACTIVE",
+        "PROCUREMENT_ASSIGNMENT_EFFECTIVE",
+        "COMPANY_PROFILE_COMPLETE",
+        "QUALIFICATION_CURRENT",
+        "NO_PROHIBITIVE_BLOCK",
+        "BANK_VERIFIED_WHEN_PAYABLE"
+      ],
+      "workforce": [
+        "BUSINESS_PARTNER_ACTIVE",
+        "EMPLOYEE_ACTIVE",
+        "EMPLOYMENT_EFFECTIVE",
+        "PRIMARY_ASSIGNMENT_EFFECTIVE",
+        "ONBOARDING_COMPLETE"
+      ]
+    },
+    "requestSchemas": {
+      "customer.add": {
+        "role": "customer",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "scope.operatingOrganizationId"
+        ],
+        "operation": "add_customer",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "customer.new": {
+        "role": "customer",
+        "version": "2.0.0",
+        "required": [
+          "partner.displayName",
+          "partner.legalName",
+          "partner.countryCode",
+          "partner.category",
+          "partner.registrationNumber",
+          "partner.taxIdentifiers",
+          "partner.addresses",
+          "partner.contacts",
+          "scope.operatingOrganizationId"
+        ],
+        "operation": "new_partner",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "supplier.add": {
+        "role": "supplier",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "scope.operatingOrganizationId"
+        ],
+        "operation": "add_supplier",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "supplier.new": {
+        "role": "supplier",
+        "version": "2.0.0",
+        "required": [
+          "partner.displayName",
+          "partner.legalName",
+          "partner.countryCode",
+          "partner.category",
+          "partner.registrationNumber",
+          "partner.taxIdentifiers",
+          "partner.addresses",
+          "partner.contacts",
+          "scope.operatingOrganizationId"
+        ],
+        "operation": "new_partner",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "partner.amend": {
+        "role": "governance",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "baseRecordVersion"
+        ],
+        "operation": "amend_partner",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "supplier.bank": {
+        "role": "supplier",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "bankVerification.evidenceReference",
+          "scope.companyCodeId"
+        ],
+        "operation": "change_bank",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "workforce.add": {
+        "role": "workforce",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "person.firstName",
+          "person.lastName",
+          "person.personalEmail",
+          "person.phone",
+          "person.consent",
+          "scope.legalEntityId",
+          "scope.companyCodeId",
+          "scope.orgUnitId",
+          "employment.startDate"
+        ],
+        "operation": "add_workforce",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "workforce.new": {
+        "role": "workforce",
+        "version": "2.0.0",
+        "required": [
+          "person.firstName",
+          "person.lastName",
+          "person.personalEmail",
+          "person.phone",
+          "person.consent",
+          "scope.legalEntityId",
+          "scope.companyCodeId",
+          "scope.orgUnitId",
+          "employment.startDate"
+        ],
+        "operation": "new_partner",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "partner.assign": {
+        "role": "governance",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "scope.operatingOrganizationId"
+        ],
+        "operation": "assign_organization",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "customer.credit": {
+        "role": "customer",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "credit.requestedLimit",
+          "credit.currency",
+          "credit.evidence",
+          "scope.companyCodeId"
+        ],
+        "operation": "credit_review",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "partner.archive": {
+        "role": "governance",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "reasonCode"
+        ],
+        "operation": "archive",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "customer.company": {
+        "role": "customer",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "company.paymentTerms",
+          "company.statementPolicy",
+          "scope.operatingOrganizationId",
+          "scope.companyCodeId"
+        ],
+        "operation": "configure_company",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "supplier.company": {
+        "role": "supplier",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "company.paymentTerms",
+          "company.currency",
+          "scope.operatingOrganizationId",
+          "scope.companyCodeId"
+        ],
+        "operation": "configure_company",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "supplier.qualify": {
+        "role": "supplier",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "qualification.criteria",
+          "qualification.evidence",
+          "scope.operatingOrganizationId"
+        ],
+        "operation": "qualify",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "workforce.change": {
+        "role": "workforce",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "employment.changeKind",
+          "employment.effectiveFrom",
+          "scope.legalEntityId",
+          "scope.companyCodeId",
+          "scope.orgUnitId"
+        ],
+        "operation": "change_employment",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "supplier.activate": {
+        "role": "supplier",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "activation.businessDate",
+          "activation.readinessEvidence",
+          "scope.operatingOrganizationId",
+          "scope.companyCodeId"
+        ],
+        "operation": "activate_supplier",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "partner.deactivate": {
+        "role": "governance",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "reasonCode"
+        ],
+        "operation": "deactivate",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "partner.reactivate": {
+        "role": "governance",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "reasonCode"
+        ],
+        "operation": "reactivate",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      },
+      "workforce.offboard": {
+        "role": "workforce",
+        "version": "2.0.0",
+        "required": [
+          "targetBusinessPartnerId",
+          "offboarding.exitDate",
+          "offboarding.reasonCode",
+          "offboarding.resourceChecklist",
+          "scope.legalEntityId"
+        ],
+        "operation": "offboard",
+        "definitionDriven": true,
+        "supportedSources": [
+          "internal",
+          "portal",
+          "mesh",
+          "import",
+          "api"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "formDescriptors": {
+      "request": {
+        "version": "2.0.0",
+        "sections": [
+          "identity",
+          "role",
+          "organizationScope",
+          "employmentScope",
+          "classification",
+          "contacts",
+          "evidence",
+          "sourceProvenance"
+        ],
+        "journeyBound": true,
+        "conditionalVisibility": [
+          {
+            "field": "organizationScope",
+            "categories": [
+              "organization"
+            ]
+          },
+          {
+            "field": "employmentScope",
+            "roles": [
+              "workforce"
+            ]
+          },
+          {
+            "field": "bankVerification",
+            "operations": [
+              "supplier.bank"
+            ]
+          }
+        ]
+      },
+      "customerCredit": {
+        "version": "2.0.0",
+        "sections": [
+          "companyScope",
+          "requestedLimit",
+          "riskEvidence",
+          "decision"
+        ]
+      },
+      "supplierRequest": {
+        "title": "New supplier onboarding request",
+        "schema": "athyper.business-partner-request-form/1",
+        "version": "2.2.0",
+        "sections": [
+          {
+            "key": "scope",
+            "title": "Onboarding scope",
+            "fields": [
+              {
+                "key": "operatingOrganizationId",
+                "path": "operatingOrganizationId",
+                "label": "Operating organization",
+                "target": "context",
+                "widget": "operating_organization",
+                "required": true
+              }
+            ],
+            "description": "Select the organization that owns this request."
+          },
+          {
+            "key": "identity",
+            "title": "Organization identity",
+            "fields": [
+              {
+                "key": "name",
+                "path": "name",
+                "label": "Registered name",
+                "target": "canonical",
+                "widget": "text",
+                "required": true,
+                "maxLength": 255,
+                "autoComplete": "organization"
+              },
+              {
+                "key": "legalName",
+                "path": "legalName",
+                "label": "Legal name",
+                "target": "canonical",
+                "widget": "text",
+                "required": true,
+                "maxLength": 255
+              },
+              {
+                "key": "displayName",
+                "path": "displayName",
+                "label": "Display name",
+                "target": "canonical",
+                "widget": "text",
+                "required": false,
+                "maxLength": 255
+              },
+              {
+                "key": "registrationCountryCode",
+                "path": "registrationCountryCode",
+                "label": "Registration country",
+                "lookup": {
+                  "code": "iso.country",
+                  "options": [
+                    {
+                      "label": "United Kingdom",
+                      "value": "GB"
+                    },
+                    {
+                      "label": "Malaysia",
+                      "value": "MY"
+                    },
+                    {
+                      "label": "Singapore",
+                      "value": "SG"
+                    },
+                    {
+                      "label": "United States",
+                      "value": "US"
+                    }
+                  ]
+                },
+                "target": "canonical",
+                "widget": "lookup",
+                "required": true
+              },
+              {
+                "key": "ownershipClass",
+                "path": "ownershipClass",
+                "label": "Ownership",
+                "lookup": {
+                  "code": "master.business_partner_ownership",
+                  "options": [
+                    {
+                      "label": "External",
+                      "value": "external"
+                    },
+                    {
+                      "label": "Internal",
+                      "value": "internal"
+                    }
+                  ]
+                },
+                "target": "canonical",
+                "widget": "lookup",
+                "required": true,
+                "defaultValue": "external"
+              },
+              {
+                "key": "legalClassification",
+                "path": "legalClassification",
+                "label": "Legal classification",
+                "lookup": {
+                  "code": "master.business_partner_legal_classification",
+                  "options": [
+                    {
+                      "label": "Government",
+                      "value": "government"
+                    },
+                    {
+                      "label": "Nonprofit",
+                      "value": "nonprofit"
+                    },
+                    {
+                      "label": "Sole proprietor",
+                      "value": "sole_proprietor"
+                    }
+                  ]
+                },
+                "target": "canonical",
+                "widget": "lookup",
+                "required": false
+              },
+              {
+                "key": "supplierType",
+                "path": "supplierType",
+                "label": "Supplier type",
+                "lookup": {
+                  "code": "master.supplier_type",
+                  "options": [
+                    {
+                      "label": "General",
+                      "value": "general"
+                    },
+                    {
+                      "label": "Strategic",
+                      "value": "strategic"
+                    },
+                    {
+                      "label": "Service",
+                      "value": "service"
+                    },
+                    {
+                      "label": "Carrier",
+                      "value": "carrier"
+                    },
+                    {
+                      "label": "Intercompany",
+                      "value": "intercompany"
+                    }
+                  ]
+                },
+                "target": "canonical",
+                "widget": "lookup",
+                "required": true,
+                "defaultValue": "general"
+              },
+              {
+                "key": "qualificationTypeCode",
+                "path": "qualificationTypeCode",
+                "label": "Qualification type",
+                "lookup": {
+                  "code": "control.qualification_type",
+                  "options": [
+                    {
+                      "label": "Compliance",
+                      "value": "compliance"
+                    },
+                    {
+                      "label": "Basic",
+                      "value": "basic"
+                    }
+                  ]
+                },
+                "target": "canonical",
+                "widget": "lookup",
+                "helpText": "Policy used for the initial supplier qualification",
+                "required": true,
+                "visibility": {
+                  "field": "ownershipClass",
+                  "value": "external",
+                  "operator": "equals"
+                },
+                "defaultValue": "compliance"
+              },
+              {
+                "key": "legalForm",
+                "path": "legalForm",
+                "label": "Legal form",
+                "target": "canonical",
+                "widget": "text",
+                "required": false,
+                "maxLength": 80
+              },
+              {
+                "key": "websiteUrl",
+                "path": "websiteUrl",
+                "label": "Website",
+                "target": "canonical",
+                "widget": "url",
+                "required": false,
+                "maxLength": 2048,
+                "placeholder": "https://example.com"
+              },
+              {
+                "key": "description",
+                "path": "description",
+                "label": "Description",
+                "target": "canonical",
+                "widget": "textarea",
+                "required": false,
+                "maxLength": 2000,
+                "columnSpan": 12
+              }
+            ]
+          },
+          {
+            "key": "addresses",
+            "title": "Addresses",
+            "fields": [],
+            "components": [
+              {
+                "key": "addresses",
+                "kind": "addresses",
+                "title": "Supplier addresses",
+                "lookups": {
+                  "purposes": [
+                    {
+                      "label": "Default",
+                      "value": "default"
+                    },
+                    {
+                      "label": "Correspondence",
+                      "value": "correspondence"
+                    },
+                    {
+                      "label": "Remit to",
+                      "value": "remit_to"
+                    },
+                    {
+                      "label": "Ship from",
+                      "value": "ship_from"
+                    }
+                  ],
+                  "countries": [
+                    {
+                      "label": "United Kingdom",
+                      "value": "GB"
+                    },
+                    {
+                      "label": "Malaysia",
+                      "value": "MY"
+                    },
+                    {
+                      "label": "Singapore",
+                      "value": "SG"
+                    },
+                    {
+                      "label": "United States",
+                      "value": "US"
+                    }
+                  ]
+                },
+                "addLabel": "Add address",
+                "maxItems": 10,
+                "minItems": 1,
+                "requirePrimary": true
+              }
+            ],
+            "description": "Add at least one primary address."
+          },
+          {
+            "key": "contacts",
+            "title": "Contacts",
+            "fields": [],
+            "components": [
+              {
+                "key": "contacts",
+                "kind": "contacts",
+                "title": "Supplier contacts",
+                "lookups": {
+                  "channels": [
+                    {
+                      "label": "Email",
+                      "value": "email"
+                    },
+                    {
+                      "label": "Phone",
+                      "value": "phone"
+                    },
+                    {
+                      "label": "SMS",
+                      "value": "sms"
+                    },
+                    {
+                      "label": "WhatsApp",
+                      "value": "whatsapp"
+                    },
+                    {
+                      "label": "Website",
+                      "value": "website"
+                    }
+                  ],
+                  "purposes": [
+                    {
+                      "label": "Default",
+                      "value": "default"
+                    },
+                    {
+                      "label": "Correspondence",
+                      "value": "correspondence"
+                    },
+                    {
+                      "label": "Procurement",
+                      "value": "procurement"
+                    },
+                    {
+                      "label": "Notification",
+                      "value": "notification"
+                    }
+                  ]
+                },
+                "addLabel": "Add contact",
+                "maxItems": 10,
+                "minItems": 1,
+                "requirePrimary": true
+              }
+            ],
+            "description": "Add at least one primary contact and communication channel."
+          }
+        ],
+        "description": "Start an internal NEON request. Approval creates the partner and initial supplier organization assignment.",
+        "submitLabel": "Create draft request"
+      },
+      "workforceReview": {
+        "version": "2.0.0",
+        "sections": [
+          "person",
+          "employment",
+          "assignment",
+          "consent",
+          "rightToWork",
+          "backgroundEvidence"
+        ]
+      },
+      "supplierQualification": {
+        "version": "2.0.0",
+        "sections": [
+          "scope",
+          "criteria",
+          "commodityRegion",
+          "evidence",
+          "decision"
+        ]
+      }
+    },
+    "meshSafeSchemas": {
+      "organizationProfile": {
+        "fields": [
+          "schemaCode",
+          "schemaVersion",
+          "fieldSetCode",
+          "authority.plane",
+          "authority.ownerTenantId",
+          "authority.ownerNetworkAccountId",
+          "recipient.tenantId",
+          "recipient.networkAccountId",
+          "recipient.networkRelationshipId",
+          "recipient.proposedNeonRole",
+          "partner.accountCode",
+          "partner.displayName",
+          "partner.legalName",
+          "partner.networkRole",
+          "partner.countryCode",
+          "partner.defaultCurrency",
+          "partner.logoAssetRef",
+          "partner.legalForm",
+          "partner.incorporationDate",
+          "partner.websiteUrl",
+          "partner.description",
+          "partner.preferredLanguageCode",
+          "commodityCapabilities.domainCode",
+          "commodityCapabilities.code",
+          "commodityCapabilities.name",
+          "commodityCapabilities.tradeRole",
+          "commodityCapabilities.effectiveFrom",
+          "commodityCapabilities.effectiveUntil",
+          "industryClassifications.domainCode",
+          "industryClassifications.code",
+          "industryClassifications.name",
+          "industryClassifications.assignmentKind",
+          "industryClassifications.isPrimary",
+          "industryClassifications.confidence",
+          "industryClassifications.effectiveFrom",
+          "industryClassifications.effectiveUntil"
+        ],
+        "version": "2.0.0",
+        "category": "organization",
+        "fieldSetCode": "recipient_safe_v2",
+        "schemaVersion": 2,
+        "prohibitedPatterns": [
+          "person.",
+          "workforce.",
+          "employment.",
+          "bankVerification.",
+          "taxIdentifiers.value"
+        ]
+      },
+      "selectiveAcceptance": {
+        "version": "2.0.0",
+        "requires": [
+          "snapshotId",
+          "acceptedFieldPaths",
+          "payloadHash"
+        ],
+        "directMasterWrite": false
+      }
+    },
+    "semanticVersion": "3.1.1",
+    "viewDescriptors": {
+      "neonReview": {
+        "panels": [
+          "reviewedPayload",
+          "fieldDiff",
+          "validation",
+          "duplicateResolution",
+          "evidence",
+          "readiness"
+        ],
+        "actions": [
+          "return",
+          "reject",
+          "approve"
+        ],
+        "version": "2.0.0",
+        "noSelfApproval": true
+      },
+      "neonPartner360": {
+        "version": "1.0.0",
+        "sections": [
+          {
+            "code": "overview",
+            "routes": [],
+            "permission": "neon.relationship.business_partner.read",
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "identity",
+            "routes": [
+              "/api/neon/business-partners/:id/360/identity"
+            ],
+            "permission": "neon.relationship.business_partner_identity.read",
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "contacts",
+            "routes": [
+              "/api/neon/business-partners/:id/360/contacts"
+            ],
+            "permission": "neon.relationship.business_partner_contact.read",
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "addresses",
+            "routes": [
+              "/api/neon/business-partners/:id/360/addresses"
+            ],
+            "permission": "neon.relationship.business_partner_address.read",
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "identifiers-tax",
+            "routes": [
+              "/api/neon/business-partners/:id/360/identifiers"
+            ],
+            "permission": "neon.relationship.business_partner_identifier.read_masked",
+            "fieldPermissions": [
+              "neon.relationship.business_partner_tax.read_masked"
+            ],
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "roles-scope",
+            "routes": [
+              "/api/neon/business-partners/:id/360/roles"
+            ],
+            "permission": "neon.relationship.business_partner.read",
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "supplier-company",
+            "routes": [
+              "/api/neon/business-partners/:id/360/company-configuration"
+            ],
+            "permission": "neon.relationship.business_partner.read",
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "customer-company",
+            "routes": [
+              "/api/neon/business-partners/:id/360/company-configuration"
+            ],
+            "permission": "neon.relationship.business_partner.read",
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "banking",
+            "routes": [
+              "/api/neon/business-partners/:id/360/banking"
+            ],
+            "permission": "neon.relationship.business_partner_bank.read_masked",
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "qualifications-certificates",
+            "routes": [
+              "/api/neon/business-partners/:id/360/qualifications",
+              "/api/neon/business-partners/:id/360/certificates"
+            ],
+            "permission": "neon.relationship.business_partner_qualification.read",
+            "fieldPermissions": [
+              "neon.relationship.business_partner_certificate.read"
+            ],
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "credit",
+            "routes": [
+              "/api/neon/business-partners/:id/360/credit"
+            ],
+            "permission": "neon.relationship.business_partner_credit.read",
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "workforce",
+            "routes": [
+              "/api/neon/business-partners/:id/360/workforce"
+            ],
+            "permission": "neon.relationship.business_partner_workforce.read",
+            "fieldPermissions": [
+              "neon.relationship.business_partner_person.read"
+            ],
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "requests",
+            "routes": [
+              "/api/neon/business-partners/:id/360/requests"
+            ],
+            "permission": "neon.relationship.entity_case.read",
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "activity",
+            "routes": [
+              "/api/neon/business-partners/:id/360/activity"
+            ],
+            "permission": "neon.relationship.business_partner_activity.read",
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "business-activity",
+            "routes": [
+              "/api/neon/business-partners/:id/360/business-activity"
+            ],
+            "permission": "neon.relationship.business_partner.read",
+            "discoverableWhenDenied": false
+          },
+          {
+            "code": "network",
+            "routes": [
+              "/api/neon/business-partners/:id/360/network"
+            ],
+            "permission": "neon.relationship.business_partner_network.read",
+            "discoverableWhenDenied": false
+          }
+        ],
+        "presentation": {
+          "scopeBar": "required_for_scoped_sections",
+          "navigation": "manifest_driven",
+          "identityHeader": "sticky",
+          "restrictedValues": "masked_by_default"
+        },
+        "schemaVersion": 1,
+        "completenessPacks": [
+          {
+            "code": "organization_base",
+            "scope": "global",
+            "version": 1,
+            "category": "organization",
+            "requirements": [
+              {
+                "code": "organization.legal_name",
+                "label": "Add legal name",
+                "severity": "required",
+                "fieldCode": "partner.legalName",
+                "actionCode": "amend_partner",
+                "sectionCode": "identity"
+              },
+              {
+                "code": "organization.lifecycle",
+                "label": "Review lifecycle",
+                "severity": "required",
+                "fieldCode": "partner.lifecycleStatus",
+                "actionCode": "lifecycle",
+                "sectionCode": "identity"
+              },
+              {
+                "code": "organization.primary_address",
+                "label": "Add primary address",
+                "severity": "required",
+                "fieldCode": "address.primary",
+                "actionCode": "amend_partner",
+                "sectionCode": "addresses",
+                "requiresVerified": true
+              },
+              {
+                "code": "organization.primary_contact",
+                "label": "Add primary contact",
+                "severity": "recommended",
+                "fieldCode": "contact.primary",
+                "actionCode": "amend_partner",
+                "sectionCode": "contacts",
+                "requiresVerified": true
+              },
+              {
+                "code": "organization.identifier",
+                "label": "Add verified identifier",
+                "severity": "recommended",
+                "fieldCode": "identifier.primary",
+                "actionCode": "amend_partner",
+                "sectionCode": "identifiers-tax",
+                "requiresVerified": true
+              },
+              {
+                "code": "organization.commercial_role",
+                "label": "Add supplier or customer role",
+                "severity": "recommended",
+                "fieldCode": "role.any_commercial",
+                "actionCode": "add_role",
+                "sectionCode": "roles-scope"
+              }
+            ]
+          },
+          {
+            "code": "supplier_scope",
+            "role": "supplier",
+            "scope": "organization",
+            "version": 1,
+            "category": "organization",
+            "requirements": [
+              {
+                "code": "supplier.role",
+                "label": "Add supplier role",
+                "severity": "required",
+                "fieldCode": "role.supplier",
+                "actionCode": "add_role",
+                "sectionCode": "roles-scope"
+              },
+              {
+                "code": "supplier.organization",
+                "label": "Assign procurement organization",
+                "severity": "required",
+                "fieldCode": "scope.supplier.organization",
+                "actionCode": "assign_organization",
+                "sectionCode": "roles-scope"
+              }
+            ]
+          },
+          {
+            "code": "supplier_payable",
+            "role": "supplier",
+            "scope": "company",
+            "version": 1,
+            "category": "organization",
+            "requirements": [
+              {
+                "code": "supplier.company",
+                "label": "Configure supplier company",
+                "severity": "required",
+                "fieldCode": "company.supplier.profile",
+                "actionCode": "configure_company",
+                "sectionCode": "supplier-company"
+              },
+              {
+                "code": "supplier.bank",
+                "label": "Verify bank account",
+                "severity": "required",
+                "fieldCode": "bank.verified_presence",
+                "actionCode": "change_bank",
+                "sectionCode": "banking",
+                "requiresVerified": true
+              },
+              {
+                "code": "supplier.qualification",
+                "label": "Start qualification",
+                "severity": "recommended",
+                "fieldCode": "qualification.current",
+                "actionCode": "qualification",
+                "sectionCode": "qualifications-certificates",
+                "requiresVerified": true
+              },
+              {
+                "code": "supplier.certificate",
+                "label": "Add certification",
+                "severity": "recommended",
+                "fieldCode": "certification.current",
+                "actionCode": "certification",
+                "sectionCode": "qualifications-certificates",
+                "requiresVerified": true
+              }
+            ]
+          },
+          {
+            "code": "customer_scope",
+            "role": "customer",
+            "scope": "organization",
+            "version": 1,
+            "category": "organization",
+            "requirements": [
+              {
+                "code": "customer.role",
+                "label": "Add customer role",
+                "severity": "required",
+                "fieldCode": "role.customer",
+                "actionCode": "add_role",
+                "sectionCode": "roles-scope"
+              },
+              {
+                "code": "customer.organization",
+                "label": "Assign sales organization",
+                "severity": "required",
+                "fieldCode": "scope.customer.organization",
+                "actionCode": "assign_organization",
+                "sectionCode": "roles-scope"
+              }
+            ]
+          },
+          {
+            "code": "customer_credit",
+            "role": "customer",
+            "scope": "company",
+            "version": 1,
+            "category": "organization",
+            "requirements": [
+              {
+                "code": "customer.company",
+                "label": "Configure customer company",
+                "severity": "required",
+                "fieldCode": "company.customer.profile",
+                "actionCode": "configure_company",
+                "sectionCode": "customer-company"
+              },
+              {
+                "code": "customer.credit",
+                "label": "Open credit review",
+                "severity": "recommended",
+                "fieldCode": "credit.current",
+                "actionCode": "configure_company",
+                "sectionCode": "credit",
+                "requiresVerified": true
+              }
+            ]
+          },
+          {
+            "code": "person_base",
+            "scope": "global",
+            "version": 1,
+            "category": "person",
+            "requirements": [
+              {
+                "code": "person.name",
+                "label": "Complete personal identity",
+                "severity": "required",
+                "fieldCode": "person.name",
+                "actionCode": "amend_partner",
+                "sectionCode": "identity"
+              },
+              {
+                "code": "person.contact",
+                "label": "Add primary contact",
+                "severity": "recommended",
+                "fieldCode": "contact.primary",
+                "actionCode": "amend_partner",
+                "sectionCode": "contacts",
+                "requiresVerified": true
+              },
+              {
+                "code": "person.identifier",
+                "label": "Add verified identity",
+                "severity": "recommended",
+                "fieldCode": "person.identifier.verified_presence",
+                "actionCode": "amend_partner",
+                "sectionCode": "identifiers-tax",
+                "requiresVerified": true
+              }
+            ]
+          },
+          {
+            "code": "workforce_active",
+            "role": "workforce",
+            "scope": "workforce",
+            "version": 1,
+            "category": "person",
+            "requirements": [
+              {
+                "code": "workforce.role",
+                "label": "Add workforce role",
+                "severity": "required",
+                "fieldCode": "role.workforce",
+                "actionCode": "add_role",
+                "sectionCode": "roles-scope"
+              },
+              {
+                "code": "workforce.employment",
+                "label": "Add active employment",
+                "severity": "required",
+                "fieldCode": "employment.active",
+                "actionCode": "change_employment",
+                "sectionCode": "workforce",
+                "requiresVerified": true
+              },
+              {
+                "code": "workforce.assignment",
+                "label": "Add active assignment",
+                "severity": "required",
+                "fieldCode": "assignment.active",
+                "actionCode": "change_employment",
+                "sectionCode": "workforce",
+                "requiresVerified": true
+              },
+              {
+                "code": "workforce.onboarding",
+                "label": "Complete onboarding",
+                "severity": "recommended",
+                "fieldCode": "onboarding.complete",
+                "actionCode": "change_employment",
+                "sectionCode": "workforce",
+                "requiresVerified": true
+              }
+            ]
+          }
+        ],
+        "excludedCapabilities": [
+          "risk"
+        ]
+      },
+      "neonRequestList": {
+        "columns": [
+          "requestNo",
+          "displayName",
+          "journey",
+          "operation",
+          "source",
+          "status",
+          "scope",
+          "slaDueAt",
+          "createdAt"
+        ],
+        "version": "2.0.0"
+      },
+      "neonRequestDetail": {
+        "panels": [
+          "summary",
+          "identity",
+          "roleScope",
+          "sourceProvenance",
+          "validation",
+          "duplicates",
+          "evidence",
+          "workflowTimeline",
+          "applicationEvidence"
+        ],
+        "version": "2.0.0"
+      },
+      "neonPartnerAggregate": {
+        "panels": [
+          "identity",
+          "roles",
+          "organizationAssignments",
+          "companyConfiguration",
+          "qualification",
+          "credit",
+          "workforce",
+          "bankVerification",
+          "readinessWithoutRisk",
+          "sourceProvenance"
+        ],
+        "version": "2.1.0",
+        "compatibility": "read_only_until_360_cutover",
+        "retirementSignal": "bp360_legacy_aggregate_consumers_zero"
+      }
+    },
+    "evidencePolicies": {
+      "customer": {
+        "required": [
+          "legal_identity",
+          "tax_or_consent"
+        ],
+        "conditional": {
+          "customer.credit": [
+            "credit_evidence"
+          ]
+        }
+      },
+      "supplier": {
+        "required": [
+          "legal_identity",
+          "tax",
+          "representation"
+        ],
+        "conditional": {
+          "supplier.bank": [
+            "bank_ownership",
+            "verification_method"
+          ],
+          "supplier.qualify": [
+            "qualification_criteria"
+          ]
+        }
+      },
+      "workforce": {
+        "required": [
+          "consent",
+          "identity",
+          "right_to_work"
+        ],
+        "conditional": {
+          "workforce.new": [
+            "background_policy_result"
+          ],
+          "workforce.offboard": [
+            "resource_checklist"
+          ]
+        },
+        "purposeBound": true
+      }
+    },
+    "mappingContracts": {
+      "api": {
+        "source": "api",
+        "version": "2.0.0",
+        "strategy": "declarative_mapping",
+        "destination": "business_partner_request",
+        "snapshotPinned": false,
+        "allowedJourneys": [
+          "supplier",
+          "customer",
+          "workforce"
+        ],
+        "directMasterWrite": false,
+        "requiredProvenance": [
+          "systemCode",
+          "entityId",
+          "payloadHash"
+        ]
+      },
+      "mesh": {
+        "source": "mesh",
+        "version": "2.0.0",
+        "strategy": "selective_acceptance",
+        "destination": "business_partner_request",
+        "snapshotPinned": true,
+        "allowedJourneys": [
+          "supplier",
+          "customer"
+        ],
+        "directMasterWrite": false,
+        "requiredProvenance": [
+          "projectionId",
+          "snapshotId",
+          "acceptedFieldPaths"
+        ]
+      },
+      "import": {
+        "source": "import",
+        "version": "2.0.0",
+        "strategy": "declarative_mapping",
+        "destination": "business_partner_request",
+        "snapshotPinned": false,
+        "allowedJourneys": [
+          "supplier",
+          "customer",
+          "workforce"
+        ],
+        "directMasterWrite": false,
+        "requiredProvenance": [
+          "systemCode",
+          "entityId",
+          "payloadHash"
+        ]
+      },
+      "portal": {
+        "source": "portal",
+        "version": "2.0.0",
+        "strategy": "declarative_mapping",
+        "destination": "business_partner_request",
+        "snapshotPinned": false,
+        "allowedJourneys": [
+          "supplier",
+          "customer",
+          "workforce"
+        ],
+        "directMasterWrite": false,
+        "requiredProvenance": [
+          "invitationId",
+          "applicantPrincipalId"
+        ]
+      },
+      "internal": {
+        "source": "internal",
+        "version": "2.0.0",
+        "strategy": "declarative_mapping",
+        "destination": "business_partner_request",
+        "snapshotPinned": false,
+        "allowedJourneys": [
+          "supplier",
+          "customer",
+          "workforce"
+        ],
+        "directMasterWrite": false,
+        "requiredProvenance": [
+          "principalId"
+        ]
+      }
+    },
+    "reasonCodeCatalog": {
+      "BP_SCOPE_INVALID": "Requested scope is invalid",
+      "BP_SLA_ESCALATED": "Workflow SLA was escalated",
+      "BP_SOD_VIOLATION": "Maker/checker separation failed",
+      "CUSTOMER_NOT_READY": "Customer readiness gates failed",
+      "SUPPLIER_NOT_READY": "Supplier readiness gates failed",
+      "BP_EVIDENCE_MISSING": "Required evidence is missing",
+      "WORKFORCE_NOT_READY": "Workforce readiness gates failed",
+      "BP_VALIDATION_FAILED": "Payload validation failed",
+      "BP_DEFINITION_INCOMPATIBLE": "Definition is incompatible with the local runtime",
+      "BP_DUPLICATE_REVIEW_REQUIRED": "Duplicate review is required"
+    },
+    "compatibilityRules": {
+      "sourceHashExact": true,
+      "addOptionalField": "backward_compatible",
+      "unknownFieldPolicy": "reject_for_policy_objects",
+      "bundleSchemaVersion": "1.0.0",
+      "removedRequiredField": "breaking",
+      "workflowStageRemoval": "breaking",
+      "minimumConsumerVersions": {
+        "mesh": "1.0.0",
+        "neon": "1.0.0",
+        "studio": "1.0.0"
+      },
+      "semanticVersionMonotonic": true,
+      "mappingChangeRequiresNewVersion": true,
+      "rollbackOnlyToExactPreviousActive": true,
+      "lastValidLocalReleaseOnStudioOutage": true
+    },
+    "workflowDefinitions": {
+      "customer": {
+        "sod": {
+          "mfaAtDecision": true,
+          "makerCannotDecide": true,
+          "applicantCannotDecide": true
+        },
+        "stages": [
+          {
+            "code": "stewardship",
+            "mode": "serial",
+            "name": "Data stewardship",
+            "quorum": {
+              "kind": "any"
+            },
+            "slaMinutes": 240,
+            "noSelfApproval": true,
+            "escalateAtMinutes": 240,
+            "remindersAtMinutes": [
+              120,
+              192
+            ]
+          },
+          {
+            "code": "compliance_consent",
+            "mode": "parallel",
+            "name": "Compliance and consent",
+            "quorum": {
+              "kind": "all"
+            },
+            "slaMinutes": 480,
+            "noSelfApproval": true,
+            "escalateAtMinutes": 480,
+            "remindersAtMinutes": [
+              240,
+              384
+            ]
+          },
+          {
+            "code": "sales_owner",
+            "mode": "serial",
+            "name": "Sales owner",
+            "quorum": {
+              "kind": "any"
+            },
+            "slaMinutes": 240,
+            "noSelfApproval": true,
+            "escalateAtMinutes": 240,
+            "remindersAtMinutes": [
+              120,
+              192
+            ]
+          },
+          {
+            "code": "credit_review",
+            "mode": "parallel",
+            "name": "Credit review",
+            "quorum": {
+              "kind": "percentage",
+              "value": 50
+            },
+            "slaMinutes": 480,
+            "noSelfApproval": true,
+            "escalateAtMinutes": 480,
+            "remindersAtMinutes": [
+              240,
+              384
+            ]
+          }
+        ],
+        "version": "3.0.1",
+        "escalation": [
+          "stage_owner",
+          "sales_organization_owner",
+          "data_governance_owner"
+        ]
+      },
+      "supplier": {
+        "sod": {
+          "mfaAtDecision": true,
+          "makerCannotDecide": true,
+          "applicantCannotDecide": true
+        },
+        "stages": [
+          {
+            "code": "stewardship",
+            "mode": "serial",
+            "name": "Data stewardship",
+            "quorum": {
+              "kind": "any"
+            },
+            "slaMinutes": 240,
+            "noSelfApproval": true,
+            "escalateAtMinutes": 240,
+            "remindersAtMinutes": [
+              120,
+              192
+            ]
+          },
+          {
+            "code": "compliance_tax",
+            "mode": "parallel",
+            "name": "Compliance and tax",
+            "when": {
+              "path": "ownershipClass",
+              "value": "internal",
+              "operator": "not_equals"
+            },
+            "quorum": {
+              "kind": "any"
+            },
+            "slaMinutes": 480,
+            "noSelfApproval": true,
+            "escalateAtMinutes": 480,
+            "remindersAtMinutes": [
+              240,
+              384
+            ]
+          },
+          {
+            "code": "procurement_owner",
+            "mode": "parallel",
+            "name": "Procurement owner",
+            "quorum": {
+              "kind": "percentage",
+              "value": 25
+            },
+            "slaMinutes": 240,
+            "noSelfApproval": true,
+            "escalateAtMinutes": 240,
+            "remindersAtMinutes": [
+              120,
+              192
+            ]
+          }
+        ],
+        "version": "3.0.1",
+        "escalation": [
+          "stage_owner",
+          "operating_organization_owner",
+          "data_governance_owner"
+        ]
+      },
+      "workforce": {
+        "sod": {
+          "mfaAtDecision": true,
+          "makerCannotDecide": true,
+          "applicantCannotDecide": true,
+          "restrictedEvidencePurposeRequired": true
+        },
+        "stages": [
+          {
+            "code": "hr_review",
+            "mode": "serial",
+            "name": "HR review",
+            "quorum": {
+              "kind": "any"
+            },
+            "slaMinutes": 240,
+            "noSelfApproval": true,
+            "escalateAtMinutes": 240,
+            "remindersAtMinutes": [
+              120,
+              192
+            ]
+          },
+          {
+            "code": "hiring_manager",
+            "mode": "serial",
+            "name": "Hiring manager",
+            "quorum": {
+              "kind": "any"
+            },
+            "slaMinutes": 240,
+            "noSelfApproval": true,
+            "escalateAtMinutes": 240,
+            "remindersAtMinutes": [
+              120,
+              192
+            ]
+          },
+          {
+            "code": "compliance_privacy",
+            "mode": "parallel",
+            "name": "Privacy compliance",
+            "quorum": {
+              "kind": "all"
+            },
+            "slaMinutes": 480,
+            "noSelfApproval": true,
+            "escalateAtMinutes": 480,
+            "remindersAtMinutes": [
+              240,
+              384
+            ]
+          }
+        ],
+        "version": "3.0.1",
+        "escalation": [
+          "stage_owner",
+          "hr_business_partner",
+          "privacy_officer"
+        ]
+      },
+      "governance": {
+        "sod": {
+          "mfaAtDecision": true,
+          "makerCannotDecide": true
+        },
+        "stages": [
+          {
+            "code": "dependency_impact_review",
+            "mode": "parallel",
+            "name": "Dependency impact review",
+            "quorum": {
+              "kind": "all"
+            },
+            "slaMinutes": 480,
+            "noSelfApproval": true,
+            "escalateAtMinutes": 480,
+            "remindersAtMinutes": [
+              240,
+              384
+            ]
+          },
+          {
+            "code": "data_stewardship",
+            "mode": "serial",
+            "name": "Data stewardship",
+            "quorum": {
+              "kind": "any"
+            },
+            "slaMinutes": 240,
+            "noSelfApproval": true,
+            "escalateAtMinutes": 240,
+            "remindersAtMinutes": [
+              120,
+              192
+            ]
+          }
+        ],
+        "version": "3.0.1",
+        "escalation": [
+          "data_governance_owner"
+        ]
+      }
+    },
+    "sourceContractHashes": {
+      "request": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "meshMatch": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "eligibility": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "meshProfile": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "validationDeclarations": [
+      {
+        "code": "BP_LEGAL_NAME_REQUIRED",
+        "path": "partner.legalName",
+        "rule": "required",
+        "severity": "error",
+        "appliesTo": "organization"
+      },
+      {
+        "code": "BP_COUNTRY_REQUIRED",
+        "path": "partner.countryCode",
+        "rule": "iso-3166-alpha2",
+        "severity": "error",
+        "appliesTo": "organization"
+      },
+      {
+        "code": "BP_PERSON_NAME_REQUIRED",
+        "path": "person.firstName",
+        "rule": "required",
+        "severity": "error",
+        "appliesTo": "person"
+      },
+      {
+        "code": "BP_PERSON_CONSENT_REQUIRED",
+        "path": "person.consent",
+        "rule": "consent-current",
+        "severity": "error",
+        "appliesTo": "person"
+      },
+      {
+        "code": "BP_SUPPLIER_SCOPE_REQUIRED",
+        "path": "scope.operatingOrganizationId",
+        "rule": "uuid",
+        "severity": "error",
+        "appliesTo": "supplier"
+      },
+      {
+        "code": "BP_CUSTOMER_SCOPE_REQUIRED",
+        "path": "scope.operatingOrganizationId",
+        "rule": "uuid",
+        "severity": "error",
+        "appliesTo": "customer"
+      },
+      {
+        "code": "BP_WORKFORCE_EMPLOYER_REQUIRED",
+        "path": "scope.legalEntityId",
+        "rule": "uuid",
+        "severity": "error",
+        "appliesTo": "workforce"
+      },
+      {
+        "code": "BP_WORKFORCE_DATE_REQUIRED",
+        "path": "employment.startDate",
+        "rule": "effective-date",
+        "severity": "error",
+        "appliesTo": "workforce"
+      },
+      {
+        "code": "BP_EVIDENCE_POLICY_REQUIRED",
+        "path": "evidence.references",
+        "rule": "evidence-policy",
+        "severity": "error",
+        "appliesTo": "all"
+      },
+      {
+        "code": "BP_SOURCE_MAPPING_REQUIRED",
+        "path": "source.kind",
+        "rule": "mapping-declared",
+        "severity": "error",
+        "appliesTo": "all"
+      }
+    ]
+  },
+  "bundleHash": "9850db20dc97f51252458d1d4185e7211438234540062a9bfc643078b22eb91e"
+}

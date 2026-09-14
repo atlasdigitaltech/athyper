@@ -6,7 +6,7 @@ import {JSDOM} from "jsdom";
 import {ShellRouteProvider,useShellRoute,useEntityBreadcrumbBinding,deriveEntityBreadcrumbs,type EntityBreadcrumbBinding} from "../../packages/platform/shell/shell/src/route-state";
 import type {DerivedShellNavigation} from "../../packages/platform/shell/shell/src/core";
 const base="/mdg/business-partner";
-const navigation={routes:[{href:base,label:"Business Partner Management",workspaceCode:"mdg",workspaceName:"Master Data Governance"}],workspaces:[{code:"mdg",name:"Master Data Governance",href:"/mdg"}]} as unknown as DerivedShellNavigation;
+const navigation={routes:[{href:base,label:"Business Partners",workspaceCode:"mdg",workspaceName:"Master Data Governance"}],workspaces:[{code:"mdg",name:"Master Data Governance",href:"/mdg"}]} as unknown as DerivedShellNavigation;
 const binding:EntityBreadcrumbBinding={basePath:base,sections:[{href:base,aliases:[],label:"Overview"},{href:`${base}/manage`,aliases:[`${base}/partners`],label:"Manage"},{href:`${base}/requests`,aliases:[],label:"Review & Approval"}]};
 function Registration({value}:{value?:EntityBreadcrumbBinding}){useEntityBreadcrumbBinding(value);return null;}
 function Observer(){const route=useShellRoute()!;return <nav>{deriveEntityBreadcrumbs(navigation,route.pathname,route.binding).map((crumb,i)=><span key={i}>{crumb.label}|</span>)}</nav>;}
@@ -19,11 +19,21 @@ test("persistent shell breadcrumbs follow section, history, locale and metadata 
   try{
     for(const [path,label] of [[`${base}/partners`,'Manage'],[base,'Overview'],[`${base}/requests`,'Review & Approval'],[base,'Overview'],[`${base}/manage?density=compact`,'Manage']]){
       await act(async()=>render(path!));
-      assert.equal(dom.window.document.querySelector('nav')?.textContent,`Master Data Governance|Business Partner Management|${label}|`);
+      assert.equal(dom.window.document.querySelector('nav')?.textContent,`Master Data Governance|Business Partners|${label}|`);
     }
     await act(async()=>render(`${base}/requests`,{...binding,sections:binding.sections.map(section=>({...section,label:section.href.endsWith('/requests')?'Semakan':section.label}))}));
     assert.match(dom.window.document.querySelector('nav')!.textContent!,/Semakan/);
     await act(async()=>root.render(<ShellRouteProvider pathname="/mdg"><Observer/></ShellRouteProvider>));
     assert.equal(dom.window.document.querySelector('nav')?.textContent,'Master Data Governance|');
   }finally{await act(async()=>root.unmount());for(const[key,value]of previous){if(value)Object.defineProperty(globalThis,key,value);else delete(globalThis as Record<string,unknown>)[key];}dom.window.close();}
+});
+
+test("saved request breadcrumb replaces the record segment and preserves Edit",()=>{
+  const recordPath=`${base}/requests/740e21e1-39f2-42a3-af55-3998b5a154b5`;
+  const pathname=`${recordPath}/edit`;
+  const crumbs=deriveEntityBreadcrumbs(navigation,pathname,binding,{pathname,label:"BPR-123",recordPath});
+  assert.equal(crumbs.at(-2)?.label,"BPR-123");
+  assert.equal(crumbs.at(-2)?.href,recordPath);
+  assert.equal(crumbs.at(-1)?.label,"Edit");
+  assert.ok(!crumbs.some(crumb=>crumb.label.includes("740e21e1")));
 });

@@ -22,6 +22,11 @@ export class AuthoringPolicyError extends Error {
 }
 
 export interface MetaEntityAuthoringRepository {
+  list?(tenantId: string): Promise<readonly MetaEntityChangeSet[]>;
+  forkDraft?(input: {
+    sourceChangeSetId: string;
+    actorId: string;
+  }): Promise<MetaEntityChangeSet>;
   createDraft(input: {
     tenantId: string | null;
     entityId: string;
@@ -29,6 +34,18 @@ export interface MetaEntityAuthoringRepository {
     branchCode: string;
     title: string;
     actorId: string;
+    registration?: {
+      schemaVersion: 1;
+      moduleCode: string;
+      entityClass:
+        | "business"
+        | "configuration"
+        | "reference"
+        | "process"
+        | "projection"
+        | "technical";
+      ownershipModel: "tenant" | "overlay";
+    };
   }): Promise<MetaEntityChangeSet>;
   get(changeSetId: string): Promise<MetaEntityChangeSet | null>;
   loadGraph(changeSetId: string): Promise<MetaEntityGraph>;

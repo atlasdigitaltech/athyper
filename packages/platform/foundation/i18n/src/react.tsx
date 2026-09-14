@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, createElement, useContext, useEffect, useMemo, type HTMLAttributes, type ReactNode } from "react";
+import React, { createContext, createElement, useContext, useEffect, useMemo, type HTMLAttributes, type ReactNode } from "react";
 import { createIntlRuntime, textDirection, type EffectiveLocalization, type IntlRuntime, type LocalizationDiagnostic, type MessageCatalog, type MessageValues } from "./index";
 
 const IntlContext = createContext<IntlRuntime | undefined>(undefined);

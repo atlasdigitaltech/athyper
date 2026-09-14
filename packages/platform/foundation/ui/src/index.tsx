@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { DatePicker } from "./date-picker";
+export { DatePicker, type DatePickerProps } from "./date-picker";
 import { CloseIcon } from "@athyper/platform-icons";
 import { createPortal } from "react-dom";
 import {
@@ -10,6 +12,8 @@ import {
 } from "react";
 
 export function cx(...values: Array<string | false | null | undefined>): string { return values.filter(Boolean).join(" "); }
+
+export { choicePresentation } from "./choice-presentation";
 
 function useControllableState<T>(value: T | undefined, initial: T, onChange?: (value: T) => void): [T, (value: T) => void] {
   const [local, setLocal] = useState(initial);
@@ -25,7 +29,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({ className, v
 Button.displayName = "Button";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> { readonly error?: boolean; }
-export const Input = forwardRef<HTMLInputElement, InputProps>(({ className, error, ...props }, ref) => <input ref={ref} className={cx("a-input", className)} aria-invalid={error || undefined} {...props} />);
+export const Input = forwardRef<HTMLInputElement, InputProps>(({ className, error, ...props }, ref) => props.type === "date" ? <DatePicker {...props} ref={ref} className={className} error={error} /> : <input ref={ref} className={cx("a-input", className)} aria-invalid={error || undefined} {...props} />);
 Input.displayName = "Input";
 
 export const Label = forwardRef<HTMLLabelElement, LabelHTMLAttributes<HTMLLabelElement>>(({ className, ...props }, ref) => <label ref={ref} className={cx("a-label", className)} {...props} />);
@@ -166,7 +170,7 @@ export function DrawerPanel({ size = "standard", variant = "task", mobilePresent
     document.body.style.overflow = "hidden";
     (closeButton.current ?? firstFocusable(panel.current))?.focus();
     const key = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) return;
+      if (event.defaultPrevented || !isTopmostModal(panel.current)) return;
       if (event.key === "Escape") { event.preventDefault(); dialog.setOpen(false); return; }
       if (event.key !== "Tab" || !panel.current) return;
       const items = focusableElements(panel.current), first = items[0], last = items.at(-1);
@@ -209,10 +213,14 @@ export const Drawer = Object.freeze({ Root: DrawerRoot, Trigger: DrawerTrigger, 
 
 function focusableElements(owner: HTMLElement): HTMLElement[] { return [...owner.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(element => !element.closest('[hidden], [inert]')); }
 function firstFocusable(owner: HTMLElement | null): HTMLElement | null { return owner ? focusableElements(owner)[0] ?? null : null; }
+function isTopmostModal(panel: HTMLElement | null): boolean {
+  const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]');
+  return dialogs.item(dialogs.length - 1) === panel;
+}
 function ModalContent({ title, description, children, className, variant }: { readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string; readonly variant: "dialog" | "drawer" }) {
   const c = useContext(DialogContext); if (!c) throw new Error("DialogContent must be inside Dialog"); const titleId = useId(); const descriptionId = useId(); const panel = useRef<HTMLDivElement>(null); const restore = useRef<HTMLElement | null>(null); const [portalReady, setPortalReady] = useState(false);
   useEffect(() => setPortalReady(true), []);
-  useEffect(() => { if (!c.open || (variant === "drawer" && !portalReady)) return; restore.current = document.activeElement as HTMLElement; const previousOverflow = document.body.style.overflow; document.body.style.overflow = "hidden"; const first = panel.current?.querySelector<HTMLElement>('button:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'); first?.focus(); const key = (event: KeyboardEvent) => { if (event.key === "Escape") c.setOpen(false); if (event.key === "Tab" && panel.current) { const items = [...panel.current.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])')]; if (!items.length) return; const firstItem = items[0]; const lastItem = items[items.length - 1]; if (event.shiftKey && document.activeElement === firstItem) { event.preventDefault(); lastItem?.focus(); } else if (!event.shiftKey && document.activeElement === lastItem) { event.preventDefault(); firstItem?.focus(); } } }; document.addEventListener("keydown", key); return () => { document.removeEventListener("keydown", key); document.body.style.overflow = previousOverflow; restore.current?.focus(); }; }, [c.open, c.setOpen, portalReady, variant]);
+  useEffect(() => { if (!c.open || (variant === "drawer" && !portalReady)) return; restore.current = document.activeElement as HTMLElement; const previousOverflow = document.body.style.overflow; document.body.style.overflow = "hidden"; const first = panel.current?.querySelector<HTMLElement>('button:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'); first?.focus(); const key = (event: KeyboardEvent) => { if (event.defaultPrevented || !isTopmostModal(panel.current)) return; if (event.key === "Escape") { event.preventDefault(); c.setOpen(false); } if (event.key === "Tab" && panel.current) { const items = [...panel.current.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])')]; if (!items.length) return; const firstItem = items[0]; const lastItem = items[items.length - 1]; if (event.shiftKey && document.activeElement === firstItem) { event.preventDefault(); lastItem?.focus(); } else if (!event.shiftKey && document.activeElement === lastItem) { event.preventDefault(); firstItem?.focus(); } } }; document.addEventListener("keydown", key); return () => { document.removeEventListener("keydown", key); document.body.style.overflow = previousOverflow; restore.current?.focus(); }; }, [c.open, c.setOpen, portalReady, variant]);
   if (!c.open) return null;
   const drawer = variant === "drawer";
   if (drawer && !portalReady) return null;
@@ -230,3 +238,5 @@ export function VisuallyHidden(props: HTMLAttributes<HTMLSpanElement>) { return 
 export function FocusGuard({ onFocus }: { readonly onFocus?: () => void }) { return <span tabIndex={0} aria-hidden="true" className="a-focus-guard" onFocus={onFocus} />; }
 export * from "./presentation";
 export { ScopePickerToolbar, CompanyGroups, type CompanyChoice } from "./company-groups";
+
+export { SearchableSelect, searchReferenceOptions, type ReferenceOption, type SearchableSelectMessages } from "./searchable-select";

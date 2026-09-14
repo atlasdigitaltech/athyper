@@ -17,6 +17,7 @@ import {
   createIamAuthenticationMiddleware,
   readVerifiedRequestContext,
   createPermissionAuthorizer,
+  readSourcePermissionRequirement,
   createKyselyIdentityContextResolver,
   organizationIdsFromClaims,
   ExactPlaneAuthorizationError,
@@ -160,7 +161,35 @@ export function registerPlatform(
     resolveIdentityContext,
   });
   container.platform.iam = iam;
-  const authorizer = createPermissionAuthorizer();
+  const authorizer = createPermissionAuthorizer({
+    // Canonical target reads can have no source allow. Read the source's
+    // current catalog requirements independently of the allow snapshot.
+    readSourceRequirement: async (context, permissionCode) => {
+      const adapter =
+        context.planeKey === "studio"
+          ? container.adapters.athyperDatabase
+          : context.planeKey === "neon"
+            ? container.adapters.neonDatabase
+            : context.planeKey === "mesh"
+              ? container.adapters.meshDatabase
+              : undefined;
+      if (!adapter) return null;
+      return adapter.database.transaction().execute(async (transaction) => {
+        await sql`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY`.execute(
+          transaction,
+        );
+        await sql`SET LOCAL statement_timeout='1500ms'`.execute(transaction);
+        await sql`SELECT set_config('app.current_tenant_id',${context.tenantId},true),set_config('app.current_principal_id',${context.principalId},true)`.execute(
+          transaction,
+        );
+        return readSourcePermissionRequirement(
+          transaction as unknown as Transaction<Record<string, never>>,
+          context.tenantId,
+          permissionCode,
+        );
+      });
+    },
+  });
   container.platform.authorizer = authorizer;
   container.platform.httpRegistrars.push((application) =>
     registerIdentityContextDiscovery(
@@ -438,13 +467,18 @@ function registerIdentitySagaRoutes(
 ): void {
   const authenticate = createIamAuthenticationMiddleware(iam);
   const repository = new KyselyIdentityReplayApprovalRepository(
-    (work) => studio.withTenantTransaction((transaction) => work(transaction as never)),
+    (work) =>
+      studio.withTenantTransaction((transaction) => work(transaction as never)),
     audit,
   );
   registerIdentityReplayRoutes(
     application,
     authenticate,
-    new IdentityReplayApprovalService(repository, createIdentityReplayAuthorizer(), replayEnabled),
+    new IdentityReplayApprovalService(
+      repository,
+      createIdentityReplayAuthorizer(),
+      replayEnabled,
+    ),
   );
   registerContractRoute(
     application,
@@ -861,7 +895,10 @@ function registerProjectionReconciliationRoutes(
             await authorizer.authorize({
               context,
               permissionCode: "studio.iam.application_projection.replay",
-              resource: { tenantId: context.tenantId, attemptId: String(request.params.attemptId) },
+              resource: {
+                tenantId: context.tenantId,
+                attemptId: String(request.params.attemptId),
+              },
             })
           ).allowed
         ) {
@@ -1621,23 +1658,104 @@ function parseRequiredActionMatrix(
   return value as Readonly<Record<string, readonly string[]>>;
 }
 
-
 function registerCustomerPortalDelivery(container: Container): void {
-  container.runtimes.jobDefinitions.push({code:CUSTOMER_PORTAL_JOB,owner:"@athyper/server-platform-iam",queue:CUSTOMER_PORTAL_QUEUE,name:CUSTOMER_PORTAL_JOB,scope:"plane",payloadSchema:{name:CUSTOMER_PORTAL_JOB,version:1},timeoutMs:120_000,maxAttempts:1,executionRetentionDays:90});
-  if(container.runtimes.scheduler) container.runtimes.scheduledJobs.push({scheduleId:"customer-portal-delivery",queue:CUSTOMER_PORTAL_QUEUE,name:CUSTOMER_PORTAL_JOB,data:{limit:20},pattern:{kind:"interval",everyMs:15_000},options:{jobId:"trustiam:customer:portal:delivery",maxAttempts:1,payloadSchema:{name:CUSTOMER_PORTAL_JOB,version:1},execution:{planeKey:"studio",scope:"plane",principalId:"00000000-0000-0000-0000-000000000000"}}});
-  const neon = container.adapters.jobNeonDatabase, studio = container.adapters.jobAthyperDatabase;
+  container.runtimes.jobDefinitions.push({
+    code: CUSTOMER_PORTAL_JOB,
+    owner: "@athyper/server-platform-iam",
+    queue: CUSTOMER_PORTAL_QUEUE,
+    name: CUSTOMER_PORTAL_JOB,
+    scope: "plane",
+    payloadSchema: { name: CUSTOMER_PORTAL_JOB, version: 1 },
+    timeoutMs: 120_000,
+    maxAttempts: 1,
+    executionRetentionDays: 90,
+  });
+  if (container.runtimes.scheduler)
+    container.runtimes.scheduledJobs.push({
+      scheduleId: "customer-portal-delivery",
+      queue: CUSTOMER_PORTAL_QUEUE,
+      name: CUSTOMER_PORTAL_JOB,
+      data: { limit: 20 },
+      pattern: { kind: "interval", everyMs: 15_000 },
+      options: {
+        jobId: "trustiam:customer:portal:delivery",
+        maxAttempts: 1,
+        payloadSchema: { name: CUSTOMER_PORTAL_JOB, version: 1 },
+        execution: {
+          planeKey: "studio",
+          scope: "plane",
+          principalId: "00000000-0000-0000-0000-000000000000",
+        },
+      },
+    });
+  const neon = container.adapters.jobNeonDatabase,
+    studio = container.adapters.jobAthyperDatabase;
   if (!neon || !studio) return;
-  const repository = new KyselyCustomerPortalDeliveryRepository(work => neon.withSystemTransaction(tx => work(tx as never)));
-  const handler = createCustomerPortalDeliveryHandler(repository, async tenantId => {
-    const actor = await studio.withSystemTransaction(async tx => (await sql<{id:string}>`SELECT id FROM master.principal WHERE tenant_id=${tenantId}::uuid AND status='active' ORDER BY (principal_type='service_account') DESC,created_at,id LIMIT 1`.execute(tx)).rows[0]);
-    if (!actor) throw Object.assign(new Error("Customer portal recipient has no active delivery principal"),{code:"CUSTOMER_PORTAL_ACTOR_MISSING"});
-    return new CustomerPortalIntentConsumer(work => studio.withSystemTransaction(tx => work(tx as never)), actor.id);
-  });
-  container.runtimes.jobs?.register(CUSTOMER_PORTAL_QUEUE, CUSTOMER_PORTAL_JOB, handler);
-  container.runtimes.health.register("trustiam.customer-portal-delivery",async()=>{
-    try {
-      const row=await neon.withSystemTransaction(async tx=>(await sql<{pending:number;dead_letters:number;oldest_seconds:number|null}>`SELECT count(*) FILTER(WHERE status IN('pending','failed','processing'))::int pending,count(*) FILTER(WHERE status='dead_letter')::int dead_letters,extract(epoch FROM clock_timestamp()-min(created_at) FILTER(WHERE status IN('pending','failed','processing')))::int oldest_seconds FROM event.outbox WHERE topic='iam-projection' AND event_type='customer.portal_iam_projection.requested'`.execute(tx)).rows[0]);
-      return {status:row && row.dead_letters===0 && Number(row.oldest_seconds??0)<900 ? "healthy" as const : "unhealthy" as const,message:`pending=${row?.pending??0}, dead_letters=${row?.dead_letters??0}`};
-    } catch { return {status:"unhealthy" as const,message:"Customer portal delivery unavailable"}; }
-  });
+  const repository = new KyselyCustomerPortalDeliveryRepository((work) =>
+    neon.withSystemTransaction((tx) => work(tx as never)),
+  );
+  const handler = createCustomerPortalDeliveryHandler(
+    repository,
+    async (tenantId) => {
+      const actor = await studio.withSystemTransaction(
+        async (tx) =>
+          (
+            await sql<{
+              id: string;
+            }>`SELECT id FROM master.principal WHERE tenant_id=${tenantId}::uuid AND status='active' ORDER BY (principal_type='service_account') DESC,created_at,id LIMIT 1`.execute(
+              tx,
+            )
+          ).rows[0],
+      );
+      if (!actor)
+        throw Object.assign(
+          new Error(
+            "Customer portal recipient has no active delivery principal",
+          ),
+          { code: "CUSTOMER_PORTAL_ACTOR_MISSING" },
+        );
+      return new CustomerPortalIntentConsumer(
+        (work) => studio.withSystemTransaction((tx) => work(tx as never)),
+        actor.id,
+      );
+    },
+  );
+  container.runtimes.jobs?.register(
+    CUSTOMER_PORTAL_QUEUE,
+    CUSTOMER_PORTAL_JOB,
+    handler,
+  );
+  container.runtimes.health.register(
+    "trustiam.customer-portal-delivery",
+    async () => {
+      try {
+        const row = await neon.withSystemTransaction(
+          async (tx) =>
+            (
+              await sql<{
+                pending: number;
+                dead_letters: number;
+                oldest_seconds: number | null;
+              }>`SELECT count(*) FILTER(WHERE status IN('pending','failed','processing'))::int pending,count(*) FILTER(WHERE status='dead_letter')::int dead_letters,extract(epoch FROM clock_timestamp()-min(created_at) FILTER(WHERE status IN('pending','failed','processing')))::int oldest_seconds FROM event.outbox WHERE topic='iam-projection' AND event_type='customer.portal_iam_projection.requested'`.execute(
+                tx,
+              )
+            ).rows[0],
+        );
+        return {
+          status:
+            row &&
+            row.dead_letters === 0 &&
+            Number(row.oldest_seconds ?? 0) < 900
+              ? ("healthy" as const)
+              : ("unhealthy" as const),
+          message: `pending=${row?.pending ?? 0}, dead_letters=${row?.dead_letters ?? 0}`,
+        };
+      } catch {
+        return {
+          status: "unhealthy" as const,
+          message: "Customer portal delivery unavailable",
+        };
+      }
+    },
+  );
 }

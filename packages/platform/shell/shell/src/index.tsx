@@ -32,3 +32,5 @@ export { useRecordFooterSources } from "./record-footer";
 export { useAtlasBusinessContextPublisher, type AtlasBusinessContextInput } from "@athyper/platform-ai-agent-ui";
 
 export { ManagementWorkspace, ManagementNavigation, ManagementToolbar, type ManagementNavigationItem } from "./management-workspace";
+
+export * from "./task-header";

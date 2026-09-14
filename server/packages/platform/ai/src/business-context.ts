@@ -10,7 +10,10 @@ import type {
   RecordQueryService,
 } from "@athyper/server-contract-records";
 import { assertAtlasContext } from "./context.js";
-import { AtlasServiceError, AtlasScopeSelectionRequiredError } from "./errors.js";
+import {
+  AtlasServiceError,
+  AtlasScopeSelectionRequiredError,
+} from "./errors.js";
 
 export interface AtlasResolvedBusinessContext {
   readonly page: AtlasBusinessContextV1;
@@ -51,7 +54,11 @@ export function createAtlasBusinessContextResolver(options: {
         context,
         page.entityCode,
       );
-      if (!descriptor || descriptor.entityCode !== page.entityCode || descriptor.planeKey !== context.planeKey)
+      if (
+        !descriptor ||
+        descriptor.entityCode !== page.entityCode ||
+        descriptor.planeKey !== context.planeKey
+      )
         return deny();
       // Legacy BP context transport is allowed; this does not enable any additional tools.
       if (
@@ -73,11 +80,25 @@ export function createAtlasBusinessContextResolver(options: {
         !["all", "supplier", "customer"].includes(page.roleLens)
       )
         return deny();
-      if (page.workContext?.networkAccountId && !descriptor.ai?.insightProviders.some(ref => ref.id === "entity_read_record" && ref.version === 1)) return deny();
+      if (
+        page.workContext?.networkAccountId &&
+        !descriptor.ai?.insightProviders.some(
+          (ref) => ref.id === "entity_read_record" && ref.version === 1,
+        )
+      )
+        return deny();
       if (page.kind === "record" && page.caseId) {
-        if (page.entityCode !== "business_partner" || !options.cases) return deny();
-        try { await options.cases.read({context, requestId: page.caseId, businessPartnerId: page.recordId}); }
-        catch { return deny(); }
+        if (page.entityCode !== "business_partner" || !options.cases)
+          return deny();
+        try {
+          await options.cases.read({
+            context,
+            requestId: page.caseId,
+            businessPartnerId: page.recordId,
+          });
+        } catch {
+          return deny();
+        }
       }
       try {
         const base = {
@@ -89,8 +110,11 @@ export function createAtlasBusinessContextResolver(options: {
         if (page.kind === "record") {
           // Mesh admission must use the account-scoped Records owner below.
           // The unscoped get cannot supply its required account coordinate.
-          const scopedMeshRecord = context.planeKey === "mesh" && page.entityCode === "network_relationship";
-          if (!scopedMeshRecord &&
+          const scopedMeshRecord =
+            context.planeKey === "mesh" &&
+            page.entityCode === "network_relationship";
+          if (
+            !scopedMeshRecord &&
             !(
               await options.records.get({
                 context,
@@ -105,7 +129,10 @@ export function createAtlasBusinessContextResolver(options: {
             ...base,
             // Tenant-wide directory admission is independent of optional work scope.
             // Work coordinates remain untrusted until a scoped owner evaluates them.
-            ...(descriptor.directoryScope?.mode === "tenant" && page.entityCode === "business_partner" && context.planeKey === "neon" ? {} : {scopeCoordinate: page.workContext}),
+            ...(descriptor.directoryScope?.mode === "tenant" &&
+            !descriptor.collectionRelationship
+              ? {}
+              : { scopeCoordinate: page.workContext }),
             recordIds: [page.recordId],
             limit: 1,
           });
@@ -115,7 +142,7 @@ export function createAtlasBusinessContextResolver(options: {
             page,
             descriptorHash: scoped.descriptorHash,
             entityDescriptorHash: descriptor.compiledHash,
-          entityContractHash: descriptor.contractHash,
+            entityContractHash: descriptor.contractHash,
             scopeFingerprint: fingerprint(scoped.scopeFingerprint, page),
           });
         }
@@ -127,6 +154,10 @@ export function createAtlasBusinessContextResolver(options: {
             limit: 1,
           });
         const directory = page.directory;
+        // Independently owned collections retain their validated work target for
+        // every row query. Parent directory filters cannot substitute for it.
+        // Mixed collection/directory semantics need a registered owner contract.
+        if (descriptor.collectionRelationship && directory) return deny();
         // The owner eligibility filter requires exactly one explicit organization/company pair.
         const directoryCoordinate =
           directory?.eligibleOperation &&
@@ -147,7 +178,9 @@ export function createAtlasBusinessContextResolver(options: {
           sort: page.sort,
           search: page.search,
           standardViewKey: page.standardViewKey,
-          scopeCoordinate: directoryCoordinate,
+          scopeCoordinate: descriptor.collectionRelationship
+            ? page.workContext
+            : directoryCoordinate,
           limit: page.pageSize,
         };
         const scoped = await options.list({ ...query, cursor: page.cursor });
@@ -178,7 +211,13 @@ export function createAtlasBusinessContextResolver(options: {
           scopeFingerprint: fingerprint(scoped.scopeFingerprint, page),
         });
       } catch (error) {
-        if (error && typeof error === "object" && "code" in error && error.code === "RECORD_LIST_SCOPE_REQUIRED") throw new AtlasScopeSelectionRequiredError();
+        if (
+          error &&
+          typeof error === "object" &&
+          "code" in error &&
+          error.code === "RECORD_LIST_SCOPE_REQUIRED"
+        )
+          throw new AtlasScopeSelectionRequiredError();
         return deny();
       }
     },
@@ -227,9 +266,15 @@ export function readAtlasBusinessContext(
 }
 
 /** Navigation/cursor coordinates stay on the server; this is not record evidence. */
-export function atlasBusinessContextModelScope(page: AtlasBusinessContextV1): Readonly<Record<string, unknown>> {
+export function atlasBusinessContextModelScope(
+  page: AtlasBusinessContextV1,
+): Readonly<Record<string, unknown>> {
   if (page.kind === "record") {
-    const { generationId: _generation, schemaVersion: _version, ...scope } = page;
+    const {
+      generationId: _generation,
+      schemaVersion: _version,
+      ...scope
+    } = page;
     return scope;
   }
   return {
@@ -244,8 +289,20 @@ export function atlasBusinessContextModelScope(page: AtlasBusinessContextV1): Re
     ...(page.standardViewKey ? { standardViewKey: page.standardViewKey } : {}),
     // The qualified summary tool can use a single selected target. Multiple-ID
     // insights need their own owner adapter; never imply partial IDs are complete.
-    ...(page.analysisTarget === "selection" && page.selectedIds.length === 1 ? { recordId: page.selectedIds[0] } : {}),
+    ...(page.analysisTarget === "selection" && page.selectedIds.length === 1
+      ? { recordId: page.selectedIds[0] }
+      : {}),
     ...(page.workContext ? { workContext: page.workContext } : {}),
-    ...(page.directory ? { directory: { operatingOrganizationCount:page.directory.operatingOrganizationIds?.length??0,companyCount:page.directory.companyCodeIds?.length??0,partnerRole:page.directory.partnerRole,eligibleOperation:page.directory.eligibleOperation } } : {}),
+    ...(page.directory
+      ? {
+          directory: {
+            operatingOrganizationCount:
+              page.directory.operatingOrganizationIds?.length ?? 0,
+            companyCount: page.directory.companyCodeIds?.length ?? 0,
+            partnerRole: page.directory.partnerRole,
+            eligibleOperation: page.directory.eligibleOperation,
+          },
+        }
+      : {}),
   };
 }

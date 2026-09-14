@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { AuthFlowError, callbackNavigationResponse, createAuthHandlers, logoutCallbackNavigationResponse, logoutNavigationResponse, type AuthContextOption, type AuthProvider, type TokenResult, type VerifiedIdentity } from "../../packages/platform/iam/auth-bff/src/index";
-import { KEYCLOAK_SESSION_TTLS_MS } from "../../packages/platform/iam/auth-bff/src/environment";
+import { KEYCLOAK_SESSION_TTLS_MS, readSessionTtls } from "../../packages/platform/iam/auth-bff/src/environment";
 import { SessionStoreUnavailableError, type SessionBinding, type SessionStore, type StoredSession } from "../../packages/platform/iam/session-store/src/index";
 
 class TestStore implements SessionStore {
@@ -395,4 +395,17 @@ it("rejects malformed logout bodies as client errors without clearing cookies", 
     }));
     assert.equal(response.status, 400);
   }
+});
+
+describe("deployment session lifetimes", () => {
+  it("preserves existing defaults and applies explicit DEV overrides", () => {
+    assert.deepEqual(readSessionTtls("studio", {}), KEYCLOAK_SESSION_TTLS_MS.studio);
+    assert.deepEqual(readSessionTtls("neon", {}), KEYCLOAK_SESSION_TTLS_MS.neon);
+    assert.deepEqual(readSessionTtls("studio", { AUTH_SESSION_IDLE_TTL_SECONDS: "7200", AUTH_SESSION_ABSOLUTE_TTL_SECONDS: "43200" }), { idleTtlMs: 7200000, absoluteTtlMs: 43200000 });
+  });
+  it("rejects malformed and contradictory timeouts instead of silently weakening the policy", () => {
+    for (const value of ["", "0", "-1", "1.5", "NaN", "Infinity", "99999999999999999"])
+      assert.throws(() => readSessionTtls("studio", { AUTH_SESSION_IDLE_TTL_SECONDS: value }));
+    assert.throws(() => readSessionTtls("studio", { AUTH_SESSION_IDLE_TTL_SECONDS: "7200", AUTH_SESSION_ABSOLUTE_TTL_SECONDS: "3600" }));
+  });
 });

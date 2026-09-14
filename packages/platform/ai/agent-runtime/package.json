@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@athyper/platform-api-client": "workspace:*",
-    "@athyper/server-contract-ai": "workspace:*"
+    "@athyper/contract-platform-ai": "workspace:*"
   },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",

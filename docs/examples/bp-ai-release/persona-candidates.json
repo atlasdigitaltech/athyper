@@ -1,0 +1,28 @@
+{
+  "schema": "bp-ai-persona-candidates/1",
+  "observedAt": "2026-09-10T10:23:22.775684+00:00",
+  "plane": "neon",
+  "otherTenant": {
+    "code": "athyper",
+    "displayName": "Athyper Group Holdings",
+    "tenantId": "11111111-1111-4111-8111-111111111111",
+    "accounts": [
+      {
+        "actor": "athyper.admin",
+        "principalId": "d4250b08-6e5e-5887-b4e1-6f3eb31d7c8c",
+        "storageState": "tests/e2e/.auth/dev/neon/athyper.admin.json"
+      },
+      {
+        "actor": "athyper.owner",
+        "principalId": "71667bf5-941b-5f6d-aab0-355e39c0bbde",
+        "storageState": "tests/e2e/.auth/dev/neon/athyper.owner.json"
+      }
+    ],
+    "identityBasis": "Existing DEV Neon master principal and tenant records; names supplied by user.",
+    "authenticationQualified": false,
+    "legacySessionState": "anonymous"
+  },
+  "sensitiveFieldRestrictedPersona": "Not assigned; requires actual admitted permission and field-disclosure observations.",
+  "permissionsChanged": false,
+  "releaseQualified": false
+}

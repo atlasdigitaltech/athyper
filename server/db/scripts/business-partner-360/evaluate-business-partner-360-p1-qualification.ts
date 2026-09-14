@@ -60,7 +60,7 @@ export type BusinessPartner360P1QualificationDecision = Readonly<{
   invalid: readonly string[];
 }>;
 
-const FIXTURE_FAMILIES = ["organization", "supplier", "customer", "dual_role", "person_workforce", "external_worker", "mesh_linked"] as const;
+const FIXTURE_FAMILIES = ["organization", "supplier", "customer", "dual_role", "mesh_linked"] as const;
 
 export function evaluateBusinessPartner360P1Qualification(packet: BusinessPartner360P1QualificationPacket, approvals: readonly Approval[]): BusinessPartner360P1QualificationDecision {
   const invalid: string[] = [];

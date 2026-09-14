@@ -172,7 +172,7 @@ try {
     [
       "--import",
       "tsx",
-      "server/db/scripts/tests/integration/governed-internal-business-partner-http.mjs",
+      "server/apps/platform-host/scripts/db-verification/tests/integration/governed-internal-business-partner-http.mjs",
     ],
     { DATABASE_URL: databaseUrl("neon") },
   );

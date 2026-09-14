@@ -1,4 +1,10 @@
 "use client";
+import {
+  EntityIntakeForm,
+  readIntakeFormReview,
+  useEntityIntake,
+} from "@athyper/platform-entity-form-detail";
+import { submitBusinessPartnerIntake } from "./intake-submit";
 
 import {
   useApiClient,
@@ -84,15 +90,21 @@ export function roleAuthoritySnapshot(aggregate: PartnerAggregate) {
 
 export function GovernedBusinessPartnerRoleExtension({
   businessPartnerId,
+  requestedRole,
 }: {
   readonly businessPartnerId: string;
+  readonly requestedRole?: CommercialRole;
 }) {
   const permissions = usePermissions();
   if (!permissions.has("neon.relationship.entity_case.create")) {
     return (
       <div data-ui-state="unauthorized">
         <PageSurface
-          title="Add Business Partner role"
+          title={
+            requestedRole
+              ? `Add ${requestedRole} role`
+              : "Add business partner role"
+          }
           description="Role extension authority is scoped by operating organization."
         >
           <Notice>
@@ -102,14 +114,25 @@ export function GovernedBusinessPartnerRoleExtension({
       </div>
     );
   }
-  return <RoleExtensionForm businessPartnerId={businessPartnerId} />;
+  return (
+    <RoleExtensionForm
+      businessPartnerId={businessPartnerId}
+      requestedRole={requestedRole}
+    />
+  );
 }
 
 function RoleExtensionForm({
   businessPartnerId,
+  requestedRole,
 }: {
   businessPartnerId: string;
+  requestedRole?: CommercialRole;
 }) {
+  const intake = useEntityIntake();
+  const [intakeCommandKey, setIntakeCommandKey] = useState(() =>
+    crypto.randomUUID(),
+  );
   const http = useApiClient();
   const api = useMemo(() => createBusinessPartnerClient(http), [http]);
   const operating = useNeonOperatingOrganization();
@@ -133,7 +156,7 @@ function RoleExtensionForm({
   );
   const [organizationId, setOrganizationId] = useState("");
   const [aggregate, setAggregate] = useState<PartnerAggregate>();
-  const [role, setRole] = useState<CommercialRole>("supplier");
+  const [role, setRole] = useState<CommercialRole>(requestedRole ?? "supplier");
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -171,8 +194,9 @@ function RoleExtensionForm({
 
   const available = aggregate ? availableRoleExtensions(aggregate) : [];
   useEffect(() => {
-    if (available.length && !available.includes(role)) setRole(available[0]!);
-  }, [available, role]);
+    if (!requestedRole && available.length && !available.includes(role))
+      setRole(available[0]!);
+  }, [available, role, requestedRole]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -183,22 +207,33 @@ function RoleExtensionForm({
     try {
       const code = requiredValue(data, "roleCode").toUpperCase();
       const type = requiredValue(data, "roleType");
-      const result = await api.extend({
-        businessPartnerId,
-        role,
-        operatingOrganizationId: organizationId,
-        ...(companyCodeId ? { companyCodeId } : {}),
-        proposedPayload:
-          role === "supplier"
-            ? { supplierCode: code, supplierType: type }
-            : { customerCode: code, customerType: type },
-      });
+      const result = await api.extend(
+        {
+          businessPartnerId,
+          role,
+          operatingOrganizationId: organizationId,
+          ...(companyCodeId ? { companyCodeId } : {}),
+          proposedPayload:
+            role === "supplier"
+              ? { supplierCode: code, supplierType: type }
+              : { customerCode: code, customerType: type },
+        },
+        intakeCommandKey,
+      );
+      intake?.markSaved();
+      const completion = intake
+        ? await submitBusinessPartnerIntake(api, result.request)
+        : undefined;
       toast.push({
-        tone: "success",
-        title: result.replayed
-          ? "Existing extension opened"
-          : "Role extension created",
-        detail: `${result.request.requestNo} reuses ${aggregate.businessPartner.code} and has an independent approval lifecycle.`,
+        tone: completion && !completion.submitted ? "warning" : "success",
+        title: completion?.submitted
+          ? "Role extension submitted"
+          : result.replayed
+            ? "Existing extension opened"
+            : "Role extension created",
+        detail:
+          completion?.detail ??
+          `${result.request.requestNo} reuses ${aggregate.businessPartner.code} and has an independent approval lifecycle.`,
       });
       navigation.push(
         `/mdg/business-partner/requests/${encodeURIComponent(result.request.id)}`,
@@ -214,7 +249,12 @@ function RoleExtensionForm({
   return (
     <div data-ui-state={busy ? "mutation-pending" : error ? "error" : "ready"}>
       <PageSurface
-        title="Add Business Partner role"
+        contentOnly={Boolean(intake)}
+        title={
+          requestedRole
+            ? `Add ${requestedRole} role`
+            : "Add business partner role"
+        }
         description="Reuse one organization identity while governing Supplier and Customer authority independently."
         actions={
           <a
@@ -225,39 +265,75 @@ function RoleExtensionForm({
           </a>
         }
       >
-        <Card className="bp-section">
-          <Field label="Operating organization" htmlFor="bp-r2-organization">
-            <Select
-              id="bp-r2-organization"
-              value={organizationId}
-              onChange={(event) => setOrganizationId(event.currentTarget.value)}
-              required
-            >
-              <option value="">Select an authorized organization</option>
-              {compatible.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.code} · {item.displayName}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        </Card>
-        {loading ? <Skeleton label="Loading existing authorities" /> : null}
-        {aggregate ? <ExistingAuthority aggregate={aggregate} /> : null}
-        {aggregate && available.length === 0 ? (
-          <Notice>
-            This Business Partner already has active Supplier and Customer
-            roles. No role extension is available.
-          </Notice>
-        ) : null}
-        {aggregate && available.length ? (
-          <form className="bp-form" onSubmit={submit}>
+        <div hidden={intake?.state.currentStep === "review"}>
+          <Card className="bp-section">
+            <Field label="Operating organization" htmlFor="bp-r2-organization">
+              <Select
+                id="bp-r2-organization"
+                value={organizationId}
+                onChange={(event) => {
+                  setOrganizationId(event.currentTarget.value);
+                  setIntakeCommandKey(crypto.randomUUID());
+                  intake?.invalidate("details");
+                }}
+                required
+              >
+                <option value="">Select an authorized organization</option>
+                {compatible.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.code} · {item.displayName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </Card>
+          {loading ? <Skeleton label="Loading existing authorities" /> : null}
+          {aggregate ? <ExistingAuthority aggregate={aggregate} /> : null}
+          {aggregate && available.length === 0 ? (
+            <Notice>
+              This Business Partner already has active Supplier and Customer
+              roles. No role extension is available.
+            </Notice>
+          ) : null}
+          {aggregate && requestedRole && !available.includes(requestedRole) ? (
+            <Notice>
+              This partner already has the requested {requestedRole} role in the
+              selected organization. Open the existing partner to review it.
+            </Notice>
+          ) : null}
+        </div>
+        {aggregate &&
+        available.length &&
+        (!requestedRole || available.includes(requestedRole)) ? (
+          <EntityIntakeForm
+            onChangeCapture={() => setIntakeCommandKey(crypto.randomUUID())}
+            detailsStep="details"
+            reviewStep="review"
+            submissionError={error}
+            reviewValues={(form) => [
+              {
+                label: "Business partner",
+                value: aggregate.businessPartner.name,
+              },
+              { label: "Requested role", value: title(role) },
+              {
+                label: "Requesting organization",
+                value:
+                  compatible.find((item) => item.id === organizationId)
+                    ?.displayName ?? organizationId,
+              },
+              ...readIntakeFormReview(form),
+            ]}
+            className="bp-form"
+            onSubmit={submit}
+          >
             <Card className="bp-section">
               <h2>Requested role</h2>
               <div className="bp-grid">
                 <Field label="Role" htmlFor="bp-r2-role">
                   <Select
                     id="bp-r2-role"
+                    disabled={Boolean(requestedRole)}
                     value={role}
                     onChange={(event) =>
                       setRole(event.currentTarget.value as CommercialRole)
@@ -316,10 +392,10 @@ function RoleExtensionForm({
             {error ? <Notice>{error}</Notice> : null}
             <div className="bp-form-actions">
               <Button type="submit" loading={busy}>
-                Create extension request
+                {intake ? "Continue to review" : "Create extension request"}
               </Button>
             </div>
-          </form>
+          </EntityIntakeForm>
         ) : null}
         {error && !aggregate ? <Notice>{error}</Notice> : null}
       </PageSurface>

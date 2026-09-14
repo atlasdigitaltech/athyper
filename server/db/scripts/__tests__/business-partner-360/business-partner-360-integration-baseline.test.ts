@@ -9,12 +9,12 @@ import {
   type BusinessPartner360P0ApprovalPacket,
 } from "../../business-partner-360/evaluate-business-partner-360-p0-approvals.js";
 import { provisionBusinessPartner360AcceptanceFixtures } from "../../business-partner-360/provision-business-partner-360-acceptance-fixtures.js";
-import { runBusinessPartner360MaterializationEvidence } from "../../business-partner-360/run-business-partner-360-materialization-evidence.js";
+import { runBusinessPartner360MaterializationEvidence } from "../../../../apps/platform-host/scripts/db-verification/business-partner-360/run-business-partner-360-materialization-evidence.js";
 
 const root = resolve(import.meta.dirname, "../../../..");
 const read = (path: string) => readFile(resolve(root, path), "utf8");
 
-test("P0 plans exactly seven deterministic BP360 acceptance families", async () => {
+test("P0 plans exactly five organization BP360 acceptance families", async () => {
   const plan = await provisionBusinessPartner360AcceptanceFixtures({
     neonDatabaseUrl: "postgresql://postgres@127.0.0.1:55432/athyper_neon",
     meshDatabaseUrl: "postgresql://postgres@127.0.0.1:55432/athyper_mesh",
@@ -28,14 +28,12 @@ test("P0 plans exactly seven deterministic BP360 acceptance families", async () 
       "supplier",
       "customer",
       "dual_role",
-      "person_workforce",
-      "external_worker",
       "mesh_linked",
     ],
   );
   assert.equal(
     new Set(plan.families.map((value) => value.businessPartnerId)).size,
-    7,
+    5,
   );
 });
 
@@ -57,9 +55,9 @@ test("P0 fixture payload is risk-negative and person/workforce remains independe
     fixture,
     /risk(?:Score|Band|Class|Trend|Incident|Exposure)/i,
   );
-  assert.match(fixture, /master\.person/);
-  assert.match(fixture, /master\.employee/);
-  assert.match(fixture, /master\.external_worker/);
+  assert.doesNotMatch(fixture, /INSERT INTO master\.person/);
+  assert.doesNotMatch(fixture, /INSERT INTO master\.employee/);
+  assert.doesNotMatch(fixture, /INSERT INTO master\.external_worker/);
   assert.match(fixture, /control\.mesh_business_partner_account_link/);
   assert.doesNotMatch(fixture, /person_sensitive_profile/);
 });
@@ -80,7 +78,7 @@ test("P0 production repository evidence is local-only, rollback-only, and covers
     /execution requires --confirm/,
   );
   const source = await read(
-    "db/scripts/business-partner-360/run-business-partner-360-materialization-evidence.ts",
+    "apps/platform-host/scripts/db-verification/business-partner-360/run-business-partner-360-materialization-evidence.ts",
   );
   for (const value of [
     "KyselyBusinessPartnerCaseRepository",

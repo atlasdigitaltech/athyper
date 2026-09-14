@@ -1,4 +1,7 @@
-# Append AFTER notification capture and only to the development instance.
+# DEV-only: stackctl loadLocalMasterData validates the exact development identity,
+# project and domain before selecting this overlay. The DEV secret paths are
+# deliberate; do not apply manually to QA/STG or generalize them independently.
+# Append AFTER notification capture.
 x-challenge: &challenge
   LOCAL_CONTACT_CHALLENGE_ENABLED: "true"
   LOCAL_CONTACT_CHALLENGE_KEY_ID: local-contact-challenge-v1
@@ -8,7 +11,12 @@ x-challenge: &challenge
 services:
   api:
     environment: *challenge
-    secrets: [local-contact-challenge-private-key, local-contact-challenge-trust, local-contact-challenge-delivery-key]
+    secrets:
+      [
+        local-contact-challenge-private-key,
+        local-contact-challenge-trust,
+        local-contact-challenge-delivery-key,
+      ]
   worker:
     environment:
       LOCAL_CONTACT_CHALLENGE_DELIVERY_KEY_FILE: /run/secrets/local-contact-challenge-delivery-key

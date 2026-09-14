@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_canonical_read_transition_review_proposal",
+  "status": "draft_not_executable",
+  "sourceReleaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "sourceArtifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "inputGrantProposalRevision": "e4f76cbdecd7962a0adf1a3584552a605f73b6419b12124540ef5cdce4fb2bc2",
+  "rows": [
+    {
+      "operation": "enter",
+      "sourcePermission": "neon.relationship.business_partner.enter",
+      "targetPermission": "neon.relationship.bp_target.enter",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "discover",
+      "sourcePermission": "neon.relationship.business_partner.read",
+      "targetPermission": "neon.relationship.bp_target.discover",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "read",
+      "sourcePermission": "neon.relationship.business_partner.read",
+      "targetPermission": "neon.relationship.bp_target.read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "navigate_manage",
+      "sourcePermission": "neon.relationship.business_partner.read",
+      "targetPermission": "neon.relationship.bp_target.navigate_manage",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "navigate_overview",
+      "sourcePermission": "neon.relationship.business_partner.read",
+      "targetPermission": "neon.relationship.bp_target.navigate_overview",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "identity_read",
+      "sourcePermission": "neon.relationship.business_partner_identity.read",
+      "targetPermission": "neon.relationship.bp_target.identity_read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "contacts_read",
+      "sourcePermission": "neon.relationship.business_partner_contact.read",
+      "targetPermission": "neon.relationship.bp_target.contacts_read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "addresses_read",
+      "sourcePermission": "neon.relationship.business_partner_address.read",
+      "targetPermission": "neon.relationship.bp_target.addresses_read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "identifier_read",
+      "sourcePermission": "neon.relationship.business_partner_identifier.read_masked",
+      "targetPermission": "neon.relationship.bp_target.identifier_read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "tax_read",
+      "sourcePermission": "neon.relationship.business_partner_tax.read_masked",
+      "targetPermission": "neon.relationship.bp_target.tax_read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "bank_read",
+      "sourcePermission": "neon.relationship.business_partner_bank.read_masked",
+      "targetPermission": "neon.relationship.bp_target.bank_read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "qualification_read",
+      "sourcePermission": "neon.relationship.business_partner_qualification.read",
+      "targetPermission": "neon.relationship.bp_target.qualification_read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "certificate_read",
+      "sourcePermission": "neon.relationship.business_partner_certificate.read",
+      "targetPermission": "neon.relationship.bp_target.certificate_read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "requests_read",
+      "sourcePermission": "neon.relationship.entity_case.read",
+      "targetPermission": "neon.relationship.bp_target.requests_read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "activity_read",
+      "sourcePermission": "neon.relationship.business_partner_activity.read",
+      "targetPermission": "neon.relationship.bp_target.activity_read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "comments_read",
+      "sourcePermission": "collaboration.comment.read",
+      "targetPermission": "neon.relationship.bp_target.comments_read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    },
+    {
+      "operation": "attachments_read",
+      "sourcePermission": "document.attachment.read",
+      "targetPermission": "neon.relationship.bp_target.attachments_read",
+      "scope": "tenant-exact",
+      "proposedAdmission": "target_allow_with_source_constraints",
+      "status": "review_required"
+    }
+  ],
+  "grantMutations": [],
+  "activationAuthorized": false,
+  "rules": [
+    "Require an explicit current target permission allow at stored tenant ownership; never derive it from an organization allow.",
+    "Retain applicable explicit source and target denials, record ACLs, entitlement, plane, assurance and business constraints.",
+    "Do not require a second legacy allow merely as a compatibility prerequisite once this transition is explicitly published.",
+    "Do not union source and target allows; no resource-free authorization retries.",
+    "Deferred operations remain unavailable; company configuration, credit, reveals, writes, import and export are outside this proposal.",
+    "Independent children retain their own stored ownership and authorization checks."
+  ],
+  "publicationRequirements": [
+    "Version and compile the admission strategy into a successor contract; release 19 is immutable.",
+    "Review denial/condition preservation against current principal evidence before approving each row.",
+    "Qualify readers and denied principals, missing target grants, source explicit denials, nested fields and live revocation against that exact successor."
+  ],
+  "approvals": [],
+  "proposalRevision": "b92129795f2e64c25d1f560acfa58eaa06c276a790e4c029d2d8fcdf1b3e1ca7"
+}

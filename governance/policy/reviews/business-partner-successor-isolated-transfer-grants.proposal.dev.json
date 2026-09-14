@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_release19_successor_isolated_transfer_grant_proposal",
+  "environment": "isolated_qualification_only",
+  "sharedDevGrantChanges": [],
+  "preservePriorIsolatedRevocations": true,
+  "restoreSnapshotsIntoSharedDev": false,
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "plane": "neon",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "runtimeImage": "sha256:718ca6008c0b33d253c61d28182b336e967f477b5d671e5e733375996f2751a4",
+  "account": "catl.admin",
+  "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+  "roleId": "3ae7d9a6-6bf9-49d5-b813-430c0ff2871d",
+  "groupId": "e34e011f-0b37-4337-9d6e-11c9e6965f55",
+  "assignmentId": "499e53b5-14ca-4afa-b879-9feecde675a2",
+  "code": "bp.r19.successor.transfer.qualification.20260911",
+  "scopeTargetId": "1d8314f6-8541-57cf-8748-679cbe318bc8",
+  "scopeKind": "tenant",
+  "propagation": "exact",
+  "effectiveFrom": "2026-09-11T02:15:00Z",
+  "effectiveUntil": "2026-09-11T06:15:00Z",
+  "permissions": [
+    {
+      "id": "01a087c3-4587-7c85-8beb-e83e9872f598",
+      "code": "neon.relationship.bp_target.export"
+    },
+    {
+      "id": "01a087c3-4587-7f94-9891-95324d5ab6fa",
+      "code": "neon.relationship.bp_target.import"
+    }
+  ],
+  "conditions": {
+    "normalAuthenticatedSession": true,
+    "domainAuthorizationStillRequired": true,
+    "mfa": "Existing workflow step-up remains mandatory for approval/application; this grant does not bypass it.",
+    "separationOfDuties": "catl.owner independently approves; catl.admin cannot approve its own requests.",
+    "import": "Creates governed draft requests only; no direct master-data writes.",
+    "export": "Published summary fields only; test output stays in isolated storage.",
+    "cleanup": "Revoke these new memberships/assignments after qualification; never restore earlier revoked test grants."
+  },
+  "approvalRequired": true,
+  "approvals": [],
+  "activationAuthorized": false,
+  "proposalRevision": "280d21697b211092fe33b4030fd3cf6d8b08fba029dfb37438d6817e9ac469e4"
+}

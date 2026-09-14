@@ -22,6 +22,12 @@ BP-AI-07 implementation: [saved case explanations and confirmed-submit integrati
 
 ## Closure review — 2026-09-10
 
+Completion execution has started: see the [release completion checklist](../../runbooks/bp-ai-release-completion.md).
+The candidate includes BP-AI-00–08, with 90 required gates. BP-AI-10 extensions
+are explicitly deferred to their separate backlog under the authorized scope
+option. The inventory and initial cache build are complete; live release
+qualification and owner cache integration remain open.
+
 **Do not mark this entire implementation plan closed.** The [BP-AI-00 baseline](bp-ai-00-baseline.md)
 is closed, and the [F6 DEV CirrusAtlantic BP/Mesh pilot](evidence/atlas-f6-phase-closure-distributed-20260910.json)
 is closed with all ten gates passed. F6's pilot checks do not satisfy every
@@ -33,14 +39,14 @@ document-grounded retrieval and inference reliability for its recorded fixtures;
 it supersedes earlier statements that no live AI publication occurred within that
 pilot. It does not establish release qualification for every BP insight or case tool.
 
-| Item | Closure decision | Remaining evidence or scope |
-| --- | --- | --- |
-| BP-AI-00 | Closed, DEV baseline | Historical inventory and measured single-record workload; not current performance certification |
-| F6 foundation pilot | Closed, recorded DEV BP/Mesh deployment | Ten gates and separate distributed inference qualification; documented limitations retained |
-| BP-AI-04/06/07 broader record, Manage and case scope | Keep release qualification open | Bind owner-backed readiness/eligibility, filtered/selected insights and confirmed-submit behavior to the target BP-AI release receipts |
-| BP-AI-08 automatic briefs | Keep open | Demonstrate proactive scheduling, cache invalidation/revocation, deduplication and accepted latency/budgets; shared inference admission alone does not qualify this package |
-| BP-AI-09 full BP release | Keep open | Complete version-bound target intake, eight required personas, package acceptance, live-model quality, performance and operations evidence |
-| BP-AI-10 extensions | Keep open for selected capabilities | Duplicate candidates and document-expiry owner/workflow qualification; optional draft preview has its own gate. Retrieval citations do not establish document validity or expiry decisions |
+| Item                                                 | Closure decision                        | Remaining evidence or scope                                                                                                                                                                |
+| ---------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| BP-AI-00                                             | Closed, DEV baseline                    | Historical inventory and measured single-record workload; not current performance certification                                                                                            |
+| F6 foundation pilot                                  | Closed, recorded DEV BP/Mesh deployment | Ten gates and separate distributed inference qualification; documented limitations retained                                                                                                |
+| BP-AI-04/06/07 broader record, Manage and case scope | Keep release qualification open         | Bind owner-backed readiness/eligibility, filtered/selected insights and confirmed-submit behavior to the target BP-AI release receipts                                                     |
+| BP-AI-08 automatic briefs                            | Keep open                               | Demonstrate proactive scheduling, cache invalidation/revocation, deduplication and accepted latency/budgets; shared inference admission alone does not qualify this package                |
+| BP-AI-09 full BP release                             | Keep open                               | Complete version-bound target intake, eight required personas, package acceptance, live-model quality, performance and operations evidence                                                 |
+| BP-AI-10 extensions                                  | Keep open for selected capabilities     | Duplicate candidates and document-expiry owner/workflow qualification; optional draft preview has its own gate. Retrieval citations do not establish document validity or expiry decisions |
 
 Review verification: `pnpm qualify:business-partner-ai` exited 1 with
 `qualified: false` and 85 required gates for the default BP-AI-00–07 candidate.
@@ -72,18 +78,18 @@ Core commitments:
 
 These observations describe the inspected working tree, not an assertion about every deployment. The tree contains substantial ongoing changes; implementation must integrate with the current branch and preserve unrelated edits.
 
-| Area | Existing foundation | Required extension |
-| --- | --- | --- |
-| Atlas workspace | Route-derived context label, conversation, action previews, sources | Structured page context, record/selection binding, response cards and inline evidence |
-| Browser conversation controller | Question, selected agent, thread and attachment context | Versioned business context carried through request and stream lifecycle |
-| Record gateway | Published descriptor resolution, Records query, field projection, source coordinates, profile hash | Audit all query operators and relationship paths; add insight-specific result contracts |
-| BP tools | `bp_read_summary`, `bp_submit_case` | List insights, richer record brief, requirements/readiness, eligibility and case explanation |
-| BP summary | Code, display name, category, status; readiness is `not_evaluated` | Preserve this contract; add separate evaluated capabilities rather than silently changing its meaning |
-| BP360 | Sections, completeness definitions, request history and explainability | Narrow authorized adapters for Atlas; avoid serializing the entire BP360 response |
-| Directory | Published directory scope, authorized filters, shared query enforcement | Reuse identical semantics for AI search, coverage and counts |
-| Eligibility | Owner service distinguishes order, invoice and payment eligibility | Explicit role, organization and company coordinates in AI requests |
-| Local generation | Pinned local model, generic prompt, 4,096-token context, bounded output and tool rounds | Context budgeting, intent-specific tools, compact facts, grounded-answer evaluations |
-| Submission | Explicit preview/confirmation, owner validation, concurrency and idempotency | Maintain existing controls; attach case findings to the same reviewed target |
+| Area                            | Existing foundation                                                                                | Required extension                                                                                    |
+| ------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Atlas workspace                 | Route-derived context label, conversation, action previews, sources                                | Structured page context, record/selection binding, response cards and inline evidence                 |
+| Browser conversation controller | Question, selected agent, thread and attachment context                                            | Versioned business context carried through request and stream lifecycle                               |
+| Record gateway                  | Published descriptor resolution, Records query, field projection, source coordinates, profile hash | Audit all query operators and relationship paths; add insight-specific result contracts               |
+| BP tools                        | `bp_read_summary`, `bp_submit_case`                                                                | List insights, richer record brief, requirements/readiness, eligibility and case explanation          |
+| BP summary                      | Code, display name, category, status; readiness is `not_evaluated`                                 | Preserve this contract; add separate evaluated capabilities rather than silently changing its meaning |
+| BP360                           | Sections, completeness definitions, request history and explainability                             | Narrow authorized adapters for Atlas; avoid serializing the entire BP360 response                     |
+| Directory                       | Published directory scope, authorized filters, shared query enforcement                            | Reuse identical semantics for AI search, coverage and counts                                          |
+| Eligibility                     | Owner service distinguishes order, invoice and payment eligibility                                 | Explicit role, organization and company coordinates in AI requests                                    |
+| Local generation                | Pinned local model, generic prompt, 4,096-token context, bounded output and tool rounds            | Context budgeting, intent-specific tools, compact facts, grounded-answer evaluations                  |
+| Submission                      | Explicit preview/confirmation, owner validation, concurrency and idempotency                       | Maintain existing controls; attach case findings to the same reviewed target                          |
 
 Baseline files:
 
@@ -113,13 +119,13 @@ When Atlas opens, show a compact scope label and a brief, if the insight capabil
 
 Example context: **Business Partners · Drafts · CirrusAtlantic UK · 3 selected**.
 
-| User intent | Evidence required | Presentation and action |
-| --- | --- | --- |
-| Which partners need attention? | Authorized filtered population, owner-defined findings, due dates if available | Counts with coverage, top findings, open matching worklist |
-| What is blocking my selection? | Explicit selected IDs and per-record readiness results | Comparison table with scoped blockers |
-| Show drafts ready for submission | Related cases and current owner validation | Case worklist; BP draft status alone is insufficient |
-| Which cases have waited longest? | Authorized case timestamps and business-defined age semantics | Sorted case list with dates; distinguish age from SLA breach |
-| Find possible duplicates | Qualified matching provider and authorized comparison fields | Candidates, matching/conflicting evidence, compare action |
+| User intent                      | Evidence required                                                              | Presentation and action                                      |
+| -------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Which partners need attention?   | Authorized filtered population, owner-defined findings, due dates if available | Counts with coverage, top findings, open matching worklist   |
+| What is blocking my selection?   | Explicit selected IDs and per-record readiness results                         | Comparison table with scoped blockers                        |
+| Show drafts ready for submission | Related cases and current owner validation                                     | Case worklist; BP draft status alone is insufficient         |
+| Which cases have waited longest? | Authorized case timestamps and business-defined age semantics                  | Sorted case list with dates; distinguish age from SLA breach |
+| Find possible duplicates         | Qualified matching provider and authorized comparison fields                   | Candidates, matching/conflicting evidence, compare action    |
 
 Default analysis target: selected records when selection is nonempty; otherwise all filtered results. Display that target before results and allow the user to switch. Explicit wording such as “all filtered partners” overrides the default without changing authorization.
 
@@ -129,14 +135,14 @@ Coverage must state `selection`, `visible_page`, or `filtered_set`, whether anal
 
 Example context: **Acme Supplies · Supplier · Purchasing setup · Company A**.
 
-| User intent | Evidence required | Presentation and action |
-| --- | --- | --- |
-| What should I know? | Authorized identity, lifecycle, role/scope and brief findings | Compact partner card and up to three relevant findings |
-| What is missing? | Published requirements and owner evaluation | Required versus recommended items, field/section navigation |
-| Can we purchase from this supplier? | Eligibility for order, supplier role, organization/company | Eligible, ineligible or unevaluated outcome with permitted explanation |
-| Why is this case blocked? | Current case validation and workflow facts | Verified blockers and links to the case |
-| What changed in the draft? | Authorized case diff and baseline revision | Before/after values only where both are authorized |
-| Explain this field/error | Published field semantics, validation code and permitted evidence | Plain-language explanation and next step |
+| User intent                         | Evidence required                                                 | Presentation and action                                                |
+| ----------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| What should I know?                 | Authorized identity, lifecycle, role/scope and brief findings     | Compact partner card and up to three relevant findings                 |
+| What is missing?                    | Published requirements and owner evaluation                       | Required versus recommended items, field/section navigation            |
+| Can we purchase from this supplier? | Eligibility for order, supplier role, organization/company        | Eligible, ineligible or unevaluated outcome with permitted explanation |
+| Why is this case blocked?           | Current case validation and workflow facts                        | Verified blockers and links to the case                                |
+| What changed in the draft?          | Authorized case diff and baseline revision                        | Before/after values only where both are authorized                     |
+| Explain this field/error            | Published field semantics, validation code and permitted evidence | Plain-language explanation and next step                               |
 
 Readiness is always qualified by role and scope. A historical/as-of view stays explicitly historical and does not offer mutations. If transaction scope is missing, use the established scope picker rather than guessing from list filters.
 
@@ -177,15 +183,15 @@ flowchart TD
     CONFIRM --> OWNER[Reauthorized owner command]
 ```
 
-| Owner | Responsibilities |
-| --- | --- |
-| Metadata contracts / Studio authoring / publication | AI contract schema, deterministic validation, publication and compatibility |
-| Entity runtime and NEON BP UI | Publish page context, selection, role/section and dirty state; navigate using registered routes |
-| Atlas contracts/runtime | Context transport, orchestration, budgets, tool admission, provenance, conversation handling |
-| Records and authorization | Row admission, directory scope, field and query-operation authorization |
-| Master-data services | Requirements, readiness, eligibility, case validation/diff, actionable findings |
-| Atlas UI | Context label, grounded rendering, evidence, errors, accessible action previews |
-| Qualification/operations | Permission personas, model/browser evaluation, metrics, staged rollout and recovery |
+| Owner                                               | Responsibilities                                                                                |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Metadata contracts / Studio authoring / publication | AI contract schema, deterministic validation, publication and compatibility                     |
+| Entity runtime and NEON BP UI                       | Publish page context, selection, role/section and dirty state; navigate using registered routes |
+| Atlas contracts/runtime                             | Context transport, orchestration, budgets, tool admission, provenance, conversation handling    |
+| Records and authorization                           | Row admission, directory scope, field and query-operation authorization                         |
+| Master-data services                                | Requirements, readiness, eligibility, case validation/diff, actionable findings                 |
+| Atlas UI                                            | Context label, grounded rendering, evidence, errors, accessible action previews                 |
+| Qualification/operations                            | Permission personas, model/browser evaluation, metrics, staged rollout and recovery             |
 
 Do not add a second unrestricted SQL or search endpoint for Atlas. Metadata-driven generic reads must be explicitly enabled; domain decisions and mutations remain owner-specific.
 
@@ -213,10 +219,10 @@ Effective capability = published enablement intersected with runtime registratio
 
 Proposed `AtlasBusinessContextV1` is a discriminated union:
 
-| Common | Manage context | Record context |
-| --- | --- | --- |
+| Common                                                     | Manage context                                                                           | Record context                                                                                       |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Schema version, entity code, context generation ID, locale | Canonical applied filters/search, selected IDs, analysis target, sort, pagination/cursor | Record ID, open section, role lens, case ID, saved revision, dirty flag, optional historical instant |
-| Requested work organization/company coordinates | Applied directory organization/company arrays | Transaction coordinates kept distinct from directory membership |
+| Requested work organization/company coordinates            | Applied directory organization/company arrays                                            | Transaction coordinates kept distinct from directory membership                                      |
 
 Never accept principal, tenant, permissions, profile hash or authorization epoch as authoritative browser fields. Resolve these from the verified server request. Validate filter fields/operators and each supplied coordinate. Reject invalid mixed selections according to existing directory rules rather than silently dropping unauthorized IDs.
 
@@ -273,17 +279,17 @@ Render safe Markdown for explanatory prose and dedicated components for findings
 
 Proposed tool names are provisional. Favor bounded owner composites to fit the local model's context and tool-round limits.
 
-| Tool | Inputs | Owner/source | Delivery |
-| --- | --- | --- | --- |
-| `bp_read_summary` | Existing record and organization coordinates | Existing Records gateway | Retain |
-| `bp_read_brief` | Record, role/section, authorized scope | BP360 adapters plus authorized identity | First usable record release |
-| `bp_list_insights` | Canonical filters or selection, requested insight, bounds | Shared Records scope plus batched BP findings | Manage release |
-| `bp_explain_readiness` | Record, role, organization/company | Published completeness/definition services | First usable record release |
-| `bp_check_eligibility` | Record, role, order/invoice/payment, explicit coordinates | Existing eligibility service | First usable record release |
-| `bp_explain_case` | Case ID, expected source revision, requested validation/diff | Case service, validation and authorized comparison | Case release |
-| `bp_submit_case` | Existing governance target/version | Existing request service and tool ledger | Retain; integrate after case evidence |
-| `bp_find_duplicate_candidates` | Authorized target/search fields, bounds | Separately qualified matching provider | Later release |
-| `bp_check_document_requirements` | Record, role/scope, as-of time | Authorized document/certification owner | Later release |
+| Tool                             | Inputs                                                       | Owner/source                                       | Delivery                              |
+| -------------------------------- | ------------------------------------------------------------ | -------------------------------------------------- | ------------------------------------- |
+| `bp_read_summary`                | Existing record and organization coordinates                 | Existing Records gateway                           | Retain                                |
+| `bp_read_brief`                  | Record, role/section, authorized scope                       | BP360 adapters plus authorized identity            | First usable record release           |
+| `bp_list_insights`               | Canonical filters or selection, requested insight, bounds    | Shared Records scope plus batched BP findings      | Manage release                        |
+| `bp_explain_readiness`           | Record, role, organization/company                           | Published completeness/definition services         | First usable record release           |
+| `bp_check_eligibility`           | Record, role, order/invoice/payment, explicit coordinates    | Existing eligibility service                       | First usable record release           |
+| `bp_explain_case`                | Case ID, expected source revision, requested validation/diff | Case service, validation and authorized comparison | Case release                          |
+| `bp_submit_case`                 | Existing governance target/version                           | Existing request service and tool ledger           | Retain; integrate after case evidence |
+| `bp_find_duplicate_candidates`   | Authorized target/search fields, bounds                      | Separately qualified matching provider             | Later release                         |
+| `bp_check_document_requirements` | Record, role/scope, as-of time                               | Authorized document/certification owner            | Later release                         |
 
 List insights need server-side aggregation over the same authorized candidate set, with bounded batching or a qualified materialized projection. Avoid one tool call per row. The directory's existing candidate limit is a constraint, not permission to load all candidates into the model. When narrowing is necessary, return an actionable scope request.
 
@@ -307,14 +313,14 @@ For the first release, use existing user-scoped service calls. Broader evaluatio
 
 ### 7.3 User-facing access language
 
-| Condition | Wording policy |
-| --- | --- |
-| Authorized empty field | “The registered address is missing.” |
-| Check did not run | “Supplier readiness has not been checked.” |
-| Evidence/definition unavailable | “Readiness could not be determined from the available evidence.” |
-| Authorized outcome, restricted details | Approved outcome only; permitted navigation if available |
-| Existence not disclosable | “I couldn't find an accessible matching record.” |
-| Operation unavailable | Explain unavailable capability without revealing protected targets |
+| Condition                              | Wording policy                                                     |
+| -------------------------------------- | ------------------------------------------------------------------ |
+| Authorized empty field                 | “The registered address is missing.”                               |
+| Check did not run                      | “Supplier readiness has not been checked.”                         |
+| Evidence/definition unavailable        | “Readiness could not be determined from the available evidence.”   |
+| Authorized outcome, restricted details | Approved outcome only; permitted navigation if available           |
+| Existence not disclosable              | “I couldn't find an accessible matching record.”                   |
+| Operation unavailable                  | Explain unavailable capability without revealing protected targets |
 
 Do not reveal hidden-record counts or the existence of confidential duplicate candidates. Explicit aggregate disclosure requires its own policy, including protection against inference through repeated narrow queries.
 
@@ -351,19 +357,19 @@ These are engineering targets, not measured current performance. Set concurrency
 
 All packages below describe future work. Contract and documentation changes should precede their consumers. Keep each package reviewable and independently controlled where practical.
 
-| ID | Work package and primary touchpoints | Depends on | Exit gate |
-| --- | --- | --- | --- |
-| BP-AI-00 | Inventory deployment, descriptors, owner projections, existing permissions, route contexts and model budgets; capture baseline fixtures | None | Source-version discrepancy resolved; evidence/disclosure matrix and benchmark recorded |
-| BP-AI-01 | AI metadata schema in `server/packages/contracts/metadata`; authoring/publication validation in Studio and metadata parser | 00 | Deterministic publication, invalid-reference rejection, legacy compatibility |
-| BP-AI-02 | Context schema in shared AI contracts; entity-runtime publishers; shell/controller/client/API/runtime transport | 00, 01 contract | Manage, record, panel and fullscreen contexts survive navigation correctly; forged coordinates rejected |
-| BP-AI-03 | Insight/evidence/action contracts; authorized projection adapters; query-operation audit; cache/history policy | 00, 01 | Restricted facts and derived signals absent from model payloads, responses and replay |
-| BP-AI-04 | BP brief, completeness/readiness and eligibility adapters/tools in master-data and platform AI | 02, 03 | Record questions answered from owner evidence; scope and unavailable-state tests pass |
-| BP-AI-05 | Structured answer envelope, validated renderer, safe prose, inline sources, context-specific starter questions | 02, 03 | Accessible dock/fullscreen experience; no invented action/reference accepted |
-| BP-AI-06 | Filtered-list insights, selected-record comparisons, coverage/count semantics and bounded aggregation | 03, 04, 05 | Results match authorized Records population; partial/overlap semantics tested at scale |
-| BP-AI-07 | Case validation/diff explanation and existing confirmed-submit integration | 03, 04, 05 | Preview matches actual case/version; exactly one accepted owner submission under retry |
-| BP-AI-08 | Opt-in rollout of automatic briefs, refresh, cancellation, deduplication, cache and context budgeting | 04, 05, 06 | No stale-record race or duplicate generation; measured budget/latency targets accepted |
-| BP-AI-09 | Full persona/browser/live-model qualification, operations runbook and release evidence | Each enabled package | Release gates below pass on target environment |
-| BP-AI-10 | Duplicate candidates, document expiry and optional draft-preview evaluation | 09 plus owner contracts | Separate evidence quality, disclosure and workflow qualification for each capability |
+| ID       | Work package and primary touchpoints                                                                                                    | Depends on              | Exit gate                                                                                               |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| BP-AI-00 | Inventory deployment, descriptors, owner projections, existing permissions, route contexts and model budgets; capture baseline fixtures | None                    | Source-version discrepancy resolved; evidence/disclosure matrix and benchmark recorded                  |
+| BP-AI-01 | AI metadata schema in `server/packages/contracts/metadata`; authoring/publication validation in Studio and metadata parser              | 00                      | Deterministic publication, invalid-reference rejection, legacy compatibility                            |
+| BP-AI-02 | Context schema in shared AI contracts; entity-runtime publishers; shell/controller/client/API/runtime transport                         | 00, 01 contract         | Manage, record, panel and fullscreen contexts survive navigation correctly; forged coordinates rejected |
+| BP-AI-03 | Insight/evidence/action contracts; authorized projection adapters; query-operation audit; cache/history policy                          | 00, 01                  | Restricted facts and derived signals absent from model payloads, responses and replay                   |
+| BP-AI-04 | BP brief, completeness/readiness and eligibility adapters/tools in master-data and platform AI                                          | 02, 03                  | Record questions answered from owner evidence; scope and unavailable-state tests pass                   |
+| BP-AI-05 | Structured answer envelope, validated renderer, safe prose, inline sources, context-specific starter questions                          | 02, 03                  | Accessible dock/fullscreen experience; no invented action/reference accepted                            |
+| BP-AI-06 | Filtered-list insights, selected-record comparisons, coverage/count semantics and bounded aggregation                                   | 03, 04, 05              | Results match authorized Records population; partial/overlap semantics tested at scale                  |
+| BP-AI-07 | Case validation/diff explanation and existing confirmed-submit integration                                                              | 03, 04, 05              | Preview matches actual case/version; exactly one accepted owner submission under retry                  |
+| BP-AI-08 | Opt-in rollout of automatic briefs, refresh, cancellation, deduplication, cache and context budgeting                                   | 04, 05, 06              | No stale-record race or duplicate generation; measured budget/latency targets accepted                  |
+| BP-AI-09 | Full persona/browser/live-model qualification, operations runbook and release evidence                                                  | Each enabled package    | Release gates below pass on target environment                                                          |
+| BP-AI-10 | Duplicate candidates, document expiry and optional draft-preview evaluation                                                             | 09 plus owner contracts | Separate evidence quality, disclosure and workflow qualification for each capability                    |
 
 BP-AI-10 build started: [capability contracts and owner gaps](../../contracts/atlas-business-partner-extensions.md), explicit capability selection, and independent owner-contract, evidence-quality, disclosure and workflow receipt checks now extend the BP-AI-09 verifier. The pending extension intake selects duplicate candidates and document expiry; draft preview remains optional. Local verifier tests pass; owner projections, runtime adapters and target qualification remain outstanding. No extended capability is enabled by this build.
 
@@ -388,26 +394,26 @@ Use synthetic fixtures covering organization/person partners, supplier/customer 
 
 Personas must include a directory reader, scoped onboarding user, submitter, independent reviewer, user without sensitive-field access, user denied a specific record, another-tenant user and a user whose access is revoked during a run. Map these to actual existing permission bindings in phase 0; do not invent role grants just to pass tests.
 
-| ID | Scenario | Required assertion |
-| --- | --- | --- |
-| A01 | Manage has filters, pagination and selection | Explicit analysis target; totals come from authorized server queries |
-| A02 | Same partner has multiple findings | Distinct partner count and overlapping issue counts remain correct |
-| A03 | Switch partner A to B during generation | No A result/action attached to B; old events discarded |
-| A04 | Change company or role | Reevaluate scoped readiness/eligibility and invalidate stale findings |
-| A05 | Active partner, ineligible supplier | No “ready for purchasing” inference from lifecycle status |
-| A06 | Missing field versus denied field | Only authorized absence becomes a missing-data finding |
-| A07 | Hidden filter/sort/group field or linked record | No indirect disclosure through query results, names or counts |
-| A08 | Cross-tenant ID or invalid organization selection | Denied before evidence reaches the model |
-| A09 | Partial/time-out/definition-unavailable provider | No all-clear; explicit authorized coverage/unavailable wording |
-| A10 | Unsaved or historical record | Saved/historical assessment labelled; no inappropriate mutation |
-| A11 | Permission revoked before cache/history replay | Restricted evidence and affected prior prose withheld from new disclosure/model use |
-| A12 | Malicious instructions inside partner name/document | Treated as data; no scope, tool or policy expansion |
-| A13 | Model invents action, evidence ID or count | Structured references rejected; authoritative counts rendered from tool result |
-| A14 | Case submission: stale version, expiry, retry, concurrent confirmation | Owner rejects invalid state; exactly one accepted submission and consistent receipt |
-| A15 | Large filtered set/context budget exhausted | Bounded reads, truthful partial results or narrowing; no silent truncation claim |
-| A16 | Fullscreen/panel/history/context transitions | Correct record and source context retained without duplicate requests |
-| A17 | Broader outcome evaluation, if enabled later | Only separately authorized outcome disclosed; no restricted inputs or existence leaks |
-| A18 | Natural-language follow-ups | “Why?”, “show those”, and “submit it” retain explicit authorized evidence/target or request clarification |
+| ID  | Scenario                                                               | Required assertion                                                                                        |
+| --- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| A01 | Manage has filters, pagination and selection                           | Explicit analysis target; totals come from authorized server queries                                      |
+| A02 | Same partner has multiple findings                                     | Distinct partner count and overlapping issue counts remain correct                                        |
+| A03 | Switch partner A to B during generation                                | No A result/action attached to B; old events discarded                                                    |
+| A04 | Change company or role                                                 | Reevaluate scoped readiness/eligibility and invalidate stale findings                                     |
+| A05 | Active partner, ineligible supplier                                    | No “ready for purchasing” inference from lifecycle status                                                 |
+| A06 | Missing field versus denied field                                      | Only authorized absence becomes a missing-data finding                                                    |
+| A07 | Hidden filter/sort/group field or linked record                        | No indirect disclosure through query results, names or counts                                             |
+| A08 | Cross-tenant ID or invalid organization selection                      | Denied before evidence reaches the model                                                                  |
+| A09 | Partial/time-out/definition-unavailable provider                       | No all-clear; explicit authorized coverage/unavailable wording                                            |
+| A10 | Unsaved or historical record                                           | Saved/historical assessment labelled; no inappropriate mutation                                           |
+| A11 | Permission revoked before cache/history replay                         | Restricted evidence and affected prior prose withheld from new disclosure/model use                       |
+| A12 | Malicious instructions inside partner name/document                    | Treated as data; no scope, tool or policy expansion                                                       |
+| A13 | Model invents action, evidence ID or count                             | Structured references rejected; authoritative counts rendered from tool result                            |
+| A14 | Case submission: stale version, expiry, retry, concurrent confirmation | Owner rejects invalid state; exactly one accepted submission and consistent receipt                       |
+| A15 | Large filtered set/context budget exhausted                            | Bounded reads, truthful partial results or narrowing; no silent truncation claim                          |
+| A16 | Fullscreen/panel/history/context transitions                           | Correct record and source context retained without duplicate requests                                     |
+| A17 | Broader outcome evaluation, if enabled later                           | Only separately authorized outcome disclosed; no restricted inputs or existence leaks                     |
+| A18 | Natural-language follow-ups                                            | “Why?”, “show those”, and “submit it” retain explicit authorized evidence/target or request clarification |
 
 Testing layers:
 
@@ -446,32 +452,32 @@ Follow-on decisions, resolved when their phase starts:
 
 ### Attachment traceability
 
-| Attached requirement | Plan coverage |
-| --- | --- |
-| Current screen and record context | Sections 3 and 5.2; BP-AI-02 |
-| Manage versus individual record assistance | Section 3; BP-AI-04/06/07 |
-| Business decisions separate from prose | Sections 4–6 |
-| Summary/findings/recommendation/actions/evidence | Section 5.3–5.4; BP-AI-05 |
-| Automatic briefs and state refresh | Section 8; BP-AI-08 |
-| Metadata principles and published capability contract | Section 5.1; BP-AI-01 |
-| User-scoped access and broader governed evaluation | Section 7.1–7.2; BP-AI-03 |
-| Natural representation of restricted/unavailable information | Section 7.3 |
-| Continuous authorization, caches, history and actions | Section 7.4; A03/A04/A11/A14 |
-| Permission-based qualification and phased implementation | Sections 9–12 |
+| Attached requirement                                         | Plan coverage                |
+| ------------------------------------------------------------ | ---------------------------- |
+| Current screen and record context                            | Sections 3 and 5.2; BP-AI-02 |
+| Manage versus individual record assistance                   | Section 3; BP-AI-04/06/07    |
+| Business decisions separate from prose                       | Sections 4–6                 |
+| Summary/findings/recommendation/actions/evidence             | Section 5.3–5.4; BP-AI-05    |
+| Automatic briefs and state refresh                           | Section 8; BP-AI-08          |
+| Metadata principles and published capability contract        | Section 5.1; BP-AI-01        |
+| User-scoped access and broader governed evaluation           | Section 7.1–7.2; BP-AI-03    |
+| Natural representation of restricted/unavailable information | Section 7.3                  |
+| Continuous authorization, caches, history and actions        | Section 7.4; A03/A04/A11/A14 |
+| Permission-based qualification and phased implementation     | Sections 9–12                |
 
 ## 13. Existing Docker infrastructure assessment
 
 Read-only inspection on 2026-09-08 found Meilisearch, MinIO, Redis, Tika, ClamAV and Gotenberg running with healthy Docker status in both DEV and QA. DEV also has a healthy Atlas inference container. Docker health is not evidence that Atlas retrieval, indexing completeness, backups or authorization have passed end-to-end qualification. No containers or configuration were changed during this assessment.
 
-| Service | Observed image | Recommended Atlas role |
-| --- | --- | --- |
-| `searchcore` | `getmeili/meilisearch:v1.13` | Locate authorized partner documents and, later, explicitly published searchable entity projections |
-| `objectstorage` | `minio/minio:RELEASE.2025-09-07T16-13-09Z` | Store source attachments and versioned evidence artifacts through existing object-storage/document services |
-| `memorycache` | `redis:7.4.8-alpine` | Bounded, short-lived authorized insight caches, request deduplication and invalidation coordination |
-| `docparser` | `apache/tika:3.0.0.0-full` | Extract document text for bounded retrieval; extraction does not establish document validity or OCR quality |
-| `virusscan` | `clamav/clamav:1.5.2` | Existing scanning gate before document use; malware scanning does not prevent prompt injection |
-| `docrender` | `gotenberg/gotenberg:8.31.0` | Optional export of reviewed briefs; not required for initial chat assistance |
-| PostgreSQL and existing owner services | `postgres:16.13-bookworm` | Authoritative business state, permissions, workflow receipts, conversation/evidence lineage |
+| Service                                | Observed image                             | Recommended Atlas role                                                                                      |
+| -------------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `searchcore`                           | `getmeili/meilisearch:v1.13`               | Locate authorized partner documents and, later, explicitly published searchable entity projections          |
+| `objectstorage`                        | `minio/minio:RELEASE.2025-09-07T16-13-09Z` | Store source attachments and versioned evidence artifacts through existing object-storage/document services |
+| `memorycache`                          | `redis:7.4.8-alpine`                       | Bounded, short-lived authorized insight caches, request deduplication and invalidation coordination         |
+| `docparser`                            | `apache/tika:3.3.1.0-full`                 | Extract document text for bounded retrieval; extraction does not establish document validity or OCR quality |
+| `virusscan`                            | `clamav/clamav:1.5.2`                      | Existing scanning gate before document use; malware scanning does not prevent prompt injection              |
+| `docrender`                            | `gotenberg/gotenberg:8.37.0`               | Optional export of reviewed briefs; not required for initial chat assistance                                |
+| PostgreSQL and existing owner services | `postgres:16.13-bookworm`                  | Authoritative business state, permissions, workflow receipts, conversation/evidence lineage                 |
 
 ### 13.1 Existing integration evidence
 
@@ -515,12 +521,12 @@ Start with exact-context evidence caching. Do not share semantically similar ans
 
 ### 13.4 Delivery additions
 
-| Phase | Infrastructure work | Required evidence |
-| --- | --- | --- |
-| BP-AI-00 | Capture provider health, actual adapter composition, index scope/settings, memory budget and dataset scale | Sanitized baseline; distinguish configured, healthy and end-to-end qualified |
-| BP-AI-04/05 | Integrate owner evidence first; preserve existing prompt attachment path | Record answers work without search dependency |
-| BP-AI-08 | Add bounded Redis evidence caching and request deduplication | Revocation, invalidation, overload and session-continuity tests |
-| BP-AI-10 | Add BP-scoped document retrieval using MinIO/document services, Tika and Meilisearch | Unauthorized/stale/deleted document exclusion, bounded passages and accurate citations |
-| Later qualified extension | Hybrid retrieval/local embeddings if keyword evaluation shows a material gap | Version compatibility, retrieval-quality gain, classification controls and measured resources |
+| Phase                     | Infrastructure work                                                                                        | Required evidence                                                                             |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| BP-AI-00                  | Capture provider health, actual adapter composition, index scope/settings, memory budget and dataset scale | Sanitized baseline; distinguish configured, healthy and end-to-end qualified                  |
+| BP-AI-04/05               | Integrate owner evidence first; preserve existing prompt attachment path                                   | Record answers work without search dependency                                                 |
+| BP-AI-08                  | Add bounded Redis evidence caching and request deduplication                                               | Revocation, invalidation, overload and session-continuity tests                               |
+| BP-AI-10                  | Add BP-scoped document retrieval using MinIO/document services, Tika and Meilisearch                       | Unauthorized/stale/deleted document exclusion, bounded passages and accurate citations        |
+| Later qualified extension | Hybrid retrieval/local embeddings if keyword evaluation shows a material gap                               | Version compatibility, retrieval-quality gain, classification controls and measured resources |
 
 Reuse the existing adapters and jobs runtime. No new vector database, storage migration or inference provider is required to deliver the initial Business Partner agent.

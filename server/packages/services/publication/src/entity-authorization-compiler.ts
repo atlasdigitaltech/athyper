@@ -1,3 +1,4 @@
+import { assertCanonicalReadSourceCatalog } from "./canonical-read-catalog.js";
 import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata";
 import { createHash } from "node:crypto";
 import {
@@ -30,7 +31,18 @@ export interface EntityAuthorizationPublicationInput {
   /** Trusted governance adapter. It must verify exact release/operation decisions,
    * reviewer authority and evidence; author-supplied allow booleans are not accepted. */
   readonly review?: {
-    qualify(input: {readonly releaseId:string;readonly releaseNo:number;readonly tenantId:string|null;readonly plane:string;readonly entityCode:string;readonly contractHash:string;readonly profileHash:string;readonly runtimeHash:string;readonly catalogHash:string;readonly operationKeys:readonly string[]}): Promise<{readonly receiptSha256:string}>;
+    qualify(input: {
+      readonly releaseId: string;
+      readonly releaseNo: number;
+      readonly tenantId: string | null;
+      readonly plane: string;
+      readonly entityCode: string;
+      readonly contractHash: string;
+      readonly profileHash: string;
+      readonly runtimeHash: string;
+      readonly catalogHash: string;
+      readonly operationKeys: readonly string[];
+    }): Promise<{ readonly receiptSha256: string }>;
   };
   readonly canonicalizer: PublicationCanonicalizer;
   readonly signer: PublicationSigner;
@@ -43,7 +55,8 @@ export async function compileEntityAuthorizationPublication(
   input: EntityAuthorizationPublicationInput,
 ): Promise<PublicationArtifactDocumentV1> {
   const { canonicalizer: canonical, projection } = input;
-  const capturedCatalog=structuredClone(input.catalog), operationIds=structuredClone(input.operationIds);
+  const capturedCatalog = structuredClone(input.catalog),
+    operationIds = structuredClone(input.operationIds);
   // Snapshot authoring inputs before awaiting signing; callers cannot mutate signed content in flight.
   const c = structuredClone(projection.entityContract),
     d = structuredClone(projection.entityDescriptor);
@@ -97,13 +110,36 @@ export async function compileEntityAuthorizationPublication(
     d.descriptor["authorizationRuntime"],
     profile,
   );
-  if (!input.review) throw new TypeError("Entity authorization publication review adapter required");
-  const review = await input.review.qualify({releaseId:c.releaseId,releaseNo:c.releaseNo,tenantId:c.tenantId??null,plane:d.plane,entityCode:c.entityCode,contractHash:hash(c.contract),profileHash:hash(profile),runtimeHash:hash(runtime),catalogHash:hash(capturedCatalog),operationKeys:profile.operations.map(o=>o.key).sort()});
-  if (!review || !/^[a-f0-9]{64}$/.test(review.receiptSha256)) throw new TypeError("Invalid entity authorization publication review receipt");
+  assertCanonicalReadSourceCatalog(runtime, capturedCatalog);
+  if (!input.review)
+    throw new TypeError(
+      "Entity authorization publication review adapter required",
+    );
+  const review = await input.review.qualify({
+    releaseId: c.releaseId,
+    releaseNo: c.releaseNo,
+    tenantId: c.tenantId ?? null,
+    plane: d.plane,
+    entityCode: c.entityCode,
+    contractHash: hash(c.contract),
+    profileHash: hash(profile),
+    runtimeHash: hash(runtime),
+    catalogHash: hash(capturedCatalog),
+    operationKeys: profile.operations.map((o) => o.key).sort(),
+  });
+  if (!review || !/^[a-f0-9]{64}$/.test(review.receiptSha256))
+    throw new TypeError(
+      "Invalid entity authorization publication review receipt",
+    );
   const authored = authoredAuthorization(c.contract);
   if (
     hash(authored["authorization"]) !== hash(profile) ||
-    hash(parseEntityAuthorizationRuntime(authored["authorizationRuntime"], profile)) !== hash(runtime)
+    hash(
+      parseEntityAuthorizationRuntime(
+        authored["authorizationRuntime"],
+        profile,
+      ),
+    ) !== hash(runtime)
   )
     throw new TypeError("Authoring contract/runtime authorization mismatch");
   const authoredOperations = c.contract["operations"];
@@ -118,8 +154,7 @@ export async function compileEntityAuthorizationPublication(
       .size !== activeOperations.length ||
     activeOperations.some(
       (operation) =>
-        !operation ||
-        operationIds[operation.operationKey] !== operation.id,
+        !operation || operationIds[operation.operationKey] !== operation.id,
     )
   )
     throw new TypeError(
@@ -171,9 +206,11 @@ export async function compileEntityAuthorizationPublication(
       // The authenticated review pins both the catalog and selected profile.
       // Catalog compatibility can support additional scopes; only the reviewed
       // resolver's scopes are emitted below. Never infer tenant compatibility.
-      if (!Array.isArray(permission.scopeKinds) ||
+      if (
+        !Array.isArray(permission.scopeKinds) ||
         new Set(permission.scopeKinds).size !== permission.scopeKinds.length ||
-        expected.some(scope => !permission.scopeKinds.includes(scope)))
+        expected.some((scope) => !permission.scopeKinds.includes(scope))
+      )
         throw new TypeError(
           `Permission scope review required: ${operation.key}`,
         );
@@ -218,7 +255,15 @@ export async function compileEntityAuthorizationPublication(
     },
     operation_scope_bindings: rows,
   };
-  parseEntityRuntimeDescriptor({entity_code:c.entityCode,release_id:c.releaseId,release_no:c.releaseNo,entity_contract_hash:contractHash,plane_code:d.plane,compiled_hash:hash(descriptor),compiled_json:descriptor});
+  parseEntityRuntimeDescriptor({
+    entity_code: c.entityCode,
+    release_id: c.releaseId,
+    release_no: c.releaseNo,
+    entity_contract_hash: contractHash,
+    plane_code: d.plane,
+    compiled_hash: hash(descriptor),
+    compiled_json: descriptor,
+  });
   const contractSignature = await input.signer.sign({
     keyId: input.signingKeyId,
     algorithm: "Ed25519",

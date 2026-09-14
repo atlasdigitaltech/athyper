@@ -240,7 +240,7 @@ CREATE TABLE runtime_meta.entity_contract (
     CONSTRAINT runtime_entity_contract_release_uq
         UNIQUE NULLS NOT DISTINCT (tenant_id, entity_id, release_id),
     CONSTRAINT runtime_entity_contract_release_no_uq
-        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_id, release_no),
+        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_id, entity_code, release_no),
     -- Compatibility coordinate retained for Mesh document envelopes.
     CONSTRAINT runtime_entity_contract_legacy_coordinate_uq
         UNIQUE (entity_id, id, entity_contract_hash),

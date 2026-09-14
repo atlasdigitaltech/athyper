@@ -166,13 +166,15 @@ export function caseStatusMessage(status: GovernedCaseStatusV1):
 
 export function GovernedCaseSummary({
   value,
+  showSummary = true,
 }: {
   readonly value: GovernedCaseViewV1;
+  readonly showSummary?: boolean;
 }) {
   const notice = caseStatusMessage(value.status);
   return (
     <>
-      <div className="bp-summary" aria-label="Governed case summary">
+      {showSummary ? <div className="bp-summary" aria-label="Governed case summary">
         <Badge tone={caseTone(value.status)}>{title(value.status)}</Badge>
         <span>Version {value.rowVersion}</span>
         <span>
@@ -180,7 +182,7 @@ export function GovernedCaseSummary({
           complete
         </span>
         <span>{value.progress.blockers} blockers</span>
-      </div>
+      </div> : null}
       {notice ? (
         <div
           className={`bp-state bp-state--${notice.tone}`}

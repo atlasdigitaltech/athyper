@@ -7,6 +7,52 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ApiTransportError } from "@athyper/platform-api-client";
 import { AppErrorBoundary, AppLoadingBoundary, NotFoundBoundary, classifyAppError, createRedactedBoundaryEvent, resolveProfileColorMode, safeLocalReturnTo } from "@athyper/platform-shell-app-foundation";
 
+for (const app of ["neon", "mesh", "studio"]) {
+  for (const route of ["error", "(shell)/error", "global-error"]) {
+    test(`${app}/${route} retries server rendering or reloads the document`, async () => {
+      const { default: Boundary } = await import(`../../apps/${app}/app/${route}.tsx`);
+      const global = route === "global-error";
+      const dom = new JSDOM("<!doctype html><html><body><div id='root'></div></body></html>", { url: "https://app.example.test/work" });
+      let reloads = 0;
+      let retries = 0;
+      let resets = 0;
+      const browserWindow = new Proxy(dom.window, {
+        get(target, key) {
+          return key === "location" ? { reload: () => { reloads++; } } : Reflect.get(target, key);
+        },
+      });
+      const previous = ["window", "document", "navigator", "IS_REACT_ACT_ENVIRONMENT"].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const);
+      Object.defineProperties(globalThis, { window: { configurable: true, value: browserWindow }, document: { configurable: true, value: dom.window.document }, navigator: { configurable: true, value: dom.window.navigator }, IS_REACT_ACT_ENVIRONMENT: { configurable: true, value: true } });
+      const root = createRoot(global ? dom.window.document : dom.window.document.getElementById("root")!);
+      try {
+        const props = { error: Object.assign(new Error("Temporary failure"), { status: 503 }), reset: () => { resets++; } };
+        await act(async () => root.render(<Boundary {...props} retry={() => { retries++; }} />));
+        const clickRetry = async () => {
+          const button = dom.window.document.querySelector("button")!;
+          assert.equal(button.textContent, "Try again");
+          assert.equal(button.disabled, false);
+          await act(async () => button.click());
+        };
+        await clickRetry();
+        assert.equal(retries, global ? 0 : 1);
+        assert.equal(reloads, global ? 1 : 0);
+        assert.equal(resets, 0, "recovery must not merely clear the error state");
+
+        if (!global) {
+          await act(async () => root.render(<Boundary {...props} />));
+          await clickRetry();
+          assert.equal(reloads, 1, "missing framework retry falls back to browser refresh");
+          assert.equal(resets, 0);
+        }
+      } finally {
+        await act(async () => root.unmount());
+        for (const [key, descriptor] of previous) descriptor ? Object.defineProperty(globalThis, key, descriptor) : delete (globalThis as Record<string, unknown>)[key];
+        dom.window.close();
+      }
+    });
+  }
+}
+
 const cases = [
   ["authentication", new ApiTransportError("authentication", "secret bearer token", 401)],
   ["required-action", { status: 403, code: "MFA_REQUIRED" }],

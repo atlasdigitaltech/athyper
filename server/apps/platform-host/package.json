@@ -14,9 +14,13 @@
     "start:scheduler": "cross-env MODE=scheduler node dist/main.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "qualify:document-malware": "tsx src/scripts/qualify-document-malware.ts",
+    "qualify:document-infrastructure": "tsx src/scripts/qualify-document-infrastructure.ts",
+    "submit:derivative-scan-backfill": "tsx src/scripts/submit-derivative-scan-backfill.ts"
   },
   "dependencies": {
+    "@athyper/server-adapter-ai-ollama": "workspace:*",
     "@athyper/server-adapter-auth-keycloak": "workspace:*",
     "@athyper/server-adapter-cache-redis": "workspace:*",
     "@athyper/server-adapter-communications": "workspace:*",
@@ -100,13 +104,23 @@
     "cross-env": "^7.0.3",
     "dotenv": "^17.4.2",
     "kysely": "^0.28.17",
-    "pino": "^10.3.1",
-    "@athyper/server-adapter-ai-ollama": "workspace:*"
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
-    "tsx": "^4.19.2",
+    "pdf-lib": "1.17.1",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "@athyper/server-service-publication": "workspace:*",
+    "@athyper/server-service-master-data": "workspace:*",
+    "@athyper/server-adapter-publication-signing": "workspace:*",
+    "pg": "^8.20.0",
+    "@types/pg": "^8.20.0",
+    "express": "^5.2.1",
+    "@types/express": "^5.0.6",
+    "@athyper/server-db": "workspace:*",
+    "@athyper/server-contract-meta-entity-authoring": "workspace:*",
+    "@athyper/server-plane-studio-meta-entity-authoring": "workspace:*"
   }
 }

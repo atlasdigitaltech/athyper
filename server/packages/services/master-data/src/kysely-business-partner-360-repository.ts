@@ -1,4 +1,6 @@
 import { sql, type Transaction } from "kysely";
+import { MasterDataError } from "./errors.js";
+import { authorizedCaseIds } from "./kysely-business-partner-360-explainability.js";
 import {
   BUSINESS_PARTNER_360_PERMISSIONS,
   type BusinessPartnerAggregate,
@@ -44,7 +46,7 @@ export class KyselyBusinessPartner360Repository implements BusinessPartner360Rep
       )
     ).rows[0]!.business_date;
     const partner = (
-      await sql<Row>`SELECT id::text,code,partner_category::text,COALESCE(display_name,name) display_name,legal_name,status::text,record_version,COALESCE(updated_at,status_changed_at,created_at) changed_at FROM master.business_partner WHERE tenant_id=${input.tenantId}::uuid AND id=${input.businessPartnerId}::uuid AND partner_category='organization' LIMIT 1`.execute(
+      await sql<Row>`SELECT id::text,code,partner_category::text,name,status::text,record_version,COALESCE(updated_at,status_changed_at,created_at) changed_at FROM master.business_partner WHERE tenant_id=${input.tenantId}::uuid AND id=${input.businessPartnerId}::uuid AND partner_category='organization' LIMIT 1`.execute(
         transaction,
       )
     ).rows[0];
@@ -68,13 +70,22 @@ export class KyselyBusinessPartner360Repository implements BusinessPartner360Rep
     }
     // A role-free identity may be inspected for its first governed role extension.
     // Existing assignments, including inactive ones, must never grant this path.
-    if (!scopeValid && input.operatingOrganizationId && roles.length === 0 && (input.roleLens ?? "all") === "all") {
-      scopeValid = Boolean((await sql`SELECT 1 FROM master.operating_organization organization
+    if (
+      !scopeValid &&
+      input.operatingOrganizationId &&
+      roles.length === 0 &&
+      (input.roleLens ?? "all") === "all"
+    ) {
+      scopeValid = Boolean(
+        (
+          await sql`SELECT 1 FROM master.operating_organization organization
         WHERE organization.tenant_id=${input.tenantId}::uuid AND organization.id=${input.operatingOrganizationId}::uuid
           AND organization.status='active'
           AND NOT EXISTS(SELECT 1 FROM master.business_partner_operating_organization_assignment assignment
             WHERE assignment.tenant_id=${input.tenantId}::uuid AND assignment.business_partner_id=${input.businessPartnerId}::uuid)
-        LIMIT 1`.execute(transaction)).rows[0]);
+        LIMIT 1`.execute(transaction)
+        ).rows[0],
+      );
     }
     if (input.companyCodeId) {
       scopeResolved = true;
@@ -107,10 +118,7 @@ export class KyselyBusinessPartner360Repository implements BusinessPartner360Rep
         partner,
         "partner_category",
       ) as BusinessPartner360Core["category"],
-      displayName: text(partner, "display_name"),
-      ...(optional(partner, "legal_name")
-        ? { legalName: optional(partner, "legal_name") }
-        : {}),
+      name: text(partner, "name"),
       status: text(partner, "status"),
       version: Number(partner["record_version"]),
       changedAt: iso(partner["changed_at"]),
@@ -131,6 +139,23 @@ export class KyselyBusinessPartner360Repository implements BusinessPartner360Rep
     input: Parameters<BusinessPartner360Repository<Tx>["readFragments"]>[0],
     transaction: Tx,
   ): Promise<BusinessPartner360Fragments> {
+    const caseIds = await authorizedCaseIds(
+      {
+        tenantId: input.tenantId,
+        businessPartnerId: input.core.id,
+        ...(input.authorizeCase ? { authorizeCase: input.authorizeCase } : {}),
+      },
+      transaction,
+    );
+    const caseFilter =
+      caseIds === undefined
+        ? sql`TRUE`
+        : caseIds.length
+          ? sql`governed_case.id IN (${sql.join(caseIds.map((id) => sql`${id}::uuid`))})`
+          : sql`FALSE`;
+    const caseCountsVisible =
+      input.permissions.has(BUSINESS_PARTNER_360_PERMISSIONS.request) &&
+      (caseIds === undefined || caseIds.length > 0);
     const can = (permission: string) => input.permissions.has(permission),
       ownerTypes = (
         await sql<{
@@ -162,10 +187,10 @@ export class KyselyBusinessPartner360Repository implements BusinessPartner360Rep
             transaction,
           )
         : Promise.resolve({ rows: [] } as { rows: Row[] }),
-      sql<Row>`SELECT count(*)FILTER(WHERE governed_case.status IN('draft','submitted','in_review','approved','materializing','conflicted'))::int active_count,count(*)FILTER(WHERE governed_case.status='draft'AND latest_decision.result_code='ENTITY_CASE_RETURNED'AND latest_decision.recorded_at>=COALESCE(latest_draft.recorded_at,'-infinity'::timestamptz))::int returned_count FROM document.entity_case governed_case LEFT JOIN LATERAL(SELECT command.result_code,command.recorded_at FROM document.entity_case_command_evidence command WHERE command.tenant_id=governed_case.tenant_id AND command.entity_case_id=governed_case.id AND command.command_code='entity.case.decision' ORDER BY command.recorded_at DESC,command.id DESC LIMIT 1)latest_decision ON true LEFT JOIN LATERAL(SELECT command.recorded_at FROM document.entity_case_command_evidence command WHERE command.tenant_id=governed_case.tenant_id AND command.entity_case_id=governed_case.id AND command.command_code='entity.case.draft.write' ORDER BY command.recorded_at DESC,command.id DESC LIMIT 1)latest_draft ON true WHERE governed_case.tenant_id=${input.tenantId}::uuid AND governed_case.entity_code='master.business_partner'AND(governed_case.target_entity_id=${input.core.id}::uuid OR EXISTS(SELECT 1 FROM document.entity_case_command_evidence materialization WHERE materialization.tenant_id=governed_case.tenant_id AND materialization.entity_case_id=governed_case.id AND materialization.command_code='entity.case.materialize'AND materialization.result_evidence->>'businessPartnerId'=${input.core.id}))`.execute(
+      sql<Row>`SELECT count(*)FILTER(WHERE governed_case.status IN('draft','submitted','in_review','approved','materializing','conflicted'))::int active_count,count(*)FILTER(WHERE governed_case.status='draft'AND latest_decision.result_code='ENTITY_CASE_RETURNED'AND latest_decision.recorded_at>=COALESCE(latest_draft.recorded_at,'-infinity'::timestamptz))::int returned_count FROM document.entity_case governed_case LEFT JOIN LATERAL(SELECT command.result_code,command.recorded_at FROM document.entity_case_command_evidence command WHERE command.tenant_id=governed_case.tenant_id AND command.entity_case_id=governed_case.id AND command.command_code='entity.case.decision' ORDER BY command.recorded_at DESC,command.id DESC LIMIT 1)latest_decision ON true LEFT JOIN LATERAL(SELECT command.recorded_at FROM document.entity_case_command_evidence command WHERE command.tenant_id=governed_case.tenant_id AND command.entity_case_id=governed_case.id AND command.command_code='entity.case.draft.write' ORDER BY command.recorded_at DESC,command.id DESC LIMIT 1)latest_draft ON true WHERE governed_case.tenant_id=${input.tenantId}::uuid AND governed_case.entity_code='master.business_partner' AND ${caseFilter} AND(governed_case.target_entity_id=${input.core.id}::uuid OR EXISTS(SELECT 1 FROM document.entity_case_command_evidence materialization WHERE materialization.tenant_id=governed_case.tenant_id AND materialization.entity_case_id=governed_case.id AND materialization.command_code='entity.case.materialize'AND materialization.result_evidence->>'businessPartnerId'=${input.core.id}))`.execute(
         transaction,
       ),
-      sql<Row>`SELECT id::text,created_at occurred_at,status,event_type FROM(SELECT id,created_at,status,('entity.case.'||status) event_type FROM document.entity_case WHERE tenant_id=${input.tenantId}::uuid AND entity_code='master.business_partner' AND target_entity_id=${input.core.id}::uuid ORDER BY created_at DESC,id DESC LIMIT 5) events`.execute(
+      sql<Row>`SELECT id::text,created_at occurred_at,status,event_type FROM(SELECT id,created_at,status,('entity.case.'||status) event_type FROM document.entity_case governed_case WHERE tenant_id=${input.tenantId}::uuid AND entity_code='master.business_partner' AND target_entity_id=${input.core.id}::uuid AND ${caseFilter} AND ${input.permissions.has(BUSINESS_PARTNER_360_PERMISSIONS.activity)} ORDER BY created_at DESC,id DESC LIMIT 5) events`.execute(
         transaction,
       ),
     ]);
@@ -211,8 +236,12 @@ export class KyselyBusinessPartner360Repository implements BusinessPartner360Rep
       contacts: actualCounts.contacts,
       "identifiers-tax": actualCounts.identifiersTax,
       governance: actualCounts.governance,
-      requests: Number(workRow["active_count"] ?? 0),
-      activity: recent.rows.length,
+      ...(caseCountsVisible
+        ? {
+            requests: Number(workRow["active_count"] ?? 0),
+            activity: recent.rows.length,
+          }
+        : {}),
       "business-activity": 0,
       network: actualCounts.network,
       ...(input.core.roles.some((role) => role.code === "supplier")
@@ -229,13 +258,25 @@ export class KyselyBusinessPartner360Repository implements BusinessPartner360Rep
           }
         : {}),
     };
+    if (caseIds)
+      for (const id of caseIds)
+        if (!(await input.authorizeCase!(id)))
+          throw new MasterDataError(
+            403,
+            "BP_CHILD_AUTHORIZATION_CHANGED",
+            "Case authorization changed during summary aggregation",
+          );
     return {
       ...(primaryAddress ? { primaryAddress } : {}),
       ...(primaryContact ? { primaryContact } : {}),
       identifiers: masked,
       openWork: {
-        activeRequestCount: Number(workRow["active_count"] ?? 0),
-        returnedRequestCount: Number(workRow["returned_count"] ?? 0),
+        ...(caseCountsVisible
+          ? {
+              activeRequestCount: Number(workRow["active_count"] ?? 0),
+              returnedRequestCount: Number(workRow["returned_count"] ?? 0),
+            }
+          : {}),
         expiringQualificationCount: 0,
         expiringCertificateCount: 0,
         pendingBankVerificationCount: 0,
@@ -444,7 +485,11 @@ async function readSummarySectionCounts(
 }
 function mapAddress(row: Row): BusinessPartner360AddressSummary {
   return {
-    lines: [optional(row,"line1"),optional(row,"line2"),optional(row,"line3")].filter((value): value is string => Boolean(value)),
+    lines: [
+      optional(row, "line1"),
+      optional(row, "line2"),
+      optional(row, "line3"),
+    ].filter((value): value is string => Boolean(value)),
     id: text(row, "id"),
     purpose: text(row, "purpose"),
     ...(optional(row, "line1") ? { line1: optional(row, "line1") } : {}),

@@ -1,16 +1,53 @@
 http:
   routers:
+    objects:
+      {
+        rule: Host(`objects.qa.athyper.test`),
+        entryPoints: [web],
+        service: objects,
+      }
     iam: { rule: Host(`iam.qa.athyper.test`), entryPoints: [web], service: iam }
-    api: { rule: Host(`api.qa.athyper.test`), entryPoints: [web], service: api-failover }
-    neon: { rule: Host(`neon.qa.athyper.test`), entryPoints: [web], service: neon-failover }
-    mesh: { rule: Host(`mesh.qa.athyper.test`), entryPoints: [web], service: mesh-failover }
-    studio: { rule: Host(`studio.qa.athyper.test`), entryPoints: [web], service: studio-failover }
-    fallback: { rule: PathPrefix(`/`), entryPoints: [web], service: problem, priority: 1 }
+    api:
+      {
+        rule: Host(`api.qa.athyper.test`),
+        entryPoints: [web],
+        service: api-failover,
+      }
+    neon:
+      {
+        rule: Host(`neon.qa.athyper.test`),
+        entryPoints: [web],
+        service: neon-failover,
+      }
+    mesh:
+      {
+        rule: Host(`mesh.qa.athyper.test`),
+        entryPoints: [web],
+        service: mesh-failover,
+      }
+    studio:
+      {
+        rule: Host(`studio.qa.athyper.test`),
+        entryPoints: [web],
+        service: studio-failover,
+      }
+    fallback:
+      {
+        rule: PathPrefix(`/`),
+        entryPoints: [web],
+        service: problem,
+        priority: 1,
+      }
   services:
-    api-failover: { failover: { healthCheck: {}, service: api, fallback: problem } }
-    neon-failover: { failover: { healthCheck: {}, service: neon, fallback: outage } }
-    mesh-failover: { failover: { healthCheck: {}, service: mesh, fallback: outage } }
-    studio-failover: { failover: { healthCheck: {}, service: studio, fallback: outage } }
+    objects: { loadBalancer: { servers: [{ url: http://objectstorage:9000 }] } }
+    api-failover:
+      { failover: { healthCheck: {}, service: api, fallback: problem } }
+    neon-failover:
+      { failover: { healthCheck: {}, service: neon, fallback: outage } }
+    mesh-failover:
+      { failover: { healthCheck: {}, service: mesh, fallback: outage } }
+    studio-failover:
+      { failover: { healthCheck: {}, service: studio, fallback: outage } }
     iam: { loadBalancer: { servers: [{ url: http://iam:8080 }] } }
     api:
       loadBalancer:

@@ -1,1 +1,1 @@
-export type * from "./derivatives.js";
+export * from "./derivatives.js";

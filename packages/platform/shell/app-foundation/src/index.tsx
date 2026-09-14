@@ -1,5 +1,8 @@
 "use client";
 
+import { readBrowserCsrfToken } from "./browser-csrf";
+export { readBrowserCsrfToken } from "./browser-csrf";
+
 import { parseInstant } from "@athyper/platform-temporal";
 export * from "./boundaries";
 export * from "./error-taxonomy";
@@ -202,7 +205,7 @@ function SessionActivityBridge({ sessionState, onRevalidate }: { readonly sessio
     if (sessionState === "anonymous") return;
     const touch = () => {
       const currentTime = Date.now(); if (inFlight.current || !shouldSendSessionTouch(lastAttemptAt.current, currentTime)) return;
-      const csrfToken = readBrowserCookie("__Host-athyper-csrf") ?? readBrowserCookie("athyper-csrf"); if (!csrfToken) return;
+      const csrfToken = readBrowserCsrfToken(); if (!csrfToken) return;
       lastAttemptAt.current = currentTime;
       inFlight.current = fetch("/api/auth/touch", { method: "POST", credentials: "same-origin", headers: { "x-csrf-token": csrfToken, accept: "application/json" }, cache: "no-store" })
         .then(async (response) => { if (response.status === 401) { onRevalidate?.("expiry"); return; } if (!response.ok) return; const value = await response.json() as Partial<SanitizedSession>; updateExpiry(sessionExpiry(value)); })
@@ -233,8 +236,6 @@ function SessionTerminationBridge({ plane }: { readonly plane: SanitizedSession[
 }
 
 function sessionExpiry(value: Pick<SanitizedSession, "expiresAt" | "idleExpiresAt" | "absoluteExpiresAt">): SessionExpiry { return Object.freeze({ ...(value.expiresAt ? { expiresAt: value.expiresAt } : {}), ...(value.idleExpiresAt ? { idleExpiresAt: value.idleExpiresAt } : {}), ...(value.absoluteExpiresAt ? { absoluteExpiresAt: value.absoluteExpiresAt } : {}) }); }
-function readBrowserCookie(name: string): string | undefined { const prefix = `${name}=`; const value = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length); if (!value) return undefined; try { return decodeURIComponent(value); } catch { return undefined; } }
-export function readBrowserCsrfToken(): string | undefined { return typeof document === "undefined" ? undefined : readBrowserCookie("__Host-athyper-csrf") ?? readBrowserCookie("athyper-csrf"); }
 
 function required<T>(value: T | undefined, name: string): T { if (value === undefined) throw new Error(`${name} must be used inside AppFoundationProviders`); return value; }
 function developmentAccessDiagnostic(event: AccessDiagnostic): void { if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname.endsWith(".local"))) console.warn("[athyper/access]", event); }

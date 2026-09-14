@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./bank-directory": "./src/bank-directory.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

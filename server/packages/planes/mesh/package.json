@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./business-partner-delivery": "./src/business-partner-delivery.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

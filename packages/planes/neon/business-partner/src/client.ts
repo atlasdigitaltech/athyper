@@ -108,6 +108,7 @@ export interface RequestView {
   readonly case: GovernedCaseViewV1;
   readonly request: PartnerRequest;
   readonly validationFindings: readonly ValidationFinding[];
+  readonly validationRun?: Readonly<{evaluationId:string;evaluatedAt:string;snapshotId:string;requestVersion:number;stale:boolean}>;
   readonly materializationProof?: MaterializationProof;
   readonly onboardingCycle?: Readonly<{
     runId:string;code:string;name:string;status:string;startedAt?:string;completedAt?:string;
@@ -127,7 +128,7 @@ export interface RequestView {
       id:string;code:string;name:string;stageNo:number;mode:"serial"|"parallel";status:string;outcome?:string;
       quorum:Readonly<{kind:"all"|"any"|"count"|"percentage";value?:number;required:number;eligibleCount:number}>;
       startedAt?:string;completedAt?:string;dueAt?:string;remindersAt:readonly string[];escalateAt?:string;
-      workItems:readonly Readonly<{id:string;status:string;rowVersion:number;ownerPrincipalId?:string;dueAt?:string;priority:string;decision?:string;decidedAt?:string;decidedBy?:string}>[];
+      workItems:readonly Readonly<{id:string;status:string;rowVersion:number;ownerPrincipalId?:string;ownerDisplayName?:string;dueAt?:string;priority:string;decision?:string;decidedAt?:string;decidedBy?:string}>[];
     }>[];
   }>;
 }
@@ -136,8 +137,6 @@ export interface PartnerAggregate {
     id: string;
     code: string;
     name: string;
-    displayName?: string;
-    legalName?: string;
     partnerCategory: string;
     legalForm?: string;
     registrationCountryCode?: string;
@@ -334,6 +333,7 @@ export interface SupplierPreference {
   readonly createdBy: string;
 }
 export interface PartnerRequestDraft {
+  readonly draftCapture?: boolean;
   readonly operatingOrganizationId: string;
   readonly companyCodeId?: string;
   readonly expectedForm?: RequestFormDefinition;
@@ -380,6 +380,7 @@ const createRequest = createOperation<
     requestedRole?: "supplier" | "customer";
     operatingOrganizationId?: string;
     companyCodeId?: string;
+    draftCapture?: boolean;
     expectedForm?: RequestFormDefinition;
     proposedPayload: Readonly<Record<string, unknown>>;
     extensions?: RequestRelationshipExtensions;
@@ -1021,6 +1022,8 @@ export function createBusinessPartnerClient(http: HttpClient) {
   });
 }
 type PatchBody = {
+  draftCapture?: boolean;
+  extensions?: RequestRelationshipExtensions;
   expectedVersion: number;
   proposedPayload: Readonly<Record<string, unknown>>;
   operatingOrganizationId?: string;
@@ -1073,6 +1076,7 @@ function parseView(value: unknown): RequestView {
       : [],
     ...(proof ? { materializationProof: proof } : {}),
     ...(onboardingCycle ? { onboardingCycle } : {}),
+    ...(body.validationRun ? {validationRun:(()=>{const r=record(body.validationRun);return {evaluationId:text(r.evaluationId),evaluatedAt:text(r.evaluatedAt),snapshotId:text(r.snapshotId),requestVersion:positive(r.requestVersion),stale:r.stale===true};})()} : {}),
     ...(workflow
       ? {
           workflow: {
@@ -1096,7 +1100,7 @@ function parseView(value: unknown): RequestView {
   });
 }
 function parseOnboardingCycle(value:unknown):NonNullable<RequestView["onboardingCycle"]>{const cycle=record(value),template=record(cycle.template);if(!Array.isArray(cycle.tasks)||!Array.isArray(cycle.subjects))throw new TypeError("Onboarding cycle contract is invalid");return Object.freeze({runId:text(cycle.runId),code:text(cycle.code),name:text(cycle.name),status:text(cycle.status),...(typeof cycle.startedAt==="string"?{startedAt:cycle.startedAt}:{}),...(typeof cycle.completedAt==="string"?{completedAt:cycle.completedAt}:{}),template:Object.freeze({code:text(template.code),version:positive(template.version),hash:text(template.hash),...(typeof template.releaseId==="string"?{releaseId:template.releaseId}:{})}),tasks:Object.freeze(cycle.tasks.map(raw=>{const task=record(raw);return Object.freeze({id:text(task.id),code:text(task.code),name:text(task.name),status:text(task.status),completionMode:["manual","system","hybrid"].includes(String(task.completionMode))?task.completionMode as "manual"|"system"|"hybrid":"manual",...(typeof task.startedAt==="string"?{startedAt:task.startedAt}:{}),...(typeof task.completedAt==="string"?{completedAt:task.completedAt}:{}),completionEvidence:record(task.completionEvidence)});})),subjects:Object.freeze(cycle.subjects.map(raw=>{const subject=record(raw);return Object.freeze({role:text(subject.role),primary:Boolean(subject.primary),...(typeof subject.entityCaseId==="string"?{entityCaseId:subject.entityCaseId}:{}),...(typeof subject.externalReference==="string"?{externalReference:subject.externalReference}:{})});}))});}
-function parseWorkflowStage(value:unknown){const stage=record(value),quorum=record(stage.quorum);return Object.freeze({id:text(stage.id),code:text(stage.code),name:text(stage.name),stageNo:positive(stage.stageNo),mode:stage.mode==="serial"?"serial" as const:"parallel" as const,status:text(stage.status),...(typeof stage.outcome==="string"?{outcome:stage.outcome}:{}),quorum:Object.freeze({kind:["all","any","count","percentage"].includes(String(quorum.kind))?quorum.kind as "all"|"any"|"count"|"percentage":"any" as const,...(quorum.value!==undefined?{value:Number(quorum.value)}:{}),required:positive(quorum.required),eligibleCount:Number(quorum.eligibleCount??0)}),...(typeof stage.startedAt==="string"?{startedAt:stage.startedAt}:{}),...(typeof stage.completedAt==="string"?{completedAt:stage.completedAt}:{}),...(typeof stage.dueAt==="string"?{dueAt:stage.dueAt}:{}),remindersAt:Array.isArray(stage.remindersAt)?Object.freeze(stage.remindersAt.filter((item):item is string=>typeof item==="string")):[],...(typeof stage.escalateAt==="string"?{escalateAt:stage.escalateAt}:{}),workItems:Array.isArray(stage.workItems)?Object.freeze(stage.workItems.map(item=>{const row=record(item);return Object.freeze({id:text(row.id),status:text(row.status),rowVersion:positive(row.rowVersion),...(typeof row.ownerPrincipalId==="string"?{ownerPrincipalId:row.ownerPrincipalId}:{}),...(typeof row.dueAt==="string"?{dueAt:row.dueAt}:{}),priority:text(row.priority),...(typeof row.decision==="string"?{decision:row.decision}:{}),...(typeof row.decidedAt==="string"?{decidedAt:row.decidedAt}:{}),...(typeof row.decidedBy==="string"?{decidedBy:row.decidedBy}:{})});})):[]});}
+function parseWorkflowStage(value:unknown){const stage=record(value),quorum=record(stage.quorum);return Object.freeze({id:text(stage.id),code:text(stage.code),name:text(stage.name),stageNo:positive(stage.stageNo),mode:stage.mode==="serial"?"serial" as const:"parallel" as const,status:text(stage.status),...(typeof stage.outcome==="string"?{outcome:stage.outcome}:{}),quorum:Object.freeze({kind:["all","any","count","percentage"].includes(String(quorum.kind))?quorum.kind as "all"|"any"|"count"|"percentage":"any" as const,...(quorum.value!==undefined?{value:Number(quorum.value)}:{}),required:positive(quorum.required),eligibleCount:Number(quorum.eligibleCount??0)}),...(typeof stage.startedAt==="string"?{startedAt:stage.startedAt}:{}),...(typeof stage.completedAt==="string"?{completedAt:stage.completedAt}:{}),...(typeof stage.dueAt==="string"?{dueAt:stage.dueAt}:{}),remindersAt:Array.isArray(stage.remindersAt)?Object.freeze(stage.remindersAt.filter((item):item is string=>typeof item==="string")):[],...(typeof stage.escalateAt==="string"?{escalateAt:stage.escalateAt}:{}),workItems:Array.isArray(stage.workItems)?Object.freeze(stage.workItems.map(item=>{const row=record(item);return Object.freeze({id:text(row.id),status:text(row.status),rowVersion:positive(row.rowVersion),...(typeof row.ownerDisplayName==="string"?{ownerDisplayName:row.ownerDisplayName}:{}),...(typeof row.ownerPrincipalId==="string"?{ownerPrincipalId:row.ownerPrincipalId}:{}),...(typeof row.dueAt==="string"?{dueAt:row.dueAt}:{}),priority:text(row.priority),...(typeof row.decision==="string"?{decision:row.decision}:{}),...(typeof row.decidedAt==="string"?{decidedAt:row.decidedAt}:{}),...(typeof row.decidedBy==="string"?{decidedBy:row.decidedBy}:{})});})):[]});}
 function parseProof(value: unknown): MaterializationProof {
   const body = record(value),
     materializer = record(body.materializer),

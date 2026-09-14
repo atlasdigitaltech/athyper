@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1231,
-    "matched": 62,
-    "legacyOnly": 806,
-    "currentOnly": 363,
+    "identities": 1291,
+    "matched": 66,
+    "legacyOnly": 802,
+    "currentOnly": 423,
     "legacyOccurrences": 898,
-    "currentOccurrences": 425
+    "currentOccurrences": 489
   },
   "routes": [
     {
@@ -70,7 +70,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 87,
+          "line": 93,
           "declaredPath": "/api/atlas/threads/:id",
           "kind": "contract"
         }
@@ -85,7 +85,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 110,
+          "line": 116,
           "declaredPath": "/api/atlas/threads/:id/participants/:principalId",
           "kind": "contract"
         }
@@ -100,7 +100,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-routes.ts",
-          "line": 201,
+          "line": 217,
           "declaredPath": "/api/attachments/:attachmentId",
           "kind": "direct"
         }
@@ -1071,7 +1071,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/bookmarks/record-bookmark-routes.ts",
-          "line": 241,
+          "line": 270,
           "declaredPath": "/api/record-bookmarks/:entityCode",
           "kind": "contract"
         }
@@ -1528,7 +1528,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 44,
+          "line": 50,
           "declaredPath": "/api/atlas/admission",
           "kind": "contract"
         }
@@ -1558,7 +1558,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 51,
+          "line": 57,
           "declaredPath": "/api/atlas/threads",
           "kind": "contract"
         }
@@ -1573,7 +1573,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 58,
+          "line": 64,
           "declaredPath": "/api/atlas/threads/:id",
           "kind": "contract"
         }
@@ -1588,7 +1588,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 95,
+          "line": 101,
           "declaredPath": "/api/atlas/threads/:id/export",
           "kind": "contract"
         }
@@ -1603,7 +1603,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 61,
+          "line": 67,
           "declaredPath": "/api/atlas/threads/:id/messages",
           "kind": "contract"
         }
@@ -1618,7 +1618,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 149,
+          "line": 157,
           "declaredPath": "/api/atlas/tools/history",
           "kind": "contract"
         }
@@ -1633,7 +1633,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-routes.ts",
-          "line": 124,
+          "line": 140,
           "declaredPath": "/api/attachments/:attachmentId/status",
           "kind": "direct"
         }
@@ -1849,6 +1849,21 @@
       ],
       "current": [],
       "status": "legacy-only"
+    },
+    {
+      "identity": "GET /api/bank-directory/reference",
+      "method": "GET",
+      "path": "/api/bank-directory/reference",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/publication/src/bank-directory-reader.ts",
+          "line": 34,
+          "declaredPath": "/api/bank-directory/reference",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
     },
     {
       "identity": "GET /api/collab/activity/stream",
@@ -2464,6 +2479,21 @@
       "status": "current-only"
     },
     {
+      "identity": "GET /api/control-admin/bank-validation/rules",
+      "method": "GET",
+      "path": "/api/control-admin/bank-validation/rules",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
+          "line": 132,
+          "declaredPath": "/api/control-admin/bank-validation/rules",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "GET /api/control-admin/cycle-config/:param/revisions/:param",
       "method": "GET",
       "path": "/api/control-admin/cycle-config/:param/revisions/:param",
@@ -2471,7 +2501,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts",
-          "line": 32,
+          "line": 49,
           "declaredPath": "/api/control-admin/cycle-config/:cycleTypeId/revisions/:version",
           "kind": "contract"
         }
@@ -2486,7 +2516,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts",
-          "line": 31,
+          "line": 48,
           "declaredPath": "/api/control-admin/cycle-config/:cycleTypeId/revisions/latest",
           "kind": "contract"
         }
@@ -2501,7 +2531,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 51,
+          "line": 118,
           "declaredPath": "/api/control-admin/entitlements/modules",
           "kind": "contract"
         }
@@ -2516,7 +2546,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 50,
+          "line": 118,
           "declaredPath": "/api/control-admin/entitlements/plans",
           "kind": "contract"
         }
@@ -2531,7 +2561,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 40,
+          "line": 112,
           "declaredPath": "/api/control-admin/features",
           "kind": "contract"
         }
@@ -2546,7 +2576,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 41,
+          "line": 112,
           "declaredPath": "/api/control-admin/features/:code/evaluation",
           "kind": "contract"
         }
@@ -2561,7 +2591,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 44,
+          "line": 104,
           "declaredPath": "/api/control-admin/lookups",
           "kind": "contract"
         }
@@ -2576,7 +2606,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 45,
+          "line": 104,
           "declaredPath": "/api/control-admin/lookups/:code",
           "kind": "contract"
         }
@@ -2591,7 +2621,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 42,
+          "line": 98,
           "declaredPath": "/api/control-admin/parameters",
           "kind": "contract"
         }
@@ -2606,7 +2636,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 43,
+          "line": 98,
           "declaredPath": "/api/control-admin/parameters/:code/effective",
           "kind": "contract"
         }
@@ -2621,7 +2651,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 46,
+          "line": 151,
           "declaredPath": "/api/control-admin/rounding",
           "kind": "contract"
         }
@@ -2636,7 +2666,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/runtime-command-routes.ts",
-          "line": 39,
+          "line": 89,
           "declaredPath": "/api/control-admin/runtime-history",
           "kind": "contract"
         }
@@ -2752,6 +2782,21 @@
       "status": "legacy-only"
     },
     {
+      "identity": "GET /api/entity-runtime/:param/application-descriptor",
+      "method": "GET",
+      "path": "/api/entity-runtime/:param/application-descriptor",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/entity-list-routes.ts",
+          "line": 29,
+          "declaredPath": "/api/entity-runtime/:entityCode/application-descriptor",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "GET /api/entity-runtime/:param/detail-descriptor",
       "method": "GET",
       "path": "/api/entity-runtime/:param/detail-descriptor",
@@ -2759,7 +2804,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 30,
+          "line": 32,
           "declaredPath": "/api/entity-runtime/:entityCode/detail-descriptor",
           "kind": "contract"
         }
@@ -2774,7 +2819,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 29,
+          "line": 31,
           "declaredPath": "/api/entity-runtime/:entityCode/form-descriptor",
           "kind": "contract"
         }
@@ -2789,7 +2834,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 32,
+          "line": 34,
           "declaredPath": "/api/entity-runtime/:entityCode/list",
           "kind": "contract"
         }
@@ -2804,7 +2849,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 28,
+          "line": 30,
           "declaredPath": "/api/entity-runtime/:entityCode/list-descriptor",
           "kind": "contract"
         }
@@ -2819,9 +2864,24 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 31,
+          "line": 33,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId",
           "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/entity-runtime/:param/views",
+      "method": "GET",
+      "path": "/api/entity-runtime/:param/views",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/preferences/src/entity-views-routes.ts",
+          "line": 46,
+          "declaredPath": "/api/entity-runtime/:entityCode/views",
+          "kind": "direct"
         }
       ],
       "status": "current-only"
@@ -4378,7 +4438,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 1167,
+          "line": 1186,
           "declaredPath": "/api/iam/contexts",
           "kind": "contract"
         }
@@ -4423,7 +4483,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 451,
+          "line": 470,
           "declaredPath": "/api/iam/identity-saga-attempts/:attemptId/evidence",
           "kind": "contract"
         }
@@ -4528,7 +4588,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 768,
+          "line": 787,
           "declaredPath": "/api/iam/projection-health",
           "kind": "contract"
         }
@@ -5118,7 +5178,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts",
-          "line": 8,
+          "line": 103,
           "declaredPath": "/api/mesh/business-partner-bank-disclosures/:disclosureId",
           "kind": "direct"
         }
@@ -5133,7 +5193,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 7,
+          "line": 72,
           "declaredPath": "/api/mesh/business-partner-network-workspace",
           "kind": "direct"
         }
@@ -5148,7 +5208,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts",
-          "line": 2,
+          "line": 86,
           "declaredPath": "/api/mesh/business-partner-profile-publications",
           "kind": "direct"
         }
@@ -5163,7 +5223,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts",
-          "line": 2,
+          "line": 100,
           "declaredPath": "/api/mesh/business-partner-profile-publications/:publicationId",
           "kind": "direct"
         }
@@ -5259,6 +5319,36 @@
       ],
       "current": [],
       "status": "legacy-only"
+    },
+    {
+      "identity": "GET /api/meta-entity-authoring/change-sets",
+      "method": "GET",
+      "path": "/api/meta-entity-authoring/change-sets",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
+          "line": 9,
+          "declaredPath": "/api/meta-entity-authoring/change-sets",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/meta-entity-authoring/change-sets/:param/graph",
+      "method": "GET",
+      "path": "/api/meta-entity-authoring/change-sets/:param/graph",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
+          "line": 10,
+          "declaredPath": "/api/meta-entity-authoring/change-sets/:id/graph",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
     },
     {
       "identity": "GET /api/meta-entity/capabilities",
@@ -5973,53 +6063,8 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 16,
+          "line": 18,
           "declaredPath": "/api/neon/business-partner-bank-verifications/:verificationId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partner-cases",
-      "method": "GET",
-      "path": "/api/neon/business-partner-cases",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 28,
-          "declaredPath": "/api/neon/business-partner-cases",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partner-cases/:param",
-      "method": "GET",
-      "path": "/api/neon/business-partner-cases/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 29,
-          "declaredPath": "/api/neon/business-partner-cases/:requestId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partner-cases/:param/view",
-      "method": "GET",
-      "path": "/api/neon/business-partner-cases/:param/view",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 30,
-          "declaredPath": "/api/neon/business-partner-cases/:requestId/view",
           "kind": "direct"
         }
       ],
@@ -6146,51 +6191,6 @@
       "status": "current-only"
     },
     {
-      "identity": "GET /api/neon/business-partner-requests",
-      "method": "GET",
-      "path": "/api/neon/business-partner-requests",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 28,
-          "declaredPath": "/api/neon/business-partner-requests",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partner-requests/:param",
-      "method": "GET",
-      "path": "/api/neon/business-partner-requests/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 29,
-          "declaredPath": "/api/neon/business-partner-requests/:requestId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partner-requests/:param/view",
-      "method": "GET",
-      "path": "/api/neon/business-partner-requests/:param/view",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 30,
-          "declaredPath": "/api/neon/business-partner-requests/:requestId/view",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "GET /api/neon/business-partners/:param",
       "method": "GET",
       "path": "/api/neon/business-partners/:param",
@@ -6198,7 +6198,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 31,
+          "line": 35,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId",
           "kind": "direct"
         }
@@ -6423,7 +6423,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 8,
+          "line": 10,
           "declaredPath": "/api/neon/mesh-business-partner-account-links/:linkId",
           "kind": "direct"
         }
@@ -6453,7 +6453,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 12,
+          "line": 14,
           "declaredPath": "/api/neon/protected-bank-registrations/:bankAccountLinkId",
           "kind": "direct"
         }
@@ -8147,7 +8147,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/bookmarks/record-bookmark-routes.ts",
-          "line": 187,
+          "line": 199,
           "declaredPath": "/api/record-bookmarks",
           "kind": "contract"
         }
@@ -8162,7 +8162,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/bookmarks/record-bookmark-routes.ts",
-          "line": 200,
+          "line": 229,
           "declaredPath": "/api/record-bookmarks/:entityCode/membership",
           "kind": "contract"
         }
@@ -8541,6 +8541,21 @@
       "status": "legacy-only"
     },
     {
+      "identity": "GET /api/records/:param/import-template.xlsx",
+      "method": "GET",
+      "path": "/api/records/:param/import-template.xlsx",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/:entityCode/import-template.xlsx",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "GET /api/records/:param/import/:param",
       "method": "GET",
       "path": "/api/records/:param/import/:param",
@@ -8554,6 +8569,66 @@
       ],
       "current": [],
       "status": "legacy-only"
+    },
+    {
+      "identity": "GET /api/records/exports/:param/download",
+      "method": "GET",
+      "path": "/api/records/exports/:param/download",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/exports/:exportRequestId/download",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/records/imports/:param",
+      "method": "GET",
+      "path": "/api/records/imports/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/records/imports/:param/error-report",
+      "method": "GET",
+      "path": "/api/records/imports/:param/error-report",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId/error-report",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/records/transfers",
+      "method": "GET",
+      "path": "/api/records/transfers",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/transfers",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
     },
     {
       "identity": "GET /api/runtime/v1/bindings/:param",
@@ -8991,6 +9066,66 @@
       "status": "legacy-only"
     },
     {
+      "identity": "GET /api/studio/atlas-learning",
+      "method": "GET",
+      "path": "/api/studio/atlas-learning",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts",
+          "line": 16,
+          "declaredPath": "/api/studio/atlas-learning",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/studio/bank-directory",
+      "method": "GET",
+      "path": "/api/studio/bank-directory",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/publication/src/bank-directory-routes.ts",
+          "line": 50,
+          "declaredPath": "/api/studio/bank-directory",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/studio/bank-directory/:param",
+      "method": "GET",
+      "path": "/api/studio/bank-directory/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/publication/src/bank-directory-routes.ts",
+          "line": 50,
+          "declaredPath": "/api/studio/bank-directory/:revisionId",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/studio/bank-directory/reconcile",
+      "method": "GET",
+      "path": "/api/studio/bank-directory/reconcile",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/publication/src/bank-directory-routes.ts",
+          "line": 50,
+          "declaredPath": "/api/studio/bank-directory/reconcile",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "GET /api/studio/business-partner-case-contracts/:param",
       "method": "GET",
       "path": "/api/studio/business-partner-case-contracts/:param",
@@ -9013,7 +9148,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
-          "line": 61,
+          "line": 62,
           "declaredPath": "/api/studio/business-partner-definitions/:revisionId",
           "kind": "contract"
         }
@@ -9036,6 +9171,21 @@
       "status": "current-only"
     },
     {
+      "identity": "GET /api/studio/local-business-partner-preview",
+      "method": "GET",
+      "path": "/api/studio/local-business-partner-preview",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
+          "line": 25,
+          "declaredPath": "/api/studio/local-business-partner-preview",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "GET /api/user/tenant-admin",
       "method": "GET",
       "path": "/api/user/tenant-admin",
@@ -9049,6 +9199,81 @@
       ],
       "current": [],
       "status": "legacy-only"
+    },
+    {
+      "identity": "GET /api/v1/records/:param/import-template.xlsx",
+      "method": "GET",
+      "path": "/api/v1/records/:param/import-template.xlsx",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/:entityCode/import-template.xlsx",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/v1/records/exports/:param/download",
+      "method": "GET",
+      "path": "/api/v1/records/exports/:param/download",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/exports/:exportRequestId/download",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/v1/records/imports/:param",
+      "method": "GET",
+      "path": "/api/v1/records/imports/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/v1/records/imports/:param/error-report",
+      "method": "GET",
+      "path": "/api/v1/records/imports/:param/error-report",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId/error-report",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/v1/records/transfers",
+      "method": "GET",
+      "path": "/api/v1/records/transfers",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/transfers",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
     },
     {
       "identity": "GET /api/workflow/definitions",
@@ -9406,8 +9631,15 @@
           "kind": "direct"
         }
       ],
-      "current": [],
-      "status": "legacy-only"
+      "current": [
+        {
+          "source": "server/packages/runtime/http/src/http-runtime.ts",
+          "line": 327,
+          "declaredPath": "/health",
+          "kind": "contract"
+        }
+      ],
+      "status": "matched"
     },
     {
       "identity": "GET /healthz",
@@ -9421,8 +9653,15 @@
           "kind": "direct"
         }
       ],
-      "current": [],
-      "status": "legacy-only"
+      "current": [
+        {
+          "source": "server/packages/runtime/http/src/http-runtime.ts",
+          "line": 327,
+          "declaredPath": "/healthz",
+          "kind": "contract"
+        }
+      ],
+      "status": "matched"
     },
     {
       "identity": "GET /livez",
@@ -9436,8 +9675,15 @@
           "kind": "direct"
         }
       ],
-      "current": [],
-      "status": "legacy-only"
+      "current": [
+        {
+          "source": "server/packages/runtime/http/src/http-runtime.ts",
+          "line": 327,
+          "declaredPath": "/livez",
+          "kind": "contract"
+        }
+      ],
+      "status": "matched"
     },
     {
       "identity": "GET /metrics",
@@ -9454,7 +9700,7 @@
       "current": [
         {
           "source": "server/packages/runtime/http/src/http-runtime.ts",
-          "line": 181,
+          "line": 192,
           "declaredPath": "/metrics",
           "kind": "contract"
         }
@@ -9503,8 +9749,15 @@
           "kind": "direct"
         }
       ],
-      "current": [],
-      "status": "legacy-only"
+      "current": [
+        {
+          "source": "server/packages/runtime/http/src/http-runtime.ts",
+          "line": 327,
+          "declaredPath": "/readyz",
+          "kind": "contract"
+        }
+      ],
+      "status": "matched"
     },
     {
       "identity": "PATCH /api/ai/agent/threads/:param",
@@ -9529,7 +9782,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 69,
+          "line": 75,
           "declaredPath": "/api/atlas/threads/:id",
           "kind": "contract"
         }
@@ -10082,36 +10335,6 @@
       "status": "legacy-only"
     },
     {
-      "identity": "PATCH /api/neon/business-partner-cases/:param",
-      "method": "PATCH",
-      "path": "/api/neon/business-partner-cases/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 32,
-          "declaredPath": "/api/neon/business-partner-cases/:requestId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "PATCH /api/neon/business-partner-requests/:param",
-      "method": "PATCH",
-      "path": "/api/neon/business-partner-requests/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 32,
-          "declaredPath": "/api/neon/business-partner-requests/:requestId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "PATCH /api/neon/external/business-partner-invitations/:param/requests/:param/correction",
       "method": "PATCH",
       "path": "/api/neon/external/business-partner-invitations/:param/requests/:param/correction",
@@ -10650,6 +10873,66 @@
       "status": "legacy-only"
     },
     {
+      "identity": "POST /api/atlas/feedback",
+      "method": "POST",
+      "path": "/api/atlas/feedback",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/ai/src/atlas-routes.ts",
+          "line": 49,
+          "declaredPath": "/api/atlas/feedback",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/atlas/knowledge/attachments/reindex",
+      "method": "POST",
+      "path": "/api/atlas/knowledge/attachments/reindex",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts",
+          "line": 382,
+          "declaredPath": "/api/atlas/knowledge/attachments/reindex",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/atlas/knowledge/search",
+      "method": "POST",
+      "path": "/api/atlas/knowledge/search",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts",
+          "line": 382,
+          "declaredPath": "/api/atlas/knowledge/search",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/atlas/learning-candidates",
+      "method": "POST",
+      "path": "/api/atlas/learning-candidates",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/ai/src/atlas-routes.ts",
+          "line": 48,
+          "declaredPath": "/api/atlas/learning-candidates",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "POST /api/atlas/threads",
       "method": "POST",
       "path": "/api/atlas/threads",
@@ -10657,7 +10940,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 47,
+          "line": 53,
           "declaredPath": "/api/atlas/threads",
           "kind": "contract"
         }
@@ -10672,7 +10955,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 80,
+          "line": 86,
           "declaredPath": "/api/atlas/threads/:id/archive",
           "kind": "contract"
         }
@@ -10687,7 +10970,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 118,
+          "line": 124,
           "declaredPath": "/api/atlas/threads/:id/runs",
           "kind": "contract"
         }
@@ -10702,7 +10985,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 179,
+          "line": 187,
           "declaredPath": "/api/atlas/tools/:proposalId/cancel",
           "kind": "contract"
         }
@@ -10717,7 +11000,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 182,
+          "line": 190,
           "declaredPath": "/api/atlas/tools/:proposalId/run",
           "kind": "contract"
         }
@@ -10732,7 +11015,7 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 152,
+          "line": 160,
           "declaredPath": "/api/atlas/tools/preview",
           "kind": "contract"
         }
@@ -10747,7 +11030,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-routes.ts",
-          "line": 162,
+          "line": 178,
           "declaredPath": "/api/attachments/:attachmentId/download",
           "kind": "direct"
         }
@@ -11221,7 +11504,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-routes.ts",
-          "line": 233,
+          "line": 249,
           "declaredPath": "/api/content/items/:id/attachments/:attachmentId/versions",
           "kind": "direct"
         }
@@ -11430,6 +11713,111 @@
       "status": "current-only"
     },
     {
+      "identity": "POST /api/control-admin/bank-validation/rules/publish",
+      "method": "POST",
+      "path": "/api/control-admin/bank-validation/rules/publish",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
+          "line": 132,
+          "declaredPath": "/api/control-admin/bank-validation/rules/publish",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/control-admin/bank-validation/verify",
+      "method": "POST",
+      "path": "/api/control-admin/bank-validation/verify",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
+          "line": 132,
+          "declaredPath": "/api/control-admin/bank-validation/verify",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/control-admin/connectors/:param/activate",
+      "method": "POST",
+      "path": "/api/control-admin/connectors/:param/activate",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
+          "line": 125,
+          "declaredPath": "/api/control-admin/connectors/:id/activate",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/control-admin/connectors/:param/deprecate",
+      "method": "POST",
+      "path": "/api/control-admin/connectors/:param/deprecate",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
+          "line": 125,
+          "declaredPath": "/api/control-admin/connectors/:id/deprecate",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/control-admin/connectors/:param/health-checks",
+      "method": "POST",
+      "path": "/api/control-admin/connectors/:param/health-checks",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
+          "line": 125,
+          "declaredPath": "/api/control-admin/connectors/:id/health-checks",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/control-admin/connectors/:param/suspend",
+      "method": "POST",
+      "path": "/api/control-admin/connectors/:param/suspend",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
+          "line": 125,
+          "declaredPath": "/api/control-admin/connectors/:id/suspend",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/control-admin/connectors/validate",
+      "method": "POST",
+      "path": "/api/control-admin/connectors/validate",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
+          "line": 125,
+          "declaredPath": "/api/control-admin/connectors/validate",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "POST /api/control-admin/cycle-config/desired-state/apply",
       "method": "POST",
       "path": "/api/control-admin/cycle-config/desired-state/apply",
@@ -11437,7 +11825,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts",
-          "line": 30,
+          "line": 47,
           "declaredPath": "/api/control-admin/cycle-config/desired-state/apply",
           "kind": "contract"
         }
@@ -11452,7 +11840,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts",
-          "line": 27,
+          "line": 44,
           "declaredPath": "/api/control-admin/cycle-config/preview",
           "kind": "contract"
         }
@@ -11467,7 +11855,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts",
-          "line": 29,
+          "line": 46,
           "declaredPath": "/api/control-admin/cycle-config/publish",
           "kind": "contract"
         }
@@ -11482,7 +11870,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts",
-          "line": 28,
+          "line": 45,
           "declaredPath": "/api/control-admin/cycle-config/validate",
           "kind": "contract"
         }
@@ -11497,7 +11885,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 61,
+          "line": 118,
           "declaredPath": "/api/control-admin/entitlements/overrides/:id/expire",
           "kind": "contract"
         }
@@ -11512,7 +11900,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 57,
+          "line": 112,
           "declaredPath": "/api/control-admin/features/overrides/:id/expire",
           "kind": "contract"
         }
@@ -11527,7 +11915,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 68,
+          "line": 104,
           "declaredPath": "/api/control-admin/lookups/:code/values/:valueCode/retire",
           "kind": "contract"
         }
@@ -11542,7 +11930,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 67,
+          "line": 104,
           "declaredPath": "/api/control-admin/lookups/desired-state/apply",
           "kind": "contract"
         }
@@ -11557,7 +11945,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 59,
+          "line": 98,
           "declaredPath": "/api/control-admin/parameters/values/:id/expire",
           "kind": "contract"
         }
@@ -11572,7 +11960,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 70,
+          "line": 151,
           "declaredPath": "/api/control-admin/rounding/:id/retire",
           "kind": "contract"
         }
@@ -11587,7 +11975,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 47,
+          "line": 151,
           "declaredPath": "/api/control-admin/rounding/simulate",
           "kind": "contract"
         }
@@ -11602,7 +11990,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/runtime-command-routes.ts",
-          "line": 27,
+          "line": 68,
           "declaredPath": "/api/control-admin/runtime-approvals/:id/decisions",
           "kind": "contract"
         }
@@ -11617,7 +12005,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/runtime-command-routes.ts",
-          "line": 20,
+          "line": 46,
           "declaredPath": "/api/control-admin/runtime-commands",
           "kind": "contract"
         }
@@ -11632,7 +12020,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/runtime-command-routes.ts",
-          "line": 14,
+          "line": 28,
           "declaredPath": "/api/control-admin/runtime-commands/dry-run",
           "kind": "contract"
         }
@@ -11787,6 +12175,21 @@
           "source": "server/packages/services/documents/src/document-routes.ts",
           "line": 16,
           "declaredPath": "/api/documents/render",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/entity-runtime/:param/views",
+      "method": "POST",
+      "path": "/api/entity-runtime/:param/views",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/preferences/src/entity-views-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/entity-runtime/:entityCode/views",
           "kind": "direct"
         }
       ],
@@ -13716,7 +14119,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 829,
+          "line": 848,
           "declaredPath": "/api/iam/projection-reconciliation-attempts/:attemptId/replay",
           "kind": "contract"
         }
@@ -13753,7 +14156,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 916,
+          "line": 935,
           "declaredPath": "/api/iam/trusted-devices",
           "kind": "contract"
         }
@@ -13775,7 +14178,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 1060,
+          "line": 1079,
           "declaredPath": "/api/iam/trusted-devices/verify",
           "kind": "contract"
         }
@@ -14404,7 +14807,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts",
-          "line": 7,
+          "line": 67,
           "declaredPath": "/api/mesh/business-partner-bank-disclosures",
           "kind": "direct"
         }
@@ -14419,7 +14822,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts",
-          "line": 9,
+          "line": 113,
           "declaredPath": "/api/mesh/business-partner-bank-disclosures/:disclosureId/decisions",
           "kind": "direct"
         }
@@ -14434,7 +14837,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts",
-          "line": 10,
+          "line": 146,
           "declaredPath": "/api/mesh/business-partner-bank-disclosures/:disclosureId/revocations",
           "kind": "direct"
         }
@@ -14449,7 +14852,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 11,
+          "line": 194,
           "declaredPath": "/api/mesh/business-partner-network-capabilities/:capabilityId/decisions",
           "kind": "direct"
         }
@@ -14464,7 +14867,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 8,
+          "line": 79,
           "declaredPath": "/api/mesh/business-partner-network-relationships",
           "kind": "direct"
         }
@@ -14479,7 +14882,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 10,
+          "line": 160,
           "declaredPath": "/api/mesh/business-partner-network-relationships/:relationshipId/capabilities",
           "kind": "direct"
         }
@@ -14494,7 +14897,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 9,
+          "line": 131,
           "declaredPath": "/api/mesh/business-partner-network-relationships/:relationshipId/decisions",
           "kind": "direct"
         }
@@ -14509,7 +14912,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts",
-          "line": 2,
+          "line": 65,
           "declaredPath": "/api/mesh/business-partner-profile-publications",
           "kind": "direct"
         }
@@ -14524,7 +14927,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts",
-          "line": 2,
+          "line": 110,
           "declaredPath": "/api/mesh/business-partner-profile-publications/:publicationId/withdrawals",
           "kind": "direct"
         }
@@ -14539,7 +14942,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 12,
+          "line": 216,
           "declaredPath": "/api/mesh/business-partner-registration-exchanges",
           "kind": "direct"
         }
@@ -14554,7 +14957,7 @@
       "current": [
         {
           "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 13,
+          "line": 263,
           "declaredPath": "/api/mesh/business-partner-registration-exchanges/:exchangeId/decisions",
           "kind": "direct"
         }
@@ -14569,7 +14972,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 7,
+          "line": 12,
           "declaredPath": "/api/meta-entity-authoring/change-sets",
           "kind": "direct"
         }
@@ -14584,7 +14987,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 13,
+          "line": 18,
           "declaredPath": "/api/meta-entity-authoring/releases/:id/activate",
           "kind": "direct"
         }
@@ -14599,7 +15002,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 14,
+          "line": 19,
           "declaredPath": "/api/meta-entity-authoring/releases/:id/rollback",
           "kind": "direct"
         }
@@ -15057,6 +15460,36 @@
       "status": "legacy-only"
     },
     {
+      "identity": "POST /api/neon/bank-account-links/:param/company-usage",
+      "method": "POST",
+      "path": "/api/neon/bank-account-links/:param/company-usage",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
+          "line": 8,
+          "declaredPath": "/api/neon/bank-account-links/:linkId/company-usage",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/bank-account-links/:param/usage-scope",
+      "method": "POST",
+      "path": "/api/neon/bank-account-links/:param/usage-scope",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
+          "line": 7,
+          "declaredPath": "/api/neon/bank-account-links/:linkId/usage-scope",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "POST /api/neon/business-partner-bank-verifications",
       "method": "POST",
       "path": "/api/neon/business-partner-bank-verifications",
@@ -15064,7 +15497,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 15,
+          "line": 17,
           "declaredPath": "/api/neon/business-partner-bank-verifications",
           "kind": "direct"
         }
@@ -15079,7 +15512,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 18,
+          "line": 20,
           "declaredPath": "/api/neon/business-partner-bank-verifications/:verificationId/applications",
           "kind": "direct"
         }
@@ -15094,7 +15527,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 17,
+          "line": 19,
           "declaredPath": "/api/neon/business-partner-bank-verifications/:verificationId/decisions",
           "kind": "direct"
         }
@@ -15102,75 +15535,15 @@
       "status": "current-only"
     },
     {
-      "identity": "POST /api/neon/business-partner-cases",
+      "identity": "POST /api/neon/business-partner-imports",
       "method": "POST",
-      "path": "/api/neon/business-partner-cases",
+      "path": "/api/neon/business-partner-imports",
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 24,
-          "declaredPath": "/api/neon/business-partner-cases",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-cases/:param/decisions",
-      "method": "POST",
-      "path": "/api/neon/business-partner-cases/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 35,
-          "declaredPath": "/api/neon/business-partner-cases/:requestId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-cases/:param/materialize",
-      "method": "POST",
-      "path": "/api/neon/business-partner-cases/:param/materialize",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 36,
-          "declaredPath": "/api/neon/business-partner-cases/:requestId/materialize",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-cases/:param/submit",
-      "method": "POST",
-      "path": "/api/neon/business-partner-cases/:param/submit",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 34,
-          "declaredPath": "/api/neon/business-partner-cases/:requestId/submit",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-cases/:param/validate",
-      "method": "POST",
-      "path": "/api/neon/business-partner-cases/:param/validate",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 33,
-          "declaredPath": "/api/neon/business-partner-cases/:requestId/validate",
+          "source": "server/packages/services/master-data/src/business-partner-governed-import-routes.ts",
+          "line": 11,
+          "declaredPath": "/api/neon/business-partner-imports",
           "kind": "direct"
         }
       ],
@@ -15372,81 +15745,6 @@
       "status": "current-only"
     },
     {
-      "identity": "POST /api/neon/business-partner-requests",
-      "method": "POST",
-      "path": "/api/neon/business-partner-requests",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 24,
-          "declaredPath": "/api/neon/business-partner-requests",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-requests/:param/apply",
-      "method": "POST",
-      "path": "/api/neon/business-partner-requests/:param/apply",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 36,
-          "declaredPath": "/api/neon/business-partner-requests/:requestId/apply",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-requests/:param/decisions",
-      "method": "POST",
-      "path": "/api/neon/business-partner-requests/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 35,
-          "declaredPath": "/api/neon/business-partner-requests/:requestId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-requests/:param/submit",
-      "method": "POST",
-      "path": "/api/neon/business-partner-requests/:param/submit",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 34,
-          "declaredPath": "/api/neon/business-partner-requests/:requestId/submit",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-requests/:param/validate",
-      "method": "POST",
-      "path": "/api/neon/business-partner-requests/:param/validate",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 33,
-          "declaredPath": "/api/neon/business-partner-requests/:requestId/validate",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "POST /api/neon/business-partners/:param/360/banking/reveal",
       "method": "POST",
       "path": "/api/neon/business-partners/:param/360/banking/reveal",
@@ -15454,8 +15752,23 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-360-route-contracts.ts",
-          "line": 45,
+          "line": 50,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/banking/reveal",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/business-partners/:param/360/comments",
+      "method": "POST",
+      "path": "/api/neon/business-partners/:param/360/comments",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/business-partner-360-route-contracts.ts",
+          "line": 40,
+          "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/comments",
           "kind": "contract"
         }
       ],
@@ -15469,7 +15782,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-360-route-contracts.ts",
-          "line": 40,
+          "line": 45,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/identifiers-tax/reveal",
           "kind": "contract"
         }
@@ -15544,7 +15857,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 11,
+          "line": 13,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/protected-bank-registrations",
           "kind": "direct"
         }
@@ -16084,7 +16397,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 10,
+          "line": 12,
           "declaredPath": "/api/neon/mesh-bank-account-events",
           "kind": "direct"
         }
@@ -16099,7 +16412,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 7,
+          "line": 9,
           "declaredPath": "/api/neon/mesh-business-partner-account-links",
           "kind": "direct"
         }
@@ -16114,7 +16427,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 9,
+          "line": 11,
           "declaredPath": "/api/neon/mesh-business-partner-account-links/:linkId/decisions",
           "kind": "direct"
         }
@@ -16144,7 +16457,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 14,
+          "line": 16,
           "declaredPath": "/api/neon/protected-bank-registrations/:bankAccountLinkId/applications",
           "kind": "direct"
         }
@@ -16159,7 +16472,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 13,
+          "line": 15,
           "declaredPath": "/api/neon/protected-bank-registrations/:bankAccountLinkId/decisions",
           "kind": "direct"
         }
@@ -17425,6 +17738,21 @@
       "status": "legacy-only"
     },
     {
+      "identity": "POST /api/records/:param/exports",
+      "method": "POST",
+      "path": "/api/records/:param/exports",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/:entityCode/exports",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "POST /api/records/:param/import",
       "method": "POST",
       "path": "/api/records/:param/import",
@@ -17453,6 +17781,21 @@
       ],
       "current": [],
       "status": "legacy-only"
+    },
+    {
+      "identity": "POST /api/records/:param/imports",
+      "method": "POST",
+      "path": "/api/records/:param/imports",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/:entityCode/imports",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
     },
     {
       "identity": "POST /api/records/:param/op/:param",
@@ -17513,6 +17856,186 @@
       ],
       "current": [],
       "status": "legacy-only"
+    },
+    {
+      "identity": "POST /api/records/exports/:param/cancel",
+      "method": "POST",
+      "path": "/api/records/exports/:param/cancel",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/exports/:exportRequestId/cancel",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/records/exports/:param/restart",
+      "method": "POST",
+      "path": "/api/records/exports/:param/restart",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/exports/:exportRequestId/restart",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/records/imports/:param/cancel",
+      "method": "POST",
+      "path": "/api/records/imports/:param/cancel",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId/cancel",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/records/imports/:param/commit",
+      "method": "POST",
+      "path": "/api/records/imports/:param/commit",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId/commit",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/records/imports/:param/complete",
+      "method": "POST",
+      "path": "/api/records/imports/:param/complete",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId/complete",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/records/imports/:param/file-complete",
+      "method": "POST",
+      "path": "/api/records/imports/:param/file-complete",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId/file-complete",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/records/imports/:param/file-upload",
+      "method": "POST",
+      "path": "/api/records/imports/:param/file-upload",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId/file-upload",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/records/imports/:param/preview",
+      "method": "POST",
+      "path": "/api/records/imports/:param/preview",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId/preview",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/records/imports/:param/restart",
+      "method": "POST",
+      "path": "/api/records/imports/:param/restart",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId/restart",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/records/imports/:param/validate",
+      "method": "POST",
+      "path": "/api/records/imports/:param/validate",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId/validate",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/records/imports/:param/workbook-complete",
+      "method": "POST",
+      "path": "/api/records/imports/:param/workbook-complete",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId/workbook-complete",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/records/imports/:param/workbook-upload",
+      "method": "POST",
+      "path": "/api/records/imports/:param/workbook-upload",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId/workbook-upload",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
     },
     {
       "identity": "POST /api/records/supplier/check-duplicates",
@@ -17800,6 +18323,156 @@
       "status": "legacy-only"
     },
     {
+      "identity": "POST /api/studio/atlas-learning/:param/approve",
+      "method": "POST",
+      "path": "/api/studio/atlas-learning/:param/approve",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts",
+          "line": 14,
+          "declaredPath": "/api/studio/atlas-learning/:id/approve",
+          "kind": "loop"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/studio/atlas-learning/:param/publish",
+      "method": "POST",
+      "path": "/api/studio/atlas-learning/:param/publish",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts",
+          "line": 14,
+          "declaredPath": "/api/studio/atlas-learning/:id/publish",
+          "kind": "loop"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/studio/atlas-learning/:param/reject",
+      "method": "POST",
+      "path": "/api/studio/atlas-learning/:param/reject",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts",
+          "line": 17,
+          "declaredPath": "/api/studio/atlas-learning/:id/reject",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/studio/atlas-learning/:param/resume",
+      "method": "POST",
+      "path": "/api/studio/atlas-learning/:param/resume",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts",
+          "line": 15,
+          "declaredPath": "/api/studio/atlas-learning/:id/resume",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/studio/atlas-learning/:param/stage",
+      "method": "POST",
+      "path": "/api/studio/atlas-learning/:param/stage",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts",
+          "line": 18,
+          "declaredPath": "/api/studio/atlas-learning/:id/stage",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/studio/atlas-learning/:param/submit",
+      "method": "POST",
+      "path": "/api/studio/atlas-learning/:param/submit",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts",
+          "line": 14,
+          "declaredPath": "/api/studio/atlas-learning/:id/submit",
+          "kind": "loop"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/studio/bank-directory/:param/resume",
+      "method": "POST",
+      "path": "/api/studio/bank-directory/:param/resume",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/publication/src/bank-directory-routes.ts",
+          "line": 50,
+          "declaredPath": "/api/studio/bank-directory/:revisionId/resume",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/studio/bank-directory/:param/review",
+      "method": "POST",
+      "path": "/api/studio/bank-directory/:param/review",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/publication/src/bank-directory-routes.ts",
+          "line": 50,
+          "declaredPath": "/api/studio/bank-directory/:revisionId/review",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/studio/bank-directory/import",
+      "method": "POST",
+      "path": "/api/studio/bank-directory/import",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/publication/src/bank-directory-routes.ts",
+          "line": 50,
+          "declaredPath": "/api/studio/bank-directory/import",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/studio/bank-directory/references",
+      "method": "POST",
+      "path": "/api/studio/bank-directory/references",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/publication/src/bank-directory-routes.ts",
+          "line": 50,
+          "declaredPath": "/api/studio/bank-directory/references",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "POST /api/studio/business-partner-case-contracts",
       "method": "POST",
       "path": "/api/studio/business-partner-case-contracts",
@@ -17852,7 +18525,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
-          "line": 25,
+          "line": 26,
           "declaredPath": "/api/studio/business-partner-definitions",
           "kind": "contract"
         }
@@ -17867,7 +18540,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
-          "line": 75,
+          "line": 76,
           "declaredPath": "/api/studio/business-partner-definitions/:revisionId/publish",
           "kind": "contract"
         }
@@ -17882,7 +18555,7 @@
       "current": [
         {
           "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
-          "line": 41,
+          "line": 42,
           "declaredPath": "/api/studio/business-partner-definitions/simulations",
           "kind": "contract"
         }
@@ -17972,7 +18645,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/onboarding/src/routes.ts",
-          "line": 88,
+          "line": 96,
           "declaredPath": "/api/studio/onboarding/cases",
           "kind": "direct"
         }
@@ -17987,7 +18660,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/onboarding/src/routes.ts",
-          "line": 139,
+          "line": 165,
           "declaredPath": "/api/studio/onboarding/cases/:caseId/actions/:action",
           "kind": "direct"
         }
@@ -18002,7 +18675,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/onboarding/src/routes.ts",
-          "line": 51,
+          "line": 82,
           "declaredPath": "/api/studio/onboarding/cases/:caseId/reconcile",
           "kind": "direct"
         }
@@ -18017,9 +18690,219 @@
       "current": [
         {
           "source": "server/packages/planes/studio/onboarding/src/routes.ts",
-          "line": 206,
+          "line": 219,
           "declaredPath": "/api/studio/onboarding/cases/:caseId/work-items/:workItemId/resolve",
           "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/:param/exports",
+      "method": "POST",
+      "path": "/api/v1/records/:param/exports",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/:entityCode/exports",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/:param/imports",
+      "method": "POST",
+      "path": "/api/v1/records/:param/imports",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/:entityCode/imports",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/exports/:param/cancel",
+      "method": "POST",
+      "path": "/api/v1/records/exports/:param/cancel",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/exports/:exportRequestId/cancel",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/exports/:param/restart",
+      "method": "POST",
+      "path": "/api/v1/records/exports/:param/restart",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/exports/:exportRequestId/restart",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/imports/:param/cancel",
+      "method": "POST",
+      "path": "/api/v1/records/imports/:param/cancel",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId/cancel",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/imports/:param/commit",
+      "method": "POST",
+      "path": "/api/v1/records/imports/:param/commit",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId/commit",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/imports/:param/complete",
+      "method": "POST",
+      "path": "/api/v1/records/imports/:param/complete",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId/complete",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/imports/:param/file-complete",
+      "method": "POST",
+      "path": "/api/v1/records/imports/:param/file-complete",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId/file-complete",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/imports/:param/file-upload",
+      "method": "POST",
+      "path": "/api/v1/records/imports/:param/file-upload",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId/file-upload",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/imports/:param/preview",
+      "method": "POST",
+      "path": "/api/v1/records/imports/:param/preview",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId/preview",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/imports/:param/restart",
+      "method": "POST",
+      "path": "/api/v1/records/imports/:param/restart",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId/restart",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/imports/:param/validate",
+      "method": "POST",
+      "path": "/api/v1/records/imports/:param/validate",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId/validate",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/imports/:param/workbook-complete",
+      "method": "POST",
+      "path": "/api/v1/records/imports/:param/workbook-complete",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId/workbook-complete",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/v1/records/imports/:param/workbook-upload",
+      "method": "POST",
+      "path": "/api/v1/records/imports/:param/workbook-upload",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId/workbook-upload",
+          "kind": "contract"
         }
       ],
       "status": "current-only"
@@ -18549,8 +19432,23 @@
       "current": [
         {
           "source": "server/packages/platform/ai/src/atlas-routes.ts",
-          "line": 98,
+          "line": 104,
           "declaredPath": "/api/atlas/threads/:id/participants/:principalId",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "PUT /api/control-admin/connectors/:param/draft",
+      "method": "PUT",
+      "path": "/api/control-admin/connectors/:param/draft",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
+          "line": 125,
+          "declaredPath": "/api/control-admin/connectors/:id/draft",
           "kind": "contract"
         }
       ],
@@ -18564,7 +19462,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 60,
+          "line": 118,
           "declaredPath": "/api/control-admin/entitlements/overrides/:id",
           "kind": "contract"
         }
@@ -18579,7 +19477,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 56,
+          "line": 112,
           "declaredPath": "/api/control-admin/features/:code/override",
           "kind": "contract"
         }
@@ -18594,7 +19492,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 58,
+          "line": 98,
           "declaredPath": "/api/control-admin/parameters/:code/value",
           "kind": "contract"
         }
@@ -18609,7 +19507,7 @@
       "current": [
         {
           "source": "server/packages/platform/control-admin/src/control-service-routes.ts",
-          "line": 69,
+          "line": 151,
           "declaredPath": "/api/control-admin/rounding/:id",
           "kind": "contract"
         }
@@ -18699,7 +19597,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 8,
+          "line": 13,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/graph",
           "kind": "direct"
         }
@@ -18939,7 +19837,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/bookmarks/record-bookmark-routes.ts",
-          "line": 228,
+          "line": 257,
           "declaredPath": "/api/record-bookmarks/:entityCode",
           "kind": "contract"
         }
@@ -18992,6 +19890,21 @@
       "status": "legacy-only"
     },
     {
+      "identity": "PUT /api/records/imports/:param/chunks/:param",
+      "method": "PUT",
+      "path": "/api/records/imports/:param/chunks/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/imports/:sessionId/chunks/:chunkIndex",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "PUT /api/runtime/v1/entities/:param/:param",
       "method": "PUT",
       "path": "/api/runtime/v1/entities/:param/:param",
@@ -19035,6 +19948,21 @@
       ],
       "current": [],
       "status": "legacy-only"
+    },
+    {
+      "identity": "PUT /api/v1/records/imports/:param/chunks/:param",
+      "method": "PUT",
+      "path": "/api/v1/records/imports/:param/chunks/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/v1/records/imports/:sessionId/chunks/:chunkIndex",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
     },
     {
       "identity": "PUT /api/workflow/definitions/:param",

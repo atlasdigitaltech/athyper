@@ -22,7 +22,8 @@
     "@athyper/platform-surface-kit": "workspace:*",
     "@athyper/platform-temporal": "workspace:*",
     "@athyper/platform-ui": "workspace:*",
-    "@athyper/product-neon-shell": "workspace:*"
+    "@athyper/product-neon-shell": "workspace:*",
+    "@athyper/platform-entity-descriptor-client": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"
@@ -30,13 +31,13 @@
   "devDependencies": {
     "@athyper/config": "workspace:*",
     "@types/jsdom": "21.1.7",
-    "@types/node": "25.6.0",
+    "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "jsdom": "25.0.1",
+    "jsdom": "^25.0.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.4"
   }
 }

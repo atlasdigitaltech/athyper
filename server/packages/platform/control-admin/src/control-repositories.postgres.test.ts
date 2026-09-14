@@ -780,9 +780,8 @@ describe.runIf(enabled)(
       expect(rules.length).toBeGreaterThan(0);
       expect(rules.some((r) => r.direction === "outbound")).toBe(true);
     });
-    it.runIf(plane === "studio")(
-      "publishes bank fixtures with version checks",
-      async () => {
+    if (plane === "studio")
+      it("publishes bank fixtures with version checks", async () => {
         const railCode = "test_" + randomUUID().slice(0, 8);
         const rule: BankValidationRule = {
           id: randomUUID(),
@@ -821,11 +820,9 @@ describe.runIf(enabled)(
         await expect(repo.publish(rule, actor, tenant)).rejects.toMatchObject({
           statusCode: 409,
         });
-      },
-    );
-    it.runIf(plane === "neon")(
-      "writes finance dispatch and releases the coordinate on retirement",
-      async () => {
+      });
+    if (plane === "neon")
+      it("writes finance dispatch and releases the coordinate on retirement", async () => {
         const repo = repositories.rounding.require(plane),
           input = rounding(),
           saved = await repo.save(input, actor);
@@ -857,8 +854,7 @@ describe.runIf(enabled)(
         await expect(repo.save(rounding(), actor)).resolves.toMatchObject({
           status: "active",
         });
-      },
-    );
+      });
     it("rolls back parent and children when outbox insertion fails", async () => {
       const input = connector();
       await sql

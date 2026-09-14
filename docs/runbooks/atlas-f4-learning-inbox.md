@@ -27,12 +27,14 @@ The first slice does not promote field aliases, role meanings, readiness/eligibi
 
 ## Database and rollout
 
-Apply these migrations using the existing forward migration runner, after the F3 migration:
+Fresh installations use canonical DDL. These historical upgrades are retained in
+`server/db/scripts/operations/upgrades/legacy-baseline-20260914/` for explicit legacy
+plans after the F3 prerequisites; they are excluded from automatic startup:
 
 - All planes: `20260910_atlas_learning_common.sql`.
 - Studio: `20260910_atlas_learning_studio.sql`.
 
-Canonical definitions are in marked F4 blocks under common AI and Studio AI DDL. Check/rebuild migrations with:
+Canonical definitions are in marked F4 blocks under common AI and Studio AI DDL. Verify canonical coverage or generate new unapplied candidates outside the checkout with:
 
 ```sh
 pnpm --dir server/db db:verify:atlas-learning

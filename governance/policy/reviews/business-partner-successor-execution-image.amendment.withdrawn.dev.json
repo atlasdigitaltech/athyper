@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "revision": "7533ccd4ea28e43c245be83427220f8fd172eb0be1bef727466c7163fdcdd760",
+  "withdrawnAt": "2026-09-11T02:28:46.087Z",
+  "reason": "Failed production startup: AI contract package exported TypeScript from node_modules. Restored prior healthy adapter image. This image must not be used for qualification.",
+  "activationAuthorized": false
+}

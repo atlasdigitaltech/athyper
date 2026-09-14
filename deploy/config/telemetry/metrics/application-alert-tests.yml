@@ -1,0 +1,67 @@
+rule_files:
+  - api-alerts.yml
+  - business-partner-case-alerts.yml
+evaluation_interval: 1m
+tests:
+  - name: API errors fire per instance and recover when traffic stops
+    interval: 1m
+    input_series:
+      - series: 'athyper_http_request_duration_seconds_count{service="api",instance="dev",environment="development",method="GET",route="/records",status_class="2xx"}'
+        values: "0+108x15 1620+0x20"
+      - series: 'athyper_http_request_duration_seconds_count{service="api",instance="dev",environment="development",method="GET",route="/records",status_class="5xx"}'
+        values: "0+12x15 180+0x20"
+      - series: 'athyper_http_errors_total{service="api",instance="dev",environment="development",method="GET",route="/records",status_class="5xx"}'
+        values: "0+12x15 180+0x20"
+      - series: 'athyper_http_request_duration_seconds_count{service="api",instance="qa",environment="test",method="GET",route="/records",status_class="2xx"}'
+        values: "0+12000x35"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ApiHighErrorRate
+        exp_alerts:
+          - exp_labels:
+              {
+                instance: dev,
+                environment: development,
+                method: GET,
+                route: /records,
+                severity: warning,
+                service: api,
+                team: platform,
+              }
+            exp_annotations:
+              summary: "API error rate above 5% (/records)"
+              description: "API 5xx responses exceed 5% for five minutes at more than one request per second."
+      - eval_time: 30m
+        alertname: ApiHighErrorRate
+        exp_alerts: []
+  - name: Case failure ratio retains deployment labels
+    interval: 1m
+    input_series:
+      - series: 'athyper_business_partner_case_http_total{instance="dev",environment="development",outcome="error"}'
+        values: "0+12x20"
+      - series: 'athyper_business_partner_case_http_total{instance="dev",environment="development",outcome="ok"}'
+        values: "0+108x20"
+      - series: 'athyper_business_partner_case_http_total{instance="qa",environment="test",outcome="ok"}'
+        values: "0+12000x20"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: AthyperBusinessPartnerCaseFailureRateHigh
+        exp_alerts:
+          - exp_labels:
+              {
+                instance: dev,
+                environment: development,
+                severity: critical,
+                service: business-partner,
+                team: master-data,
+              }
+            exp_annotations:
+              summary: "Business Partner governed-case error rate exceeds one percent"
+              runbook: docs/runbooks/business-partner-v1-operations.md
+  - name: Missing traffic does not fabricate an error ratio
+    interval: 1m
+    input_series: []
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ApiHighErrorRate
+        exp_alerts: []

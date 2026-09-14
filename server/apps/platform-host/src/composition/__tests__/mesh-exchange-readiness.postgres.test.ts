@@ -10,7 +10,7 @@ describe.skipIf(!container)("MESH readiness PostgreSQL regression", () => {
   it("rehearses repair and validates exact requirements as athyper_runtime", () => {
     const db = new Kysely<Record<string, never>>({ dialect: new PostgresDialect({ pool: {} as never }) });
     const query = meshExchangeRequirementsQuery().compile(db).sql;
-    const migration = readFileSync(new URL("../../../../../db/migrations/20260906_mesh_exchange_readiness.sql", import.meta.url), "utf8").replace(/COMMIT;\s*$/, "");
+    const migration = readFileSync(new URL("../../../../../db/scripts/operations/upgrades/legacy-baseline-20260914/20260906_mesh_exchange_readiness.sql", import.meta.url), "utf8").replace(/COMMIT;\s*$/, "");
     const assert = (predicate: string, expected: number) => `SET LOCAL ROLE athyper_runtime;
       DO $test$ BEGIN IF (SELECT count(*) FROM (${query}) inspected WHERE ${predicate}) <> ${expected} THEN RAISE EXCEPTION 'MESH requirement assertion failed: expected ${expected}' USING DETAIL=$predicate$${predicate}$predicate$; END IF; END $test$;
       RESET ROLE;`;

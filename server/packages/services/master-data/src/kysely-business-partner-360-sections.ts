@@ -137,7 +137,7 @@ async function identity(
   transaction: Tx,
 ): Promise<Positioned<unknown>[]> {
   const [root, classifications, references] = await Promise.all([
-    sql<Row>`SELECT bp.id::text,bp.code,bp.name,bp.display_name,bp.legal_name,COALESCE((SELECT array_agg(alias.alias_name ORDER BY alias.is_primary DESC,alias.alias_name) FROM master.business_partner_alias alias WHERE alias.tenant_id=bp.tenant_id AND alias.business_partner_id=bp.id AND alias.status='active' AND alias.effective_from<=${input.asOf}::date AND(alias.effective_until IS NULL OR alias.effective_until>${input.asOf}::date)),'{}'::text[]) aliases,bp.partner_category::text,bp.ownership_class::text,bp.legal_classification::text,bp.legal_form,bp.registration_country_code::text,bp.incorporation_date,bp.website_url,bp.status::text,bp.created_at,parent.id::text parent_id,parent.code parent_code,COALESCE(parent.display_name,parent.name) parent_name FROM master.business_partner bp LEFT JOIN master.business_partner parent ON parent.tenant_id=bp.tenant_id AND parent.id=bp.parent_business_partner_id WHERE bp.tenant_id=${input.tenantId}::uuid AND bp.id=${input.businessPartnerId}::uuid AND bp.partner_category='organization' AND bp.created_at<=${input.cursor.snapshotAt}::timestamptz AND ${!input.cursor.afterAt}`.execute(
+    sql<Row>`SELECT bp.id::text,bp.code,bp.name,COALESCE((SELECT array_agg(alias.alias_name ORDER BY alias.is_primary DESC,alias.alias_name) FROM master.business_partner_alias alias WHERE alias.tenant_id=bp.tenant_id AND alias.business_partner_id=bp.id AND alias.status='active' AND alias.effective_from<=${input.asOf}::date AND(alias.effective_until IS NULL OR alias.effective_until>${input.asOf}::date)),'{}'::text[]) aliases,bp.partner_category::text,bp.ownership_class::text,bp.legal_classification::text,bp.legal_form,bp.registration_country_code::text,bp.incorporation_date,bp.website_url,bp.status::text,bp.created_at,parent.id::text parent_id,parent.code parent_code,parent.name parent_name FROM master.business_partner bp LEFT JOIN master.business_partner parent ON parent.tenant_id=bp.tenant_id AND parent.id=bp.parent_business_partner_id WHERE bp.tenant_id=${input.tenantId}::uuid AND bp.id=${input.businessPartnerId}::uuid AND bp.partner_category='organization' AND bp.created_at<=${input.cursor.snapshotAt}::timestamptz AND ${!input.cursor.afterAt}`.execute(
       transaction,
     ),
     sql<Row>`SELECT id::text,(SELECT code FROM shared.industry_code WHERE id=classification.industry_code_id) industry_code,(SELECT name FROM shared.industry_code WHERE id=classification.industry_code_id) industry_name,industry_domain_code,industry_code_id::text,assignment_kind,is_primary,verified_at,effective_from,effective_until,created_at FROM master.business_partner_industry_classification classification WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND status='active' AND effective_from<=${input.asOf}::date AND(effective_until IS NULL OR effective_until>${input.asOf}::date) AND created_at<=${input.cursor.snapshotAt}::timestamptz ${after(input)} ORDER BY created_at DESC,id DESC LIMIT ${input.limit + 1}`.execute(
@@ -153,10 +153,7 @@ async function identity(
         kind: "canonical",
         id: text(row, "id"),
         code: text(row, "code"),
-        displayName: optional(row, "display_name") ?? text(row, "name"),
-        ...(optional(row, "legal_name")
-          ? { legalName: optional(row, "legal_name") }
-          : {}),
+        name: text(row, "name"),
         aliases: stringArray(row["aliases"]),
         category: "organization" as const,
         ownershipClass: text(row, "ownership_class"),

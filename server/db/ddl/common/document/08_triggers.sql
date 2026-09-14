@@ -18,3 +18,6 @@ CREATE TRIGGER entity_case_command_evidence_immutable BEFORE UPDATE OR DELETE ON
 FOR EACH ROW EXECUTE FUNCTION snapshot.trg_reject_entity_snapshot_mutation();
 CREATE TRIGGER entity_case_validation_immutable BEFORE UPDATE OR DELETE ON document.entity_case_validation
 FOR EACH ROW EXECUTE FUNCTION snapshot.trg_reject_entity_snapshot_mutation();
+
+CREATE TRIGGER company_owned_case BEFORE INSERT OR UPDATE ON document.entity_case
+ FOR EACH ROW EXECUTE FUNCTION document.trg_company_owned_case();

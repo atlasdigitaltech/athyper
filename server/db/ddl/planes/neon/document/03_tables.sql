@@ -4614,7 +4614,7 @@ CREATE TABLE document.business_partner_request (
             AND application_result_kind IS NOT NULL
             AND applied_at IS NOT NULL AND applied_by IS NOT NULL
             AND CASE request_kind
-              WHEN 'new_partner' THEN (requested_role='workforce' AND application_result_kind='workforce_created' AND materialized_person_id IS NOT NULL AND materialized_employee_id IS NOT NULL AND materialized_employment_id IS NOT NULL AND materialized_work_assignment_id IS NOT NULL) OR (requested_role='supplier' AND application_result_kind='partner_role_created' AND materialized_supplier_id IS NOT NULL AND materialized_customer_id IS NULL AND materialized_person_id IS NULL AND materialized_operating_organization_assignment_id IS NOT NULL) OR (requested_role='customer' AND application_result_kind='partner_role_created' AND materialized_customer_id IS NOT NULL AND materialized_supplier_id IS NULL AND materialized_operating_organization_assignment_id IS NOT NULL AND (CASE WHEN COALESCE(proposed_payload->>'partnerCategory',proposed_payload->>'partner_category') IN('person','individual') THEN materialized_person_id IS NOT NULL ELSE materialized_person_id IS NULL END) AND num_nonnulls(materialized_employee_id,materialized_employment_id,materialized_work_assignment_id)=0)
+              WHEN 'new_partner' THEN (requested_role='workforce' AND application_result_kind='workforce_created' AND materialized_person_id IS NOT NULL AND materialized_employee_id IS NOT NULL AND materialized_employment_id IS NOT NULL AND materialized_work_assignment_id IS NOT NULL) OR (requested_role='supplier' AND application_result_kind='partner_role_created' AND materialized_supplier_id IS NOT NULL AND materialized_customer_id IS NULL AND materialized_person_id IS NULL AND materialized_operating_organization_assignment_id IS NOT NULL) OR (requested_role='customer' AND application_result_kind='partner_role_created' AND materialized_customer_id IS NOT NULL AND materialized_supplier_id IS NULL AND materialized_operating_organization_assignment_id IS NOT NULL AND materialized_person_id IS NULL AND num_nonnulls(materialized_employee_id,materialized_employment_id,materialized_work_assignment_id)=0)
               WHEN 'add_supplier' THEN requested_role='supplier' AND application_result_kind='partner_role_created' AND materialized_supplier_id IS NOT NULL AND materialized_operating_organization_assignment_id IS NOT NULL
               WHEN 'add_customer' THEN requested_role='customer' AND application_result_kind='partner_role_created' AND materialized_customer_id IS NOT NULL AND materialized_operating_organization_assignment_id IS NOT NULL
               WHEN 'add_workforce' THEN requested_role='workforce' AND application_result_kind='workforce_created' AND materialized_person_id IS NOT NULL AND materialized_employee_id IS NOT NULL AND materialized_employment_id IS NOT NULL AND materialized_work_assignment_id IS NOT NULL
@@ -4766,6 +4766,7 @@ CREATE TABLE document.business_partner_request_address (
     line2                  text,
     city                   text,
     region                 text,
+    state_region_code      text,
     postal_code            text,
     po_box                 text,
     country_code           text        NOT NULL,
@@ -4779,6 +4780,7 @@ CREATE TABLE document.business_partner_request_address (
     created_at             timestamptz NOT NULL DEFAULT now(),
     created_by             uuid        NOT NULL,
 
+    CONSTRAINT business_partner_request_address_subdivision_fk FOREIGN KEY (country_code, state_region_code) REFERENCES shared.state_region(country_code, code),
     CONSTRAINT business_partner_request_address_pkey PRIMARY KEY (id),
     CONSTRAINT business_partner_request_address_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT business_partner_request_address_client_key_uq UNIQUE (tenant_id, request_id, client_item_key),
@@ -5046,10 +5048,10 @@ CREATE TABLE document.mesh_business_partner_acceptance (
     CONSTRAINT mesh_business_partner_acceptance_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT mesh_business_partner_acceptance_key_uq UNIQUE (tenant_id, request_idempotency_key),
     CONSTRAINT mesh_business_partner_acceptance_paths_chk CHECK (
-        cardinality(accepted_field_paths) BETWEEN 1 AND 8
+        cardinality(accepted_field_paths) BETWEEN 1 AND 7
         AND array_position(accepted_field_paths, NULL) IS NULL
         AND accepted_field_paths <@ ARRAY[
-            'partner.accountCode', 'partner.displayName', 'partner.legalName',
+            'partner.accountCode', 'partner.legalName',
             'partner.legalForm', 'partner.countryCode', 'partner.incorporationDate',
             'partner.websiteUrl', 'partner.description'
         ]::text[]

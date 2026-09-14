@@ -1,0 +1,549 @@
+{
+  "capturedAt": "2026-09-11T22:23:53.015Z",
+  "changes": [
+    "Registered process entity class",
+    "Native grid list layout",
+    "Explicit tenant identity field with read-only/no-query policy; no summary column"
+  ],
+  "validation": {
+    "deterministic": true,
+    "contractHash": "22712c3a8d885b5f3e40ef68a293c89ce0eb62527c31ce815df3884776344aa9",
+    "issues": []
+  },
+  "tests": {
+    "contractHash": "22712c3a8d885b5f3e40ef68a293c89ce0eb62527c31ce815df3884776344aa9",
+    "passed": true,
+    "results": [
+      {
+        "key": "independent_read",
+        "passed": true
+      },
+      {
+        "key": "no_direct_writes",
+        "passed": true
+      },
+      {
+        "key": "organization_coordinate",
+        "passed": true
+      }
+    ]
+  },
+  "artifact": {
+    "schema": "athyper.entity-runtime-descriptor/1.0",
+    "compiler": {
+      "name": "@athyper/meta-entity-compiler",
+      "version": "1.0.0"
+    },
+    "contractHash": "22712c3a8d885b5f3e40ef68a293c89ce0eb62527c31ce815df3884776344aa9",
+    "descriptorHash": "22edf97797ef6dfe02795cfc546b6c99e9060f5cc597fb7b2544af8d4b973220",
+    "descriptor": {
+      "authorization": {
+        "directory": {
+          "operation": "discover",
+          "population": "ownership"
+        },
+        "entityCode": "business_partner_request",
+        "fieldPolicies": [
+          {
+            "fields": [
+              "id",
+              "case_code",
+              "operation_code",
+              "status",
+              "created_at",
+              "updated_at"
+            ],
+            "key": "request_summary",
+            "queryUses": [
+              "filter",
+              "sort",
+              "search"
+            ],
+            "readOperation": "read",
+            "representation": "plain",
+            "writeOperations": []
+          },
+          {
+            "fields": [
+              "tenant_id"
+            ],
+            "key": "tenant_identity",
+            "queryUses": [],
+            "readOperation": "read",
+            "representation": "plain",
+            "writeOperations": []
+          }
+        ],
+        "operations": [
+          {
+            "effect": "read",
+            "key": "discover",
+            "permissionCode": "neon.relationship.entity_case.read",
+            "requiresParentRead": false,
+            "requiresPreflight": false,
+            "scope": "organization.record.v1",
+            "target": "collection"
+          },
+          {
+            "effect": "read",
+            "key": "read",
+            "permissionCode": "neon.relationship.entity_case.read",
+            "requiresParentRead": false,
+            "requiresPreflight": false,
+            "scope": "organization.record.v1",
+            "target": "existing"
+          }
+        ],
+        "ownership": "organization.record.v1",
+        "planeKey": "neon",
+        "recordReadOperation": "read",
+        "relationships": [],
+        "schemaVersion": 1,
+        "surfaces": [
+          {
+            "key": "review_approval",
+            "level": "tab",
+            "operation": "discover"
+          }
+        ]
+      },
+      "classProfiles": [],
+      "collectionRelationship": {
+        "schemaVersion": 1,
+        "scope": {
+          "contextRef": "operatingOrganizationId",
+          "fieldRef": "current_snapshot.organization"
+        },
+        "sourceRef": "entity_case",
+        "subject": {
+          "fieldRef": "subject_entity",
+          "value": "master.business_partner"
+        }
+      },
+      "entity": {
+        "entityClass": "process",
+        "entityCode": "business_partner_request",
+        "ownershipModel": "tenant"
+      },
+      "fieldPolicyBindings": [],
+      "fields": [
+        {
+          "cardinality": "one",
+          "dataType": "datetime",
+          "fieldKey": "created_at",
+          "id": "d90a0fa6-875e-5a70-88d0-c690cc14d47d",
+          "storagePath": "created_at",
+          "typeConfig": {
+            "kind": "datetime"
+          },
+          "valueOrigin": "stored",
+          "writeMode": "read_only"
+        },
+        {
+          "cardinality": "one",
+          "dataType": "datetime",
+          "fieldKey": "updated_at",
+          "id": "06fed490-7c82-5de7-8b96-c99c1154d11d",
+          "storagePath": "updated_at",
+          "typeConfig": {
+            "kind": "datetime"
+          },
+          "valueOrigin": "stored",
+          "writeMode": "read_only"
+        },
+        {
+          "cardinality": "one",
+          "dataType": "string",
+          "fieldKey": "case_code",
+          "id": "cc1b7f03-1f1f-5a88-b84a-515d9462f052",
+          "storagePath": "case_code",
+          "typeConfig": {
+            "kind": "string"
+          },
+          "valueOrigin": "stored",
+          "writeMode": "read_only"
+        },
+        {
+          "cardinality": "one",
+          "dataType": "string",
+          "fieldKey": "operation_code",
+          "id": "2587fb75-269c-587a-a546-3ee9af504e1b",
+          "storagePath": "operation_code",
+          "typeConfig": {
+            "kind": "string"
+          },
+          "valueOrigin": "stored",
+          "writeMode": "read_only"
+        },
+        {
+          "cardinality": "one",
+          "dataType": "string",
+          "fieldKey": "status",
+          "id": "990303f6-1340-5d97-baa1-388a832e6da4",
+          "storagePath": "status",
+          "typeConfig": {
+            "kind": "string"
+          },
+          "valueOrigin": "stored",
+          "writeMode": "read_only"
+        },
+        {
+          "cardinality": "one",
+          "dataType": "uuid",
+          "fieldKey": "id",
+          "id": "e33532e8-6b5c-552b-882d-46f2375782a0",
+          "storagePath": "id",
+          "typeConfig": {
+            "kind": "uuid"
+          },
+          "valueOrigin": "stored",
+          "writeMode": "read_only"
+        },
+        {
+          "cardinality": "one",
+          "dataType": "uuid",
+          "fieldKey": "tenant_id",
+          "id": "393127d0-1726-44c3-8548-5818b8276019",
+          "nullSemantics": "not_allowed",
+          "storagePath": "tenant_id",
+          "typeConfig": {
+            "kind": "uuid"
+          },
+          "valueOrigin": "stored",
+          "writeMode": "read_only"
+        }
+      ],
+      "flowSteps": [],
+      "flows": [],
+      "keyFields": [
+        {
+          "entityFieldId": "e33532e8-6b5c-552b-882d-46f2375782a0",
+          "entityKeyId": "3a2a95c5-c494-599e-af2f-fbf8b76c1f5d",
+          "id": "ee7ab368-809f-50b0-a1e7-a02529b0f6a3",
+          "position": 1
+        }
+      ],
+      "keys": [
+        {
+          "id": "3a2a95c5-c494-599e-af2f-fbf8b76c1f5d",
+          "keyKey": "primary",
+          "keyKind": "primary",
+          "nullSemantics": "not_allowed",
+          "uniquenessScope": "global"
+        }
+      ],
+      "lifecycleBindings": [],
+      "lifecycleOperationBindings": [],
+      "listPresentation": {
+        "defaultState": {
+          "columns": [
+            "case_code",
+            "operation_code",
+            "status",
+            "created_at",
+            "updated_at"
+          ],
+          "density": "comfortable",
+          "mode": "table",
+          "sort": [
+            {
+              "direction": "desc",
+              "field": "created_at"
+            }
+          ]
+        },
+        "experience": {
+          "actions": [],
+          "header": {
+            "title": {
+              "defaultLocale": "en",
+              "values": {
+                "en": "Review & Approval"
+              }
+            }
+          },
+          "routes": [],
+          "schemaVersion": 1
+        },
+        "identityField": "case_code",
+        "limits": {
+          "allowedPageSizes": [
+            25,
+            50,
+            100
+          ],
+          "countMode": "none",
+          "defaultPageSize": 25,
+          "maxSortLevels": 3
+        },
+        "schemaVersion": 1,
+        "search": {
+          "minimumQueryLength": 1
+        },
+        "supportedModes": [
+          "table",
+          "compact"
+        ],
+        "title": "Review & Approval"
+      },
+      "numberingBindings": [],
+      "operationPermissions": [
+        {
+          "entityOperationId": "6bf4ad53-ceae-5a71-b25a-658ec2dbbba3",
+          "id": "b24322c8-54fb-50be-835c-c39d466be627",
+          "permissionCode": "neon.relationship.entity_case.read",
+          "permissionKind": "entity_operation",
+          "targetPlane": "neon"
+        },
+        {
+          "entityOperationId": "8acd602b-4c86-5419-bcd9-b06980ca6a7e",
+          "id": "9b3c658a-1201-5cee-9a5c-1a9628c7bee7",
+          "permissionCode": "neon.relationship.entity_case.read",
+          "permissionKind": "entity_operation",
+          "targetPlane": "neon"
+        }
+      ],
+      "operationRules": [],
+      "operationScopeBindings": [
+        {
+          "bindingKey": "discover_organization",
+          "coordinateSource": "relation_resolver",
+          "decisionMode": "collection",
+          "entityOperationId": "8acd602b-4c86-5419-bcd9-b06980ca6a7e",
+          "id": "d35fb558-9693-515f-8afa-9a3b84d0a280",
+          "missingValueBehavior": "deny",
+          "resolverKey": "platform.document_relationship.v1",
+          "scopeKind": "operating_organization",
+          "targetPlane": "neon"
+        },
+        {
+          "bindingKey": "read_organization",
+          "coordinateSource": "relation_resolver",
+          "decisionMode": "collection",
+          "entityOperationId": "6bf4ad53-ceae-5a71-b25a-658ec2dbbba3",
+          "id": "f7e83b22-dcd0-5bf4-bf52-b575f6b4ea00",
+          "missingValueBehavior": "deny",
+          "resolverKey": "platform.document_relationship.v1",
+          "scopeKind": "operating_organization",
+          "targetPlane": "neon"
+        }
+      ],
+      "operations": [
+        {
+          "auditEventCode": "business_partner_request.discover",
+          "id": "8acd602b-4c86-5419-bcd9-b06980ca6a7e",
+          "label": "Discover",
+          "operationKey": "discover",
+          "operationKind": "read",
+          "permissionCode": "neon.relationship.entity_case.read"
+        },
+        {
+          "auditEventCode": "business_partner_request.read",
+          "id": "6bf4ad53-ceae-5a71-b25a-658ec2dbbba3",
+          "label": "Read",
+          "operationKey": "read",
+          "operationKind": "read",
+          "permissionCode": "neon.relationship.entity_case.read"
+        }
+      ],
+      "policyBindings": [],
+      "relationFields": [],
+      "relationTargets": [],
+      "relations": [],
+      "runtimeProfiles": [
+        {
+          "apiExposure": "api",
+          "backingKind": "table",
+          "id": "a4295021-2452-5eb5-bbcb-fae161a9afff",
+          "profileKey": "default",
+          "readMode": "generic",
+          "storageObject": "entity_case",
+          "storagePlane": "neon",
+          "storageSchema": "document",
+          "tenantFieldKey": "tenant_id",
+          "writeMode": "none"
+        }
+      ],
+      "searchFields": [],
+      "searchProfiles": [],
+      "surfaceFieldBindings": [
+        {
+          "bindingKey": "case_code",
+          "displayConfig": {
+            "defaultVisible": true
+          },
+          "entityFieldId": "cc1b7f03-1f1f-5a88-b84a-515d9462f052",
+          "entitySurfaceId": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+          "id": "22471872-1164-59d0-bc44-10a906e14ebe",
+          "labelOverride": "Case code",
+          "position": 1
+        },
+        {
+          "bindingKey": "created_at",
+          "displayConfig": {
+            "defaultVisible": true
+          },
+          "entityFieldId": "d90a0fa6-875e-5a70-88d0-c690cc14d47d",
+          "entitySurfaceId": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+          "id": "ab78caf9-a43e-54db-adcc-7c8456a3cd05",
+          "labelOverride": "Created at",
+          "position": 4
+        },
+        {
+          "bindingKey": "id",
+          "displayConfig": {
+            "defaultVisible": false
+          },
+          "entityFieldId": "e33532e8-6b5c-552b-882d-46f2375782a0",
+          "entitySurfaceId": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+          "id": "6abc487a-d467-5400-ba5d-b6df771ac0fb",
+          "labelOverride": "Id",
+          "position": 0
+        },
+        {
+          "bindingKey": "operation_code",
+          "displayConfig": {
+            "defaultVisible": true
+          },
+          "entityFieldId": "2587fb75-269c-587a-a546-3ee9af504e1b",
+          "entitySurfaceId": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+          "id": "3d0dff0d-6b86-5b73-98f4-0818bf37d852",
+          "labelOverride": "Operation code",
+          "position": 2
+        },
+        {
+          "bindingKey": "status",
+          "displayConfig": {
+            "defaultVisible": true
+          },
+          "entityFieldId": "990303f6-1340-5d97-baa1-388a832e6da4",
+          "entitySurfaceId": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+          "id": "9dc28c22-69eb-58c4-b7ec-ed8088a799f9",
+          "labelOverride": "Status",
+          "position": 3
+        },
+        {
+          "bindingKey": "updated_at",
+          "displayConfig": {
+            "defaultVisible": true
+          },
+          "entityFieldId": "06fed490-7c82-5de7-8b96-c99c1154d11d",
+          "entitySurfaceId": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+          "id": "1255cd37-0e47-5c72-acd4-dddcc39f9da9",
+          "labelOverride": "Updated at",
+          "position": 5
+        }
+      ],
+      "surfaceOperations": [],
+      "surfaceSections": [],
+      "surfaces": [
+        {
+          "id": "684ab922-eeb9-52c3-b187-145aa5ac457a",
+          "isDefault": true,
+          "layoutConfig": {
+            "authorization": {
+              "directory": {
+                "operation": "discover",
+                "population": "ownership"
+              },
+              "entityCode": "business_partner_request",
+              "fieldPolicies": [
+                {
+                  "fields": [
+                    "id",
+                    "case_code",
+                    "operation_code",
+                    "status",
+                    "created_at",
+                    "updated_at"
+                  ],
+                  "key": "request_summary",
+                  "queryUses": [
+                    "filter",
+                    "sort",
+                    "search"
+                  ],
+                  "readOperation": "read",
+                  "representation": "plain",
+                  "writeOperations": []
+                },
+                {
+                  "fields": [
+                    "tenant_id"
+                  ],
+                  "key": "tenant_identity",
+                  "queryUses": [],
+                  "readOperation": "read",
+                  "representation": "plain",
+                  "writeOperations": []
+                }
+              ],
+              "operations": [
+                {
+                  "effect": "read",
+                  "key": "discover",
+                  "permissionCode": "neon.relationship.entity_case.read",
+                  "requiresParentRead": false,
+                  "requiresPreflight": false,
+                  "scope": "organization.record.v1",
+                  "target": "collection"
+                },
+                {
+                  "effect": "read",
+                  "key": "read",
+                  "permissionCode": "neon.relationship.entity_case.read",
+                  "requiresParentRead": false,
+                  "requiresPreflight": false,
+                  "scope": "organization.record.v1",
+                  "target": "existing"
+                }
+              ],
+              "ownership": "organization.record.v1",
+              "planeKey": "neon",
+              "recordReadOperation": "read",
+              "relationships": [],
+              "schemaVersion": 1,
+              "surfaces": [
+                {
+                  "key": "review_approval",
+                  "level": "tab",
+                  "operation": "discover"
+                }
+              ]
+            },
+            "collectionRelationship": {
+              "schemaVersion": 1,
+              "scope": {
+                "contextRef": "operatingOrganizationId",
+                "fieldRef": "current_snapshot.organization"
+              },
+              "sourceRef": "entity_case",
+              "subject": {
+                "fieldRef": "subject_entity",
+                "value": "master.business_partner"
+              }
+            },
+            "defaultState": {
+              "sort": [
+                {
+                  "direction": "desc",
+                  "field": "created_at"
+                }
+              ]
+            },
+            "supportedModes": [
+              "table",
+              "compact"
+            ]
+          },
+          "layoutKind": "grid",
+          "surfaceKey": "review_approval",
+          "surfaceKind": "list",
+          "title": "Review & Approval"
+        }
+      ]
+    }
+  },
+  "approved": false,
+  "published": false
+}

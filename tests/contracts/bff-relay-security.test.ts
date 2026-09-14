@@ -5,7 +5,7 @@ import { gzipSync } from "node:zlib";
 import { clearedAuthSessionCookies } from "../../packages/platform/iam/auth-bff/src/index";
 import { describe, it } from "node:test";
 import ts from "typescript";
-import { ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, createRelayHandler, ENTITY_APPLICATION_DESCRIPTOR_OPERATION, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, NEON_BP_INVITATION_CREATE_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
+import { REFERENCE_HISTORY_RELAY_OPERATIONS, ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, createRelayHandler, ENTITY_APPLICATION_DESCRIPTOR_OPERATION, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, NEON_BP_INVITATION_CREATE_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
 
 const context = (...path: string[]) => ({ params: Promise.resolve({ path }) });
 // Inspect the actual relay configuration. Conditional pilot arrays can contain
@@ -187,6 +187,21 @@ describe("Phase 4 hardened BFF relay", () => {
     assert.equal(upstream, `http://platform-host:4000/api/entity-runtime/business_partner/application-descriptor?${query}`);
     assert.equal((await handler(new Request("https://neon.example/api/relay/entity-runtime/business_partner/application-descriptor", {method:"POST"}), context("entity-runtime", "business_partner", "application-descriptor"))).status, 404);
     assert.equal((await handler(new Request("https://neon.example/api/relay/records/invoice"), context("records", "invoice"))).status, 404);
+  });
+
+  it("registers reference history in every plane and enforces CSRF on selections", async () => {
+    for (const plane of ["neon", "studio", "mesh"]) {
+      assert.ok(registeredOperations(readFileSync(`apps/${plane}/lib/relay.ts`, "utf8")).has("REFERENCE_HISTORY_RELAY_OPERATIONS"));
+      let forwarded = "";
+      const handler = createRelayHandler({ plane, runtimeApiUrl: "http://platform-host:4000/api", appOrigin: `https://${plane}.example`, operations: REFERENCE_HISTORY_RELAY_OPERATIONS, session: authority(session(plane)), fetch: async url => { forwarded=String(url);return Response.json({items:[]}); } });
+      const url=`https://${plane}.example/api/relay/entity-runtime/business_partner/reference-history?surface=intake_details&field=details_registration_country_code`;
+      const target=()=>context("entity-runtime","business_partner","reference-history");
+      assert.equal((await handler(new Request(url),target())).status,200);
+      assert.ok(forwarded.endsWith("reference-history?surface=intake_details&field=details_registration_country_code"));
+      assert.equal((await handler(new Request(url,{method:"POST",headers:{"content-type":"application/json"},body:'{"action":"select","key":"MY"}'}),target())).status,403);
+      assert.equal((await handler(new Request(url,{method:"POST",headers:{origin:`https://${plane}.example`,"content-type":"application/json","x-csrf-token":"csrf-proof"},body:'{"action":"select","key":"MY"}'}),target())).status,200);
+      assert.equal((await handler(new Request(url,{method:"DELETE"}),target())).status,404);
+    }
   });
 
   it("injects verified identity for /api/iam/me in every plane without exposing it to the browser", async () => {

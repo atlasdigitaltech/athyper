@@ -241,4 +241,7 @@ common/control/14_admin_integrations.sql
 common/control/15_lookup_reference_governance.sql
 common/master/19_entity_saved_views.sql
 planes/studio/metadata/12_baseline_import.sql
+planes/studio/metadata/14_runtime_restoration.sql
 common/shared/99_security_definer_hardening.sql
+
+common/master/21_reference_choice_recent.sql

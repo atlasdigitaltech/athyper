@@ -1,4 +1,39 @@
+# Development/QA email qualification. Mailpit captures mail; it does not relay
+# these messages to a real mailbox. Production must supply a monitored receiver.
+global:
+  smtp_smarthost: mailtrap:1025
+  smtp_from: alerts@athyper.test
+  smtp_require_tls: false
 route:
-  receiver: local-null
+  receiver: default-mailpit
+  group_by: [alertname, instance]
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 4h
+  routes:
+    - receiver: redis-mailpit
+      matchers: ['service="memorycache"']
+    - receiver: business-partner-mailpit
+      matchers: ['service=~"business-partner.*"']
+    - receiver: record-transfer-mailpit
+      matchers: ['service="record-transfer"']
 receivers:
-  - name: local-null
+  # Catches anything that does not match a more specific route below, so a
+  # rule file added without a matching route still reaches an operator inbox
+  # instead of being silently dropped.
+  - name: default-mailpit
+    email_configs:
+      - to: platform-alerts@athyper.test
+        send_resolved: true
+  - name: redis-mailpit
+    email_configs:
+      - to: redis-alerts@athyper.test
+        send_resolved: true
+  - name: business-partner-mailpit
+    email_configs:
+      - to: business-partner-alerts@athyper.test
+        send_resolved: true
+  - name: record-transfer-mailpit
+    email_configs:
+      - to: record-transfer-alerts@athyper.test
+        send_resolved: true

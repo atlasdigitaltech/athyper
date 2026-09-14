@@ -2,13 +2,13 @@
 
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
-Registry SHA-256: `963befb838222089a41e6422a6c767b5c357d902360c247e24ce2d9aea940bc0`
-Files scanned / authorization-bearing: 2780 / 532
-Registered authorization objects: 466
-Aggregated object references: 823
-Writer references: 68
-Contract/UI field references: 881
-Permission definitions / uses: 83 / 394
+Registry SHA-256: `cca360b6ec2c32bc5cc5c1489517d5e43e175c10f97b509cbe4c51cffd5d4814`
+Files scanned / authorization-bearing: 10440 / 1429
+Registered authorization objects: 470
+Aggregated object references: 1118
+Writer references: 136
+Contract/UI field references: 2345
+Permission definitions / uses: 85 / 2015
 Authorization-bearing routes: 11
 Keycloak mappers: 145
 Canonical capture sources: 0 ()
@@ -59,13 +59,13 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | catalog.subscription_plan_version | `shared.subscription_plan_version` | neon_and_mesh_legacy | entitlement_catalog | commercial-platform | neon | keep_neon | 0 | 2 | 0 |
 | catalog.workspace | `shared.workspace` | neon_and_mesh_legacy | entitlement_catalog | platform-catalog | studio, neon, mesh | keep_neon_reference_only_in_mesh | 0 | 3 | 1 |
 | compiled.entity | `snapshot.entity_compiled` | neon | authorization_projection | metadata-platform | studio, neon | regenerate | 0 | 1 | 0 |
-| context.company_code | `master.company_code` | neon | authorization_scope | finance-platform | neon | keep_as_non_granting_scope_source | 1 | 39 | 3 |
-| context.legal_entity | `master.legal_entity` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 25 | 3 |
-| context.operating_organization | `master.operating_organization` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 30 | 4 |
+| context.company_code | `master.company_code` | neon | authorization_scope | finance-platform | neon | keep_as_non_granting_scope_source | 2 | 59 | 11 |
+| context.legal_entity | `master.legal_entity` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 26 | 6 |
+| context.operating_organization | `master.operating_organization` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 3 | 46 | 12 |
 | context.operating_organization_company | `master.operating_organization_company` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_membership | 0 | 1 | 0 |
 | context.principal_relationship | `master.principal_relationship` | neon | context_only | platform-iam | studio, neon | keep_non_authorizing | 0 | 2 | 0 |
 | context.team | `master.team` | neon | context_only | organization-platform | neon | keep_non_authorizing | 1 | 33 | 0 |
-| context.team_member | `master.team_member` | neon | context_only | organization-platform | neon | keep_non_authorizing | 1 | 27 | 0 |
+| context.team_member | `master.team_member` | neon | context_only | organization-platform | neon | keep_non_authorizing | 2 | 28 | 0 |
 | context.tenant_relationship | `master.tenant_relationship` | neon | context_only | platform-iam | studio, neon | keep_non_authorizing | 1 | 27 | 0 |
 | function.access_grant_status_changed | `master.trg_access_grant_status_changed` | neon | authorization_change_capture | platform-iam | neon | remove_with_legacy_access_grant | 0 | 0 | 0 |
 | function.bump_auth_epoch | `master.fn_bump_auth_epoch` | neon | authorization_change_capture | platform-iam | studio, neon | replace_with_durable_change_watermark | 0 | 0 | 0 |
@@ -80,10 +80,10 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function.validate_delegation_permissions | `master.trg_validate_delegation_permissions` | neon | legacy_authorization_invariant | platform-iam | neon | remove_with_legacy_delegation | 0 | 0 | 0 |
 | function.visibility_scope | `master.get_effective_visibility_scope` | neon | legacy_scope_evaluator | platform-iam | neon | remove_after_shadow | 0 | 0 | 0 |
 | identity.legal_entity_binding | `master.legal_entity_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep_as_non_granting_identity_projection | 0 | 2 | 0 |
-| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 1 | 113 | 15 |
-| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 1 | 41 | 7 |
+| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 4 | 195 | 35 |
+| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 1 | 47 | 9 |
 | identity.principal_profile | `master.principal_profile` | neon | identity_profile | platform-iam | studio, neon | remove_duplicate_idp_fields | 1 | 27 | 0 |
-| identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 1 | 107 | 14 |
+| identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 5 | 152 | 26 |
 | identity.tenant_domain | `master.tenant_identity_domain` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 2 | 0 |
 | identity.tenant_provider | `master.tenant_identity_provider` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 2 | 0 |
 | legacy.access_grant | `master.access_grant` | neon | legacy_authorization | platform-iam | studio, neon, mesh | split_into_role_scope_override_acl | 0 | 2 | 0 |
@@ -110,7 +110,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | legacy.tenant_feature_entitlement | `master.tenant_feature_entitlement` | neon | entitlement | commercial-platform | neon | replace_with_tenant_entitlement | 0 | 3 | 0 |
 | legacy.tenant_module_subscription | `master.tenant_module_subscription` | neon | entitlement | commercial-platform | neon | replace_with_tenant_entitlement | 0 | 4 | 0 |
 | legacy.tenant_permission_override | `master.tenant_permission_override` | neon | entitlement_override | commercial-platform | neon | replace_with_feature_entitlement_override | 0 | 2 | 0 |
-| mesh.account | `mesh.network_account` | mesh | plane_membership_context | mesh-platform | mesh | keep_mesh_only | 1 | 29 | 8 |
+| mesh.account | `mesh.network_account` | mesh | plane_membership_context | mesh-platform | mesh | keep_mesh_only | 2 | 34 | 12 |
 | mesh.account_grant | `mesh.account_grant` | mesh | legacy_authorization | mesh-platform | mesh | replace_with_mesh_local_role_group_model | 0 | 2 | 0 |
 | mesh.attachment_acl | `mesh.attachment_acl` | mesh | record_acl | mesh-platform | mesh | normalize_mesh_locally | 0 | 1 | 0 |
 | mesh.audit.access_decision | `mesh_log.access_decision_log` | mesh | decision_evidence | mesh-platform | mesh | retain | 0 | 0 | 0 |
@@ -148,9 +148,9 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | mesh.function.grant_revoke | `mesh.fn_account_grant_revoke_hook` | mesh | authorization_change_hook | mesh-platform | mesh | replace_with_mesh_local_change_capture | 0 | 0 | 0 |
 | mesh.identity.binding | `mesh.principal_identity_binding` | mesh | identity_binding | mesh-platform | mesh | keep_mesh_only | 0 | 2 | 0 |
 | mesh.identity.principal | `mesh.principal` | mesh | identity | mesh-platform | mesh | keep_mesh_only | 0 | 2 | 0 |
-| mesh.relationship | `mesh.network_relationship` | mesh | context_only | mesh-platform | mesh | keep_non_authorizing | 1 | 35 | 8 |
+| mesh.relationship | `mesh.network_relationship` | mesh | context_only | mesh-platform | mesh | keep_non_authorizing | 1 | 41 | 10 |
 | mesh.rollout.feature_flag | `mesh_control.feature_flag` | mesh | rollout_control | mesh-platform | mesh | keep_mesh_only | 0 | 0 | 0 |
-| metadata.entity | `control.entity` | neon | authorization_metadata | metadata-platform | studio, neon | keep_canonical_entity_identity | 0 | 3 | 0 |
+| metadata.entity | `control.entity` | neon | authorization_metadata | metadata-platform | studio, neon | keep_canonical_entity_identity | 0 | 2 | 0 |
 | metadata.entity_action_rule | `control.entity_action_rule` | neon | authorization_metadata | metadata-platform | studio, neon | replace_permission_code_with_permission_id | 0 | 1 | 0 |
 | metadata.entity_field | `control.entity_field` | neon | field_authorization_metadata | metadata-platform | studio, neon | normalize_security_references | 0 | 1 | 0 |
 | metadata.entity_flow | `control.entity_flow` | neon | authorization_metadata | metadata-platform | studio, neon | normalize_permission_references | 0 | 2 | 0 |
@@ -192,6 +192,10 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | migration.telemetry_view | `event.v_authorization_legacy_write_telemetry` | neon_and_mesh_migration | migration_telemetry | platform-iam | studio, neon, mesh | retain_through_post_cutover_observation | 0 | 0 | 0 |
 | migration.writer_registry | `control.authorization_writer_registry` | neon_and_mesh_migration | migration_control | platform-iam | studio, neon, mesh | retain_through_authorization_cutover_and_observation | 0 | 1 | 0 |
 | rollout.feature_flag | `control.feature_flag` | neon | rollout_control | platform-runtime | studio, neon | keep | 0 | 1 | 0 |
+| studio.publication.entity_authorization_successor_link | `publication.entity_authorization_successor_link` | studio | authorization_publication | publication | studio | immutable_studio_release_provenance_not_runtime_authority | 2 | 5 | 3 |
+| studio.publication.entity_authorization_successor_payload | `publication.entity_authorization_successor_payload` | studio | authorization_publication | publication | studio | immutable_hash_pinned_studio_publication_input_not_runtime_authority | 2 | 8 | 6 |
+| studio.publication.fn_authorization_successor_compilation_source | `publication.fn_authorization_successor_compilation_source` | studio | authorization_publication | publication | studio | studio_compilation_reader_for_hash_pinned_approved_release | 2 | 0 | 0 |
+| studio.publication.fn_prepare_authorization_successor | `publication.fn_prepare_authorization_successor` | studio | authorization_publication | publication | studio | studio_approved_release_materialization_with_maker_checker_and_tenant_checks | 3 | 0 | 0 |
 | support.session | `ai.atlas_support_session` | neon | delegated_support_access | ai-platform | studio | keep_bounded_by_new_evaluator | 0 | 5 | 0 |
 | support.session_audit | `ai.atlas_support_session_audit` | neon | audit | ai-platform | studio | retain | 0 | 0 | 0 |
 | wave1.mesh.function.mesh_control.authorization_v2_is_effective | `mesh_control.authorization_v2_is_effective` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
@@ -570,15 +574,31 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `authz.trg_validate_delegation_activation` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:992 | `master.principal` |
 | function | `authz.trg_validate_group_member` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:704 | `master.principal` |
 | function | `authz.trg_validate_permission_publish` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:244 | — |
+| function | `control.capture_entitlement_plan` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:725 | — |
+| function | `control.effective_tenant_entitlement` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:770 | `master.tenant` |
+| function | `control.entitlement_plan_at` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:754 | — |
 | function | `control.fn_provision_external_workforce_exchange` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/control/07_functions.sql:695 | `master.principal`<br>`mesh.network_account` |
 | function | `control.fn_validate_owner_type_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/control/07_functions.sql:1 | `master.tenant` |
 | function | `control.fn_validate_owner_type_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/control/07_functions.sql:1 | `master.tenant` |
 | function | `control.fn_validate_owner_type_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/control/07_functions.sql:1 | `master.tenant` |
-| function | `control.generate_fiscal_periods` | structural_dependency | finance-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/control/07_functions.sql:3700 | `master.company_code`<br>`master.principal` |
+| function | `control.generate_fiscal_periods` | structural_dependency | finance-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/control/07_functions.sql:3792 | `master.company_code`<br>`master.principal` |
+| trigger | `control.subscription_plan.subscription_plan_entitlement_capture` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/snapshot/08_triggers.sql:25 | — |
+| trigger | `control.subscription_plan.subscription_plan_entitlement_version` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/08_triggers.sql:270 | — |
+| table | `control.tenant_module_entitlement_override` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/03_tables.sql:1503 | — |
+| trigger | `control.tenant_module_entitlement_override.tenant_module_entitlement_override_guard` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/08_triggers.sql:277 | — |
+| function | `control.trg_capture_entitlement_plan` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:746 | — |
+| function | `control.trg_guard_module_entitlement_override` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:712 | — |
 | function | `control.trg_validate_decision_scope` | structural_dependency | finance-platform+organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/control/07_functions.sql:856 | `master.company_code`<br>`master.operating_organization` |
+| function | `control.trg_version_entitlement_plan` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:682 | — |
+| function | `control.trg_version_entitlement_plan_components` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:690 | — |
 | function | `document.fn_business_partner_request_approvers` | structural_dependency | finance-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_functions.sql:3941 | `master.company_code`<br>`master.operating_organization`<br>`master.principal` |
-| function | `document.fn_workflow_sla_due_tenants` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/document/07_functions.sql:145 | `master.tenant` |
+| function | `document.fn_company_setup_case_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_functions.sql:5453 | `master.principal` |
+| function | `document.fn_company_setup_case_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20260912_company_pilot_approver_visibility.sql:4 | `master.principal` |
+| function | `document.fn_company_setup_case_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20260912_company_pilot_lifecycle.sql:212 | `master.principal` |
+| function | `document.fn_workflow_sla_due_tenants` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/document/07_functions.sql:181 | `master.tenant` |
 | function | `document.fn_workforce_request_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_functions.sql:3144 | `master.principal` |
+| function | `document.trg_company_owned_case` | structural_dependency | finance-platform+organization-platform | review_with_registered_dependency | server/db/ddl/common/document/07_functions.sql:212 | `master.company_code`<br>`master.operating_organization` |
+| function | `document.trg_company_owned_case` | structural_dependency | finance-platform+organization-platform | review_with_registered_dependency | server/db/migrations/20260911_company_owned_case_pilot.sql:9 | `master.company_code`<br>`master.operating_organization` |
 | table | `event.authorization_invalidation_outbox` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/03_tables.sql:409 | — |
 | trigger | `event.authorization_invalidation_outbox.trg_authorization_invalidation_immutable` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/08_triggers.sql:69 | — |
 | trigger | `event.authorization_invalidation_outbox.trg_authorization_invalidation_notify` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/08_triggers.sql:96 | — |
@@ -596,7 +616,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `master.fn_resolve_dimension_set` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:1329 | `master.company_code` |
 | function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:854 | `master.principal`<br>`master.principal_identity_binding` |
 | function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:899 | `master.principal`<br>`master.principal_identity_binding` |
-| function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:892 | `master.principal`<br>`master.principal_identity_binding` |
+| function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:895 | `master.principal`<br>`master.principal_identity_binding` |
 | table | `master.identity_provider_d` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/02_domains.sql:36 | — |
 | table | `master.identity_provider_d` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/02_domains.sql:38 | — |
 | table | `master.identity_provider_d` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/02_domains.sql:47 | — |
@@ -604,17 +624,17 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | trigger | `master.legal_entity.trg_legal_entity_identity_immutable` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:347 | `master.legal_entity` |
 | trigger | `master.legal_entity.trg_legal_entity_status_changed` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:349 | `master.legal_entity` |
 | trigger | `master.legal_entity.trg_legal_entity_updated_at` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:351 | `master.legal_entity` |
-| trigger | `master.legal_entity.wave6_legal_entity_amendment` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1559 | `master.legal_entity` |
-| trigger | `master.legal_entity.wave6_legal_entity_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1557 | `master.legal_entity` |
-| trigger | `master.legal_entity.wave6_legal_entity_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1563 | `master.legal_entity` |
+| trigger | `master.legal_entity.wave6_legal_entity_amendment` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1550 | `master.legal_entity` |
+| trigger | `master.legal_entity.wave6_legal_entity_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1548 | `master.legal_entity` |
+| trigger | `master.legal_entity.wave6_legal_entity_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1554 | `master.legal_entity` |
 | view | `master.mv_company_postable_account` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/09_views.sql:26 | `master.company_code` |
 | trigger | `master.operating_organization.trg_operating_organization_hierarchy_cycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:379 | `master.operating_organization` |
 | trigger | `master.operating_organization.trg_operating_organization_identity_immutable` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:373 | `master.operating_organization` |
 | trigger | `master.operating_organization.trg_operating_organization_status_changed` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:375 | `master.operating_organization` |
 | trigger | `master.operating_organization.trg_operating_organization_updated_at` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:377 | `master.operating_organization` |
-| trigger | `master.operating_organization.wave6_operating_organization_amendment` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1560 | `master.operating_organization` |
-| trigger | `master.operating_organization.wave6_operating_organization_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1558 | `master.operating_organization` |
-| trigger | `master.operating_organization.wave6_operating_organization_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1564 | `master.operating_organization` |
+| trigger | `master.operating_organization.wave6_operating_organization_amendment` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1551 | `master.operating_organization` |
+| trigger | `master.operating_organization.wave6_operating_organization_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1549 | `master.operating_organization` |
+| trigger | `master.operating_organization.wave6_operating_organization_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1555 | `master.operating_organization` |
 | trigger | `master.principal_identity_binding.trg_principal_identity_binding_10_normalize` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/08_triggers.sql:204 | `master.principal_identity_binding` |
 | trigger | `master.principal_identity_binding.trg_principal_identity_binding_10_normalize` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:204 | `master.principal_identity_binding` |
 | trigger | `master.principal_identity_binding.trg_principal_identity_binding_10_normalize` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/08_triggers.sql:214 | `master.principal_identity_binding` |
@@ -646,7 +666,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | trigger | `master.principal.trg_principal_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:192 | `master.principal` |
 | trigger | `master.principal.trg_principal_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/08_triggers.sql:202 | `master.principal` |
 | function | `master.seed_audit_reason_catalog` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/audit/07_functions.sql:418 | `master.principal` |
-| function | `master.seed_condition_type_catalog` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:2831 | `master.principal` |
+| function | `master.seed_condition_type_catalog` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:2823 | `master.principal` |
 | trigger | `master.team_member.trg_team_member_10_normalize` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/master/08_triggers.sql:155 | `master.team_member` |
 | trigger | `master.team_member.trg_team_member_10_normalize` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:155 | `master.team_member` |
 | trigger | `master.team_member.trg_team_member_10_normalize` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/studio/master/08_triggers.sql:165 | `master.team_member` |
@@ -685,67 +705,76 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | trigger | `master.tenant.trg_tenant_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/08_triggers.sql:15 | `master.tenant` |
 | function | `master.trg_guard_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:649 | `master.principal` |
 | function | `master.trg_guard_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:694 | `master.principal` |
-| function | `master.trg_guard_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:687 | `master.principal` |
+| function | `master.trg_guard_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:690 | `master.principal` |
 | function | `master.trg_guard_principal_identity_binding` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:747 | `master.principal_identity_binding` |
 | function | `master.trg_guard_principal_identity_binding` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:792 | `master.principal_identity_binding` |
-| function | `master.trg_guard_principal_identity_binding` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:785 | `master.principal_identity_binding` |
+| function | `master.trg_guard_principal_identity_binding` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:788 | `master.principal_identity_binding` |
 | function | `master.trg_guard_team_identity` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:489 | `master.team` |
 | function | `master.trg_guard_team_identity` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:534 | `master.team` |
-| function | `master.trg_guard_team_identity` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:527 | `master.team` |
+| function | `master.trg_guard_team_identity` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:530 | `master.team` |
 | function | `master.trg_guard_team_member` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:524 | `master.team_member` |
 | function | `master.trg_guard_team_member` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:569 | `master.team_member` |
-| function | `master.trg_guard_team_member` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:562 | `master.team_member` |
+| function | `master.trg_guard_team_member` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:565 | `master.team_member` |
 | function | `master.trg_guard_tenant_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:1 | `master.tenant` |
 | function | `master.trg_guard_tenant_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:1 | `master.tenant` |
-| function | `master.trg_guard_tenant_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:39 | `master.tenant` |
+| function | `master.trg_guard_tenant_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:42 | `master.tenant` |
 | function | `master.trg_guard_tenant_relationship_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:164 | `master.tenant_relationship` |
 | function | `master.trg_guard_tenant_relationship_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:205 | `master.tenant_relationship` |
-| function | `master.trg_guard_tenant_relationship_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:202 | `master.tenant_relationship` |
+| function | `master.trg_guard_tenant_relationship_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:205 | `master.tenant_relationship` |
 | function | `master.trg_normalize_principal_identity_binding` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:729 | — |
 | function | `master.trg_normalize_principal_identity_binding` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:774 | — |
-| function | `master.trg_normalize_principal_identity_binding` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:767 | — |
-| function | `master.trg_sync_organization_scope_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4891 | `master.tenant` |
-| function | `master.trg_validate_business_partner_role` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:3790 | `master.operating_organization` |
-| function | `master.trg_validate_employment_contract` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4038 | `master.company_code` |
+| function | `master.trg_normalize_principal_identity_binding` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:770 | — |
+| function | `master.trg_sync_organization_scope_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4887 | `master.tenant` |
+| function | `master.trg_validate_business_partner_role` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:3786 | `master.operating_organization` |
+| function | `master.trg_validate_employment_contract` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4034 | `master.company_code` |
 | function | `master.trg_validate_identity_binding_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:768 | `master.principal` |
 | function | `master.trg_validate_identity_binding_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:813 | `master.principal` |
-| function | `master.trg_validate_identity_binding_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:806 | `master.principal` |
+| function | `master.trg_validate_identity_binding_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:809 | `master.principal` |
 | function | `master.trg_validate_operating_organization_profile` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:1081 | `master.operating_organization` |
-| function | `master.trg_validate_partner_profile_references` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:3242 | `master.company_code` |
+| function | `master.trg_validate_partner_profile_references` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:3234 | `master.company_code` |
 | function | `mesh.catalog_is_visible` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:217 | `mesh.network_relationship` |
 | function | `mesh.catalog_price_is_visible` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:315 | `mesh.network_relationship` |
-| function | `mesh.command_document_envelope_lifecycle` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1211 | `master.tenant`<br>`mesh.network_account`<br>`mesh.network_relationship` |
-| function | `mesh.command_issue_registration_exchange` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1705 | `mesh.network_account` |
-| function | `mesh.command_network_account_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:695 | `mesh.network_account` |
-| function | `mesh.command_network_relationship_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:859 | `mesh.network_relationship` |
-| function | `mesh.command_open_canonical_party_correlation_case` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2083 | `mesh.network_account` |
-| function | `mesh.command_registration_exchange_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1720 | `mesh.network_account` |
-| function | `mesh.command_relationship_capability_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1673 | `mesh.network_relationship` |
-| function | `mesh.command_request_network_relationship` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:764 | `mesh.network_relationship` |
-| function | `mesh.command_request_relationship_capability` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1648 | `mesh.network_relationship` |
-| function | `mesh.command_resolve_canonical_party_correlation_case` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2097 | `mesh.network_account` |
-| function | `mesh.fn_catalog_publication_snapshot` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:418 | `mesh.network_account`<br>`mesh.network_relationship` |
+| function | `mesh.command_document_envelope_lifecycle` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1209 | `master.tenant`<br>`mesh.network_account`<br>`mesh.network_relationship` |
+| function | `mesh.command_issue_registration_exchange` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1783 | `mesh.network_account` |
+| function | `mesh.command_issue_registration_exchange` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260906_mesh_exchange_readiness.sql:247 | `mesh.network_account` |
+| function | `mesh.command_network_account_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:693 | `mesh.network_account` |
+| function | `mesh.command_network_relationship_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:857 | `mesh.network_relationship` |
+| function | `mesh.command_open_canonical_party_correlation_case` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2181 | `mesh.network_account` |
+| function | `mesh.command_registration_exchange_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1799 | `mesh.network_account` |
+| function | `mesh.command_relationship_capability_lifecycle` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1672 | `master.tenant`<br>`mesh.network_relationship` |
+| function | `mesh.command_relationship_capability_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260906_mesh_exchange_readiness.sql:215 | `mesh.network_relationship` |
+| function | `mesh.command_relationship_capability_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260910_mesh_command_hardening.sql:35 | `mesh.network_relationship` |
+| function | `mesh.command_request_network_relationship` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:762 | `mesh.network_relationship` |
+| function | `mesh.command_request_relationship_capability` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1647 | `mesh.network_relationship` |
+| function | `mesh.command_request_relationship_capability` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260906_mesh_exchange_readiness.sql:190 | `mesh.network_relationship` |
+| function | `mesh.command_resolve_canonical_party_correlation_case` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2195 | `mesh.network_account` |
+| function | `mesh.command_retrieve_bank_protected_token` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2139 | `mesh.network_account`<br>`mesh.network_relationship` |
+| function | `mesh.command_retrieve_bank_protected_token` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260910_mesh_command_hardening.sql:149 | `mesh.network_account`<br>`mesh.network_relationship` |
+| function | `mesh.fn_catalog_publication_snapshot` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:416 | `mesh.network_account`<br>`mesh.network_relationship` |
 | function | `mesh.fn_upsert_network_scope` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:884 | `master.tenant` |
-| function | `mesh.is_hardened_https_url` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1845 | `master.principal`<br>`mesh.network_account` |
-| trigger | `mesh.network_account.trg_network_account_command_authority` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1314 | `mesh.network_account` |
-| trigger | `mesh.network_account.trg_network_account_identity_coordinates_immutable` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1317 | `mesh.network_account` |
+| function | `mesh.is_hardened_https_url` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1924 | `master.principal`<br>`mesh.network_account` |
+| function | `mesh.lock_profile_publication_relationship` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:954 | `mesh.network_account`<br>`mesh.network_relationship` |
+| trigger | `mesh.network_account.trg_network_account_command_authority` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1312 | `mesh.network_account` |
+| trigger | `mesh.network_account.trg_network_account_identity_coordinates_immutable` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1315 | `mesh.network_account` |
 | trigger | `mesh.network_account.trg_network_account_status_changed` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:42 | `mesh.network_account` |
-| trigger | `mesh.network_account.wave6_network_account_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:259 | `mesh.network_account` |
-| trigger | `mesh.network_account.wave6_network_account_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1307 | `mesh.network_account` |
-| trigger | `mesh.network_account.wave6_network_account_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:257 | `mesh.network_account` |
-| trigger | `mesh.network_account.wave6_network_account_scope` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:261 | `mesh.network_account` |
-| trigger | `mesh.network_relationship.trg_network_relationship_command_authority` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1320 | `mesh.network_relationship` |
-| trigger | `mesh.network_relationship.trg_network_relationship_identity_coordinates_immutable` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1323 | `mesh.network_relationship` |
+| trigger | `mesh.network_account.wave6_network_account_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:250 | `mesh.network_account` |
+| trigger | `mesh.network_account.wave6_network_account_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1305 | `mesh.network_account` |
+| trigger | `mesh.network_account.wave6_network_account_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:248 | `mesh.network_account` |
+| trigger | `mesh.network_account.wave6_network_account_scope` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:252 | `mesh.network_account` |
+| trigger | `mesh.network_relationship.trg_network_relationship_command_authority` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1318 | `mesh.network_relationship` |
+| trigger | `mesh.network_relationship.trg_network_relationship_identity_coordinates_immutable` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1321 | `mesh.network_relationship` |
 | trigger | `mesh.network_relationship.trg_network_relationship_status_changed` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:46 | `mesh.network_relationship` |
-| trigger | `mesh.network_relationship.wave6_network_relationship_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:260 | `mesh.network_relationship` |
-| trigger | `mesh.network_relationship.wave6_network_relationship_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1310 | `mesh.network_relationship` |
-| trigger | `mesh.network_relationship.wave6_network_relationship_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:258 | `mesh.network_relationship` |
-| trigger | `mesh.network_relationship.wave6_network_relationship_scopes` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:262 | `mesh.network_relationship` |
-| function | `mesh.trg_guard_network_identity_coordinates` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:575 | `mesh.network_account`<br>`mesh.network_relationship` |
+| trigger | `mesh.network_relationship.wave6_network_relationship_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:251 | `mesh.network_relationship` |
+| trigger | `mesh.network_relationship.wave6_network_relationship_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1308 | `mesh.network_relationship` |
+| trigger | `mesh.network_relationship.wave6_network_relationship_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:249 | `mesh.network_relationship` |
+| trigger | `mesh.network_relationship.wave6_network_relationship_scopes` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:253 | `mesh.network_relationship` |
+| function | `mesh.read_eligible_bank_disclosure_source` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:1012 | `mesh.network_account`<br>`mesh.network_relationship` |
+| function | `mesh.read_eligible_bank_disclosure_source_v2` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/15_bank_disclosure_source.sql:1 | `mesh.network_account`<br>`mesh.network_relationship` |
+| function | `mesh.trg_guard_network_identity_coordinates` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:573 | `mesh.network_account`<br>`mesh.network_relationship` |
 | function | `mesh.trg_sync_network_account_scope` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:903 | `mesh.network_account` |
 | function | `mesh.trg_sync_network_relationship_scopes` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:913 | `mesh.network_relationship` |
 | function | `mesh.trg_validate_bank_disclosure` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:731 | `mesh.network_relationship` |
-| function | `mesh.trg_validate_bank_disclosure` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2021 | `mesh.network_relationship` |
+| function | `mesh.trg_validate_bank_disclosure` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2101 | `mesh.network_relationship` |
 | function | `mesh.trg_validate_catalog_audience` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:127 | `mesh.network_relationship` |
 | function | `mesh.trg_validate_catalog_owner` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:78 | `mesh.network_account` |
 | function | `mesh.trg_validate_catalog_price` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:159 | `mesh.network_relationship` |
@@ -772,38 +801,100 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `ops.trg_guard_authorization_parity_certification` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/07_functions.sql:76 | — |
 | function | `ops.trg_guard_authorization_rollout_write` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/07_functions.sql:81 | — |
 | function | `ops.trg_guard_authorization_shadow_comparison` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/07_functions.sql:94 | — |
+| function | `pg_temp.decide` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/scripts/tests/integration/supplier-preference-normalized-scope.sql:25 | `master.operating_organization` |
+| function | `pg_temp.expect_error` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/scripts/tests/integration/db-review/bank.sql:5 | `master.principal`<br>`mesh.network_account`<br>`mesh.network_relationship` |
+| function | `pg_temp.expect_error` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/scripts/tests/integration/db-review/mesh.sql:15 | `mesh.network_relationship` |
+| function | `pg_temp.must_fail` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/scripts/tests/integration/bank-directory/ownership.sql:4 | `master.principal` |
+| function | `pg_temp.r4_fail_outbox` | structural_dependency | finance-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/scripts/tests/integration/business-partner-r4-change-case.sql:3 | `master.company_code`<br>`master.legal_entity`<br>`master.operating_organization`<br>`master.principal` |
+| function | `pg_temp.r4_fail_outbox` | structural_dependency | finance-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/scripts/tests/integration/business-partner-r6-amendment.sql:3 | `master.company_code`<br>`master.legal_entity`<br>`master.operating_organization`<br>`master.principal` |
+| trigger | `publication.entity_authorization_successor_link.authorization_successor_link_immutable` | structural_dependency | publication | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql:35 | `publication.entity_authorization_successor_link` |
+| trigger | `publication.entity_authorization_successor_link.authorization_successor_link_immutable` | structural_dependency | publication | review_with_registered_dependency | server/db/migrations/20260910_authorization_successor_materializer.sql:37 | `publication.entity_authorization_successor_link` |
+| trigger | `publication.entity_authorization_successor_payload.authorization_successor_payload_immutable` | structural_dependency | publication | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql:19 | `publication.entity_authorization_successor_payload` |
+| trigger | `publication.entity_authorization_successor_payload.authorization_successor_payload_immutable` | structural_dependency | publication | review_with_registered_dependency | server/db/migrations/20260910_authorization_successor_materializer.sql:21 | `publication.entity_authorization_successor_payload` |
+| function | `publication.fn_authorization_successor_compilation_source` | registered | publication | studio_compilation_reader_for_hash_pinned_approved_release | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql:89 | `publication.entity_authorization_successor_link` |
+| function | `publication.fn_authorization_successor_compilation_source` | registered | publication | studio_compilation_reader_for_hash_pinned_approved_release | server/db/migrations/20260910_authorization_successor_materializer.sql:86 | `publication.entity_authorization_successor_link` |
+| function | `publication.fn_prepare_authorization_successor` | registered | publication | studio_approved_release_materialization_with_maker_checker_and_tenant_checks | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql:41 | `publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
+| function | `publication.fn_prepare_authorization_successor` | registered | publication | studio_approved_release_materialization_with_maker_checker_and_tenant_checks | server/db/migrations/20260910_authorization_successor_materializer.sql:43 | `publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
+| function | `publication.fn_prepare_authorization_successor` | registered | publication | studio_approved_release_materialization_with_maker_checker_and_tenant_checks | server/db/migrations/20260911_successor_active_baseline_sequence.sql:2 | `publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
+| function | `publication.fn_successor_canonical_json` | structural_dependency | platform-iam+publication | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql:2 | `master.tenant`<br>`publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
+| function | `publication.fn_successor_canonical_json` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/14_runtime_restoration.sql:3 | `master.tenant` |
+| function | `publication.fn_successor_canonical_json` | structural_dependency | platform-iam+publication | review_with_registered_dependency | server/db/migrations/20260910_authorization_successor_materializer.sql:4 | `master.tenant`<br>`publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
 | table | `runtime_meta.authorization_epoch` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/runtime_meta/03_tables.sql:70 | — |
 | trigger | `runtime_meta.authorization_epoch.trg_authorization_epoch_coordinates_immutable` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/event/08_triggers.sql:46 | — |
 | function | `runtime_meta.trg_authorization_epoch_coordinates_immutable` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/event/07_functions.sql:107 | — |
+| table | `snapshot.subscription_plan_entitlement` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/snapshot/03_tables.sql:128 | — |
+| trigger | `snapshot.subscription_plan_entitlement.subscription_plan_entitlement_immutable` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/snapshot/08_triggers.sql:27 | — |
 
 ## Runtime authorization reader and evaluator symbols
 
 | Symbol | Classification | Artifact class | Path | Lines |
 |---|---|---|---|---|
-| `authorizeAdmin` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 4133 |
+| `authorizeAccess` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2976 |
+| `authorizeAccess` | reviewed | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 606, 1573 |
+| `authorizeAccess` | reviewed | test | server/packages/services/master-data/src/__tests__/master-data-services.test.ts | 30, 38, 39, 113 |
+| `authorizeAccess` | reviewed | runtime | server/packages/services/master-data/src/services.ts | 34, 53, 94, 106, 117, 128, 154, 155, 156 |
+| `authorizeAdmin` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 5506 |
+| `authorizeAdmin` | reviewed | test | server/packages/platform/ai/src/__tests__/atlas-experience-runtime-review.test.ts | 13 |
 | `authorizeAdmin` | reviewed | test | server/packages/platform/ai/src/__tests__/experience-routes.test.ts | 6 |
 | `authorizeAdmin` | reviewed | route | server/packages/platform/ai/src/atlas-experience-routes.ts | 8, 10 |
-| `authorizeDescriptorOperation` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 67, 84, 94, 101, 140, 159, 225, 242, 270, 314 |
-| `authorizeImportMode` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 68, 84, 94, 141, 160, 225, 315 |
-| `authorizeRecordListRead` | reviewed | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 2, 19 |
-| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 10, 28 |
-| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/query-service.ts | 7, 37 |
-| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/record-read-access.ts | 5 |
-| `checkAnyPermission` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 942 |
-| `checkPermission` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 925, 942 |
-| `getEffectiveModuleAccess` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 690 |
-| `requireAllow` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 942 |
-| `requireCatalogPermission` | unclassified | tool | server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts | 54, 109 |
-| `requirePermission` | reviewed | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 26, 39, 51, 58, 59, 60, 61, 62, 63, 73 |
-| `requirePermission` | reviewed | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 9, 86 |
-| `requirePermission` | reviewed | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 27, 70, 108, 431 |
-| `requirePermission` | reviewed | runtime | server/packages/services/documents/src/document-service.ts | 29, 34, 80, 120 |
+| `authorizeAdmission` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 5809 |
+| `authorizeAdmission` | reviewed | test | server/packages/platform/ai/src/__tests__/local-generation.test.ts | 31 |
+| `authorizeAdmission` | reviewed | runtime | server/packages/platform/ai/src/conversation-composition.ts | 20, 25, 80 |
+| `authorizeAdmission` | reviewed | runtime | server/packages/platform/ai/src/local-generation-composition.ts | 31, 34, 38, 41 |
+| `authorizeAssignment` | reviewed | test | server/packages/services/master-data/src/__tests__/business-partner-company-relationships.test.ts | 9, 10 |
+| `authorizeAssignment` | reviewed | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 207, 1067 |
+| `authorizeAssignment` | reviewed | runtime | server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts | 341, 368 |
+| `authorizeCase` | reviewed | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 854, 894 |
+| `authorizeCase` | reviewed | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 159, 241, 497, 950 |
+| `authorizeCase` | reviewed | runtime | server/packages/services/master-data/src/kysely-business-partner-360-explainability.ts | 51, 125, 270, 273, 289 |
+| `authorizeCase` | reviewed | runtime | server/packages/services/master-data/src/kysely-business-partner-360-repository.ts | 149, 266 |
+| `authorizeCaseMutation` | reviewed | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 593, 654, 1006 |
+| `authorizeCaseRead` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 3360 |
+| `authorizeCaseRead` | reviewed | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 865 |
+| `authorizeCaseRead` | reviewed | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 312, 498, 504, 951, 957 |
+| `authorizeCaseRead` | reviewed | tool | tooling/scripts/verification/deploy-business-partner-worker.mjs | 210 |
+| `authorizeDescriptorOperation` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 359, 458, 531, 656, 822, 913, 1229, 1335, 1370, 1584, 1717, 1936 |
+| `authorizeEntityActivation` | reviewed | test | server/packages/services/publication/src/__tests__/authorization-activation-hold.test.ts | 7 |
+| `authorizeEntityActivation` | reviewed | runtime | server/packages/services/publication/src/kysely-publication-authority-work.ts | 56, 647, 649 |
+| `authorizeEntityRelationship` | reviewed | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 17, 250 |
+| `authorizeEntityRelationship` | reviewed | runtime | server/packages/services/records/src/entity-authorization.ts | 355 |
+| `authorizeGateway` | reviewed | runtime | server/apps/platform-host/src/composition/business-partner-import-runtime.ts | 43 |
+| `authorizeGateway` | reviewed | test | server/packages/services/master-data/src/__tests__/business-partner-governed-import.test.ts | 28, 30, 31, 54, 70 |
+| `authorizeGateway` | reviewed | runtime | server/packages/services/master-data/src/business-partner-governed-import.ts | 37, 43 |
+| `authorizeImportMode` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 366, 465, 538, 829, 920, 1236, 1342, 1972 |
+| `authorizeListContextDiscovery` | reviewed | test | server/packages/services/records/src/__tests__/list-context-discovery.test.ts | 7, 71, 84, 91, 104, 120, 135 |
+| `authorizeListContextDiscovery` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 1, 242 |
+| `authorizeListContextDiscovery` | reviewed | runtime | server/packages/services/records/src/list-context-discovery.ts | 16 |
+| `authorizeParent` | reviewed | runtime | server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts | 118, 146, 157 |
+| `authorizeParent` | reviewed | runtime | server/apps/platform-host/src/composition/atlas-document-grounding.ts | 51, 88, 97 |
+| `authorizeParent` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 5931 |
+| `authorizeParent` | reviewed | test | server/packages/services/attachments/src/retrieval-admission.test.ts | 57, 62, 64, 70, 99, 103, 107 |
+| `authorizeParent` | reviewed | runtime | server/packages/services/attachments/src/retrieval-admission.ts | 32, 94 |
+| `authorizeRecordListRead` | reviewed | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 2, 19, 33, 42, 52 |
+| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 61, 167, 249 |
+| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/query-service.ts | 25, 88, 297, 378 |
+| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/record-read-access.ts | 6 |
+| `authorizeVerification` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2977 |
+| `authorizeVerification` | reviewed | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 669, 779, 934, 1006 |
+| `authorizeVerification` | reviewed | test | server/packages/services/master-data/src/__tests__/master-data-services.test.ts | 35, 38 |
+| `authorizeVerification` | reviewed | runtime | server/packages/services/master-data/src/local-contact-challenge.ts | 38 |
+| `authorizeVerification` | reviewed | runtime | server/packages/services/master-data/src/services.ts | 35, 70 |
+| `checkAnyPermission` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 1132 |
+| `checkPermission` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 1112, 1132 |
+| `getEffectiveModuleAccess` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 828 |
+| `requireAllow` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 1132 |
+| `requireCatalogPermission` | unclassified | tool | server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts | 57, 269 |
+| `requirePermission` | reviewed | route | server/packages/planes/neon/src/finance-http.ts | 80, 245, 342, 425 |
+| `requirePermission` | reviewed | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 55, 146, 185, 210, 237, 253, 268, 291, 312, 467 |
+| `requirePermission` | reviewed | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 35, 243 |
+| `requirePermission` | reviewed | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 38, 82, 122, 457 |
+| `requirePermission` | reviewed | runtime | server/packages/services/documents/src/document-service.ts | 30, 35, 90, 128 |
 | `requirePermission` | reviewed | runtime | server/packages/services/finance/src/planning/planning-service.ts | 8, 9, 14, 15, 24 |
-| `requirePermission` | reviewed | runtime | server/packages/services/master-data/src/services.ts | 46, 60, 70, 79, 93, 102, 103, 104, 124 |
 | `requirePermission` | reviewed | route | server/packages/services/publication/src/publication-routes.ts | 37, 46, 54, 62, 72, 81, 90, 107, 123, 136 |
-| `resolveAccessibleCompany` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 690 |
-| `resolveAccessScope` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 690 |
-| `resolveCurrentAuthEpoch` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 690 |
+| `requirePermission` | reviewed | tool | tooling/scripts/verification/master-data-prerequisites.mjs | 51 |
+| `resolveAccessibleCompany` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 828 |
+| `resolveAccessScope` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 828 |
+| `resolveCurrentAuthEpoch` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 828 |
 
 ## Unknown source findings
 
@@ -833,74 +924,142 @@ Capture DDLs:
 
 | Object | Access | Artifact class | Path | Lines |
 |---|---|---|---|---|
-| `master.auth_group` | insert | test | tooling/scripts/policy/authorization-inventory.test.ts | 99 |
-| `master.auth_group` | update | test | tooling/scripts/policy/authorization-inventory.test.ts | 100 |
-| `shared.workspace` | insert | test | server/db/scripts/__tests__/seed/seed-contract-lint.test.ts | 77 |
+| `master.auth_group` | insert | test | tooling/scripts/policy/authorization-inventory.test.ts | 145 |
+| `master.auth_group` | update | test | tooling/scripts/policy/authorization-inventory.test.ts | 146 |
+| `shared.workspace` | insert | test | server/db/scripts/__tests__/seed/seed-contract-lint.test.ts | 84 |
 | `master.company_code` | insert | tool | server/db/scripts/provisioning/neon-scenario-foundation.ts | 30 |
+| `master.company_code` | insert | test | server/db/scripts/tests/integration/business-partner-r4-change-case.sql | 56 |
+| `master.company_code` | insert | test | server/db/scripts/tests/integration/business-partner-r5-fixture-foundation.sql | 11 |
+| `master.company_code` | insert | test | server/db/scripts/tests/integration/business-partner-r6-amendment.sql | 57 |
 | `master.company_code` | insert | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 243 |
+| `master.company_code` | insert | test | server/db/scripts/tests/integration/db-review/account-isolation.sql | 3 |
 | `master.company_code` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 46 |
+| `master.company_code` | insert | tool | tooling/scripts/local-dev/bp-provider-sql.integration.test.mts | 207 |
+| `master.company_code` | update | tool | tooling/scripts/local-dev/bp-provider-sql.integration.test.mts | 316 |
+| `master.company_code` | insert | tool | tooling/scripts/verification/isolated-enter/qualify-company-context-revocation.mjs | 91 |
+| `master.company_code` | update | tool | tooling/scripts/verification/isolated-enter/qualify-company-context-revocation.mjs | 91 |
 | `master.legal_entity` | insert | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 478 |
+| `master.legal_entity` | insert | test | server/db/scripts/tests/integration/business-partner-r4-change-case.sql | 54 |
+| `master.legal_entity` | insert | test | server/db/scripts/tests/integration/business-partner-r5-fixture-foundation.sql | 10 |
+| `master.legal_entity` | insert | test | server/db/scripts/tests/integration/business-partner-r6-amendment.sql | 55 |
 | `master.legal_entity` | insert | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 239 |
 | `master.legal_entity` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 33 |
 | `master.operating_organization` | update | tool | server/db/scripts/business-partner-360/provision-business-partner-360-acceptance-fixtures.ts | 45 |
 | `master.operating_organization` | insert | tool | server/db/scripts/provisioning/neon-scenario-foundation.ts | 68 |
-| `master.operating_organization` | update | tool | server/db/scripts/provisioning/provision-development-business-partner-fixtures.ts | 314 |
+| `master.operating_organization` | insert | tool | server/db/scripts/provisioning/provision-business-partner-r2-fixtures.ts | 216 |
+| `master.operating_organization` | update | tool | server/db/scripts/provisioning/provision-development-business-partner-fixtures.ts | 344 |
+| `master.operating_organization` | insert | test | server/db/scripts/tests/integration/business-partner-r4-change-case.sql | 58 |
+| `master.operating_organization` | insert | test | server/db/scripts/tests/integration/business-partner-r5-fixture-foundation.sql | 12 |
+| `master.operating_organization` | insert | test | server/db/scripts/tests/integration/business-partner-r6-amendment.sql | 59 |
 | `master.operating_organization` | insert | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 247 |
+| `master.operating_organization` | insert | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 1157, 1265 |
+| `master.operating_organization` | update | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 1222, 1609 |
+| `master.operating_organization` | insert | tool | tooling/scripts/local-dev/bp-provider-sql.integration.test.mts | 213 |
+| `master.operating_organization` | insert | tool | tooling/scripts/verification/setup-local-master-data-authority.mjs | 39 |
+| `master.principal` | insert | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 131 |
+| `master.principal` | insert | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 146 |
+| `master.principal` | insert | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 116 |
+| `master.principal` | insert | test | server/apps/platform-host/scripts/db-verification/tests/integration/business-partner-case-contract-publication.ts | 56 |
 | `master.principal` | insert | ddl | server/db/ddl/common/master/12_system_authority_reference_seed.sql | 46 |
 | `master.principal` | delete | tool | server/db/scripts/business-partner-360/run-business-partner-s5-certification.ts | 206 |
 | `master.principal` | insert | tool | server/db/scripts/business-partner-360/run-business-partner-s5-certification.ts | 55 |
 | `master.principal` | update | tool | server/db/scripts/operations/authorization/reset-authorization-clean-slate.ts | 86 |
 | `master.principal` | insert | tool | server/db/scripts/operations/studio/project-meta-entity-admin-identities.ts | 126, 145 |
 | `master.principal` | insert | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 403, 770 |
-| `master.principal` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 529 |
+| `master.principal` | insert | tool | server/db/scripts/provisioning/provision-business-partner-r3-applicant.ts | 42 |
+| `master.principal` | insert | test | server/db/scripts/tests/integration/business-partner-r4-change-case.sql | 25 |
+| `master.principal` | insert | test | server/db/scripts/tests/integration/business-partner-r6-amendment.sql | 26 |
+| `master.principal` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 530 |
 | `master.principal` | insert | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 327 |
 | `master.principal` | delete | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 430 |
 | `master.principal` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 270 |
+| `master.principal` | insert | test | server/db/scripts/tests/integration/ci-integrity.ts | 300, 407 |
+| `master.principal` | insert | test | server/db/scripts/tests/integration/db-review/bank.sql | 21 |
+| `master.principal` | insert | test | server/db/scripts/tests/integration/db-review/mesh.sql | 5 |
+| `master.principal` | insert | test | server/db/scripts/tests/integration/db-review/tenant-isolation.sql | 7 |
 | `master.principal` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 21 |
+| `master.principal` | insert | test | server/db/scripts/tests/integration/identity-replay-live.mjs | 396 |
 | `master.principal` | insert | test | server/db/scripts/tests/integration/meta-entity/schema.sql | 98 |
-| `master.principal` | insert | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 329 |
-| `master.principal` | update | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 335, 423 |
+| `master.principal` | insert | test | server/packages/platform/control-admin/src/authorization-writers.postgres.test.ts | 105 |
+| `master.principal` | insert | test | server/packages/platform/control-admin/src/control-repositories.postgres.test.ts | 124 |
+| `master.principal` | insert | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 343, 1081 |
+| `master.principal` | insert | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 314 |
+| `master.principal` | update | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 320, 408 |
+| `master.principal` | insert | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 912 |
+| `master.principal` | insert | test | server/packages/services/publication/src/__tests__/integration/bank-directory.mjs | 21 |
+| `master.principal` | insert | test | server/packages/services/publication/src/__tests__/integration/business-partner-case-contract-publication.ts | 56 |
 | `master.principal` | insert | runtime | server/packages/test-utils/fixtures/rls-actors.sql | 23 |
+| `master.principal` | insert | tool | tooling/scripts/iam/provision-business-partner-v1-local.mjs | 217 |
+| `master.principal` | insert | tool | tooling/scripts/verification/isolated-enter/preview-company-lifecycle.mts | 122 |
 | `master.principal_identity_binding` | delete | tool | server/db/scripts/operations/iam/reconcile-runtime-subjects.ts | 68 |
 | `master.principal_identity_binding` | insert | tool | server/db/scripts/operations/iam/reconcile-runtime-subjects.ts | 72 |
 | `master.principal_identity_binding` | insert | tool | server/db/scripts/operations/studio/project-meta-entity-admin-identities.ts | 153 |
 | `master.principal_identity_binding` | insert | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 801 |
 | `master.principal_identity_binding` | update | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 781 |
-| `master.principal_identity_binding` | insert | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 341 |
-| `master.principal_identity_binding` | update | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 416 |
+| `master.principal_identity_binding` | insert | tool | server/db/scripts/provisioning/provision-business-partner-r3-applicant.ts | 47 |
+| `master.principal_identity_binding` | insert | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 326 |
+| `master.principal_identity_binding` | update | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 401 |
+| `master.principal_identity_binding` | insert | tool | tooling/scripts/iam/provision-business-partner-v1-local.mjs | 219 |
+| `master.tenant` | insert | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 124 |
+| `master.tenant` | insert | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 139 |
+| `master.tenant` | insert | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 109 |
 | `master.tenant` | insert | ddl | server/db/ddl/common/master/12_system_authority_reference_seed.sql | 29 |
 | `master.tenant` | insert | tool | server/db/scripts/operations/studio/project-meta-entity-admin-identities.ts | 120, 137 |
 | `master.tenant` | insert | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 420 |
 | `master.tenant` | delete | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 557 |
 | `master.tenant` | insert | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 199 |
-| `master.tenant` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 532 |
+| `master.tenant` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 533 |
 | `master.tenant` | insert | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 315 |
 | `master.tenant` | delete | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 431 |
 | `master.tenant` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 256 |
+| `master.tenant` | insert | test | server/db/scripts/tests/integration/db-review/mesh.sql | 3 |
+| `master.tenant` | insert | test | server/db/scripts/tests/integration/db-review/tenant-isolation.sql | 5 |
 | `master.tenant` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 11 |
 | `master.tenant` | insert | test | server/db/scripts/tests/integration/fixtures/publication-authority.sql | 5 |
 | `master.tenant` | insert | test | server/db/scripts/tests/integration/meta-entity/schema.sql | 90 |
+| `master.tenant` | insert | test | server/packages/adapters/experience-postgres/src/localization.postgres.test.ts | 49 |
+| `master.tenant` | insert | test | server/packages/platform/control-admin/src/authorization-writers.postgres.test.ts | 101 |
+| `master.tenant` | insert | test | server/packages/platform/control-admin/src/control-repositories.postgres.test.ts | 121, 358 |
+| `master.tenant` | insert | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 340, 1078 |
+| `master.tenant` | update | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 617, 784, 831, 844, 877, 924, 997 |
+| `master.tenant` | insert | test | server/packages/platform/control-admin/src/parameter-versions.postgres.test.ts | 46 |
+| `master.tenant` | insert | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 211 |
 | `master.tenant` | insert | runtime | server/packages/test-utils/fixtures/rls-actors.sql | 18 |
-| `master.tenant` | update | test | server/packages/test-utils/src/postgres-service-harness.postgres.test.ts | 24, 29 |
-| `mesh.network_account` | update | ddl | server/db/ddl/planes/mesh/mesh/11_grants.sql | 276, 755, 2108 |
+| `master.tenant` | update | test | server/packages/test-utils/src/postgres-service-harness.postgres.test.ts | 48 |
+| `mesh.network_account` | update | ddl | server/db/ddl/planes/mesh/mesh/11_grants.sql | 274, 753, 2206 |
 | `mesh.network_account` | insert | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 523 |
+| `mesh.network_account` | insert | tool | server/db/scripts/provisioning/provision-development-northwind-mesh-fixture.ts | 72 |
 | `mesh.network_account` | insert | tool | server/db/scripts/provisioning/provision-development-phase1-list-fixtures.ts | 31 |
-| `mesh.network_account` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 525 |
+| `mesh.network_account` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 526 |
 | `mesh.network_account` | insert | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 331 |
 | `mesh.network_account` | delete | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 429 |
 | `mesh.network_account` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 274 |
 | `mesh.network_account` | update | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 137 |
-| `mesh_control.authorization_capture_source` | insert | test | tooling/scripts/policy/authorization-inventory.test.ts | 298 |
-| `mesh.network_relationship` | insert | ddl | server/db/ddl/planes/mesh/mesh/11_grants.sql | 838 |
-| `mesh.network_relationship` | update | ddl | server/db/ddl/planes/mesh/mesh/11_grants.sql | 256, 271, 286, 944 |
+| `mesh.network_account` | update | test | server/db/scripts/tests/integration/db-review/bank.sql | 63, 72 |
+| `mesh.network_account` | insert | test | server/db/scripts/tests/integration/db-review/mesh.sql | 7 |
+| `mesh.network_account` | insert | test | server/db/scripts/tests/integration/mesh-api-review.mjs | 87 |
+| `mesh_control.authorization_capture_source` | insert | test | tooling/scripts/policy/authorization-inventory.test.ts | 383 |
+| `mesh.network_relationship` | insert | ddl | server/db/ddl/planes/mesh/mesh/11_grants.sql | 836 |
+| `mesh.network_relationship` | update | ddl | server/db/ddl/planes/mesh/mesh/11_grants.sql | 254, 269, 284, 942 |
 | `mesh.network_relationship` | update | test | server/db/scripts/tests/integration/business-partner-profile-publication.sql | 3 |
-| `mesh.network_relationship` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 517 |
+| `mesh.network_relationship` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 518 |
 | `mesh.network_relationship` | delete | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 427 |
 | `mesh.network_relationship` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 298 |
+| `mesh.network_relationship` | update | test | server/db/scripts/tests/integration/db-review/bank.sql | 45, 54 |
+| `mesh.network_relationship` | update | test | server/db/scripts/tests/integration/db-review/run.mjs | 189, 191 |
 | `mesh.network_relationship` | insert | runtime | server/packages/planes/mesh/src/network-relationship-import.ts | 37 |
 | `mesh.network_relationship` | update | runtime | server/packages/planes/mesh/src/network-relationship-import.ts | 31, 36 |
 | `control.entity_version` | update | test | server/db/scripts/tests/integration/effective-lock-scenarios.ts | 108, 132, 190 |
-| `control.authorization_capture_source` | insert | test | tooling/scripts/policy/authorization-inventory.test.ts | 247, 261, 265, 279 |
+| `control.authorization_capture_source` | insert | test | tooling/scripts/policy/authorization-inventory.test.ts | 335, 349, 353, 366 |
+| `publication.entity_authorization_successor_link` | insert | ddl | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql | 84 |
+| `publication.entity_authorization_successor_link` | insert | runtime | server/db/migrations/20260910_authorization_successor_materializer.sql | 81 |
+| `publication.entity_authorization_successor_link` | insert | runtime | server/db/migrations/20260911_successor_active_baseline_sequence.sql | 45 |
+| `publication.entity_authorization_successor_payload` | insert | tool | tooling/scripts/verification/deploy-business-partner-successor-materializer.mjs | 56 |
+| `publication.entity_authorization_successor_payload` | insert | tool | tooling/scripts/verification/qualify-business-partner-successor-sql.mjs | 13, 16 |
+| `publication.entity_authorization_successor_payload` | update | tool | tooling/scripts/verification/qualify-business-partner-successor-sql.mjs | 20 |
+| `publication.entity_authorization_successor_payload` | insert | tool | tooling/scripts/verification/qualify-business-partner-v2-successor-sql.mjs | 35, 38 |
+| `publication.entity_authorization_successor_payload` | update | tool | tooling/scripts/verification/qualify-business-partner-v2-successor-sql.mjs | 42 |
+| `publication.entity_authorization_successor_payload` | insert | tool | tooling/scripts/verification/stage-business-partner-v2-payload.mjs | 26 |
 
 ## Keycloak REST writer inventory
 
@@ -921,39 +1080,40 @@ Capture DDLs:
 
 | Code | Risk | Definition sources |
 |---|---|---|
-| `mesh.catalog.attachment.create` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:10 |
-| `mesh.catalog.attachment.delete` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:23 |
-| `mesh.catalog.attachment.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:36 |
-| `mesh.catalog.attachment.share` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:49 |
-| `mesh.catalog.bank_account.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:62 |
-| `mesh.catalog.bank_account.update` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:75 |
-| `mesh.catalog.bank_account.verify` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:88 |
-| `mesh.catalog.catalog.publish` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:101 |
-| `mesh.catalog.catalog.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:114 |
-| `mesh.catalog.content_item.create` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:127 |
-| `mesh.catalog.content_item.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:140 |
-| `mesh.catalog.content_item.share` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:153 |
-| `mesh.catalog.content_item.update` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:166 |
-| `mesh.catalog.conversation.add_participant` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:179 |
-| `mesh.catalog.conversation.create` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:192 |
-| `mesh.catalog.conversation.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:205 |
-| `mesh.catalog.conversation.remove_participant` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:218 |
-| `mesh.catalog.document_envelope.acknowledge` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:231 |
-| `mesh.catalog.document_envelope.publish` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:244 |
-| `mesh.catalog.document_envelope.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:257 |
-| `mesh.catalog.document_envelope.replay` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:270 |
-| `mesh.catalog.network_account.connect` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:283 |
-| `mesh.catalog.network_account.invite` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:296 |
-| `mesh.catalog.network_account.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:309 |
-| `mesh.catalog.network_account.update` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:322 |
-| `mesh.catalog.network_relationship.accept` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:335 |
-| `mesh.catalog.network_relationship.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:348 |
-| `mesh.catalog.network_relationship.request` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:361 |
-| `mesh.catalog.network_relationship.suspend` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:374 |
-| `mesh.catalog.network_relationship.terminate` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:387 |
-| `mesh.catalog.supplier_profile_verification.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:400 |
-| `mesh.catalog.supplier_profile_verification.reject` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:413 |
-| `mesh.catalog.supplier_profile_verification.verify` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:426 |
+| `mesh.ai.agent.use` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:10 |
+| `mesh.catalog.attachment.create` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:23 |
+| `mesh.catalog.attachment.delete` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:36 |
+| `mesh.catalog.attachment.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:49 |
+| `mesh.catalog.attachment.share` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:62 |
+| `mesh.catalog.bank_account.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:75 |
+| `mesh.catalog.bank_account.update` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:88 |
+| `mesh.catalog.bank_account.verify` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:101 |
+| `mesh.catalog.catalog.publish` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:114 |
+| `mesh.catalog.catalog.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:127 |
+| `mesh.catalog.content_item.create` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:140 |
+| `mesh.catalog.content_item.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:153 |
+| `mesh.catalog.content_item.share` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:166 |
+| `mesh.catalog.content_item.update` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:179 |
+| `mesh.catalog.conversation.add_participant` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:192 |
+| `mesh.catalog.conversation.create` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:205 |
+| `mesh.catalog.conversation.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:218 |
+| `mesh.catalog.conversation.remove_participant` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:231 |
+| `mesh.catalog.document_envelope.acknowledge` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:244 |
+| `mesh.catalog.document_envelope.publish` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:257 |
+| `mesh.catalog.document_envelope.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:270 |
+| `mesh.catalog.document_envelope.replay` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:283 |
+| `mesh.catalog.network_account.connect` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:296 |
+| `mesh.catalog.network_account.invite` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:309 |
+| `mesh.catalog.network_account.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:322 |
+| `mesh.catalog.network_account.update` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:335 |
+| `mesh.catalog.network_relationship.accept` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:348 |
+| `mesh.catalog.network_relationship.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:361 |
+| `mesh.catalog.network_relationship.request` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:374 |
+| `mesh.catalog.network_relationship.suspend` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:387 |
+| `mesh.catalog.network_relationship.terminate` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:400 |
+| `mesh.catalog.supplier_profile_verification.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:413 |
+| `mesh.catalog.supplier_profile_verification.reject` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:426 |
+| `mesh.catalog.supplier_profile_verification.verify` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:439 |
 | `neon.address_contact.company_code.manage` | medium | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:10 |
 | `neon.address_contact.legal_entity.manage` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:23 |
 | `neon.address_contact.tenant.manage` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:36 |
@@ -978,360 +1138,985 @@ Capture DDLs:
 | `neon.supplier.tax.restricted` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:283 |
 | `neon.supplier.tax.submit` | low | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:296 |
 | `neon.supplier.tax.verify` | medium | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:309 |
-| `studio.iam.application_projection.read` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:10 |
-| `studio.iam.application_projection.replay` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:23 |
-| `studio.iam.idp.manage` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:36 |
-| `studio.iam.idp.read` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:49 |
-| `studio.iam.parameter.manage` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:62 |
-| `studio.jobs.board.view` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:75 |
-| `studio.jobs.queue.manage` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:88 |
-| `studio.metadata.contract_draft.create` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:101 |
-| `studio.metadata.contract.break_glass` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:114 |
-| `studio.metadata.contract.edit` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:127 |
-| `studio.metadata.contract.export` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:140 |
-| `studio.metadata.contract.import` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:153 |
-| `studio.metadata.contract.publish` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:166 |
-| `studio.metadata.contract.review` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:179 |
-| `studio.metadata.contract.rollback` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:192 |
-| `studio.metadata.contract.submit` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:205 |
-| `studio.metadata.contract.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:218 |
-| `studio.metadata.overlay.edit` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:231 |
-| `studio.platform.catalog.manage` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:244 |
-| `studio.platform.catalog.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:257 |
-| `studio.platform.reference.import` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:270 |
-| `studio.platform.reference.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:283 |
-| `studio.platform.subscriptions.manage` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:296 |
-| `studio.platform.subscriptions.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:309 |
-| `studio.platform.taxonomy.import` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:322 |
-| `studio.platform.taxonomy.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:335 |
+| `studio.ai.agent.use` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:10 |
+| `studio.iam.application_projection.read` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:23 |
+| `studio.iam.application_projection.replay` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:36 |
+| `studio.iam.idp.manage` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:49 |
+| `studio.iam.idp.read` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:62 |
+| `studio.iam.parameter.manage` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:75 |
+| `studio.jobs.board.view` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:88 |
+| `studio.jobs.queue.manage` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:101 |
+| `studio.metadata.contract_draft.create` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:114 |
+| `studio.metadata.contract.break_glass` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:127 |
+| `studio.metadata.contract.edit` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:140 |
+| `studio.metadata.contract.export` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:153 |
+| `studio.metadata.contract.import` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:166 |
+| `studio.metadata.contract.publish` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:179 |
+| `studio.metadata.contract.review` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:192 |
+| `studio.metadata.contract.rollback` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:205 |
+| `studio.metadata.contract.submit` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:218 |
+| `studio.metadata.contract.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:231 |
+| `studio.metadata.overlay.edit` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:244 |
+| `studio.platform.catalog.manage` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:257 |
+| `studio.platform.catalog.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:270 |
+| `studio.platform.reference.import` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:283 |
+| `studio.platform.reference.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:296 |
+| `studio.platform.subscriptions.manage` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:309 |
+| `studio.platform.subscriptions.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:322 |
+| `studio.platform.taxonomy.import` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:335 |
+| `studio.platform.taxonomy.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:348 |
 
 ## Authorization-bearing routes
 
 | Source | Route | Methods | Permissions | Security symbols |
 |---|---|---|---|---|
+| server/packages/planes/neon/src/finance-http.ts | `<dynamic-or-mounted>` | UNKNOWN | — | requirePermission |
+| server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/change-sets` | GET, POST | `studio.platform.catalog.manage` | — |
+| server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/change-sets/:id/${name}` | POST | `studio.platform.catalog.manage` | — |
+| server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/change-sets/:id/graph` | GET, PUT | `studio.platform.catalog.manage` | — |
+| server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/releases/:id/activate` | POST | `studio.platform.catalog.manage` | — |
+| server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/releases/:id/rollback` | POST | `studio.platform.catalog.manage` | — |
 | server/packages/platform/ai/src/atlas-experience-routes.ts | `<dynamic-or-mounted>` | UNKNOWN | `studio.platform.catalog.manage` | authorizeAdmin |
 | server/packages/platform/ai/src/atlas-routes.ts | `<dynamic-or-mounted>` | UNKNOWN | `neon.ai.agent.use` | — |
 | server/packages/platform/ai/src/atlas-surface-draft-routes.ts | `<dynamic-or-mounted>` | UNKNOWN | `studio.platform.catalog.manage` | — |
 | server/packages/platform/experience/src/routes.ts | `<dynamic-or-mounted>` | UNKNOWN | `studio.platform.catalog.manage` | — |
-| server/packages/services/attachments/src/attachment-routes.ts | `/api/attachments/:attachmentId` | DELETE | `mesh.catalog.attachment.create` | — |
-| server/packages/services/attachments/src/attachment-routes.ts | `/api/attachments/:attachmentId/download` | POST | `mesh.catalog.attachment.create` | — |
-| server/packages/services/attachments/src/attachment-routes.ts | `/api/attachments/:attachmentId/finalize` | POST | `mesh.catalog.attachment.create` | — |
-| server/packages/services/attachments/src/attachment-routes.ts | `/api/attachments/:attachmentId/status` | GET | `mesh.catalog.attachment.create` | — |
-| server/packages/services/attachments/src/attachment-routes.ts | `/api/attachments/stage` | POST | `mesh.catalog.attachment.create` | — |
-| server/packages/services/attachments/src/attachment-routes.ts | `/api/content/items/:id/attachments/:attachmentId/versions` | POST | `mesh.catalog.attachment.create` | — |
 | server/packages/services/publication/src/publication-routes.ts | `<dynamic-or-mounted>` | UNKNOWN | — | requirePermission |
 
 ## Contract and UI field inventory
 
 | Field | Artifact class | Path | Lines |
 |---|---|---|---|
-| `allowed` | runtime | governance/config/governance/authorization-data-disposition-inventory.v1.json | 1795 |
+| `allowed` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/apps_neon_lib_auth_ts_0q7z0gp._.js | 1 |
+| `allowed` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/apps_neon_lib_auth_ts_0q7z0gp._.js | 1 |
+| `allowed` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/apps_neon_lib_auth_ts_0q7z0gp._.js | 1 |
+| `allowed` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/apps_neon_lib_auth_ts_0q7z0gp._.js | 1 |
+| `allowed` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/apps_neon_lib_auth_ts_0q7z0gp._.js | 1 |
+| `allowed` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/apps_neon_lib_auth_ts_0q7z0gp._.js | 1 |
+| `allowed` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/apps_studio_lib_auth_ts_0kr8_49._.js | 1 |
+| `allowed` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/apps_studio_lib_auth_ts_0kr8_49._.js | 1 |
+| `allowed` | keycloak | deploy/config/iam/realm-athyper-clean-slate.json | 2239, 2249, 2251, 2685, 2713, 2717, 2732, 2744, 2748 |
+| `allowed` | keycloak | deploy/config/iam/realm-athyper.json | 2241, 2251, 2253, 2846, 2874, 2878, 2893, 2905, 2909 |
+| `allowed` | keycloak | deploy/config/iam/realm-platform-control-clean-slate.json | 191, 200, 202 |
+| `allowed` | keycloak | deploy/config/iam/realm-platform-control.json | 195, 204, 206 |
+| `allowed` | runtime | governance/config/governance/authorization-data-disposition-inventory.v1.json | 1921 |
 | `allowed` | runtime | governance/config/governance/authorization-data-disposition-policy.v1.json | 204 |
+| `allowed` | runtime | governance/policy/reports/business-partner-activation-differences.dev.json | 109, 154, 199, 244, 289, 334, 379, 424, 469, 514, 559, 604, 649, 694, 739, 784, 829, 874, 919, 964, 1009, 1054, 1099, 1144, 1189, 1234, 1279 |
+| `allowed` | runtime | governance/policy/reports/business-partner-affordance-count-66-comparison-20260912-r2.dev.json | 4122, 4132, 4162, 4172, 4184, 4194, 5606, 5648, 11860, 11870, 11900, 11910, 11922, 11932, 13434, 13476 |
+| `allowed` | runtime | governance/policy/reports/business-partner-affordance-count-66-comparison-20260912-r3.dev.json | 4101, 4111, 4141, 4151, 4163, 4173, 11671, 11681, 11711, 11721, 11733, 11743 |
+| `allowed` | runtime | governance/policy/reports/business-partner-affordance-count-66-comparison-20260912-r5.dev.json | 4101, 4111, 4141, 4151, 4163, 4173, 11671, 11681, 11711, 11721, 11733, 11743 |
+| `allowed` | runtime | governance/policy/reports/business-partner-affordance-count-comparisons-admin-20260912-r2.dev.json | 10115, 12266, 13711 |
+| `allowed` | runtime | governance/policy/reports/business-partner-affordance-count-comparisons-admin-20260912-r3.dev.json | 10403, 12842 |
+| `allowed` | runtime | governance/policy/reports/business-partner-affordance-count-comparisons-admin-20260912-r5.dev.json | 10403, 12842 |
+| `allowed` | runtime | governance/policy/reports/business-partner-affordance-count-comparisons-owner-20260912-r2.dev.json | 10060, 12189 |
+| `allowed` | runtime | governance/policy/reports/business-partner-affordance-count-comparisons-owner-20260912-r3.dev.json | 10204, 12477 |
+| `allowed` | runtime | governance/policy/reports/business-partner-affordance-count-comparisons-owner-20260912-r5.dev.json | 10204, 12477 |
+| `allowed` | runtime | governance/policy/reports/business-partner-causal-shadow.admin-repeat.dev.json | 60, 100, 140, 180, 240, 260, 300, 340, 402, 444, 486, 528, 570, 633, 696, 738, 800, 842, 904, 1092, 1116, 1139, 1163, 1186, 1209, 1232, 1256, 1279, 1325, 1368, 1408 |
+| `allowed` | runtime | governance/policy/reports/business-partner-causal-shadow.admin.dev.json | 60, 100, 140, 180, 240, 260, 300, 340, 402, 444, 486, 528, 570, 633, 696, 738, 800, 842, 904, 1092, 1116, 1139, 1163, 1186, 1209, 1232, 1256, 1279, 1325, 1368, 1428, 1468, 1508, 1548, 1588, 1648, 1708, 1748, 1808, 1848, 1908, 1948, 1988 |
+| `allowed` | runtime | governance/policy/reports/business-partner-causal-shadow.owner-qualified.dev.json | 60, 100, 140, 180, 300, 340, 563, 832, 1099, 1139 |
+| `allowed` | runtime | governance/policy/reports/business-partner-consolidated-disposition-source-audit-20260912.dev.json | 109, 155, 201, 247, 293, 339, 385, 431, 477, 523, 569, 615, 661, 707, 753, 799, 845, 891, 937, 983, 1029, 1075, 1121, 1167, 1213, 1259, 1305 |
+| `allowed` | runtime | governance/policy/reports/business-partner-r4-66-disposition-coverage-20260912.dev.json | 36, 186, 418, 433, 726, 1009, 1024, 1248 |
+| `allowed` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.3a22a0df96a2.dev.json | 127, 128, 134, 163, 169, 197, 198, 204, 233, 239, 267, 268, 274, 338, 346, 374, 375, 383, 447, 455, 483, 484, 492, 556, 564, 592, 593, 601, 673, 701, 710, 739, 747, 775, 776, 784, 848, 856, 884, 885, 893, 957, 963, 991, 992, 998, 1098, 1099, 1105, 1169, 1177, 1205, 1206, 1214, 1321, 1349, 1358, 1387, 1395, 1423, 1424, 1432, 1461, 1469, 1533, 1541, 1569, 1570, 1578, 1642, 1650, 1678, 1679, 1687, 1751, 1757, 1785, 1786, 1792, 1856, 1864, 1893, 1901, 1966, 2039, 2045, 2073, 2074, 2080, 2144, 2152, 2180, 2181, 2189, 2253, 2261, 2289, 2290, 2298, 2362, 2370, 2398, 2399, 2407, 2479, 2507, 2516, 2545, 2553, 2581, 2582, 2590, 2654, 2662, 2690, 2691, 2699, 2763, 2769, 2797, 2798, 2804, 2904, 2905, 2911, 2975, 2983, 3011, 3012, 3020, 3127, 3155, 3164, 3193, 3201, 3229, 3230, 3238, 3267, 3275, 3339, 3347, 3375, 3376, 3384, 3448, 3456, 3484, 3485, 3493, 3557, 3563, 3591, 3592, 3598, 3662, 3670, 3699, 3707, 3772, 4136, 4137, 4143, 4171, 4172, 4178, 4206, 4207, 4213, 4241, 4278, 4279, 4287, 4315, 4352, 4353, 4361, 4389, 4426, 4427, 4435, 4463, 4500, 4509, 4537, 4538, 4546, 4574, 4611, 4612, 4620, 4648, 4685, 4686, 4692, 4720, 4757, 4795, 4832, 4833, 4841, 4904, 4941, 4950, 4978, 4987, 5016, 5024, 5052, 5089, 5090, 5098, 5126, 5163, 5164, 5172, 5200, 5237, 5238, 5244, 5272, 5310, 5318, 5347, 5355, 5383, 5421, 5458, 5459, 5465, 5493, 5530, 5531, 5539, 5567, 5604, 5605, 5613, 5641, 5678, 5679, 5687, 5715, 5752, 5761, 5789, 5790, 5798, 5826, 5863, 5864, 5872, 5900, 5937, 5938, 5944, 5972, 6009, 6047, 6084, 6085, 6093, 6156, 6193, 6202, 6230, 6239, 6268, 6276, 6304, 6341, 6342, 6350, 6378, 6415, 6416, 6424, 6452, 6489, 6490, 6496, 6524, 6562, 6570, 6599, 6607, 6635, 6673, 6710, 6749, 6788, 6827, 6865, 6904, 6981, 7018, 7019, 7025, 7053, 7054, 7060, 7088, 7089, 7095, 7123, 7160, 7161, 7169, 7197, 7234, 7235, 7243, 7271, 7308, 7309, 7317, 7345, 7382, 7391, 7419, 7420, 7428, 7456, 7493, 7494, 7502, 7530, 7567, 7568, 7574, 7602, 7639, 7677, 7714, 7715, 7723, 7786, 7823, 7832, 7860, 7869, 7898, 7906, 7934, 7971, 7972, 7980, 8008, 8045, 8046, 8054, 8082, 8119, 8120, 8126, 8154, 8192, 8200, 8229, 8237, 8265, 8303, 8340, 8341, 8347, 8375, 8376, 8382, 8410, 8411, 8417, 8445, 8482, 8483, 8491, 8519, 8556, 8557, 8565, 8593, 8630, 8631, 8639, 8667, 8704, 8713, 8741, 8742, 8750, 8778, 8815, 8816, 8824, 8852, 8889, 8890, 8896, 8924, 8961, 8999, 9036, 9037, 9045, 9108, 9145, 9154, 9182, 9191, 9220, 9228, 9256, 9293, 9294, 9302, 9330, 9367, 9368, 9376, 9404, 9441, 9442, 9448, 9476, 9514, 9522, 9551, 9559, 9587, 9625, 9662, 9663, 9669, 9697, 9698, 9704, 9732, 9733, 9739, 9767, 9804, 9805, 9813, 9841, 9878, 9879, 9887, 9915, 9952, 9953, 9961, 9989, 10026, 10035, 10063, 10064, 10072, 10100, 10137, 10138, 10146, 10174, 10211, 10212, 10218, 10246, 10283, 10321, 10358, 10359, 10367, 10430, 10467, 10476, 10504, 10513, 10542, 10550, 10578, 10615, 10616, 10624, 10652, 10689, 10690, 10698, 10726, 10763, 10764, 10770, 10798, 10836, 10844, 10873, 10881, 10909, 10947, 10984, 10985, 10991, 11019, 11020, 11026, 11054, 11055, 11061, 11089, 11126, 11127, 11135, 11163, 11200, 11201, 11209, 11237, 11274, 11275, 11283, 11311, 11348, 11357, 11385, 11386, 11394, 11422, 11459, 11460, 11468, 11496, 11533, 11534, 11540, 11568, 11605, 11643, 11680, 11681, 11689, 11752, 11789, 11798, 11826, 11835, 11864, 11872, 11900, 11937, 11938, 11946, 11974, 12011, 12012, 12020, 12048, 12085, 12086, 12092, 12120, 12158, 12166, 12195, 12203, 12231, 12269, 12306, 12307, 12313, 12341, 12342, 12348, 12376, 12377, 12383, 12411, 12448, 12449, 12457, 12485, 12522, 12523, 12531, 12559, 12596, 12597, 12605, 12633, 12670, 12679, 12707, 12708, 12716, 12744, 12781, 12782, 12790, 12818, 12855, 12856, 12862, 12890, 12927, 12965, 13002, 13003, 13011, 13074, 13111, 13120, 13148, 13157, 13186, 13194, 13222, 13259, 13260, 13268, 13296, 13333, 13334, 13342, 13370, 13407, 13408, 13414, 13442, 13480, 13488, 13517, 13525, 13553, 13591, 13628, 13666, 13667, 13673, 13701, 13702, 13708, 13736, 13737, 13743, 13771, 13808, 13809, 13817, 13845, 13882, 13883, 13891, 13919, 13956, 13957, 13965, 13993, 14030, 14039, 14067, 14068, 14076, 14104, 14141, 14142, 14150, 14178, 14215, 14216, 14222, 14250, 14287, 14325, 14362, 14363, 14371, 14434, 14471, 14480, 14508, 14517, 14546, 14554, 14582, 14619, 14620, 14628, 14656, 14693, 14694, 14702, 14730, 14767, 14768, 14774, 14802, 14840, 14848, 14877, 14885, 14913, 14951, 14988, 14989, 14995, 15023, 15024, 15030, 15058, 15059, 15065, 15093, 15130, 15131, 15139, 15167, 15204, 15205, 15213, 15241, 15278, 15279, 15287, 15315, 15352, 15361, 15389, 15390, 15398, 15426, 15463, 15464, 15472, 15500, 15537, 15538, 15544, 15572, 15609, 15647, 15684, 15685, 15693, 15756, 15793, 15802, 15830, 15839, 15868, 15876, 15904, 15941, 15942, 15950, 15978, 16015, 16016, 16024, 16052, 16089, 16090, 16096, 16124, 16162, 16170, 16199, 16207, 16235, 16273, 16310, 16311, 16317, 16345, 16346, 16352, 16380, 16381, 16387, 16415, 16452, 16453, 16461, 16489, 16526, 16527, 16535, 16563, 16600, 16601, 16609, 16637, 16674, 16683, 16711, 16712, 16720, 16748, 16785, 16786, 16794, 16822, 16859, 16860, 16866, 16894, 16931, 16969, 17006, 17007, 17015, 17078, 17115, 17124, 17152, 17161, 17190, 17198, 17226, 17263, 17264, 17272, 17300, 17337, 17338, 17346, 17374, 17411, 17412, 17418, 17446, 17484, 17492, 17521, 17529, 17557, 17595, 17632, 17633, 17639, 17667, 17668, 17674, 17702, 17703, 17709, 17737, 17774, 17775, 17783, 17811, 17848, 17849, 17857, 17885, 17922, 17923, 17931, 17959, 17996, 18005, 18033, 18034, 18042, 18070, 18107, 18108, 18116, 18144, 18181, 18182, 18188, 18216, 18253, 18291, 18328, 18329, 18337, 18400, 18437, 18446, 18474, 18483, 18512, 18520, 18548, 18585, 18586, 18594, 18622, 18659, 18660, 18668, 18696, 18733, 18734, 18740, 18768, 18806, 18814, 18843, 18851, 18879, 18917, 18954, 18955, 18961, 18989, 18990, 18996, 19024, 19025, 19031, 19059, 19096, 19097, 19105, 19133, 19170, 19171, 19179, 19207, 19244, 19245, 19253, 19281, 19318, 19327, 19355, 19356, 19364, 19392, 19429, 19430, 19438, 19466, 19503, 19504, 19510, 19538, 19575, 19613, 19650, 19651, 19659, 19722, 19759, 19768, 19796, 19805, 19834, 19842, 19870, 19907, 19908, 19916, 19944, 19981, 19982, 19990, 20018, 20055, 20056, 20062, 20090, 20128, 20136, 20165, 20173, 20201, 20239, 20276, 20277, 20283, 20311, 20312, 20318, 20346, 20347, 20353, 20381, 20418, 20419, 20427, 20455, 20492, 20493, 20501, 20529, 20566, 20567, 20575, 20603, 20640, 20649, 20677, 20678, 20686, 20714, 20751, 20752, 20760, 20788, 20825, 20826, 20832, 20860, 20897, 20935, 20972, 20973, 20981, 21044, 21081, 21090, 21118, 21127, 21156, 21164, 21192, 21229, 21230, 21238, 21266, 21303, 21304, 21312, 21340, 21377, 21378, 21384, 21412, 21450, 21458, 21487, 21495, 21523, 21561, 21603, 21626, 21649, 21672, 21695, 21718, 21741, 21764, 21787, 21810, 21833, 21856 |
+| `allowed` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.3fbbbaa37628.dev.json | 127, 128, 134, 162, 163, 169, 198, 204, 232, 233, 239, 268, 274, 302, 303, 309, 373, 381, 409, 410, 418, 482, 490, 518, 519, 527, 591, 599, 627, 628, 636, 708, 736, 745, 774, 782, 810, 811, 819, 883, 891, 919, 920, 928, 992, 998, 1026, 1027, 1033, 1133, 1134, 1140, 1204, 1212, 1240, 1241, 1249, 1356, 1384, 1393, 1422, 1430, 1458, 1459, 1467, 1496, 1504, 1568, 1576, 1604, 1605, 1613, 1677, 1685, 1713, 1714, 1722, 1786, 1792, 1820, 1821, 1827, 1891, 1899, 1928, 1936, 2001, 2074, 2080, 2108, 2109, 2115, 2179, 2187, 2215, 2216, 2224, 2288, 2296, 2324, 2325, 2333, 2397, 2405, 2433, 2434, 2442, 2514, 2542, 2551, 2580, 2588, 2616, 2617, 2625, 2689, 2697, 2725, 2726, 2734, 2798, 2804, 2832, 2833, 2839, 2939, 2940, 2946, 3010, 3018, 3046, 3047, 3055, 3162, 3190, 3199, 3228, 3236, 3264, 3265, 3273, 3302, 3310, 3374, 3382, 3410, 3411, 3419, 3483, 3491, 3519, 3520, 3528, 3592, 3598, 3626, 3627, 3633, 3697, 3705, 3734, 3742, 3807, 4171, 4172, 4178, 4206, 4207, 4213, 4241, 4242, 4248, 4276, 4277, 4283, 4311, 4348, 4349, 4357, 4385, 4422, 4423, 4431, 4459, 4496, 4497, 4505, 4533, 4570, 4579, 4607, 4608, 4616, 4644, 4681, 4682, 4690, 4718, 4755, 4756, 4762, 4790, 4827, 4865, 4902, 4903, 4911, 4974, 5011, 5020, 5048, 5057, 5086, 5094, 5122, 5159, 5160, 5168, 5196, 5233, 5234, 5242, 5270, 5307, 5308, 5314, 5342, 5380, 5388, 5417, 5425, 5453, 5491, 5528, 5529, 5535, 5563, 5600, 5601, 5609, 5637, 5674, 5675, 5683, 5711, 5748, 5749, 5757, 5785, 5822, 5831, 5859, 5860, 5868, 5896, 5933, 5934, 5942, 5970, 6007, 6008, 6014, 6042, 6079, 6117, 6154, 6155, 6163, 6226, 6263, 6272, 6300, 6309, 6338, 6346, 6374, 6411, 6412, 6420, 6448, 6485, 6486, 6494, 6522, 6559, 6560, 6566, 6594, 6632, 6640, 6669, 6677, 6705, 6743, 6780, 6819, 6858, 6897, 6935, 6974, 7051, 7088, 7089, 7095, 7123, 7124, 7130, 7158, 7159, 7165, 7193, 7194, 7200, 7228, 7265, 7266, 7274, 7302, 7339, 7340, 7348, 7376, 7413, 7414, 7422, 7450, 7487, 7496, 7524, 7525, 7533, 7561, 7598, 7599, 7607, 7635, 7672, 7673, 7679, 7707, 7744, 7782, 7819, 7820, 7828, 7891, 7928, 7937, 7965, 7974, 8003, 8011, 8039, 8076, 8077, 8085, 8113, 8150, 8151, 8159, 8187, 8224, 8225, 8231, 8259, 8297, 8305, 8334, 8342, 8370, 8408, 8445, 8446, 8452, 8480, 8481, 8487, 8515, 8516, 8522, 8550, 8551, 8557, 8585, 8622, 8623, 8631, 8659, 8696, 8697, 8705, 8733, 8770, 8771, 8779, 8807, 8844, 8853, 8881, 8882, 8890, 8918, 8955, 8956, 8964, 8992, 9029, 9030, 9036, 9064, 9101, 9139, 9176, 9177, 9185, 9248, 9285, 9294, 9322, 9331, 9360, 9368, 9396, 9433, 9434, 9442, 9470, 9507, 9508, 9516, 9544, 9581, 9582, 9588, 9616, 9654, 9662, 9691, 9699, 9727, 9765, 9802, 9803, 9809, 9837, 9838, 9844, 9872, 9873, 9879, 9907, 9908, 9914, 9942, 9979, 9980, 9988, 10016, 10053, 10054, 10062, 10090, 10127, 10128, 10136, 10164, 10201, 10210, 10238, 10239, 10247, 10275, 10312, 10313, 10321, 10349, 10386, 10387, 10393, 10421, 10458, 10496, 10533, 10534, 10542, 10605, 10642, 10651, 10679, 10688, 10717, 10725, 10753, 10790, 10791, 10799, 10827, 10864, 10865, 10873, 10901, 10938, 10939, 10945, 10973, 11011, 11019, 11048, 11056, 11084, 11122, 11159, 11160, 11166, 11194, 11195, 11201, 11229, 11230, 11236, 11264, 11265, 11271, 11299, 11336, 11337, 11345, 11373, 11410, 11411, 11419, 11447, 11484, 11485, 11493, 11521, 11558, 11567, 11595, 11596, 11604, 11632, 11669, 11670, 11678, 11706, 11743, 11744, 11750, 11778, 11815, 11853, 11890, 11891, 11899, 11962, 11999, 12008, 12036, 12045, 12074, 12082, 12110, 12147, 12148, 12156, 12184, 12221, 12222, 12230, 12258, 12295, 12296, 12302, 12330, 12368, 12376, 12405, 12413, 12441, 12479, 12516, 12517, 12523, 12551, 12552, 12558, 12586, 12587, 12593, 12621, 12622, 12628, 12656, 12693, 12694, 12702, 12730, 12767, 12768, 12776, 12804, 12841, 12842, 12850, 12878, 12915, 12924, 12952, 12953, 12961, 12989, 13026, 13027, 13035, 13063, 13100, 13101, 13107, 13135, 13172, 13210, 13247, 13248, 13256, 13319, 13356, 13365, 13393, 13402, 13431, 13439, 13467, 13504, 13505, 13513, 13541, 13578, 13579, 13587, 13615, 13652, 13653, 13659, 13687, 13725, 13733, 13762, 13770, 13798, 13836, 13873, 13911, 13912, 13918, 13946, 13947, 13953, 13981, 13982, 13988, 14016, 14017, 14023, 14051, 14088, 14089, 14097, 14125, 14162, 14163, 14171, 14199, 14236, 14237, 14245, 14273, 14310, 14319, 14347, 14348, 14356, 14384, 14421, 14422, 14430, 14458, 14495, 14496, 14502, 14530, 14567, 14605, 14642, 14643, 14651, 14714, 14751, 14760, 14788, 14797, 14826, 14834, 14862, 14899, 14900, 14908, 14936, 14973, 14974, 14982, 15010, 15047, 15048, 15054, 15082, 15120, 15128, 15157, 15165, 15193, 15231, 15268, 15269, 15275, 15303, 15304, 15310, 15338, 15339, 15345, 15373, 15374, 15380, 15408, 15445, 15446, 15454, 15482, 15519, 15520, 15528, 15556, 15593, 15594, 15602, 15630, 15667, 15676, 15704, 15705, 15713, 15741, 15778, 15779, 15787, 15815, 15852, 15853, 15859, 15887, 15924, 15962, 15999, 16000, 16008, 16071, 16108, 16117, 16145, 16154, 16183, 16191, 16219, 16256, 16257, 16265, 16293, 16330, 16331, 16339, 16367, 16404, 16405, 16411, 16439, 16477, 16485, 16514, 16522, 16550, 16588, 16625, 16626, 16632, 16660, 16661, 16667, 16695, 16696, 16702, 16730, 16731, 16737, 16765, 16802, 16803, 16811, 16839, 16876, 16877, 16885, 16913, 16950, 16951, 16959, 16987, 17024, 17033, 17061, 17062, 17070, 17098, 17135, 17136, 17144, 17172, 17209, 17210, 17216, 17244, 17281, 17319, 17356, 17357, 17365, 17428, 17465, 17474, 17502, 17511, 17540, 17548, 17576, 17613, 17614, 17622, 17650, 17687, 17688, 17696, 17724, 17761, 17762, 17768, 17796, 17834, 17842, 17871, 17879, 17907, 17945, 17982, 17983, 17989, 18017, 18018, 18024, 18052, 18053, 18059, 18087, 18088, 18094, 18122, 18159, 18160, 18168, 18196, 18233, 18234, 18242, 18270, 18307, 18308, 18316, 18344, 18381, 18390, 18418, 18419, 18427, 18455, 18492, 18493, 18501, 18529, 18566, 18567, 18573, 18601, 18638, 18676, 18713, 18714, 18722, 18785, 18822, 18831, 18859, 18868, 18897, 18905, 18933, 18970, 18971, 18979, 19007, 19044, 19045, 19053, 19081, 19118, 19119, 19125, 19153, 19191, 19199, 19228, 19236, 19264, 19302, 19339, 19340, 19346, 19374, 19375, 19381, 19409, 19410, 19416, 19444, 19445, 19451, 19479, 19516, 19517, 19525, 19553, 19590, 19591, 19599, 19627, 19664, 19665, 19673, 19701, 19738, 19747, 19775, 19776, 19784, 19812, 19849, 19850, 19858, 19886, 19923, 19924, 19930, 19958, 19995, 20033, 20070, 20071, 20079, 20142, 20179, 20188, 20216, 20225, 20254, 20262, 20290, 20327, 20328, 20336, 20364, 20401, 20402, 20410, 20438, 20475, 20476, 20482, 20510, 20548, 20556, 20585, 20593, 20621, 20659, 20696, 20697, 20703, 20731, 20732, 20738, 20766, 20767, 20773, 20801, 20802, 20808, 20836, 20873, 20874, 20882, 20910, 20947, 20948, 20956, 20984, 21021, 21022, 21030, 21058, 21095, 21104, 21132, 21133, 21141, 21169, 21206, 21207, 21215, 21243, 21280, 21281, 21287, 21315, 21352, 21390, 21427, 21428, 21436, 21499, 21536, 21545, 21573, 21582, 21611, 21619, 21647, 21684, 21685, 21693, 21721, 21758, 21759, 21767, 21795, 21832, 21833, 21839, 21867, 21905, 21913, 21942, 21950, 21978, 22016 |
+| `allowed` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.6ce0171efcfd.dev.json | 127, 128, 134, 163, 169, 197, 198, 204, 233, 239, 267, 268, 274, 338, 346, 374, 375, 383, 447, 455, 483, 484, 492, 556, 564, 592, 593, 601, 673, 701, 710, 739, 747, 775, 776, 784, 848, 856, 884, 885, 893, 957, 963, 991, 992, 998, 1098, 1099, 1105, 1169, 1177, 1205, 1206, 1214, 1321, 1349, 1358, 1387, 1395, 1423, 1424, 1432, 1461, 1469, 1533, 1541, 1569, 1570, 1578, 1642, 1650, 1678, 1679, 1687, 1751, 1757, 1785, 1786, 1792, 1856, 1864, 1893, 1901, 1966, 2039, 2045, 2073, 2074, 2080, 2144, 2152, 2180, 2181, 2189, 2253, 2261, 2289, 2290, 2298, 2362, 2370, 2398, 2399, 2407, 2479, 2507, 2516, 2545, 2553, 2581, 2582, 2590, 2654, 2662, 2690, 2691, 2699, 2763, 2769, 2797, 2798, 2804, 2904, 2905, 2911, 2975, 2983, 3011, 3012, 3020, 3127, 3155, 3164, 3193, 3201, 3229, 3230, 3238, 3267, 3275, 3339, 3347, 3375, 3376, 3384, 3448, 3456, 3484, 3485, 3493, 3557, 3563, 3591, 3592, 3598, 3662, 3670, 3699, 3707, 3772, 4136, 4137, 4143, 4171, 4172, 4178, 4206, 4207, 4213, 4241, 4278, 4279, 4287, 4315, 4352, 4353, 4361, 4389, 4426, 4427, 4435, 4463, 4500, 4509, 4537, 4538, 4546, 4574, 4611, 4612, 4620, 4648, 4685, 4686, 4692, 4720, 4757, 4795, 4832, 4833, 4841, 4904, 4941, 4950, 4978, 4987, 5016, 5024, 5052, 5089, 5090, 5098, 5126, 5163, 5164, 5172, 5200, 5237, 5238, 5244, 5272, 5310, 5318, 5347, 5355, 5383, 5421, 5458, 5459, 5465, 5493, 5530, 5531, 5539, 5567, 5604, 5605, 5613, 5641, 5678, 5679, 5687, 5715, 5752, 5761, 5789, 5790, 5798, 5826, 5863, 5864, 5872, 5900, 5937, 5938, 5944, 5972, 6009, 6047, 6084, 6085, 6093, 6156, 6193, 6202, 6230, 6239, 6268, 6276, 6304, 6341, 6342, 6350, 6378, 6415, 6416, 6424, 6452, 6489, 6490, 6496, 6524, 6562, 6570, 6599, 6607, 6635, 6673, 6710, 6749, 6788, 6827, 6865, 6904, 6981, 7018, 7019, 7025, 7053, 7054, 7060, 7088, 7089, 7095, 7123, 7160, 7161, 7169, 7197, 7234, 7235, 7243, 7271, 7308, 7309, 7317, 7345, 7382, 7391, 7419, 7420, 7428, 7456, 7493, 7494, 7502, 7530, 7567, 7568, 7574, 7602, 7639, 7677, 7714, 7715, 7723, 7786, 7823, 7832, 7860, 7869, 7898, 7906, 7934, 7971, 7972, 7980, 8008, 8045, 8046, 8054, 8082, 8119, 8120, 8126, 8154, 8192, 8200, 8229, 8237, 8265, 8303, 8340, 8341, 8347, 8375, 8376, 8382, 8410, 8411, 8417, 8445, 8482, 8483, 8491, 8519, 8556, 8557, 8565, 8593, 8630, 8631, 8639, 8667, 8704, 8713, 8741, 8742, 8750, 8778, 8815, 8816, 8824, 8852, 8889, 8890, 8896, 8924, 8961, 8999, 9036, 9037, 9045, 9108, 9145, 9154, 9182, 9191, 9220, 9228, 9256, 9293, 9294, 9302, 9330, 9367, 9368, 9376, 9404, 9441, 9442, 9448, 9476, 9514, 9522, 9551, 9559, 9587, 9625, 9662, 9663, 9669, 9697, 9698, 9704, 9732, 9733, 9739, 9767, 9804, 9805, 9813, 9841, 9878, 9879, 9887, 9915, 9952, 9953, 9961, 9989, 10026, 10035, 10063, 10064, 10072, 10100, 10137, 10138, 10146, 10174, 10211, 10212, 10218, 10246, 10283, 10321, 10358, 10359, 10367, 10430, 10467, 10476, 10504, 10513, 10542, 10550, 10578, 10615, 10616, 10624, 10652, 10689, 10690, 10698, 10726, 10763, 10764, 10770, 10798, 10836, 10844, 10873, 10881, 10909, 10947, 10984, 10985, 10991, 11019, 11020, 11026, 11054, 11055, 11061, 11089, 11126, 11127, 11135, 11163, 11200, 11201, 11209, 11237, 11274, 11275, 11283, 11311, 11348, 11357, 11385, 11386, 11394, 11422, 11459, 11460, 11468, 11496, 11533, 11534, 11540, 11568, 11605, 11643, 11680, 11681, 11689, 11752, 11789, 11798, 11826, 11835, 11864, 11872, 11900, 11937, 11938, 11946, 11974, 12011, 12012, 12020, 12048, 12085, 12086, 12092, 12120, 12158, 12166, 12195, 12203, 12231, 12269, 12306, 12307, 12313, 12341, 12342, 12348, 12376, 12377, 12383, 12411, 12448, 12449, 12457, 12485, 12522, 12523, 12531, 12559, 12596, 12597, 12605, 12633, 12670, 12679, 12707, 12708, 12716, 12744, 12781, 12782, 12790, 12818, 12855, 12856, 12862, 12890, 12927, 12965, 13002, 13003, 13011, 13074, 13111, 13120, 13148, 13157, 13186, 13194, 13222, 13259, 13260, 13268, 13296, 13333, 13334, 13342, 13370, 13407, 13408, 13414, 13442, 13480, 13488, 13517, 13525, 13553, 13591, 13628, 13666, 13667, 13673, 13701, 13702, 13708, 13736, 13737, 13743, 13771, 13808, 13809, 13817, 13845, 13882, 13883, 13891, 13919, 13956, 13957, 13965, 13993, 14030, 14039, 14067, 14068, 14076, 14104, 14141, 14142, 14150, 14178, 14215, 14216, 14222, 14250, 14287, 14325, 14362, 14363, 14371, 14434, 14471, 14480, 14508, 14517, 14546, 14554, 14582, 14619, 14620, 14628, 14656, 14693, 14694, 14702, 14730, 14767, 14768, 14774, 14802, 14840, 14848, 14877, 14885, 14913, 14951, 14988, 14989, 14995, 15023, 15024, 15030, 15058, 15059, 15065, 15093, 15130, 15131, 15139, 15167, 15204, 15205, 15213, 15241, 15278, 15279, 15287, 15315, 15352, 15361, 15389, 15390, 15398, 15426, 15463, 15464, 15472, 15500, 15537, 15538, 15544, 15572, 15609, 15647, 15684, 15685, 15693, 15756, 15793, 15802, 15830, 15839, 15868, 15876, 15904, 15941, 15942, 15950, 15978, 16015, 16016, 16024, 16052, 16089, 16090, 16096, 16124, 16162, 16170, 16199, 16207, 16235, 16273, 16310, 16311, 16317, 16345, 16346, 16352, 16380, 16381, 16387, 16415, 16452, 16453, 16461, 16489, 16526, 16527, 16535, 16563, 16600, 16601, 16609, 16637, 16674, 16683, 16711, 16712, 16720, 16748, 16785, 16786, 16794, 16822, 16859, 16860, 16866, 16894, 16931, 16969, 17006, 17007, 17015, 17078, 17115, 17124, 17152, 17161, 17190, 17198, 17226, 17263, 17264, 17272, 17300, 17337, 17338, 17346, 17374, 17411, 17412, 17418, 17446, 17484, 17492, 17521, 17529, 17557, 17595, 17632, 17633, 17639, 17667, 17668, 17674, 17702, 17703, 17709, 17737, 17774, 17775, 17783, 17811, 17848, 17849, 17857, 17885, 17922, 17923, 17931, 17959, 17996, 18005, 18033, 18034, 18042, 18070, 18107, 18108, 18116, 18144, 18181, 18182, 18188, 18216, 18253, 18291, 18328, 18329, 18337, 18400, 18437, 18446, 18474, 18483, 18512, 18520, 18548, 18585, 18586, 18594, 18622, 18659, 18660, 18668, 18696, 18733, 18734, 18740, 18768, 18806, 18814, 18843, 18851, 18879, 18917, 18954, 18955, 18961, 18989, 18990, 18996, 19024, 19025, 19031, 19059, 19096, 19097, 19105, 19133, 19170, 19171, 19179, 19207, 19244, 19245, 19253, 19281, 19318, 19327, 19355, 19356, 19364, 19392, 19429, 19430, 19438, 19466, 19503, 19504, 19510, 19538, 19575, 19613, 19650, 19651, 19659, 19722, 19759, 19768, 19796, 19805, 19834, 19842, 19870, 19907, 19908, 19916, 19944, 19981, 19982, 19990, 20018, 20055, 20056, 20062, 20090, 20128, 20136, 20165, 20173, 20201, 20239, 20276, 20277, 20283, 20311, 20312, 20318, 20346, 20347, 20353, 20381, 20418, 20419, 20427, 20455, 20492, 20493, 20501, 20529, 20566, 20567, 20575, 20603, 20640, 20649, 20677, 20678, 20686, 20714, 20751, 20752, 20760, 20788, 20825, 20826, 20832, 20860, 20897, 20935, 20972, 20973, 20981, 21044, 21081, 21090, 21118, 21127, 21156, 21164, 21192, 21229, 21230, 21238, 21266, 21303, 21304, 21312, 21340, 21377, 21378, 21384, 21412, 21450, 21458, 21487, 21495, 21523, 21561, 21600, 21620, 21640, 21660, 21680, 21700, 21720, 21740, 21760, 21780, 21800, 21820, 21840 |
+| `allowed` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.b907d257.dev.json | 128, 134, 162, 163, 169, 198, 204, 232, 233, 239, 303, 311, 339, 340, 348, 412, 420, 448, 449, 457, 521, 529, 557, 558, 566, 638, 666, 675, 704, 712, 740, 741, 749, 813, 821, 849, 850, 858, 922, 928, 956, 957, 963, 1063, 1064, 1070, 1134, 1142, 1170, 1171, 1179, 1286, 1314, 1323, 1352, 1360, 1388, 1389, 1397, 1426, 1434, 1498, 1506, 1534, 1535, 1543, 1607, 1615, 1643, 1644, 1652, 1716, 1722, 1750, 1751, 1757, 1821, 1829, 1858, 1866, 1931, 2004, 2010, 2038, 2039, 2045, 2109, 2117, 2145, 2146, 2154, 2218, 2226, 2254, 2255, 2263, 2327, 2335, 2363, 2364, 2372, 2444, 2472, 2481, 2510, 2518, 2546, 2547, 2555, 2619, 2627, 2655, 2656, 2664, 2728, 2734, 2762, 2763, 2769, 2869, 2870, 2876, 2940, 2948, 2976, 2977, 2985, 3092, 3120, 3129, 3158, 3166, 3194, 3195, 3203, 3232, 3240, 3304, 3312, 3340, 3341, 3349, 3413, 3421, 3449, 3450, 3458, 3522, 3528, 3556, 3557, 3563, 3627, 3635, 3664, 3672, 3737, 4101, 4102, 4108, 4136, 4137, 4143, 4171, 4208, 4209, 4217, 4245, 4282, 4283, 4291, 4319, 4356, 4357, 4365, 4393, 4430, 4439, 4467, 4468, 4476, 4504, 4541, 4542, 4550, 4578, 4615, 4616, 4622, 4650, 4687, 4725, 4762, 4763, 4771, 4834, 4871, 4880, 4908, 4917, 4946, 4954, 4982, 5019, 5020, 5028, 5056, 5093, 5094, 5102, 5130, 5167, 5168, 5174, 5202, 5240, 5248, 5277, 5285, 5313, 5351, 5388, 5389, 5395, 5423, 5460, 5461, 5469, 5497, 5534, 5535, 5543, 5571, 5608, 5609, 5617, 5645, 5682, 5691, 5719, 5720, 5728, 5756, 5793, 5794, 5802, 5830, 5867, 5868, 5874, 5902, 5939, 5977, 6014, 6015, 6023, 6086, 6123, 6132, 6160, 6169, 6198, 6206, 6234, 6271, 6272, 6280, 6308, 6345, 6346, 6354, 6382, 6419, 6420, 6426, 6454, 6492, 6500, 6529, 6537, 6565, 6603, 6640, 6679, 6718, 6757, 6795, 6834, 6911, 6948, 6949, 6955, 6983, 6984, 6990, 7018, 7055, 7056, 7064, 7092, 7129, 7130, 7138, 7166, 7203, 7204, 7212, 7240, 7277, 7286, 7314, 7315, 7323, 7351, 7388, 7389, 7397, 7425, 7462, 7463, 7469, 7497, 7534, 7572, 7609, 7610, 7618, 7681, 7718, 7727, 7755, 7764, 7793, 7801, 7829, 7866, 7867, 7875, 7903, 7940, 7941, 7949, 7977, 8014, 8015, 8021, 8049, 8087, 8095, 8124, 8132, 8160, 8198, 8235, 8236, 8242, 8270, 8271, 8277, 8305, 8342, 8343, 8351, 8379, 8416, 8417, 8425, 8453, 8490, 8491, 8499, 8527, 8564, 8573, 8601, 8602, 8610, 8638, 8675, 8676, 8684, 8712, 8749, 8750, 8756, 8784, 8821, 8859, 8896, 8897, 8905, 8968, 9005, 9014, 9042, 9051, 9080, 9088, 9116, 9153, 9154, 9162, 9190, 9227, 9228, 9236, 9264, 9301, 9302, 9308, 9336, 9374, 9382, 9411, 9419, 9447, 9485, 9522, 9523, 9529, 9557, 9558, 9564, 9592, 9629, 9630, 9638, 9666, 9703, 9704, 9712, 9740, 9777, 9778, 9786, 9814, 9851, 9860, 9888, 9889, 9897, 9925, 9962, 9963, 9971, 9999, 10036, 10037, 10043, 10071, 10108, 10146, 10183, 10184, 10192, 10255, 10292, 10301, 10329, 10338, 10367, 10375, 10403, 10440, 10441, 10449, 10477, 10514, 10515, 10523, 10551, 10588, 10589, 10595, 10623, 10661, 10669, 10698, 10706, 10734, 10772, 10809, 10810, 10816, 10844, 10845, 10851, 10879, 10916, 10917, 10925, 10953, 10990, 10991, 10999, 11027, 11064, 11065, 11073, 11101, 11138, 11147, 11175, 11176, 11184, 11212, 11249, 11250, 11258, 11286, 11323, 11324, 11330, 11358, 11395, 11433, 11470, 11471, 11479, 11542, 11579, 11588, 11616, 11625, 11654, 11662, 11690, 11727, 11728, 11736, 11764, 11801, 11802, 11810, 11838, 11875, 11876, 11882, 11910, 11948, 11956, 11985, 11993, 12021, 12059, 12096, 12097, 12103, 12131, 12132, 12138, 12166, 12203, 12204, 12212, 12240, 12277, 12278, 12286, 12314, 12351, 12352, 12360, 12388, 12425, 12434, 12462, 12463, 12471, 12499, 12536, 12537, 12545, 12573, 12610, 12611, 12617, 12645, 12682, 12720, 12757, 12758, 12766, 12829, 12866, 12875, 12903, 12912, 12941, 12949, 12977, 13014, 13015, 13023, 13051, 13088, 13089, 13097, 13125, 13162, 13163, 13169, 13197, 13235, 13243, 13272, 13280, 13308, 13346, 13383, 13421, 13422, 13428, 13456, 13457, 13463, 13491, 13528, 13529, 13537, 13565, 13602, 13603, 13611, 13639, 13676, 13677, 13685, 13713, 13750, 13759, 13787, 13788, 13796, 13824, 13861, 13862, 13870, 13898, 13935, 13936, 13942, 13970, 14007, 14045, 14082, 14083, 14091, 14154, 14191, 14200, 14228, 14237, 14266, 14274, 14302, 14339, 14340, 14348, 14376, 14413, 14414, 14422, 14450, 14487, 14488, 14494, 14522, 14560, 14568, 14597, 14605, 14633, 14671, 14708, 14709, 14715, 14743, 14744, 14750, 14778, 14815, 14816, 14824, 14852, 14889, 14890, 14898, 14926, 14963, 14964, 14972, 15000, 15037, 15046, 15074, 15075, 15083, 15111, 15148, 15149, 15157, 15185, 15222, 15223, 15229, 15257, 15294, 15332, 15369, 15370, 15378, 15441, 15478, 15487, 15515, 15524, 15553, 15561, 15589, 15626, 15627, 15635, 15663, 15700, 15701, 15709, 15737, 15774, 15775, 15781, 15809, 15847, 15855, 15884, 15892, 15920, 15958, 15995, 15996, 16002, 16030, 16031, 16037, 16065, 16102, 16103, 16111, 16139, 16176, 16177, 16185, 16213, 16250, 16251, 16259, 16287, 16324, 16333, 16361, 16362, 16370, 16398, 16435, 16436, 16444, 16472, 16509, 16510, 16516, 16544, 16581, 16619, 16656, 16657, 16665, 16728, 16765, 16774, 16802, 16811, 16840, 16848, 16876, 16913, 16914, 16922, 16950, 16987, 16988, 16996, 17024, 17061, 17062, 17068, 17096, 17134, 17142, 17171, 17179, 17207, 17245, 17282, 17283, 17289, 17317, 17318, 17324, 17352, 17389, 17390, 17398, 17426, 17463, 17464, 17472, 17500, 17537, 17538, 17546, 17574, 17611, 17620, 17648, 17649, 17657, 17685, 17722, 17723, 17731, 17759, 17796, 17797, 17803, 17831, 17868, 17906, 17943, 17944, 17952, 18015, 18052, 18061, 18089, 18098, 18127, 18135, 18163, 18200, 18201, 18209, 18237, 18274, 18275, 18283, 18311, 18348, 18349, 18355, 18383, 18421, 18429, 18458, 18466, 18494, 18532, 18569, 18570, 18576, 18604, 18605, 18611, 18639, 18676, 18677, 18685, 18713, 18750, 18751, 18759, 18787, 18824, 18825, 18833, 18861, 18898, 18907, 18935, 18936, 18944, 18972, 19009, 19010, 19018, 19046, 19083, 19084, 19090, 19118, 19155, 19193, 19230, 19231, 19239, 19302, 19339, 19348, 19376, 19385, 19414, 19422, 19450, 19487, 19488, 19496, 19524, 19561, 19562, 19570, 19598, 19635, 19636, 19642, 19670, 19708, 19716, 19745, 19753, 19781, 19819, 19856, 19857, 19863, 19891, 19892, 19898, 19926, 19963, 19964, 19972, 20000, 20037, 20038, 20046, 20074, 20111, 20112, 20120, 20148, 20185, 20194, 20222, 20223, 20231, 20259, 20296, 20297, 20305, 20333, 20370, 20371, 20377, 20405, 20442, 20480, 20517, 20518, 20526, 20589, 20626, 20635, 20663, 20672, 20701, 20709, 20737, 20774, 20775, 20783, 20811, 20848, 20849, 20857, 20885, 20922, 20923, 20929, 20957, 20995, 21003, 21032, 21040, 21068, 21106, 21145, 21165, 21185, 21205, 21225, 21245, 21265, 21285, 21305, 21325, 21345, 21365, 21385, 21405, 21425, 21445, 21465, 21485, 21505, 21525, 21545, 21565, 21585, 21605, 21625, 21645 |
+| `allowed` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.3a22a0df96a2.dev.json | 127, 128, 134, 163, 169, 197, 198, 204, 233, 239, 267, 268, 274, 338, 346, 375, 383, 412, 420, 457, 486, 494, 523, 529, 557, 558, 564, 664, 665, 671, 735, 743, 780, 809, 817, 846, 854, 882, 883, 891, 955, 963, 992, 998, 1026, 1027, 1033, 1097, 1105, 1134, 1142, 1208, 1214, 1242, 1243, 1249, 1313, 1321, 1350, 1358, 1387, 1395, 1432, 1461, 1469, 1498, 1504, 1532, 1533, 1539, 1639, 1640, 1646, 1710, 1718, 1755, 1784, 1792, 1821, 1829, 1857, 1858, 1866, 1930, 1938, 1967, 1973, 2001, 2002, 2008, 2072, 2080, 2109, 2117, 2474, 2475, 2481, 2509, 2510, 2516, 2544, 2545, 2551, 2617, 2625, 2654, 2662, 2691, 2699, 2736, 2765, 2773, 2801, 2802, 2808, 2873, 2949, 2957, 2994, 3023, 3031, 3059, 3060, 3068, 3134, 3142, 3170, 3171, 3177, 3243, 3251, 3280, 3288, 3354, 3355, 3361, 3427, 3435, 3464, 3472, 3501, 3509, 3546, 3575, 3583, 3611, 3612, 3618, 3683, 3759, 3767, 3804, 3833, 3841, 3869, 3870, 3878, 3944, 3952, 3980, 3981, 3987, 4053, 4061, 4090, 4098, 4462, 4463, 4469, 4497, 4498, 4504, 4532, 4533, 4539, 4605, 4613, 4642, 4650, 4679, 4687, 4724, 4753, 4761, 4789, 4790, 4796, 4861, 4937, 4945, 4982, 5011, 5019, 5047, 5048, 5056, 5122, 5130, 5158, 5159, 5165, 5231, 5239, 5268, 5276, 5342, 5343, 5349, 5377, 5378, 5384, 5412, 5413, 5419, 5485, 5493, 5522, 5530, 5559, 5567, 5604, 5633, 5641, 5669, 5670, 5676, 5741, 5817, 5825, 5862, 5891, 5899, 5927, 5928, 5936, 6002, 6010, 6038, 6039, 6045, 6111, 6119, 6148, 6156, 6222, 6223, 6229, 6257, 6258, 6264, 6292, 6293, 6299, 6365, 6373, 6402, 6410, 6439, 6447, 6484, 6513, 6521, 6549, 6550, 6556, 6621, 6697, 6705, 6742, 6771, 6779, 6807, 6808, 6816, 6882, 6890, 6918, 6919, 6925, 6991, 6999, 7028, 7036, 7102, 7103, 7109, 7137, 7138, 7144, 7172, 7173, 7179, 7245, 7253, 7282, 7290, 7319, 7327, 7364, 7393, 7401, 7429, 7430, 7436, 7501, 7577, 7585, 7622, 7651, 7659, 7687, 7688, 7696, 7762, 7770, 7798, 7799, 7805, 7871, 7879, 7908, 7916, 7982, 7983, 7989, 8017, 8018, 8024, 8052, 8053, 8059, 8125, 8133, 8162, 8170, 8199, 8207, 8244, 8273, 8281, 8309, 8310, 8316, 8381, 8457, 8465, 8502, 8531, 8539, 8567, 8568, 8576, 8642, 8650, 8678, 8679, 8685, 8751, 8759, 8788, 8796, 8862, 8900, 8901, 8907, 8935, 8936, 8942, 8970, 8971, 8977, 9043, 9051, 9080, 9088, 9117, 9125, 9162, 9191, 9199, 9227, 9228, 9234, 9299, 9375, 9383, 9420, 9449, 9457, 9485, 9486, 9494, 9560, 9568, 9596, 9597, 9603, 9669, 9677, 9706, 9714, 9780, 9781, 9787, 9815, 9816, 9822, 9850, 9851, 9857, 9923, 9931, 9960, 9968, 9997, 10005, 10042, 10071, 10079, 10107, 10108, 10114, 10179, 10255, 10263, 10300, 10329, 10337, 10365, 10366, 10374, 10440, 10448, 10476, 10477, 10483, 10549, 10557, 10586, 10594, 10660, 10661, 10667, 10695, 10696, 10702, 10730, 10731, 10737, 10803, 10811, 10840, 10848, 10877, 10885, 10922, 10951, 10959, 10987, 10988, 10994, 11059, 11135, 11143, 11180, 11209, 11217, 11245, 11246, 11254, 11320, 11328, 11356, 11357, 11363, 11429, 11437, 11466, 11474, 11540, 11541, 11547, 11575, 11576, 11582, 11610, 11611, 11617, 11683, 11691, 11720, 11728, 11757, 11765, 11802, 11831, 11839, 11867, 11868, 11874, 11939, 12015, 12023, 12060, 12089, 12097, 12125, 12126, 12134, 12200, 12208, 12236, 12237, 12243, 12309, 12317, 12346, 12354, 12420, 12421, 12427, 12455, 12456, 12462, 12490, 12491, 12497, 12563, 12571, 12600, 12608, 12637, 12645, 12682, 12711, 12719, 12747, 12748, 12754, 12819, 12895, 12903, 12940, 12969, 12977, 13005, 13006, 13014, 13080, 13088, 13116, 13117, 13123, 13189, 13197, 13226, 13234, 13300, 13301, 13307, 13335, 13336, 13342, 13370, 13371, 13377, 13443, 13451, 13480, 13488, 13517, 13525, 13562, 13591, 13599, 13627, 13628, 13634, 13699, 13775, 13783, 13820, 13849, 13857, 13885, 13886, 13894, 13960, 13968, 13996, 13997, 14003, 14069, 14077, 14106, 14114, 14185, 14208, 14231, 14254, 14277, 14300, 14323, 14346, 14369, 14392, 14415, 14438 |
+| `allowed` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.3fbbbaa37628.dev.json | 127, 128, 134, 162, 163, 169, 198, 204, 232, 233, 239, 268, 274, 302, 303, 309, 373, 381, 410, 418, 447, 455, 492, 521, 529, 558, 564, 592, 593, 599, 699, 700, 706, 770, 778, 815, 844, 852, 881, 889, 917, 918, 926, 990, 998, 1027, 1033, 1061, 1062, 1068, 1132, 1140, 1169, 1177, 1243, 1249, 1277, 1278, 1284, 1348, 1356, 1385, 1393, 1422, 1430, 1467, 1496, 1504, 1533, 1539, 1567, 1568, 1574, 1674, 1675, 1681, 1745, 1753, 1790, 1819, 1827, 1856, 1864, 1892, 1893, 1901, 1965, 1973, 2002, 2008, 2036, 2037, 2043, 2107, 2115, 2144, 2152, 2509, 2510, 2516, 2544, 2545, 2551, 2579, 2580, 2586, 2614, 2615, 2621, 2687, 2695, 2724, 2732, 2761, 2769, 2806, 2835, 2843, 2871, 2872, 2878, 2943, 3019, 3027, 3064, 3093, 3101, 3129, 3130, 3138, 3204, 3212, 3240, 3241, 3247, 3313, 3321, 3350, 3358, 3424, 3425, 3431, 3497, 3505, 3534, 3542, 3571, 3579, 3616, 3645, 3653, 3681, 3682, 3688, 3753, 3829, 3837, 3874, 3903, 3911, 3939, 3940, 3948, 4014, 4022, 4050, 4051, 4057, 4123, 4131, 4160, 4168, 4532, 4533, 4539, 4567, 4568, 4574, 4602, 4603, 4609, 4637, 4638, 4644, 4710, 4718, 4747, 4755, 4784, 4792, 4829, 4858, 4866, 4894, 4895, 4901, 4966, 5042, 5050, 5087, 5116, 5124, 5152, 5153, 5161, 5227, 5235, 5263, 5264, 5270, 5336, 5344, 5373, 5381, 5447, 5448, 5454, 5482, 5483, 5489, 5517, 5518, 5524, 5552, 5553, 5559, 5625, 5633, 5662, 5670, 5699, 5707, 5744, 5773, 5781, 5809, 5810, 5816, 5881, 5957, 5965, 6002, 6031, 6039, 6067, 6068, 6076, 6142, 6150, 6178, 6179, 6185, 6251, 6259, 6288, 6296, 6362, 6363, 6369, 6397, 6398, 6404, 6432, 6433, 6439, 6467, 6468, 6474, 6540, 6548, 6577, 6585, 6614, 6622, 6659, 6688, 6696, 6724, 6725, 6731, 6796, 6872, 6880, 6917, 6946, 6954, 6982, 6983, 6991, 7057, 7065, 7093, 7094, 7100, 7166, 7174, 7203, 7211, 7277, 7278, 7284, 7312, 7313, 7319, 7347, 7348, 7354, 7382, 7383, 7389, 7455, 7463, 7492, 7500, 7529, 7537, 7574, 7603, 7611, 7639, 7640, 7646, 7711, 7787, 7795, 7832, 7861, 7869, 7897, 7898, 7906, 7972, 7980, 8008, 8009, 8015, 8081, 8089, 8118, 8126, 8192, 8193, 8199, 8227, 8228, 8234, 8262, 8263, 8269, 8297, 8298, 8304, 8370, 8378, 8407, 8415, 8444, 8452, 8489, 8518, 8526, 8554, 8555, 8561, 8626, 8702, 8710, 8747, 8776, 8784, 8812, 8813, 8821, 8887, 8895, 8923, 8924, 8930, 8996, 9004, 9033, 9041, 9107, 9145, 9146, 9152, 9180, 9181, 9187, 9215, 9216, 9222, 9250, 9251, 9257, 9323, 9331, 9360, 9368, 9397, 9405, 9442, 9471, 9479, 9507, 9508, 9514, 9579, 9655, 9663, 9700, 9729, 9737, 9765, 9766, 9774, 9840, 9848, 9876, 9877, 9883, 9949, 9957, 9986, 9994, 10060, 10061, 10067, 10095, 10096, 10102, 10130, 10131, 10137, 10165, 10166, 10172, 10238, 10246, 10275, 10283, 10312, 10320, 10357, 10386, 10394, 10422, 10423, 10429, 10494, 10570, 10578, 10615, 10644, 10652, 10680, 10681, 10689, 10755, 10763, 10791, 10792, 10798, 10864, 10872, 10901, 10909, 10975, 10976, 10982, 11010, 11011, 11017, 11045, 11046, 11052, 11080, 11081, 11087, 11153, 11161, 11190, 11198, 11227, 11235, 11272, 11301, 11309, 11337, 11338, 11344, 11409, 11485, 11493, 11530, 11559, 11567, 11595, 11596, 11604, 11670, 11678, 11706, 11707, 11713, 11779, 11787, 11816, 11824, 11890, 11891, 11897, 11925, 11926, 11932, 11960, 11961, 11967, 11995, 11996, 12002, 12068, 12076, 12105, 12113, 12142, 12150, 12187, 12216, 12224, 12252, 12253, 12259, 12324, 12400, 12408, 12445, 12474, 12482, 12510, 12511, 12519, 12585, 12593, 12621, 12622, 12628, 12694, 12702, 12731, 12739, 12805, 12806, 12812, 12840, 12841, 12847, 12875, 12876, 12882, 12910, 12911, 12917, 12983, 12991, 13020, 13028, 13057, 13065, 13102, 13131, 13139, 13167, 13168, 13174, 13239, 13315, 13323, 13360, 13389, 13397, 13425, 13426, 13434, 13500, 13508, 13536, 13537, 13543, 13609, 13617, 13646, 13654, 13720, 13721, 13727, 13755, 13756, 13762, 13790, 13791, 13797, 13825, 13826, 13832, 13898, 13906, 13935, 13943, 13972, 13980, 14017, 14046, 14054, 14082, 14083, 14089, 14154, 14230, 14238, 14275, 14304, 14312, 14340, 14341, 14349, 14415, 14423, 14451, 14452, 14458, 14524, 14532, 14561, 14569 |
+| `allowed` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.6ce0171efcfd.dev.json | 127, 128, 134, 163, 169, 197, 198, 204, 233, 239, 267, 268, 274, 338, 346, 375, 383, 412, 420, 457, 486, 494, 523, 529, 557, 558, 564, 664, 665, 671, 735, 743, 780, 809, 817, 846, 854, 882, 883, 891, 955, 963, 992, 998, 1026, 1027, 1033, 1097, 1105, 1134, 1142, 1208, 1214, 1242, 1243, 1249, 1313, 1321, 1350, 1358, 1387, 1395, 1432, 1461, 1469, 1498, 1504, 1532, 1533, 1539, 1639, 1640, 1646, 1710, 1718, 1755, 1784, 1792, 1821, 1829, 1857, 1858, 1866, 1930, 1938, 1967, 1973, 2001, 2002, 2008, 2072, 2080, 2109, 2117, 2474, 2475, 2481, 2509, 2510, 2516, 2544, 2545, 2551, 2617, 2625, 2654, 2662, 2691, 2699, 2736, 2765, 2773, 2801, 2802, 2808, 2873, 2949, 2957, 2994, 3023, 3031, 3059, 3060, 3068, 3134, 3142, 3170, 3171, 3177, 3243, 3251, 3280, 3288, 3354, 3355, 3361, 3427, 3435, 3464, 3472, 3501, 3509, 3546, 3575, 3583, 3611, 3612, 3618, 3683, 3759, 3767, 3804, 3833, 3841, 3869, 3870, 3878, 3944, 3952, 3980, 3981, 3987, 4053, 4061, 4090, 4098, 4462, 4463, 4469, 4497, 4498, 4504, 4532, 4533, 4539, 4605, 4613, 4642, 4650, 4679, 4687, 4724, 4753, 4761, 4789, 4790, 4796, 4861, 4937, 4945, 4982, 5011, 5019, 5047, 5048, 5056, 5122, 5130, 5158, 5159, 5165, 5231, 5239, 5268, 5276, 5342, 5343, 5349, 5377, 5378, 5384, 5412, 5413, 5419, 5485, 5493, 5522, 5530, 5559, 5567, 5604, 5633, 5641, 5669, 5670, 5676, 5741, 5817, 5825, 5862, 5891, 5899, 5927, 5928, 5936, 6002, 6010, 6038, 6039, 6045, 6111, 6119, 6148, 6156, 6222, 6223, 6229, 6257, 6258, 6264, 6292, 6293, 6299, 6365, 6373, 6402, 6410, 6439, 6447, 6484, 6513, 6521, 6549, 6550, 6556, 6621, 6697, 6705, 6742, 6771, 6779, 6807, 6808, 6816, 6882, 6890, 6918, 6919, 6925, 6991, 6999, 7028, 7036, 7102, 7103, 7109, 7137, 7138, 7144, 7172, 7173, 7179, 7245, 7253, 7282, 7290, 7319, 7327, 7364, 7393, 7401, 7429, 7430, 7436, 7501, 7577, 7585, 7622, 7651, 7659, 7687, 7688, 7696, 7762, 7770, 7798, 7799, 7805, 7871, 7879, 7908, 7916, 7982, 7983, 7989, 8017, 8018, 8024, 8052, 8053, 8059, 8125, 8133, 8162, 8170, 8199, 8207, 8244, 8273, 8281, 8309, 8310, 8316, 8381, 8457, 8465, 8502, 8531, 8539, 8567, 8568, 8576, 8642, 8650, 8678, 8679, 8685, 8751, 8759, 8788, 8796, 8862, 8900, 8901, 8907, 8935, 8936, 8942, 8970, 8971, 8977, 9043, 9051, 9080, 9088, 9117, 9125, 9162, 9191, 9199, 9227, 9228, 9234, 9299, 9375, 9383, 9420, 9449, 9457, 9485, 9486, 9494, 9560, 9568, 9596, 9597, 9603, 9669, 9677, 9706, 9714, 9780, 9781, 9787, 9815, 9816, 9822, 9850, 9851, 9857, 9923, 9931, 9960, 9968, 9997, 10005, 10042, 10071, 10079, 10107, 10108, 10114, 10179, 10255, 10263, 10300, 10329, 10337, 10365, 10366, 10374, 10440, 10448, 10476, 10477, 10483, 10549, 10557, 10586, 10594, 10660, 10661, 10667, 10695, 10696, 10702, 10730, 10731, 10737, 10803, 10811, 10840, 10848, 10877, 10885, 10922, 10951, 10959, 10987, 10988, 10994, 11059, 11135, 11143, 11180, 11209, 11217, 11245, 11246, 11254, 11320, 11328, 11356, 11357, 11363, 11429, 11437, 11466, 11474, 11540, 11541, 11547, 11575, 11576, 11582, 11610, 11611, 11617, 11683, 11691, 11720, 11728, 11757, 11765, 11802, 11831, 11839, 11867, 11868, 11874, 11939, 12015, 12023, 12060, 12089, 12097, 12125, 12126, 12134, 12200, 12208, 12236, 12237, 12243, 12309, 12317, 12346, 12354, 12420, 12421, 12427, 12455, 12456, 12462, 12490, 12491, 12497, 12563, 12571, 12600, 12608, 12637, 12645, 12682, 12711, 12719, 12747, 12748, 12754, 12819, 12895, 12903, 12940, 12969, 12977, 13005, 13006, 13014, 13080, 13088, 13116, 13117, 13123, 13189, 13197, 13226, 13234, 13300, 13301, 13307, 13335, 13336, 13342, 13370, 13371, 13377, 13443, 13451, 13480, 13488, 13517, 13525, 13562, 13591, 13599, 13627, 13628, 13634, 13699, 13775, 13783, 13820, 13849, 13857, 13885, 13886, 13894, 13960, 13968, 13996, 13997, 14003, 14069, 14077, 14106, 14114, 14182, 14202, 14222, 14242, 14262, 14282, 14302, 14322, 14342, 14362, 14382, 14402, 14422 |
+| `allowed` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.b907d257.dev.json | 128, 134, 162, 163, 169, 198, 204, 232, 233, 239, 303, 311, 340, 348, 377, 385, 422, 451, 459, 488, 494, 522, 523, 529, 629, 630, 636, 700, 708, 745, 774, 782, 811, 819, 847, 848, 856, 920, 928, 957, 963, 991, 992, 998, 1062, 1070, 1099, 1107, 1173, 1179, 1207, 1208, 1214, 1278, 1286, 1315, 1323, 1352, 1360, 1397, 1426, 1434, 1463, 1469, 1497, 1498, 1504, 1604, 1605, 1611, 1675, 1683, 1720, 1749, 1757, 1786, 1794, 1822, 1823, 1831, 1895, 1903, 1932, 1938, 1966, 1967, 1973, 2037, 2045, 2074, 2082, 2439, 2440, 2446, 2474, 2475, 2481, 2547, 2555, 2584, 2592, 2621, 2629, 2666, 2695, 2703, 2731, 2732, 2738, 2803, 2879, 2887, 2924, 2953, 2961, 2989, 2990, 2998, 3064, 3072, 3100, 3101, 3107, 3173, 3181, 3210, 3218, 3284, 3285, 3291, 3357, 3365, 3394, 3402, 3431, 3439, 3476, 3505, 3513, 3541, 3542, 3548, 3613, 3689, 3697, 3734, 3763, 3771, 3799, 3800, 3808, 3874, 3882, 3910, 3911, 3917, 3983, 3991, 4020, 4028, 4392, 4393, 4399, 4427, 4428, 4434, 4500, 4508, 4537, 4545, 4574, 4582, 4619, 4648, 4656, 4684, 4685, 4691, 4756, 4832, 4840, 4877, 4906, 4914, 4942, 4943, 4951, 5017, 5025, 5053, 5054, 5060, 5126, 5134, 5163, 5171, 5237, 5238, 5244, 5272, 5273, 5279, 5345, 5353, 5382, 5390, 5419, 5427, 5464, 5493, 5501, 5529, 5530, 5536, 5601, 5677, 5685, 5722, 5751, 5759, 5787, 5788, 5796, 5862, 5870, 5898, 5899, 5905, 5971, 5979, 6008, 6016, 6082, 6083, 6089, 6117, 6118, 6124, 6190, 6198, 6227, 6235, 6264, 6272, 6309, 6338, 6346, 6374, 6375, 6381, 6446, 6522, 6530, 6567, 6596, 6604, 6632, 6633, 6641, 6707, 6715, 6743, 6744, 6750, 6816, 6824, 6853, 6861, 6927, 6928, 6934, 6962, 6963, 6969, 7035, 7043, 7072, 7080, 7109, 7117, 7154, 7183, 7191, 7219, 7220, 7226, 7291, 7367, 7375, 7412, 7441, 7449, 7477, 7478, 7486, 7552, 7560, 7588, 7589, 7595, 7661, 7669, 7698, 7706, 7772, 7773, 7779, 7807, 7808, 7814, 7880, 7888, 7917, 7925, 7954, 7962, 7999, 8028, 8036, 8064, 8065, 8071, 8136, 8212, 8220, 8257, 8286, 8294, 8322, 8323, 8331, 8397, 8405, 8433, 8434, 8440, 8506, 8514, 8543, 8551, 8617, 8655, 8656, 8662, 8690, 8691, 8697, 8763, 8771, 8800, 8808, 8837, 8845, 8882, 8911, 8919, 8947, 8948, 8954, 9019, 9095, 9103, 9140, 9169, 9177, 9205, 9206, 9214, 9280, 9288, 9316, 9317, 9323, 9389, 9397, 9426, 9434, 9500, 9501, 9507, 9535, 9536, 9542, 9608, 9616, 9645, 9653, 9682, 9690, 9727, 9756, 9764, 9792, 9793, 9799, 9864, 9940, 9948, 9985, 10014, 10022, 10050, 10051, 10059, 10125, 10133, 10161, 10162, 10168, 10234, 10242, 10271, 10279, 10345, 10346, 10352, 10380, 10381, 10387, 10453, 10461, 10490, 10498, 10527, 10535, 10572, 10601, 10609, 10637, 10638, 10644, 10709, 10785, 10793, 10830, 10859, 10867, 10895, 10896, 10904, 10970, 10978, 11006, 11007, 11013, 11079, 11087, 11116, 11124, 11190, 11191, 11197, 11225, 11226, 11232, 11298, 11306, 11335, 11343, 11372, 11380, 11417, 11446, 11454, 11482, 11483, 11489, 11554, 11630, 11638, 11675, 11704, 11712, 11740, 11741, 11749, 11815, 11823, 11851, 11852, 11858, 11924, 11932, 11961, 11969, 12035, 12036, 12042, 12070, 12071, 12077, 12143, 12151, 12180, 12188, 12217, 12225, 12262, 12291, 12299, 12327, 12328, 12334, 12399, 12475, 12483, 12520, 12549, 12557, 12585, 12586, 12594, 12660, 12668, 12696, 12697, 12703, 12769, 12777, 12806, 12814, 12880, 12881, 12887, 12915, 12916, 12922, 12988, 12996, 13025, 13033, 13062, 13070, 13107, 13136, 13144, 13172, 13173, 13179, 13244, 13320, 13328, 13365, 13394, 13402, 13430, 13431, 13439, 13505, 13513, 13541, 13542, 13548, 13614, 13622, 13651, 13659, 13727, 13747, 13767, 13787, 13807, 13827, 13847, 13867, 13887, 13907, 13927, 13947, 13967, 13987, 14007, 14027, 14047, 14067, 14087, 14107, 14127, 14147, 14167, 14187, 14207, 14227 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-19-causal-shadow.admin.v2.dev.json | 62, 102, 142, 182, 242, 262, 302, 342, 402, 442, 482, 522, 562, 623, 683, 723, 783, 823, 884, 1071, 1094, 1116, 1139, 1162, 1185, 1208, 1231, 1254, 1300, 1342, 1382 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-19-causal-shadow.owner.v3.dev.json | 62, 102, 142, 182, 302, 342, 563, 830, 1096, 1136 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-19-granted-causal-shadow.admin.dev.json | 44, 50, 62, 64, 70, 84, 90, 102, 104, 110, 142, 164, 170, 182, 184, 190, 242, 262, 284, 290, 302, 304, 310, 324, 330, 342, 344, 350, 382, 442, 482, 522, 562, 602, 663, 724, 764, 824, 864, 925, 1112, 1135, 1157, 1180, 1203, 1226, 1249, 1272, 1295, 1341, 1383, 1423 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-19-shadow-gaps.dev.json | 19, 27, 35, 59, 75, 91, 107, 123, 139, 163, 179, 203, 219, 243, 259, 267, 308, 384, 395, 406, 417, 428 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.admin.dev.json | 6334, 6869, 7398, 7933, 8048, 10509, 11044, 13799, 14334, 16423, 16958, 19243, 19778, 22484, 23019, 23044, 24763, 25298, 28886, 29421, 33303, 33838, 36047, 36582, 38553, 39088, 40422, 40957 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.admin.overlapped.dev.json | 5526, 5961, 6350, 6785, 12076, 12511, 17510, 17945, 22474, 22909, 28130, 28590, 31716, 33295, 33730, 33755, 39168, 39603, 44778, 45213, 51459, 51894, 56229, 56664, 60124, 60559, 63382, 63817 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.admin.pre-intent-fix.dev.json | 5469, 5904, 6293, 6728, 8969, 9404, 12019, 12454, 14403, 14838, 16983, 17418, 19984, 20419, 20444, 22023, 22458, 25906, 26341, 30083, 30518, 32587, 33022, 34853, 35288, 36482, 36917 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.admin.pre-navigation-fix.dev.json | 6309, 6844, 7373, 7908, 8023, 10484, 11019, 13774, 14309, 16398, 16933, 19218, 19753, 22459, 22994, 23019, 24738, 25273, 28861, 29396, 33278, 33813, 36022, 36557, 38528, 39063, 40397, 40932 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.admin.pre-section-fix.dev.json | 5689, 6124, 6513, 6948, 7063, 9384, 9819, 12434, 12869, 14818, 15253, 17398, 17833, 20399, 20834, 20859, 22438, 22873, 26321, 26756, 30498, 30933, 33002, 33437, 35268, 35703, 36897, 37332 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.owner.dev.json | 6334, 7398, 10484, 13774, 16398, 19218, 22459, 23019, 24738, 28861, 33278, 36022, 38528, 40397 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.owner.pre-navigation-fix.dev.json | 6309, 7373, 10459, 13749, 16373, 19193, 22434, 22994, 24713, 28836, 33253, 35997, 38503, 40372 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.owner.pre-section-fix.dev.json | 5689, 6513, 9359, 12409, 14793, 17373, 20374, 20834, 22413, 26296, 30473, 32977, 35243, 36872 |
+| `allowed` | runtime | governance/policy/reports/business-partner-release-20-context-qualification.pre-intent-fix.dev.json | 1370, 1885 |
+| `allowed` | runtime | governance/policy/reports/business-partner-shadow-attestation.dev.json | 105, 123, 141, 159, 186, 195, 213, 240, 258, 276, 294, 312, 339, 366, 384, 411, 429, 456, 537, 546, 555, 564, 573, 582, 591, 600, 618 |
+| `allowed` | runtime | governance/policy/reports/business-partner-shadow-deployment.dev.json | 133, 214, 234, 254, 274, 294, 314, 334, 438, 492, 546, 615, 669, 723, 777, 858, 939, 1020, 1101, 1155, 1236, 1317, 1398, 1479, 1587, 1641, 1749, 1830, 1911, 2046, 2127, 2208, 2289, 2370, 2451, 2505, 2586, 2667, 2748, 2829, 2937, 2991, 3099, 3180, 3261, 3396, 3701, 3755, 3809, 3863, 3917, 3971, 4025, 4106, 4160, 4187, 4241, 4295, 4349, 4403, 4457, 4538, 4592, 4619, 4700, 4781, 4862, 4943, 4997, 5078, 5159, 5240, 5321, 5429, 5483, 5645, 5726, 5807, 5888, 5942, 6023, 6104, 6185, 6266, 6374, 6428, 6536, 6617, 6698, 6860, 6887, 6968, 7049, 7130, 7211, 7265, 7346, 7427, 7508, 7589, 7697, 7751, 7859, 7940, 8021, 8156, 8264, 8345, 8426, 8507, 8561, 8642, 8723, 8804, 8885, 8993, 9047, 9155, 9236, 9317, 9452, 9506, 9587, 9668, 9803, 9911, 9992, 10073, 10154, 10208, 10289, 10370, 10451, 10532, 10640, 10694, 10844, 10913, 10994, 11075, 11237, 11291, 11390, 11444, 11498, 11552, 11633, 11714, 11795, 11876, 11930, 12011, 12092, 12173, 12254, 12362, 12416, 12524, 12605, 12686, 12821, 12917, 12971, 13025, 13079, 13160, 13241, 13322, 13403, 13457, 13538, 13619, 13700, 13781, 13889, 13943, 14051, 14132, 14213, 14348, 14444, 14498, 14552, 14606, 14687, 14768, 14849, 14930, 14984, 15065, 15146, 15227, 15308, 15416, 15470, 15578, 15659, 15740, 15875, 15971, 16025, 16079, 16133, 16214, 16295, 16376, 16457, 16511, 16592, 16673, 16754, 16835, 16943, 16997, 17105, 17186, 17267, 17402, 17498, 17552, 17606, 17660, 17741, 17822, 17903, 17984, 18038, 18119, 18200, 18281, 18362, 18470, 18524, 18632, 18713, 18794, 18929, 19010, 19079, 19133, 19187, 19241, 19295, 19349, 19403, 19484, 19565, 19646, 19727, 19781, 19862, 19943, 20024, 20105, 20213, 20267, 20375, 20456, 20537, 20699, 20780, 20861, 20942, 20996, 21077, 21158, 21239, 21320, 21428, 21482, 21617, 21671, 21752, 21833, 21968 |
+| `allowed` | runtime | governance/policy/reports/entity-authorization-difference-review.dev.json | 25, 109, 155, 201, 247, 293, 309, 339, 355, 385, 431, 477, 523, 569, 615, 661, 707, 753, 799, 845, 891, 937, 983, 999, 1029, 1045, 1075, 1091, 1121, 1137, 1167, 1183, 1213, 1229, 1259, 1275, 1305, 1321 |
+| `allowed` | runtime | governance/policy/reports/entity-authorization-policy-regression.dev.json | 16 |
+| `allowed` | runtime | governance/policy/reports/entity-authorization-shadow.dev.json | 16 |
+| `allowed` | runtime | governance/policy/reviews/business-partner-final-binding-66-dispositions-20260912.proposal.dev.json | 4083, 4316, 4326, 4356, 4366, 4378, 4388, 11793, 12078, 12088, 12118, 12128, 12140, 12150 |
+| `allowed` | runtime | governance/policy/reviews/business-partner-policy-triage.dev.json | 15, 89, 122, 155, 188, 221, 258, 295, 328, 361, 394, 427, 460, 493, 526, 559, 592, 625, 658, 691, 724, 761, 794, 827, 860, 893, 926, 959 |
+| `allowed` | runtime | governance/policy/reviews/business-partner-release-19-differences.proposal.dev.json | 60, 104, 148, 192, 264, 385, 429, 500, 544, 615, 659, 730, 774, 818, 862, 906, 950, 999, 1070, 1163, 1207, 1251, 1295, 1366, 1459, 1552, 1645, 1738, 1809, 1902, 1995, 2088, 2132, 2203, 2297, 2320, 2443, 2491, 2565, 2685, 2807, 2929, 3051, 3174, 3296, 3417, 3509, 3554, 3599, 3644, 3689, 3727, 3765, 3810, 3900, 3938, 3976, 4014, 4052, 4090, 4128, 4166, 4204, 4249, 4287, 4371, 4419, 4459, 4500, 4541, 4582, 4623, 4664, 4705, 4746, 4786, 4831 |
+| `allowed` | runtime | governance/policy/reviews/business-partner-release-19-differences.successor-20260911.proposal.dev.json | 56, 92, 128, 164, 230, 335, 371, 434, 470, 533, 569, 632, 668, 704, 740, 776, 812, 857, 920, 1001, 1037, 1073, 1109, 1172, 1253, 1334, 1415, 1496, 1559, 1640, 1721, 1802, 1838, 1901, 1985, 2006, 2111, 2150, 2213, 2315, 2423, 2531, 2639, 2744, 2852, 2957, 3033, 3074, 3115, 3156, 3197, 3231, 3265, 3306, 3388, 3422, 3456, 3490, 3524, 3558, 3592, 3626, 3660, 3701, 3735, 3813, 3854, 3888, 3922, 3959, 3996, 4033, 4067, 4104, 4141, 4175, 4216 |
+| `allowed` | runtime | governance/policy/reviews/entity-authorization-differences.dev.json | 161, 185, 521, 545, 569, 593, 617, 641, 665, 689 |
 | `allowed` | runtime | packages/contracts/platform/authorization/src/index.ts | 2, 7, 18, 21 |
+| `allowed` | runtime | packages/contracts/platform/entity-runtime/src/access-decision.ts | 3 |
 | `allowed` | runtime | packages/contracts/platform/fixtures/authorization-snapshot.v1.json | 4 |
 | `allowed` | runtime | packages/contracts/platform/fixtures/platform-bootstrap.v1.json | 23 |
+| `allowed` | runtime | packages/planes/neon/business-partner/src/360/company-relationships.ts | 13 |
 | `allowed` | runtime | packages/platform/shell/shell-runtime/src/core.ts | 28 |
 | `allowed` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 51 |
-| `allowed` | ui | packages/platform/shell/shell/src/home.tsx | 340 |
-| `allowed` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 7 |
-| `allowed` | route | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
-| `allowed` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 515, 819, 874 |
-| `allowed` | runtime | server/apps/platform-host/src/composition/register-services.ts | 857, 1443, 1451, 2212, 2222, 2232, 2245, 2258, 2265, 2295, 2348, 2359, 2363, 4134, 4137, 4138, 4287, 4288, 4498, 4826 |
+| `allowed` | ui | packages/platform/shell/shell/src/home.tsx | 1772 |
+| `allowed` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 150 |
+| `allowed` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 165 |
+| `allowed` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval-qualification.mts | 16 |
+| `allowed` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 135 |
+| `allowed` | test | server/apps/platform-host/scripts/db-verification/tests/integration/governed-internal-business-partner-http.mjs | 135 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 81, 86 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/atlas-attachment-knowledge.test.ts | 69 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/atlas-document-grounding.test.ts | 11 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16, 25 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts | 41, 90, 91 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 44, 112, 119, 149, 194, 199, 201, 203, 221, 225, 237, 245, 247, 262, 289, 295, 303, 310, 321, 326, 354, 390, 392, 414, 432, 448, 449, 513, 599, 617, 622, 653, 657 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-bound-import.test.ts | 15 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-case-authority.test.ts | 40, 47, 60, 79 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-company-native-authority.test.ts | 11, 27 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts | 24, 67, 108, 110, 119 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-read-policy.test.ts | 37, 101, 103, 126 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-reveal-policy.test.ts | 100, 121, 129, 133, 143, 151 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/finance-http-review.test.ts | 110 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 46, 163 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 22, 46, 52 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 41 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5, 7, 10, 13, 17, 23, 24, 27 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 13, 189 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts | 115, 288 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/atlas-document-grounding.ts | 87 |
+| `allowed` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 22, 48, 60, 71, 81, 92, 97, 107 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/bank-directory-authorizer.ts | 12, 17, 22, 24, 32 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 236, 359, 376, 488, 496 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/business-partner-case-authority.ts | 26 |
+| `allowed` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 9, 17, 22, 25, 29, 34, 35 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/business-partner-definition-authorizer.ts | 9, 12, 14, 16 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/business-partner-export-runtime.ts | 13 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/business-partner-import-runtime.ts | 16, 56, 102 |
+| `allowed` | route | server/apps/platform-host/src/composition/finance-routes.ts | 41, 295 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/local-graph-preview.ts | 59 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/meta-entity-authoring-authorizer.ts | 7, 9, 11, 15 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 525, 833 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1362, 2125, 2133, 2310, 3093, 3100, 3110, 3120, 3133, 3146, 3153, 3168, 3175, 3209, 3263, 3274, 3278, 5507, 5510, 5511, 5669, 5673, 5818, 6604, 7241 |
+| `allowed` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 158 |
+| `allowed` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 250 |
 | `allowed` | ddl | server/db/ddl/common/master/03_platform_tables.sql | 50 |
 | `allowed` | tool | server/db/scripts/checks/seeds/authorization-release-gates.ts | 52, 187 |
 | `allowed` | tool | server/db/scripts/seed/compile-mesh-authorization-inventory.ts | 228, 229 |
 | `allowed` | tool | server/db/scripts/seed/compile-neon-authorization-inventory.ts | 207, 211 |
 | `allowed` | test | server/db/scripts/tests/integration/atlas/tools-rls.ts | 175, 176, 279, 368, 422, 459 |
-| `allowed` | test | server/db/scripts/tests/integration/external-worker-iam-cross-plane.mjs | 465 |
-| `allowed` | test | server/db/scripts/tests/integration/governed-internal-business-partner-http.mjs | 135 |
+| `allowed` | test | server/db/scripts/tests/integration/business-partner-bank-verification.ts | 76 |
+| `allowed` | test | server/db/scripts/tests/integration/external-worker-iam-cross-plane.mjs | 478 |
+| `allowed` | test | server/db/scripts/tests/integration/identity-replay-live.mjs | 458, 464, 471 |
+| `allowed` | runtime | server/packages/adapters/ai-ollama/src/index.ts | 192 |
 | `allowed` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
-| `allowed` | runtime | server/packages/contracts/ai/src/tools.ts | 103 |
+| `allowed` | runtime | server/packages/contracts/ai/src/tools.ts | 115 |
 | `allowed` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 20, 39 |
-| `allowed` | runtime | server/packages/contracts/auth/src/authorization.ts | 7, 75, 101, 102 |
-| `allowed` | runtime | server/packages/contracts/auth/src/management.ts | 78 |
-| `allowed` | test | server/packages/planes/mesh/src/business-partner-bank-disclosure.test.ts | 5, 6 |
-| `allowed` | runtime | server/packages/planes/mesh/src/business-partner-bank-disclosure.ts | 58 |
+| `allowed` | runtime | server/packages/contracts/auth/src/authorization.ts | 7, 79, 122, 123 |
+| `allowed` | runtime | server/packages/contracts/auth/src/management.ts | 204, 207 |
+| `allowed` | test | server/packages/planes/mesh/src/business-partner-bank-disclosure.test.ts | 5 |
+| `allowed` | runtime | server/packages/planes/mesh/src/business-partner-bank-disclosure.ts | 820 |
+| `allowed` | test | server/packages/planes/mesh/src/business-partner-network-exchange.test.ts | 5 |
+| `allowed` | runtime | server/packages/planes/mesh/src/business-partner-network-exchange.ts | 639 |
 | `allowed` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 3, 6 |
-| `allowed` | runtime | server/packages/planes/mesh/src/business-partner-profile-publication.ts | 41 |
+| `allowed` | runtime | server/packages/planes/mesh/src/business-partner-profile-publication.ts | 762 |
+| `allowed` | test | server/packages/planes/mesh/src/network-account-context.test.ts | 8, 14 |
+| `allowed` | test | server/packages/planes/neon/src/__tests__/integration/business-partner-bank-verification.ts | 79 |
 | `allowed` | test | server/packages/planes/neon/src/business-partner-account-bank-linkage.test.ts | 6, 7 |
-| `allowed` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 962 |
-| `allowed` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6, 20 |
-| `allowed` | runtime | server/packages/planes/neon/src/business-partner-profile-match.ts | 79 |
+| `allowed` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 508, 872, 1152 |
+| `allowed` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6, 23 |
+| `allowed` | runtime | server/packages/planes/neon/src/business-partner-profile-match.ts | 176 |
 | `allowed` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7, 23 |
-| `allowed` | runtime | server/packages/planes/neon/src/business-partner-profile-projection.ts | 132 |
-| `allowed` | test | server/packages/planes/neon/src/finance-http.test.ts | 7 |
-| `allowed` | route | server/packages/planes/neon/src/finance-http.ts | 54 |
-| `allowed` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 13 |
-| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/deterministic.ts | 222 |
-| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts | 87 |
-| `allowed` | route | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 7, 8, 13, 14, 16, 17 |
-| `allowed` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 5 |
+| `allowed` | runtime | server/packages/planes/neon/src/business-partner-profile-projection.ts | 147 |
+| `allowed` | test | server/packages/planes/neon/src/finance-http.test.ts | 20 |
+| `allowed` | route | server/packages/planes/neon/src/finance-http.ts | 445 |
+| `allowed` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 47 |
+| `allowed` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/durable-preview-adapter.test.ts | 22, 30, 96 |
+| `allowed` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/graph-editor-routes.test.ts | 25 |
+| `allowed` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/learning-inbox.test.ts | 36 |
+| `allowed` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/learning-route-scope.test.ts | 11 |
+| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/deterministic.ts | 518, 1222 |
+| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/entity-authorization.ts | 86 |
+| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts | 654, 656 |
+| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/learning-inbox.ts | 129, 177, 204, 205, 373, 407, 430, 437 |
+| `allowed` | route | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 24, 32, 51, 72, 131, 148, 176, 189, 205, 282 |
+| `allowed` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 26 |
 | `allowed` | runtime | server/packages/planes/studio/onboarding/src/maintenance.ts | 24 |
 | `allowed` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 8 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/business-context.test.ts | 19 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/business-partner-evaluations.test.ts | 12, 22, 87, 89, 120, 124, 146 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/business-partner-insight-tools.test.ts | 14 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/business-partner-list-insights.test.ts | 16 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/conversation-composition.test.ts | 16, 66 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/durable-message-lineage.test.ts | 22, 230, 260 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/entity-record-tool.test.ts | 14, 65, 120 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/entity-section-tool.test.ts | 11 |
 | `allowed` | test | server/packages/platform/ai/src/__tests__/experience-configuration.test.ts | 8 |
 | `allowed` | test | server/packages/platform/ai/src/__tests__/failover.test.ts | 6 |
 | `allowed` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 9 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/inference-reauthorization.test.ts | 52 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/local-generation.test.ts | 11, 20, 26, 30, 31, 32 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/repository-review.test.ts | 180, 193 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/response-feedback.test.ts | 7 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/retrieval-f5.test.ts | 11 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/review-fixture.ts | 18 |
+| `allowed` | test | server/packages/platform/ai/src/__tests__/route-review.test.ts | 299 |
 | `allowed` | test | server/packages/platform/ai/src/__tests__/runtime.test.ts | 6 |
 | `allowed` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 7, 37 |
 | `allowed` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
 | `allowed` | runtime | server/packages/platform/ai/src/context.ts | 22 |
-| `allowed` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 18, 19, 27, 28, 29 |
-| `allowed` | runtime | server/packages/platform/ai/src/knowledge.ts | 172 |
+| `allowed` | runtime | server/packages/platform/ai/src/conversation-composition.ts | 92 |
+| `allowed` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 19, 20, 28, 29, 30 |
+| `allowed` | runtime | server/packages/platform/ai/src/knowledge.ts | 247, 249 |
+| `allowed` | runtime | server/packages/platform/ai/src/local-generation-composition.ts | 38 |
 | `allowed` | runtime | server/packages/platform/ai/src/surface-draft-generation.ts | 109 |
-| `allowed` | runtime | server/packages/platform/ai/src/tool-service.ts | 58, 60, 80, 87, 123, 197 |
+| `allowed` | runtime | server/packages/platform/ai/src/tool-service.ts | 61, 62, 84, 91, 134, 245 |
 | `allowed` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
-| `allowed` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
-| `allowed` | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 73 |
-| `allowed` | test | server/packages/platform/control-admin/src/authorization-management-service.test.ts | 10, 70, 96, 124, 127, 128, 129, 130 |
-| `allowed` | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 56, 57, 58, 59, 85, 86, 102 |
-| `allowed` | runtime | server/packages/platform/control-admin/src/control-services.ts | 145 |
-| `allowed` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 48 |
-| `allowed` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 436 |
-| `allowed` | runtime | server/packages/platform/control-admin/src/runtime-command-service.ts | 344 |
-| `allowed` | test | server/packages/platform/experience/src/service.test.ts | 15, 53, 96, 156, 168 |
-| `allowed` | runtime | server/packages/platform/experience/src/service.ts | 207, 247, 274, 951 |
-| `allowed` | runtime | server/packages/platform/governance/src/compliance/legal-hold-service.ts | 71 |
-| `allowed` | runtime | server/packages/platform/governance/src/compliance/report-pack-service.ts | 96 |
-| `allowed` | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 128 |
+| `allowed` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 357 |
+| `allowed` | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 472 |
+| `allowed` | test | server/packages/platform/control-admin/src/authorization-governance.postgres.test.ts | 110 |
+| `allowed` | test | server/packages/platform/control-admin/src/authorization-management-service.test.ts | 41, 161, 356, 435, 441, 445, 454, 462 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 169, 170, 171, 172, 239, 248, 364 |
+| `allowed` | test | server/packages/platform/control-admin/src/authorization-writers.postgres.test.ts | 41 |
+| `allowed` | test | server/packages/platform/control-admin/src/bank-validation.test.ts | 98 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/bank-validation.ts | 9 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/connector-control.ts | 10 |
+| `allowed` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 50 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 462 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/entitlement-control.ts | 10 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/feature-control.ts | 33 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/kysely-authorization-management-repository.ts | 227, 234 |
+| `allowed` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1100 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/lookup-control.ts | 26 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/parameter-control.ts | 33 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/rounding-control.ts | 40 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/runtime-command-service.ts | 829 |
+| `allowed` | test | server/packages/platform/experience/src/service.test.ts | 16, 108, 151, 211, 223, 232, 281 |
+| `allowed` | runtime | server/packages/platform/experience/src/service.ts | 202, 249, 277, 971 |
+| `allowed` | runtime | server/packages/platform/governance/src/compliance/legal-hold-service.ts | 78 |
+| `allowed` | runtime | server/packages/platform/governance/src/compliance/report-pack-service.ts | 368 |
+| `allowed` | test | server/packages/platform/governance/src/cycles/cycle-execution-services.test.ts | 146 |
+| `allowed` | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 142 |
 | `allowed` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
-| `allowed` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 48 |
+| `allowed` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 54 |
 | `allowed` | runtime | server/packages/platform/iam/src/__fixtures__/authorization-golden-corpus.v1.json | 15, 24, 34, 44, 51, 58, 64, 71, 78, 84, 91, 97, 103 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 12 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/iam-foundation.test.ts | 11, 12, 13, 14 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/iam-service.test.ts | 35, 39, 59, 61 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2, 4 |
-| `allowed` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 438, 450, 451, 453 |
+| `allowed` | test | server/packages/platform/iam/src/__tests__/identity-replay-approval.test.ts | 13, 21, 22, 23 |
+| `allowed` | test | server/packages/platform/iam/src/__tests__/identity-replay-routes.test.ts | 53, 68, 173, 183 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/legacy-compatibility.test.ts | 2 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 11, 17, 19, 24, 32, 50, 55, 60, 75, 77, 78, 79, 80, 81, 90, 93 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10, 22 |
+| `allowed` | test | server/packages/platform/iam/src/__tests__/shadow-authorizer.test.ts | 6, 22, 49, 53, 58, 65, 76, 84, 109, 122 |
+| `allowed` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 14, 43, 100 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6, 16 |
 | `allowed` | runtime | server/packages/platform/iam/src/external-worker-identity-intent.ts | 206, 229 |
-| `allowed` | route | server/packages/platform/iam/src/iam-routes.ts | 34 |
-| `allowed` | runtime | server/packages/platform/iam/src/iam-service.ts | 172, 173, 179, 182, 224 |
+| `allowed` | route | server/packages/platform/iam/src/iam-routes.ts | 36 |
+| `allowed` | runtime | server/packages/platform/iam/src/iam-service.ts | 173, 174, 180, 183, 225 |
 | `allowed` | runtime | server/packages/platform/iam/src/identity-provisioning-service.ts | 24 |
-| `allowed` | runtime | server/packages/platform/iam/src/identity-saga.ts | 394 |
-| `allowed` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 265, 281 |
+| `allowed` | runtime | server/packages/platform/iam/src/identity-replay-approval.ts | 73, 132 |
+| `allowed` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 342, 379 |
 | `allowed` | runtime | server/packages/platform/iam/src/legacy-compatibility.ts | 1, 8 |
-| `allowed` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 4, 14, 17, 21, 25, 28, 31, 34, 37, 38, 40, 41, 42, 46, 49, 51, 52, 55, 56, 60 |
-| `allowed` | runtime | server/packages/platform/iam/src/provisioning-vertical.ts | 52 |
+| `allowed` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 16, 46, 54, 63, 72, 75, 78, 81, 87, 89, 95, 96, 97, 107, 115, 118, 124, 132, 134, 138, 144, 301 |
+| `allowed` | runtime | server/packages/platform/iam/src/provisioning-vertical.ts | 56 |
 | `allowed` | runtime | server/packages/platform/iam/src/required-actions.ts | 2, 3, 14, 17, 19 |
 | `allowed` | runtime | server/packages/platform/iam/src/trustiam-authority.ts | 117 |
-| `allowed` | route | server/packages/platform/jobs/src/job-admin-routes.ts | 460, 465 |
+| `allowed` | route | server/packages/platform/jobs/src/job-admin-routes.ts | 466, 471 |
 | `allowed` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
-| `allowed` | runtime | server/packages/platform/notifications/src/notification-operations.ts | 47 |
+| `allowed` | runtime | server/packages/platform/notifications/src/notification-operations.ts | 229 |
 | `allowed` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
-| `allowed` | route | server/packages/platform/policy/src/policy-routes.ts | 31, 70 |
-| `allowed` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 3 |
-| `allowed` | runtime | server/packages/platform/search/src/document-search-service.ts | 3 |
+| `allowed` | route | server/packages/platform/policy/src/policy-routes.ts | 41, 81 |
+| `allowed` | test | server/packages/platform/preferences/src/entity-views-routes.test.ts | 15 |
+| `allowed` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
+| `allowed` | runtime | server/packages/platform/search/src/document-search-service.ts | 18 |
 | `allowed` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 79 |
-| `allowed` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 70, 77, 128 |
-| `allowed` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 3, 5 |
-| `allowed` | route | server/packages/services/attachments/src/attachment-routes.ts | 37, 38 |
+| `allowed` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 74, 82, 140 |
+| `allowed` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 125, 163, 164, 263, 264 |
+| `allowed` | route | server/packages/services/attachments/src/attachment-routes.ts | 330, 343, 364, 386 |
+| `allowed` | runtime | server/packages/services/attachments/src/retrieval-admission.ts | 117 |
 | `allowed` | test | server/packages/services/content/src/content-service.test.ts | 2 |
 | `allowed` | runtime | server/packages/services/content/src/content-service.ts | 4, 5 |
-| `allowed` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 35 |
-| `allowed` | runtime | server/packages/services/documents/src/document-service.ts | 120 |
+| `allowed` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36, 101, 117 |
+| `allowed` | runtime | server/packages/services/documents/src/document-service.ts | 128 |
 | `allowed` | runtime | server/packages/services/finance/src/ledger/cross-book-posting-service.ts | 10, 25 |
 | `allowed` | runtime | server/packages/services/finance/src/planning/planning-service.ts | 9 |
-| `allowed` | route | server/packages/services/integration/src/integration-routes.ts | 2 |
+| `allowed` | test | server/packages/services/integration/src/__tests__/integration-routes.test.ts | 183 |
+| `allowed` | route | server/packages/services/integration/src/integration-routes.ts | 54 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-commercial-controls.test.ts | 9 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-explainability.test.ts | 4 |
-| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 2, 6, 14 |
-| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 8, 41, 45 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-policy.test.ts | 18, 20, 21, 104, 105 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-resources.test.ts | 132, 133 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 21, 274, 281, 361, 659, 660, 663, 664 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 27, 464, 497, 498, 499, 501, 502 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 6, 8 |
-| `allowed` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 156 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-invitation-service.test.ts | 9 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-provider-projection.test.ts | 33, 63, 73, 74, 117, 118, 122, 131, 141, 200, 201, 213 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-reveal-affordances.test.ts | 22, 44, 81 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-reveal-revocation.test.ts | 44, 45, 103, 104, 105, 106 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 209 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 15, 26, 62 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/integration/governed-internal-business-partner-http.mjs | 133 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 1176, 1454 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/master-data-services.test.ts | 32 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/worker-engagement-iam-service.test.ts | 25 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/workforce-service.test.ts | 6, 16 |
 | `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts | 11 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-policy.ts | 16, 18, 21 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 78, 94 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1104 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-invitation-service.ts | 149 |
-| `allowed` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 44 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 309 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-policy.ts | 75, 105, 121, 143, 159 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 397, 1515 |
+| `allowed` | test | server/packages/services/master-data/src/business-partner-atlas-insights.test.ts | 9, 68 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-atlas-insights.ts | 24, 69, 70, 71 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-company-pilot.ts | 64, 75, 111 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1302 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-invitation-service.ts | 171 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-provider-projection.ts | 553, 561, 608, 609, 624, 632, 633, 635 |
+| `allowed` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 359 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 412, 1756 |
 | `allowed` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 101 |
-| `allowed` | runtime | server/packages/services/master-data/src/services.ts | 124 |
+| `allowed` | runtime | server/packages/services/master-data/src/master-data-authority.ts | 84, 88 |
+| `allowed` | runtime | server/packages/services/master-data/src/supplier-workforce-command-guard.ts | 51, 54 |
+| `allowed` | runtime | server/packages/services/master-data/src/supplier-workforce-requisition-service.ts | 18 |
+| `allowed` | runtime | server/packages/services/master-data/src/verification-authority.ts | 21 |
 | `allowed` | runtime | server/packages/services/master-data/src/workforce-service.ts | 43 |
-| `allowed` | route | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 8 |
-| `allowed` | route | server/packages/services/publication/src/business-partner-definition-routes.ts | 20 |
+| `allowed` | route | server/packages/services/publication/src/bank-directory-routes.ts | 82, 87 |
+| `allowed` | route | server/packages/services/publication/src/business-partner-case-contract-routes.ts | 282 |
+| `allowed` | route | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 10, 11 |
+| `allowed` | route | server/packages/services/publication/src/business-partner-definition-routes.ts | 302 |
 | `allowed` | route | server/packages/services/publication/src/publication-routes.ts | 138 |
 | `allowed` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
-| `allowed` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20, 39, 47, 113, 141, 150 |
-| `allowed` | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 6, 19 |
-| `allowed` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43, 46, 140 |
-| `allowed` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
+| `allowed` | test | server/packages/services/records/src/__tests__/canonical-read-backend.test.ts | 112, 160, 185 |
+| `allowed` | test | server/packages/services/records/src/__tests__/canonical-read-diagnostics.test.ts | 112, 168, 208, 227, 241 |
+| `allowed` | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 81, 97, 99, 100, 110, 123, 154, 180, 183, 184, 185, 188, 189, 211, 226, 239, 265, 323, 325, 330, 344, 379, 393, 397, 421, 438, 465, 519, 522 |
+| `allowed` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 46, 89, 93, 145, 158, 166, 171, 178, 184, 200, 208, 209, 212, 223, 242, 255, 288, 299, 451, 452, 531, 541, 561, 583, 612, 613, 623, 627 |
+| `allowed` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 46, 150, 153, 163 |
+| `allowed` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20, 39, 47, 113, 141, 150, 195, 237, 238 |
+| `allowed` | test | server/packages/services/records/src/__tests__/list-context-discovery.test.ts | 46, 47, 48, 72, 124 |
+| `allowed` | test | server/packages/services/records/src/__tests__/list-experience.test.ts | 88, 146, 276, 402 |
+| `allowed` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 44, 99 |
+| `allowed` | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 6, 19, 31, 32, 36, 41, 50 |
+| `allowed` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 44, 47, 141 |
+| `allowed` | test | server/packages/services/records/src/__tests__/snapshot-routes.test.ts | 14 |
+| `allowed` | test | server/packages/services/records/src/__tests__/snapshot-service.test.ts | 15 |
+| `allowed` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8, 41 |
 | `allowed` | runtime | server/packages/services/records/src/actions/action-service.ts | 12 |
-| `allowed` | runtime | server/packages/services/records/src/entity-list-service.ts | 40, 56, 106, 173, 175, 177, 183, 185, 188, 205 |
+| `allowed` | runtime | server/packages/services/records/src/entity-authorization.ts | 51, 215, 218, 234, 246, 262, 265, 289, 318, 349, 367, 372 |
+| `allowed` | runtime | server/packages/services/records/src/entity-backend-authorizer.ts | 212, 213, 238, 246, 249, 256, 271, 332, 344, 345, 359, 361, 377, 391, 416, 418, 422, 425 |
+| `allowed` | runtime | server/packages/services/records/src/entity-list-service.ts | 1079, 1084, 1096, 1101, 1102, 1138, 1142, 1172, 1249 |
 | `allowed` | runtime | server/packages/services/records/src/field-validation.ts | 35 |
 | `allowed` | runtime | server/packages/services/records/src/lifecycle-service.ts | 20 |
-| `allowed` | runtime | server/packages/services/records/src/mutation-service.ts | 34, 56, 75, 95, 109 |
-| `allowed` | runtime | server/packages/services/records/src/query-service.ts | 20, 139, 142 |
-| `allowed` | runtime | server/packages/services/records/src/record-read-access.ts | 10, 28, 31, 59 |
-| `allowed` | route | server/packages/services/records/src/snapshots/snapshot-routes.ts | 8 |
-| `allowed` | runtime | server/packages/services/records/src/transfer/transfer-jobs.ts | 120, 121 |
-| `allowed` | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 314, 315 |
-| `allowed` | keycloak | deploy/config/iam/realm-athyper-clean-slate.json | 2248, 2258, 2260, 2694, 2722, 2726, 2741, 2753, 2757 |
-| `allowed` | keycloak | deploy/config/iam/realm-athyper.json | 2259, 2269, 2271, 2864, 2892, 2896, 2911, 2923, 2927 |
-| `allowed` | keycloak | deploy/config/iam/realm-platform-control-clean-slate.json | 209, 218, 220 |
-| `allowed` | keycloak | deploy/config/iam/realm-platform-control.json | 213, 222, 224 |
+| `allowed` | runtime | server/packages/services/records/src/list-context-discovery.ts | 122 |
+| `allowed` | runtime | server/packages/services/records/src/list-experience.ts | 103, 117, 127, 135 |
+| `allowed` | runtime | server/packages/services/records/src/mutation-service.ts | 35, 57, 61, 77, 82, 98, 112, 129 |
+| `allowed` | runtime | server/packages/services/records/src/navigation-context-discovery.ts | 63 |
+| `allowed` | runtime | server/packages/services/records/src/query-service.ts | 45, 150, 271, 282, 593, 605 |
+| `allowed` | runtime | server/packages/services/records/src/record-read-access.ts | 11, 33, 38, 42, 75 |
+| `allowed` | route | server/packages/services/records/src/snapshots/snapshot-routes.ts | 18 |
+| `allowed` | runtime | server/packages/services/records/src/standard-views.ts | 57 |
+| `allowed` | test | server/packages/services/records/src/transfer/export-preflight.test.ts | 6, 10 |
+| `allowed` | runtime | server/packages/services/records/src/transfer/transfer-jobs.ts | 1271 |
+| `allowed` | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 1997 |
 | `allowed` | test | tests/contracts/access-consumption-phase9.test.ts | 13, 37, 41 |
 | `allowed` | test | tests/contracts/api-client-transport.test.ts | 97 |
 | `allowed` | test | tests/contracts/auth-session-foundation.test.ts | 35 |
+| `allowed` | test | tests/contracts/business-partner-independent-child.test.ts | 20, 33, 73 |
 | `allowed` | test | tests/contracts/home-personalization-phase3.test.ts | 26, 28, 30 |
-| `allowed` | tool | tooling/scripts/policy/authorization-inventory.ts | 739, 925, 942 |
+| `allowed` | tool | tooling/scripts/local-dev/graph-preview.integration.test.mts | 255, 265, 279, 324 |
+| `allowed` | tool | tooling/scripts/policy/authorization-inventory.ts | 891, 1112, 1132 |
 | `allowed` | tool | tooling/scripts/policy/verify-api-client-phase2.mjs | 10, 13 |
-| `authorizationScopes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4831 |
+| `allowed` | tool | tooling/scripts/verification/entity-authorization/canonical-execution-evidence.mjs | 36, 37 |
+| `allowed` | tool | tooling/scripts/verification/entity-authorization/canonical-execution-evidence.test.mjs | 16, 18, 19, 26, 28, 29, 37, 48, 51, 69 |
+| `allowed` | tool | tooling/scripts/verification/entity-authorization/policy-differences.mjs | 3, 24 |
+| `allowed` | tool | tooling/scripts/verification/entity-authorization/policy-differences.test.mjs | 4, 5, 14 |
+| `allowed` | tool | tooling/scripts/verification/isolated-enter/harness/ai-retrieval.mjs | 50 |
+| `allowed` | tool | tooling/scripts/verification/isolated-enter/preview-summary-open-work.mts | 121 |
+| `allowed` | tool | tooling/scripts/verification/isolated-execution/ai-retrieval.mjs | 14 |
+| `allowed` | tool | tooling/scripts/verification/isolated-execution/case-bindings.mjs | 20 |
+| `allowed` | tool | tooling/scripts/verification/isolated-execution/host.mjs | 52, 56 |
+| `allowed` | tool | tooling/scripts/verification/isolated-execution/import-policy.mjs | 5 |
+| `allowed` | tool | tooling/scripts/verification/isolated-execution/import-policy.test.mjs | 3 |
+| `allowed` | tool | tooling/scripts/verification/qualify-business-partner-database-adapters.mts | 49, 61 |
+| `allowed` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 82, 111, 125, 185, 202, 207, 209, 217, 241 |
+| `allowed` | tool | tooling/scripts/verification/verify-local-atlas-conversations.mts | 65 |
+| `allowed` | tool | tooling/scripts/verification/verify-local-atlas-generation-races.mts | 25 |
+| `allowed` | tool | tooling/scripts/verification/verify-local-atlas-generation.mts | 22, 44 |
+| `authorizationScopes` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 155 |
+| `authorizationScopes` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 170 |
+| `authorizationScopes` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 140 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts | 46 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 49 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/business-partner-company-native-authority.test.ts | 31 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts | 71 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-read-policy.test.ts | 41 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-reveal-policy.test.ts | 105 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 54 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 23 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 41 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 27 |
+| `authorizationScopes` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 9 |
+| `authorizationScopes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 7246 |
+| `authorizationScopes` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 161 |
+| `authorizationScopes` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 255 |
+| `authorizationScopes` | test | server/db/scripts/tests/integration/business-partner-bank-verification.ts | 80 |
+| `authorizationScopes` | test | server/db/scripts/tests/integration/identity-replay-live.mjs | 463 |
 | `authorizationScopes` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `authorizationScopes` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 25 |
-| `authorizationScopes` | runtime | server/packages/contracts/auth/src/authorization.ts | 80 |
+| `authorizationScopes` | runtime | server/packages/contracts/auth/src/authorization.ts | 84 |
 | `authorizationScopes` | test | server/packages/planes/mesh/src/business-partner-bank-disclosure.test.ts | 5 |
+| `authorizationScopes` | test | server/packages/planes/mesh/src/business-partner-network-exchange.test.ts | 5 |
 | `authorizationScopes` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 3 |
+| `authorizationScopes` | test | server/packages/planes/neon/src/__tests__/integration/business-partner-bank-verification.ts | 83 |
 | `authorizationScopes` | test | server/packages/planes/neon/src/business-partner-account-bank-linkage.test.ts | 6 |
+| `authorizationScopes` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 508 |
 | `authorizationScopes` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6 |
 | `authorizationScopes` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7 |
-| `authorizationScopes` | test | server/packages/planes/neon/src/finance-http.test.ts | 7 |
-| `authorizationScopes` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 13 |
-| `authorizationScopes` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 5 |
+| `authorizationScopes` | test | server/packages/planes/neon/src/finance-http.test.ts | 25 |
+| `authorizationScopes` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 52 |
+| `authorizationScopes` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 31 |
 | `authorizationScopes` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 8 |
+| `authorizationScopes` | test | server/packages/platform/ai/src/__tests__/business-partner-evaluations.test.ts | 12 |
+| `authorizationScopes` | test | server/packages/platform/ai/src/__tests__/business-partner-insight-tools.test.ts | 14 |
 | `authorizationScopes` | test | server/packages/platform/ai/src/__tests__/experience-configuration.test.ts | 8 |
 | `authorizationScopes` | test | server/packages/platform/ai/src/__tests__/failover.test.ts | 6 |
 | `authorizationScopes` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 9 |
+| `authorizationScopes` | test | server/packages/platform/ai/src/__tests__/review-fixture.ts | 23 |
 | `authorizationScopes` | test | server/packages/platform/ai/src/__tests__/runtime.test.ts | 6 |
 | `authorizationScopes` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 7 |
 | `authorizationScopes` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
-| `authorizationScopes` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
-| `authorizationScopes` | test | server/packages/platform/experience/src/service.test.ts | 15, 100, 113, 125, 132 |
-| `authorizationScopes` | runtime | server/packages/platform/experience/src/service.ts | 664, 726, 825 |
+| `authorizationScopes` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 362 |
+| `authorizationScopes` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1105 |
+| `authorizationScopes` | test | server/packages/platform/experience/src/service.test.ts | 16, 155, 168, 180, 187 |
+| `authorizationScopes` | runtime | server/packages/platform/experience/src/service.ts | 677, 739, 838 |
 | `authorizationScopes` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 443 |
+| `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/identity-replay-routes.test.ts | 72 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 12, 34 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
+| `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 18 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
-| `authorizationScopes` | runtime | server/packages/platform/iam/src/iam-service.ts | 187 |
-| `authorizationScopes` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 286 |
-| `authorizationScopes` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 58 |
+| `authorizationScopes` | runtime | server/packages/platform/iam/src/iam-service.ts | 188 |
+| `authorizationScopes` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 384 |
+| `authorizationScopes` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 141 |
 | `authorizationScopes` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `authorizationScopes` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
-| `authorizationScopes` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 3 |
+| `authorizationScopes` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
 | `authorizationScopes` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 79 |
-| `authorizationScopes` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 3 |
+| `authorizationScopes` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 130 |
 | `authorizationScopes` | test | server/packages/services/content/src/content-service.test.ts | 2 |
-| `authorizationScopes` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 35 |
+| `authorizationScopes` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
+| `authorizationScopes` | test | server/packages/services/master-data/src/__tests__/business-partner-360-resources.test.ts | 133 |
+| `authorizationScopes` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 2122 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
+| `authorizationScopes` | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 86 |
+| `authorizationScopes` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 51 |
+| `authorizationScopes` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 51 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
-| `authorizationScopes` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43 |
+| `authorizationScopes` | test | server/packages/services/records/src/__tests__/list-context-discovery.test.ts | 18, 95 |
+| `authorizationScopes` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 35, 90 |
+| `authorizationScopes` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 44 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
+| `authorizationScopes` | runtime | server/packages/services/records/src/list-context-discovery.ts | 79 |
+| `authorizationScopes` | runtime | server/packages/services/records/src/navigation-context-discovery.ts | 41 |
+| `authorizationScopes` | test | tests/contracts/business-partner-independent-child.test.ts | 25 |
+| `authorizationScopes` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 89 |
+| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/0999rc2t4fc84.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/0l66v5ovp8lhq.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/0o9v9fe9piukx.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/1_w7smeqdn5iv.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/36cxx3gg4xrls.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/42x397h50yqoj.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal/static/chunks/1-wqrr3qesgmm.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal/static/chunks/12314vhhtdtjp.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal/static/chunks/13rkzslag_7xg.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal/static/chunks/1xv4mdgsqxfay.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal/static/chunks/23h51s6ooiokw.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-reveal/static/chunks/2cylf4ydydgi9.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-summary/static/chunks/0999rc2t4fc84.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-summary/static/chunks/0l66v5ovp8lhq.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-summary/static/chunks/0o9v9fe9piukx.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-summary/static/chunks/1_w7smeqdn5iv.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-summary/static/chunks/36cxx3gg4xrls.js | 1 |
+| `denied` | runtime | apps/neon/.next-bp-summary/static/chunks/42x397h50yqoj.js | 1 |
+| `denied` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_ai_agent-runtime_src_index_ts_1m59cra._.js | 1 |
+| `denied` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
+| `denied` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_ai_agent-runtime_src_index_ts_1m59cra._.js | 1 |
+| `denied` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
+| `denied` | runtime | apps/studio/.next-bp-consolidated/static/chunks/0-pg7qnm-emo_.js | 1 |
+| `denied` | runtime | apps/studio/.next-bp-consolidated/static/chunks/0vxfk5epq65p3.js | 1 |
+| `denied` | runtime | apps/studio/.next-bp-consolidated/static/chunks/1qxrpml0t6duj.js | 1 |
+| `denied` | runtime | apps/studio/.next-bp-consolidated/static/chunks/1xv4mdgsqxfay.js | 1 |
+| `denied` | runtime | apps/studio/.next-bp-consolidated/static/chunks/2p7s-44cq47be.js | 1 |
+| `denied` | runtime | apps/studio/.next-bp-consolidated/static/chunks/3_kmdat6u6dxc.js | 1 |
+| `denied` | runtime | governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-publication-save-repair.json | 7 |
+| `denied` | runtime | governance/evidence/business-partner/r5-development-deployment-2026-09-05.json | 55 |
+| `denied` | runtime | governance/policy/reports/business-partner-activation-current-grants.dev.json | 6881 |
+| `denied` | runtime | governance/policy/reports/business-partner-activation-differences.dev.json | 110, 111, 155, 156, 200, 201, 245, 246, 290, 291, 335, 380, 381, 425, 426, 470, 471, 515, 516, 560, 561, 605, 606, 650, 651, 695, 696, 740, 741, 785, 786, 830, 831, 875, 876, 920, 921, 965, 966, 1010, 1011, 1055, 1056, 1100, 1101, 1145, 1146, 1190, 1191, 1235, 1236, 1280, 1281 |
+| `denied` | runtime | governance/policy/reports/business-partner-affordance-count-66-comparison-20260912-r2.dev.json | 492, 494, 496, 4032, 4034, 4036, 4042, 4044, 4046, 4072, 4074, 4076, 4082, 4084, 4086, 4124, 4126, 4134, 4136, 4164, 4166, 4174, 4176, 4186, 4188, 4196, 4198, 5413, 5415, 5417, 5484, 5486, 5488, 5555, 5557, 5559, 5608, 5610, 5626, 5628, 5630, 5650, 5652, 5697, 5699, 5701, 5768, 5770, 5772, 11699, 11701, 11703, 11709, 11711, 11713, 11739, 11741, 11743, 11749, 11751, 11753, 11862, 11864, 11872, 11874, 11902, 11904, 11912, 11914, 11924, 11926, 11934, 11936, 13141, 13143, 13145, 13151, 13153, 13155, 13181, 13183, 13185, 13191, 13193, 13195, 13241, 13243, 13245, 13312, 13314, 13316, 13383, 13385, 13387, 13436, 13438, 13454, 13456, 13458, 13478, 13480, 13525, 13527, 13529, 13596, 13598, 13600 |
+| `denied` | runtime | governance/policy/reports/business-partner-affordance-count-66-comparison-20260912-r3.dev.json | 472, 474, 476, 492, 494, 496, 4011, 4013, 4015, 4021, 4023, 4025, 4051, 4053, 4055, 4061, 4063, 4065, 4103, 4105, 4113, 4115, 4143, 4145, 4153, 4155, 4165, 4167, 4175, 4177, 5372, 5374, 5376, 5392, 5394, 5396, 5422, 5424, 5426, 5442, 5444, 5446, 5472, 5474, 5476, 5492, 5494, 5496, 5522, 5524, 5526, 5542, 5544, 5546, 5572, 5574, 5576, 5592, 5594, 5596, 5622, 5624, 5626, 5642, 5644, 5646, 11531, 11533, 11535, 11541, 11543, 11545, 11571, 11573, 11575, 11581, 11583, 11585, 11673, 11675, 11683, 11685, 11713, 11715, 11723, 11725, 11735, 11737, 11745, 11747, 12952, 12954, 12956, 12962, 12964, 12966, 12992, 12994, 12996, 13002, 13004, 13006, 13032, 13034, 13036, 13052, 13054, 13056, 13082, 13084, 13086, 13102, 13104, 13106, 13132, 13134, 13136, 13152, 13154, 13156, 13182, 13184, 13186, 13202, 13204, 13206, 13232, 13234, 13236, 13252, 13254, 13256, 13282, 13284, 13286, 13302, 13304, 13306 |
+| `denied` | runtime | governance/policy/reports/business-partner-affordance-count-66-comparison-20260912-r5.dev.json | 472, 474, 476, 492, 494, 496, 4011, 4013, 4015, 4021, 4023, 4025, 4051, 4053, 4055, 4061, 4063, 4065, 4103, 4105, 4113, 4115, 4143, 4145, 4153, 4155, 4165, 4167, 4175, 4177, 5372, 5374, 5376, 5392, 5394, 5396, 5422, 5424, 5426, 5442, 5444, 5446, 5472, 5474, 5476, 5492, 5494, 5496, 5522, 5524, 5526, 5542, 5544, 5546, 5572, 5574, 5576, 5592, 5594, 5596, 5622, 5624, 5626, 5642, 5644, 5646, 11531, 11533, 11535, 11541, 11543, 11545, 11571, 11573, 11575, 11581, 11583, 11585, 11673, 11675, 11683, 11685, 11713, 11715, 11723, 11725, 11735, 11737, 11745, 11747, 12952, 12954, 12956, 12962, 12964, 12966, 12992, 12994, 12996, 13002, 13004, 13006, 13032, 13034, 13036, 13052, 13054, 13056, 13082, 13084, 13086, 13102, 13104, 13106, 13132, 13134, 13136, 13152, 13154, 13156, 13182, 13184, 13186, 13202, 13204, 13206, 13232, 13234, 13236, 13252, 13254, 13256, 13282, 13284, 13286, 13302, 13304, 13306 |
+| `denied` | runtime | governance/policy/reports/business-partner-affordance-count-comparisons-admin-20260912-r2.dev.json | 10117, 10119, 10136, 10686, 10688, 10690, 10696, 10707, 11347, 11349, 11351, 11357, 11368, 12268, 12270, 12287, 12837, 12839, 12841, 12847, 12858, 13498, 13500, 13502, 13508, 13519, 13713, 13715, 13732, 13868, 13870, 13872, 13878, 13889, 19306, 19308, 19310, 19316, 19327, 19351, 19353, 19355, 19361, 19372 |
+| `denied` | runtime | governance/policy/reports/business-partner-affordance-count-comparisons-admin-20260912-r3.dev.json | 10405, 10407, 10424, 10974, 10976, 10978, 10984, 10995, 11635, 11637, 11639, 11645, 11656, 12844, 12846, 12863, 13413, 13415, 13417, 13423, 13434, 14074, 14076, 14078, 14084, 14095, 14119, 14121, 14123, 14129, 14140, 14164, 14166, 14168, 14174, 14185, 14209, 14211, 14213, 14230, 14254, 14256, 14258, 14275, 14299, 14301, 14303, 14309, 14320, 14344, 14346, 14348, 14354, 14365, 14389, 14391, 14393, 14399, 14410, 19827, 19829, 19831, 19837, 19848, 19872, 19874, 19876, 19882, 19893 |
+| `denied` | runtime | governance/policy/reports/business-partner-affordance-count-comparisons-admin-20260912-r5.dev.json | 10405, 10407, 10424, 10974, 10976, 10978, 10984, 10995, 11635, 11637, 11639, 11645, 11656, 12844, 12846, 12863, 13413, 13415, 13417, 13423, 13434, 14074, 14076, 14078, 14084, 14095, 14119, 14121, 14123, 14129, 14140, 14164, 14166, 14168, 14174, 14185, 14209, 14211, 14213, 14230, 14254, 14256, 14258, 14275, 14299, 14301, 14303, 14309, 14320, 14344, 14346, 14348, 14354, 14365, 14389, 14391, 14393, 14399, 14410, 19827, 19829, 19831, 19837, 19848, 19872, 19874, 19876, 19882, 19893 |
+| `denied` | runtime | governance/policy/reports/business-partner-affordance-count-comparisons-owner-20260912-r2.dev.json | 2176, 2178, 2180, 2186, 2197, 2625, 2627, 2629, 2635, 2646, 4260, 4262, 4264, 4270, 4281, 4709, 4711, 4713, 4719, 4730, 9779, 9781, 9783, 9789, 9800, 10062, 10064, 10081, 10273, 10275, 10277, 10283, 10294, 10620, 10622, 10624, 10630, 10641, 11281, 11283, 11285, 11291, 11302, 11908, 11910, 11912, 11918, 11929, 12191, 12193, 12210, 12402, 12404, 12406, 12412, 12423, 12749, 12751, 12753, 12759, 12770, 13410, 13412, 13414, 13420, 13431, 13455, 13457, 13459, 13465, 13476, 13500, 13502, 13504, 13510, 13521, 13545, 13547, 13549, 13566, 13590, 13592, 13594, 13611, 13635, 13637, 13639, 13645, 13656, 13680, 13682, 13684, 13690, 13701, 13725, 13727, 13729, 13735, 13746, 19112, 19114, 19116, 19122, 19133, 19157, 19159, 19161, 19167, 19178 |
+| `denied` | runtime | governance/policy/reports/business-partner-affordance-count-comparisons-owner-20260912-r3.dev.json | 2176, 2178, 2180, 2186, 2197, 2625, 2627, 2629, 2635, 2646, 3678, 3680, 3682, 3688, 3700, 3726, 3728, 3730, 3736, 3748, 3774, 3776, 3778, 3784, 3796, 4404, 4406, 4408, 4414, 4425, 4853, 4855, 4857, 4863, 4874, 9923, 9925, 9927, 9933, 9944, 10206, 10208, 10225, 10417, 10419, 10421, 10427, 10438, 10764, 10766, 10768, 10774, 10785, 11425, 11427, 11429, 11435, 11446, 11470, 11472, 11474, 11480, 11492, 11518, 11520, 11522, 11528, 11540, 11566, 11568, 11570, 11576, 11588, 12196, 12198, 12200, 12206, 12217, 12479, 12481, 12498, 12690, 12692, 12694, 12700, 12711, 13037, 13039, 13041, 13047, 13058, 13698, 13700, 13702, 13708, 13719, 13743, 13745, 13747, 13753, 13764, 13788, 13790, 13792, 13798, 13809, 13833, 13835, 13837, 13854, 13878, 13880, 13882, 13899, 13923, 13925, 13927, 13933, 13944, 13968, 13970, 13972, 13978, 13989, 14013, 14015, 14017, 14023, 14034, 19400, 19402, 19404, 19410, 19421, 19445, 19447, 19449, 19455, 19466 |
+| `denied` | runtime | governance/policy/reports/business-partner-affordance-count-comparisons-owner-20260912-r5.dev.json | 2176, 2178, 2180, 2186, 2197, 2625, 2627, 2629, 2635, 2646, 3678, 3680, 3682, 3688, 3700, 3726, 3728, 3730, 3736, 3748, 3774, 3776, 3778, 3784, 3796, 4404, 4406, 4408, 4414, 4425, 4853, 4855, 4857, 4863, 4874, 9923, 9925, 9927, 9933, 9944, 10206, 10208, 10225, 10417, 10419, 10421, 10427, 10438, 10764, 10766, 10768, 10774, 10785, 11425, 11427, 11429, 11435, 11446, 11470, 11472, 11474, 11480, 11492, 11518, 11520, 11522, 11528, 11540, 11566, 11568, 11570, 11576, 11588, 12196, 12198, 12200, 12206, 12217, 12479, 12481, 12498, 12690, 12692, 12694, 12700, 12711, 13037, 13039, 13041, 13047, 13058, 13698, 13700, 13702, 13708, 13719, 13743, 13745, 13747, 13753, 13764, 13788, 13790, 13792, 13798, 13809, 13833, 13835, 13837, 13854, 13878, 13880, 13882, 13899, 13923, 13925, 13927, 13933, 13944, 13968, 13970, 13972, 13978, 13989, 14013, 14015, 14017, 14023, 14034, 19400, 19402, 19404, 19410, 19421, 19445, 19447, 19449, 19455, 19466 |
+| `denied` | runtime | governance/policy/reports/business-partner-causal-shadow.admin-repeat.dev.json | 20, 21, 22, 40, 41, 42, 45, 48, 61, 62, 65, 68, 80, 81, 82, 85, 88, 101, 102, 105, 108, 120, 121, 122, 125, 128, 141, 142, 145, 148, 160, 161, 162, 165, 168, 181, 182, 185, 188, 200, 201, 202, 220, 221, 222, 241, 242, 261, 280, 281, 282, 285, 288, 301, 302, 305, 308, 320, 321, 322, 325, 328, 341, 342, 345, 348, 360, 361, 362, 381, 382, 383, 386, 389, 390, 403, 404, 407, 410, 411, 423, 424, 425, 428, 431, 432, 445, 446, 449, 452, 453, 465, 466, 467, 470, 473, 474, 487, 488, 491, 494, 495, 507, 508, 509, 512, 515, 516, 529, 530, 533, 536, 537, 549, 550, 551, 554, 557, 558, 571, 572, 575, 578, 579, 591, 592, 593, 596, 599, 600, 612, 613, 614, 617, 620, 621, 634, 635, 638, 641, 642, 654, 655, 656, 675, 676, 677, 680, 683, 684, 697, 698, 701, 704, 705, 717, 718, 719, 722, 725, 726, 739, 740, 743, 746, 747, 759, 760, 761, 764, 767, 779, 780, 781, 784, 787, 788, 801, 802, 805, 808, 809, 821, 822, 823, 826, 829, 830, 843, 844, 847, 850, 851, 863, 864, 865, 868, 871, 883, 884, 885, 888, 891, 892, 905, 906, 909, 912, 913, 925, 926, 927, 946, 947, 948, 967, 968, 969, 988, 989, 990, 1009, 1010, 1011, 1030, 1031, 1032, 1051, 1052, 1053, 1071, 1072, 1073, 1093, 1094, 1097, 1100, 1101, 1117, 1118, 1140, 1141, 1144, 1147, 1148, 1164, 1165, 1187, 1188, 1210, 1211, 1233, 1234, 1257, 1258, 1280, 1281, 1302, 1303, 1304, 1307, 1310, 1326, 1327, 1348, 1349, 1350, 1353, 1356, 1369, 1370, 1373, 1376, 1388, 1389, 1390, 1393, 1396, 1409, 1410, 1413, 1416 |
+| `denied` | runtime | governance/policy/reports/business-partner-causal-shadow.admin.dev.json | 20, 21, 22, 40, 41, 42, 45, 48, 61, 62, 65, 68, 80, 81, 82, 85, 88, 101, 102, 105, 108, 120, 121, 122, 125, 128, 141, 142, 145, 148, 160, 161, 162, 165, 168, 181, 182, 185, 188, 200, 201, 202, 220, 221, 222, 241, 242, 261, 280, 281, 282, 285, 288, 301, 302, 305, 308, 320, 321, 322, 325, 328, 341, 342, 345, 348, 360, 361, 362, 381, 382, 383, 386, 389, 390, 403, 404, 407, 410, 411, 423, 424, 425, 428, 431, 432, 445, 446, 449, 452, 453, 465, 466, 467, 470, 473, 474, 487, 488, 491, 494, 495, 507, 508, 509, 512, 515, 516, 529, 530, 533, 536, 537, 549, 550, 551, 554, 557, 558, 571, 572, 575, 578, 579, 591, 592, 593, 596, 599, 600, 612, 613, 614, 617, 620, 621, 634, 635, 638, 641, 642, 654, 655, 656, 675, 676, 677, 680, 683, 684, 697, 698, 701, 704, 705, 717, 718, 719, 722, 725, 726, 739, 740, 743, 746, 747, 759, 760, 761, 764, 767, 779, 780, 781, 784, 787, 788, 801, 802, 805, 808, 809, 821, 822, 823, 826, 829, 830, 843, 844, 847, 850, 851, 863, 864, 865, 868, 871, 883, 884, 885, 888, 891, 892, 905, 906, 909, 912, 913, 925, 926, 927, 946, 947, 948, 967, 968, 969, 988, 989, 990, 1009, 1010, 1011, 1030, 1031, 1032, 1051, 1052, 1053, 1071, 1072, 1073, 1093, 1094, 1097, 1100, 1101, 1117, 1118, 1140, 1141, 1144, 1147, 1148, 1164, 1165, 1187, 1188, 1210, 1211, 1233, 1234, 1257, 1258, 1280, 1281, 1302, 1303, 1304, 1307, 1310, 1326, 1327, 1348, 1349, 1353, 1369, 1373, 1388, 1389, 1408, 1409, 1413, 1429, 1433, 1448, 1449, 1453, 1469, 1473, 1488, 1489, 1493, 1509, 1513, 1528, 1529, 1533, 1549, 1553, 1568, 1569, 1573, 1589, 1593, 1608, 1609, 1613, 1628, 1629, 1633, 1649, 1653, 1668, 1669, 1688, 1689, 1693, 1709, 1713, 1728, 1729, 1733, 1749, 1753, 1768, 1769, 1773, 1788, 1789, 1793, 1809, 1813, 1828, 1829, 1833, 1849, 1853, 1868, 1869, 1873, 1888, 1889, 1893, 1909, 1913, 1928, 1929, 1930, 1933, 1936, 1949, 1950, 1953, 1956, 1968, 1969, 1970, 1973, 1976, 1989, 1990, 1993, 1996 |
+| `denied` | runtime | governance/policy/reports/business-partner-causal-shadow.owner-qualified.dev.json | 20, 21, 22, 40, 41, 42, 45, 48, 61, 62, 65, 68, 80, 81, 82, 85, 88, 101, 102, 105, 108, 120, 121, 122, 125, 128, 141, 142, 145, 148, 160, 161, 162, 165, 168, 181, 182, 185, 188, 200, 201, 202, 220, 221, 222, 240, 241, 242, 260, 261, 262, 265, 268, 280, 281, 282, 285, 288, 301, 302, 305, 308, 320, 321, 322, 325, 328, 341, 342, 345, 348, 360, 361, 362, 381, 382, 383, 386, 389, 401, 402, 403, 406, 409, 421, 422, 423, 426, 429, 441, 442, 443, 446, 449, 461, 462, 463, 466, 469, 470, 482, 483, 484, 487, 490, 502, 503, 504, 507, 510, 522, 523, 524, 527, 530, 542, 543, 544, 547, 550, 551, 564, 565, 568, 571, 572, 584, 585, 586, 589, 592, 604, 605, 606, 609, 612, 624, 625, 626, 629, 632, 644, 645, 646, 649, 652, 653, 665, 666, 667, 686, 687, 688, 707, 708, 709, 728, 729, 730, 749, 750, 751, 770, 771, 772, 791, 792, 793, 811, 812, 813, 833, 834, 837, 840, 841, 856, 857, 858, 861, 864, 878, 879, 880, 883, 886, 901, 902, 903, 906, 909, 923, 924, 925, 928, 931, 945, 946, 947, 950, 953, 967, 968, 969, 972, 975, 990, 991, 992, 995, 998, 1012, 1013, 1014, 1017, 1020, 1034, 1035, 1036, 1039, 1042, 1057, 1058, 1059, 1062, 1065, 1079, 1080, 1081, 1084, 1087, 1100, 1101, 1104, 1107, 1119, 1120, 1121, 1124, 1127, 1140, 1141, 1144, 1147 |
+| `denied` | runtime | governance/policy/reports/business-partner-consolidated-disposition-source-audit-20260912.dev.json | 110, 111, 156, 157, 202, 203, 248, 249, 294, 295, 340, 386, 387, 432, 433, 478, 479, 524, 525, 570, 571, 616, 617, 662, 663, 708, 709, 754, 755, 800, 801, 846, 847, 892, 893, 938, 939, 984, 985, 1030, 1031, 1076, 1077, 1122, 1123, 1168, 1169, 1214, 1215, 1260, 1261, 1306, 1307 |
+| `denied` | runtime | governance/policy/reports/business-partner-finance-reveal-comparisons-admin-20260912.dev.json | 11235, 11237, 11239, 11245, 11256, 13386, 13388, 13390, 13396, 13407, 13431, 13433, 13435, 13441, 13452, 13476, 13478, 13480, 13486, 13497, 13521, 13523, 13525, 13542, 13566, 13568, 13570, 13587, 13611, 13613, 13615, 13621, 13632, 13656, 13658, 13660, 13666, 13677, 13701, 13703, 13705, 13711, 13722, 19139, 19141, 19143, 19149, 19160, 19184, 19186, 19188, 19194, 19205 |
+| `denied` | runtime | governance/policy/reports/business-partner-finance-reveal-comparisons-owner-20260912.dev.json | 2580, 2582, 2584, 2590, 2601, 4619, 4621, 4623, 4629, 4640, 10183, 10185, 10187, 10193, 10204, 11202, 11204, 11206, 11212, 11223, 12323, 12325, 12327, 12333, 12344, 13342, 13344, 13346, 13352, 13363, 13387, 13389, 13391, 13397, 13408, 13432, 13434, 13436, 13442, 13453, 13477, 13479, 13481, 13498, 13522, 13524, 13526, 13543, 13567, 13569, 13571, 13577, 13588, 13612, 13614, 13616, 13622, 13633, 13657, 13659, 13661, 13667, 13678, 19095, 19097, 19099, 19105, 19116, 19140, 19142, 19144, 19150, 19161 |
+| `denied` | runtime | governance/policy/reports/business-partner-neon-final-source-intersection-diagnostics-20260912.dev.json | 87, 186, 285, 384, 417, 450, 549, 648, 747, 846, 945, 1044, 1143, 1176, 1209, 1308, 1407, 1506 |
+| `denied` | runtime | governance/policy/reports/business-partner-protected-reveal-comparisons-admin-20260912.dev.json | 11235, 11237, 11239, 11245, 11256, 13386, 13388, 13390, 13396, 13407, 13431, 13433, 13435, 13441, 13452, 13476, 13478, 13480, 13486, 13497, 13521, 13523, 13525, 13542, 13566, 13568, 13570, 13587, 13611, 13613, 13615, 13621, 13632, 13656, 13658, 13660, 13666, 13677, 13701, 13703, 13705, 13711, 13722, 19139, 19141, 19143, 19149, 19160, 19184, 19186, 19188, 19194, 19205 |
+| `denied` | runtime | governance/policy/reports/business-partner-protected-reveal-comparisons-owner-20260912.dev.json | 2580, 2582, 2584, 2590, 2601, 4619, 4621, 4623, 4629, 4640, 10183, 10185, 10187, 10193, 10204, 11202, 11204, 11206, 11212, 11223, 12323, 12325, 12327, 12333, 12344, 13342, 13344, 13346, 13352, 13363, 13387, 13389, 13391, 13397, 13408, 13432, 13434, 13436, 13442, 13453, 13477, 13479, 13481, 13498, 13522, 13524, 13526, 13543, 13567, 13569, 13571, 13577, 13588, 13612, 13614, 13616, 13622, 13633, 13657, 13659, 13661, 13667, 13678, 19095, 19097, 19099, 19105, 19116, 19140, 19142, 19144, 19150, 19161 |
+| `denied` | runtime | governance/policy/reports/business-partner-r4-66-disposition-coverage-20260912.dev.json | 39, 41, 43, 47, 58, 60, 62, 65, 67, 189, 191, 193, 197, 394, 396, 398, 401, 403, 420, 422, 425, 427, 429, 433, 461, 463, 465, 468, 470, 485, 487, 489, 492, 494, 509, 511, 513, 516, 518, 533, 535, 537, 540, 542, 557, 559, 561, 564, 566, 581, 583, 585, 588, 590, 729, 731, 733, 737, 968, 970, 972, 975, 977, 1011, 1013, 1016, 1018, 1020, 1024, 1052, 1054, 1056, 1059, 1061, 1076, 1078, 1080, 1083, 1085, 1100, 1102, 1104, 1107, 1109, 1124, 1126, 1128, 1131, 1133, 1148, 1150, 1152, 1155, 1157, 1172, 1174, 1176, 1179, 1181, 1196, 1198, 1200, 1203, 1205, 1251, 1253, 1255, 1259 |
+| `denied` | runtime | governance/policy/reports/business-partner-r4-runtime-decision-traces-20260912.dev.json | 2056, 2507, 3024, 3955, 4406, 4923, 4956, 4989, 5022, 5055, 5088, 5121, 5154, 8568, 9019, 9536, 13355, 13806, 14323, 16746, 16955, 17120, 17395, 17912, 17946, 17982, 18018, 18515, 18724, 18889, 19164, 19681, 19714, 19747, 19780, 19813, 19846, 19879, 19912, 23106, 23315, 23480, 23755, 24272, 27871, 28080, 28245, 28520, 29037, 31680, 32131, 32648, 35518, 35727, 35892, 36167, 36684, 36718, 36754, 36790, 36827, 36866, 36905, 36944, 36983, 39275, 39726, 40243, 41174, 41625, 42142, 42175, 42208, 42241, 42274, 42307, 42340, 42373, 53593, 53802, 53989, 54022, 55496, 55958, 56233, 56288, 57927, 58473, 58814, 58847, 59691, 60984, 68025, 68738, 70822, 71711, 71812, 74537, 74807, 75503, 75584, 77005, 77060, 78217, 89131, 89582, 90099, 91030, 91481, 91998, 92031, 92064, 92097, 92130, 92163, 92196, 92229, 103581, 103636, 103669, 104340, 105539, 105594, 105792, 106892, 108058, 108146, 108317, 108776, 109169, 110152, 118642, 121986, 122065, 122126, 124161, 124194, 124469, 124524, 126001, 126772, 126838, 126882, 127658, 129484, 131090, 137450, 138121, 138330, 138550, 138869, 139353, 139408, 140081, 140115, 140151, 140187, 140684, 140893, 141058, 141333, 141850, 141883, 141916, 141949, 141982, 142015, 142048, 142081, 152575, 152619, 152641, 153455, 153477, 153708, 153730, 154258, 154544, 154566, 155424, 155446, 155897, 155919, 158009, 158042, 158474, 158496, 158915, 159250, 167187, 167722, 168075, 168446, 168648, 169602, 170241, 170428, 170802, 171253, 171275, 172232, 172419, 172826, 173185, 173300, 173813, 174480, 174513, 175186, 178967, 179176, 179341, 179616, 180133, 180167, 180203, 180239, 180736, 180945, 181110, 181385, 181902, 181935, 181968, 182001, 182034, 182067, 182100, 182133, 192583, 192660, 192693, 193518, 193573, 193705, 193782, 194222, 194486, 194618, 195553, 195586, 195960, 196037, 198116, 198237, 198546, 198568, 198625, 199142, 207021, 208028, 208292, 208542, 210568, 210656, 210931, 212064, 212757, 212834, 212989, 213756, 213789, 214170, 214901, 215490, 219530, 219981, 220498, 221429, 221880, 222397, 222430, 222463, 222496, 222529, 222562, 222595, 222628, 233782, 234167, 234211, 234321, 235773, 236213, 236268, 236587, 238369, 238600, 238689, 238922, 240362, 240739, 246434, 247215, 247765, 248227, 248720, 249741, 258462, 260309, 260518, 260683, 260958, 261475, 265074, 265283, 265448, 265723, 266240, 269110, 269319, 269484, 269759, 270276, 270310, 270346, 270382, 270419, 270458, 270497, 270536, 270575, 270627, 270679, 270731, 270783, 270835, 270887, 270939 |
+| `denied` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.3a22a0df96a2.dev.json | 162, 232, 302, 337, 411, 446, 520, 555, 629, 664, 738, 812, 847, 921, 956, 1026, 1061, 1133, 1168, 1242, 1243, 1244, 1246, 1249, 1277, 1312, 1386, 1460, 1497, 1532, 1606, 1641, 1715, 1750, 1820, 1855, 1892, 1929, 2003, 2038, 2108, 2143, 2217, 2252, 2326, 2361, 2435, 2470, 2544, 2618, 2653, 2727, 2762, 2832, 2867, 2939, 2974, 3048, 3049, 3050, 3052, 3055, 3083, 3118, 3192, 3266, 3303, 3338, 3412, 3447, 3521, 3556, 3626, 3661, 3698, 3735, 3809, 3844, 3881, 3918, 3955, 3992, 4029, 4066, 4101, 4758, 4759, 4761, 4764, 4869, 4870, 4871, 4873, 4876, 5015, 5309, 5346, 5384, 5385, 5387, 5390, 6010, 6011, 6013, 6016, 6121, 6122, 6123, 6125, 6128, 6267, 6561, 6598, 6636, 6637, 6639, 6642, 6828, 6829, 6831, 6834, 6943, 6944, 6945, 6947, 6950, 7640, 7641, 7643, 7646, 7751, 7752, 7753, 7755, 7758, 7897, 8191, 8228, 8266, 8267, 8269, 8272, 8962, 8963, 8965, 8968, 9073, 9074, 9075, 9077, 9080, 9219, 9513, 9550, 9588, 9589, 9591, 9594, 10284, 10285, 10287, 10290, 10395, 10396, 10397, 10399, 10402, 10541, 10835, 10872, 10910, 10911, 10913, 10916, 11606, 11607, 11609, 11612, 11717, 11718, 11719, 11721, 11724, 11863, 12157, 12194, 12232, 12233, 12235, 12238, 12928, 12929, 12931, 12934, 13039, 13040, 13041, 13043, 13046, 13185, 13479, 13516, 13554, 13555, 13557, 13560, 13629, 13630, 13632, 13635, 14288, 14289, 14291, 14294, 14399, 14400, 14401, 14403, 14406, 14545, 14839, 14876, 14914, 14915, 14917, 14920, 15610, 15611, 15613, 15616, 15721, 15722, 15723, 15725, 15728, 15867, 16161, 16198, 16236, 16237, 16239, 16242, 16932, 16933, 16935, 16938, 17043, 17044, 17045, 17047, 17050, 17189, 17483, 17520, 17558, 17559, 17561, 17564, 18254, 18255, 18257, 18260, 18365, 18366, 18367, 18369, 18372, 18511, 18805, 18842, 18880, 18881, 18883, 18886, 19576, 19577, 19579, 19582, 19687, 19688, 19689, 19691, 19694, 19833, 20127, 20164, 20202, 20203, 20205, 20208, 20898, 20899, 20901, 20904, 21009, 21010, 21011, 21013, 21016, 21155, 21449, 21486, 21524, 21525, 21527, 21530 |
+| `denied` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.3fbbbaa37628.dev.json | 197, 267, 337, 372, 446, 481, 555, 590, 664, 699, 773, 847, 882, 956, 991, 1061, 1096, 1168, 1203, 1277, 1278, 1279, 1281, 1284, 1312, 1347, 1421, 1495, 1532, 1567, 1641, 1676, 1750, 1785, 1855, 1890, 1927, 1964, 2038, 2073, 2143, 2178, 2252, 2287, 2361, 2396, 2470, 2505, 2579, 2653, 2688, 2762, 2797, 2867, 2902, 2974, 3009, 3083, 3084, 3085, 3087, 3090, 3118, 3153, 3227, 3301, 3338, 3373, 3447, 3482, 3556, 3591, 3661, 3696, 3733, 3770, 3844, 3879, 3916, 3953, 3990, 4027, 4064, 4101, 4136, 4828, 4829, 4831, 4834, 4939, 4940, 4941, 4943, 4946, 5085, 5379, 5416, 5454, 5455, 5457, 5460, 6080, 6081, 6083, 6086, 6191, 6192, 6193, 6195, 6198, 6337, 6631, 6668, 6706, 6707, 6709, 6712, 6898, 6899, 6901, 6904, 7013, 7014, 7015, 7017, 7020, 7745, 7746, 7748, 7751, 7856, 7857, 7858, 7860, 7863, 8002, 8296, 8333, 8371, 8372, 8374, 8377, 9102, 9103, 9105, 9108, 9213, 9214, 9215, 9217, 9220, 9359, 9653, 9690, 9728, 9729, 9731, 9734, 10459, 10460, 10462, 10465, 10570, 10571, 10572, 10574, 10577, 10716, 11010, 11047, 11085, 11086, 11088, 11091, 11816, 11817, 11819, 11822, 11927, 11928, 11929, 11931, 11934, 12073, 12367, 12404, 12442, 12443, 12445, 12448, 13173, 13174, 13176, 13179, 13284, 13285, 13286, 13288, 13291, 13430, 13724, 13761, 13799, 13800, 13802, 13805, 13874, 13875, 13877, 13880, 14568, 14569, 14571, 14574, 14679, 14680, 14681, 14683, 14686, 14825, 15119, 15156, 15194, 15195, 15197, 15200, 15925, 15926, 15928, 15931, 16036, 16037, 16038, 16040, 16043, 16182, 16476, 16513, 16551, 16552, 16554, 16557, 17282, 17283, 17285, 17288, 17393, 17394, 17395, 17397, 17400, 17539, 17833, 17870, 17908, 17909, 17911, 17914, 18639, 18640, 18642, 18645, 18750, 18751, 18752, 18754, 18757, 18896, 19190, 19227, 19265, 19266, 19268, 19271, 19996, 19997, 19999, 20002, 20107, 20108, 20109, 20111, 20114, 20253, 20547, 20584, 20622, 20623, 20625, 20628, 21353, 21354, 21356, 21359, 21464, 21465, 21466, 21468, 21471, 21610, 21904, 21941, 21979, 21980, 21982, 21985 |
+| `denied` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.6ce0171efcfd.dev.json | 162, 232, 302, 337, 411, 446, 520, 555, 629, 664, 738, 812, 847, 921, 956, 1026, 1061, 1133, 1168, 1242, 1243, 1244, 1246, 1249, 1277, 1312, 1386, 1460, 1497, 1532, 1606, 1641, 1715, 1750, 1820, 1855, 1892, 1929, 2003, 2038, 2108, 2143, 2217, 2252, 2326, 2361, 2435, 2470, 2544, 2618, 2653, 2727, 2762, 2832, 2867, 2939, 2974, 3048, 3049, 3050, 3052, 3055, 3083, 3118, 3192, 3266, 3303, 3338, 3412, 3447, 3521, 3556, 3626, 3661, 3698, 3735, 3809, 3844, 3881, 3918, 3955, 3992, 4029, 4066, 4101, 4758, 4759, 4761, 4764, 4869, 4870, 4871, 4873, 4876, 5015, 5309, 5346, 5384, 5385, 5387, 5390, 6010, 6011, 6013, 6016, 6121, 6122, 6123, 6125, 6128, 6267, 6561, 6598, 6636, 6637, 6639, 6642, 6828, 6829, 6831, 6834, 6943, 6944, 6945, 6947, 6950, 7640, 7641, 7643, 7646, 7751, 7752, 7753, 7755, 7758, 7897, 8191, 8228, 8266, 8267, 8269, 8272, 8962, 8963, 8965, 8968, 9073, 9074, 9075, 9077, 9080, 9219, 9513, 9550, 9588, 9589, 9591, 9594, 10284, 10285, 10287, 10290, 10395, 10396, 10397, 10399, 10402, 10541, 10835, 10872, 10910, 10911, 10913, 10916, 11606, 11607, 11609, 11612, 11717, 11718, 11719, 11721, 11724, 11863, 12157, 12194, 12232, 12233, 12235, 12238, 12928, 12929, 12931, 12934, 13039, 13040, 13041, 13043, 13046, 13185, 13479, 13516, 13554, 13555, 13557, 13560, 13629, 13630, 13632, 13635, 14288, 14289, 14291, 14294, 14399, 14400, 14401, 14403, 14406, 14545, 14839, 14876, 14914, 14915, 14917, 14920, 15610, 15611, 15613, 15616, 15721, 15722, 15723, 15725, 15728, 15867, 16161, 16198, 16236, 16237, 16239, 16242, 16932, 16933, 16935, 16938, 17043, 17044, 17045, 17047, 17050, 17189, 17483, 17520, 17558, 17559, 17561, 17564, 18254, 18255, 18257, 18260, 18365, 18366, 18367, 18369, 18372, 18511, 18805, 18842, 18880, 18881, 18883, 18886, 19576, 19577, 19579, 19582, 19687, 19688, 19689, 19691, 19694, 19833, 20127, 20164, 20202, 20203, 20205, 20208, 20898, 20899, 20901, 20904, 21009, 21010, 21011, 21013, 21016, 21155, 21449, 21486, 21524, 21525, 21527, 21530 |
+| `denied` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.b907d257.dev.json | 127, 197, 267, 302, 376, 411, 485, 520, 594, 629, 703, 777, 812, 886, 921, 991, 1026, 1098, 1133, 1207, 1208, 1209, 1211, 1214, 1242, 1277, 1351, 1425, 1462, 1497, 1571, 1606, 1680, 1715, 1785, 1820, 1857, 1894, 1968, 2003, 2073, 2108, 2182, 2217, 2291, 2326, 2400, 2435, 2509, 2583, 2618, 2692, 2727, 2797, 2832, 2904, 2939, 3013, 3014, 3015, 3017, 3020, 3048, 3083, 3157, 3231, 3268, 3303, 3377, 3412, 3486, 3521, 3591, 3626, 3663, 3700, 3774, 3809, 3846, 3883, 3920, 3957, 3994, 4031, 4066, 4688, 4689, 4691, 4694, 4799, 4800, 4801, 4803, 4806, 4945, 5239, 5276, 5314, 5315, 5317, 5320, 5940, 5941, 5943, 5946, 6051, 6052, 6053, 6055, 6058, 6197, 6491, 6528, 6566, 6567, 6569, 6572, 6758, 6759, 6761, 6764, 6873, 6874, 6875, 6877, 6880, 7535, 7536, 7538, 7541, 7646, 7647, 7648, 7650, 7653, 7792, 8086, 8123, 8161, 8162, 8164, 8167, 8822, 8823, 8825, 8828, 8933, 8934, 8935, 8937, 8940, 9079, 9373, 9410, 9448, 9449, 9451, 9454, 10109, 10110, 10112, 10115, 10220, 10221, 10222, 10224, 10227, 10366, 10660, 10697, 10735, 10736, 10738, 10741, 11396, 11397, 11399, 11402, 11507, 11508, 11509, 11511, 11514, 11653, 11947, 11984, 12022, 12023, 12025, 12028, 12683, 12684, 12686, 12689, 12794, 12795, 12796, 12798, 12801, 12940, 13234, 13271, 13309, 13310, 13312, 13315, 13384, 13385, 13387, 13390, 14008, 14009, 14011, 14014, 14119, 14120, 14121, 14123, 14126, 14265, 14559, 14596, 14634, 14635, 14637, 14640, 15295, 15296, 15298, 15301, 15406, 15407, 15408, 15410, 15413, 15552, 15846, 15883, 15921, 15922, 15924, 15927, 16582, 16583, 16585, 16588, 16693, 16694, 16695, 16697, 16700, 16839, 17133, 17170, 17208, 17209, 17211, 17214, 17869, 17870, 17872, 17875, 17980, 17981, 17982, 17984, 17987, 18126, 18420, 18457, 18495, 18496, 18498, 18501, 19156, 19157, 19159, 19162, 19267, 19268, 19269, 19271, 19274, 19413, 19707, 19744, 19782, 19783, 19785, 19788, 20443, 20444, 20446, 20449, 20554, 20555, 20556, 20558, 20561, 20700, 20994, 21031, 21069, 21070, 21072, 21075 |
+| `denied` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.3a22a0df96a2.dev.json | 162, 232, 302, 337, 374, 411, 448, 485, 522, 592, 627, 699, 734, 771, 808, 845, 919, 954, 991, 1061, 1096, 1133, 1170, 1207, 1277, 1312, 1349, 1386, 1423, 1460, 1497, 1567, 1602, 1674, 1709, 1746, 1783, 1820, 1894, 1929, 1966, 2036, 2071, 2108, 2145, 2182, 2219, 2256, 2293, 2330, 2367, 2404, 2439, 2579, 2616, 2653, 2690, 2727, 2764, 2836, 2874, 2875, 2877, 2880, 2911, 2948, 2985, 3022, 3096, 3133, 3205, 3242, 3279, 3316, 3317, 3318, 3320, 3323, 3389, 3426, 3463, 3500, 3537, 3574, 3646, 3684, 3685, 3687, 3690, 3721, 3758, 3795, 3832, 3906, 3943, 4015, 4052, 4089, 4126, 4127, 4128, 4130, 4133, 4164, 4165, 4166, 4168, 4171, 4201, 4202, 4203, 4205, 4208, 4238, 4239, 4240, 4242, 4245, 4275, 4276, 4277, 4279, 4282, 4313, 4314, 4315, 4317, 4320, 4350, 4351, 4352, 4354, 4357, 4387, 4388, 4389, 4391, 4394, 4425, 4567, 4604, 4641, 4678, 4715, 4752, 4824, 4862, 4863, 4865, 4868, 4899, 4936, 4973, 5010, 5084, 5121, 5193, 5230, 5267, 5304, 5305, 5306, 5308, 5311, 5447, 5484, 5521, 5558, 5595, 5632, 5704, 5742, 5743, 5745, 5748, 5779, 5816, 5853, 5890, 5964, 6001, 6073, 6110, 6147, 6184, 6185, 6186, 6188, 6191, 6327, 6364, 6401, 6438, 6475, 6512, 6584, 6622, 6623, 6625, 6628, 6659, 6696, 6733, 6770, 6844, 6881, 6953, 6990, 7027, 7064, 7065, 7066, 7068, 7071, 7207, 7244, 7281, 7318, 7355, 7392, 7464, 7502, 7503, 7505, 7508, 7539, 7576, 7613, 7650, 7724, 7761, 7833, 7870, 7907, 7944, 7945, 7946, 7948, 7951, 8087, 8124, 8161, 8198, 8235, 8272, 8344, 8382, 8383, 8385, 8388, 8419, 8456, 8493, 8530, 8604, 8641, 8713, 8750, 8787, 8824, 8825, 8826, 8828, 8831, 8863, 8864, 8866, 8869, 9005, 9042, 9079, 9116, 9153, 9190, 9262, 9300, 9301, 9303, 9306, 9337, 9374, 9411, 9448, 9522, 9559, 9631, 9668, 9705, 9742, 9743, 9744, 9746, 9749, 9885, 9922, 9959, 9996, 10033, 10070, 10142, 10180, 10181, 10183, 10186, 10217, 10254, 10291, 10328, 10402, 10439, 10511, 10548, 10585, 10622, 10623, 10624, 10626, 10629, 10765, 10802, 10839, 10876, 10913, 10950, 11022, 11060, 11061, 11063, 11066, 11097, 11134, 11171, 11208, 11282, 11319, 11391, 11428, 11465, 11502, 11503, 11504, 11506, 11509, 11645, 11682, 11719, 11756, 11793, 11830, 11902, 11940, 11941, 11943, 11946, 11977, 12014, 12051, 12088, 12162, 12199, 12271, 12308, 12345, 12382, 12383, 12384, 12386, 12389, 12525, 12562, 12599, 12636, 12673, 12710, 12782, 12820, 12821, 12823, 12826, 12857, 12894, 12931, 12968, 13042, 13079, 13151, 13188, 13225, 13262, 13263, 13264, 13266, 13269, 13405, 13442, 13479, 13516, 13553, 13590, 13662, 13700, 13701, 13703, 13706, 13737, 13774, 13811, 13848, 13922, 13959, 14031, 14068, 14105, 14142, 14143, 14144, 14146, 14149 |
+| `denied` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.3fbbbaa37628.dev.json | 197, 267, 337, 372, 409, 446, 483, 520, 557, 627, 662, 734, 769, 806, 843, 880, 954, 989, 1026, 1096, 1131, 1168, 1205, 1242, 1312, 1347, 1384, 1421, 1458, 1495, 1532, 1602, 1637, 1709, 1744, 1781, 1818, 1855, 1929, 1964, 2001, 2071, 2106, 2143, 2180, 2217, 2254, 2291, 2328, 2365, 2402, 2439, 2474, 2649, 2686, 2723, 2760, 2797, 2834, 2906, 2944, 2945, 2947, 2950, 2981, 3018, 3055, 3092, 3166, 3203, 3275, 3312, 3349, 3386, 3387, 3388, 3390, 3393, 3459, 3496, 3533, 3570, 3607, 3644, 3716, 3754, 3755, 3757, 3760, 3791, 3828, 3865, 3902, 3976, 4013, 4085, 4122, 4159, 4196, 4197, 4198, 4200, 4203, 4234, 4235, 4236, 4238, 4241, 4271, 4272, 4273, 4275, 4278, 4308, 4309, 4310, 4312, 4315, 4345, 4346, 4347, 4349, 4352, 4383, 4384, 4385, 4387, 4390, 4420, 4421, 4422, 4424, 4427, 4457, 4458, 4459, 4461, 4464, 4495, 4672, 4709, 4746, 4783, 4820, 4857, 4929, 4967, 4968, 4970, 4973, 5004, 5041, 5078, 5115, 5189, 5226, 5298, 5335, 5372, 5409, 5410, 5411, 5413, 5416, 5587, 5624, 5661, 5698, 5735, 5772, 5844, 5882, 5883, 5885, 5888, 5919, 5956, 5993, 6030, 6104, 6141, 6213, 6250, 6287, 6324, 6325, 6326, 6328, 6331, 6502, 6539, 6576, 6613, 6650, 6687, 6759, 6797, 6798, 6800, 6803, 6834, 6871, 6908, 6945, 7019, 7056, 7128, 7165, 7202, 7239, 7240, 7241, 7243, 7246, 7417, 7454, 7491, 7528, 7565, 7602, 7674, 7712, 7713, 7715, 7718, 7749, 7786, 7823, 7860, 7934, 7971, 8043, 8080, 8117, 8154, 8155, 8156, 8158, 8161, 8332, 8369, 8406, 8443, 8480, 8517, 8589, 8627, 8628, 8630, 8633, 8664, 8701, 8738, 8775, 8849, 8886, 8958, 8995, 9032, 9069, 9070, 9071, 9073, 9076, 9108, 9109, 9111, 9114, 9285, 9322, 9359, 9396, 9433, 9470, 9542, 9580, 9581, 9583, 9586, 9617, 9654, 9691, 9728, 9802, 9839, 9911, 9948, 9985, 10022, 10023, 10024, 10026, 10029, 10200, 10237, 10274, 10311, 10348, 10385, 10457, 10495, 10496, 10498, 10501, 10532, 10569, 10606, 10643, 10717, 10754, 10826, 10863, 10900, 10937, 10938, 10939, 10941, 10944, 11115, 11152, 11189, 11226, 11263, 11300, 11372, 11410, 11411, 11413, 11416, 11447, 11484, 11521, 11558, 11632, 11669, 11741, 11778, 11815, 11852, 11853, 11854, 11856, 11859, 12030, 12067, 12104, 12141, 12178, 12215, 12287, 12325, 12326, 12328, 12331, 12362, 12399, 12436, 12473, 12547, 12584, 12656, 12693, 12730, 12767, 12768, 12769, 12771, 12774, 12945, 12982, 13019, 13056, 13093, 13130, 13202, 13240, 13241, 13243, 13246, 13277, 13314, 13351, 13388, 13462, 13499, 13571, 13608, 13645, 13682, 13683, 13684, 13686, 13689, 13860, 13897, 13934, 13971, 14008, 14045, 14117, 14155, 14156, 14158, 14161, 14192, 14229, 14266, 14303, 14377, 14414, 14486, 14523, 14560, 14597, 14598, 14599, 14601, 14604 |
+| `denied` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.6ce0171efcfd.dev.json | 162, 232, 302, 337, 374, 411, 448, 485, 522, 592, 627, 699, 734, 771, 808, 845, 919, 954, 991, 1061, 1096, 1133, 1170, 1207, 1277, 1312, 1349, 1386, 1423, 1460, 1497, 1567, 1602, 1674, 1709, 1746, 1783, 1820, 1894, 1929, 1966, 2036, 2071, 2108, 2145, 2182, 2219, 2256, 2293, 2330, 2367, 2404, 2439, 2579, 2616, 2653, 2690, 2727, 2764, 2836, 2874, 2875, 2877, 2880, 2911, 2948, 2985, 3022, 3096, 3133, 3205, 3242, 3279, 3316, 3317, 3318, 3320, 3323, 3389, 3426, 3463, 3500, 3537, 3574, 3646, 3684, 3685, 3687, 3690, 3721, 3758, 3795, 3832, 3906, 3943, 4015, 4052, 4089, 4126, 4127, 4128, 4130, 4133, 4164, 4165, 4166, 4168, 4171, 4201, 4202, 4203, 4205, 4208, 4238, 4239, 4240, 4242, 4245, 4275, 4276, 4277, 4279, 4282, 4313, 4314, 4315, 4317, 4320, 4350, 4351, 4352, 4354, 4357, 4387, 4388, 4389, 4391, 4394, 4425, 4567, 4604, 4641, 4678, 4715, 4752, 4824, 4862, 4863, 4865, 4868, 4899, 4936, 4973, 5010, 5084, 5121, 5193, 5230, 5267, 5304, 5305, 5306, 5308, 5311, 5447, 5484, 5521, 5558, 5595, 5632, 5704, 5742, 5743, 5745, 5748, 5779, 5816, 5853, 5890, 5964, 6001, 6073, 6110, 6147, 6184, 6185, 6186, 6188, 6191, 6327, 6364, 6401, 6438, 6475, 6512, 6584, 6622, 6623, 6625, 6628, 6659, 6696, 6733, 6770, 6844, 6881, 6953, 6990, 7027, 7064, 7065, 7066, 7068, 7071, 7207, 7244, 7281, 7318, 7355, 7392, 7464, 7502, 7503, 7505, 7508, 7539, 7576, 7613, 7650, 7724, 7761, 7833, 7870, 7907, 7944, 7945, 7946, 7948, 7951, 8087, 8124, 8161, 8198, 8235, 8272, 8344, 8382, 8383, 8385, 8388, 8419, 8456, 8493, 8530, 8604, 8641, 8713, 8750, 8787, 8824, 8825, 8826, 8828, 8831, 8863, 8864, 8866, 8869, 9005, 9042, 9079, 9116, 9153, 9190, 9262, 9300, 9301, 9303, 9306, 9337, 9374, 9411, 9448, 9522, 9559, 9631, 9668, 9705, 9742, 9743, 9744, 9746, 9749, 9885, 9922, 9959, 9996, 10033, 10070, 10142, 10180, 10181, 10183, 10186, 10217, 10254, 10291, 10328, 10402, 10439, 10511, 10548, 10585, 10622, 10623, 10624, 10626, 10629, 10765, 10802, 10839, 10876, 10913, 10950, 11022, 11060, 11061, 11063, 11066, 11097, 11134, 11171, 11208, 11282, 11319, 11391, 11428, 11465, 11502, 11503, 11504, 11506, 11509, 11645, 11682, 11719, 11756, 11793, 11830, 11902, 11940, 11941, 11943, 11946, 11977, 12014, 12051, 12088, 12162, 12199, 12271, 12308, 12345, 12382, 12383, 12384, 12386, 12389, 12525, 12562, 12599, 12636, 12673, 12710, 12782, 12820, 12821, 12823, 12826, 12857, 12894, 12931, 12968, 13042, 13079, 13151, 13188, 13225, 13262, 13263, 13264, 13266, 13269, 13405, 13442, 13479, 13516, 13553, 13590, 13662, 13700, 13701, 13703, 13706, 13737, 13774, 13811, 13848, 13922, 13959, 14031, 14068, 14105, 14142, 14143, 14144, 14146, 14149 |
+| `denied` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.b907d257.dev.json | 127, 197, 267, 302, 339, 376, 413, 450, 487, 557, 592, 664, 699, 736, 773, 810, 884, 919, 956, 1026, 1061, 1098, 1135, 1172, 1242, 1277, 1314, 1351, 1388, 1425, 1462, 1532, 1567, 1639, 1674, 1711, 1748, 1785, 1859, 1894, 1931, 2001, 2036, 2073, 2110, 2147, 2184, 2221, 2258, 2295, 2332, 2369, 2404, 2509, 2546, 2583, 2620, 2657, 2694, 2766, 2804, 2805, 2807, 2810, 2841, 2878, 2915, 2952, 3026, 3063, 3135, 3172, 3209, 3246, 3247, 3248, 3250, 3253, 3319, 3356, 3393, 3430, 3467, 3504, 3576, 3614, 3615, 3617, 3620, 3651, 3688, 3725, 3762, 3836, 3873, 3945, 3982, 4019, 4056, 4057, 4058, 4060, 4063, 4094, 4095, 4096, 4098, 4101, 4131, 4132, 4133, 4135, 4138, 4168, 4169, 4170, 4172, 4175, 4205, 4206, 4207, 4209, 4212, 4243, 4244, 4245, 4247, 4250, 4280, 4281, 4282, 4284, 4287, 4317, 4318, 4319, 4321, 4324, 4355, 4462, 4499, 4536, 4573, 4610, 4647, 4719, 4757, 4758, 4760, 4763, 4794, 4831, 4868, 4905, 4979, 5016, 5088, 5125, 5162, 5199, 5200, 5201, 5203, 5206, 5307, 5344, 5381, 5418, 5455, 5492, 5564, 5602, 5603, 5605, 5608, 5639, 5676, 5713, 5750, 5824, 5861, 5933, 5970, 6007, 6044, 6045, 6046, 6048, 6051, 6152, 6189, 6226, 6263, 6300, 6337, 6409, 6447, 6448, 6450, 6453, 6484, 6521, 6558, 6595, 6669, 6706, 6778, 6815, 6852, 6889, 6890, 6891, 6893, 6896, 6997, 7034, 7071, 7108, 7145, 7182, 7254, 7292, 7293, 7295, 7298, 7329, 7366, 7403, 7440, 7514, 7551, 7623, 7660, 7697, 7734, 7735, 7736, 7738, 7741, 7842, 7879, 7916, 7953, 7990, 8027, 8099, 8137, 8138, 8140, 8143, 8174, 8211, 8248, 8285, 8359, 8396, 8468, 8505, 8542, 8579, 8580, 8581, 8583, 8586, 8618, 8619, 8621, 8624, 8725, 8762, 8799, 8836, 8873, 8910, 8982, 9020, 9021, 9023, 9026, 9057, 9094, 9131, 9168, 9242, 9279, 9351, 9388, 9425, 9462, 9463, 9464, 9466, 9469, 9570, 9607, 9644, 9681, 9718, 9755, 9827, 9865, 9866, 9868, 9871, 9902, 9939, 9976, 10013, 10087, 10124, 10196, 10233, 10270, 10307, 10308, 10309, 10311, 10314, 10415, 10452, 10489, 10526, 10563, 10600, 10672, 10710, 10711, 10713, 10716, 10747, 10784, 10821, 10858, 10932, 10969, 11041, 11078, 11115, 11152, 11153, 11154, 11156, 11159, 11260, 11297, 11334, 11371, 11408, 11445, 11517, 11555, 11556, 11558, 11561, 11592, 11629, 11666, 11703, 11777, 11814, 11886, 11923, 11960, 11997, 11998, 11999, 12001, 12004, 12105, 12142, 12179, 12216, 12253, 12290, 12362, 12400, 12401, 12403, 12406, 12437, 12474, 12511, 12548, 12622, 12659, 12731, 12768, 12805, 12842, 12843, 12844, 12846, 12849, 12950, 12987, 13024, 13061, 13098, 13135, 13207, 13245, 13246, 13248, 13251, 13282, 13319, 13356, 13393, 13467, 13504, 13576, 13613, 13650, 13687, 13688, 13689, 13691, 13694 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-19-causal-shadow.admin.v2.dev.json | 22, 23, 24, 42, 43, 44, 47, 50, 63, 64, 67, 70, 82, 83, 84, 87, 90, 103, 104, 107, 110, 122, 123, 124, 127, 130, 143, 144, 147, 150, 162, 163, 164, 167, 170, 183, 184, 187, 190, 202, 203, 204, 207, 210, 222, 223, 224, 227, 230, 282, 283, 284, 287, 290, 303, 304, 307, 310, 322, 323, 324, 327, 330, 343, 344, 347, 350, 362, 382, 383, 384, 387, 390, 403, 404, 407, 410, 422, 423, 424, 427, 430, 443, 444, 447, 450, 462, 463, 464, 467, 470, 483, 484, 487, 490, 502, 503, 504, 507, 510, 523, 524, 527, 530, 542, 543, 544, 547, 550, 563, 564, 567, 570, 582, 583, 584, 587, 590, 591, 603, 604, 605, 608, 611, 624, 625, 628, 631, 643, 644, 645, 648, 651, 663, 664, 665, 668, 671, 684, 685, 688, 691, 703, 704, 705, 708, 711, 724, 725, 728, 731, 743, 744, 745, 748, 751, 763, 764, 765, 768, 771, 784, 785, 788, 791, 803, 804, 805, 808, 811, 824, 825, 828, 831, 843, 844, 845, 848, 851, 863, 864, 865, 868, 871, 872, 885, 886, 889, 892, 893, 905, 906, 907, 910, 913, 914, 926, 927, 928, 931, 934, 935, 947, 948, 949, 952, 955, 956, 968, 969, 970, 973, 976, 977, 989, 990, 991, 994, 997, 998, 1010, 1011, 1012, 1015, 1018, 1019, 1031, 1032, 1033, 1051, 1072, 1073, 1076, 1079, 1117, 1118, 1121, 1124, 1140, 1141, 1144, 1147, 1148, 1163, 1164, 1167, 1170, 1171, 1186, 1187, 1190, 1193, 1194, 1209, 1210, 1213, 1216, 1232, 1233, 1236, 1239, 1240, 1255, 1256, 1259, 1262, 1263, 1277, 1278, 1279, 1282, 1285, 1322, 1323, 1324, 1327, 1330, 1343, 1344, 1347, 1350, 1362, 1363, 1364, 1367, 1370, 1383, 1384, 1387, 1390 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-19-causal-shadow.owner.v3.dev.json | 22, 23, 24, 42, 43, 44, 47, 50, 63, 64, 67, 70, 82, 83, 84, 87, 90, 103, 104, 107, 110, 122, 123, 124, 127, 130, 143, 144, 147, 150, 162, 163, 164, 167, 170, 183, 184, 187, 190, 202, 203, 204, 207, 210, 222, 223, 224, 227, 230, 242, 262, 282, 283, 284, 287, 290, 303, 304, 307, 310, 322, 323, 324, 327, 330, 343, 344, 347, 350, 362, 382, 383, 384, 387, 390, 402, 403, 404, 407, 410, 422, 423, 424, 427, 430, 442, 443, 444, 447, 450, 462, 463, 464, 467, 470, 471, 483, 484, 485, 488, 491, 503, 504, 505, 508, 511, 523, 524, 525, 528, 531, 543, 544, 545, 548, 551, 564, 565, 568, 571, 583, 584, 585, 588, 591, 603, 604, 605, 608, 611, 623, 624, 625, 628, 631, 643, 644, 645, 648, 651, 652, 664, 665, 666, 669, 672, 673, 685, 686, 687, 690, 693, 694, 706, 707, 708, 711, 714, 715, 727, 728, 729, 732, 735, 736, 748, 749, 750, 753, 756, 757, 769, 770, 771, 774, 777, 778, 790, 791, 792, 810, 831, 832, 835, 838, 853, 875, 876, 877, 880, 883, 898, 899, 900, 903, 906, 920, 921, 922, 925, 928, 942, 943, 944, 947, 950, 964, 965, 966, 969, 972, 987, 988, 989, 992, 995, 1009, 1010, 1011, 1014, 1017, 1031, 1032, 1033, 1036, 1039, 1054, 1076, 1077, 1078, 1081, 1084, 1097, 1098, 1101, 1104, 1116, 1117, 1118, 1121, 1124, 1137, 1138, 1141, 1144 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-19-granted-causal-shadow.admin.dev.json | 22, 23, 42, 43, 47, 63, 67, 82, 83, 87, 103, 107, 122, 123, 127, 143, 147, 162, 163, 167, 183, 187, 202, 203, 222, 223, 282, 283, 287, 303, 307, 322, 323, 327, 343, 347, 362, 363, 364, 367, 370, 383, 384, 387, 390, 402, 422, 423, 424, 427, 430, 443, 444, 447, 450, 462, 463, 464, 467, 470, 483, 484, 487, 490, 502, 503, 504, 507, 510, 523, 524, 527, 530, 542, 543, 544, 547, 550, 563, 564, 567, 570, 582, 583, 584, 587, 590, 603, 604, 607, 610, 622, 623, 624, 627, 630, 631, 643, 644, 645, 648, 651, 664, 665, 668, 671, 683, 684, 685, 688, 691, 692, 704, 705, 706, 709, 712, 725, 726, 729, 732, 744, 745, 746, 749, 752, 765, 766, 769, 772, 784, 785, 786, 789, 792, 804, 805, 806, 809, 812, 825, 826, 829, 832, 844, 845, 846, 849, 852, 865, 866, 869, 872, 884, 885, 886, 889, 892, 904, 905, 906, 909, 912, 913, 926, 927, 930, 933, 934, 946, 947, 948, 951, 954, 955, 967, 968, 969, 972, 975, 976, 988, 989, 990, 993, 996, 997, 1009, 1010, 1011, 1014, 1017, 1018, 1030, 1031, 1032, 1035, 1038, 1039, 1051, 1052, 1053, 1056, 1059, 1060, 1072, 1073, 1074, 1092, 1113, 1114, 1117, 1120, 1158, 1159, 1162, 1165, 1181, 1182, 1185, 1188, 1189, 1204, 1205, 1208, 1211, 1212, 1227, 1228, 1231, 1234, 1235, 1250, 1251, 1254, 1257, 1273, 1274, 1277, 1280, 1281, 1296, 1297, 1300, 1303, 1304, 1318, 1319, 1320, 1323, 1326, 1363, 1364, 1365, 1368, 1371, 1384, 1385, 1388, 1391, 1403, 1404, 1405, 1408, 1411, 1424, 1425, 1428, 1431 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-19-shadow-gaps.dev.json | 11, 43, 51, 67, 83, 99, 115, 131, 147, 155, 171, 187, 195, 211, 227, 235, 251, 275, 283, 307, 313, 315, 316, 318, 319, 324, 326, 327, 329, 330, 335, 337, 338, 340, 341, 346, 348, 349, 351, 352, 357, 359, 360, 362, 363, 368, 372, 373, 378, 380, 381, 383, 389, 391, 392, 394, 400, 402, 403, 405, 411, 413, 414, 416, 422, 424, 425, 427 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.admin.dev.json | 630, 635, 640, 655, 660, 665, 2258, 2263, 2268, 3322, 3327, 3332, 6339, 6344, 6408, 6413, 6418, 6874, 6879, 7403, 7408, 7472, 7477, 7482, 7938, 7943, 8053, 8058, 8133, 8138, 8143, 10514, 10519, 10583, 10588, 10593, 11049, 11054, 13804, 13809, 13873, 13878, 13883, 14339, 14344, 16428, 16433, 16497, 16502, 16507, 16963, 16968, 19248, 19253, 19317, 19322, 19327, 19783, 19788, 22489, 22494, 22558, 22563, 22568, 23024, 23029, 23049, 23054, 24768, 24773, 24837, 24842, 24847, 25303, 25308, 28891, 28896, 28960, 28965, 28970, 29426, 29431, 33308, 33313, 33377, 33382, 33387, 33843, 33848, 36052, 36057, 36121, 36126, 36131, 36587, 36592, 38558, 38563, 38627, 38632, 38637, 39093, 39098, 40427, 40432, 40496, 40501, 40506, 40962, 40967 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.admin.overlapped.dev.json | 687, 692, 697, 712, 717, 722, 2100, 2105, 2110, 2924, 2929, 2934, 5531, 5536, 5600, 5605, 5610, 5966, 5971, 6355, 6360, 6424, 6429, 6434, 6790, 6795, 6810, 6815, 6820, 9100, 9105, 9110, 12081, 12086, 12150, 12155, 12160, 12516, 12521, 15200, 15205, 15210, 17515, 17520, 17584, 17589, 17594, 17950, 17955, 19968, 19973, 19978, 22479, 22484, 22548, 22553, 22558, 22914, 22919, 25128, 25133, 25138, 28135, 28140, 28229, 28234, 28239, 28595, 28600, 31330, 31335, 31340, 31721, 31726, 33300, 33305, 33369, 33374, 33379, 33735, 33740, 33760, 33765, 35408, 35413, 35418, 39173, 39178, 39242, 39247, 39252, 39608, 39613, 43125, 43130, 43135, 44783, 44788, 44852, 44857, 44862, 45218, 45223, 49029, 49034, 49039, 51464, 51469, 51533, 51538, 51543, 51899, 51904, 54037, 54042, 54047, 56234, 56239, 56303, 56308, 56313, 56669, 56674, 58569, 58574, 58579, 60129, 60134, 60198, 60203, 60208, 60564, 60569, 61827, 61832, 61837, 63387, 63392, 63456, 63461, 63466, 63822, 63827 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.admin.pre-intent-fix.dev.json | 630, 635, 640, 655, 660, 665, 2043, 2048, 2053, 2867, 2872, 2877, 5474, 5479, 5543, 5548, 5553, 5909, 5914, 6298, 6303, 6367, 6372, 6377, 6733, 6738, 6753, 6758, 6763, 8974, 8979, 9043, 9048, 9053, 9409, 9414, 12024, 12029, 12093, 12098, 12103, 12459, 12464, 14408, 14413, 14477, 14482, 14487, 14843, 14848, 16988, 16993, 17057, 17062, 17067, 17423, 17428, 19989, 19994, 20058, 20063, 20068, 20424, 20429, 20449, 20454, 22028, 22033, 22097, 22102, 22107, 22463, 22468, 25911, 25916, 25980, 25985, 25990, 26346, 26351, 30088, 30093, 30157, 30162, 30167, 30523, 30528, 32592, 32597, 32661, 32666, 32671, 33027, 33032, 34858, 34863, 34927, 34932, 34937, 35293, 35298, 36487, 36492, 36556, 36561, 36566, 36922, 36927 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.admin.pre-navigation-fix.dev.json | 630, 635, 640, 655, 660, 665, 2233, 2238, 2243, 3297, 3302, 3307, 6314, 6319, 6383, 6388, 6393, 6849, 6854, 7378, 7383, 7447, 7452, 7457, 7913, 7918, 8028, 8033, 8108, 8113, 8118, 10489, 10494, 10558, 10563, 10568, 11024, 11029, 13779, 13784, 13848, 13853, 13858, 14314, 14319, 16403, 16408, 16472, 16477, 16482, 16938, 16943, 19223, 19228, 19292, 19297, 19302, 19758, 19763, 22464, 22469, 22533, 22538, 22543, 22999, 23004, 23024, 23029, 24743, 24748, 24812, 24817, 24822, 25278, 25283, 28866, 28871, 28935, 28940, 28945, 29401, 29406, 33283, 33288, 33352, 33357, 33362, 33818, 33823, 36027, 36032, 36096, 36101, 36106, 36562, 36567, 38533, 38538, 38602, 38607, 38612, 39068, 39073, 40402, 40407, 40471, 40476, 40481, 40937, 40942 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.admin.pre-section-fix.dev.json | 630, 635, 640, 655, 660, 665, 2093, 2098, 2103, 2917, 2922, 2927, 5694, 5699, 5763, 5768, 5773, 6129, 6134, 6518, 6523, 6587, 6592, 6597, 6953, 6958, 7068, 7073, 7148, 7153, 7158, 9389, 9394, 9458, 9463, 9468, 9824, 9829, 12439, 12444, 12508, 12513, 12518, 12874, 12879, 14823, 14828, 14892, 14897, 14902, 15258, 15263, 17403, 17408, 17472, 17477, 17482, 17838, 17843, 20404, 20409, 20473, 20478, 20483, 20839, 20844, 20864, 20869, 22443, 22448, 22512, 22517, 22522, 22878, 22883, 26326, 26331, 26395, 26400, 26405, 26761, 26766, 30503, 30508, 30572, 30577, 30582, 30938, 30943, 33007, 33012, 33076, 33081, 33086, 33442, 33447, 35273, 35278, 35342, 35347, 35352, 35708, 35713, 36902, 36907, 36971, 36976, 36981, 37337, 37342 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.owner.dev.json | 630, 635, 640, 655, 660, 665, 2258, 2263, 2268, 3322, 3327, 3332, 6339, 6344, 6408, 6413, 6418, 6869, 6874, 6879, 7403, 7408, 7472, 7477, 7482, 7933, 7938, 7943, 7958, 7963, 7968, 7983, 7988, 7993, 8008, 8013, 8018, 8033, 8038, 8043, 8058, 8063, 8068, 8083, 8088, 8093, 8108, 8113, 8118, 10489, 10494, 10558, 10563, 10568, 11019, 11024, 11029, 13779, 13784, 13848, 13853, 13858, 14309, 14314, 14319, 16403, 16408, 16472, 16477, 16482, 16933, 16938, 16943, 19223, 19228, 19292, 19297, 19302, 19753, 19758, 19763, 22464, 22469, 22533, 22538, 22543, 22994, 22999, 23004, 23024, 23029, 24743, 24748, 24812, 24817, 24822, 25273, 25278, 25283, 28866, 28871, 28935, 28940, 28945, 29396, 29401, 29406, 33283, 33288, 33352, 33357, 33362, 33813, 33818, 33823, 36027, 36032, 36096, 36101, 36106, 36557, 36562, 36567, 38533, 38538, 38602, 38607, 38612, 39063, 39068, 39073, 40402, 40407, 40471, 40476, 40481, 40932, 40937, 40942 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.owner.pre-navigation-fix.dev.json | 630, 635, 640, 655, 660, 665, 2233, 2238, 2243, 3297, 3302, 3307, 6314, 6319, 6383, 6388, 6393, 6844, 6849, 6854, 7378, 7383, 7447, 7452, 7457, 7908, 7913, 7918, 7933, 7938, 7943, 7958, 7963, 7968, 7983, 7988, 7993, 8008, 8013, 8018, 8033, 8038, 8043, 8058, 8063, 8068, 8083, 8088, 8093, 10464, 10469, 10533, 10538, 10543, 10994, 10999, 11004, 13754, 13759, 13823, 13828, 13833, 14284, 14289, 14294, 16378, 16383, 16447, 16452, 16457, 16908, 16913, 16918, 19198, 19203, 19267, 19272, 19277, 19728, 19733, 19738, 22439, 22444, 22508, 22513, 22518, 22969, 22974, 22979, 22999, 23004, 24718, 24723, 24787, 24792, 24797, 25248, 25253, 25258, 28841, 28846, 28910, 28915, 28920, 29371, 29376, 29381, 33258, 33263, 33327, 33332, 33337, 33788, 33793, 33798, 36002, 36007, 36071, 36076, 36081, 36532, 36537, 36542, 38508, 38513, 38577, 38582, 38587, 39038, 39043, 39048, 40377, 40382, 40446, 40451, 40456, 40907, 40912, 40917 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-20-canonical-reads.catl.owner.pre-section-fix.dev.json | 630, 635, 640, 655, 660, 665, 2093, 2098, 2103, 2917, 2922, 2927, 5694, 5699, 5763, 5768, 5773, 6124, 6129, 6134, 6518, 6523, 6587, 6592, 6597, 6948, 6953, 6958, 6973, 6978, 6983, 6998, 7003, 7008, 7023, 7028, 7033, 7048, 7053, 7058, 7073, 7078, 7083, 7098, 7103, 7108, 7123, 7128, 7133, 9364, 9369, 9433, 9438, 9443, 9794, 9799, 9804, 12414, 12419, 12483, 12488, 12493, 12844, 12849, 12854, 14798, 14803, 14867, 14872, 14877, 15228, 15233, 15238, 17378, 17383, 17447, 17452, 17457, 17808, 17813, 17818, 20379, 20384, 20448, 20453, 20458, 20809, 20814, 20819, 20839, 20844, 22418, 22423, 22487, 22492, 22497, 22848, 22853, 22858, 26301, 26306, 26370, 26375, 26380, 26731, 26736, 26741, 30478, 30483, 30547, 30552, 30557, 30908, 30913, 30918, 32982, 32987, 33051, 33056, 33061, 33412, 33417, 33422, 35248, 35253, 35317, 35322, 35327, 35678, 35683, 35688, 36877, 36882, 36946, 36951, 36956, 37307, 37312, 37317 |
+| `denied` | runtime | governance/policy/reports/business-partner-release-20-context-qualification.pre-intent-fix.dev.json | 1375, 1380, 1469, 1474, 1479, 1890, 1895 |
+| `denied` | runtime | governance/policy/reports/business-partner-role-review.dev.json | 5201 |
+| `denied` | runtime | governance/policy/reports/business-partner-role-review.named.dev.json | 6881 |
+| `denied` | runtime | governance/policy/reports/business-partner-shadow-attestation.dev.json | 87, 88, 89, 96, 97, 98, 106, 107, 114, 115, 116, 124, 125, 132, 133, 134, 142, 143, 150, 151, 152, 160, 161, 168, 169, 170, 177, 178, 179, 187, 188, 196, 204, 205, 206, 214, 215, 222, 223, 224, 231, 232, 233, 241, 242, 249, 250, 251, 259, 260, 267, 268, 269, 277, 278, 285, 286, 287, 295, 296, 303, 304, 305, 313, 314, 321, 322, 323, 330, 331, 332, 340, 341, 348, 349, 350, 357, 358, 359, 367, 368, 375, 376, 377, 385, 386, 393, 394, 395, 402, 403, 404, 412, 413, 420, 421, 422, 430, 431, 438, 439, 440, 447, 448, 449, 457, 458, 465, 466, 467, 474, 475, 476, 483, 484, 485, 492, 493, 494, 501, 502, 503, 510, 511, 512, 519, 520, 521, 528, 529, 530, 538, 539, 547, 548, 556, 557, 565, 566, 574, 575, 583, 584, 592, 593, 601, 602, 609, 610, 611, 619, 620 |
+| `denied` | runtime | governance/policy/reports/business-partner-shadow-deployment.dev.json | 106, 107, 108, 134, 135, 160, 161, 187, 188, 384, 385, 411, 412, 413, 439, 440, 465, 466, 467, 493, 494, 519, 520, 521, 547, 548, 588, 589, 590, 616, 617, 642, 643, 644, 670, 671, 696, 697, 698, 724, 725, 750, 751, 752, 778, 779, 804, 831, 832, 833, 859, 860, 885, 912, 913, 914, 940, 941, 966, 993, 994, 995, 1021, 1022, 1047, 1074, 1075, 1076, 1102, 1103, 1128, 1129, 1130, 1156, 1157, 1182, 1209, 1210, 1211, 1237, 1238, 1263, 1290, 1291, 1292, 1318, 1319, 1344, 1371, 1372, 1373, 1399, 1400, 1425, 1452, 1453, 1454, 1480, 1481, 1506, 1507, 1533, 1560, 1561, 1562, 1588, 1589, 1614, 1615, 1616, 1642, 1643, 1668, 1669, 1670, 1695, 1722, 1723, 1724, 1750, 1751, 1776, 1803, 1804, 1805, 1831, 1832, 1857, 1884, 1885, 1886, 1912, 1913, 1938, 1965, 1966, 1967, 1992, 1993, 1994, 2019, 2020, 2021, 2047, 2048, 2073, 2100, 2101, 2102, 2128, 2129, 2154, 2181, 2182, 2183, 2209, 2210, 2235, 2262, 2263, 2264, 2290, 2291, 2316, 2343, 2344, 2345, 2371, 2372, 2397, 2424, 2425, 2426, 2452, 2453, 2478, 2479, 2480, 2506, 2507, 2532, 2559, 2560, 2561, 2587, 2588, 2613, 2640, 2641, 2642, 2668, 2669, 2694, 2721, 2722, 2723, 2749, 2750, 2775, 2802, 2803, 2804, 2830, 2831, 2856, 2857, 2883, 2910, 2911, 2912, 2938, 2939, 2964, 2965, 2966, 2992, 2993, 3018, 3019, 3020, 3045, 3072, 3073, 3074, 3100, 3101, 3126, 3153, 3154, 3155, 3181, 3182, 3207, 3234, 3235, 3236, 3262, 3263, 3288, 3315, 3316, 3317, 3342, 3343, 3344, 3369, 3370, 3371, 3397, 3398, 3423, 3450, 3451, 3477, 3478, 3504, 3505, 3531, 3532, 3558, 3559, 3585, 3586, 3612, 3632, 3633, 3674, 3675, 3676, 3702, 3703, 3728, 3729, 3730, 3756, 3757, 3782, 3783, 3810, 3836, 3837, 3838, 3864, 3865, 3890, 3891, 3892, 3918, 3919, 3944, 3945, 3946, 3972, 3973, 3998, 3999, 4000, 4026, 4027, 4052, 4053, 4054, 4079, 4080, 4081, 4107, 4108, 4133, 4134, 4135, 4161, 4162, 4188, 4189, 4214, 4215, 4216, 4242, 4243, 4268, 4269, 4270, 4296, 4297, 4322, 4323, 4324, 4350, 4351, 4376, 4377, 4378, 4404, 4405, 4430, 4431, 4432, 4458, 4459, 4484, 4485, 4486, 4511, 4512, 4513, 4539, 4540, 4565, 4566, 4567, 4593, 4594, 4620, 4621, 4646, 4673, 4674, 4675, 4701, 4702, 4727, 4754, 4755, 4756, 4782, 4783, 4808, 4835, 4836, 4837, 4863, 4864, 4889, 4916, 4917, 4918, 4944, 4945, 4970, 4971, 4972, 4998, 4999, 5024, 5051, 5052, 5053, 5079, 5080, 5105, 5132, 5133, 5134, 5160, 5161, 5186, 5213, 5214, 5215, 5241, 5242, 5267, 5294, 5295, 5296, 5322, 5323, 5348, 5349, 5375, 5402, 5403, 5404, 5430, 5431, 5456, 5457, 5458, 5484, 5485, 5510, 5511, 5512, 5537, 5564, 5565, 5566, 5591, 5618, 5619, 5620, 5646, 5647, 5672, 5699, 5700, 5701, 5727, 5728, 5753, 5780, 5781, 5782, 5808, 5809, 5834, 5861, 5862, 5863, 5889, 5890, 5915, 5916, 5917, 5943, 5944, 5969, 5996, 5997, 5998, 6024, 6025, 6050, 6077, 6078, 6079, 6105, 6106, 6131, 6158, 6159, 6160, 6186, 6187, 6212, 6239, 6240, 6241, 6267, 6268, 6293, 6294, 6320, 6347, 6348, 6349, 6375, 6376, 6401, 6402, 6403, 6429, 6430, 6455, 6456, 6457, 6482, 6509, 6510, 6511, 6537, 6538, 6563, 6590, 6591, 6592, 6618, 6619, 6644, 6671, 6672, 6673, 6699, 6700, 6725, 6752, 6753, 6754, 6779, 6780, 6781, 6806, 6807, 6808, 6833, 6834, 6835, 6861, 6862, 6888, 6889, 6914, 6941, 6942, 6969, 6995, 7022, 7023, 7050, 7076, 7103, 7104, 7131, 7157, 7184, 7185, 7212, 7238, 7239, 7266, 7292, 7319, 7320, 7347, 7373, 7400, 7401, 7402, 7428, 7429, 7454, 7481, 7482, 7483, 7509, 7510, 7535, 7562, 7563, 7590, 7616, 7617, 7643, 7670, 7671, 7698, 7724, 7725, 7752, 7778, 7779, 7780, 7805, 7832, 7833, 7860, 7886, 7913, 7914, 7941, 7967, 7994, 7995, 7996, 8022, 8023, 8048, 8075, 8076, 8077, 8102, 8103, 8104, 8129, 8130, 8157, 8183, 8210, 8237, 8238, 8239, 8265, 8266, 8291, 8318, 8319, 8320, 8346, 8347, 8372, 8399, 8400, 8401, 8427, 8428, 8453, 8480, 8481, 8482, 8508, 8509, 8534, 8535, 8536, 8562, 8563, 8588, 8615, 8616, 8617, 8643, 8644, 8669, 8696, 8697, 8698, 8724, 8725, 8750, 8777, 8778, 8779, 8805, 8806, 8831, 8858, 8859, 8860, 8886, 8887, 8912, 8913, 8939, 8966, 8967, 8968, 8994, 8995, 9020, 9021, 9022, 9048, 9049, 9074, 9075, 9076, 9101, 9128, 9129, 9130, 9156, 9157, 9182, 9209, 9210, 9211, 9237, 9238, 9263, 9290, 9291, 9292, 9318, 9319, 9344, 9371, 9372, 9373, 9398, 9399, 9400, 9425, 9426, 9427, 9453, 9454, 9479, 9507, 9508, 9533, 9560, 9561, 9562, 9588, 9589, 9614, 9641, 9642, 9643, 9669, 9670, 9695, 9722, 9723, 9724, 9749, 9750, 9751, 9776, 9777, 9778, 9804, 9805, 9830, 9857, 9884, 9885, 9886, 9912, 9913, 9938, 9965, 9966, 9967, 9993, 9994, 10019, 10046, 10047, 10048, 10074, 10075, 10100, 10127, 10128, 10129, 10155, 10156, 10181, 10182, 10183, 10209, 10210, 10235, 10262, 10263, 10264, 10290, 10291, 10316, 10343, 10344, 10345, 10371, 10372, 10397, 10424, 10425, 10426, 10452, 10453, 10478, 10505, 10506, 10507, 10533, 10534, 10559, 10560, 10586, 10613, 10614, 10615, 10641, 10642, 10667, 10668, 10669, 10695, 10696, 10721, 10722, 10723, 10748, 10775, 10776, 10777, 10817, 10818, 10819, 10845, 10846, 10871, 10914, 10915, 10940, 10967, 10968, 10969, 10995, 10996, 11021, 11048, 11049, 11050, 11076, 11077, 11102, 11129, 11130, 11131, 11156, 11157, 11158, 11183, 11184, 11185, 11210, 11211, 11212, 11238, 11239, 11264, 11292, 11293, 11363, 11364, 11365, 11391, 11392, 11417, 11418, 11419, 11445, 11446, 11471, 11472, 11473, 11499, 11500, 11525, 11526, 11527, 11553, 11554, 11579, 11606, 11607, 11608, 11634, 11635, 11660, 11687, 11688, 11689, 11715, 11716, 11741, 11768, 11769, 11770, 11796, 11797, 11822, 11849, 11850, 11851, 11877, 11878, 11903, 11904, 11905, 11931, 11932, 11957, 11984, 11985, 11986, 12012, 12013, 12038, 12065, 12066, 12067, 12093, 12094, 12119, 12146, 12147, 12148, 12174, 12175, 12200, 12227, 12228, 12229, 12255, 12256, 12281, 12282, 12308, 12335, 12336, 12337, 12363, 12364, 12389, 12390, 12391, 12417, 12418, 12443, 12444, 12445, 12470, 12497, 12498, 12499, 12525, 12526, 12551, 12578, 12579, 12580, 12606, 12607, 12632, 12659, 12660, 12661, 12687, 12688, 12713, 12740, 12741, 12742, 12767, 12768, 12769, 12794, 12795, 12796, 12822, 12823, 12848, 12890, 12891, 12892, 12918, 12919, 12944, 12945, 12946, 12972, 12973, 12998, 12999, 13000, 13026, 13027, 13052, 13053, 13054, 13080, 13081, 13106, 13133, 13134, 13135, 13161, 13162, 13187, 13214, 13215, 13216, 13242, 13243, 13268, 13295, 13296, 13297, 13323, 13324, 13349, 13376, 13377, 13378, 13404, 13405, 13430, 13431, 13432, 13458, 13459, 13484, 13511, 13512, 13513, 13539, 13540, 13565, 13592, 13593, 13594, 13620, 13621, 13646, 13673, 13674, 13675, 13701, 13702, 13727, 13754, 13755, 13756, 13782, 13783, 13808, 13809, 13835, 13862, 13863, 13864, 13890, 13891, 13916, 13917, 13918, 13944, 13945, 13970, 13971, 13972, 13997, 14024, 14025, 14026, 14052, 14053, 14078, 14105, 14106, 14107, 14133, 14134, 14159, 14186, 14187, 14188, 14214, 14215, 14240, 14267, 14268, 14269, 14294, 14295, 14296, 14321, 14322, 14323, 14349, 14350, 14375, 14417, 14418, 14419, 14445, 14446, 14471, 14472, 14473, 14499, 14500, 14525, 14526, 14527, 14553, 14554, 14579, 14580, 14581, 14607, 14608, 14633, 14660, 14661, 14662, 14688, 14689, 14714, 14741, 14742, 14743, 14769, 14770, 14795, 14822, 14823, 14824, 14850, 14851, 14876, 14903, 14904, 14905, 14931, 14932, 14957, 14958, 14959, 14985, 14986, 15011, 15038, 15039, 15040, 15066, 15067, 15092, 15119, 15120, 15121, 15147, 15148, 15173, 15200, 15201, 15202, 15228, 15229, 15254, 15281, 15282, 15283, 15309, 15310, 15335, 15336, 15362, 15389, 15390, 15391, 15417, 15418, 15443, 15444, 15445, 15471, 15472, 15497, 15498, 15499, 15524, 15551, 15552, 15553, 15579, 15580, 15605, 15632, 15633, 15634, 15660, 15661, 15686, 15713, 15714, 15715, 15741, 15742, 15767, 15794, 15795, 15796, 15821, 15822, 15823, 15848, 15849, 15850, 15876, 15877, 15902, 15944, 15945, 15946, 15972, 15973, 15998, 15999, 16000, 16026, 16027, 16052, 16053, 16054, 16080, 16081, 16106, 16107, 16108, 16134, 16135, 16160, 16187, 16188, 16189, 16215, 16216, 16241, 16268, 16269, 16270, 16296, 16297, 16322, 16349, 16350, 16351, 16377, 16378, 16403, 16430, 16431, 16432, 16458, 16459, 16484, 16485, 16486, 16512, 16513, 16538, 16565, 16566, 16567, 16593, 16594, 16619, 16646, 16647, 16648, 16674, 16675, 16700, 16727, 16728, 16729, 16755, 16756, 16781, 16808, 16809, 16810, 16836, 16837, 16862, 16863, 16889, 16916, 16917, 16918, 16944, 16945, 16970, 16971, 16972, 16998, 16999, 17024, 17025, 17026, 17051, 17078, 17079, 17080, 17106, 17107, 17132, 17159, 17160, 17161, 17187, 17188, 17213, 17240, 17241, 17242, 17268, 17269, 17294, 17321, 17322, 17323, 17348, 17349, 17350, 17375, 17376, 17377, 17403, 17404, 17429, 17471, 17472, 17473, 17499, 17500, 17525, 17526, 17527, 17553, 17554, 17579, 17580, 17581, 17607, 17608, 17633, 17634, 17635, 17661, 17662, 17687, 17714, 17715, 17716, 17742, 17743, 17768, 17795, 17796, 17797, 17823, 17824, 17849, 17876, 17877, 17878, 17904, 17905, 17930, 17957, 17958, 17959, 17985, 17986, 18011, 18012, 18013, 18039, 18040, 18065, 18092, 18093, 18094, 18120, 18121, 18146, 18173, 18174, 18175, 18201, 18202, 18227, 18254, 18255, 18256, 18282, 18283, 18308, 18335, 18336, 18337, 18363, 18364, 18389, 18390, 18416, 18443, 18444, 18445, 18471, 18472, 18497, 18498, 18499, 18525, 18526, 18551, 18552, 18553, 18578, 18605, 18606, 18607, 18633, 18634, 18659, 18686, 18687, 18688, 18714, 18715, 18740, 18767, 18768, 18769, 18795, 18796, 18821, 18848, 18849, 18850, 18875, 18876, 18877, 18902, 18903, 18904, 18930, 18931, 18956, 18983, 18984, 18985, 19011, 19012, 19052, 19053, 19054, 19080, 19081, 19106, 19107, 19108, 19134, 19135, 19160, 19161, 19162, 19188, 19189, 19214, 19215, 19216, 19242, 19243, 19268, 19269, 19270, 19296, 19297, 19322, 19323, 19324, 19350, 19351, 19376, 19377, 19378, 19404, 19405, 19430, 19457, 19458, 19459, 19485, 19486, 19511, 19538, 19539, 19540, 19566, 19567, 19592, 19619, 19620, 19621, 19647, 19648, 19673, 19700, 19701, 19702, 19728, 19729, 19754, 19755, 19756, 19782, 19783, 19808, 19835, 19836, 19837, 19863, 19864, 19889, 19916, 19917, 19918, 19944, 19945, 19970, 19997, 19998, 19999, 20025, 20026, 20051, 20078, 20079, 20080, 20106, 20107, 20132, 20133, 20159, 20186, 20187, 20188, 20214, 20215, 20240, 20241, 20242, 20268, 20269, 20294, 20295, 20296, 20321, 20348, 20349, 20350, 20376, 20377, 20402, 20429, 20430, 20431, 20457, 20458, 20483, 20510, 20511, 20512, 20538, 20539, 20564, 20591, 20592, 20593, 20618, 20619, 20620, 20645, 20672, 20673, 20674, 20700, 20701, 20726, 20753, 20754, 20755, 20781, 20782, 20807, 20834, 20835, 20836, 20862, 20863, 20888, 20915, 20916, 20917, 20943, 20944, 20969, 20970, 20971, 20997, 20998, 21023, 21050, 21051, 21052, 21078, 21079, 21104, 21131, 21132, 21133, 21159, 21160, 21185, 21212, 21213, 21214, 21240, 21241, 21266, 21293, 21294, 21295, 21321, 21322, 21347, 21348, 21374, 21401, 21402, 21403, 21429, 21430, 21455, 21456, 21457, 21483, 21484, 21509, 21510, 21511, 21536, 21563, 21564, 21565, 21590, 21591, 21592, 21618, 21619, 21644, 21672, 21673, 21698, 21725, 21726, 21727, 21753, 21754, 21779, 21806, 21807, 21808, 21834, 21835, 21860, 21887, 21888, 21889, 21914, 21915, 21916, 21941, 21942, 21943, 21969, 21970, 21995, 22022, 22023, 22024 |
+| `denied` | runtime | governance/policy/reports/business-partner-target-assignment-current.dev.json | 6881 |
+| `denied` | runtime | governance/policy/reports/entity-authorization-difference-review.dev.json | 26, 67, 110, 111, 156, 157, 202, 203, 248, 249, 294, 295, 309, 340, 355, 386, 387, 432, 433, 478, 479, 524, 525, 570, 571, 616, 617, 662, 663, 708, 709, 754, 755, 800, 801, 846, 847, 892, 893, 938, 939, 984, 985, 999, 1030, 1031, 1045, 1076, 1077, 1091, 1122, 1123, 1137, 1168, 1169, 1183, 1214, 1215, 1229, 1260, 1261, 1275, 1306, 1307, 1321 |
+| `denied` | runtime | governance/policy/reports/entity-authorization-policy-regression.dev.json | 17, 23, 24, 30, 37, 38 |
+| `denied` | runtime | governance/policy/reports/entity-authorization-shadow.dev.json | 17, 23, 24, 30, 37, 38 |
+| `denied` | runtime | governance/policy/reviews/business-partner-final-66-dispositions-20260912.proposal.dev.json | 214, 216, 218, 240, 242, 244, 1441, 1443, 1445, 1469, 1471, 1473, 1759, 1761, 1763, 1785, 1787, 1789, 1832, 1834, 1836, 1858, 1860, 1862, 1905, 1907, 1909, 1931, 1933, 1935, 1978, 1980, 1982, 2004, 2006, 2008, 2051, 2053, 2055, 2077, 2079, 2081, 2124, 2126, 2128, 2150, 2152, 2154, 2219, 2267, 2391, 2621, 2731, 3053, 3113, 3181, 3257, 3333, 3385, 3437, 3489, 3549, 3625, 3704, 3706, 3708, 3732, 3734, 3736, 3801, 4041, 4068, 4070, 4072, 4096, 4098, 4100, 4143, 4145, 4147, 4169, 4171, 4173, 4215, 4217, 4219, 4241, 4243, 4245, 4287, 4289, 4291, 4313, 4315, 4317, 4333, 4359, 4361, 4363, 4385, 4387, 4389, 4431, 4433, 4435, 4457, 4459, 4461, 4503, 4505, 4507, 4529, 4531, 4533 |
+| `denied` | runtime | governance/policy/reviews/business-partner-final-binding-66-dispositions-20260912.proposal.dev.json | 539, 541, 543, 559, 561, 563, 4087, 4220, 4222, 4224, 4230, 4232, 4234, 4260, 4262, 4264, 4270, 4272, 4274, 4318, 4320, 4328, 4330, 4358, 4360, 4368, 4370, 4380, 4382, 4390, 4392, 5599, 5601, 5603, 5619, 5621, 5623, 5655, 5657, 5659, 5675, 5677, 5679, 5711, 5713, 5715, 5731, 5733, 5735, 5767, 5769, 5771, 5787, 5789, 5791, 5823, 5825, 5827, 5843, 5845, 5847, 5879, 5881, 5883, 5899, 5901, 5903, 5973, 6028, 6158, 7375, 7810, 10140, 10315, 10570, 10905, 11240, 11335, 11430, 11525, 11700, 11797, 11806, 11928, 11930, 11932, 11938, 11940, 11942, 11968, 11970, 11972, 11978, 11980, 11982, 12051, 12080, 12082, 12090, 12092, 12120, 12122, 12130, 12132, 12142, 12144, 12152, 12154, 13342, 13369, 13371, 13373, 13379, 13381, 13383, 13409, 13411, 13413, 13419, 13421, 13423, 13454, 13456, 13458, 13474, 13476, 13478, 13509, 13511, 13513, 13529, 13531, 13533, 13564, 13566, 13568, 13584, 13586, 13588, 13602, 13619, 13621, 13623, 13639, 13641, 13643, 13674, 13676, 13678, 13694, 13696, 13698, 13729, 13731, 13733, 13749, 13751, 13753 |
+| `denied` | runtime | governance/policy/reviews/business-partner-policy-triage.dev.json | 16, 90, 91, 123, 124, 156, 157, 189, 190, 222, 223, 259, 296, 297, 329, 330, 362, 363, 395, 396, 428, 429, 461, 462, 494, 495, 527, 528, 560, 561, 593, 594, 626, 627, 659, 660, 692, 693, 725, 726, 762, 763, 795, 796, 828, 829, 861, 862, 894, 895, 927, 928, 960, 961 |
+| `denied` | runtime | governance/policy/reviews/business-partner-release-19-differences.proposal.dev.json | 38, 39, 40, 43, 46, 61, 62, 65, 68, 82, 83, 84, 87, 90, 105, 106, 109, 112, 126, 127, 128, 131, 134, 149, 150, 153, 156, 170, 171, 172, 175, 178, 193, 194, 197, 200, 241, 242, 243, 246, 249, 250, 265, 266, 269, 272, 273, 289, 290, 291, 294, 297, 298, 312, 313, 314, 317, 320, 363, 364, 365, 368, 371, 386, 387, 390, 393, 407, 408, 409, 412, 415, 430, 431, 434, 437, 478, 479, 480, 483, 486, 501, 502, 505, 508, 522, 523, 524, 527, 530, 545, 546, 549, 552, 593, 594, 595, 598, 601, 616, 617, 620, 623, 637, 638, 639, 642, 645, 660, 661, 664, 667, 708, 709, 710, 713, 716, 731, 732, 735, 738, 752, 753, 754, 757, 760, 775, 776, 779, 782, 796, 797, 798, 801, 804, 819, 820, 823, 826, 840, 841, 842, 845, 848, 863, 864, 867, 870, 884, 885, 886, 889, 892, 907, 908, 911, 914, 928, 929, 930, 933, 936, 951, 952, 955, 958, 1021, 1092, 1141, 1142, 1143, 1146, 1149, 1164, 1165, 1168, 1171, 1185, 1186, 1187, 1190, 1193, 1208, 1209, 1212, 1215, 1229, 1230, 1231, 1234, 1237, 1252, 1253, 1256, 1259, 1273, 1274, 1275, 1278, 1281, 1296, 1297, 1300, 1303, 1344, 1345, 1346, 1349, 1352, 1367, 1368, 1371, 1374, 1388, 1389, 1390, 1393, 1396, 1437, 1438, 1439, 1442, 1445, 1460, 1461, 1464, 1467, 1481, 1482, 1483, 1486, 1489, 1530, 1531, 1532, 1535, 1538, 1553, 1554, 1557, 1560, 1574, 1575, 1576, 1579, 1582, 1623, 1624, 1625, 1628, 1631, 1646, 1647, 1650, 1653, 1667, 1668, 1669, 1672, 1675, 1716, 1717, 1718, 1721, 1724, 1739, 1740, 1743, 1746, 1787, 1788, 1789, 1792, 1795, 1810, 1811, 1814, 1817, 1831, 1832, 1833, 1836, 1839, 1880, 1881, 1882, 1885, 1888, 1903, 1904, 1907, 1910, 1924, 1925, 1926, 1929, 1932, 1973, 1974, 1975, 1978, 1981, 1996, 1997, 2000, 2003, 2017, 2018, 2019, 2022, 2025, 2066, 2067, 2068, 2071, 2074, 2089, 2090, 2093, 2096, 2110, 2111, 2112, 2115, 2118, 2133, 2134, 2137, 2140, 2181, 2182, 2183, 2186, 2189, 2204, 2205, 2208, 2211, 2225, 2226, 2227, 2230, 2233, 2274, 2275, 2276, 2279, 2282, 2283, 2298, 2299, 2302, 2305, 2306, 2321, 2322, 2325, 2328, 2345, 2346, 2347, 2350, 2353, 2354, 2368, 2369, 2370, 2373, 2376, 2420, 2421, 2422, 2425, 2428, 2429, 2444, 2445, 2448, 2451, 2468, 2469, 2470, 2473, 2476, 2477, 2492, 2493, 2496, 2499, 2543, 2589, 2611, 2662, 2663, 2664, 2667, 2670, 2671, 2686, 2687, 2690, 2693, 2694, 2710, 2711, 2712, 2715, 2718, 2719, 2733, 2734, 2735, 2738, 2741, 2784, 2785, 2786, 2789, 2792, 2793, 2808, 2809, 2812, 2815, 2816, 2832, 2833, 2834, 2837, 2840, 2841, 2855, 2856, 2857, 2860, 2863, 2906, 2907, 2908, 2911, 2914, 2915, 2930, 2931, 2934, 2937, 2938, 2954, 2955, 2956, 2959, 2962, 2963, 2977, 2978, 2979, 2982, 2985, 3028, 3029, 3030, 3033, 3036, 3037, 3052, 3053, 3056, 3059, 3076, 3077, 3078, 3081, 3084, 3085, 3099, 3100, 3101, 3104, 3107, 3151, 3152, 3153, 3156, 3159, 3160, 3175, 3176, 3179, 3182, 3183, 3199, 3200, 3201, 3204, 3207, 3208, 3222, 3223, 3224, 3227, 3230, 3273, 3274, 3275, 3278, 3281, 3282, 3297, 3298, 3301, 3304, 3305, 3321, 3322, 3323, 3326, 3329, 3330, 3344, 3345, 3346, 3349, 3352, 3395, 3441, 3463, 3510, 3511, 3514, 3517, 3526, 3555, 3556, 3559, 3562, 3571, 3600, 3601, 3604, 3607, 3645, 3646, 3649, 3652, 3661, 3766, 3767, 3770, 3773, 3782, 3811, 3812, 3815, 3818, 3827, 3855, 3901, 3902, 3905, 3908, 3917, 3939, 3940, 3943, 3946, 3955, 3977, 3978, 3981, 3984, 3993, 4015, 4016, 4019, 4022, 4031, 4053, 4054, 4057, 4060, 4069, 4091, 4092, 4095, 4098, 4107, 4129, 4130, 4133, 4136, 4145, 4167, 4168, 4171, 4174, 4183, 4205, 4206, 4209, 4212, 4221, 4250, 4251, 4254, 4257, 4266, 4288, 4289, 4292, 4295, 4296, 4326, 4372, 4373, 4376, 4379, 4391, 4460, 4461, 4464, 4467, 4479, 4501, 4502, 4505, 4508, 4509, 4542, 4543, 4546, 4549, 4550, 4583, 4584, 4587, 4590, 4591, 4624, 4625, 4628, 4631, 4643, 4665, 4666, 4669, 4672, 4673, 4706, 4707, 4710, 4713, 4714, 4787, 4788, 4791, 4794, 4803, 4832, 4833, 4836, 4839, 4848, 4876, 4914, 4952, 4992 |
+| `denied` | runtime | governance/policy/reviews/business-partner-release-19-differences.successor-20260911.proposal.dev.json | 38, 39, 40, 42, 43, 57, 58, 60, 61, 74, 75, 76, 78, 79, 93, 94, 96, 97, 110, 111, 112, 114, 115, 129, 130, 132, 133, 146, 147, 148, 150, 151, 165, 166, 168, 169, 209, 210, 211, 213, 215, 216, 231, 232, 234, 236, 237, 251, 252, 253, 255, 257, 258, 272, 273, 274, 276, 277, 317, 318, 319, 321, 322, 336, 337, 339, 340, 353, 354, 355, 357, 358, 372, 373, 375, 376, 416, 417, 418, 420, 421, 435, 436, 438, 439, 452, 453, 454, 456, 457, 471, 472, 474, 475, 515, 516, 517, 519, 520, 534, 535, 537, 538, 551, 552, 553, 555, 556, 570, 571, 573, 574, 614, 615, 616, 618, 619, 633, 634, 636, 637, 650, 651, 652, 654, 655, 669, 670, 672, 673, 686, 687, 688, 690, 691, 705, 706, 708, 709, 722, 723, 724, 726, 727, 741, 742, 744, 745, 758, 759, 760, 762, 763, 777, 778, 780, 781, 794, 795, 796, 798, 799, 813, 814, 816, 817, 875, 938, 983, 984, 985, 987, 988, 1002, 1003, 1005, 1006, 1019, 1020, 1021, 1023, 1024, 1038, 1039, 1041, 1042, 1055, 1056, 1057, 1059, 1060, 1074, 1075, 1077, 1078, 1091, 1092, 1093, 1095, 1096, 1110, 1111, 1113, 1114, 1154, 1155, 1156, 1158, 1159, 1173, 1174, 1176, 1177, 1190, 1191, 1192, 1194, 1195, 1235, 1236, 1237, 1239, 1240, 1254, 1255, 1257, 1258, 1271, 1272, 1273, 1275, 1276, 1316, 1317, 1318, 1320, 1321, 1335, 1336, 1338, 1339, 1352, 1353, 1354, 1356, 1357, 1397, 1398, 1399, 1401, 1402, 1416, 1417, 1419, 1420, 1433, 1434, 1435, 1437, 1438, 1478, 1479, 1480, 1482, 1483, 1497, 1498, 1500, 1501, 1541, 1542, 1543, 1545, 1546, 1560, 1561, 1563, 1564, 1577, 1578, 1579, 1581, 1582, 1622, 1623, 1624, 1626, 1627, 1641, 1642, 1644, 1645, 1658, 1659, 1660, 1662, 1663, 1703, 1704, 1705, 1707, 1708, 1722, 1723, 1725, 1726, 1739, 1740, 1741, 1743, 1744, 1784, 1785, 1786, 1788, 1789, 1803, 1804, 1806, 1807, 1820, 1821, 1822, 1824, 1825, 1839, 1840, 1842, 1843, 1883, 1884, 1885, 1887, 1888, 1902, 1903, 1905, 1906, 1919, 1920, 1921, 1923, 1924, 1964, 1965, 1966, 1968, 1970, 1971, 1986, 1987, 1989, 1991, 1992, 2007, 2008, 2010, 2011, 2024, 2025, 2026, 2028, 2030, 2031, 2045, 2046, 2047, 2049, 2050, 2090, 2091, 2092, 2094, 2096, 2097, 2112, 2113, 2115, 2116, 2129, 2130, 2131, 2133, 2135, 2136, 2151, 2152, 2154, 2155, 2195, 2231, 2249, 2294, 2295, 2296, 2298, 2300, 2301, 2316, 2317, 2319, 2321, 2322, 2336, 2337, 2338, 2340, 2342, 2343, 2357, 2358, 2359, 2361, 2362, 2402, 2403, 2404, 2406, 2408, 2409, 2424, 2425, 2427, 2429, 2430, 2444, 2445, 2446, 2448, 2450, 2451, 2465, 2466, 2467, 2469, 2470, 2510, 2511, 2512, 2514, 2516, 2517, 2532, 2533, 2535, 2537, 2538, 2552, 2553, 2554, 2556, 2558, 2559, 2573, 2574, 2575, 2577, 2578, 2618, 2619, 2620, 2622, 2624, 2625, 2640, 2641, 2643, 2644, 2657, 2658, 2659, 2661, 2663, 2664, 2678, 2679, 2680, 2682, 2683, 2723, 2724, 2725, 2727, 2729, 2730, 2745, 2746, 2748, 2750, 2751, 2765, 2766, 2767, 2769, 2771, 2772, 2786, 2787, 2788, 2790, 2791, 2831, 2832, 2833, 2835, 2837, 2838, 2853, 2854, 2856, 2858, 2859, 2873, 2874, 2875, 2877, 2879, 2880, 2894, 2895, 2896, 2898, 2899, 2939, 2975, 2993, 3034, 3035, 3037, 3038, 3046, 3075, 3076, 3078, 3079, 3087, 3116, 3117, 3119, 3120, 3157, 3158, 3160, 3161, 3169, 3266, 3267, 3269, 3270, 3278, 3307, 3308, 3310, 3311, 3319, 3347, 3389, 3390, 3392, 3393, 3401, 3423, 3424, 3426, 3427, 3435, 3457, 3458, 3460, 3461, 3469, 3491, 3492, 3494, 3495, 3503, 3525, 3526, 3528, 3529, 3537, 3559, 3560, 3562, 3563, 3571, 3593, 3594, 3596, 3597, 3605, 3627, 3628, 3630, 3631, 3639, 3661, 3662, 3664, 3665, 3673, 3702, 3703, 3705, 3706, 3714, 3736, 3737, 3739, 3741, 3742, 3772, 3814, 3815, 3817, 3818, 3826, 3889, 3890, 3892, 3893, 3901, 3923, 3924, 3926, 3928, 3929, 3960, 3961, 3963, 3965, 3966, 3997, 3998, 4000, 4002, 4003, 4034, 4035, 4037, 4038, 4046, 4068, 4069, 4071, 4073, 4074, 4105, 4106, 4108, 4110, 4111, 4176, 4177, 4179, 4180, 4188, 4217, 4218, 4220, 4221, 4229, 4257, 4291, 4325, 4359 |
+| `denied` | runtime | governance/policy/reviews/entity-authorization-differences.dev.json | 161, 185, 521, 545, 569, 593, 617, 641, 665, 689 |
+| `denied` | runtime | packages/contracts/platform/ai/src/intent.ts | 4, 36, 64 |
+| `denied` | runtime | packages/contracts/platform/entity-runtime/src/access-decision.ts | 8 |
 | `denied` | test | packages/planes/neon/business-partner/src/case-experience.test.ts | 105 |
-| `denied` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 18, 132 |
-| `denied` | runtime | packages/platform/iam/auth-bff/package.json | 12, 13, 18, 19 |
-| `denied` | runtime | packages/platform/iam/auth-bff/src/index.ts | 252, 253, 327 |
+| `denied` | test | packages/planes/studio/business-partner/src/authoring.test.tsx | 79 |
+| `denied` | test | packages/planes/studio/business-partner/src/case-contract-authoring.test.tsx | 19 |
+| `denied` | ui | packages/planes/studio/business-partner/src/case-contract-authoring.tsx | 32 |
+| `denied` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 114 |
+| `denied` | runtime | packages/platform/iam/auth-bff/package.json | 12, 13, 18, 19, 24, 25 |
+| `denied` | runtime | packages/platform/iam/auth-bff/src/index.ts | 338 |
+| `denied` | runtime | packages/platform/iam/governance-review/package.json | 10, 11, 16, 17, 21, 22, 26, 27, 31, 32 |
 | `denied` | runtime | packages/platform/iam/session-store/package.json | 12, 13 |
 | `denied` | runtime | packages/platform/shell/activity-center-data/src/index.ts | 24, 31, 32 |
 | `denied` | runtime | packages/platform/shell/app-foundation/src/error-taxonomy.ts | 7, 51 |
 | `denied` | runtime | packages/platform/shell/shell/src/messages.ts | 9 |
-| `denied` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1249, 4827 |
-| `denied` | ddl | server/db/ddl/common/ai/05_constraints.sql | 218 |
-| `denied` | ddl | server/db/ddl/common/ai/07_functions.sql | 64 |
+| `denied` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 151 |
+| `denied` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 166 |
+| `denied` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 136 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 81 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/atlas-attachment-knowledge.test.ts | 69, 151 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts | 42 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 27, 45, 120, 121, 200, 202, 226, 247, 257, 434, 629, 678 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/business-partner-company-native-authority.test.ts | 28 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts | 68, 110 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-read-policy.test.ts | 38, 104 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-reveal-policy.test.ts | 101, 134 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/finance-http-review.test.ts | 114 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 50 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 23, 45 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 41 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/mesh-exchange-readiness.postgres.test.ts | 33, 36 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5, 17 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 186 |
+| `denied` | runtime | server/apps/platform-host/src/composition/atlas-document-grounding.ts | 142, 185 |
+| `denied` | runtime | server/apps/platform-host/src/composition/authorization-management-config.ts | 8, 99, 101 |
+| `denied` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 23 |
+| `denied` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 237, 359, 376, 488, 496 |
+| `denied` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 9 |
+| `denied` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1930, 5676, 7242 |
+| `denied` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 159 |
+| `denied` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 251 |
+| `denied` | ddl | server/db/ddl/common/ai/05_constraints.sql | 219 |
+| `denied` | ddl | server/db/ddl/common/ai/07_functions.sql | 65 |
 | `denied` | ddl | server/db/ddl/common/audit/02_domains.sql | 65 |
 | `denied` | test | server/db/scripts/tests/integration/atlas/tools-rls.ts | 340, 341, 343, 345 |
+| `denied` | test | server/db/scripts/tests/integration/business-partner-bank-verification.ts | 77 |
+| `denied` | test | server/db/scripts/tests/integration/experience-foundation.mjs | 77 |
+| `denied` | test | server/db/scripts/tests/integration/identity-replay-live.mjs | 459 |
 | `denied` | runtime | server/db/seed/contracts/authorization/control/cross-plane-suspension-control.v1.json | 70 |
 | `denied` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `denied` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 21 |
-| `denied` | runtime | server/packages/contracts/auth/src/authorization.ts | 76 |
+| `denied` | runtime | server/packages/contracts/auth/src/authorization.ts | 80 |
+| `denied` | runtime | server/packages/contracts/auth/src/ports.ts | 35 |
 | `denied` | test | server/packages/planes/mesh/src/business-partner-bank-disclosure.test.ts | 5 |
-| `denied` | runtime | server/packages/planes/mesh/src/business-partner-bank-disclosure.ts | 58 |
+| `denied` | runtime | server/packages/planes/mesh/src/business-partner-bank-disclosure.ts | 825 |
+| `denied` | test | server/packages/planes/mesh/src/business-partner-network-exchange.test.ts | 5 |
+| `denied` | runtime | server/packages/planes/mesh/src/business-partner-network-exchange.ts | 644 |
 | `denied` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 3 |
-| `denied` | runtime | server/packages/planes/mesh/src/business-partner-profile-publication.ts | 41 |
+| `denied` | runtime | server/packages/planes/mesh/src/business-partner-profile-publication.ts | 766 |
+| `denied` | test | server/packages/planes/neon/src/__tests__/integration/business-partner-bank-verification.ts | 80 |
 | `denied` | test | server/packages/planes/neon/src/business-partner-account-bank-linkage.test.ts | 6 |
-| `denied` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 964 |
+| `denied` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 1154 |
 | `denied` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6 |
-| `denied` | runtime | server/packages/planes/neon/src/business-partner-profile-match.ts | 79 |
+| `denied` | runtime | server/packages/planes/neon/src/business-partner-profile-match.ts | 176 |
 | `denied` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7 |
-| `denied` | runtime | server/packages/planes/neon/src/business-partner-profile-projection.ts | 132 |
-| `denied` | test | server/packages/planes/neon/src/finance-http.test.ts | 7 |
-| `denied` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 13 |
-| `denied` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 5 |
+| `denied` | runtime | server/packages/planes/neon/src/business-partner-profile-projection.ts | 147 |
+| `denied` | test | server/packages/planes/neon/src/finance-http.test.ts | 21 |
+| `denied` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 48 |
+| `denied` | runtime | server/packages/planes/studio/meta-entity-authoring/src/baseline-publication.ts | 24, 27, 29, 30, 32, 35, 52, 54, 65, 67, 69, 71, 73, 75 |
+| `denied` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 27 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 8 |
+| `denied` | test | server/packages/platform/ai/src/__tests__/business-context.test.ts | 20 |
+| `denied` | test | server/packages/platform/ai/src/__tests__/business-partner-evaluations.test.ts | 12, 123, 124, 125 |
+| `denied` | test | server/packages/platform/ai/src/__tests__/business-partner-insight-tools.test.ts | 14, 105 |
+| `denied` | test | server/packages/platform/ai/src/__tests__/conversation-composition.test.ts | 37 |
+| `denied` | test | server/packages/platform/ai/src/__tests__/entity-record-tool.test.ts | 65, 66 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/experience-configuration.test.ts | 8 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/failover.test.ts | 6 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 9 |
+| `denied` | test | server/packages/platform/ai/src/__tests__/local-generation.test.ts | 13 |
+| `denied` | test | server/packages/platform/ai/src/__tests__/missing-scope-runtime.test.ts | 105 |
+| `denied` | test | server/packages/platform/ai/src/__tests__/repository-review.test.ts | 180, 189, 194, 198 |
+| `denied` | test | server/packages/platform/ai/src/__tests__/retrieval-f5.test.ts | 84 |
+| `denied` | test | server/packages/platform/ai/src/__tests__/review-fixture.ts | 19 |
+| `denied` | test | server/packages/platform/ai/src/__tests__/route-review.test.ts | 298 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/runtime.test.ts | 6 |
+| `denied` | test | server/packages/platform/ai/src/__tests__/structured-intent.test.ts | 288 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 7 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15, 57 |
-| `denied` | route | server/packages/platform/ai/src/atlas-experience-routes.ts | 15 |
+| `denied` | runtime | server/packages/platform/ai/src/agent-runtime.ts | 326, 774, 1290 |
 | `denied` | runtime | server/packages/platform/ai/src/context.ts | 23 |
-| `denied` | runtime | server/packages/platform/ai/src/tool-service.ts | 89, 125, 197 |
+| `denied` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 29 |
+| `denied` | runtime | server/packages/platform/ai/src/tool-service.ts | 93, 136, 245 |
 | `denied` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
-| `denied` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
+| `denied` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 358 |
 | `denied` | route | server/packages/platform/control-admin/src/authorization-management-routes.ts | 14, 16 |
-| `denied` | route | server/packages/platform/experience/src/routes.ts | 32 |
-| `denied` | test | server/packages/platform/experience/src/service.test.ts | 15 |
+| `denied` | test | server/packages/platform/control-admin/src/bank-validation-routes.test.ts | 70, 71 |
+| `denied` | test | server/packages/platform/control-admin/src/bank-validation.test.ts | 98 |
+| `denied` | runtime | server/packages/platform/control-admin/src/bank-validation.ts | 9 |
+| `denied` | test | server/packages/platform/control-admin/src/connector-control.test.ts | 98 |
+| `denied` | test | server/packages/platform/control-admin/src/connector-routes.test.ts | 81 |
+| `denied` | test | server/packages/platform/control-admin/src/entitlement-routes.test.ts | 59 |
+| `denied` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1101 |
+| `denied` | route | server/packages/platform/experience/src/routes.ts | 34 |
+| `denied` | test | server/packages/platform/experience/src/service.test.ts | 16 |
+| `denied` | test | server/packages/platform/governance/src/cycles/cycle-execution-services.test.ts | 146 |
 | `denied` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `denied` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 439 |
+| `denied` | test | server/packages/platform/iam/src/__tests__/identity-replay-routes.test.ts | 69 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 11, 23, 33 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
+| `denied` | test | server/packages/platform/iam/src/__tests__/shadow-authorizer.test.ts | 104, 116 |
+| `denied` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 15, 59, 63, 73, 95, 103 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
-| `denied` | runtime | server/packages/platform/iam/src/iam-service.ts | 73, 77, 84, 97, 114, 183, 216, 238 |
-| `denied` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 263, 266, 282 |
-| `denied` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 27 |
+| `denied` | runtime | server/packages/platform/iam/src/iam-service.ts | 73, 77, 84, 96, 101, 118, 184, 217, 239 |
+| `denied` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 337, 344, 380 |
+| `denied` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 74, 258, 262, 264, 272, 274, 276, 284, 286, 288, 293, 303, 307 |
 | `denied` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `denied` | test | server/packages/platform/notifications/src/__tests__/email-canary.test.ts | 56 |
 | `denied` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
-| `denied` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 3 |
+| `denied` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
 | `denied` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 79 |
-| `denied` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 3 |
+| `denied` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 126 |
+| `denied` | test | server/packages/services/attachments/src/retrieval-admission.test.ts | 96 |
 | `denied` | test | server/packages/services/content/src/content-service.test.ts | 2 |
-| `denied` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 35 |
-| `denied` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1108 |
-| `denied` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 309 |
+| `denied` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36, 117 |
+| `denied` | test | server/packages/services/finance/src/ledger/business-partner-journal-activity.test.ts | 57, 58, 61 |
+| `denied` | test | server/packages/services/master-data/src/__tests__/business-partner-360-commercial-controls.test.ts | 9 |
+| `denied` | test | server/packages/services/master-data/src/__tests__/business-partner-360-policy.test.ts | 15, 17 |
+| `denied` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 2058 |
+| `denied` | test | server/packages/services/master-data/src/__tests__/business-partner-provider-projection.test.ts | 73, 118 |
+| `denied` | test | server/packages/services/master-data/src/__tests__/business-partner-reveal-revocation.test.ts | 43, 44 |
+| `denied` | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 1448, 1456, 1480, 1485 |
+| `denied` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1306 |
+| `denied` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 1766 |
 | `denied` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 105 |
-| `denied` | runtime | server/packages/services/master-data/src/services.ts | 124 |
+| `denied` | runtime | server/packages/services/master-data/src/master-data-authority.ts | 84, 88 |
+| `denied` | runtime | server/packages/services/master-data/src/supplier-workforce-command-guard.ts | 52 |
+| `denied` | runtime | server/packages/services/master-data/src/supplier-workforce-requisition-service.ts | 18 |
+| `denied` | runtime | server/packages/services/master-data/src/verification-authority.ts | 21 |
 | `denied` | runtime | server/packages/services/master-data/src/workforce-service.ts | 43 |
 | `denied` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
+| `denied` | test | server/packages/services/records/src/__tests__/canonical-read-backend.test.ts | 94 |
+| `denied` | test | server/packages/services/records/src/__tests__/canonical-read-diagnostics.test.ts | 94, 211, 230, 244 |
+| `denied` | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 82, 131, 134, 151, 158, 192, 312, 341, 358, 363, 393, 420, 433, 437, 451 |
+| `denied` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 47, 304, 445 |
+| `denied` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 47, 154 |
 | `denied` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
-| `denied` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43 |
+| `denied` | test | server/packages/services/records/src/__tests__/list-experience.test.ts | 274, 281 |
+| `denied` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 44 |
+| `denied` | test | server/packages/services/records/src/__tests__/snapshot-service.test.ts | 31 |
 | `denied` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
-| `denied` | runtime | server/packages/services/records/src/bookmarks/record-bookmark-service.ts | 60 |
-| `denied` | test | tests/contracts/auth-session-foundation.test.ts | 96, 171 |
+| `denied` | runtime | server/packages/services/records/src/bookmarks/record-bookmark-service.ts | 225 |
+| `denied` | runtime | server/packages/services/records/src/entity-authorization.ts | 98, 129, 135, 153, 161, 176, 181, 225, 236, 243, 253 |
+| `denied` | runtime | server/packages/services/records/src/entity-backend-authorizer.ts | 216, 249, 344 |
+| `denied` | runtime | server/packages/services/records/src/list-context-discovery.ts | 27, 44, 76, 124 |
+| `denied` | runtime | server/packages/services/records/src/list-experience.ts | 80, 82 |
+| `denied` | test | tests/contracts/auth-session-foundation.test.ts | 96, 217 |
+| `denied` | test | tests/contracts/business-partner-independent-child.test.ts | 21, 68 |
 | `denied` | test | tests/contracts/home-personalization-phase3.test.ts | 27, 29, 30 |
+| `denied` | test | tests/contracts/trusted-device-authentication.test.ts | 28, 29, 30, 31 |
 | `denied` | test | tests/e2e/production/surface-matrix.spec.ts | 203 |
 | `denied` | test | tests/foundation-browser/error-boundaries.spec.ts | 5 |
 | `denied` | test | tests/foundation/error-boundaries.test.tsx | 13 |
-| `denied` | tool | tooling/scripts/policy/authorization-inventory.ts | 740 |
+| `denied` | tool | tooling/scripts/policy/authorization-inventory.ts | 892 |
 | `denied` | tool | tooling/scripts/policy/verify-auth-session-phase3.mjs | 10 |
+| `denied` | tool | tooling/scripts/verification/bp-ai-authenticated-evidence.test.mjs | 26, 27, 31 |
+| `denied` | tool | tooling/scripts/verification/entity-authorization/canonical-execution-evidence.mjs | 36, 37 |
+| `denied` | tool | tooling/scripts/verification/entity-authorization/canonical-execution-evidence.test.mjs | 15, 30, 32, 42, 48, 57 |
+| `denied` | tool | tooling/scripts/verification/entity-authorization/policy-differences.mjs | 3, 24 |
+| `denied` | tool | tooling/scripts/verification/entity-authorization/policy-differences.test.mjs | 4, 5, 20, 21, 27 |
+| `denied` | tool | tooling/scripts/verification/isolated-enter/prepare-affordance-count-execution.mjs | 142 |
+| `denied` | tool | tooling/scripts/verification/isolated-enter/prepare-final-binding-dispositions.mjs | 62 |
+| `denied` | tool | tooling/scripts/verification/prepare-business-partner-release-19-difference-review.mjs | 39, 40 |
+| `denied` | tool | tooling/scripts/verification/provision-business-partner-r3-invitation.mjs | 81, 84 |
+| `denied` | tool | tooling/scripts/verification/qualify-atlas-f6-personas.mjs | 25, 26 |
+| `denied` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 85, 126, 136, 137, 152, 163, 164, 202, 207, 209, 217, 253 |
 | `denied` | ui | tooling/scripts/verification/render-boundary-fixture.tsx | 9 |
+| `denied` | tool | tooling/scripts/verification/review-business-partner-roles.mjs | 48 |
+| `denied` | tool | tooling/scripts/verification/verify-local-atlas-generation.mts | 44, 45, 58 |
+| `groupIds` | runtime | governance/policy/reports/business-partner-affordance-count-browser-bank-completion-20260912-r4.dev.json | 95 |
+| `groupIds` | runtime | governance/policy/reports/business-partner-affordance-count-expiry-20260912-r4.dev.json | 4 |
+| `groupIds` | runtime | governance/policy/reports/business-partner-affordance-count-expiry-20260912.dev.json | 4 |
+| `groupIds` | runtime | governance/policy/reports/business-partner-affordance-count-revocation-20260912-r2.dev.json | 10, 18 |
+| `groupIds` | runtime | governance/policy/reports/business-partner-affordance-count-revocation-20260912-r3.dev.json | 10, 18 |
+| `groupIds` | runtime | governance/policy/reports/business-partner-affordance-count-revocation-20260912-r4.dev.json | 10, 18 |
+| `groupIds` | runtime | governance/policy/reports/business-partner-affordance-count-revocation-20260912-r5.dev.json | 10, 18 |
 | `groupIds` | test | server/db/scripts/__tests__/provisioning/three-plane-provision.test.ts | 220, 229, 232 |
 | `groupIds` | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 119, 145, 158 |
 | `groupIds` | tool | server/db/scripts/seed/tenant-authority-projection.ts | 273, 282, 285 |
-| `groupIds` | tool | tooling/scripts/policy/authorization-inventory.ts | 741, 761 |
-| `matchedGrantId` | tool | tooling/scripts/policy/authorization-inventory.ts | 761 |
-| `matchedGroupId` | tool | tooling/scripts/policy/authorization-inventory.ts | 761 |
-| `matchedRoleId` | tool | tooling/scripts/policy/authorization-inventory.ts | 761 |
-| `permissionCode` | ui | apps/studio/app/(shell)/mdg/business-partner/ai-experience/experience-editor.tsx | 62, 72, 293, 296 |
+| `groupIds` | tool | tooling/scripts/policy/authorization-inventory.ts | 893, 916 |
+| `groupIds` | tool | tooling/scripts/verification/isolated-enter/affordance-count-client.mjs | 56 |
+| `matchedGrantId` | tool | tooling/scripts/policy/authorization-inventory.ts | 916 |
+| `matchedGroupId` | tool | tooling/scripts/policy/authorization-inventory.ts | 916 |
+| `matchedRoleId` | tool | tooling/scripts/policy/authorization-inventory.ts | 916 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/3s1cx-co3p7g9.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/42x397h50yqoj.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/43cf9c2ta28aj.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal/static/chunks/1-wqrr3qesgmm.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal/static/chunks/1he1c02z2s_09.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-reveal/static/chunks/3dsc6rk665jnx.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-summary/static/chunks/1iuri9db1_90v.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-summary/static/chunks/3s1cx-co3p7g9.js | 1 |
+| `permissionCode` | runtime | apps/neon/.next-bp-summary/static/chunks/42x397h50yqoj.js | 1 |
+| `permissionCode` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/061b_app_(shell)_mdg_business-partner_ai-experience_experience-editor_tsx_148ar3g._.js | 1 |
+| `permissionCode` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_ai_agent-runtime_src_index_ts_1m59cra._.js | 1 |
+| `permissionCode` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
+| `permissionCode` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/061b_app_(shell)_mdg_business-partner_ai-experience_experience-editor_tsx_148ar3g._.js | 1 |
+| `permissionCode` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_ai_agent-runtime_src_index_ts_1m59cra._.js | 1 |
+| `permissionCode` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
+| `permissionCode` | runtime | apps/studio/.next-bp-consolidated/static/chunks/1qxrpml0t6duj.js | 1 |
+| `permissionCode` | runtime | apps/studio/.next-bp-consolidated/static/chunks/2yz9q1tgxt6kr.js | 1 |
+| `permissionCode` | runtime | apps/studio/app/(shell)/mdg/business-partner/ai-experience/experience-defaults.ts | 54, 64 |
+| `permissionCode` | ui | apps/studio/app/(shell)/mdg/business-partner/ai-experience/experience-editor.tsx | 110, 113 |
+| `permissionCode` | runtime | governance/config/governance/server-legacy-route-baseline.json | 407, 431, 7055, 7079 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-accepted-operations.dev.json | 217, 221, 225, 229, 233, 237, 241, 245, 249, 253, 257, 261, 265, 269, 273, 277, 281, 285, 289, 293, 297, 301, 305, 309, 313, 317, 321, 325, 329, 333, 337, 341, 345, 349, 353, 357, 361, 365, 369, 373, 377, 381, 515, 551, 586, 622, 1533, 1542, 1551, 1560, 1569, 1578, 1587, 1597, 1607, 1617, 1627, 1637, 1647, 1657, 1667, 1677, 1687, 1697, 1707, 1717, 1727, 1737, 1747, 1757, 1767, 1777, 1787, 1797, 1806, 1815, 1825, 1835, 1845, 1855, 1865, 1875, 1885, 1895, 1905, 1915, 1925, 1935, 2821, 2854, 2887, 2920, 2953, 2986, 3021, 3054, 3089, 3124, 3159, 3194, 3236, 3271, 3306, 3341, 3374, 3407, 3440, 3473, 3506, 3539, 3572, 3605, 3645, 3678, 3711, 3751, 3784, 3817, 3851, 3885, 3920, 3953, 3988, 4023, 4058, 4093, 4128, 4162, 4203, 4243 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-activation-differences.dev.json | 108, 153, 198, 243, 288, 333, 378, 423, 468, 513, 558, 603, 648, 693, 738, 783, 828, 873, 918, 963, 1008, 1053, 1098, 1143, 1188, 1233, 1278 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-activation-publication.dev.json | 256, 260, 264, 268, 272, 276, 280, 284, 288, 292, 296, 300, 304, 308, 312, 316, 320, 324, 328, 332, 336, 340, 344, 348, 352, 356, 360, 364, 368, 372, 376, 380, 384, 388, 392, 396, 400, 404, 408, 412, 416, 420, 424, 428, 432, 436, 440, 444, 448, 452, 456, 589, 625, 660, 695, 1635, 1644, 1653, 1662, 1671, 1680, 1689, 1699, 1709, 1719, 1729, 1739, 1749, 1759, 1769, 1779, 1789, 1799, 1809, 1819, 1829, 1839, 1849, 1859, 1869, 1879, 1889, 1899, 1909, 1918, 1927, 1937, 1947, 1956, 1965, 1974, 1983, 1992, 2002, 2012, 2022, 2032, 2042, 2052, 2062, 2072, 2082, 2092, 2102, 2112, 2122, 2259, 2297, 2334, 2376, 2389, 2431, 2444, 2486, 2499, 2538, 2580, 2591, 2635, 2646, 2690, 2701, 2745, 2756, 2800, 2811, 2862, 2875, 2912, 2949, 2988, 3027, 3064, 3101, 3138, 3175, 3212, 3249, 3286, 3323, 3367, 3404, 3441, 3485, 3522, 3559, 3597, 3635, 3673, 3711, 3749, 3787, 3825, 3862, 3897, 3934, 3971, 4008, 4045, 4082, 4121, 4159, 4202, 4215, 4251, 4296, 4340 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-activation-publication.dev.snapshot.json | 19, 38, 57, 76, 95, 114, 133, 152, 171, 190, 209, 228, 247, 266, 285, 304, 323, 342, 361, 380, 399, 418, 437, 456, 475, 494, 513, 532, 551, 570, 589, 608, 627, 646, 665, 684, 703, 722, 741, 760, 779, 798, 817, 836, 855, 874, 893, 912, 931, 950, 969, 988, 1007, 1026, 1045, 1064, 1083, 1102, 1121, 1140, 1159, 1178, 1197, 1216, 1235, 1254, 1273, 1292, 1311, 1330, 1349, 1368, 1387, 1406, 1425, 1444, 1463, 1482, 1501, 1520, 1539, 1558, 1577, 1596, 1615, 1634, 1653, 1672, 1691, 1710, 1729, 1748, 1767, 1786, 1805, 1824, 1843, 1862, 1881, 1900, 1919, 1938, 1957, 1976, 1995, 2014, 2033, 2052, 2071, 2090, 2109, 2128, 2147, 2166, 2185, 2204, 2223, 2242, 2261, 2280, 2299, 2318, 2337, 2356, 2375, 2394, 2413, 2432, 2451, 2470, 2489, 2508, 2527, 2546, 2565, 2584, 2603, 2622, 2641, 2660, 2679, 2698, 2717, 2736, 2755, 2774, 2793, 2812, 2831, 2850, 2869, 2888, 2907, 2926, 2945, 2964, 2983, 3002, 3021, 3040, 3059, 3078, 3097, 3116, 3135, 3154, 3173, 3192, 3211, 3230, 3249, 3268, 3287, 3306, 3325, 3344, 3363, 3382, 3401, 3420, 3439, 3458, 3477, 3496, 3515, 3534, 3553, 3572, 3591, 3610, 3629, 3648, 3667, 3686, 3705, 3724, 3743, 3762, 3781, 3800, 3819, 3838, 3857, 3876, 3895, 3914, 3933, 3952, 3971, 3990, 4009, 4028, 4047, 4066, 4085, 4104, 4123, 4142, 4161, 4180, 4199, 4218, 4237, 4256, 4275, 4294, 4313, 4332, 4351, 4370, 4389, 4408, 4427, 4446, 4465, 4484, 4503, 4522, 4541, 4560, 4579, 4598, 4617, 4636, 4655, 4674, 4693, 4712, 4731, 4750, 4769, 4788, 4807, 4826, 4845, 4864, 4883, 4902, 4921, 4940, 4959, 4978, 4997, 5016, 5035, 5054, 5073, 5092, 5111, 5130, 5149, 5168, 5187, 5206, 5225, 5244, 5263, 5282, 5301, 5320, 5339, 5358, 5377, 5396, 5415, 5649, 5653, 5657, 5661, 5665, 5669, 5673, 5677, 5681, 5685, 5689, 5822, 5858, 5893, 5928, 6865, 6880, 6895, 6910, 6925, 6940, 6955, 6970, 6985, 7242, 7246, 7250, 7254, 7258, 7262, 7266, 7270, 7274, 7278, 7282, 7286, 7419, 7455, 7490, 7525, 8462, 8477, 8492, 8507, 8522, 8537, 8552, 8567, 8582, 8597 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-authorization-publication.dev.json | 256, 260, 264, 268, 272, 276, 280, 284, 288, 292, 296, 300, 304, 308, 312, 316, 320, 324, 328, 332, 336, 340, 344, 348, 352, 356, 360, 364, 368, 372, 376, 380, 384, 388, 392, 396, 400, 404, 408, 412, 416, 420, 424, 428, 432, 436, 440, 444, 448, 452, 456, 589, 625, 660, 695, 1635, 1644, 1653, 1662, 1671, 1680, 1689, 1699, 1709, 1719, 1729, 1739, 1749, 1759, 1769, 1779, 1789, 1799, 1809, 1819, 1829, 1839, 1849, 1859, 1869, 1879, 1889, 1899, 1909, 1918, 1927, 1937, 1947, 1956, 1965, 1974, 1983, 1992, 2002, 2012, 2022, 2032, 2042, 2052, 2062, 2072, 2082, 2092, 2102, 2112, 2122, 2259, 2297, 2334, 2376, 2389, 2431, 2444, 2486, 2499, 2538, 2580, 2591, 2635, 2646, 2690, 2701, 2745, 2756, 2800, 2811, 2862, 2875, 2912, 2949, 2988, 3027, 3064, 3101, 3138, 3175, 3212, 3249, 3286, 3323, 3367, 3404, 3441, 3485, 3522, 3559, 3597, 3635, 3673, 3711, 3749, 3787, 3825, 3862, 3897, 3934, 3971, 4008, 4045, 4082, 4121, 4159, 4202, 4215, 4251, 4296, 4340 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-authorization-publication.dev.snapshot.json | 19, 38, 57, 76, 95, 114, 133, 152, 171, 190, 209, 228, 247, 266, 285, 304, 323, 342, 361, 380, 399, 418, 437, 456, 475, 494, 513, 532, 551, 570, 589, 608, 627, 646, 665, 684, 703, 722, 741, 760, 779, 798, 817, 836, 855, 874, 893, 912, 931, 950, 969, 988, 1007, 1026, 1045, 1064, 1083, 1102, 1121, 1140, 1159, 1178, 1197, 1216, 1235, 1254, 1273, 1292, 1311, 1330, 1349, 1368, 1387, 1406, 1425, 1444, 1463, 1482, 1501, 1520, 1539, 1558, 1577, 1596, 1615, 1634, 1653, 1672, 1691, 1710, 1729, 1748, 1767, 1786, 1805, 1824, 1843, 1862, 1881, 1900, 1919, 1938, 1957, 1976, 1995, 2014, 2033, 2052, 2071, 2090, 2109, 2128, 2147, 2166, 2185, 2204, 2223, 2242, 2261, 2280, 2299, 2318, 2337, 2356, 2375, 2394, 2413, 2432, 2451, 2470, 2489, 2508, 2527, 2546, 2565, 2584, 2603, 2622, 2641, 2660, 2679, 2698, 2717, 2736, 2755, 2774, 2793, 2812, 2831, 2850, 2869, 2888, 2907, 2926, 2945, 2964, 2983, 3002, 3021, 3040, 3059, 3078, 3097, 3116, 3135, 3154, 3173, 3192, 3211, 3230, 3249, 3268, 3287, 3306, 3325, 3344, 3363, 3382, 3401, 3420, 3439, 3458, 3477, 3496, 3515, 3534, 3553, 3572, 3591, 3610, 3629, 3648, 3667, 3686, 3705, 3724, 3743, 3762, 3781, 3800, 3819, 3838, 3857, 3876, 3895, 3914, 3933, 3952, 3971, 3990, 4009, 4028, 4047, 4066, 4085, 4104, 4123, 4142, 4161, 4180, 4199, 4218, 4237, 4256, 4275, 4294, 4313, 4332, 4351, 4370, 4389, 4408, 4427, 4446, 4465, 4484, 4503, 4522, 4541, 4560, 4579, 4598, 4617, 4636, 4655, 4674, 4693, 4712, 4731, 4750, 4769, 4788, 4807, 4826, 4845, 4864, 4883, 4902, 4921, 4940, 4959, 4978, 4997, 5016, 5035, 5054, 5073, 5092, 5111, 5130, 5149, 5168, 5187, 5206, 5225, 5244, 5263, 5282, 5301, 5320, 5339, 5358, 5377, 5396, 5415, 5649, 5653, 5657, 5661, 5665, 5669, 5673, 5677, 5681, 5685, 5689, 5822, 5858, 5893, 5928, 6865, 6880, 6895, 6910, 6925, 6940, 6955, 6970, 6985, 7242, 7246, 7250, 7254, 7258, 7262, 7266, 7270, 7274, 7278, 7282, 7286, 7419, 7455, 7490, 7525, 8462, 8477, 8492, 8507, 8522, 8537, 8552, 8567, 8582, 8597 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-canonical-v2-native-publication.dev.json | 154, 163, 172, 181, 190, 199, 209, 219, 229, 239, 249, 259, 269, 279, 289, 299, 309, 319, 329, 339, 349, 359, 369, 379, 389, 399, 409, 418, 427, 437, 447, 457, 467, 477, 487, 497, 507, 517, 527, 537, 547, 557, 1151, 1159, 1167, 1175, 1183, 1191, 1199, 1207, 1215, 1223, 1231, 1239, 1247, 1255, 1263, 1271, 1279, 1287, 1295, 1303, 1311, 1319, 1327, 1335, 1343, 1351, 1359, 1367, 1375, 1383, 1391, 1399, 1407, 1415, 1423, 1431, 1439, 1447, 1455, 1463, 1471, 1479, 2053, 2066, 2079, 2092, 2105, 2118, 2131, 2144, 2157, 2170, 2183, 2196, 2209, 2222, 2235, 2248, 2261, 2274, 2287, 2300, 2313, 2326, 2339, 2352, 2365, 2378, 2391, 2404, 2417, 2430, 2443, 2456, 2469, 2482, 2495, 2508, 2521, 2534, 2547, 2560, 2573, 2586, 2792, 2801, 2810, 2819, 2828, 2837, 2847, 2857, 2867, 2877, 2887, 2897, 2907, 2917, 2927, 2937, 2947, 2957, 2967, 2977, 2987, 2997, 3007, 3017, 3027, 3037, 3047, 3056, 3065, 3075, 3085, 3095, 3105, 3115, 3125, 3135, 3145, 3155, 3165, 3175, 3185, 3195 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-case-runtime-correction.dev.json | 203, 207, 211, 215, 219, 223, 227, 231, 235, 239, 243, 247, 251, 255, 259, 263, 267, 271, 275, 279, 283, 287, 291, 295, 299, 303, 307, 311, 315, 319, 323, 327, 331, 335, 339, 343, 347, 351, 355, 359, 363, 367, 501, 537, 572, 608, 1519, 1528, 1537, 1546, 1555, 1564, 1573, 1583, 1593, 1603, 1613, 1623, 1633, 1643, 1653, 1663, 1673, 1683, 1693, 1703, 1713, 1723, 1733, 1743, 1753, 1763, 1773, 1783, 1792, 1801, 1811, 1821, 1831, 1841, 1851, 1861, 1871, 1881, 1891, 1901, 1911, 1921 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-causal-shadow.admin-repeat.dev.json | 19, 39, 59, 79, 99, 119, 139, 159, 179, 199, 219, 239, 259, 279, 299, 319, 339, 359, 380, 401, 422, 443, 464, 485, 506, 527, 548, 569, 590, 611, 632, 653, 674, 695, 716, 737, 758, 778, 799, 820, 841, 862, 882, 903, 924, 945, 966, 987, 1008, 1029, 1050, 1070, 1091, 1115, 1138, 1162, 1185, 1208, 1231, 1255, 1278, 1301, 1324, 1347, 1367, 1387, 1407 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-causal-shadow.admin.dev.json | 19, 39, 59, 79, 99, 119, 139, 159, 179, 199, 219, 239, 259, 279, 299, 319, 339, 359, 380, 401, 422, 443, 464, 485, 506, 527, 548, 569, 590, 611, 632, 653, 674, 695, 716, 737, 758, 778, 799, 820, 841, 862, 882, 903, 924, 945, 966, 987, 1008, 1029, 1050, 1070, 1091, 1115, 1138, 1162, 1185, 1208, 1231, 1255, 1278, 1301, 1324, 1347, 1367, 1387, 1407, 1427, 1447, 1467, 1487, 1507, 1527, 1547, 1567, 1587, 1607, 1627, 1647, 1667, 1687, 1707, 1727, 1747, 1767, 1787, 1807, 1827, 1847, 1867, 1887, 1907, 1927, 1947, 1967, 1987 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-causal-shadow.owner-qualified.dev.json | 19, 39, 59, 79, 99, 119, 139, 159, 179, 199, 219, 239, 259, 279, 299, 319, 339, 359, 380, 400, 420, 440, 460, 481, 501, 521, 541, 562, 583, 603, 623, 643, 664, 685, 706, 727, 748, 769, 790, 810, 831, 855, 877, 900, 922, 944, 966, 989, 1011, 1033, 1056, 1078, 1098, 1118, 1138 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-child-native-publish-20260912.1789166744852.dev.json | 63, 72, 290, 298, 340, 352, 513, 522 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-child-process-20260912.compilation.dev.json | 67, 76, 267, 274, 311, 319, 448, 457 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-child-provenance-independent-review-20260912.dev.json | 182, 191, 270, 282, 320, 328 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-child-provenance-publish-20260912.1789168760800.dev.json | 63, 72, 290, 298, 340, 352, 513, 522 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-child-storage-20260912.compilation.dev.json | 81, 90, 294, 301, 338, 346, 485, 494 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-combined-head.dev.json | 340, 344, 348, 352, 356, 360, 364, 368, 372, 376, 380, 384, 388, 392, 396, 400, 404, 408, 412, 416, 420, 424, 428, 432, 436, 440, 444, 448, 452, 456, 460, 464, 468, 472, 476, 480, 484, 488, 492, 496, 500, 504, 508, 512, 516, 520, 524, 528, 532, 536, 540, 673, 709, 744, 779, 1719, 1728, 1737, 1746, 1755, 1764, 1773, 1783, 1793, 1803, 1813, 1823, 1833, 1843, 1853, 1863, 1873, 1883, 1893, 1903, 1913, 1923, 1933, 1943, 1953, 1963, 1973, 1983, 1993, 2002, 2011, 2021, 2031, 2040, 2049, 2058, 2067, 2076, 2086, 2096, 2106, 2116, 2126, 2136, 2146, 2156, 2166, 2176, 2186, 2196, 2206, 2343, 2381, 2418, 2460, 2473, 2515, 2528, 2570, 2583, 2622, 2664, 2675, 2719, 2730, 2774, 2785, 2829, 2840, 2884, 2895, 2946, 2959, 2996, 3033, 3072, 3111, 3148, 3185, 3222, 3259, 3296, 3333, 3370, 3407, 3451, 3488, 3525, 3569, 3606, 3643, 3681, 3719, 3757, 3795, 3833, 3871, 3909, 3946, 3981, 4018, 4055, 4092, 4129, 4166, 4205, 4243, 4286, 4299, 4335, 4380, 4424 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-combined-head.dev.snapshot.json | 19, 38, 57, 76, 95, 114, 133, 152, 171, 190, 209, 228, 247, 266, 285, 304, 323, 342, 361, 380, 399, 418, 437, 456, 475, 494, 513, 532, 551, 570, 589, 608, 627, 646, 665, 684, 703, 722, 741, 760, 779, 798, 817, 836, 855, 874, 893, 912, 931, 950, 969, 988, 1007, 1026, 1045, 1064, 1083, 1102, 1121, 1140, 1159, 1178, 1197, 1216, 1235, 1254, 1273, 1292, 1311, 1330, 1349, 1368, 1387, 1406, 1425, 1444, 1463, 1482, 1501, 1520, 1539, 1558, 1577, 1596, 1615, 1634, 1653, 1672, 1691, 1710, 1729, 1748, 1767, 1786, 1805, 1824, 1843, 1862, 1881, 1900, 1919, 1938, 1957, 1976, 1995, 2014, 2033, 2052, 2071, 2090, 2109, 2128, 2147, 2166, 2185, 2204, 2223, 2242, 2261, 2280, 2299, 2318, 2337, 2356, 2375, 2394, 2413, 2432, 2451, 2470, 2489, 2508, 2527, 2546, 2565, 2584, 2603, 2622, 2641, 2660, 2679, 2698, 2717, 2736, 2755, 2774, 2793, 2812, 2831, 2850, 2869, 2888, 2907, 2926, 2945, 2964, 2983, 3002, 3021, 3040, 3059, 3078, 3097, 3116, 3135, 3154, 3173, 3192, 3211, 3230, 3249, 3268, 3287, 3306, 3325, 3344, 3363, 3382, 3401, 3420, 3439, 3458, 3477, 3496, 3515, 3534, 3553, 3572, 3591, 3610, 3629, 3648, 3667, 3686, 3705, 3724, 3743, 3762, 3781, 3800, 3819, 3838, 3857, 3876, 3895, 3914, 3933, 3952, 3971, 3990, 4009, 4028, 4047, 4066, 4085, 4104, 4123, 4142, 4161, 4180, 4199, 4218, 4237, 4256, 4275, 4294, 4313, 4332, 4351, 4370, 4389, 4408, 4427, 4446, 4465, 4484, 4503, 4522, 4541, 4560, 4579, 4598, 4617, 4636, 4655, 4674, 4693, 4712, 4731, 4750, 4769, 4788, 4807, 4826, 4845, 4864, 4883, 4902, 4921, 4940, 4959, 4978, 4997, 5016, 5035, 5054, 5073, 5092, 5111, 5130, 5149, 5168, 5187, 5206, 5225, 5244, 5263, 5282, 5301, 5320, 5339, 5358, 5377, 5396, 5415, 5434, 5453, 5472, 5491, 5510, 5529, 5548, 5567, 5586, 5605, 5839, 5843, 5847, 5851, 5855, 5859, 5863, 5867, 5871, 5875, 5879, 6012, 6048, 6083, 6118, 7055, 7070, 7085, 7100, 7115, 7130, 7145, 7160, 7175, 7516, 7520, 7524, 7528, 7532, 7536, 7540, 7544, 7548, 7552, 7556, 7560, 7693, 7729, 7764, 7799, 8736, 8751, 8766, 8781, 8796, 8811, 8826, 8841, 8856, 8871 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-combined-native-publication.dev.json | 154, 163, 172, 181, 190, 199, 209, 219, 229, 239, 249, 259, 269, 279, 289, 299, 309, 319, 329, 339, 349, 359, 369, 379, 389, 399, 409, 418, 427, 437, 447, 457, 467, 477, 487, 497, 507, 517, 527, 537, 547, 557, 1056, 1064, 1072, 1080, 1088, 1096, 1104, 1112, 1120, 1128, 1136, 1144, 1152, 1160, 1168, 1176, 1184, 1192, 1200, 1208, 1216, 1224, 1232, 1240, 1248, 1256, 1264, 1272, 1280, 1288, 1296, 1304, 1312, 1320, 1328, 1336, 1344, 1352, 1360, 1368, 1376, 1384, 1958, 1971, 1984, 1997, 2010, 2023, 2036, 2049, 2062, 2075, 2088, 2101, 2114, 2127, 2140, 2153, 2166, 2179, 2192, 2205, 2218, 2231, 2244, 2257, 2270, 2283, 2296, 2309, 2322, 2335, 2348, 2361, 2374, 2387, 2400, 2413, 2426, 2439, 2452, 2465, 2478, 2491, 2697, 2706, 2715, 2724, 2733, 2742, 2752, 2762, 2772, 2782, 2792, 2802, 2812, 2822, 2832, 2842, 2852, 2862, 2872, 2882, 2892, 2902, 2912, 2922, 2932, 2942, 2952, 2961, 2970, 2980, 2990, 3000, 3010, 3020, 3030, 3040, 3050, 3060, 3070, 3080, 3090, 3100 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-combined-persisted-approval.dev.json | 446, 455, 464, 473, 482, 491, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 610, 620, 630, 640, 650, 660, 670, 680, 690, 700, 710, 719, 728, 738, 748, 758, 768, 778, 788, 798, 808, 818, 828, 838, 848, 1244, 1253, 1262, 1271, 1280, 1289, 1298, 1308, 1318, 1328, 1338, 1348, 1358, 1368, 1378, 1388, 1398, 1408, 1418, 1428, 1438, 1448, 1458, 1468, 1478, 1488, 1498, 1508, 1517, 1526, 1536, 1546, 1556, 1566, 1576, 1586, 1596, 1606, 1616, 1626, 1636, 1646, 1971, 1984, 1997, 2010, 2023, 2036, 2049, 2062, 2075, 2088, 2101, 2114, 2127, 2140, 2153, 2166, 2179, 2192, 2205, 2218, 2231, 2244, 2257, 2270, 2283, 2296, 2309, 2322, 2335, 2348, 2361, 2374, 2387, 2400, 2413, 2426, 2439, 2452, 2465, 2478, 2491, 2504, 2582, 2590, 2598, 2606, 2614, 2622, 2630, 2638, 2646, 2654, 2662, 2670, 2678, 2686, 2694, 2702, 2710, 2718, 2726, 2734, 2742, 2750, 2758, 2766, 2774, 2782, 2790, 2798, 2806, 2814, 2822, 2830, 2838, 2846, 2854, 2862, 2870, 2878, 2886, 2894, 2902, 2910 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-combined-persisted-review.dev.json | 446, 455, 464, 473, 482, 491, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 610, 620, 630, 640, 650, 660, 670, 680, 690, 700, 710, 719, 728, 738, 748, 758, 768, 778, 788, 798, 808, 818, 828, 838, 848, 1244, 1253, 1262, 1271, 1280, 1289, 1298, 1308, 1318, 1328, 1338, 1348, 1358, 1368, 1378, 1388, 1398, 1408, 1418, 1428, 1438, 1448, 1458, 1468, 1478, 1488, 1498, 1508, 1517, 1526, 1536, 1546, 1556, 1566, 1576, 1586, 1596, 1606, 1616, 1626, 1636, 1646, 1971, 1984, 1997, 2010, 2023, 2036, 2049, 2062, 2075, 2088, 2101, 2114, 2127, 2140, 2153, 2166, 2179, 2192, 2205, 2218, 2231, 2244, 2257, 2270, 2283, 2296, 2309, 2322, 2335, 2348, 2361, 2374, 2387, 2400, 2413, 2426, 2439, 2452, 2465, 2478, 2491, 2504, 2582, 2590, 2598, 2606, 2614, 2622, 2630, 2638, 2646, 2654, 2662, 2670, 2678, 2686, 2694, 2702, 2710, 2718, 2726, 2734, 2742, 2750, 2758, 2766, 2774, 2782, 2790, 2798, 2806, 2814, 2822, 2830, 2838, 2846, 2854, 2862, 2870, 2878, 2886, 2894, 2902, 2910 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-combined-source.dev.json | 327, 331, 335, 339, 343, 347, 351, 355, 359, 363, 367, 371, 504, 540, 575, 610, 1547, 1562, 1577, 1592, 1607, 1622, 1637, 1652, 1667, 1682, 1703, 1980, 2139, 2143, 2147, 2151, 3251, 3257, 3263, 3269, 3565, 3569, 3573, 3577, 3581, 3585, 3589, 3593, 3597, 3601, 3605, 3609, 3742, 3778, 3813, 3848, 4785, 4800, 4815, 4830, 4845, 4860, 4875, 4890, 4905, 4920 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-combined-successor.dev.json | 298, 302, 306, 310, 314, 318, 322, 326, 330, 334, 338, 342, 346, 350, 354, 358, 362, 366, 370, 374, 378, 382, 386, 390, 394, 398, 402, 406, 410, 414, 418, 422, 426, 430, 434, 438, 442, 446, 450, 454, 458, 462, 596, 632, 667, 703, 1615, 1624, 1633, 1642, 1651, 1660, 1669, 1679, 1689, 1699, 1709, 1719, 1729, 1739, 1749, 1759, 1769, 1779, 1789, 1799, 1809, 1819, 1829, 1839, 1849, 1859, 1869, 1879, 1888, 1897, 1907, 1917, 1927, 1937, 1947, 1957, 1967, 1977, 1987, 1997, 2007, 2017 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-company-case-provenance-signing-1789183444279.dev.json | 250, 265, 280, 295, 310, 325, 340, 355 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-company-case-signing-1789182508198.dev.json | 245, 250, 255, 260, 265, 270, 275, 280 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-company-operations-publication-20260912.dev.json | 131, 139, 147, 155, 163, 171, 179, 187, 302, 315, 327, 340, 352, 365, 378, 391, 554, 567, 579, 592, 604, 617, 630, 643, 681, 689, 697, 705, 713, 721, 729, 737, 969, 977, 985, 993, 1001, 1009, 1017, 1025, 1140, 1153, 1165, 1178, 1190, 1203, 1216, 1229 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-consolidated-disposition-source-audit-20260912.dev.json | 108, 154, 200, 246, 292, 338, 384, 430, 476, 522, 568, 614, 660, 706, 752, 798, 844, 890, 936, 982, 1028, 1074, 1120, 1166, 1212, 1258, 1304 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-corrected-release.dev.json | 216, 220, 224, 228, 232, 236, 240, 244, 248, 252, 256, 260, 264, 268, 272, 276, 280, 284, 288, 292, 296, 300, 304, 308, 312, 316, 320, 324, 328, 332, 336, 340, 344, 348, 352, 356, 360, 364, 368, 372, 376, 380, 514, 550, 585, 621, 1532, 1541, 1550, 1559, 1568, 1577, 1586, 1596, 1606, 1616, 1626, 1636, 1646, 1656, 1666, 1676, 1686, 1696, 1706, 1716, 1726, 1736, 1746, 1756, 1766, 1776, 1786, 1796, 1805, 1814, 1824, 1834, 1844, 1854, 1864, 1874, 1884, 1894, 1904, 1914, 1924, 1934, 2820, 2853, 2886, 2919, 2952, 2985, 3020, 3053, 3088, 3123, 3158, 3193, 3235, 3270, 3305, 3340, 3373, 3406, 3439, 3472, 3505, 3538, 3571, 3604, 3644, 3677, 3710, 3750, 3783, 3816, 3850, 3884, 3919, 3952, 3987, 4022, 4057, 4092, 4127, 4161, 4202, 4242 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-dependency-independent-review-20260912.dev.json | 182, 191, 270, 282, 320, 328 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-enter-correction-exact-release.after-signing.dev.json | 373, 377, 381, 385, 389, 393, 397, 401, 405, 409, 413, 417, 421, 425, 429, 433, 437, 441, 445, 449, 453, 457, 461, 465, 469, 473, 477, 481, 485, 489, 493, 497, 501, 505, 509, 513, 517, 521, 525, 529, 533, 537, 636, 645, 654, 663, 672, 681, 690, 700, 710, 720, 730, 740, 750, 760, 770, 780, 790, 800, 810, 820, 830, 840, 850, 860, 870, 880, 890, 900, 909, 918, 928, 938, 948, 958, 968, 978, 988, 998, 1008, 1018, 1028, 1038, 1222, 1258, 1293, 1329, 2938, 2942, 2946, 2950, 2954, 2958, 2962, 2966, 2970, 2974, 2978, 2982, 2986, 2990, 2994, 2998, 3002, 3006, 3010, 3014, 3018, 3022, 3026, 3030, 3034, 3038, 3042, 3046, 3050, 3054, 3058, 3062, 3066, 3070, 3074, 3078, 3082, 3086, 3090, 3094, 3098, 3102, 3201, 3210, 3219, 3228, 3237, 3246, 3255, 3265, 3275, 3285, 3295, 3305, 3315, 3325, 3335, 3345, 3355, 3365, 3375, 3385, 3395, 3405, 3415, 3425, 3435, 3445, 3455, 3465, 3474, 3483, 3493, 3503, 3513, 3523, 3533, 3543, 3553, 3563, 3573, 3583, 3593, 3603, 3787, 3823, 3858, 3894, 5792, 5801, 5810, 5819, 5828, 5837, 5846, 5856, 5866, 5876, 5886, 5896, 5906, 5916, 5926, 5936, 5946, 5956, 5966, 5976, 5986, 5996, 6006, 6016, 6026, 6036, 6046, 6056, 6065, 6074, 6084, 6094, 6104, 6114, 6124, 6134, 6144, 6154, 6164, 6174, 6184, 6194, 6537, 6541, 6545, 6549, 6553, 6557, 6561, 6565, 6569, 6573, 6577, 6581, 6585, 6589, 6593, 6597, 6601, 6605, 6609, 6613, 6617, 6621, 6625, 6629, 6633, 6637, 6641, 6645, 6649, 6653, 6657, 6661, 6665, 6669, 6673, 6677, 6681, 6685, 6689, 6693, 6697, 6701, 6800, 6809, 6818, 6827, 6836, 6845, 6854, 6864, 6874, 6884, 6894, 6904, 6914, 6924, 6934, 6944, 6954, 6964, 6974, 6984, 6994, 7004, 7014, 7024, 7034, 7044, 7054, 7064, 7073, 7082, 7092, 7102, 7112, 7122, 7132, 7142, 7152, 7162, 7172, 7182, 7192, 7202, 7386, 7422, 7457, 7493, 9065, 9078, 9091, 9104, 9117, 9130, 9143, 9156, 9169, 9182, 9195, 9208, 9221, 9234, 9247, 9260, 9273, 9286, 9299, 9312, 9325, 9338, 9351, 9364, 9377, 9390, 9403, 9416, 9429, 9442, 9455, 9468, 9481, 9494, 9507, 9520, 9533, 9546, 9559, 9572, 9585, 9598, 9676, 9684, 9692, 9700, 9708, 9716, 9724, 9732, 9740, 9748, 9756, 9764, 9772, 9780, 9788, 9796, 9804, 9812, 9820, 9828, 9836, 9844, 9852, 9860, 9868, 9876, 9884, 9892, 9900, 9908, 9916, 9924, 9932, 9940, 9948, 9956, 9964, 9972, 9980, 9988, 9996, 10004 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-enter-correction-exact-release.dev.json | 373, 377, 381, 385, 389, 393, 397, 401, 405, 409, 413, 417, 421, 425, 429, 433, 437, 441, 445, 449, 453, 457, 461, 465, 469, 473, 477, 481, 485, 489, 493, 497, 501, 505, 509, 513, 517, 521, 525, 529, 533, 537, 636, 645, 654, 663, 672, 681, 690, 700, 710, 720, 730, 740, 750, 760, 770, 780, 790, 800, 810, 820, 830, 840, 850, 860, 870, 880, 890, 900, 909, 918, 928, 938, 948, 958, 968, 978, 988, 998, 1008, 1018, 1028, 1038, 1222, 1258, 1293, 1329, 2938, 2942, 2946, 2950, 2954, 2958, 2962, 2966, 2970, 2974, 2978, 2982, 2986, 2990, 2994, 2998, 3002, 3006, 3010, 3014, 3018, 3022, 3026, 3030, 3034, 3038, 3042, 3046, 3050, 3054, 3058, 3062, 3066, 3070, 3074, 3078, 3082, 3086, 3090, 3094, 3098, 3102, 3201, 3210, 3219, 3228, 3237, 3246, 3255, 3265, 3275, 3285, 3295, 3305, 3315, 3325, 3335, 3345, 3355, 3365, 3375, 3385, 3395, 3405, 3415, 3425, 3435, 3445, 3455, 3465, 3474, 3483, 3493, 3503, 3513, 3523, 3533, 3543, 3553, 3563, 3573, 3583, 3593, 3603, 3787, 3823, 3858, 3894, 5792, 5801, 5810, 5819, 5828, 5837, 5846, 5856, 5866, 5876, 5886, 5896, 5906, 5916, 5926, 5936, 5946, 5956, 5966, 5976, 5986, 5996, 6006, 6016, 6026, 6036, 6046, 6056, 6065, 6074, 6084, 6094, 6104, 6114, 6124, 6134, 6144, 6154, 6164, 6174, 6184, 6194, 6537, 6541, 6545, 6549, 6553, 6557, 6561, 6565, 6569, 6573, 6577, 6581, 6585, 6589, 6593, 6597, 6601, 6605, 6609, 6613, 6617, 6621, 6625, 6629, 6633, 6637, 6641, 6645, 6649, 6653, 6657, 6661, 6665, 6669, 6673, 6677, 6681, 6685, 6689, 6693, 6697, 6701, 6800, 6809, 6818, 6827, 6836, 6845, 6854, 6864, 6874, 6884, 6894, 6904, 6914, 6924, 6934, 6944, 6954, 6964, 6974, 6984, 6994, 7004, 7014, 7024, 7034, 7044, 7054, 7064, 7073, 7082, 7092, 7102, 7112, 7122, 7132, 7142, 7152, 7162, 7172, 7182, 7192, 7202, 7386, 7422, 7457, 7493, 9065, 9078, 9091, 9104, 9117, 9130, 9143, 9156, 9169, 9182, 9195, 9208, 9221, 9234, 9247, 9260, 9273, 9286, 9299, 9312, 9325, 9338, 9351, 9364, 9377, 9390, 9403, 9416, 9429, 9442, 9455, 9468, 9481, 9494, 9507, 9520, 9533, 9546, 9559, 9572, 9585, 9598, 9676, 9684, 9692, 9700, 9708, 9716, 9724, 9732, 9740, 9748, 9756, 9764, 9772, 9780, 9788, 9796, 9804, 9812, 9820, 9828, 9836, 9844, 9852, 9860, 9868, 9876, 9884, 9892, 9900, 9908, 9916, 9924, 9932, 9940, 9948, 9956, 9964, 9972, 9980, 9988, 9996, 10004 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-enter-correction-native-publication.dev.json | 154, 163, 172, 181, 190, 199, 209, 219, 229, 239, 249, 259, 269, 279, 289, 299, 309, 319, 329, 339, 349, 359, 369, 379, 389, 399, 409, 418, 427, 437, 447, 457, 467, 477, 487, 497, 507, 517, 527, 537, 547, 557, 1146, 1154, 1162, 1170, 1178, 1186, 1194, 1202, 1210, 1218, 1226, 1234, 1242, 1250, 1258, 1266, 1274, 1282, 1290, 1298, 1306, 1314, 1322, 1330, 1338, 1346, 1354, 1362, 1370, 1378, 1386, 1394, 1402, 1410, 1418, 1426, 1434, 1442, 1450, 1458, 1466, 1474, 2048, 2061, 2074, 2087, 2100, 2113, 2126, 2139, 2152, 2165, 2178, 2191, 2204, 2217, 2230, 2243, 2256, 2269, 2282, 2295, 2308, 2321, 2334, 2347, 2360, 2373, 2386, 2399, 2412, 2425, 2438, 2451, 2464, 2477, 2490, 2503, 2516, 2529, 2542, 2555, 2568, 2581, 2787, 2796, 2805, 2814, 2823, 2832, 2842, 2852, 2862, 2872, 2882, 2892, 2902, 2912, 2922, 2932, 2942, 2952, 2962, 2972, 2982, 2992, 3002, 3012, 3022, 3032, 3042, 3051, 3060, 3070, 3080, 3090, 3100, 3110, 3120, 3130, 3140, 3150, 3160, 3170, 3180, 3190, 3749, 3758, 3767, 3776, 3785, 3794, 3804, 3814, 3824, 3834, 3844, 3854, 3864, 3874, 3884, 3894, 3904, 3914, 3924, 3934, 3944, 3954, 3964, 3974, 3984, 3994, 4004, 4013, 4022, 4032, 4042, 4052, 4062, 4072, 4082, 4092, 4102, 4112, 4122, 4132, 4142, 4152, 4864, 4924, 4959, 4994, 5086, 5090, 5094, 5098, 5102, 5106, 5110, 5114, 5118, 5122, 5126, 5130, 5134, 5138, 5142, 5146, 5150, 5154, 5158, 5162, 5166, 5170, 5174, 5178, 5182, 5186, 5190, 5194, 5198, 5202, 5206, 5210, 5214, 5218, 5222, 5226, 5230, 5234, 5238, 5242, 5246, 5250 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-exact-release.dev.json | 372, 376, 380, 384, 388, 392, 396, 400, 404, 408, 412, 416, 420, 424, 428, 432, 436, 440, 444, 448, 452, 456, 460, 464, 468, 472, 476, 480, 484, 488, 492, 496, 500, 504, 508, 512, 516, 520, 524, 528, 532, 536, 635, 644, 653, 662, 671, 680, 689, 699, 709, 719, 729, 739, 749, 759, 769, 779, 789, 799, 809, 819, 829, 839, 849, 859, 869, 879, 889, 899, 908, 917, 927, 937, 947, 957, 967, 977, 987, 997, 1007, 1017, 1027, 1037, 1221, 1257, 1292, 1328, 2896, 2905, 2914, 2923, 2932, 2941, 2950, 2960, 2970, 2980, 2990, 3000, 3010, 3020, 3030, 3040, 3050, 3060, 3070, 3080, 3090, 3100, 3110, 3120, 3130, 3140, 3150, 3160, 3169, 3178, 3188, 3198, 3208, 3218, 3228, 3238, 3248, 3258, 3268, 3278, 3288, 3298, 3694, 3703, 3712, 3721, 3730, 3739, 3748, 3758, 3768, 3778, 3788, 3798, 3808, 3818, 3828, 3838, 3848, 3858, 3868, 3878, 3888, 3898, 3908, 3918, 3928, 3938, 3948, 3958, 3967, 3976, 3986, 3996, 4006, 4016, 4026, 4036, 4046, 4056, 4066, 4076, 4086, 4096, 4421, 4434, 4447, 4460, 4473, 4486, 4499, 4512, 4525, 4538, 4551, 4564, 4577, 4590, 4603, 4616, 4629, 4642, 4655, 4668, 4681, 4694, 4707, 4720, 4733, 4746, 4759, 4772, 4785, 4798, 4811, 4824, 4837, 4850, 4863, 4876, 4889, 4902, 4915, 4928, 4941, 4954, 5032, 5040, 5048, 5056, 5064, 5072, 5080, 5088, 5096, 5104, 5112, 5120, 5128, 5136, 5144, 5152, 5160, 5168, 5176, 5184, 5192, 5200, 5208, 5216, 5224, 5232, 5240, 5248, 5256, 5264, 5272, 5280, 5288, 5296, 5304, 5312, 5320, 5328, 5336, 5344, 5352, 5360 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-import-integration-publication.dev.json | 256, 260, 264, 268, 272, 276, 280, 284, 288, 292, 296, 300, 304, 308, 312, 316, 320, 324, 328, 332, 336, 340, 344, 348, 352, 356, 360, 364, 368, 372, 376, 380, 384, 388, 392, 396, 400, 404, 408, 412, 416, 420, 424, 428, 432, 436, 440, 444, 448, 452, 456, 589, 625, 660, 695, 1635, 1644, 1653, 1662, 1671, 1680, 1689, 1699, 1709, 1719, 1729, 1739, 1749, 1759, 1769, 1779, 1789, 1799, 1809, 1819, 1829, 1839, 1849, 1859, 1869, 1879, 1889, 1899, 1909, 1918, 1927, 1937, 1947, 1956, 1965, 1974, 1983, 1992, 2002, 2012, 2022, 2032, 2042, 2052, 2062, 2072, 2082, 2092, 2102, 2112, 2122, 2259, 2297, 2334, 2376, 2389, 2431, 2444, 2486, 2499, 2538, 2580, 2591, 2635, 2646, 2690, 2701, 2745, 2756, 2800, 2811, 2862, 2875, 2912, 2949, 2988, 3027, 3064, 3101, 3138, 3175, 3212, 3249, 3286, 3323, 3367, 3404, 3441, 3485, 3522, 3559, 3597, 3635, 3673, 3711, 3749, 3787, 3825, 3862, 3897, 3934, 3971, 4008, 4045, 4082, 4121, 4159, 4202, 4215, 4251, 4296, 4340 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-import-integration-publication.dev.snapshot.json | 19, 38, 57, 76, 95, 114, 133, 152, 171, 190, 209, 228, 247, 266, 285, 304, 323, 342, 361, 380, 399, 418, 437, 456, 475, 494, 513, 532, 551, 570, 589, 608, 627, 646, 665, 684, 703, 722, 741, 760, 779, 798, 817, 836, 855, 874, 893, 912, 931, 950, 969, 988, 1007, 1026, 1045, 1064, 1083, 1102, 1121, 1140, 1159, 1178, 1197, 1216, 1235, 1254, 1273, 1292, 1311, 1330, 1349, 1368, 1387, 1406, 1425, 1444, 1463, 1482, 1501, 1520, 1539, 1558, 1577, 1596, 1615, 1634, 1653, 1672, 1691, 1710, 1729, 1748, 1767, 1786, 1805, 1824, 1843, 1862, 1881, 1900, 1919, 1938, 1957, 1976, 1995, 2014, 2033, 2052, 2071, 2090, 2109, 2128, 2147, 2166, 2185, 2204, 2223, 2242, 2261, 2280, 2299, 2318, 2337, 2356, 2375, 2394, 2413, 2432, 2451, 2470, 2489, 2508, 2527, 2546, 2565, 2584, 2603, 2622, 2641, 2660, 2679, 2698, 2717, 2736, 2755, 2774, 2793, 2812, 2831, 2850, 2869, 2888, 2907, 2926, 2945, 2964, 2983, 3002, 3021, 3040, 3059, 3078, 3097, 3116, 3135, 3154, 3173, 3192, 3211, 3230, 3249, 3268, 3287, 3306, 3325, 3344, 3363, 3382, 3401, 3420, 3439, 3458, 3477, 3496, 3515, 3534, 3553, 3572, 3591, 3610, 3629, 3648, 3667, 3686, 3705, 3724, 3743, 3762, 3781, 3800, 3819, 3838, 3857, 3876, 3895, 3914, 3933, 3952, 3971, 3990, 4009, 4028, 4047, 4066, 4085, 4104, 4123, 4142, 4161, 4180, 4199, 4218, 4237, 4256, 4275, 4294, 4313, 4332, 4351, 4370, 4389, 4408, 4427, 4446, 4465, 4484, 4503, 4522, 4541, 4560, 4579, 4598, 4617, 4636, 4655, 4674, 4693, 4712, 4731, 4750, 4769, 4788, 4807, 4826, 4845, 4864, 4883, 4902, 4921, 4940, 4959, 4978, 4997, 5016, 5035, 5054, 5073, 5092, 5111, 5130, 5149, 5168, 5187, 5206, 5225, 5244, 5263, 5282, 5301, 5320, 5339, 5358, 5377, 5396, 5415, 5649, 5653, 5657, 5661, 5665, 5669, 5673, 5677, 5681, 5685, 5689, 5822, 5858, 5893, 5928, 6865, 6880, 6895, 6910, 6925, 6940, 6955, 6970, 6985, 7242, 7246, 7250, 7254, 7258, 7262, 7266, 7270, 7274, 7278, 7282, 7286, 7419, 7455, 7490, 7525, 8462, 8477, 8492, 8507, 8522, 8537, 8552, 8567, 8582, 8597 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-import-release.dev.json | 216, 220, 224, 228, 232, 236, 240, 244, 248, 252, 256, 260, 264, 268, 272, 276, 280, 284, 288, 292, 296, 300, 304, 308, 312, 316, 320, 324, 328, 332, 336, 340, 344, 348, 352, 356, 360, 364, 368, 372, 376, 380, 514, 550, 585, 621, 1532, 1541, 1550, 1559, 1568, 1577, 1586, 1596, 1606, 1616, 1626, 1636, 1646, 1656, 1666, 1676, 1686, 1696, 1706, 1716, 1726, 1736, 1746, 1756, 1766, 1776, 1786, 1796, 1805, 1814, 1824, 1834, 1844, 1854, 1864, 1874, 1884, 1894, 1904, 1914, 1924, 1934, 3055, 3088, 3121, 3154, 3187, 3220, 3255, 3288, 3323, 3358, 3393, 3428, 3470, 3505, 3540, 3578, 3611, 3644, 3677, 3710, 3743, 3776, 3809, 3842, 3882, 3915, 3948, 3988, 4021, 4054, 4088, 4122, 4157, 4190, 4225, 4260, 4295, 4330, 4365, 4399, 4440, 4480 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-native-authoring-publication.dev.json | 256, 260, 264, 268, 272, 276, 280, 284, 288, 292, 296, 300, 304, 308, 312, 316, 320, 324, 328, 332, 336, 340, 344, 348, 352, 356, 360, 364, 368, 372, 376, 380, 384, 388, 392, 396, 400, 404, 408, 412, 416, 420, 424, 428, 432, 436, 440, 444, 448, 452, 456, 589, 625, 660, 695, 1635, 1644, 1653, 1662, 1671, 1680, 1689, 1699, 1709, 1719, 1729, 1739, 1749, 1759, 1769, 1779, 1789, 1799, 1809, 1819, 1829, 1839, 1849, 1859, 1869, 1879, 1889, 1899, 1909, 1918, 1927, 1937, 1947, 1956, 1965, 1974, 1983, 1992, 2002, 2012, 2022, 2032, 2042, 2052, 2062, 2072, 2082, 2092, 2102, 2112, 2122, 2259, 2297, 2334, 2376, 2389, 2431, 2444, 2486, 2499, 2538, 2580, 2591, 2635, 2646, 2690, 2701, 2745, 2756, 2800, 2811, 2862, 2875, 2912, 2949, 2988, 3027, 3064, 3101, 3138, 3175, 3212, 3249, 3286, 3323, 3367, 3404, 3441, 3485, 3522, 3559, 3597, 3635, 3673, 3711, 3749, 3787, 3825, 3862, 3897, 3934, 3971, 4008, 4045, 4082, 4121, 4159, 4202, 4215, 4251, 4296, 4340 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-native-authoring-publication.dev.snapshot.json | 19, 38, 57, 76, 95, 114, 133, 152, 171, 190, 209, 228, 247, 266, 285, 304, 323, 342, 361, 380, 399, 418, 437, 456, 475, 494, 513, 532, 551, 570, 589, 608, 627, 646, 665, 684, 703, 722, 741, 760, 779, 798, 817, 836, 855, 874, 893, 912, 931, 950, 969, 988, 1007, 1026, 1045, 1064, 1083, 1102, 1121, 1140, 1159, 1178, 1197, 1216, 1235, 1254, 1273, 1292, 1311, 1330, 1349, 1368, 1387, 1406, 1425, 1444, 1463, 1482, 1501, 1520, 1539, 1558, 1577, 1596, 1615, 1634, 1653, 1672, 1691, 1710, 1729, 1748, 1767, 1786, 1805, 1824, 1843, 1862, 1881, 1900, 1919, 1938, 1957, 1976, 1995, 2014, 2033, 2052, 2071, 2090, 2109, 2128, 2147, 2166, 2185, 2204, 2223, 2242, 2261, 2280, 2299, 2318, 2337, 2356, 2375, 2394, 2413, 2432, 2451, 2470, 2489, 2508, 2527, 2546, 2565, 2584, 2603, 2622, 2641, 2660, 2679, 2698, 2717, 2736, 2755, 2774, 2793, 2812, 2831, 2850, 2869, 2888, 2907, 2926, 2945, 2964, 2983, 3002, 3021, 3040, 3059, 3078, 3097, 3116, 3135, 3154, 3173, 3192, 3211, 3230, 3249, 3268, 3287, 3306, 3325, 3344, 3363, 3382, 3401, 3420, 3439, 3458, 3477, 3496, 3515, 3534, 3553, 3572, 3591, 3610, 3629, 3648, 3667, 3686, 3705, 3724, 3743, 3762, 3781, 3800, 3819, 3838, 3857, 3876, 3895, 3914, 3933, 3952, 3971, 3990, 4009, 4028, 4047, 4066, 4085, 4104, 4123, 4142, 4161, 4180, 4199, 4218, 4237, 4256, 4275, 4294, 4313, 4332, 4351, 4370, 4389, 4408, 4427, 4446, 4465, 4484, 4503, 4522, 4541, 4560, 4579, 4598, 4617, 4636, 4655, 4674, 4693, 4712, 4731, 4750, 4769, 4788, 4807, 4826, 4845, 4864, 4883, 4902, 4921, 4940, 4959, 4978, 4997, 5016, 5035, 5054, 5073, 5092, 5111, 5130, 5149, 5168, 5187, 5206, 5225, 5244, 5263, 5282, 5301, 5320, 5339, 5358, 5377, 5396, 5415, 5649, 5653, 5657, 5661, 5665, 5669, 5673, 5677, 5681, 5685, 5689, 5822, 5858, 5893, 5928, 6865, 6880, 6895, 6910, 6925, 6940, 6955, 6970, 6985, 7242, 7246, 7250, 7254, 7258, 7262, 7266, 7270, 7274, 7278, 7282, 7286, 7419, 7455, 7490, 7525, 8462, 8477, 8492, 8507, 8522, 8537, 8552, 8567, 8582, 8597 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.3a22a0df96a2.dev.json | 123, 158, 193, 228, 263, 298, 333, 370, 407, 442, 479, 516, 551, 588, 625, 660, 697, 734, 771, 808, 843, 880, 917, 952, 987, 1022, 1057, 1094, 1129, 1164, 1201, 1238, 1273, 1308, 1345, 1382, 1419, 1456, 1493, 1528, 1565, 1602, 1637, 1674, 1711, 1746, 1781, 1816, 1851, 1888, 1925, 1962, 1999, 2034, 2069, 2104, 2139, 2176, 2213, 2248, 2285, 2322, 2357, 2394, 2431, 2466, 2503, 2540, 2577, 2614, 2649, 2686, 2723, 2758, 2793, 2828, 2863, 2900, 2935, 2970, 3007, 3044, 3079, 3114, 3151, 3188, 3225, 3262, 3299, 3334, 3371, 3408, 3443, 3480, 3517, 3552, 3587, 3622, 3657, 3694, 3731, 3768, 3805, 3840, 3877, 3914, 3951, 3988, 4025, 4062, 4097, 4132, 4167, 4202, 4237, 4274, 4311, 4348, 4385, 4422, 4459, 4496, 4533, 4570, 4607, 4644, 4681, 4716, 4753, 4791, 4828, 4865, 4900, 4937, 4974, 5011, 5048, 5085, 5122, 5159, 5196, 5233, 5268, 5305, 5342, 5379, 5417, 5454, 5489, 5526, 5563, 5600, 5637, 5674, 5711, 5748, 5785, 5822, 5859, 5896, 5933, 5968, 6005, 6043, 6080, 6117, 6152, 6189, 6226, 6263, 6300, 6337, 6374, 6411, 6448, 6485, 6520, 6557, 6594, 6631, 6669, 6706, 6745, 6784, 6823, 6861, 6900, 6939, 6977, 7014, 7049, 7084, 7119, 7156, 7193, 7230, 7267, 7304, 7341, 7378, 7415, 7452, 7489, 7526, 7563, 7598, 7635, 7673, 7710, 7747, 7782, 7819, 7856, 7893, 7930, 7967, 8004, 8041, 8078, 8115, 8150, 8187, 8224, 8261, 8299, 8336, 8371, 8406, 8441, 8478, 8515, 8552, 8589, 8626, 8663, 8700, 8737, 8774, 8811, 8848, 8885, 8920, 8957, 8995, 9032, 9069, 9104, 9141, 9178, 9215, 9252, 9289, 9326, 9363, 9400, 9437, 9472, 9509, 9546, 9583, 9621, 9658, 9693, 9728, 9763, 9800, 9837, 9874, 9911, 9948, 9985, 10022, 10059, 10096, 10133, 10170, 10207, 10242, 10279, 10317, 10354, 10391, 10426, 10463, 10500, 10537, 10574, 10611, 10648, 10685, 10722, 10759, 10794, 10831, 10868, 10905, 10943, 10980, 11015, 11050, 11085, 11122, 11159, 11196, 11233, 11270, 11307, 11344, 11381, 11418, 11455, 11492, 11529, 11564, 11601, 11639, 11676, 11713, 11748, 11785, 11822, 11859, 11896, 11933, 11970, 12007, 12044, 12081, 12116, 12153, 12190, 12227, 12265, 12302, 12337, 12372, 12407, 12444, 12481, 12518, 12555, 12592, 12629, 12666, 12703, 12740, 12777, 12814, 12851, 12886, 12923, 12961, 12998, 13035, 13070, 13107, 13144, 13181, 13218, 13255, 13292, 13329, 13366, 13403, 13438, 13475, 13512, 13549, 13587, 13624, 13662, 13697, 13732, 13767, 13804, 13841, 13878, 13915, 13952, 13989, 14026, 14063, 14100, 14137, 14174, 14211, 14246, 14283, 14321, 14358, 14395, 14430, 14467, 14504, 14541, 14578, 14615, 14652, 14689, 14726, 14763, 14798, 14835, 14872, 14909, 14947, 14984, 15019, 15054, 15089, 15126, 15163, 15200, 15237, 15274, 15311, 15348, 15385, 15422, 15459, 15496, 15533, 15568, 15605, 15643, 15680, 15717, 15752, 15789, 15826, 15863, 15900, 15937, 15974, 16011, 16048, 16085, 16120, 16157, 16194, 16231, 16269, 16306, 16341, 16376, 16411, 16448, 16485, 16522, 16559, 16596, 16633, 16670, 16707, 16744, 16781, 16818, 16855, 16890, 16927, 16965, 17002, 17039, 17074, 17111, 17148, 17185, 17222, 17259, 17296, 17333, 17370, 17407, 17442, 17479, 17516, 17553, 17591, 17628, 17663, 17698, 17733, 17770, 17807, 17844, 17881, 17918, 17955, 17992, 18029, 18066, 18103, 18140, 18177, 18212, 18249, 18287, 18324, 18361, 18396, 18433, 18470, 18507, 18544, 18581, 18618, 18655, 18692, 18729, 18764, 18801, 18838, 18875, 18913, 18950, 18985, 19020, 19055, 19092, 19129, 19166, 19203, 19240, 19277, 19314, 19351, 19388, 19425, 19462, 19499, 19534, 19571, 19609, 19646, 19683, 19718, 19755, 19792, 19829, 19866, 19903, 19940, 19977, 20014, 20051, 20086, 20123, 20160, 20197, 20235, 20272, 20307, 20342, 20377, 20414, 20451, 20488, 20525, 20562, 20599, 20636, 20673, 20710, 20747, 20784, 20821, 20856, 20893, 20931, 20968, 21005, 21040, 21077, 21114, 21151, 21188, 21225, 21262, 21299, 21336, 21373, 21408, 21445, 21482, 21519, 21557, 21596, 21619, 21642, 21665, 21688, 21711, 21734, 21757, 21780, 21803, 21826, 21849, 21872 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.3fbbbaa37628.dev.json | 123, 158, 193, 228, 263, 298, 333, 368, 405, 442, 477, 514, 551, 586, 623, 660, 695, 732, 769, 806, 843, 878, 915, 952, 987, 1022, 1057, 1092, 1129, 1164, 1199, 1236, 1273, 1308, 1343, 1380, 1417, 1454, 1491, 1528, 1563, 1600, 1637, 1672, 1709, 1746, 1781, 1816, 1851, 1886, 1923, 1960, 1997, 2034, 2069, 2104, 2139, 2174, 2211, 2248, 2283, 2320, 2357, 2392, 2429, 2466, 2501, 2538, 2575, 2612, 2649, 2684, 2721, 2758, 2793, 2828, 2863, 2898, 2935, 2970, 3005, 3042, 3079, 3114, 3149, 3186, 3223, 3260, 3297, 3334, 3369, 3406, 3443, 3478, 3515, 3552, 3587, 3622, 3657, 3692, 3729, 3766, 3803, 3840, 3875, 3912, 3949, 3986, 4023, 4060, 4097, 4132, 4167, 4202, 4237, 4272, 4307, 4344, 4381, 4418, 4455, 4492, 4529, 4566, 4603, 4640, 4677, 4714, 4751, 4786, 4823, 4861, 4898, 4935, 4970, 5007, 5044, 5081, 5118, 5155, 5192, 5229, 5266, 5303, 5338, 5375, 5412, 5449, 5487, 5524, 5559, 5596, 5633, 5670, 5707, 5744, 5781, 5818, 5855, 5892, 5929, 5966, 6003, 6038, 6075, 6113, 6150, 6187, 6222, 6259, 6296, 6333, 6370, 6407, 6444, 6481, 6518, 6555, 6590, 6627, 6664, 6701, 6739, 6776, 6815, 6854, 6893, 6931, 6970, 7009, 7047, 7084, 7119, 7154, 7189, 7224, 7261, 7298, 7335, 7372, 7409, 7446, 7483, 7520, 7557, 7594, 7631, 7668, 7703, 7740, 7778, 7815, 7852, 7887, 7924, 7961, 7998, 8035, 8072, 8109, 8146, 8183, 8220, 8255, 8292, 8329, 8366, 8404, 8441, 8476, 8511, 8546, 8581, 8618, 8655, 8692, 8729, 8766, 8803, 8840, 8877, 8914, 8951, 8988, 9025, 9060, 9097, 9135, 9172, 9209, 9244, 9281, 9318, 9355, 9392, 9429, 9466, 9503, 9540, 9577, 9612, 9649, 9686, 9723, 9761, 9798, 9833, 9868, 9903, 9938, 9975, 10012, 10049, 10086, 10123, 10160, 10197, 10234, 10271, 10308, 10345, 10382, 10417, 10454, 10492, 10529, 10566, 10601, 10638, 10675, 10712, 10749, 10786, 10823, 10860, 10897, 10934, 10969, 11006, 11043, 11080, 11118, 11155, 11190, 11225, 11260, 11295, 11332, 11369, 11406, 11443, 11480, 11517, 11554, 11591, 11628, 11665, 11702, 11739, 11774, 11811, 11849, 11886, 11923, 11958, 11995, 12032, 12069, 12106, 12143, 12180, 12217, 12254, 12291, 12326, 12363, 12400, 12437, 12475, 12512, 12547, 12582, 12617, 12652, 12689, 12726, 12763, 12800, 12837, 12874, 12911, 12948, 12985, 13022, 13059, 13096, 13131, 13168, 13206, 13243, 13280, 13315, 13352, 13389, 13426, 13463, 13500, 13537, 13574, 13611, 13648, 13683, 13720, 13757, 13794, 13832, 13869, 13907, 13942, 13977, 14012, 14047, 14084, 14121, 14158, 14195, 14232, 14269, 14306, 14343, 14380, 14417, 14454, 14491, 14526, 14563, 14601, 14638, 14675, 14710, 14747, 14784, 14821, 14858, 14895, 14932, 14969, 15006, 15043, 15078, 15115, 15152, 15189, 15227, 15264, 15299, 15334, 15369, 15404, 15441, 15478, 15515, 15552, 15589, 15626, 15663, 15700, 15737, 15774, 15811, 15848, 15883, 15920, 15958, 15995, 16032, 16067, 16104, 16141, 16178, 16215, 16252, 16289, 16326, 16363, 16400, 16435, 16472, 16509, 16546, 16584, 16621, 16656, 16691, 16726, 16761, 16798, 16835, 16872, 16909, 16946, 16983, 17020, 17057, 17094, 17131, 17168, 17205, 17240, 17277, 17315, 17352, 17389, 17424, 17461, 17498, 17535, 17572, 17609, 17646, 17683, 17720, 17757, 17792, 17829, 17866, 17903, 17941, 17978, 18013, 18048, 18083, 18118, 18155, 18192, 18229, 18266, 18303, 18340, 18377, 18414, 18451, 18488, 18525, 18562, 18597, 18634, 18672, 18709, 18746, 18781, 18818, 18855, 18892, 18929, 18966, 19003, 19040, 19077, 19114, 19149, 19186, 19223, 19260, 19298, 19335, 19370, 19405, 19440, 19475, 19512, 19549, 19586, 19623, 19660, 19697, 19734, 19771, 19808, 19845, 19882, 19919, 19954, 19991, 20029, 20066, 20103, 20138, 20175, 20212, 20249, 20286, 20323, 20360, 20397, 20434, 20471, 20506, 20543, 20580, 20617, 20655, 20692, 20727, 20762, 20797, 20832, 20869, 20906, 20943, 20980, 21017, 21054, 21091, 21128, 21165, 21202, 21239, 21276, 21311, 21348, 21386, 21423, 21460, 21495, 21532, 21569, 21606, 21643, 21680, 21717, 21754, 21791, 21828, 21863, 21900, 21937, 21974, 22012 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.6ce0171efcfd.dev.json | 123, 158, 193, 228, 263, 298, 333, 370, 407, 442, 479, 516, 551, 588, 625, 660, 697, 734, 771, 808, 843, 880, 917, 952, 987, 1022, 1057, 1094, 1129, 1164, 1201, 1238, 1273, 1308, 1345, 1382, 1419, 1456, 1493, 1528, 1565, 1602, 1637, 1674, 1711, 1746, 1781, 1816, 1851, 1888, 1925, 1962, 1999, 2034, 2069, 2104, 2139, 2176, 2213, 2248, 2285, 2322, 2357, 2394, 2431, 2466, 2503, 2540, 2577, 2614, 2649, 2686, 2723, 2758, 2793, 2828, 2863, 2900, 2935, 2970, 3007, 3044, 3079, 3114, 3151, 3188, 3225, 3262, 3299, 3334, 3371, 3408, 3443, 3480, 3517, 3552, 3587, 3622, 3657, 3694, 3731, 3768, 3805, 3840, 3877, 3914, 3951, 3988, 4025, 4062, 4097, 4132, 4167, 4202, 4237, 4274, 4311, 4348, 4385, 4422, 4459, 4496, 4533, 4570, 4607, 4644, 4681, 4716, 4753, 4791, 4828, 4865, 4900, 4937, 4974, 5011, 5048, 5085, 5122, 5159, 5196, 5233, 5268, 5305, 5342, 5379, 5417, 5454, 5489, 5526, 5563, 5600, 5637, 5674, 5711, 5748, 5785, 5822, 5859, 5896, 5933, 5968, 6005, 6043, 6080, 6117, 6152, 6189, 6226, 6263, 6300, 6337, 6374, 6411, 6448, 6485, 6520, 6557, 6594, 6631, 6669, 6706, 6745, 6784, 6823, 6861, 6900, 6939, 6977, 7014, 7049, 7084, 7119, 7156, 7193, 7230, 7267, 7304, 7341, 7378, 7415, 7452, 7489, 7526, 7563, 7598, 7635, 7673, 7710, 7747, 7782, 7819, 7856, 7893, 7930, 7967, 8004, 8041, 8078, 8115, 8150, 8187, 8224, 8261, 8299, 8336, 8371, 8406, 8441, 8478, 8515, 8552, 8589, 8626, 8663, 8700, 8737, 8774, 8811, 8848, 8885, 8920, 8957, 8995, 9032, 9069, 9104, 9141, 9178, 9215, 9252, 9289, 9326, 9363, 9400, 9437, 9472, 9509, 9546, 9583, 9621, 9658, 9693, 9728, 9763, 9800, 9837, 9874, 9911, 9948, 9985, 10022, 10059, 10096, 10133, 10170, 10207, 10242, 10279, 10317, 10354, 10391, 10426, 10463, 10500, 10537, 10574, 10611, 10648, 10685, 10722, 10759, 10794, 10831, 10868, 10905, 10943, 10980, 11015, 11050, 11085, 11122, 11159, 11196, 11233, 11270, 11307, 11344, 11381, 11418, 11455, 11492, 11529, 11564, 11601, 11639, 11676, 11713, 11748, 11785, 11822, 11859, 11896, 11933, 11970, 12007, 12044, 12081, 12116, 12153, 12190, 12227, 12265, 12302, 12337, 12372, 12407, 12444, 12481, 12518, 12555, 12592, 12629, 12666, 12703, 12740, 12777, 12814, 12851, 12886, 12923, 12961, 12998, 13035, 13070, 13107, 13144, 13181, 13218, 13255, 13292, 13329, 13366, 13403, 13438, 13475, 13512, 13549, 13587, 13624, 13662, 13697, 13732, 13767, 13804, 13841, 13878, 13915, 13952, 13989, 14026, 14063, 14100, 14137, 14174, 14211, 14246, 14283, 14321, 14358, 14395, 14430, 14467, 14504, 14541, 14578, 14615, 14652, 14689, 14726, 14763, 14798, 14835, 14872, 14909, 14947, 14984, 15019, 15054, 15089, 15126, 15163, 15200, 15237, 15274, 15311, 15348, 15385, 15422, 15459, 15496, 15533, 15568, 15605, 15643, 15680, 15717, 15752, 15789, 15826, 15863, 15900, 15937, 15974, 16011, 16048, 16085, 16120, 16157, 16194, 16231, 16269, 16306, 16341, 16376, 16411, 16448, 16485, 16522, 16559, 16596, 16633, 16670, 16707, 16744, 16781, 16818, 16855, 16890, 16927, 16965, 17002, 17039, 17074, 17111, 17148, 17185, 17222, 17259, 17296, 17333, 17370, 17407, 17442, 17479, 17516, 17553, 17591, 17628, 17663, 17698, 17733, 17770, 17807, 17844, 17881, 17918, 17955, 17992, 18029, 18066, 18103, 18140, 18177, 18212, 18249, 18287, 18324, 18361, 18396, 18433, 18470, 18507, 18544, 18581, 18618, 18655, 18692, 18729, 18764, 18801, 18838, 18875, 18913, 18950, 18985, 19020, 19055, 19092, 19129, 19166, 19203, 19240, 19277, 19314, 19351, 19388, 19425, 19462, 19499, 19534, 19571, 19609, 19646, 19683, 19718, 19755, 19792, 19829, 19866, 19903, 19940, 19977, 20014, 20051, 20086, 20123, 20160, 20197, 20235, 20272, 20307, 20342, 20377, 20414, 20451, 20488, 20525, 20562, 20599, 20636, 20673, 20710, 20747, 20784, 20821, 20856, 20893, 20931, 20968, 21005, 21040, 21077, 21114, 21151, 21188, 21225, 21262, 21299, 21336, 21373, 21408, 21445, 21482, 21519, 21557, 21596, 21616, 21636, 21656, 21676, 21696, 21716, 21736, 21756, 21776, 21796, 21816, 21836 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.b907d257.dev.json | 123, 158, 193, 228, 263, 298, 335, 372, 407, 444, 481, 516, 553, 590, 625, 662, 699, 736, 773, 808, 845, 882, 917, 952, 987, 1022, 1059, 1094, 1129, 1166, 1203, 1238, 1273, 1310, 1347, 1384, 1421, 1458, 1493, 1530, 1567, 1602, 1639, 1676, 1711, 1746, 1781, 1816, 1853, 1890, 1927, 1964, 1999, 2034, 2069, 2104, 2141, 2178, 2213, 2250, 2287, 2322, 2359, 2396, 2431, 2468, 2505, 2542, 2579, 2614, 2651, 2688, 2723, 2758, 2793, 2828, 2865, 2900, 2935, 2972, 3009, 3044, 3079, 3116, 3153, 3190, 3227, 3264, 3299, 3336, 3373, 3408, 3445, 3482, 3517, 3552, 3587, 3622, 3659, 3696, 3733, 3770, 3805, 3842, 3879, 3916, 3953, 3990, 4027, 4062, 4097, 4132, 4167, 4204, 4241, 4278, 4315, 4352, 4389, 4426, 4463, 4500, 4537, 4574, 4611, 4646, 4683, 4721, 4758, 4795, 4830, 4867, 4904, 4941, 4978, 5015, 5052, 5089, 5126, 5163, 5198, 5235, 5272, 5309, 5347, 5384, 5419, 5456, 5493, 5530, 5567, 5604, 5641, 5678, 5715, 5752, 5789, 5826, 5863, 5898, 5935, 5973, 6010, 6047, 6082, 6119, 6156, 6193, 6230, 6267, 6304, 6341, 6378, 6415, 6450, 6487, 6524, 6561, 6599, 6636, 6675, 6714, 6753, 6791, 6830, 6869, 6907, 6944, 6979, 7014, 7051, 7088, 7125, 7162, 7199, 7236, 7273, 7310, 7347, 7384, 7421, 7458, 7493, 7530, 7568, 7605, 7642, 7677, 7714, 7751, 7788, 7825, 7862, 7899, 7936, 7973, 8010, 8045, 8082, 8119, 8156, 8194, 8231, 8266, 8301, 8338, 8375, 8412, 8449, 8486, 8523, 8560, 8597, 8634, 8671, 8708, 8745, 8780, 8817, 8855, 8892, 8929, 8964, 9001, 9038, 9075, 9112, 9149, 9186, 9223, 9260, 9297, 9332, 9369, 9406, 9443, 9481, 9518, 9553, 9588, 9625, 9662, 9699, 9736, 9773, 9810, 9847, 9884, 9921, 9958, 9995, 10032, 10067, 10104, 10142, 10179, 10216, 10251, 10288, 10325, 10362, 10399, 10436, 10473, 10510, 10547, 10584, 10619, 10656, 10693, 10730, 10768, 10805, 10840, 10875, 10912, 10949, 10986, 11023, 11060, 11097, 11134, 11171, 11208, 11245, 11282, 11319, 11354, 11391, 11429, 11466, 11503, 11538, 11575, 11612, 11649, 11686, 11723, 11760, 11797, 11834, 11871, 11906, 11943, 11980, 12017, 12055, 12092, 12127, 12162, 12199, 12236, 12273, 12310, 12347, 12384, 12421, 12458, 12495, 12532, 12569, 12606, 12641, 12678, 12716, 12753, 12790, 12825, 12862, 12899, 12936, 12973, 13010, 13047, 13084, 13121, 13158, 13193, 13230, 13267, 13304, 13342, 13379, 13417, 13452, 13487, 13524, 13561, 13598, 13635, 13672, 13709, 13746, 13783, 13820, 13857, 13894, 13931, 13966, 14003, 14041, 14078, 14115, 14150, 14187, 14224, 14261, 14298, 14335, 14372, 14409, 14446, 14483, 14518, 14555, 14592, 14629, 14667, 14704, 14739, 14774, 14811, 14848, 14885, 14922, 14959, 14996, 15033, 15070, 15107, 15144, 15181, 15218, 15253, 15290, 15328, 15365, 15402, 15437, 15474, 15511, 15548, 15585, 15622, 15659, 15696, 15733, 15770, 15805, 15842, 15879, 15916, 15954, 15991, 16026, 16061, 16098, 16135, 16172, 16209, 16246, 16283, 16320, 16357, 16394, 16431, 16468, 16505, 16540, 16577, 16615, 16652, 16689, 16724, 16761, 16798, 16835, 16872, 16909, 16946, 16983, 17020, 17057, 17092, 17129, 17166, 17203, 17241, 17278, 17313, 17348, 17385, 17422, 17459, 17496, 17533, 17570, 17607, 17644, 17681, 17718, 17755, 17792, 17827, 17864, 17902, 17939, 17976, 18011, 18048, 18085, 18122, 18159, 18196, 18233, 18270, 18307, 18344, 18379, 18416, 18453, 18490, 18528, 18565, 18600, 18635, 18672, 18709, 18746, 18783, 18820, 18857, 18894, 18931, 18968, 19005, 19042, 19079, 19114, 19151, 19189, 19226, 19263, 19298, 19335, 19372, 19409, 19446, 19483, 19520, 19557, 19594, 19631, 19666, 19703, 19740, 19777, 19815, 19852, 19887, 19922, 19959, 19996, 20033, 20070, 20107, 20144, 20181, 20218, 20255, 20292, 20329, 20366, 20401, 20438, 20476, 20513, 20550, 20585, 20622, 20659, 20696, 20733, 20770, 20807, 20844, 20881, 20918, 20953, 20990, 21027, 21064, 21102, 21141, 21161, 21181, 21201, 21221, 21241, 21261, 21281, 21301, 21321, 21341, 21361, 21381, 21401, 21421, 21441, 21461, 21481, 21501, 21521, 21541, 21561, 21581, 21601, 21621, 21641 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.3a22a0df96a2.dev.json | 123, 158, 193, 228, 263, 298, 333, 370, 407, 444, 481, 518, 553, 588, 623, 660, 695, 730, 767, 804, 841, 878, 915, 950, 987, 1022, 1057, 1092, 1129, 1166, 1203, 1238, 1273, 1308, 1345, 1382, 1419, 1456, 1493, 1528, 1563, 1598, 1635, 1670, 1705, 1742, 1779, 1816, 1853, 1890, 1925, 1962, 1997, 2032, 2067, 2104, 2141, 2178, 2215, 2252, 2289, 2326, 2363, 2400, 2435, 2470, 2505, 2540, 2575, 2612, 2649, 2686, 2723, 2760, 2797, 2832, 2869, 2907, 2944, 2981, 3018, 3055, 3092, 3129, 3166, 3201, 3238, 3275, 3312, 3350, 3385, 3422, 3459, 3496, 3533, 3570, 3607, 3642, 3679, 3717, 3754, 3791, 3828, 3865, 3902, 3939, 3976, 4011, 4048, 4085, 4122, 4160, 4197, 4234, 4271, 4309, 4346, 4383, 4421, 4458, 4493, 4528, 4563, 4600, 4637, 4674, 4711, 4748, 4785, 4820, 4857, 4895, 4932, 4969, 5006, 5043, 5080, 5117, 5154, 5189, 5226, 5263, 5300, 5338, 5373, 5408, 5443, 5480, 5517, 5554, 5591, 5628, 5665, 5700, 5737, 5775, 5812, 5849, 5886, 5923, 5960, 5997, 6034, 6069, 6106, 6143, 6180, 6218, 6253, 6288, 6323, 6360, 6397, 6434, 6471, 6508, 6545, 6580, 6617, 6655, 6692, 6729, 6766, 6803, 6840, 6877, 6914, 6949, 6986, 7023, 7060, 7098, 7133, 7168, 7203, 7240, 7277, 7314, 7351, 7388, 7425, 7460, 7497, 7535, 7572, 7609, 7646, 7683, 7720, 7757, 7794, 7829, 7866, 7903, 7940, 7978, 8013, 8048, 8083, 8120, 8157, 8194, 8231, 8268, 8305, 8340, 8377, 8415, 8452, 8489, 8526, 8563, 8600, 8637, 8674, 8709, 8746, 8783, 8820, 8858, 8896, 8931, 8966, 9001, 9038, 9075, 9112, 9149, 9186, 9223, 9258, 9295, 9333, 9370, 9407, 9444, 9481, 9518, 9555, 9592, 9627, 9664, 9701, 9738, 9776, 9811, 9846, 9881, 9918, 9955, 9992, 10029, 10066, 10103, 10138, 10175, 10213, 10250, 10287, 10324, 10361, 10398, 10435, 10472, 10507, 10544, 10581, 10618, 10656, 10691, 10726, 10761, 10798, 10835, 10872, 10909, 10946, 10983, 11018, 11055, 11093, 11130, 11167, 11204, 11241, 11278, 11315, 11352, 11387, 11424, 11461, 11498, 11536, 11571, 11606, 11641, 11678, 11715, 11752, 11789, 11826, 11863, 11898, 11935, 11973, 12010, 12047, 12084, 12121, 12158, 12195, 12232, 12267, 12304, 12341, 12378, 12416, 12451, 12486, 12521, 12558, 12595, 12632, 12669, 12706, 12743, 12778, 12815, 12853, 12890, 12927, 12964, 13001, 13038, 13075, 13112, 13147, 13184, 13221, 13258, 13296, 13331, 13366, 13401, 13438, 13475, 13512, 13549, 13586, 13623, 13658, 13695, 13733, 13770, 13807, 13844, 13881, 13918, 13955, 13992, 14027, 14064, 14101, 14138, 14178, 14201, 14224, 14247, 14270, 14293, 14316, 14339, 14362, 14385, 14408, 14431, 14454 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.3fbbbaa37628.dev.json | 123, 158, 193, 228, 263, 298, 333, 368, 405, 442, 479, 516, 553, 588, 623, 658, 695, 730, 765, 802, 839, 876, 913, 950, 985, 1022, 1057, 1092, 1127, 1164, 1201, 1238, 1273, 1308, 1343, 1380, 1417, 1454, 1491, 1528, 1563, 1598, 1633, 1670, 1705, 1740, 1777, 1814, 1851, 1888, 1925, 1960, 1997, 2032, 2067, 2102, 2139, 2176, 2213, 2250, 2287, 2324, 2361, 2398, 2435, 2470, 2505, 2540, 2575, 2610, 2645, 2682, 2719, 2756, 2793, 2830, 2867, 2902, 2939, 2977, 3014, 3051, 3088, 3125, 3162, 3199, 3236, 3271, 3308, 3345, 3382, 3420, 3455, 3492, 3529, 3566, 3603, 3640, 3677, 3712, 3749, 3787, 3824, 3861, 3898, 3935, 3972, 4009, 4046, 4081, 4118, 4155, 4192, 4230, 4267, 4304, 4341, 4379, 4416, 4453, 4491, 4528, 4563, 4598, 4633, 4668, 4705, 4742, 4779, 4816, 4853, 4890, 4925, 4962, 5000, 5037, 5074, 5111, 5148, 5185, 5222, 5259, 5294, 5331, 5368, 5405, 5443, 5478, 5513, 5548, 5583, 5620, 5657, 5694, 5731, 5768, 5805, 5840, 5877, 5915, 5952, 5989, 6026, 6063, 6100, 6137, 6174, 6209, 6246, 6283, 6320, 6358, 6393, 6428, 6463, 6498, 6535, 6572, 6609, 6646, 6683, 6720, 6755, 6792, 6830, 6867, 6904, 6941, 6978, 7015, 7052, 7089, 7124, 7161, 7198, 7235, 7273, 7308, 7343, 7378, 7413, 7450, 7487, 7524, 7561, 7598, 7635, 7670, 7707, 7745, 7782, 7819, 7856, 7893, 7930, 7967, 8004, 8039, 8076, 8113, 8150, 8188, 8223, 8258, 8293, 8328, 8365, 8402, 8439, 8476, 8513, 8550, 8585, 8622, 8660, 8697, 8734, 8771, 8808, 8845, 8882, 8919, 8954, 8991, 9028, 9065, 9103, 9141, 9176, 9211, 9246, 9281, 9318, 9355, 9392, 9429, 9466, 9503, 9538, 9575, 9613, 9650, 9687, 9724, 9761, 9798, 9835, 9872, 9907, 9944, 9981, 10018, 10056, 10091, 10126, 10161, 10196, 10233, 10270, 10307, 10344, 10381, 10418, 10453, 10490, 10528, 10565, 10602, 10639, 10676, 10713, 10750, 10787, 10822, 10859, 10896, 10933, 10971, 11006, 11041, 11076, 11111, 11148, 11185, 11222, 11259, 11296, 11333, 11368, 11405, 11443, 11480, 11517, 11554, 11591, 11628, 11665, 11702, 11737, 11774, 11811, 11848, 11886, 11921, 11956, 11991, 12026, 12063, 12100, 12137, 12174, 12211, 12248, 12283, 12320, 12358, 12395, 12432, 12469, 12506, 12543, 12580, 12617, 12652, 12689, 12726, 12763, 12801, 12836, 12871, 12906, 12941, 12978, 13015, 13052, 13089, 13126, 13163, 13198, 13235, 13273, 13310, 13347, 13384, 13421, 13458, 13495, 13532, 13567, 13604, 13641, 13678, 13716, 13751, 13786, 13821, 13856, 13893, 13930, 13967, 14004, 14041, 14078, 14113, 14150, 14188, 14225, 14262, 14299, 14336, 14373, 14410, 14447, 14482, 14519, 14556, 14593 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.6ce0171efcfd.dev.json | 123, 158, 193, 228, 263, 298, 333, 370, 407, 444, 481, 518, 553, 588, 623, 660, 695, 730, 767, 804, 841, 878, 915, 950, 987, 1022, 1057, 1092, 1129, 1166, 1203, 1238, 1273, 1308, 1345, 1382, 1419, 1456, 1493, 1528, 1563, 1598, 1635, 1670, 1705, 1742, 1779, 1816, 1853, 1890, 1925, 1962, 1997, 2032, 2067, 2104, 2141, 2178, 2215, 2252, 2289, 2326, 2363, 2400, 2435, 2470, 2505, 2540, 2575, 2612, 2649, 2686, 2723, 2760, 2797, 2832, 2869, 2907, 2944, 2981, 3018, 3055, 3092, 3129, 3166, 3201, 3238, 3275, 3312, 3350, 3385, 3422, 3459, 3496, 3533, 3570, 3607, 3642, 3679, 3717, 3754, 3791, 3828, 3865, 3902, 3939, 3976, 4011, 4048, 4085, 4122, 4160, 4197, 4234, 4271, 4309, 4346, 4383, 4421, 4458, 4493, 4528, 4563, 4600, 4637, 4674, 4711, 4748, 4785, 4820, 4857, 4895, 4932, 4969, 5006, 5043, 5080, 5117, 5154, 5189, 5226, 5263, 5300, 5338, 5373, 5408, 5443, 5480, 5517, 5554, 5591, 5628, 5665, 5700, 5737, 5775, 5812, 5849, 5886, 5923, 5960, 5997, 6034, 6069, 6106, 6143, 6180, 6218, 6253, 6288, 6323, 6360, 6397, 6434, 6471, 6508, 6545, 6580, 6617, 6655, 6692, 6729, 6766, 6803, 6840, 6877, 6914, 6949, 6986, 7023, 7060, 7098, 7133, 7168, 7203, 7240, 7277, 7314, 7351, 7388, 7425, 7460, 7497, 7535, 7572, 7609, 7646, 7683, 7720, 7757, 7794, 7829, 7866, 7903, 7940, 7978, 8013, 8048, 8083, 8120, 8157, 8194, 8231, 8268, 8305, 8340, 8377, 8415, 8452, 8489, 8526, 8563, 8600, 8637, 8674, 8709, 8746, 8783, 8820, 8858, 8896, 8931, 8966, 9001, 9038, 9075, 9112, 9149, 9186, 9223, 9258, 9295, 9333, 9370, 9407, 9444, 9481, 9518, 9555, 9592, 9627, 9664, 9701, 9738, 9776, 9811, 9846, 9881, 9918, 9955, 9992, 10029, 10066, 10103, 10138, 10175, 10213, 10250, 10287, 10324, 10361, 10398, 10435, 10472, 10507, 10544, 10581, 10618, 10656, 10691, 10726, 10761, 10798, 10835, 10872, 10909, 10946, 10983, 11018, 11055, 11093, 11130, 11167, 11204, 11241, 11278, 11315, 11352, 11387, 11424, 11461, 11498, 11536, 11571, 11606, 11641, 11678, 11715, 11752, 11789, 11826, 11863, 11898, 11935, 11973, 12010, 12047, 12084, 12121, 12158, 12195, 12232, 12267, 12304, 12341, 12378, 12416, 12451, 12486, 12521, 12558, 12595, 12632, 12669, 12706, 12743, 12778, 12815, 12853, 12890, 12927, 12964, 13001, 13038, 13075, 13112, 13147, 13184, 13221, 13258, 13296, 13331, 13366, 13401, 13438, 13475, 13512, 13549, 13586, 13623, 13658, 13695, 13733, 13770, 13807, 13844, 13881, 13918, 13955, 13992, 14027, 14064, 14101, 14138, 14178, 14198, 14218, 14238, 14258, 14278, 14298, 14318, 14338, 14358, 14378, 14398, 14418 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.b907d257.dev.json | 123, 158, 193, 228, 263, 298, 335, 372, 409, 446, 483, 518, 553, 588, 625, 660, 695, 732, 769, 806, 843, 880, 915, 952, 987, 1022, 1057, 1094, 1131, 1168, 1203, 1238, 1273, 1310, 1347, 1384, 1421, 1458, 1493, 1528, 1563, 1600, 1635, 1670, 1707, 1744, 1781, 1818, 1855, 1890, 1927, 1962, 1997, 2032, 2069, 2106, 2143, 2180, 2217, 2254, 2291, 2328, 2365, 2400, 2435, 2470, 2505, 2542, 2579, 2616, 2653, 2690, 2727, 2762, 2799, 2837, 2874, 2911, 2948, 2985, 3022, 3059, 3096, 3131, 3168, 3205, 3242, 3280, 3315, 3352, 3389, 3426, 3463, 3500, 3537, 3572, 3609, 3647, 3684, 3721, 3758, 3795, 3832, 3869, 3906, 3941, 3978, 4015, 4052, 4090, 4127, 4164, 4201, 4239, 4276, 4313, 4351, 4388, 4423, 4458, 4495, 4532, 4569, 4606, 4643, 4680, 4715, 4752, 4790, 4827, 4864, 4901, 4938, 4975, 5012, 5049, 5084, 5121, 5158, 5195, 5233, 5268, 5303, 5340, 5377, 5414, 5451, 5488, 5525, 5560, 5597, 5635, 5672, 5709, 5746, 5783, 5820, 5857, 5894, 5929, 5966, 6003, 6040, 6078, 6113, 6148, 6185, 6222, 6259, 6296, 6333, 6370, 6405, 6442, 6480, 6517, 6554, 6591, 6628, 6665, 6702, 6739, 6774, 6811, 6848, 6885, 6923, 6958, 6993, 7030, 7067, 7104, 7141, 7178, 7215, 7250, 7287, 7325, 7362, 7399, 7436, 7473, 7510, 7547, 7584, 7619, 7656, 7693, 7730, 7768, 7803, 7838, 7875, 7912, 7949, 7986, 8023, 8060, 8095, 8132, 8170, 8207, 8244, 8281, 8318, 8355, 8392, 8429, 8464, 8501, 8538, 8575, 8613, 8651, 8686, 8721, 8758, 8795, 8832, 8869, 8906, 8943, 8978, 9015, 9053, 9090, 9127, 9164, 9201, 9238, 9275, 9312, 9347, 9384, 9421, 9458, 9496, 9531, 9566, 9603, 9640, 9677, 9714, 9751, 9788, 9823, 9860, 9898, 9935, 9972, 10009, 10046, 10083, 10120, 10157, 10192, 10229, 10266, 10303, 10341, 10376, 10411, 10448, 10485, 10522, 10559, 10596, 10633, 10668, 10705, 10743, 10780, 10817, 10854, 10891, 10928, 10965, 11002, 11037, 11074, 11111, 11148, 11186, 11221, 11256, 11293, 11330, 11367, 11404, 11441, 11478, 11513, 11550, 11588, 11625, 11662, 11699, 11736, 11773, 11810, 11847, 11882, 11919, 11956, 11993, 12031, 12066, 12101, 12138, 12175, 12212, 12249, 12286, 12323, 12358, 12395, 12433, 12470, 12507, 12544, 12581, 12618, 12655, 12692, 12727, 12764, 12801, 12838, 12876, 12911, 12946, 12983, 13020, 13057, 13094, 13131, 13168, 13203, 13240, 13278, 13315, 13352, 13389, 13426, 13463, 13500, 13537, 13572, 13609, 13646, 13683, 13723, 13743, 13763, 13783, 13803, 13823, 13843, 13863, 13883, 13903, 13923, 13943, 13963, 13983, 14003, 14023, 14043, 14063, 14083, 14103, 14123, 14143, 14163, 14183, 14203, 14223 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-release-19-causal-shadow.admin.v2.dev.json | 21, 41, 61, 81, 101, 121, 141, 161, 181, 201, 221, 241, 261, 281, 301, 321, 341, 361, 381, 401, 421, 441, 461, 481, 501, 521, 541, 561, 581, 602, 622, 642, 662, 682, 702, 722, 742, 762, 782, 802, 822, 842, 862, 883, 904, 925, 946, 967, 988, 1009, 1030, 1050, 1070, 1093, 1115, 1138, 1161, 1184, 1207, 1230, 1253, 1276, 1299, 1321, 1341, 1361, 1381 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-release-19-causal-shadow.owner.v3.dev.json | 21, 41, 61, 81, 101, 121, 141, 161, 181, 201, 221, 241, 261, 281, 301, 321, 341, 361, 381, 401, 421, 441, 461, 482, 502, 522, 542, 562, 582, 602, 622, 642, 663, 684, 705, 726, 747, 768, 789, 809, 829, 852, 874, 897, 919, 941, 963, 986, 1008, 1030, 1053, 1075, 1095, 1115, 1135 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-release-19-execution-readiness.dev.json | 61, 67, 73, 79, 85, 91, 97, 103, 109, 115, 121, 127, 133, 139, 145, 151, 157, 163, 169, 175, 181, 187, 193, 199, 205, 211, 217, 223, 229, 235, 241, 247, 253, 259, 265, 271, 277, 283, 289, 295, 301, 307, 363, 369, 375, 381, 387, 393, 399, 405, 411, 417, 423, 429, 435, 441, 447, 453, 459, 465, 471, 477, 483, 489, 495, 501, 507, 513, 519, 525, 531, 537, 543, 549, 555, 561, 567, 573, 579, 585, 591, 597, 603, 609 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-release-19-granted-causal-shadow.admin.dev.json | 21, 41, 61, 81, 101, 121, 141, 161, 181, 201, 221, 241, 261, 281, 301, 321, 341, 361, 381, 401, 421, 441, 461, 481, 501, 521, 541, 561, 581, 601, 621, 642, 662, 682, 703, 723, 743, 763, 783, 803, 823, 843, 863, 883, 903, 924, 945, 966, 987, 1008, 1029, 1050, 1071, 1091, 1111, 1134, 1156, 1179, 1202, 1225, 1248, 1271, 1294, 1317, 1340, 1362, 1382, 1402, 1422 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-release-19-post-grant-readiness.dev.json | 61, 67, 73, 79, 85, 91, 97, 103, 109, 115, 121, 127, 133, 139, 145, 151, 157, 163, 169, 175, 181, 187, 193, 199, 205, 211, 217, 223, 229, 235, 241, 247, 253, 259, 265, 271, 277, 283, 289, 295, 301, 307, 363, 369, 375, 381, 387, 393, 399, 405, 411, 417, 423, 429, 435, 441, 447, 453, 459, 465, 471, 477, 483, 489, 495, 501, 507, 513, 519, 525, 531, 537, 543, 549, 555, 561, 567, 573, 579, 585, 591, 597, 603, 609 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-release-19-shadow-gaps.dev.json | 12, 20, 28, 36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124, 132, 140, 148, 156, 164, 172, 180, 188, 196, 204, 212, 220, 228, 236, 244, 252, 260, 268, 276 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-request-native-candidate-20260912.compilation.dev.json | 68, 77, 268, 275, 312, 320, 449, 458 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-reset-exact-release.dev.json | 373, 377, 381, 385, 389, 393, 397, 401, 405, 409, 413, 417, 421, 425, 429, 433, 437, 441, 445, 449, 453, 457, 461, 465, 469, 473, 477, 481, 485, 489, 493, 497, 501, 505, 509, 513, 517, 521, 525, 529, 533, 537, 636, 645, 654, 663, 672, 681, 690, 700, 710, 720, 730, 740, 750, 760, 770, 780, 790, 800, 810, 820, 830, 840, 850, 860, 870, 880, 890, 900, 909, 918, 928, 938, 948, 958, 968, 978, 988, 998, 1008, 1018, 1028, 1038, 1222, 1258, 1293, 1329, 2943, 2947, 2951, 2955, 2959, 2963, 2967, 2971, 2975, 2979, 2983, 2987, 2991, 2995, 2999, 3003, 3007, 3011, 3015, 3019, 3023, 3027, 3031, 3035, 3039, 3043, 3047, 3051, 3055, 3059, 3063, 3067, 3071, 3075, 3079, 3083, 3087, 3091, 3095, 3099, 3103, 3107, 3206, 3215, 3224, 3233, 3242, 3251, 3260, 3270, 3280, 3290, 3300, 3310, 3320, 3330, 3340, 3350, 3360, 3370, 3380, 3390, 3400, 3410, 3420, 3430, 3440, 3450, 3460, 3470, 3479, 3488, 3498, 3508, 3518, 3528, 3538, 3548, 3558, 3568, 3578, 3588, 3598, 3608, 3792, 3828, 3863, 3899, 5807, 5816, 5825, 5834, 5843, 5852, 5861, 5871, 5881, 5891, 5901, 5911, 5921, 5931, 5941, 5951, 5961, 5971, 5981, 5991, 6001, 6011, 6021, 6031, 6041, 6051, 6061, 6071, 6080, 6089, 6099, 6109, 6119, 6129, 6139, 6149, 6159, 6169, 6179, 6189, 6199, 6209, 6552, 6556, 6560, 6564, 6568, 6572, 6576, 6580, 6584, 6588, 6592, 6596, 6600, 6604, 6608, 6612, 6616, 6620, 6624, 6628, 6632, 6636, 6640, 6644, 6648, 6652, 6656, 6660, 6664, 6668, 6672, 6676, 6680, 6684, 6688, 6692, 6696, 6700, 6704, 6708, 6712, 6716, 6815, 6824, 6833, 6842, 6851, 6860, 6869, 6879, 6889, 6899, 6909, 6919, 6929, 6939, 6949, 6959, 6969, 6979, 6989, 6999, 7009, 7019, 7029, 7039, 7049, 7059, 7069, 7079, 7088, 7097, 7107, 7117, 7127, 7137, 7147, 7157, 7167, 7177, 7187, 7197, 7207, 7217, 7401, 7437, 7472, 7508, 9090, 9103, 9116, 9129, 9142, 9155, 9168, 9181, 9194, 9207, 9220, 9233, 9246, 9259, 9272, 9285, 9298, 9311, 9324, 9337, 9350, 9363, 9376, 9389, 9402, 9415, 9428, 9441, 9454, 9467, 9480, 9493, 9506, 9519, 9532, 9545, 9558, 9571, 9584, 9597, 9610, 9623, 9701, 9709, 9717, 9725, 9733, 9741, 9749, 9757, 9765, 9773, 9781, 9789, 9797, 9805, 9813, 9821, 9829, 9837, 9845, 9853, 9861, 9869, 9877, 9885, 9893, 9901, 9909, 9917, 9925, 9933, 9941, 9949, 9957, 9965, 9973, 9981, 9989, 9997, 10005, 10013, 10021, 10029 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-reset-native-publication.dev.json | 154, 163, 172, 181, 190, 199, 209, 219, 229, 239, 249, 259, 269, 279, 289, 299, 309, 319, 329, 339, 349, 359, 369, 379, 389, 399, 409, 418, 427, 437, 447, 457, 467, 477, 487, 497, 507, 517, 527, 537, 547, 557, 1151, 1159, 1167, 1175, 1183, 1191, 1199, 1207, 1215, 1223, 1231, 1239, 1247, 1255, 1263, 1271, 1279, 1287, 1295, 1303, 1311, 1319, 1327, 1335, 1343, 1351, 1359, 1367, 1375, 1383, 1391, 1399, 1407, 1415, 1423, 1431, 1439, 1447, 1455, 1463, 1471, 1479, 2053, 2066, 2079, 2092, 2105, 2118, 2131, 2144, 2157, 2170, 2183, 2196, 2209, 2222, 2235, 2248, 2261, 2274, 2287, 2300, 2313, 2326, 2339, 2352, 2365, 2378, 2391, 2404, 2417, 2430, 2443, 2456, 2469, 2482, 2495, 2508, 2521, 2534, 2547, 2560, 2573, 2586, 2792, 2801, 2810, 2819, 2828, 2837, 2847, 2857, 2867, 2877, 2887, 2897, 2907, 2917, 2927, 2937, 2947, 2957, 2967, 2977, 2987, 2997, 3007, 3017, 3027, 3037, 3047, 3056, 3065, 3075, 3085, 3095, 3105, 3115, 3125, 3135, 3145, 3155, 3165, 3175, 3185, 3195, 3759, 3768, 3777, 3786, 3795, 3804, 3814, 3824, 3834, 3844, 3854, 3864, 3874, 3884, 3894, 3904, 3914, 3924, 3934, 3944, 3954, 3964, 3974, 3984, 3994, 4004, 4014, 4023, 4032, 4042, 4052, 4062, 4072, 4082, 4092, 4102, 4112, 4122, 4132, 4142, 4152, 4162, 4879, 4939, 4974, 5009, 5101, 5105, 5109, 5113, 5117, 5121, 5125, 5129, 5133, 5137, 5141, 5145, 5149, 5153, 5157, 5161, 5165, 5169, 5173, 5177, 5181, 5185, 5189, 5193, 5197, 5201, 5205, 5209, 5213, 5217, 5221, 5225, 5229, 5233, 5237, 5241, 5245, 5249, 5253, 5257, 5261, 5265 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-shadow-attestation.dev.json | 86, 95, 104, 113, 122, 131, 140, 149, 158, 167, 176, 185, 194, 203, 212, 221, 230, 239, 248, 257, 266, 275, 284, 293, 302, 311, 320, 329, 338, 347, 356, 365, 374, 383, 392, 401, 410, 419, 428, 437, 446, 455, 464, 473, 482, 491, 500, 509, 518, 527, 536, 545, 554, 563, 572, 581, 590, 599, 608, 617 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-shadow-deployment.dev.json | 102, 129, 156, 183, 210, 230, 250, 270, 290, 310, 330, 380, 407, 434, 461, 488, 515, 542, 584, 611, 638, 665, 692, 719, 746, 773, 800, 827, 854, 881, 908, 935, 962, 989, 1016, 1043, 1070, 1097, 1124, 1151, 1178, 1205, 1232, 1259, 1286, 1313, 1340, 1367, 1394, 1421, 1448, 1475, 1502, 1529, 1556, 1583, 1610, 1637, 1664, 1691, 1718, 1745, 1772, 1799, 1826, 1853, 1880, 1907, 1934, 1961, 1988, 2015, 2042, 2069, 2096, 2123, 2150, 2177, 2204, 2231, 2258, 2285, 2312, 2339, 2366, 2393, 2420, 2447, 2474, 2501, 2528, 2555, 2582, 2609, 2636, 2663, 2690, 2717, 2744, 2771, 2798, 2825, 2852, 2879, 2906, 2933, 2960, 2987, 3014, 3041, 3068, 3095, 3122, 3149, 3176, 3203, 3230, 3257, 3284, 3311, 3338, 3365, 3392, 3419, 3446, 3473, 3500, 3527, 3554, 3581, 3608, 3628, 3670, 3697, 3724, 3751, 3778, 3805, 3832, 3859, 3886, 3913, 3940, 3967, 3994, 4021, 4048, 4075, 4102, 4129, 4156, 4183, 4210, 4237, 4264, 4291, 4318, 4345, 4372, 4399, 4426, 4453, 4480, 4507, 4534, 4561, 4588, 4615, 4642, 4669, 4696, 4723, 4750, 4777, 4804, 4831, 4858, 4885, 4912, 4939, 4966, 4993, 5020, 5047, 5074, 5101, 5128, 5155, 5182, 5209, 5236, 5263, 5290, 5317, 5344, 5371, 5398, 5425, 5452, 5479, 5506, 5533, 5560, 5587, 5614, 5641, 5668, 5695, 5722, 5749, 5776, 5803, 5830, 5857, 5884, 5911, 5938, 5965, 5992, 6019, 6046, 6073, 6100, 6127, 6154, 6181, 6208, 6235, 6262, 6289, 6316, 6343, 6370, 6397, 6424, 6451, 6478, 6505, 6532, 6559, 6586, 6613, 6640, 6667, 6694, 6721, 6748, 6775, 6802, 6829, 6856, 6883, 6910, 6937, 6964, 6991, 7018, 7045, 7072, 7099, 7126, 7153, 7180, 7207, 7234, 7261, 7288, 7315, 7342, 7369, 7396, 7423, 7450, 7477, 7504, 7531, 7558, 7585, 7612, 7639, 7666, 7693, 7720, 7747, 7774, 7801, 7828, 7855, 7882, 7909, 7936, 7963, 7990, 8017, 8044, 8071, 8098, 8125, 8152, 8179, 8206, 8233, 8260, 8287, 8314, 8341, 8368, 8395, 8422, 8449, 8476, 8503, 8530, 8557, 8584, 8611, 8638, 8665, 8692, 8719, 8746, 8773, 8800, 8827, 8854, 8881, 8908, 8935, 8962, 8989, 9016, 9043, 9070, 9097, 9124, 9151, 9178, 9205, 9232, 9259, 9286, 9313, 9340, 9367, 9394, 9421, 9448, 9475, 9502, 9529, 9556, 9583, 9610, 9637, 9664, 9691, 9718, 9745, 9772, 9799, 9826, 9853, 9880, 9907, 9934, 9961, 9988, 10015, 10042, 10069, 10096, 10123, 10150, 10177, 10204, 10231, 10258, 10285, 10312, 10339, 10366, 10393, 10420, 10447, 10474, 10501, 10528, 10555, 10582, 10609, 10636, 10663, 10690, 10717, 10744, 10771, 10813, 10840, 10867, 10909, 10936, 10963, 10990, 11017, 11044, 11071, 11098, 11125, 11152, 11179, 11206, 11233, 11260, 11287, 11359, 11386, 11413, 11440, 11467, 11494, 11521, 11548, 11575, 11602, 11629, 11656, 11683, 11710, 11737, 11764, 11791, 11818, 11845, 11872, 11899, 11926, 11953, 11980, 12007, 12034, 12061, 12088, 12115, 12142, 12169, 12196, 12223, 12250, 12277, 12304, 12331, 12358, 12385, 12412, 12439, 12466, 12493, 12520, 12547, 12574, 12601, 12628, 12655, 12682, 12709, 12736, 12763, 12790, 12817, 12844, 12886, 12913, 12940, 12967, 12994, 13021, 13048, 13075, 13102, 13129, 13156, 13183, 13210, 13237, 13264, 13291, 13318, 13345, 13372, 13399, 13426, 13453, 13480, 13507, 13534, 13561, 13588, 13615, 13642, 13669, 13696, 13723, 13750, 13777, 13804, 13831, 13858, 13885, 13912, 13939, 13966, 13993, 14020, 14047, 14074, 14101, 14128, 14155, 14182, 14209, 14236, 14263, 14290, 14317, 14344, 14371, 14413, 14440, 14467, 14494, 14521, 14548, 14575, 14602, 14629, 14656, 14683, 14710, 14737, 14764, 14791, 14818, 14845, 14872, 14899, 14926, 14953, 14980, 15007, 15034, 15061, 15088, 15115, 15142, 15169, 15196, 15223, 15250, 15277, 15304, 15331, 15358, 15385, 15412, 15439, 15466, 15493, 15520, 15547, 15574, 15601, 15628, 15655, 15682, 15709, 15736, 15763, 15790, 15817, 15844, 15871, 15898, 15940, 15967, 15994, 16021, 16048, 16075, 16102, 16129, 16156, 16183, 16210, 16237, 16264, 16291, 16318, 16345, 16372, 16399, 16426, 16453, 16480, 16507, 16534, 16561, 16588, 16615, 16642, 16669, 16696, 16723, 16750, 16777, 16804, 16831, 16858, 16885, 16912, 16939, 16966, 16993, 17020, 17047, 17074, 17101, 17128, 17155, 17182, 17209, 17236, 17263, 17290, 17317, 17344, 17371, 17398, 17425, 17467, 17494, 17521, 17548, 17575, 17602, 17629, 17656, 17683, 17710, 17737, 17764, 17791, 17818, 17845, 17872, 17899, 17926, 17953, 17980, 18007, 18034, 18061, 18088, 18115, 18142, 18169, 18196, 18223, 18250, 18277, 18304, 18331, 18358, 18385, 18412, 18439, 18466, 18493, 18520, 18547, 18574, 18601, 18628, 18655, 18682, 18709, 18736, 18763, 18790, 18817, 18844, 18871, 18898, 18925, 18952, 18979, 19006, 19048, 19075, 19102, 19129, 19156, 19183, 19210, 19237, 19264, 19291, 19318, 19345, 19372, 19399, 19426, 19453, 19480, 19507, 19534, 19561, 19588, 19615, 19642, 19669, 19696, 19723, 19750, 19777, 19804, 19831, 19858, 19885, 19912, 19939, 19966, 19993, 20020, 20047, 20074, 20101, 20128, 20155, 20182, 20209, 20236, 20263, 20290, 20317, 20344, 20371, 20398, 20425, 20452, 20479, 20506, 20533, 20560, 20587, 20614, 20641, 20668, 20695, 20722, 20749, 20776, 20803, 20830, 20857, 20884, 20911, 20938, 20965, 20992, 21019, 21046, 21073, 21100, 21127, 21154, 21181, 21208, 21235, 21262, 21289, 21316, 21343, 21370, 21397, 21424, 21451, 21478, 21505, 21532, 21559, 21586, 21613, 21640, 21667, 21694, 21721, 21748, 21775, 21802, 21829, 21856, 21883, 21910, 21937, 21964, 21991, 22018 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-v2-exact-release.after-signing.dev.json | 372, 376, 380, 384, 388, 392, 396, 400, 404, 408, 412, 416, 420, 424, 428, 432, 436, 440, 444, 448, 452, 456, 460, 464, 468, 472, 476, 480, 484, 488, 492, 496, 500, 504, 508, 512, 516, 520, 524, 528, 532, 536, 635, 644, 653, 662, 671, 680, 689, 699, 709, 719, 729, 739, 749, 759, 769, 779, 789, 799, 809, 819, 829, 839, 849, 859, 869, 879, 889, 899, 908, 917, 927, 937, 947, 957, 967, 977, 987, 997, 1007, 1017, 1027, 1037, 1221, 1257, 1292, 1328, 3328, 3337, 3346, 3355, 3364, 3373, 3382, 3392, 3402, 3412, 3422, 3432, 3442, 3452, 3462, 3472, 3482, 3492, 3502, 3512, 3522, 3532, 3542, 3552, 3562, 3572, 3582, 3592, 3601, 3610, 3620, 3630, 3640, 3650, 3660, 3670, 3680, 3690, 3700, 3710, 3720, 3730, 4150, 4163, 4176, 4189, 4202, 4215, 4228, 4241, 4254, 4267, 4280, 4293, 4306, 4319, 4332, 4345, 4358, 4371, 4384, 4397, 4410, 4423, 4436, 4449, 4462, 4475, 4488, 4501, 4514, 4527, 4540, 4553, 4566, 4579, 4592, 4605, 4618, 4631, 4644, 4657, 4670, 4683, 4761, 4769, 4777, 4785, 4793, 4801, 4809, 4817, 4825, 4833, 4841, 4849, 4857, 4865, 4873, 4881, 4889, 4897, 4905, 4913, 4921, 4929, 4937, 4945, 4953, 4961, 4969, 4977, 4985, 4993, 5001, 5009, 5017, 5025, 5033, 5041, 5049, 5057, 5065, 5073, 5081, 5089 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-v2-exact-release.dev.json | 372, 376, 380, 384, 388, 392, 396, 400, 404, 408, 412, 416, 420, 424, 428, 432, 436, 440, 444, 448, 452, 456, 460, 464, 468, 472, 476, 480, 484, 488, 492, 496, 500, 504, 508, 512, 516, 520, 524, 528, 532, 536, 635, 644, 653, 662, 671, 680, 689, 699, 709, 719, 729, 739, 749, 759, 769, 779, 789, 799, 809, 819, 829, 839, 849, 859, 869, 879, 889, 899, 908, 917, 927, 937, 947, 957, 967, 977, 987, 997, 1007, 1017, 1027, 1037, 1221, 1257, 1292, 1328, 3328, 3337, 3346, 3355, 3364, 3373, 3382, 3392, 3402, 3412, 3422, 3432, 3442, 3452, 3462, 3472, 3482, 3492, 3502, 3512, 3522, 3532, 3542, 3552, 3562, 3572, 3582, 3592, 3601, 3610, 3620, 3630, 3640, 3650, 3660, 3670, 3680, 3690, 3700, 3710, 3720, 3730, 4150, 4163, 4176, 4189, 4202, 4215, 4228, 4241, 4254, 4267, 4280, 4293, 4306, 4319, 4332, 4345, 4358, 4371, 4384, 4397, 4410, 4423, 4436, 4449, 4462, 4475, 4488, 4501, 4514, 4527, 4540, 4553, 4566, 4579, 4592, 4605, 4618, 4631, 4644, 4657, 4670, 4683, 4761, 4769, 4777, 4785, 4793, 4801, 4809, 4817, 4825, 4833, 4841, 4849, 4857, 4865, 4873, 4881, 4889, 4897, 4905, 4913, 4921, 4929, 4937, 4945, 4953, 4961, 4969, 4977, 4985, 4993, 5001, 5009, 5017, 5025, 5033, 5041, 5049, 5057, 5065, 5073, 5081, 5089 |
+| `permissionCode` | runtime | governance/policy/reports/entity-authorization-difference-review.dev.json | 108, 154, 200, 246, 292, 338, 384, 430, 476, 522, 568, 614, 660, 706, 752, 798, 844, 890, 936, 982, 1028, 1074, 1120, 1166, 1212, 1258, 1304 |
+| `permissionCode` | runtime | governance/policy/reports/entity-authorization-inventory.dev.json | 1252, 1256, 1260, 1264, 1268, 1272, 1276, 1280, 1284, 1288, 1292, 1296, 2049, 2053, 2057, 2061, 2065, 2069, 2073, 2077, 2081, 2085, 2089, 2205, 3688, 3692, 3696 |
+| `permissionCode` | runtime | governance/policy/reports/entity-authorization-migration.dev.json | 46, 50, 54, 58, 62, 66, 70, 74, 78, 82, 86, 90, 94, 98, 102, 106, 110, 114, 118, 122, 126, 130, 134, 138, 142, 146, 150, 154, 158, 162, 166, 170, 174, 178, 182, 186, 190, 194, 198, 212, 216, 220, 224, 228, 232, 236, 240, 244, 248, 252, 256, 260, 264, 268, 272, 276, 280, 284, 288, 292, 296, 300, 304, 308, 312, 316, 320, 324, 328, 332, 336, 340, 344, 348, 352, 356, 360, 364, 368 |
+| `permissionCode` | runtime | governance/policy/reviews/bp-consolidated-20260912/company-operations-handlers.candidate.json | 90, 100, 109, 119, 129, 139, 148, 158, 195, 202, 209, 216, 223, 230, 237, 244 |
+| `permissionCode` | runtime | governance/policy/reviews/bp-consolidated-20260912/company-operations-isolated-ids.candidate.json | 90, 98, 106, 114, 122, 130, 138, 146, 181, 188, 195, 202, 209, 216, 223, 230 |
+| `permissionCode` | runtime | governance/policy/reviews/bp-consolidated-20260912/company-operations.candidate.json | 90, 98, 106, 114, 122, 130, 138, 146, 181, 188, 195, 202, 209, 216, 223, 230 |
+| `permissionCode` | runtime | governance/policy/reviews/bp-dependencies-20260912/child-native.candidate.json | 102, 110, 119, 126, 188, 197 |
+| `permissionCode` | runtime | governance/policy/reviews/bp-dependencies-20260912/child-process.candidate.json | 102, 110, 119, 126, 188, 197 |
+| `permissionCode` | runtime | governance/policy/reviews/bp-dependencies-20260912/child-provenance-review.json | 180, 189, 268, 280, 318, 326 |
+| `permissionCode` | runtime | governance/policy/reviews/bp-dependencies-20260912/child-provenance.candidate.json | 177, 186, 265, 277, 315, 323 |
+| `permissionCode` | runtime | governance/policy/reviews/bp-dependencies-20260912/child-storage.candidate.json | 115, 123, 132, 139, 201, 210 |
+| `permissionCode` | runtime | governance/policy/reviews/bp-dependencies-20260912/child-stored-review.json | 184, 193, 272, 284, 322, 330, 485, 494, 545, 549, 560, 575 |
+| `permissionCode` | runtime | governance/policy/reviews/bp-dependencies-20260912/proposal.json | 2077, 2086, 2127, 2131, 2142, 2157 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-canonical-v2-native-graph.dev.json | 165, 173, 181, 189, 197, 205, 213, 221, 229, 237, 245, 253, 261, 269, 277, 285, 293, 301, 309, 317, 325, 333, 341, 349, 357, 365, 373, 381, 389, 397, 405, 413, 421, 429, 437, 445, 453, 461, 469, 477, 485, 493, 1067, 1080, 1093, 1106, 1119, 1132, 1145, 1158, 1171, 1184, 1197, 1210, 1223, 1236, 1249, 1262, 1275, 1288, 1301, 1314, 1327, 1340, 1353, 1366, 1379, 1392, 1405, 1418, 1431, 1444, 1457, 1470, 1483, 1496, 1509, 1522, 1535, 1548, 1561, 1574, 1587, 1600, 1806, 1815, 1824, 1833, 1842, 1851, 1861, 1871, 1881, 1891, 1901, 1911, 1921, 1931, 1941, 1951, 1961, 1971, 1981, 1991, 2001, 2011, 2021, 2031, 2041, 2051, 2061, 2070, 2079, 2089, 2099, 2109, 2119, 2129, 2139, 2149, 2159, 2169, 2179, 2189, 2199, 2209 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-canonical-v2-native-graph.pre-native-hash.dev.json | 165, 173, 181, 189, 197, 205, 213, 221, 229, 237, 245, 253, 261, 269, 277, 285, 293, 301, 309, 317, 325, 333, 341, 349, 357, 365, 373, 381, 389, 397, 405, 413, 421, 429, 437, 445, 453, 461, 469, 477, 485, 493, 1067, 1080, 1093, 1106, 1119, 1132, 1145, 1158, 1171, 1184, 1197, 1210, 1223, 1236, 1249, 1262, 1275, 1288, 1301, 1314, 1327, 1340, 1353, 1366, 1379, 1392, 1405, 1418, 1431, 1444, 1457, 1470, 1483, 1496, 1509, 1522, 1535, 1548, 1561, 1574, 1587, 1600, 1806, 1815, 1824, 1833, 1842, 1851, 1861, 1871, 1881, 1891, 1901, 1911, 1921, 1931, 1941, 1951, 1961, 1971, 1981, 1991, 2001, 2011, 2021, 2031, 2041, 2051, 2061, 2070, 2079, 2089, 2099, 2109, 2119, 2129, 2139, 2149, 2159, 2169, 2179, 2189, 2199, 2209 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-canonical-v2-native.proposal.dev.json | 144, 153, 162, 171, 180, 189, 199, 209, 219, 229, 239, 249, 259, 269, 279, 289, 299, 309, 319, 329, 339, 349, 359, 369, 379, 389, 399, 408, 417, 427, 437, 447, 457, 467, 477, 487, 497, 507, 517, 527, 537, 547, 1264, 1324, 1359, 1394, 1486, 1490, 1494, 1498, 1502, 1506, 1510, 1514, 1518, 1522, 1526, 1530, 1534, 1538, 1542, 1546, 1550, 1554, 1558, 1562, 1566, 1570, 1574, 1578, 1582, 1586, 1590, 1594, 1598, 1602, 1606, 1610, 1614, 1618, 1622, 1626, 1630, 1634, 1638, 1642, 1646, 1650 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-canonical-v2-native.proposal.pre-native-hash.dev.json | 144, 153, 162, 171, 180, 189, 199, 209, 219, 229, 239, 249, 259, 269, 279, 289, 299, 309, 319, 329, 339, 349, 359, 369, 379, 389, 399, 408, 417, 427, 437, 447, 457, 467, 477, 487, 497, 507, 517, 527, 537, 547, 1264, 1324, 1359, 1394, 1486, 1490, 1494, 1498, 1502, 1506, 1510, 1514, 1518, 1522, 1526, 1530, 1534, 1538, 1542, 1546, 1550, 1554, 1558, 1562, 1566, 1570, 1574, 1578, 1582, 1586, 1590, 1594, 1598, 1602, 1606, 1610, 1614, 1618, 1622, 1626, 1630, 1634, 1638, 1642, 1646, 1650 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-combined-native-graph.dev.json | 111, 120, 129, 138, 147, 156, 165, 175, 185, 195, 205, 215, 225, 235, 245, 255, 265, 275, 285, 295, 305, 315, 325, 335, 345, 355, 365, 375, 384, 393, 403, 413, 423, 433, 443, 453, 463, 473, 483, 493, 503, 513, 1154, 1163, 1172, 1181, 1190, 1199, 1208, 1218, 1228, 1238, 1248, 1258, 1268, 1278, 1288, 1298, 1308, 1318, 1328, 1338, 1348, 1358, 1368, 1378, 1388, 1398, 1408, 1418, 1427, 1436, 1446, 1456, 1466, 1476, 1486, 1496, 1506, 1516, 1526, 1536, 1546, 1556, 1953, 1963, 1973, 1983, 1993, 2003, 2013, 2023, 2033, 2043, 2053, 2063, 2073, 2083, 2093, 2103, 2113, 2123, 2133, 2143, 2153, 2163, 2173, 2183, 2193, 2203, 2213, 2223, 2233, 2243, 2253, 2263, 2273, 2283, 2293, 2303, 2313, 2323, 2333, 2343, 2353, 2363, 2443, 2451, 2459, 2467, 2475, 2483, 2491, 2499, 2507, 2515, 2523, 2531, 2539, 2547, 2555, 2563, 2571, 2579, 2587, 2595, 2603, 2611, 2619, 2627, 2635, 2643, 2651, 2659, 2667, 2675, 2683, 2691, 2699, 2707, 2715, 2723, 2731, 2739, 2747, 2755, 2763, 2771 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-company-setup-request.profile.proposal.dev.json | 14, 23, 32, 41, 50, 59, 68, 77 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-enter-correction-runtime-workflow.dev.json | 350, 638, 926, 1214, 1502, 1792, 2081, 2372, 2664, 2956, 3248, 3547, 3839, 4131, 4732, 4992, 5281, 5570, 5859, 6148, 6437, 6726, 7015, 7311, 7600, 7889, 8185, 8472, 8758, 9047, 9338, 11003, 11293, 11584, 11876, 12168, 12460, 12752, 13875, 14175, 14472, 14768 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-enter-correction.graph.dev.json | 165, 173, 181, 189, 197, 205, 213, 221, 229, 237, 245, 253, 261, 269, 277, 285, 293, 301, 309, 317, 325, 333, 341, 349, 357, 365, 373, 381, 389, 397, 405, 413, 421, 429, 437, 445, 453, 461, 469, 477, 485, 493, 1067, 1080, 1093, 1106, 1119, 1132, 1145, 1158, 1171, 1184, 1197, 1210, 1223, 1236, 1249, 1262, 1275, 1288, 1301, 1314, 1327, 1340, 1353, 1366, 1379, 1392, 1405, 1418, 1431, 1444, 1457, 1470, 1483, 1496, 1509, 1522, 1535, 1548, 1561, 1574, 1587, 1600, 1806, 1815, 1824, 1833, 1842, 1851, 1861, 1871, 1881, 1891, 1901, 1911, 1921, 1931, 1941, 1951, 1961, 1971, 1981, 1991, 2001, 2011, 2021, 2031, 2041, 2051, 2061, 2070, 2079, 2089, 2099, 2109, 2119, 2129, 2139, 2149, 2159, 2169, 2179, 2189, 2199, 2209, 2774, 2783, 2792, 2801, 2810, 2819, 2829, 2839, 2849, 2859, 2869, 2879, 2889, 2899, 2909, 2919, 2929, 2939, 2949, 2959, 2969, 2979, 2989, 2999, 3009, 3019, 3029, 3038, 3047, 3057, 3067, 3077, 3087, 3097, 3107, 3117, 3127, 3137, 3147, 3157, 3167, 3177, 3889, 3949, 3984, 4019, 4111, 4115, 4119, 4123, 4127, 4131, 4135, 4139, 4143, 4147, 4151, 4155, 4159, 4163, 4167, 4171, 4175, 4179, 4183, 4187, 4191, 4195, 4199, 4203, 4207, 4211, 4215, 4219, 4223, 4227, 4231, 4235, 4239, 4243, 4247, 4251, 4255, 4259, 4263, 4267, 4271, 4275, 5675, 5684, 5693, 5702, 5711, 5720, 5730, 5740, 5750, 5760, 5770, 5780, 5790, 5800, 5810, 5820, 5830, 5840, 5850, 5860, 5870, 5880, 5890, 5900, 5910, 5920, 5930, 5939, 5948, 5958, 5968, 5978, 5988, 5998, 6008, 6018, 6028, 6038, 6048, 6058, 6068, 6078, 6790, 6850, 6885, 6920, 7012, 7016, 7020, 7024, 7028, 7032, 7036, 7040, 7044, 7048, 7052, 7056, 7060, 7064, 7068, 7072, 7076, 7080, 7084, 7088, 7092, 7096, 7100, 7104, 7108, 7112, 7116, 7120, 7124, 7128, 7132, 7136, 7140, 7144, 7148, 7152, 7156, 7160, 7164, 7168, 7172, 7176 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-enter-correction.pre-row-rekey.graph.dev.json | 165, 173, 181, 189, 197, 205, 213, 221, 229, 237, 245, 253, 261, 269, 277, 285, 293, 301, 309, 317, 325, 333, 341, 349, 357, 365, 373, 381, 389, 397, 405, 413, 421, 429, 437, 445, 453, 461, 469, 477, 485, 493, 1067, 1080, 1093, 1106, 1119, 1132, 1145, 1158, 1171, 1184, 1197, 1210, 1223, 1236, 1249, 1262, 1275, 1288, 1301, 1314, 1327, 1340, 1353, 1366, 1379, 1392, 1405, 1418, 1431, 1444, 1457, 1470, 1483, 1496, 1509, 1522, 1535, 1548, 1561, 1574, 1587, 1600, 1806, 1815, 1824, 1833, 1842, 1851, 1861, 1871, 1881, 1891, 1901, 1911, 1921, 1931, 1941, 1951, 1961, 1971, 1981, 1991, 2001, 2011, 2021, 2031, 2041, 2051, 2061, 2070, 2079, 2089, 2099, 2109, 2119, 2129, 2139, 2149, 2159, 2169, 2179, 2189, 2199, 2209, 2774, 2783, 2792, 2801, 2810, 2819, 2829, 2839, 2849, 2859, 2869, 2879, 2889, 2899, 2909, 2919, 2929, 2939, 2949, 2959, 2969, 2979, 2989, 2999, 3009, 3019, 3029, 3038, 3047, 3057, 3067, 3077, 3087, 3097, 3107, 3117, 3127, 3137, 3147, 3157, 3167, 3177, 3889, 3949, 3984, 4019, 4111, 4115, 4119, 4123, 4127, 4131, 4135, 4139, 4143, 4147, 4151, 4155, 4159, 4163, 4167, 4171, 4175, 4179, 4183, 4187, 4191, 4195, 4199, 4203, 4207, 4211, 4215, 4219, 4223, 4227, 4231, 4235, 4239, 4243, 4247, 4251, 4255, 4259, 4263, 4267, 4271, 4275, 5675, 5684, 5693, 5702, 5711, 5720, 5730, 5740, 5750, 5760, 5770, 5780, 5790, 5800, 5810, 5820, 5830, 5840, 5850, 5860, 5870, 5880, 5890, 5900, 5910, 5920, 5930, 5939, 5948, 5958, 5968, 5978, 5988, 5998, 6008, 6018, 6028, 6038, 6048, 6058, 6068, 6078, 6790, 6850, 6885, 6920, 7012, 7016, 7020, 7024, 7028, 7032, 7036, 7040, 7044, 7048, 7052, 7056, 7060, 7064, 7068, 7072, 7076, 7080, 7084, 7088, 7092, 7096, 7100, 7104, 7108, 7112, 7116, 7120, 7124, 7128, 7132, 7136, 7140, 7144, 7148, 7152, 7156, 7160, 7164, 7168, 7172, 7176 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-operation-reviews.dev.json | 62, 111, 162, 213, 264, 315, 367, 418, 470, 522, 574, 627, 686, 738, 791, 844, 897, 948, 999, 1050, 1101, 1152, 1203, 1254, 1305, 1363, 1414, 1465, 1523, 1572, 1621, 1672, 1724, 1777, 1830, 1883, 1935, 1985, 2037, 2088, 2140, 2192, 2244, 2296, 2349, 2402, 2456, 2509, 2564, 2626, 2684 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-policy-triage.dev.json | 88, 121, 154, 187, 220, 257, 294, 327, 360, 393, 426, 459, 492, 525, 558, 591, 624, 657, 690, 723, 760, 793, 826, 859, 892, 925, 958 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-release-19-differences.proposal.dev.json | 37, 59, 81, 103, 125, 147, 169, 191, 240, 263, 288, 311, 362, 384, 406, 428, 477, 499, 521, 543, 592, 614, 636, 658, 707, 729, 751, 773, 795, 817, 839, 861, 883, 905, 927, 949, 998, 1020, 1069, 1091, 1140, 1162, 1184, 1206, 1228, 1250, 1272, 1294, 1343, 1365, 1387, 1436, 1458, 1480, 1529, 1551, 1573, 1622, 1644, 1666, 1715, 1737, 1786, 1808, 1830, 1879, 1901, 1923, 1972, 1994, 2016, 2065, 2087, 2109, 2131, 2180, 2202, 2224, 2273, 2296, 2319, 2344, 2367, 2419, 2442, 2467, 2490, 2542, 2564, 2588, 2610, 2661, 2684, 2709, 2732, 2783, 2806, 2831, 2854, 2905, 2928, 2953, 2976, 3027, 3050, 3075, 3098, 3150, 3173, 3198, 3221, 3272, 3295, 3320, 3343, 3394, 3416, 3440, 3462, 3508, 3553, 3598, 3643, 3688, 3726, 3764, 3809, 3854, 3899, 3937, 3975, 4013, 4051, 4089, 4127, 4165, 4203, 4248, 4286, 4325, 4370, 4418, 4458, 4499, 4540, 4581, 4622, 4663, 4704, 4745, 4785, 4830, 4875, 4913, 4951, 4991 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-release-19-differences.successor-20260911.proposal.dev.json | 37, 55, 73, 91, 109, 127, 145, 163, 208, 229, 250, 271, 316, 334, 352, 370, 415, 433, 451, 469, 514, 532, 550, 568, 613, 631, 649, 667, 685, 703, 721, 739, 757, 775, 793, 811, 856, 874, 919, 937, 982, 1000, 1018, 1036, 1054, 1072, 1090, 1108, 1153, 1171, 1189, 1234, 1252, 1270, 1315, 1333, 1351, 1396, 1414, 1432, 1477, 1495, 1540, 1558, 1576, 1621, 1639, 1657, 1702, 1720, 1738, 1783, 1801, 1819, 1837, 1882, 1900, 1918, 1963, 1984, 2005, 2023, 2044, 2089, 2110, 2128, 2149, 2194, 2212, 2230, 2248, 2293, 2314, 2335, 2356, 2401, 2422, 2443, 2464, 2509, 2530, 2551, 2572, 2617, 2638, 2656, 2677, 2722, 2743, 2764, 2785, 2830, 2851, 2872, 2893, 2938, 2956, 2974, 2992, 3032, 3073, 3114, 3155, 3196, 3230, 3264, 3305, 3346, 3387, 3421, 3455, 3489, 3523, 3557, 3591, 3625, 3659, 3700, 3734, 3771, 3812, 3853, 3887, 3921, 3958, 3995, 4032, 4066, 4103, 4140, 4174, 4215, 4256, 4290, 4324, 4358 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-release-19-qualification-grant-gaps.dev.json | 13, 22, 31, 40, 49, 58, 67, 77, 86, 95, 104, 113, 122, 131, 140, 149, 158, 168, 177, 186, 196, 205, 214, 223, 232, 242, 252 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-release-19-workflow.dev.json | 264, 462, 660, 858, 1056, 1256, 1455, 1656, 1858, 2060, 2262, 2471, 2673, 2875, 3296, 3466, 3665, 3864, 4063, 4262, 4461, 4660, 4859, 5065, 5264, 5463, 5669, 5866, 6062, 6261, 6462, 7587, 7787, 7988, 8190, 8392, 8594, 8796, 9559, 9769, 9976, 10182 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-release-20-workflow.dev.json | 357, 650, 943, 1236, 1529, 1824, 2118, 2414, 2711, 3008, 3305, 3609, 3906, 4203, 4814, 5079, 5373, 5667, 5961, 6255, 6549, 6843, 7137, 7438, 7732, 8026, 8327, 8619, 8910, 9204, 9500, 11195, 11490, 11786, 12083, 12380, 12677, 12974, 14117, 14422, 14724, 15025 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-release-20-workflow.pre-head-correction.dev.json | 353, 646, 939, 1232, 1525, 1820, 2114, 2410, 2707, 3004, 3301, 3605, 3902, 4199, 4810, 5075, 5369, 5663, 5957, 6251, 6545, 6839, 7133, 7434, 7728, 8022, 8323, 8615, 8906, 9200, 9496, 11191, 11486, 11782, 12079, 12376, 12673, 12970, 14113, 14418, 14720, 15021 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-request-native-candidate-20260912.json | 102, 110, 119, 126, 188, 197 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-reset-runtime.graph.dev.json | 165, 173, 181, 189, 197, 205, 213, 221, 229, 237, 245, 253, 261, 269, 277, 285, 293, 301, 309, 317, 325, 333, 341, 349, 357, 365, 373, 381, 389, 397, 405, 413, 421, 429, 437, 445, 453, 461, 469, 477, 485, 493, 1067, 1080, 1093, 1106, 1119, 1132, 1145, 1158, 1171, 1184, 1197, 1210, 1223, 1236, 1249, 1262, 1275, 1288, 1301, 1314, 1327, 1340, 1353, 1366, 1379, 1392, 1405, 1418, 1431, 1444, 1457, 1470, 1483, 1496, 1509, 1522, 1535, 1548, 1561, 1574, 1587, 1600, 1806, 1815, 1824, 1833, 1842, 1851, 1861, 1871, 1881, 1891, 1901, 1911, 1921, 1931, 1941, 1951, 1961, 1971, 1981, 1991, 2001, 2011, 2021, 2031, 2041, 2051, 2061, 2070, 2079, 2089, 2099, 2109, 2119, 2129, 2139, 2149, 2159, 2169, 2179, 2189, 2199, 2209, 2779, 2788, 2797, 2806, 2815, 2824, 2834, 2844, 2854, 2864, 2874, 2884, 2894, 2904, 2914, 2924, 2934, 2944, 2954, 2964, 2974, 2984, 2994, 3004, 3014, 3024, 3034, 3043, 3052, 3062, 3072, 3082, 3092, 3102, 3112, 3122, 3132, 3142, 3152, 3162, 3172, 3182, 3899, 3959, 3994, 4029, 4121, 4125, 4129, 4133, 4137, 4141, 4145, 4149, 4153, 4157, 4161, 4165, 4169, 4173, 4177, 4181, 4185, 4189, 4193, 4197, 4201, 4205, 4209, 4213, 4217, 4221, 4225, 4229, 4233, 4237, 4241, 4245, 4249, 4253, 4257, 4261, 4265, 4269, 4273, 4277, 4281, 4285, 5690, 5699, 5708, 5717, 5726, 5735, 5745, 5755, 5765, 5775, 5785, 5795, 5805, 5815, 5825, 5835, 5845, 5855, 5865, 5875, 5885, 5895, 5905, 5915, 5925, 5935, 5945, 5954, 5963, 5973, 5983, 5993, 6003, 6013, 6023, 6033, 6043, 6053, 6063, 6073, 6083, 6093, 6810, 6870, 6905, 6940, 7032, 7036, 7040, 7044, 7048, 7052, 7056, 7060, 7064, 7068, 7072, 7076, 7080, 7084, 7088, 7092, 7096, 7100, 7104, 7108, 7112, 7116, 7120, 7124, 7128, 7132, 7136, 7140, 7144, 7148, 7152, 7156, 7160, 7164, 7168, 7172, 7176, 7180, 7184, 7188, 7192, 7196 |
+| `permissionCode` | runtime | governance/policy/reviews/business-partner-target-read-grants.proposal.dev.json | 127, 137, 147, 157, 167, 177, 187, 197, 207, 217, 227, 237, 247, 257, 267, 277, 287, 297, 307, 317, 327, 337, 347, 357, 367, 377, 387 |
+| `permissionCode` | runtime | packages/contracts/platform/entity-list/src/experience.ts | 21, 215 |
+| `permissionCode` | runtime | packages/contracts/platform/entity-list/src/standard-views.ts | 17, 58 |
+| `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/business-partner-case.v1.json | 14, 23, 32, 41, 50, 59, 68, 77, 86 |
+| `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/business-partner.v1.json | 14, 23, 32, 41, 50, 59, 68, 78, 88, 98, 108, 118, 128, 138, 148, 158, 168, 178, 188, 198, 208, 218, 228, 238, 248, 258, 268, 278, 288, 297, 306, 316, 326, 335, 344, 353, 362, 371, 381, 391, 401, 411, 421, 431, 441, 451, 461, 471, 481, 491, 501 |
+| `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/company-invoice.v1.json | 14, 23, 33, 43 |
+| `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/independent-document.v1.json | 14, 23, 32 |
 | `permissionCode` | ui | packages/planes/neon/business-partner/src/360/components/network-section.tsx | 222 |
-| `permissionCode` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 21, 137 |
+| `permissionCode` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 138, 1328, 1329 |
 | `permissionCode` | runtime | packages/platform/shell/work-inbox/src/index.ts | 8, 15 |
-| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 20 |
-| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/metadata-records-vertical.test.ts | 35, 36, 37, 38, 40 |
+| `permissionCode` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/attachment-admission-qualification.mts | 55 |
+| `permissionCode` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-qualification.mts | 418, 425, 498 |
+| `permissionCode` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval-qualification.mts | 63, 89, 133 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 83, 84, 91, 95 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/atlas-attachment-knowledge.test.ts | 75, 126, 140 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 21, 25 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/atlas-semantic-index.test.ts | 9, 23 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts | 83, 88, 89 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 53, 90, 109, 152, 191, 219, 243, 254, 266, 301, 320, 331, 337, 356, 361, 400, 453, 528, 532, 544, 586, 605, 628, 640, 662 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-backend-intents.test.ts | 29, 33 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-backend-mapping.test.ts | 29, 33, 140, 159, 182 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-case-authority.test.ts | 28 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-company-native-authority.test.ts | 36, 43 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts | 23, 24, 40, 59, 67, 74, 91, 110 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-read-policy.test.ts | 10, 15, 18, 23, 37, 46, 58, 67, 72, 104, 108, 137 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-reveal-policy.test.ts | 11, 20, 31, 46, 95, 100, 108, 134 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 106 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/finance-http-review.test.ts | 186 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 163, 164 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 24, 26, 28, 33, 48 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 42, 43, 71 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5, 10, 13, 17, 22, 27 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/metadata-records-vertical.test.ts | 35, 36, 37, 38, 40, 62 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts | 22 |
-| `permissionCode` | route | server/apps/platform-host/src/composition/finance-routes.ts | 9 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 512, 817, 872 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1442, 1448, 2210, 2216, 2228, 2237, 2250, 2263, 2271, 2290, 2292, 2303, 2345, 2356, 4496 |
-| `permissionCode` | ddl | server/db/ddl/common/authz/07_functions.sql | 1720, 1721, 1722, 1723, 1724, 1732, 1750, 1764 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts | 100, 112, 234, 274, 281, 312, 329, 338 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/atlas-document-grounding.ts | 84, 137, 180 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/atlas-semantic-index.ts | 57, 141, 312, 339, 359, 363 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 4, 22, 30, 45, 56, 68, 78, 94, 102, 104 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/bank-directory-authorizer.ts | 10, 14, 15, 19 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-action-runtime.ts | 22, 45 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 126, 209, 212, 244, 251, 257, 269, 272, 279, 285, 298, 301, 308, 324, 332, 528, 531 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-backend-mapping.ts | 25, 28, 29, 56, 60, 61, 72, 76, 97, 149, 155, 174, 179, 181, 183, 210, 214, 215 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-bound-import.ts | 9, 28 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-case-authority.ts | 20 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-case-runtime.ts | 17, 42 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 4, 9, 10, 16, 22, 25, 29, 34, 35 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-definition-authorizer.ts | 6, 7, 8, 10 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-export-runtime.ts | 16 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-import-runtime.ts | 17, 46, 93 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-permission-transitions.ts | 151 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-qualification-runtime.ts | 23 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-read-runtime.ts | 33, 43, 48 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-reveal-runtime.ts | 15 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-target-read-policy.ts | 20, 32, 66, 67 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/entity-case-backend-mapping.ts | 22, 25 |
+| `permissionCode` | route | server/apps/platform-host/src/composition/finance-routes.ts | 105 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/local-graph-preview.ts | 57, 152, 270 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/meta-entity-authoring-authorizer.ts | 6, 7, 8, 12, 14, 17 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 167, 188, 522, 830, 897 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-services.ts | 2124, 2130, 3030, 3043, 3050, 3054, 3059, 3087, 3098, 3104, 3116, 3125, 3138, 3151, 3159, 3173, 3181, 3202, 3205, 3206, 3217, 3260, 3271, 3434, 3439, 3603, 3625, 4553, 5737, 5815, 5952, 6602 |
+| `permissionCode` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 204 |
+| `permissionCode` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 442 |
+| `permissionCode` | ddl | server/db/ddl/common/authz/07_functions.sql | 1720, 1721, 1722, 1723, 1724, 1732, 1750, 1765 |
+| `permissionCode` | runtime | server/db/migrations/20260910_operation_projection_release_identity.sql | 18, 19, 20, 21, 22, 30, 48, 63 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts | 14, 31 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/exact-scope-compatibility.test.ts | 15 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/inventory-promotion.test.ts | 14, 40, 51 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/mesh-authorization-inventory.test.ts | 37, 149 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/neon-authorization-inventory.test.ts | 37 |
-| `permissionCode` | test | server/db/scripts/__tests__/provisioning/development-business-partner-runtime.test.ts | 22, 26 |
+| `permissionCode` | test | server/db/scripts/__tests__/provisioning/development-business-partner-runtime.test.ts | 25, 29 |
 | `permissionCode` | tool | server/db/scripts/checks/seeds/authorization-release-gates.ts | 22, 34, 48, 52, 96, 104, 106, 109, 111, 112, 113, 115, 127, 128, 129, 130, 143, 151, 152, 161, 417, 418, 426, 437, 438, 439, 454, 461, 462, 464, 475, 476, 477, 481, 482 |
 | `permissionCode` | tool | server/db/scripts/operations/studio/provision-meta-entity-authority.ts | 143, 151, 156, 158 |
 | `permissionCode` | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 648, 705, 706, 712, 713 |
-| `permissionCode` | tool | server/db/scripts/provisioning/provision-development-business-partner-runtime.ts | 56, 95, 104 |
+| `permissionCode` | tool | server/db/scripts/provisioning/config/business-partner-request-standard-views.json | 44 |
+| `permissionCode` | tool | server/db/scripts/provisioning/provision-development-business-partner-runtime.ts | 56, 96, 105 |
 | `permissionCode` | tool | server/db/scripts/provisioning/provision-development-phase1-list-runtimes.ts | 18, 43, 66, 68, 77, 80 |
 | `permissionCode` | tool | server/db/scripts/provisioning/provision-three-tenant-demo-authorization.ts | 126, 128, 129, 136, 139, 140 |
+| `permissionCode` | tool | server/db/scripts/provisioning/publish-development-list-experience.ts | 125, 265, 343, 347, 349, 367, 403, 405, 520, 522, 584, 602, 612 |
+| `permissionCode` | tool | server/db/scripts/provisioning/publish-development-record-presentation.ts | 121, 124, 135, 136, 144, 152 |
 | `permissionCode` | tool | server/db/scripts/provisioning/three-plane-model.ts | 179 |
 | `permissionCode` | tool | server/db/scripts/reports/neon-authorization-quality.ts | 585, 610 |
 | `permissionCode` | tool | server/db/scripts/seed/compile-final-authorization-seed-packs.ts | 15 |
@@ -1345,189 +2130,551 @@ Capture DDLs:
 | `permissionCode` | tool | server/db/scripts/seed/mesh-authorization-inventory-model.ts | 44, 59, 232, 233, 234, 235, 237, 269, 372 |
 | `permissionCode` | tool | server/db/scripts/seed/neon-authorization-inventory-model.ts | 37, 52, 218, 219, 220, 221, 223, 257, 350 |
 | `permissionCode` | tool | server/db/scripts/seed/tenant-authority-projection.ts | 67, 144, 145, 151, 252 |
-| `permissionCode` | runtime | server/db/seed/contracts/authorization/catalog/mesh/scope-compatibility.v1.json | 8, 25, 42, 59, 76, 93, 110, 127, 140, 153, 170, 187, 204, 221, 238, 255, 272, 289, 310, 331, 352, 373, 386, 399, 412, 425, 442, 459, 476, 493, 510, 527, 544 |
+| `permissionCode` | test | server/db/scripts/tests/integration/identity-replay-live.mjs | 464, 465, 471, 472 |
+| `permissionCode` | runtime | server/db/seed/contracts/authorization/catalog/mesh/scope-compatibility.v1.json | 8, 21, 38, 55, 72, 89, 106, 123, 140, 153, 166, 183, 200, 217, 234, 251, 268, 285, 302, 323, 344, 365, 386, 399, 412, 425, 438, 455, 472, 489, 506, 523, 540, 557 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/catalog/neon/scope-compatibility.v1.json | 8, 21, 34, 43, 52, 61, 70, 79, 92, 105, 118, 131, 140, 161, 174, 191, 208, 225, 242, 259, 276, 293, 310, 327 |
-| `permissionCode` | runtime | server/db/seed/contracts/authorization/catalog/studio/scope-compatibility.v1.json | 8, 17, 26, 35, 44, 53, 62, 71, 84, 97, 110, 123, 136, 149, 162, 175, 188, 201, 214, 227, 240, 253, 266, 275, 284, 297 |
-| `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json | 1498, 1518, 1538, 1558, 1578, 1598, 1618, 1638, 1658, 1678, 1698, 1718, 1768, 1812, 1862, 1912, 1962, 2012, 2072, 2080, 2088, 2098, 2113, 2121, 2129, 2137, 2146 |
+| `permissionCode` | runtime | server/db/seed/contracts/authorization/catalog/studio/scope-compatibility.v1.json | 8, 17, 26, 35, 44, 53, 62, 71, 80, 93, 106, 119, 132, 145, 158, 171, 184, 197, 210, 223, 236, 249, 262, 275, 284, 293, 306 |
+| `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json | 1654, 1674, 1694, 1714, 1734, 1754, 1774, 1794, 1814, 1834, 1854, 1874, 1924, 1968, 2018, 2068, 2118, 2168, 2228, 2236, 2244, 2254, 2269, 2277, 2285, 2293, 2302 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/mesh/promotion/qualification-template.v1.json | 7, 26, 43, 60, 77, 94, 111, 130, 149, 166, 185, 202, 221, 238, 257, 274, 293, 312 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/mesh/reviewed-slices.v1.json | 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28, 29, 30, 31, 32, 33, 34, 42, 43, 44, 45, 53, 54, 55, 56, 57 |
-| `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json | 6464, 6481, 6498, 6515, 6532, 6549, 6566, 6583, 6600, 6617, 6634, 6651, 6668, 6685, 6702, 6719, 6736, 6753, 6770, 6787, 6804, 6821, 6838, 6855, 6872, 6889, 6906, 6923, 6940, 6957, 6974, 6991, 7008, 7025, 7042, 7059, 7076, 7093, 7112, 7131, 7148, 7165, 7182, 7211, 7221, 7237, 7245, 7255, 7271, 7279, 7288, 7304, 7312, 7321, 7330, 7346, 7354, 7363, 7372, 7388, 7396, 7405, 7414 |
+| `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json | 6608, 6625, 6642, 6659, 6676, 6693, 6710, 6727, 6744, 6761, 6778, 6795, 6812, 6829, 6846, 6863, 6880, 6897, 6914, 6931, 6948, 6965, 6982, 6999, 7016, 7033, 7050, 7067, 7084, 7101, 7118, 7135, 7152, 7169, 7186, 7203, 7220, 7237, 7256, 7275, 7292, 7309, 7326, 7355, 7365, 7381, 7389, 7399, 7415, 7423, 7432, 7448, 7456, 7465, 7474, 7490, 7498, 7507, 7516, 7532, 7540, 7549, 7558 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/neon/promotion-qualification.v1.json | 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/neon/promotion/operation-bindings.v1.candidate.json | 11, 19, 27, 35, 43, 51, 59, 67, 75, 83, 91, 99, 107, 115, 123, 131, 139, 147, 155, 163, 171, 179, 187, 195, 203, 211, 219, 227, 235, 243, 251, 259, 267, 275, 283, 291, 299, 307, 315, 323, 331, 339, 347 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/neon/promotion/qualification-template.v1.json | 7, 26, 43, 60, 79, 96, 115, 132, 149, 168, 185, 202, 221, 238, 257, 276, 293, 312, 329, 348, 365, 384, 403, 420, 439, 456, 475, 492, 511, 530, 547, 564, 581, 600, 617, 636, 653, 670, 689, 708, 725, 744, 761 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/neon/promotion/scope-compatibility.v1.candidate.json | 8, 21, 34, 43, 52, 61, 70, 79, 92, 105, 118, 131, 140, 153, 166, 179, 192, 205, 218, 231, 244, 257, 270, 283, 296, 309, 330, 343, 356, 373, 386, 399, 412, 425, 438, 451, 464, 477, 490, 503, 516, 529, 542, 559, 572, 581, 594, 607, 620, 637, 650, 663, 680, 697, 714, 731, 748, 765, 782, 799, 816, 833, 850, 867, 884 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/neon/reviewed-slices.v1.json | 54, 55, 56, 57, 58, 60, 61, 62, 63, 64, 65, 66, 67, 69, 70, 71, 72, 73, 74, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 109, 110, 119, 120, 121, 129, 130, 131, 139, 140, 141, 142, 150, 151, 152, 153, 161, 162, 163, 164 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/operation-lifecycle-contract.v1.json | 18, 39 |
-| `permissionCode` | runtime | server/db/seed/packs/authorization-v2/mesh/seed-pack.v1.json | 570, 587, 604, 621, 638, 655, 672, 689, 702, 715, 732, 749, 766, 783, 800, 817, 834, 851, 872, 893, 914, 935, 948, 961, 974, 987, 1004, 1021, 1038, 1055, 1072, 1089, 1106 |
+| `permissionCode` | runtime | server/db/seed/packs/authorization-v2/mesh/seed-pack.v1.json | 586, 599, 616, 633, 650, 667, 684, 701, 718, 731, 744, 761, 778, 795, 812, 829, 846, 863, 880, 901, 922, 943, 964, 977, 990, 1003, 1016, 1033, 1050, 1067, 1084, 1101, 1118, 1135 |
 | `permissionCode` | runtime | server/db/seed/packs/authorization-v2/neon/seed-pack.v1.json | 426, 439, 452, 461, 470, 479, 488, 497, 510, 523, 536, 549, 558, 579, 592, 609, 626, 643, 660, 677, 694, 711, 728, 745 |
-| `permissionCode` | runtime | server/db/seed/packs/authorization-v2/studio/seed-pack.v1.json | 458, 467, 476, 485, 494, 503, 512, 521, 534, 547, 560, 573, 586, 599, 612, 625, 638, 651, 664, 677, 690, 703, 716, 725, 734, 747 |
+| `permissionCode` | runtime | server/db/seed/packs/authorization-v2/studio/seed-pack.v1.json | 474, 483, 492, 501, 510, 519, 528, 537, 546, 559, 572, 585, 598, 611, 624, 637, 650, 663, 676, 689, 702, 715, 728, 741, 750, 759, 772 |
 | `permissionCode` | runtime | server/packages/contracts/ai/src/experience-configuration.ts | 29 |
-| `permissionCode` | runtime | server/packages/contracts/ai/src/operations.ts | 27, 30, 32 |
-| `permissionCode` | runtime | server/packages/contracts/ai/src/runtime-schemas.ts | 6 |
-| `permissionCode` | runtime | server/packages/contracts/auth/src/authorization.ts | 22, 33, 40, 53, 96 |
-| `permissionCode` | runtime | server/packages/contracts/finance/src/foundation.ts | 102 |
+| `permissionCode` | runtime | server/packages/contracts/ai/src/operations.ts | 27, 30, 38 |
+| `permissionCode` | runtime | server/packages/contracts/ai/src/runtime-schemas.ts | 8 |
+| `permissionCode` | runtime | server/packages/contracts/auth/src/authorization.ts | 22, 33, 40, 54, 117 |
+| `permissionCode` | runtime | server/packages/contracts/finance/src/foundation.ts | 118 |
 | `permissionCode` | runtime | server/packages/contracts/finance/src/ports.ts | 79 |
 | `permissionCode` | runtime | server/packages/contracts/master-data/src/business-partner-360-network.ts | 25 |
 | `permissionCode` | runtime | server/packages/contracts/meta-entity-authoring/src/model.ts | 21, 32 |
-| `permissionCode` | runtime | server/packages/contracts/metadata/src/descriptors.ts | 131, 137, 147 |
+| `permissionCode` | test | server/packages/contracts/metadata/src/__tests__/entity-authorization.test.ts | 28, 30, 67, 69, 81, 86 |
+| `permissionCode` | test | server/packages/contracts/metadata/src/__tests__/entity-canonical-read-admission.test.ts | 9, 10, 76, 115, 124 |
+| `permissionCode` | runtime | server/packages/contracts/metadata/src/descriptors.ts | 226, 232, 242 |
+| `permissionCode` | runtime | server/packages/contracts/metadata/src/entity-authorization.ts | 19, 69, 144, 154, 332 |
+| `permissionCode` | runtime | server/packages/contracts/metadata/src/entity-canonical-read-admission.ts | 84 |
 | `permissionCode` | runtime | server/packages/contracts/records/src/mutation.ts | 70 |
 | `permissionCode` | runtime | server/packages/contracts/workflow/src/work-items.ts | 85 |
-| `permissionCode` | runtime | server/packages/planes/mesh/src/business-partner-bank-disclosure.ts | 58 |
+| `permissionCode` | runtime | server/packages/planes/mesh/src/business-partner-bank-disclosure.ts | 806, 813, 825 |
+| `permissionCode` | runtime | server/packages/planes/mesh/src/business-partner-network-exchange.ts | 629, 636, 644 |
 | `permissionCode` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 6 |
-| `permissionCode` | runtime | server/packages/planes/mesh/src/business-partner-profile-publication.ts | 41 |
-| `permissionCode` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 945, 948, 955, 964 |
-| `permissionCode` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 20 |
-| `permissionCode` | runtime | server/packages/planes/neon/src/business-partner-profile-match.ts | 79 |
+| `permissionCode` | runtime | server/packages/planes/mesh/src/business-partner-profile-publication.ts | 759, 762, 766 |
+| `permissionCode` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 507, 508, 871, 1135, 1138, 1145, 1154 |
+| `permissionCode` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 23 |
+| `permissionCode` | runtime | server/packages/planes/neon/src/business-partner-profile-match.ts | 176 |
 | `permissionCode` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 23 |
-| `permissionCode` | runtime | server/packages/planes/neon/src/business-partner-profile-projection.ts | 132 |
-| `permissionCode` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 11 |
-| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/deterministic.ts | 187 |
-| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts | 98 |
-| `permissionCode` | route | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 17 |
+| `permissionCode` | runtime | server/packages/planes/neon/src/business-partner-profile-projection.ts | 147 |
+| `permissionCode` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 27 |
+| `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/entity-authorization.test.ts | 46, 49 |
+| `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/graph-editor-routes.test.ts | 24, 25 |
+| `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/graph-preview.test.ts | 227 |
+| `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/learning-route-scope.test.ts | 11 |
+| `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/list-experience.test.ts | 55, 84 |
+| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/deterministic.ts | 1011 |
+| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/entity-authorization.ts | 69 |
+| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/graph-dependencies.ts | 42 |
+| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts | 894, 911 |
+| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/learning-inbox.ts | 432, 436 |
+| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/list-experience.ts | 92 |
+| `permissionCode` | route | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 202, 280 |
 | `permissionCode` | runtime | server/packages/planes/studio/onboarding/src/maintenance.ts | 23 |
 | `permissionCode` | runtime | server/packages/planes/studio/src/catalog-metadata-reader.ts | 26 |
 | `permissionCode` | test | server/packages/planes/studio/src/metadata-draft-import.test.ts | 3 |
 | `permissionCode` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 24 |
+| `permissionCode` | test | server/packages/platform/ai/src/__tests__/entity-record-tool.test.ts | 20 |
 | `permissionCode` | test | server/packages/platform/ai/src/__tests__/experience-configuration.test.ts | 6 |
 | `permissionCode` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 19 |
-| `permissionCode` | route | server/packages/platform/ai/src/atlas-admin-routes.ts | 11 |
-| `permissionCode` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 28, 83 |
-| `permissionCode` | runtime | server/packages/platform/ai/src/knowledge.ts | 83, 172, 191, 197, 354 |
+| `permissionCode` | test | server/packages/platform/ai/src/__tests__/repository-review.test.ts | 185 |
+| `permissionCode` | test | server/packages/platform/ai/src/__tests__/retrieval-f5.test.ts | 27, 33, 143, 149 |
+| `permissionCode` | test | server/packages/platform/ai/src/__tests__/route-review.test.ts | 191 |
+| `permissionCode` | route | server/packages/platform/ai/src/atlas-admin-routes.ts | 13 |
+| `permissionCode` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 15 |
+| `permissionCode` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 29, 84 |
+| `permissionCode` | runtime | server/packages/platform/ai/src/knowledge.ts | 96, 224, 243, 278, 284, 516 |
 | `permissionCode` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
-| `permissionCode` | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 73 |
-| `permissionCode` | test | server/packages/platform/control-admin/src/authorization-management-service.test.ts | 70, 96 |
-| `permissionCode` | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 85, 86 |
-| `permissionCode` | runtime | server/packages/platform/control-admin/src/control-services.ts | 145 |
-| `permissionCode` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 48 |
-| `permissionCode` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 434, 436 |
-| `permissionCode` | runtime | server/packages/platform/control-admin/src/runtime-command-service.ts | 343, 344 |
-| `permissionCode` | test | server/packages/platform/experience/src/service.test.ts | 100, 113, 125, 132 |
-| `permissionCode` | runtime | server/packages/platform/experience/src/service.ts | 696 |
-| `permissionCode` | runtime | server/packages/platform/governance/src/compliance/legal-hold-service.ts | 71 |
-| `permissionCode` | runtime | server/packages/platform/governance/src/compliance/report-pack-service.ts | 96 |
-| `permissionCode` | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 128 |
-| `permissionCode` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 46 |
+| `permissionCode` | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 470, 472, 476 |
+| `permissionCode` | test | server/packages/platform/control-admin/src/authorization-management-service.test.ts | 160, 355 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 236, 238, 246, 248 |
+| `permissionCode` | test | server/packages/platform/control-admin/src/bank-validation.test.ts | 104, 105, 106 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/bank-validation.ts | 8, 9 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/connector-control.ts | 10 |
+| `permissionCode` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 50 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 460, 462 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/entitlement-control.ts | 9, 10 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/feature-control.ts | 30, 33 |
+| `permissionCode` | test | server/packages/platform/control-admin/src/lookup-control.test.ts | 133 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/lookup-control.ts | 23, 26 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/parameter-control.ts | 30, 33 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/rounding-control.ts | 36 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/runtime-command-service.ts | 827, 829 |
+| `permissionCode` | test | server/packages/platform/experience/src/service.test.ts | 155, 168, 180, 187 |
+| `permissionCode` | runtime | server/packages/platform/experience/src/service.ts | 709 |
+| `permissionCode` | runtime | server/packages/platform/governance/src/compliance/legal-hold-service.ts | 78 |
+| `permissionCode` | runtime | server/packages/platform/governance/src/compliance/report-pack-service.ts | 366 |
+| `permissionCode` | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 142 |
+| `permissionCode` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 52 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/__fixtures__/authorization-golden-corpus.v1.json | 13, 14, 19, 21, 22, 28, 31, 32, 38, 41, 42, 48, 50, 55, 57, 62, 63, 68, 70, 75, 77, 82, 88, 90, 95, 96, 101, 102 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 9, 32 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/iam-service.test.ts | 51 |
+| `permissionCode` | test | server/packages/platform/iam/src/__tests__/identity-replay-routes.test.ts | 75 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 12, 18, 23, 36, 49, 53, 58, 69, 70, 74, 76, 78, 80, 86, 87, 89, 92 |
-| `permissionCode` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 73 |
+| `permissionCode` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 80, 89 |
+| `permissionCode` | test | server/packages/platform/iam/src/__tests__/shadow-authorizer.test.ts | 4 |
+| `permissionCode` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 22, 34 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/identity-provisioning-service.ts | 24 |
-| `permissionCode` | runtime | server/packages/platform/iam/src/identity-saga.ts | 388 |
-| `permissionCode` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 256, 258, 259, 260, 270, 294, 297, 302, 316, 317, 321, 333, 334 |
-| `permissionCode` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 4, 10, 19, 27, 30, 33, 36, 39, 41, 54, 59, 65, 73, 76 |
-| `permissionCode` | runtime | server/packages/platform/iam/src/provisioning-vertical.ts | 22, 51, 52 |
+| `permissionCode` | runtime | server/packages/platform/iam/src/identity-replay-approval.ts | 66 |
+| `permissionCode` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 318, 325, 327, 333, 357, 395, 409, 417, 436, 440, 453, 472, 483, 524, 527 |
+| `permissionCode` | runtime | server/packages/platform/iam/src/local-graph-bindings.ts | 16, 27, 28, 29, 41 |
+| `permissionCode` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 12, 29, 38, 57, 74, 77, 80, 84, 92, 96, 128, 142, 151, 173, 178, 245, 264, 267, 273, 275, 279, 280, 281, 297 |
+| `permissionCode` | runtime | server/packages/platform/iam/src/provisioning-vertical.ts | 22, 51, 55, 56 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/trustiam-authority.ts | 117 |
-| `permissionCode` | route | server/packages/platform/jobs/src/job-admin-routes.ts | 463, 465 |
+| `permissionCode` | route | server/packages/platform/jobs/src/job-admin-routes.ts | 469, 471 |
+| `permissionCode` | test | server/packages/platform/metadata/src/__tests__/entity-ai.test.ts | 5 |
+| `permissionCode` | test | server/packages/platform/metadata/src/__tests__/entity-authorization.test.ts | 36, 38 |
 | `permissionCode` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 5 |
-| `permissionCode` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 27, 53 |
+| `permissionCode` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 34, 38, 87 |
 | `permissionCode` | test | server/packages/platform/metadata/src/distributed-descriptor-cache.test.ts | 16 |
-| `permissionCode` | runtime | server/packages/platform/notifications/src/notification-operations.ts | 47 |
-| `permissionCode` | route | server/packages/platform/policy/src/policy-routes.ts | 29, 68 |
-| `permissionCode` | runtime | server/packages/platform/search/src/document-search-service.ts | 3 |
+| `permissionCode` | runtime | server/packages/platform/metadata/src/native-runtime-projection.ts | 96, 100, 118 |
+| `permissionCode` | runtime | server/packages/platform/notifications/src/notification-operations.ts | 227, 229, 233 |
+| `permissionCode` | test | server/packages/platform/policy/src/__tests__/policy-routes.test.ts | 130 |
+| `permissionCode` | route | server/packages/platform/policy/src/policy-routes.ts | 39, 79 |
+| `permissionCode` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 28, 34, 43 |
+| `permissionCode` | runtime | server/packages/platform/search/src/document-search-service.ts | 17, 51 |
+| `permissionCode` | test | server/packages/platform/workflow/src/__tests__/workflow-routes.test.ts | 61 |
 | `permissionCode` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 82 |
-| `permissionCode` | runtime | server/packages/platform/workflow/src/sla-automation.ts | 8, 11, 13 |
-| `permissionCode` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 128, 129 |
-| `permissionCode` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 5 |
-| `permissionCode` | route | server/packages/services/attachments/src/attachment-routes.ts | 37, 38 |
+| `permissionCode` | runtime | server/packages/platform/workflow/src/sla-automation.ts | 9, 12, 14 |
+| `permissionCode` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 140, 141 |
+| `permissionCode` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 147, 156, 160, 219, 261, 262 |
+| `permissionCode` | route | server/packages/services/attachments/src/attachment-routes.ts | 333, 340, 348, 361, 383, 385 |
+| `permissionCode` | test | server/packages/services/attachments/src/retrieval-admission.test.ts | 23, 77 |
+| `permissionCode` | runtime | server/packages/services/attachments/src/retrieval-admission.ts | 17, 103 |
 | `permissionCode` | runtime | server/packages/services/content/src/content-service.ts | 4 |
-| `permissionCode` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
-| `permissionCode` | runtime | server/packages/services/documents/src/document-service.ts | 34, 120 |
+| `permissionCode` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 37, 79, 101, 105, 116, 117 |
+| `permissionCode` | runtime | server/packages/services/documents/src/document-service.ts | 35, 128 |
+| `permissionCode` | runtime | server/packages/services/finance/src/ledger/business-partner-journal-activity.ts | 31 |
 | `permissionCode` | runtime | server/packages/services/finance/src/ledger/gl-posting-service.ts | 17 |
 | `permissionCode` | test | server/packages/services/finance/src/shared/finance-foundation.test.ts | 83 |
 | `permissionCode` | runtime | server/packages/services/finance/src/shared/permission-checker.ts | 5, 6 |
 | `permissionCode` | runtime | server/packages/services/finance/src/shared/posting-guard.ts | 9 |
-| `permissionCode` | route | server/packages/services/integration/src/integration-routes.ts | 2 |
+| `permissionCode` | test | server/packages/services/integration/src/__tests__/integration-routes.test.ts | 186 |
+| `permissionCode` | route | server/packages/services/integration/src/integration-routes.ts | 52 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-commercial-controls.test.ts | 9 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-explainability.test.ts | 4 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-mesh-network-adapter.test.ts | 5, 7 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-policy.test.ts | 17, 103 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-production-integrations.test.ts | 8 |
-| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 6, 14 |
-| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 45 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-resources.test.ts | 132 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 280, 281, 356, 359, 657, 658 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 467, 495, 498 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 8 |
-| `permissionCode` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 28, 155 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-invitation-service.test.ts | 13 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-provider-projection.test.ts | 34, 72, 86 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-reveal-affordances.test.ts | 23, 35, 44, 81 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-reveal-revocation.test.ts | 40, 43, 157 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 29, 208 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 61 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 1178, 1345, 1346, 1357, 1445, 1456, 1465, 1479, 1544 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/supplier-workforce-command-guard.test.ts | 33 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/workforce-service.test.ts | 16 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts | 8, 11, 35 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-policy.ts | 15, 18, 20 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 30, 69, 70, 73, 77, 94 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1096, 1101, 1108 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-invitation-service.ts | 149 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 309 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-policy.ts | 67, 82, 101, 112, 136, 151, 167 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 367, 394, 659, 1014, 1075, 1243, 1356, 1479, 1504, 1934, 2127, 2138 |
+| `permissionCode` | test | server/packages/services/master-data/src/business-partner-atlas-insights.test.ts | 9 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-atlas-insights.ts | 24 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-company-pilot.ts | 56, 59, 113, 119, 129 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1293, 1298, 1300, 1306 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-invitation-service.ts | 171 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-provider-projection.ts | 223, 542, 612 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 312, 409, 1743, 1748, 1753, 1761, 1766 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 88, 93, 105 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/kysely-business-partner-case-repository.ts | 345 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/kysely-business-partner-case-repository.ts | 2048 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/kysely-workforce-request-repository.ts | 61 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/services.ts | 124 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/master-data-authority.ts | 71, 75, 79, 82, 87 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/supplier-workforce-command-guard.ts | 25, 39, 44, 48 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/supplier-workforce-requisition-service.ts | 18 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/verification-authority.ts | 19 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/worker-engagement-iam-service.ts | 45 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/worker-engagement-lifecycle-service.ts | 119, 166 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/workforce-service.ts | 43 |
-| `permissionCode` | route | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 8 |
-| `permissionCode` | route | server/packages/services/publication/src/business-partner-definition-routes.ts | 20 |
+| `permissionCode` | test | server/packages/services/publication/src/__tests__/business-partner-company-case-contract.test.ts | 30, 103, 112, 136 |
+| `permissionCode` | test | server/packages/services/publication/src/__tests__/document-collection-compiler.test.ts | 46 |
+| `permissionCode` | test | server/packages/services/publication/src/__tests__/entity-authorization-compiler.test.ts | 67, 76, 144, 193, 418, 608 |
+| `permissionCode` | route | server/packages/services/publication/src/bank-directory-routes.ts | 84 |
+| `permissionCode` | route | server/packages/services/publication/src/business-partner-case-contract-routes.ts | 273, 279 |
+| `permissionCode` | runtime | server/packages/services/publication/src/business-partner-company-case-contract.ts | 16, 119, 131, 187 |
+| `permissionCode` | route | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 10, 11 |
+| `permissionCode` | route | server/packages/services/publication/src/business-partner-definition-routes.ts | 293, 299 |
+| `permissionCode` | runtime | server/packages/services/publication/src/document-collection-compiler.ts | 65, 94, 96, 118, 127 |
+| `permissionCode` | runtime | server/packages/services/publication/src/entity-authorization-compiler.ts | 106, 181, 230 |
 | `permissionCode` | route | server/packages/services/publication/src/publication-routes.ts | 136, 138 |
 | `permissionCode` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 10 |
-| `permissionCode` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 18, 38, 39, 46, 47, 113, 119, 141, 146, 150 |
-| `permissionCode` | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 13, 22 |
-| `permissionCode` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 31, 32, 33, 34, 36, 39, 46, 139, 140 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/canonical-read-backend.test.ts | 25, 34, 87, 112, 149, 154, 163, 183 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/canonical-read-diagnostics.test.ts | 25, 34, 87, 112, 163, 207, 226, 240 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/document-collection-read.test.ts | 26 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 51, 96, 97 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 55, 71, 104, 239, 286, 327, 384, 486, 537, 542, 559, 564, 574, 579, 622 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 55, 71, 104 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 18, 38, 39, 46, 47, 113, 119, 141, 146, 150, 190, 195, 199, 234, 236 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/list-context-discovery.test.ts | 9, 20, 33 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/list-experience.test.ts | 31, 59, 73, 124 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 37, 64 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 13, 22, 35, 44, 53 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 32, 33, 34, 35, 37, 40, 47, 140, 141 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/snapshot-service.test.ts | 12, 15, 29 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/standard-views.test.ts | 38 |
 | `permissionCode` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 9, 38, 49 |
 | `permissionCode` | runtime | server/packages/services/records/src/actions/action-service.ts | 12 |
-| `permissionCode` | runtime | server/packages/services/records/src/entity-list-service.ts | 40, 56, 106, 174, 175, 188 |
+| `permissionCode` | runtime | server/packages/services/records/src/entity-authorization.ts | 118, 195, 206 |
+| `permissionCode` | runtime | server/packages/services/records/src/entity-backend-authorizer.ts | 133, 198, 266, 267, 268, 279, 280, 312, 321 |
+| `permissionCode` | runtime | server/packages/services/records/src/entity-list-service.ts | 349, 460, 736, 737, 741, 1080, 1087, 1168, 1169 |
 | `permissionCode` | runtime | server/packages/services/records/src/field-validation.ts | 34, 35 |
 | `permissionCode` | runtime | server/packages/services/records/src/lifecycle-service.ts | 17, 20 |
-| `permissionCode` | runtime | server/packages/services/records/src/mutation-service.ts | 33, 34, 56, 74, 75, 94, 95, 112, 115, 117 |
-| `permissionCode` | runtime | server/packages/services/records/src/query-service.ts | 79, 137, 140, 141 |
-| `permissionCode` | runtime | server/packages/services/records/src/record-read-access.ts | 11, 12, 16, 30, 50 |
-| `permissionCode` | route | server/packages/services/records/src/snapshots/snapshot-routes.ts | 8 |
-| `permissionCode` | runtime | server/packages/services/records/src/transfer/transfer-jobs.ts | 120, 121 |
-| `permissionCode` | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 314, 315 |
+| `permissionCode` | runtime | server/packages/services/records/src/list-context-discovery.ts | 34, 36, 47, 80, 107 |
+| `permissionCode` | runtime | server/packages/services/records/src/list-experience.ts | 31, 32, 43, 99, 111, 125, 133 |
+| `permissionCode` | runtime | server/packages/services/records/src/mutation-service.ts | 34, 35, 57, 61, 76, 77, 97, 98, 115, 118, 120 |
+| `permissionCode` | runtime | server/packages/services/records/src/navigation-context-discovery.ts | 16, 32, 42, 54 |
+| `permissionCode` | runtime | server/packages/services/records/src/query-service.ts | 141, 260, 395, 591, 594, 602 |
+| `permissionCode` | runtime | server/packages/services/records/src/record-read-access.ts | 14, 15, 21, 37, 41, 61, 62, 65 |
+| `permissionCode` | route | server/packages/services/records/src/snapshots/snapshot-routes.ts | 10, 18, 19 |
+| `permissionCode` | runtime | server/packages/services/records/src/snapshots/snapshot-service.ts | 16 |
+| `permissionCode` | runtime | server/packages/services/records/src/standard-views.ts | 57 |
+| `permissionCode` | test | server/packages/services/records/src/transfer/export-preflight.test.ts | 9 |
+| `permissionCode` | runtime | server/packages/services/records/src/transfer/transfer-jobs.ts | 1227, 1229, 1233, 1263, 1268 |
+| `permissionCode` | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 1943, 1945, 1949, 1989, 1994 |
+| `permissionCode` | test | tests/contracts/business-partner-independent-child.test.ts | 28 |
+| `permissionCode` | test | tests/contracts/business-partner-r7-contracts.test.ts | 147 |
 | `permissionCode` | test | tests/contracts/three-plane-list-scope.test.ts | 30 |
 | `permissionCode` | runtime | tests/e2e/acceptance/governed-import-smoke.mjs | 299 |
 | `permissionCode` | runtime | tests/e2e/acceptance/public-record-transfer-smoke.mjs | 304 |
-| `permissionCode` | tool | tooling/scripts/policy/authorization-inventory.ts | 925, 943 |
-| `permissionCodes` | route | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
-| `permissionCodes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 857 |
+| `permissionCode` | tool | tooling/scripts/local-dev/graph-preview.integration.test.mts | 48, 70, 71, 83, 175, 178, 254, 262, 276, 321 |
+| `permissionCode` | tool | tooling/scripts/policy/authorization-inventory.ts | 1112, 1135 |
+| `permissionCode` | tool | tooling/scripts/verification/atlas-baseline-adoption.test.mjs | 32 |
+| `permissionCode` | tool | tooling/scripts/verification/attest-business-partner-shadow.mjs | 49 |
+| `permissionCode` | tool | tooling/scripts/verification/capture-business-partner-causal-evidence.mjs | 24 |
+| `permissionCode` | tool | tooling/scripts/verification/capture-business-partner-release-19-execution-readiness.mts | 21 |
+| `permissionCode` | tool | tooling/scripts/verification/capture-business-partner-reset-catalog-dependencies.mjs | 12, 14 |
+| `permissionCode` | tool | tooling/scripts/verification/entity-authorization/accepted-operation-selection.mjs | 41, 42, 53, 76 |
+| `permissionCode` | tool | tooling/scripts/verification/entity-authorization/accepted-operation-selection.test.mjs | 20, 24, 29 |
+| `permissionCode` | tool | tooling/scripts/verification/entity-authorization/case-runtime-correction.mjs | 24 |
+| `permissionCode` | tool | tooling/scripts/verification/entity-authorization/combined-successor.test.mjs | 5, 9 |
+| `permissionCode` | tool | tooling/scripts/verification/entity-authorization/governed-import-selection.mjs | 21 |
+| `permissionCode` | tool | tooling/scripts/verification/entity-authorization/policy-differences.mjs | 18, 22 |
+| `permissionCode` | tool | tooling/scripts/verification/entity-authorization/policy-differences.test.mjs | 5 |
+| `permissionCode` | tool | tooling/scripts/verification/entity-authorization/publication-plan.mts | 63, 349, 359, 383, 387, 425, 455 |
+| `permissionCode` | tool | tooling/scripts/verification/entity-authorization/publication-plan.test.mts | 24, 112, 279, 287, 295, 320 |
+| `permissionCode` | tool | tooling/scripts/verification/isolated-enter/harness/ai-retrieval.mjs | 47 |
+| `permissionCode` | tool | tooling/scripts/verification/isolated-enter/harness/case-bindings.mjs | 18, 20, 28, 61 |
+| `permissionCode` | tool | tooling/scripts/verification/isolated-enter/harness/import-policy.mjs | 8 |
+| `permissionCode` | tool | tooling/scripts/verification/isolated-enter/prepare-access.mjs | 27 |
+| `permissionCode` | tool | tooling/scripts/verification/isolated-enter/test-document-publication-handoff.mjs | 70 |
+| `permissionCode` | tool | tooling/scripts/verification/isolated-execution/ai-retrieval.mjs | 14 |
+| `permissionCode` | tool | tooling/scripts/verification/isolated-execution/build-image.mjs | 22, 24 |
+| `permissionCode` | tool | tooling/scripts/verification/isolated-execution/case-bindings.mjs | 6, 7, 9, 18 |
+| `permissionCode` | tool | tooling/scripts/verification/isolated-execution/case-bindings.test.mjs | 2, 3, 4, 5 |
+| `permissionCode` | tool | tooling/scripts/verification/isolated-execution/host.mjs | 56 |
+| `permissionCode` | tool | tooling/scripts/verification/isolated-execution/import-policy.mjs | 5 |
+| `permissionCode` | tool | tooling/scripts/verification/isolated-execution/import-policy.test.mjs | 2, 3 |
+| `permissionCode` | tool | tooling/scripts/verification/master-data-prerequisites.mjs | 63 |
+| `permissionCode` | tool | tooling/scripts/verification/plan-entity-authorization-migration.mjs | 71, 76 |
+| `permissionCode` | tool | tooling/scripts/verification/plan-entity-authorization-migration.test.mjs | 25, 46, 47, 68 |
+| `permissionCode` | tool | tooling/scripts/verification/prepare-atlas-baseline-native-graph.mts | 10, 14 |
+| `permissionCode` | tool | tooling/scripts/verification/prepare-atlas-mesh-native-graph.mts | 14, 18 |
+| `permissionCode` | tool | tooling/scripts/verification/prepare-business-partner-combined-successor.mts | 18, 19 |
+| `permissionCode` | tool | tooling/scripts/verification/prepare-business-partner-enter-correction-runtime-review.mjs | 108, 125 |
+| `permissionCode` | tool | tooling/scripts/verification/prepare-business-partner-exact-release-review.mjs | 28, 32 |
+| `permissionCode` | tool | tooling/scripts/verification/prepare-business-partner-operation-reviews.mjs | 8, 11, 26 |
+| `permissionCode` | tool | tooling/scripts/verification/prepare-business-partner-operation-workflow.mjs | 8 |
+| `permissionCode` | tool | tooling/scripts/verification/prepare-business-partner-release-19-difference-review.mjs | 32 |
+| `permissionCode` | tool | tooling/scripts/verification/prepare-business-partner-release-19-test-grants.mjs | 15 |
+| `permissionCode` | tool | tooling/scripts/verification/prepare-business-partner-target-read-proposal.mjs | 50, 53, 69, 85 |
+| `permissionCode` | tool | tooling/scripts/verification/prepare-business-partner-v2-exact-release-review.mjs | 105, 122 |
+| `permissionCode` | tool | tooling/scripts/verification/prepare-entity-authorization-publication.mts | 55 |
+| `permissionCode` | tool | tooling/scripts/verification/qualify-atlas-operation-projection-identity.sql | 18, 19, 20, 21, 22, 30, 48, 63 |
+| `permissionCode` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 58, 94, 170, 172, 175, 188 |
+| `permissionCode` | tool | tooling/scripts/verification/setup-local-master-data-authority.mjs | 18, 20, 22 |
+| `permissionCodes` | test | server/apps/platform-host/src/composition/__tests__/finance-http-review.test.ts | 515 |
+| `permissionCodes` | route | server/apps/platform-host/src/composition/finance-routes.ts | 295 |
+| `permissionCodes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1362 |
 | `permissionCodes` | test | server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts | 89, 190 |
 | `permissionCodes` | test | server/db/scripts/__tests__/authorization/exact-scope-compatibility.test.ts | 12, 28, 41, 62, 71, 97 |
+| `permissionCodes` | tool | server/db/scripts/provisioning/provision-development-northwind-mesh-fixture.ts | 258, 267, 268 |
 | `permissionCodes` | tool | server/db/scripts/seed/build-exact-scope-compatibility.ts | 20 |
 | `permissionCodes` | tool | server/db/scripts/seed/exact-scope-compatibility-model.ts | 24, 28, 29 |
 | `permissionCodes` | tool | server/db/scripts/seed/inventory-promotion-model.ts | 94 |
 | `permissionCodes` | tool | server/db/scripts/seed/mesh-authorization-inventory-model.ts | 227, 232, 233 |
 | `permissionCodes` | tool | server/db/scripts/seed/neon-authorization-inventory-model.ts | 213, 218, 219 |
 | `permissionCodes` | runtime | server/packages/contracts/finance/src/commands.ts | 7 |
-| `permissionCodes` | route | server/packages/planes/neon/src/finance-http.ts | 54 |
+| `permissionCodes` | route | server/packages/planes/neon/src/finance-http.ts | 426, 445 |
 | `permissionCodes` | test | server/packages/planes/neon/src/finance-jobs.test.ts | 6 |
 | `permissionCodes` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 13, 79 |
 | `permissionCodes` | runtime | server/packages/services/finance/src/shared/permission-checker.ts | 6 |
-| `permissionCodes` | test | server/packages/services/master-data/src/__tests__/business-partner-case-view.test.ts | 62, 90, 120, 124, 150, 163, 169 |
-| `permissionCodes` | runtime | server/packages/services/master-data/src/business-partner-case-view.ts | 17, 182 |
-| `permissionCodes` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 44 |
-| `permissionCodes` | test | tests/contracts/business-partner-phase0-contracts.test.ts | 106 |
-| `permissionCodes` | tool | tooling/scripts/policy/authorization-inventory.ts | 180, 1001, 1003, 1033, 2112 |
-| `permissions` | ui | packages/planes/neon/business-partner/src/customer-controls.tsx | 11, 71, 72 |
-| `permissions` | ui | packages/planes/neon/business-partner/src/index.tsx | 39, 81 |
+| `permissionCodes` | test | server/packages/services/master-data/src/__tests__/business-partner-case-view.test.ts | 62, 87, 96, 101, 113, 143, 147, 173, 186, 192 |
+| `permissionCodes` | runtime | server/packages/services/master-data/src/business-partner-case-view.ts | 18, 201 |
+| `permissionCodes` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 359 |
+| `permissionCodes` | test | tests/contracts/business-partner-phase0-contracts.test.ts | 109 |
+| `permissionCodes` | tool | tooling/scripts/policy/authorization-inventory.ts | 183, 1198, 1202, 1236, 2542 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/apps_neon_app_(shell)_mdg_operation-review_review_tsx_1d41-5f._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_1otqo1d._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/apps_neon_app_(shell)_mdg_operation-review_review_tsx_1d41-5f._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_1otqo1d._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/0h-_i5jmlccmv.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/1uhwwbtoiv-f5.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/2-vwisattg7if.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/26vimz5ee2k3y.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/42x397h50yqoj.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/43cf9c2ta28aj.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/apps_neon_app_(shell)_mdg_operation-review_review_tsx_1d41-5f._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_1otqo1d._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/apps_neon_app_(shell)_mdg_operation-review_review_tsx_1d41-5f._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_1otqo1d._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/0awy4ee-qwf-4.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/0yta17jjywcsn.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/1-wqrr3qesgmm.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/316d2ipy869xg.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/3crtgwhu1xw_7.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/3dsc6rk665jnx.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/apps_neon_app_(shell)_mdg_operation-review_review_tsx_1d41-5f._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_1otqo1d._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/apps_neon_app_(shell)_mdg_operation-review_review_tsx_1d41-5f._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_1otqo1d._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/static/chunks/0h-_i5jmlccmv.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/static/chunks/1iuri9db1_90v.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/static/chunks/1uhwwbtoiv-f5.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/static/chunks/2-vwisattg7if.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/static/chunks/26vimz5ee2k3y.js | 1 |
+| `permissions` | runtime | apps/neon/.next-bp-summary/static/chunks/42x397h50yqoj.js | 1 |
+| `permissions` | ui | apps/neon/app/(shell)/mdg/operation-review/review.tsx | 10 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_06s1utk._.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_10hjbt7._.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_ai_agent-runtime_src_index_ts_1m59cra._.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_06s1utk._.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_10hjbt7._.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_ai_agent-runtime_src_index_ts_1m59cra._.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/static/chunks/1qxrpml0t6duj.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/static/chunks/2v6a_1api22e2.js | 1 |
+| `permissions` | runtime | apps/studio/.next-bp-consolidated/static/chunks/3crtgwhu1xw_7.js | 1 |
+| `permissions` | runtime | governance/config/governance/business-partner-authorization-bindings.v1.json | 235 |
+| `permissions` | runtime | governance/config/governance/server-legacy-route-baseline.json | 404, 407, 428, 431, 1996, 1999, 2900, 2903, 3124, 3127, 7052, 7055, 7076, 7079 |
+| `permissions` | runtime | governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-definition-publication-review.json | 1679, 1686 |
+| `permissions` | runtime | governance/evidence/business-partner/v1-r2-r3-build-fix-2026-09-05.json | 95 |
+| `permissions` | runtime | governance/policy/reports/business-partner-accepted-operations.dev.json | 512, 548, 583, 619, 3011, 3331 |
+| `permissions` | runtime | governance/policy/reports/business-partner-activation-publication.dev.json | 586, 622, 657, 692, 2523, 3012 |
+| `permissions` | runtime | governance/policy/reports/business-partner-activation-publication.dev.snapshot.json | 5819, 5855, 5890, 5925, 7416, 7452, 7487, 7522, 8631 |
+| `permissions` | runtime | governance/policy/reports/business-partner-authorization-publication.dev.json | 586, 622, 657, 692, 2523, 3012 |
+| `permissions` | runtime | governance/policy/reports/business-partner-authorization-publication.dev.snapshot.json | 5819, 5855, 5890, 5925, 7416, 7452, 7487, 7522, 8631 |
+| `permissions` | runtime | governance/policy/reports/business-partner-case-correction-decisions.dev.json | 28, 34, 40, 46, 52, 83, 89, 95, 101, 107 |
+| `permissions` | runtime | governance/policy/reports/business-partner-case-runtime-correction.dev.json | 498, 534, 569, 605 |
+| `permissions` | runtime | governance/policy/reports/business-partner-child-process-20260912.compilation.dev.json | 3 |
+| `permissions` | runtime | governance/policy/reports/business-partner-combined-head.dev.json | 670, 706, 741, 776, 2607, 3096 |
+| `permissions` | runtime | governance/policy/reports/business-partner-combined-head.dev.snapshot.json | 6009, 6045, 6080, 6115, 7690, 7726, 7761, 7796, 8905 |
+| `permissions` | runtime | governance/policy/reports/business-partner-combined-source.dev.json | 501, 537, 572, 607, 3739, 3775, 3810, 3845 |
+| `permissions` | runtime | governance/policy/reports/business-partner-combined-successor.dev.json | 593, 629, 664, 700 |
+| `permissions` | runtime | governance/policy/reports/business-partner-command-qualification.dev.json | 98, 111 |
+| `permissions` | runtime | governance/policy/reports/business-partner-company-correction-backend-image-20260912.dev.json | 3085, 3086, 3087 |
+| `permissions` | runtime | governance/policy/reports/business-partner-consolidated-backend-image-20260912-v3.dev.json | 3144, 3145, 3146 |
+| `permissions` | runtime | governance/policy/reports/business-partner-corrected-release.dev.json | 511, 547, 582, 618, 3010, 3330 |
+| `permissions` | runtime | governance/policy/reports/business-partner-enter-correction-exact-release.after-signing.dev.json | 1219, 1255, 1290, 1326, 3784, 3820, 3855, 3891, 7383, 7419, 7454, 7490 |
+| `permissions` | runtime | governance/policy/reports/business-partner-enter-correction-exact-release.dev.json | 1219, 1255, 1290, 1326, 3784, 3820, 3855, 3891, 7383, 7419, 7454, 7490 |
+| `permissions` | runtime | governance/policy/reports/business-partner-enter-correction-native-publication.dev.json | 4862, 4922, 4957, 4992 |
+| `permissions` | runtime | governance/policy/reports/business-partner-exact-release.dev.json | 1218, 1254, 1289, 1325 |
+| `permissions` | runtime | governance/policy/reports/business-partner-finance-reveal-candidate-v2-20260912.dev.json | 32, 33 |
+| `permissions` | runtime | governance/policy/reports/business-partner-import-integration-publication.dev.json | 586, 622, 657, 692, 2523, 3012 |
+| `permissions` | runtime | governance/policy/reports/business-partner-import-integration-publication.dev.snapshot.json | 5819, 5855, 5890, 5925, 7416, 7452, 7487, 7522, 8631 |
+| `permissions` | runtime | governance/policy/reports/business-partner-import-release.dev.json | 511, 547, 582, 618, 3245 |
+| `permissions` | runtime | governance/policy/reports/business-partner-native-authoring-publication.dev.json | 586, 622, 657, 692, 2523, 3012 |
+| `permissions` | runtime | governance/policy/reports/business-partner-native-authoring-publication.dev.snapshot.json | 5819, 5855, 5890, 5925, 7416, 7452, 7487, 7522, 8631 |
+| `permissions` | runtime | governance/policy/reports/business-partner-ownership-command-qualification.dev.json | 97, 110 |
+| `permissions` | runtime | governance/policy/reports/business-partner-ownership-complete-qualification.dev.json | 97, 110 |
+| `permissions` | runtime | governance/policy/reports/business-partner-ownership-qualified.dev.json | 96, 109 |
+| `permissions` | runtime | governance/policy/reports/business-partner-release-19-binding-selection.dev.json | 7, 13, 17 |
+| `permissions` | runtime | governance/policy/reports/business-partner-release-19-retained-commands.dev.json | 103, 116 |
+| `permissions` | runtime | governance/policy/reports/business-partner-release-19-successor-revocation.dev.json | 106 |
+| `permissions` | runtime | governance/policy/reports/business-partner-release-20-phase-closure.dev.json | 35 |
+| `permissions` | runtime | governance/policy/reports/business-partner-release-20-revocation.dev.json | 106 |
+| `permissions` | runtime | governance/policy/reports/business-partner-release20-isolated-transfer-grants.applied.dev.json | 6 |
+| `permissions` | runtime | governance/policy/reports/business-partner-release20-isolated-transfer-grants.dry-run.dev.json | 6 |
+| `permissions` | runtime | governance/policy/reports/business-partner-reset-exact-release.dev.json | 1219, 1255, 1290, 1326, 3789, 3825, 3860, 3896, 7398, 7434, 7469, 7505 |
+| `permissions` | runtime | governance/policy/reports/business-partner-reset-native-publication.dev.json | 4877, 4937, 4972, 5007 |
+| `permissions` | runtime | governance/policy/reports/business-partner-successor-isolated-transfer-grants.applied.dev.json | 6 |
+| `permissions` | runtime | governance/policy/reports/business-partner-successor-isolated-transfer-grants.dry-run.dev.json | 6 |
+| `permissions` | runtime | governance/policy/reports/business-partner-successor-isolated-transfer-grants.rehearsal.dev.json | 6 |
+| `permissions` | runtime | governance/policy/reports/business-partner-target-catalog.dev.sql | 20, 32 |
+| `permissions` | runtime | governance/policy/reports/business-partner-target-catalog.dry-run.dev.json | 5 |
+| `permissions` | runtime | governance/policy/reports/business-partner-target-catalog.installed.dev.json | 5 |
+| `permissions` | runtime | governance/policy/reports/business-partner-v2-exact-release.after-signing.dev.json | 1218, 1254, 1289, 1325 |
+| `permissions` | runtime | governance/policy/reports/business-partner-v2-exact-release.dev.json | 1218, 1254, 1289, 1325 |
+| `permissions` | runtime | governance/policy/reviews/bp-dependencies-20260912/studio-access.proposal.json | 29, 160, 216, 222 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-affordance-count-execution-20260912-r2.proposal.dev.json | 63, 354, 394, 685, 725, 773, 840, 878, 913 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-affordance-count-execution-20260912-r2.user-approval.dev.json | 13 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-affordance-count-execution-20260912.proposal.dev.json | 63, 354, 394, 685, 725, 773, 840, 878, 913 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-canonical-v2-native.proposal.dev.json | 1262, 1322, 1357, 1392 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-canonical-v2-native.proposal.pre-native-hash.dev.json | 1262, 1322, 1357, 1392 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-company-execution-bound-20260912.before-parent-correction.proposal.dev.json | 33, 94 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-company-execution-bound-20260912.proposal.dev.json | 34, 96 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-company-image-correction-20260912.proposal.dev.json | 24 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-company-image-correction-v2-20260912.proposal.dev.json | 24 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-company-pilot-execution-access-20260912.proposal.dev.json | 28, 40 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-consolidated-studio-access-20260912.proposal.dev.json | 29, 160, 213 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-enter-atlas-access-20260912.proposal.dev.json | 32, 64 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-enter-correction-runtime-workflow.dev.json | 1581 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-enter-correction.graph.dev.json | 3887, 3947, 3982, 4017, 6788, 6848, 6883, 6918 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-enter-correction.pre-row-rekey.graph.dev.json | 3887, 3947, 3982, 4017, 6788, 6848, 6883, 6918 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-enter-test-access-20260912.proposal.dev.json | 32, 323, 614, 665, 780, 828 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-enter-test-access.exact-case-rejected.proposal.dev.json | 32, 323, 614, 665, 780, 828 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-enter-test-access.proposal.dev.json | 32, 323, 614, 665, 780, 828 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-final-66-dispositions-20260912.proposal.dev.json | 2219, 2267, 2391, 2621, 2731, 3053, 3113, 3181, 3257, 3333, 3385, 3437, 3489, 3549, 3625, 3801, 4041, 4333 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-final-binding-66-dispositions-20260912.proposal.dev.json | 5973, 6028, 6158, 7375, 7810, 10140, 10315, 10570, 10905, 11240, 11335, 11430, 11525, 11700, 11806, 12051, 13342, 13602 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-final-closure-execution-20260912.proposal.dev.json | 63, 354, 394, 685, 725, 773, 840, 878 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-finance-reveal-execution-20260912.proposal.dev.json | 61, 352, 434, 469, 760, 842, 877, 928, 965, 1002, 1034, 1101, 1136 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-manual-ui-walkthrough-20260912.proposal.dev.json | 29, 320, 360, 651, 688, 723, 761 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-manual-ui-walkthrough-20260912.user-approval.dev.json | 9 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-named-role-recommendations.dev.json | 11966, 12053, 12140 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-neon-final-execution-20260912.proposal.dev.json | 84, 375, 457, 492, 783, 865, 900, 951, 988, 1025 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-operation-reviews.dev.json | 335, 864 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-operation-workflow.dev.json | 383, 997 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-release-19-differences.proposal.dev.json | 3526, 3571, 3661, 3782, 3827, 3917, 3955, 3993, 4031, 4069, 4107, 4145, 4183, 4221, 4266, 4391, 4479, 4643 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-release-19-differences.successor-20260911.proposal.dev.json | 3046, 3087, 3169, 3278, 3319, 3401, 3435, 3469, 3503, 3537, 3571, 3605, 3639, 3673, 3714, 3826, 3901, 4046 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-release-19-qualification-grant-gaps.dev.json | 9, 10 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-release-19-test-grants.proposal.dev.json | 22, 140, 183, 222 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-release-19-workflow.dev.json | 1135 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-release-20-workflow.dev.json | 1608 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-release-20-workflow.pre-head-correction.dev.json | 1604 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-release20-isolated-transfer-grants.proposal.dev.json | 24 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-reset-runtime.graph.dev.json | 3897, 3957, 3992, 4027, 6808, 6868, 6903, 6938 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-reset-studio-authoring-grants.proposal.dev.json | 17, 28 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-reveal-coordinates-execution-20260912.proposal.dev.json | 63, 354, 394, 685, 725, 773, 840, 878 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-successor-execution-image.amendment.7533ccd4.withdrawn.dev.json | 11 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-successor-execution-image.amendment.b893dafc.dev.json | 11 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-successor-execution-image.amendment.dev.json | 11 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-successor-import-policy-image.amendment.dev.json | 11 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-successor-isolated-transfer-grants.proposal.dev.json | 24 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-summary-context-execution-20260912.proposal.dev.json | 63, 354, 394, 685, 725, 773, 840, 878 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-summary-context-execution-20260912.user-approval.dev.json | 13 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-target-read-grants.proposal.dev.json | 14 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-two-reviewer-recommendations.dev.json | 12035, 12122, 12209 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-two-reviewer-recorded.dev.json | 13622, 13732, 13842 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-v2-studio-authoring-grants.proposal.dev.json | 18, 29, 44 |
+| `permissions` | test | packages/contracts/platform/ai/src/__tests__/business-context.test.ts | 35 |
+| `permissions` | test | packages/contracts/platform/ai/src/__tests__/protocol.test.ts | 21, 72 |
+| `permissions` | runtime | packages/contracts/platform/ai/src/intent.ts | 16 |
+| `permissions` | runtime | packages/contracts/platform/entity-list/src/experience.ts | 19, 211, 218, 219, 220, 301 |
+| `permissions` | ui | packages/planes/neon/business-partner/src/360/components/commercial-controls.tsx | 381 |
+| `permissions` | ui | packages/planes/neon/business-partner/src/bank-verification-controls.tsx | 17, 19 |
+| `permissions` | ui | packages/planes/neon/business-partner/src/banking-workspace.tsx | 14, 48 |
+| `permissions` | ui | packages/planes/neon/business-partner/src/index.tsx | 420, 433, 2618, 2619 |
 | `permissions` | ui | packages/planes/neon/business-partner/src/role-extension-experience.tsx | 90, 91 |
-| `permissions` | ui | packages/planes/neon/list-view/src/index.tsx | 10, 14 |
-| `permissions` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 19, 136 |
+| `permissions` | ui | packages/planes/studio/business-partner/src/bank-directory.tsx | 124, 125, 126 |
+| `permissions` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 120, 1278, 1279, 1281, 1287 |
 | `permissions` | runtime | packages/platform/foundation/api-client/src/bootstrap.ts | 27, 50, 52 |
+| `permissions` | runtime | packages/platform/iam/governance-review/src/named-role-recommendations.mjs | 103 |
+| `permissions` | runtime | packages/platform/iam/identity-gate/src/workspace-showcase-data.ts | 664, 670, 672 |
 | `permissions` | ui | packages/platform/shell/app-foundation/src/index.tsx | 57, 58, 65, 125 |
 | `permissions` | runtime | packages/platform/shell/shell-runtime/src/core.ts | 8, 19, 32, 37, 38, 52, 53 |
+| `permissions` | ui | packages/platform/shell/shell/src/atlas-context-inspector.tsx | 75, 176 |
 | `permissions` | runtime | packages/platform/shell/shell/src/core.ts | 41, 133 |
 | `permissions` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 65 |
-| `permissions` | ui | packages/platform/shell/shell/src/home.tsx | 135, 297, 340 |
+| `permissions` | ui | packages/platform/shell/shell/src/home.tsx | 446, 1471, 1772 |
 | `permissions` | runtime | packages/platform/shell/shell/src/messages.ts | 9 |
-| `permissions` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 16 |
-| `permissions` | test | server/apps/platform-host/src/composition/__tests__/iam-audit-vertical.test.ts | 25, 54, 77 |
-| `permissions` | test | server/apps/platform-host/src/composition/__tests__/metadata-records-vertical.test.ts | 45, 48, 87, 90 |
+| `permissions` | tool | server/apps/platform-host/scripts/db-verification/business-partner-360/verify-business-partner-360-reads.ts | 49, 166 |
+| `permissions` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 142, 298, 299, 313 |
+| `permissions` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 157 |
+| `permissions` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-qualification.mts | 62 |
+| `permissions` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval-qualification.mts | 16, 145, 147 |
+| `permissions` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 127 |
+| `permissions` | test | server/apps/platform-host/scripts/db-verification/tests/integration/governed-internal-business-partner-http.mjs | 135 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 71, 81 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/atlas-attachment-knowledge.test.ts | 150 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16, 25, 51 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/authorization-management-api.test.ts | 35 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts | 33 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 36, 87, 539, 540, 581 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-backend-intents.test.ts | 56 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-company-native-authority.test.ts | 23 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts | 63, 116 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-read-policy.test.ts | 33, 123, 133, 134 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-reveal-policy.test.ts | 96, 117, 135, 141 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 45 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/finance-http-review.test.ts | 55, 109, 110, 304, 447, 579, 581 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 42, 161, 162, 163 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/iam-audit-vertical.test.ts | 25, 54, 95 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 22, 42, 44, 48, 51 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 39, 41, 42, 47, 52, 71 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/mesh-exchange-readiness.test.ts | 12 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5, 15, 17 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/metadata-records-vertical.test.ts | 45, 48, 89, 93, 96 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/policy-vertical.test.ts | 19 |
-| `permissions` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 7 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 13 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts | 20, 21 |
-| `permissions` | route | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
-| `permissions` | runtime | server/apps/platform-host/src/composition/register-services.ts | 754, 783, 791, 803, 857, 4134, 4137, 4138, 4287, 4288, 4818 |
+| `permissions` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 14, 92, 102 |
+| `permissions` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 229, 231, 235, 236, 237, 238, 239, 461, 462, 465 |
+| `permissions` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 8, 34, 35 |
+| `permissions` | route | server/apps/platform-host/src/composition/finance-routes.ts | 41, 295 |
+| `permissions` | runtime | server/apps/platform-host/src/composition/local-graph-preview.ts | 103, 121, 245 |
+| `permissions` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1259, 1288, 1296, 1308, 1362, 2308, 5507, 5510, 5511, 5673, 5676, 5679, 5682, 7233 |
+| `permissions` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 150 |
+| `permissions` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 242 |
+| `permissions` | runtime | server/architecture/legacy-inventory-baseline.json | 1206, 4401, 4403, 4405, 4527, 4529, 4530, 5433, 5435, 5457, 5459, 7011, 7013, 7931, 7933, 8155, 8157, 11853, 11855, 11877, 11879 |
 | `permissions` | ddl | server/db/ddl/common/authz/00_schema.sql | 4 |
 | `permissions` | ddl | server/db/ddl/common/authz/07_functions.sql | 578 |
 | `permissions` | ddl | server/db/ddl/common/master/03_platform_tables.sql | 53, 191 |
 | `permissions` | runtime | server/db/ddl/governed-entity-lifecycle-minimal-schema-review.v1.json | 133 |
-| `permissions` | ddl | server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql | 97, 277, 299, 326, 348, 381, 398, 405, 457, 505 |
-| `permissions` | ddl | server/db/ddl/planes/neon/master/03_tables.sql | 1990 |
-| `permissions` | ddl | server/db/ddl/planes/studio/authz/14_permission_reference_seed.sql | 142 |
+| `permissions` | ddl | server/db/ddl/planes/mesh/control/12_reference_seed.sql | 172 |
+| `permissions` | ddl | server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql | 97, 277, 299, 329, 351, 384, 401, 408, 460, 508, 522 |
+| `permissions` | ddl | server/db/ddl/planes/neon/master/03_tables.sql | 1965 |
+| `permissions` | ddl | server/db/ddl/planes/studio/authz/14_permission_reference_seed.sql | 142, 160 |
+| `permissions` | runtime | server/db/migrations/20260906_mesh_exchange_readiness.sql | 313, 337 |
+| `permissions` | runtime | server/db/migrations/20260912_company_pilot_lifecycle.sql | 239 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/authorization-clean-slate.test.ts | 21, 23, 41, 46, 152, 166 |
+| `permissions` | test | server/db/scripts/__tests__/authorization/cirrusatlantic-demo-authorization.test.ts | 37, 49, 54, 63 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts | 76, 103, 131, 174 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/exact-scope-compatibility.test.ts | 14, 30, 43, 50, 82, 100 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/inventory-promotion.test.ts | 72, 122, 127 |
@@ -1536,9 +2683,19 @@ Capture DDLs:
 | `permissions` | tool | server/db/scripts/checks/ddl/platform-catalog.ts | 60 |
 | `permissions` | tool | server/db/scripts/checks/seeds/authorization-release-gates.ts | 22, 24, 94, 100, 106, 107, 148, 149, 151, 158, 215, 442 |
 | `permissions` | tool | server/db/scripts/operations/authorization/reset-authorization-clean-slate.ts | 111, 120 |
+| `permissions` | tool | server/db/scripts/operations/provision-cirrusatlantic-bp-qa.sql | 7, 15, 20, 21 |
+| `permissions` | tool | server/db/scripts/operations/studio/provision-cirrusatlantic-meta-qa.sql | 21, 28, 31 |
+| `permissions` | tool | server/db/scripts/operations/studio/provision-cirrusatlantic-preview-reader-session.sql | 23, 30, 33 |
+| `permissions` | tool | server/db/scripts/operations/studio/provision-cirrusatlantic-preview-session.sql | 22, 29, 32 |
 | `permissions` | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 60, 644, 647, 693, 701, 713 |
-| `permissions` | tool | server/db/scripts/provisioning/provision-development-business-partner-runtime.ts | 316, 401, 413 |
+| `permissions` | tool | server/db/scripts/provisioning/cirrusatlantic-demo-authorization-model.ts | 9, 26, 45, 54, 63, 146, 147 |
+| `permissions` | tool | server/db/scripts/provisioning/provision-business-partner-r2-fixtures.ts | 311, 318, 331 |
+| `permissions` | tool | server/db/scripts/provisioning/provision-business-partner-r3-applicant.ts | 87, 94, 95, 111 |
+| `permissions` | tool | server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts | 114, 117, 118, 120, 138, 149, 172, 175, 176, 178, 216, 219, 220, 222, 413, 418, 435, 437, 455, 456, 471 |
+| `permissions` | tool | server/db/scripts/provisioning/provision-development-business-partner-runtime.ts | 346, 433, 445 |
+| `permissions` | tool | server/db/scripts/provisioning/provision-development-northwind-mesh-fixture.ts | 40, 267, 268, 269 |
 | `permissions` | tool | server/db/scripts/provisioning/provision-three-tenant-demo-authorization.ts | 135, 140, 161, 216, 226, 227 |
+| `permissions` | tool | server/db/scripts/provisioning/publish-development-list-experience.ts | 341, 367, 403, 405 |
 | `permissions` | tool | server/db/scripts/provisioning/three-plane-model.ts | 178 |
 | `permissions` | tool | server/db/scripts/reports/neon-authorization-quality.ts | 613, 634, 637 |
 | `permissions` | tool | server/db/scripts/seed/build-exact-scope-compatibility.ts | 17, 23 |
@@ -1550,7 +2707,8 @@ Capture DDLs:
 | `permissions` | tool | server/db/scripts/seed/inventory-promotion-model.ts | 89, 90, 91, 92, 94, 95, 102 |
 | `permissions` | tool | server/db/scripts/seed/validate-canonical-catalogs.ts | 28, 47, 74, 79 |
 | `permissions` | test | server/db/scripts/tests/integration/atlas/tools-rls.ts | 175 |
-| `permissions` | test | server/db/scripts/tests/integration/governed-internal-business-partner-http.mjs | 135 |
+| `permissions` | test | server/db/scripts/tests/integration/business-partner-bank-verification.ts | 72 |
+| `permissions` | test | server/db/scripts/tests/integration/identity-replay-live.mjs | 450 |
 | `permissions` | runtime | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json | 7 |
 | `permissions` | runtime | server/db/seed/contracts/authorization/catalog/mesh/scope-compatibility.v1.json | 6 |
 | `permissions` | runtime | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json | 7 |
@@ -1560,66 +2718,109 @@ Capture DDLs:
 | `permissions` | runtime | server/db/seed/contracts/authorization/control/cross-plane-suspension-control.v1.json | 13 |
 | `permissions` | runtime | server/db/seed/contracts/authorization/inventory/neon/promotion/catalog.v2.candidate.json | 7 |
 | `permissions` | runtime | server/db/seed/contracts/authorization/inventory/neon/promotion/scope-compatibility.v1.candidate.json | 6 |
-| `permissions` | runtime | server/db/seed/packs/authorization-v2/mesh/seed-pack.v1.json | 568 |
+| `permissions` | runtime | server/db/seed/packs/authorization-v2/mesh/seed-pack.v1.json | 584 |
 | `permissions` | runtime | server/db/seed/packs/authorization-v2/neon/seed-pack.v1.json | 424 |
-| `permissions` | runtime | server/db/seed/packs/authorization-v2/studio/seed-pack.v1.json | 456 |
+| `permissions` | runtime | server/db/seed/packs/authorization-v2/studio/seed-pack.v1.json | 472 |
 | `permissions` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 42, 56 |
-| `permissions` | runtime | server/packages/adapters/experience-postgres/src/index.ts | 111 |
+| `permissions` | runtime | server/packages/adapters/experience-postgres/src/index.ts | 248 |
+| `permissions` | test | server/packages/contracts/ai/src/__tests__/business-context.test.ts | 35 |
 | `permissions` | runtime | server/packages/contracts/ai/src/experience-configuration.ts | 9 |
 | `permissions` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 12, 34, 35, 39 |
-| `permissions` | runtime | server/packages/contracts/auth/src/authorization.ts | 87 |
+| `permissions` | runtime | server/packages/contracts/auth/src/authorization.ts | 91 |
+| `permissions` | runtime | server/packages/contracts/experience/src/ports.ts | 145 |
 | `permissions` | runtime | server/packages/contracts/finance/src/index.ts | 9 |
+| `permissions` | test | server/packages/contracts/metadata/src/__tests__/entity-ai.test.ts | 16 |
 | `permissions` | test | server/packages/planes/mesh/src/business-partner-bank-disclosure.test.ts | 5 |
+| `permissions` | test | server/packages/planes/mesh/src/business-partner-network-exchange.test.ts | 5, 14 |
+| `permissions` | runtime | server/packages/planes/mesh/src/business-partner-network-exchange.ts | 598 |
 | `permissions` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 3, 6, 7 |
+| `permissions` | test | server/packages/planes/mesh/src/mesh-services-review.test.ts | 24 |
+| `permissions` | test | server/packages/planes/mesh/src/network-account-context.test.ts | 8, 13, 14, 15, 28, 29 |
+| `permissions` | runtime | server/packages/planes/mesh/src/network-account-context.ts | 18 |
+| `permissions` | test | server/packages/planes/neon/src/__tests__/integration/business-partner-bank-verification.ts | 75 |
 | `permissions` | test | server/packages/planes/neon/src/business-partner-account-bank-linkage.test.ts | 6 |
-| `permissions` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6, 20 |
-| `permissions` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7, 23, 30 |
-| `permissions` | test | server/packages/planes/neon/src/finance-http.test.ts | 7 |
-| `permissions` | route | server/packages/planes/neon/src/finance-http.ts | 54 |
-| `permissions` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 13 |
+| `permissions` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 508 |
+| `permissions` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6, 23, 36 |
+| `permissions` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7, 23, 35, 57 |
+| `permissions` | test | server/packages/planes/neon/src/finance-http.test.ts | 19 |
+| `permissions` | route | server/packages/planes/neon/src/finance-http.ts | 445 |
+| `permissions` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 39 |
 | `permissions` | test | server/packages/planes/neon/src/register-finance.test.ts | 7 |
 | `permissions` | runtime | server/packages/planes/neon/src/register-finance.ts | 289, 336, 348, 355, 380, 386, 391, 411, 469 |
-| `permissions` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 5 |
+| `permissions` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/list-experience.test.ts | 84 |
+| `permissions` | runtime | server/packages/planes/studio/meta-entity-authoring/src/collection-relationship.ts | 30, 34, 38 |
+| `permissions` | runtime | server/packages/planes/studio/meta-entity-authoring/src/list-experience.ts | 84 |
+| `permissions` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 18 |
 | `permissions` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 8 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/business-context.test.ts | 14, 169, 385 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/business-partner-evaluations.test.ts | 9, 12, 89, 93, 124, 137, 146 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/business-partner-insight-tools.test.ts | 11, 14, 17 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/business-partner-list-insights.test.ts | 16, 329 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/conversation-composition.test.ts | 13, 14, 43, 44, 64, 65 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/durable-message-lineage.test.ts | 20, 21 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/entity-record-tool.test.ts | 14, 65, 120 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/entity-section-tool.test.ts | 11 |
 | `permissions` | test | server/packages/platform/ai/src/__tests__/experience-configuration.test.ts | 8 |
 | `permissions` | test | server/packages/platform/ai/src/__tests__/failover.test.ts | 6 |
 | `permissions` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 9 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/inference-reauthorization.test.ts | 136 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/local-generation.test.ts | 11, 13, 20, 26, 32 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/local-page-answer-budget.test.ts | 37 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/missing-scope-runtime.test.ts | 33, 66, 99, 129 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/redis-insight-cache.test.ts | 134 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/repository-review.test.ts | 191, 192 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/response-feedback.test.ts | 7 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/retrieval-f5.test.ts | 11, 84, 104, 108 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/review-fixture.ts | 10 |
+| `permissions` | test | server/packages/platform/ai/src/__tests__/route-review.test.ts | 305, 306 |
 | `permissions` | test | server/packages/platform/ai/src/__tests__/runtime.test.ts | 6 |
 | `permissions` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 7, 37 |
 | `permissions` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
+| `permissions` | runtime | server/packages/platform/ai/src/business-partner-insight-tools.ts | 18 |
 | `permissions` | runtime | server/packages/platform/ai/src/context.ts | 13, 14, 15, 16, 22, 23, 24, 25 |
-| `permissions` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 18, 19, 28, 86 |
-| `permissions` | runtime | server/packages/platform/ai/src/knowledge.ts | 172 |
+| `permissions` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 19, 20, 29, 87 |
 | `permissions` | runtime | server/packages/platform/ai/src/surface-draft-generation.ts | 109 |
-| `permissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 81, 197 |
-| `permissions` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
-| `permissions` | test | server/packages/platform/control-admin/src/authorization-management-service.test.ts | 69 |
-| `permissions` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 46 |
+| `permissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 85, 245 |
+| `permissions` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 349 |
+| `permissions` | test | server/packages/platform/control-admin/src/authorization-management-service.test.ts | 156 |
+| `permissions` | test | server/packages/platform/control-admin/src/bank-validation.test.ts | 97 |
+| `permissions` | test | server/packages/platform/control-admin/src/connector-control.test.ts | 98 |
+| `permissions` | test | server/packages/platform/control-admin/src/control-admin-inventory.test.ts | 8 |
+| `permissions` | test | server/packages/platform/control-admin/src/cycle/cycle-config-routes.test.ts | 31, 38 |
+| `permissions` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 48 |
+| `permissions` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1092, 1137 |
+| `permissions` | test | server/packages/platform/control-admin/src/rounding-control.test.ts | 205 |
 | `permissions` | runtime | server/packages/platform/experience/src/contracts.ts | 74, 140, 172 |
-| `permissions` | runtime | server/packages/platform/experience/src/ports.ts | 105 |
-| `permissions` | test | server/packages/platform/experience/src/service.test.ts | 15, 22, 34, 37, 52, 53, 55, 58, 60, 75, 96, 100, 113, 125, 132, 156, 168 |
-| `permissions` | runtime | server/packages/platform/experience/src/service.ts | 200, 205, 207, 224, 233, 247, 274, 664, 726, 825, 931, 951, 970, 987, 989, 990, 1116 |
+| `permissions` | test | server/packages/platform/experience/src/service.test.ts | 16, 23, 45, 70, 89, 92, 107, 108, 110, 113, 115, 130, 151, 155, 168, 180, 187, 211, 223, 232, 281 |
+| `permissions` | runtime | server/packages/platform/experience/src/service.ts | 195, 200, 202, 219, 228, 249, 277, 677, 739, 838, 951, 971, 990, 1007, 1009, 1010, 1137 |
 | `permissions` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `permissions` | test | server/packages/platform/governance/src/routes/governance-routes.test.ts | 9 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 23, 27, 28 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/iam-service.test.ts | 13, 35, 38, 39, 40, 44, 59, 61 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `permissions` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 430 |
+| `permissions` | test | server/packages/platform/iam/src/__tests__/identity-replay-routes.test.ts | 64 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 8, 30, 31, 67, 68, 85, 91 |
-| `permissions` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
+| `permissions` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10, 80, 83 |
+| `permissions` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 10, 49, 55, 85, 86, 88, 110, 115 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
-| `permissions` | route | server/packages/platform/iam/src/iam-routes.ts | 34 |
-| `permissions` | runtime | server/packages/platform/iam/src/iam-service.ts | 46, 101, 102, 104, 106, 109, 110, 172, 174, 200, 201 |
+| `permissions` | route | server/packages/platform/iam/src/iam-routes.ts | 36 |
+| `permissions` | runtime | server/packages/platform/iam/src/iam-service.ts | 46, 105, 106, 108, 110, 113, 114, 173, 175, 201, 202 |
+| `permissions` | runtime | server/packages/platform/iam/src/kysely-context-refresh.ts | 33, 38, 42, 43 |
 | `permissions` | runtime | server/packages/platform/iam/src/kysely-identity-context-resolver.ts | 58, 63 |
-| `permissions` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 11, 12, 13, 19, 27, 30, 33, 36, 39, 41, 58, 65, 70, 71 |
+| `permissions` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 39, 41, 42, 43, 56, 74, 77, 80, 83, 91, 96, 141, 150, 164, 165, 251 |
+| `permissions` | test | server/packages/platform/metadata/src/__tests__/entity-ai.test.ts | 12 |
 | `permissions` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
+| `permissions` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 37 |
+| `permissions` | runtime | server/packages/platform/metadata/src/metadata-service.ts | 33 |
+| `permissions` | runtime | server/packages/platform/metadata/src/native-runtime-projection.ts | 36, 95 |
 | `permissions` | test | server/packages/platform/notifications/src/__tests__/notification-operations.test.ts | 44 |
 | `permissions` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
-| `permissions` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 3 |
+| `permissions` | test | server/packages/platform/preferences/src/entity-views.test.ts | 8 |
+| `permissions` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
 | `permissions` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 79 |
-| `permissions` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 3 |
+| `permissions` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 117 |
 | `permissions` | test | server/packages/services/content/src/content-service.test.ts | 2 |
-| `permissions` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 35 |
+| `permissions` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
 | `permissions` | runtime | server/packages/services/finance/src/budget/budget-service.ts | 7, 12, 32, 48, 51, 56 |
 | `permissions` | test | server/packages/services/finance/src/closing/closing-services.test.ts | 9, 17, 19, 21, 23, 25 |
 | `permissions` | runtime | server/packages/services/finance/src/closing/closing-services.ts | 7, 12, 29, 41, 54, 56, 71 |
@@ -1639,252 +2840,674 @@ Capture DDLs:
 | `permissions` | runtime | server/packages/services/finance/src/tax/tax-calculation-service.ts | 11, 16 |
 | `permissions` | runtime | server/packages/services/finance/src/tax/tax-credit-service.ts | 8, 13, 47 |
 | `permissions` | test | server/packages/services/finance/src/tax/tax-services.test.ts | 11, 26, 42 |
-| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 2 |
-| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 8, 42, 45, 54, 74, 80, 100, 123, 128, 130, 142, 172, 174, 183 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-360-policy.test.ts | 118 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-360-resources.test.ts | 133 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 21 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 27, 474, 495, 570, 625, 651, 747, 815, 823, 827, 879, 919, 931, 934, 947, 1256, 1599, 1639, 1755, 1773, 1991, 2044, 2048 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-case-view.test.ts | 83 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 6, 8, 11, 14 |
-| `permissions` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 37, 155, 179, 229 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-invitation-service.test.ts | 2 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 40, 208, 234, 285, 471, 472 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 15, 28, 61, 76, 122 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/integration/governed-internal-business-partner-http.mjs | 133 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 1353 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/supplier-workforce-command-guard.test.ts | 14 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/supplier-workforce-requisition-service.test.ts | 2 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/worker-engagement-iam-service.test.ts | 11 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/worker-engagement-lifecycle-service.test.ts | 23 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/workforce-service.test.ts | 6, 16, 21, 22 |
-| `permissions` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 23, 41, 43 |
-| `permissions` | runtime | server/packages/services/master-data/src/business-partner-case-view.ts | 182, 186, 187, 192, 200, 208, 211 |
-| `permissions` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 44 |
-| `permissions` | runtime | server/packages/services/master-data/src/kysely-business-partner-360-repository.ts | 124, 275, 292 |
+| `permissions` | runtime | server/packages/services/master-data/src/business-partner-360-route-contracts.ts | 97 |
+| `permissions` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 166, 178, 512, 549, 2073, 2077, 2083, 2092, 2102, 2112, 2122 |
+| `permissions` | runtime | server/packages/services/master-data/src/business-partner-atlas-insights.ts | 68, 70 |
+| `permissions` | runtime | server/packages/services/master-data/src/business-partner-case-view.ts | 201, 222, 225, 231, 239, 249, 255 |
+| `permissions` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 359 |
+| `permissions` | runtime | server/packages/services/master-data/src/kysely-business-partner-360-repository.ts | 160, 162, 196, 329, 346 |
+| `permissions` | runtime | server/packages/services/master-data/src/master-data-authority.ts | 78 |
+| `permissions` | test | server/packages/services/publication/src/__tests__/business-partner-company-case-contract.test.ts | 11 |
 | `permissions` | test | server/packages/services/publication/src/__tests__/studio-authority-ddl.test.ts | 9 |
+| `permissions` | runtime | server/packages/services/publication/src/business-partner-company-case-contract.ts | 117, 123, 127 |
+| `permissions` | runtime | server/packages/services/publication/src/document-collection-compiler.ts | 68, 79 |
 | `permissions` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
+| `permissions` | test | server/packages/services/records/src/__tests__/canonical-read-backend.test.ts | 80 |
+| `permissions` | test | server/packages/services/records/src/__tests__/canonical-read-diagnostics.test.ts | 80 |
+| `permissions` | test | server/packages/services/records/src/__tests__/document-collection-read.test.ts | 35 |
+| `permissions` | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 72, 334, 335, 348, 349, 514 |
+| `permissions` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 38, 169, 415 |
+| `permissions` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 38, 152, 164 |
 | `permissions` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
-| `permissions` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 39, 43, 46, 133 |
+| `permissions` | test | server/packages/services/records/src/__tests__/list-context-discovery.test.ts | 14, 95, 139 |
+| `permissions` | test | server/packages/services/records/src/__tests__/list-experience.test.ts | 31, 68, 139, 168, 248, 299, 300, 303, 429 |
+| `permissions` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 31, 90 |
+| `permissions` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 40, 44, 47, 134 |
+| `permissions` | test | server/packages/services/records/src/__tests__/snapshot-service.test.ts | 25 |
 | `permissions` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
-| `permissions` | runtime | server/packages/services/records/src/entity-list-service.ts | 188, 299 |
-| `permissions` | runtime | server/packages/services/records/src/query-service.ts | 93 |
-| `permissions` | runtime | server/packages/services/records/src/transfer/transfer-jobs.ts | 121 |
-| `permissions` | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 315 |
+| `permissions` | runtime | server/packages/services/records/src/entity-authorization.ts | 100 |
+| `permissions` | runtime | server/packages/services/records/src/entity-backend-authorizer.ts | 228, 229, 230 |
+| `permissions` | runtime | server/packages/services/records/src/entity-list-service.ts | 1165, 1166, 1168, 1515, 1518 |
+| `permissions` | runtime | server/packages/services/records/src/list-context-discovery.ts | 40, 41, 42, 79 |
+| `permissions` | runtime | server/packages/services/records/src/list-experience.ts | 26, 35 |
+| `permissions` | runtime | server/packages/services/records/src/navigation-context-discovery.ts | 20 |
+| `permissions` | runtime | server/packages/services/records/src/query-service.ts | 441, 444 |
+| `permissions` | test | server/packages/services/records/src/transfer/export-preflight.test.ts | 6 |
+| `permissions` | runtime | server/packages/services/records/src/transfer/transfer-jobs.ts | 1255, 1259, 1263 |
+| `permissions` | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 1979, 1983, 1989 |
 | `permissions` | runtime | server/packages/test-utils/src/index.ts | 16, 22 |
 | `permissions` | test | tests/contracts/access-consumption-phase9.test.ts | 6, 20, 25, 28, 29 |
 | `permissions` | test | tests/contracts/app-composition-phase10.test.ts | 24 |
+| `permissions` | test | tests/contracts/business-partner-independent-child.test.ts | 16, 73 |
 | `permissions` | test | tests/contracts/first-business-module-readiness.test.ts | 11 |
 | `permissions` | test | tests/contracts/home-personalization-phase3.test.ts | 19 |
 | `permissions` | test | tests/contracts/platform-catalog-experience.test.ts | 192 |
 | `permissions` | test | tests/contracts/query-provider-lifecycle.test.ts | 13 |
-| `permissions` | test | tests/contracts/shared-shell-navigation.test.ts | 45, 117, 164, 194, 197, 261 |
+| `permissions` | test | tests/contracts/shared-shell-navigation.test.ts | 45, 117, 164, 194, 197, 261, 664, 667, 668 |
+| `permissions` | test | tests/contracts/studio-publication-navigation.test.ts | 7, 11 |
 | `permissions` | test | tests/foundation/access-gates-phase9.test.tsx | 6 |
-| `permissions` | tool | tooling/scripts/policy/authorization-inventory.ts | 742, 802, 804, 925, 944, 945, 983, 987 |
+| `permissions` | tool | tooling/scripts/local-dev/graph-preview.integration.test.mts | 67, 78, 87, 91, 94, 102, 111, 187, 193, 194, 270, 307, 345, 360, 379 |
+| `permissions` | tool | tooling/scripts/policy/authorization-inventory.ts | 894, 966, 968, 1112, 1138, 1139, 1180, 1184 |
+| `permissions` | tool | tooling/scripts/policy/generate-development-url-catalogue.mjs | 208 |
 | `permissions` | tool | tooling/scripts/policy/host-capability-registry.mjs | 98 |
 | `permissions` | tool | tooling/scripts/policy/host-capability-registry.test.mjs | 32 |
 | `permissions` | tool | tooling/scripts/policy/verify-access-consumption-phase9.mjs | 12 |
 | `permissions` | tool | tooling/scripts/policy/verify-shared-shell-phase8.mjs | 14, 20 |
+| `permissions` | tool | tooling/scripts/verification/apply-business-partner-release-19-test-grants.mjs | 26, 32 |
+| `permissions` | tool | tooling/scripts/verification/approve-business-partner-canonical-v2.mts | 113 |
+| `permissions` | tool | tooling/scripts/verification/approve-business-partner-case-correction.mts | 42 |
+| `permissions` | tool | tooling/scripts/verification/approve-business-partner-combined-successor.mts | 35 |
+| `permissions` | tool | tooling/scripts/verification/approve-business-partner-enter-correction.mts | 121 |
+| `permissions` | tool | tooling/scripts/verification/approve-business-partner-reset-runtime.mts | 121 |
+| `permissions` | tool | tooling/scripts/verification/assign-atlas-enablement-roles.mjs | 18, 21, 34 |
+| `permissions` | tool | tooling/scripts/verification/capture-atlas-foundation-baseline.mjs | 228 |
+| `permissions` | tool | tooling/scripts/verification/capture-business-partner-release-19-execution-readiness.mts | 18, 21 |
+| `permissions` | tool | tooling/scripts/verification/dry-run-business-partner-release-19-test-grants.mjs | 19, 25 |
+| `permissions` | tool | tooling/scripts/verification/dry-run-business-partner-target-read-grants.mjs | 22 |
+| `permissions` | tool | tooling/scripts/verification/entity-authorization/accepted-operation-selection.mjs | 53 |
+| `permissions` | tool | tooling/scripts/verification/entity-authorization/accepted-operation-selection.test.mjs | 11 |
+| `permissions` | tool | tooling/scripts/verification/entity-authorization/governed-import-selection.test.mjs | 8 |
+| `permissions` | tool | tooling/scripts/verification/entity-authorization/named-role-recommendations.test.mjs | 9 |
+| `permissions` | tool | tooling/scripts/verification/entity-authorization/publication-plan.mts | 54, 382, 386, 389 |
+| `permissions` | tool | tooling/scripts/verification/entity-authorization/publication-plan.test.mts | 127, 214, 218, 228 |
+| `permissions` | tool | tooling/scripts/verification/entity-authorization/studio-authoring-grants.mjs | 73, 88, 99 |
+| `permissions` | tool | tooling/scripts/verification/entity-authorization/studio-authoring-grants.test.mjs | 20 |
+| `permissions` | tool | tooling/scripts/verification/entity-authorization/target-read-grants.mjs | 34, 39, 83 |
+| `permissions` | tool | tooling/scripts/verification/entity-authorization/target-read-grants.test.mjs | 44 |
+| `permissions` | tool | tooling/scripts/verification/install-business-partner-target-catalog.mjs | 32, 44, 53 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/access-dry-run.mjs | 97 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/access-sql.mjs | 10, 12 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/build-finance-reveal-candidate.mjs | 32, 33 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-access.mjs | 48, 121, 139 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-affordance-count-execution.mjs | 36, 38, 41, 61, 84, 142, 150 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-company-correction-candidate.mjs | 92 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-company-correction-only-candidate.mjs | 92 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-final-disposition-review.mjs | 218 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-finance-reveal-access.mjs | 47, 98 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-manual-ui-access.mjs | 25, 30, 31, 53, 86 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-neon-final-candidate.mjs | 108, 200 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/preview-summary-open-work.mts | 119 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/refresh-access.mjs | 42, 60, 99, 129 |
+| `permissions` | tool | tooling/scripts/verification/isolated-execution/check-binding-selection.mjs | 5, 9 |
+| `permissions` | tool | tooling/scripts/verification/isolated-release20/grants.mjs | 51, 53, 59, 85 |
+| `permissions` | tool | tooling/scripts/verification/isolated-release20/qualify-revocation.mjs | 222 |
+| `permissions` | tool | tooling/scripts/verification/isolated-successor/authority-check.mjs | 70, 80, 81 |
+| `permissions` | tool | tooling/scripts/verification/isolated-successor/grants.mjs | 47, 49, 55, 81 |
+| `permissions` | tool | tooling/scripts/verification/isolated-successor/qualify-revocation.mjs | 220 |
+| `permissions` | tool | tooling/scripts/verification/master-data-prerequisites.mjs | 10, 11, 12, 13, 14, 15, 52, 60, 61, 62, 63, 65 |
+| `permissions` | tool | tooling/scripts/verification/master-data-prerequisites.test.mjs | 8 |
+| `permissions` | tool | tooling/scripts/verification/prepare-bp-ai-release.mjs | 35 |
+| `permissions` | tool | tooling/scripts/verification/prepare-business-partner-accepted-operations.mts | 44 |
+| `permissions` | tool | tooling/scripts/verification/prepare-business-partner-operation-reviews.mjs | 8 |
+| `permissions` | tool | tooling/scripts/verification/prepare-business-partner-publication-review.ts | 48, 49 |
+| `permissions` | tool | tooling/scripts/verification/prepare-business-partner-release-19-difference-review.mjs | 39 |
+| `permissions` | tool | tooling/scripts/verification/prepare-business-partner-release-19-test-grants.mjs | 12, 15, 19, 20, 32 |
+| `permissions` | tool | tooling/scripts/verification/prepare-business-partner-target-read-proposal.mjs | 18, 48, 52, 81, 127, 185, 187 |
+| `permissions` | tool | tooling/scripts/verification/prepare-entity-authorization-publication.mts | 53, 95 |
+| `permissions` | tool | tooling/scripts/verification/provision-business-partner-r3-invitation.mjs | 75 |
+| `permissions` | tool | tooling/scripts/verification/publish-business-partner-canonical-v2.mts | 77 |
+| `permissions` | tool | tooling/scripts/verification/publish-business-partner-combined-successor.mts | 20 |
+| `permissions` | tool | tooling/scripts/verification/publish-business-partner-enter-correction.mts | 46 |
+| `permissions` | tool | tooling/scripts/verification/publish-business-partner-reset-runtime.mts | 46 |
+| `permissions` | tool | tooling/scripts/verification/qualify-business-partner-approved-read-grants.mjs | 60, 62, 65 |
+| `permissions` | tool | tooling/scripts/verification/qualify-business-partner-commands.mts | 144 |
+| `permissions` | tool | tooling/scripts/verification/qualify-business-partner-database-adapters.mts | 49, 61 |
+| `permissions` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 74 |
+| `permissions` | tool | tooling/scripts/verification/retry-business-partner-release-19.mts | 10 |
+| `permissions` | tool | tooling/scripts/verification/review-business-partner-roles.mjs | 34, 35, 36, 37, 38, 39, 40, 41 |
+| `permissions` | tool | tooling/scripts/verification/setup-local-atlas-authority.mts | 24 |
+| `permissions` | tool | tooling/scripts/verification/setup-local-contact-challenge.mjs | 35 |
+| `permissions` | tool | tooling/scripts/verification/stage-business-partner-reset-draft.mts | 56 |
+| `permissions` | tool | tooling/scripts/verification/submit-business-partner-enter-correction.mts | 56 |
+| `permissions` | tool | tooling/scripts/verification/verify-local-atlas-conversations.mts | 60, 61, 115, 116 |
+| `permissions` | tool | tooling/scripts/verification/verify-local-atlas-generation-races.mts | 25 |
+| `permissions` | tool | tooling/scripts/verification/verify-local-atlas-generation.mts | 22, 44 |
+| `permissions` | tool | tooling/scripts/verification/verify-local-master-data-six-routes.mjs | 57, 123, 124 |
+| `permissions` | tool | tooling/tools/scripts/openapi-policy.test.mjs | 37 |
+| `permissions` | tool | tooling/tools/scripts/verify-deployed-openapi.mjs | 37 |
+| `persona` | keycloak | deploy/config/iam/realm-athyper-demosetup.json | 1703, 1745, 1778, 1811, 1848, 1881, 1914, 1947, 1989, 2022, 2055, 2092, 2125, 2158, 2191, 2233, 2266, 2299, 2336, 2369, 2402, 2435, 2477, 2510, 2543, 2580, 2613, 2646, 2679, 2721, 2754, 2787, 2824, 2857, 2890, 2923, 2965, 2998, 3031, 3068, 3101, 3134, 3167, 3209, 3242, 3275, 3312, 3345, 3378, 3411, 3453, 3486, 3519, 3556, 3589, 3622, 3655, 3697, 3730, 3763, 3800, 3833, 3866, 3899, 3941, 3974, 4007, 4044, 4077, 4110, 4143, 4185, 4218, 4251, 4288, 4321, 4354, 4387, 4429, 4462, 4495, 4532, 4565, 4598, 4631, 4673, 4706, 4739, 4776, 4809, 4842, 4875, 4917, 4950, 4983, 5020, 5053, 5086, 5119, 5161, 5194, 5227, 5264, 5297, 5330, 5367, 5400, 5433, 5470, 5507, 5549, 5582, 5615, 5652, 5685, 5718, 5751, 5793, 5826, 5859, 5896, 5929, 5962, 5995, 6037, 6070, 6103, 6140, 6173, 6206, 6749, 6782, 6815 |
 | `persona` | runtime | governance/config/governance/authorization-data-disposition-policy.v1.json | 362 |
 | `persona` | runtime | governance/config/governance/authorization-legacy-freeze-baseline.v1.json | 6497, 6649, 6663, 6664, 6671, 6672, 6679, 6680, 6687, 6688, 6695, 6696, 6703, 6704, 6711, 6712, 6719, 6720, 6727, 6728, 6735, 6736, 6743, 6744, 6751, 6752, 6753, 6759, 6760, 6767, 6768, 6775, 6776, 6783, 6784, 6791, 6792, 6799, 6800, 7041, 7049, 7057 |
-| `persona` | test | server/db/scripts/__tests__/authorization/cirrusatlantic-demo-authorization.test.ts | 14, 17, 19, 21, 28 |
+| `persona` | runtime | governance/policy/reports/business-partner-activation-differences.dev.json | 82 |
+| `persona` | runtime | governance/policy/reports/business-partner-consolidated-disposition-source-audit-20260912.dev.json | 82 |
+| `persona` | runtime | governance/policy/reports/entity-authorization-difference-review.dev.json | 23, 65, 81, 82, 126, 172, 218, 264, 310, 356, 402, 448, 494, 540, 586, 632, 678, 724, 770, 816, 862, 908, 954, 1000, 1046, 1092, 1138, 1184, 1230, 1276, 1322 |
+| `persona` | runtime | governance/policy/reports/entity-authorization-migration.dev.json | 387 |
+| `persona` | runtime | governance/policy/reports/entity-authorization-policy-regression.dev.json | 14, 21, 28, 35 |
+| `persona` | runtime | governance/policy/reports/entity-authorization-shadow.dev.json | 14, 21, 28, 35 |
+| `persona` | runtime | governance/policy/reviews/business-partner-enter-atlas-access-20260912.proposal.dev.json | 70 |
+| `persona` | runtime | governance/policy/reviews/business-partner-policy-triage.dev.json | 58 |
+| `persona` | runtime | governance/policy/reviews/business-partner-release-19-differences.proposal.dev.json | 234 |
+| `persona` | runtime | governance/policy/reviews/business-partner-release-19-differences.successor-20260911.proposal.dev.json | 202 |
+| `persona` | runtime | governance/policy/reviews/entity-authorization-differences.dev.json | 41, 42, 66, 90, 114, 138, 162, 186, 210, 234, 258, 282, 306, 330, 354, 378, 402, 426, 450, 474, 498, 522, 546, 570, 594, 618, 642, 666, 690 |
+| `persona` | test | server/db/scripts/__tests__/authorization/cirrusatlantic-demo-authorization.test.ts | 16, 19, 21, 23, 30 |
 | `persona` | tool | server/db/scripts/checks/seeds/authorization.ts | 72 |
-| `persona` | tool | server/db/scripts/provisioning/cirrusatlantic-demo-authorization-model.ts | 64, 65, 66, 67, 68, 70, 72 |
-| `persona` | tool | server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts | 35, 56, 57, 58, 59, 60, 61, 64, 149, 158, 159, 163, 164, 169, 172, 173, 179, 184, 185, 190, 193, 194, 198, 199, 209, 210, 222, 233, 234 |
+| `persona` | tool | server/db/scripts/provisioning/cirrusatlantic-demo-authorization-model.ts | 127, 128, 129, 130, 131, 133, 135 |
+| `persona` | tool | server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts | 38, 59, 60, 61, 62, 63, 64, 67, 103, 104, 107, 126, 162, 206, 309, 318, 319, 323, 324, 329, 332, 333, 339, 344, 345, 350, 353, 354, 358, 359, 369, 370, 382, 393, 394 |
 | `persona` | tool | server/db/scripts/provisioning/provision-three-tenant-demo-authorization.ts | 68 |
-| `persona` | keycloak | deploy/config/iam/realm-athyper-demosetup.json | 1703, 1745, 1778, 1811, 1848, 1881, 1914, 1947, 1989, 2022, 2055, 2092, 2125, 2158, 2191, 2233, 2266, 2299, 2336, 2369, 2402, 2435, 2477, 2510, 2543, 2580, 2613, 2646, 2679, 2721, 2754, 2787, 2824, 2857, 2890, 2923, 2965, 2998, 3031, 3068, 3101, 3134, 3167, 3209, 3242, 3275, 3312, 3345, 3378, 3411, 3453, 3486, 3519, 3556, 3589, 3622, 3655, 3697, 3730, 3763, 3800, 3833, 3866, 3899, 3941, 3974, 4007, 4044, 4077, 4110, 4143, 4185, 4218, 4251, 4288, 4321, 4354, 4387, 4429, 4462, 4495, 4532, 4565, 4598, 4631, 4673, 4706, 4739, 4776, 4809, 4842, 4875, 4917, 4950, 4983, 5020, 5053, 5086, 5119, 5161, 5194, 5227, 5264, 5297, 5330, 5367, 5400, 5433, 5470, 5507, 5549, 5582, 5615, 5652, 5685, 5718, 5751, 5793, 5826, 5859, 5896, 5929, 5962, 5995, 6037, 6070, 6103, 6140, 6173, 6206, 6749, 6782, 6815 |
-| `persona` | tool | tooling/scripts/policy/authorization-inventory.ts | 564, 743, 748 |
+| `persona` | tool | tooling/scripts/policy/authorization-inventory.ts | 634, 895, 900 |
+| `persona` | tool | tooling/scripts/verification/business-partner-ai-qualification.test.mjs | 65, 205, 210, 213 |
+| `persona` | tool | tooling/scripts/verification/complete-business-partner-ai-baseline.mjs | 108 |
+| `persona` | tool | tooling/scripts/verification/deploy-atlas-f6-persona-api.cjs | 5, 27, 28, 30, 35 |
+| `persona` | tool | tooling/scripts/verification/deploy-atlas-f6-persona-schema.mjs | 15, 21 |
+| `persona` | tool | tooling/scripts/verification/entity-authorization/policy-differences.mjs | 12, 14 |
+| `persona` | tool | tooling/scripts/verification/entity-authorization/policy-differences.test.mjs | 4 |
+| `persona` | tool | tooling/scripts/verification/isolated-enter/refresh-access.mjs | 114 |
+| `persona` | tool | tooling/scripts/verification/plan-entity-authorization-migration.mjs | 97 |
+| `persona` | tool | tooling/scripts/verification/qualify-atlas-f6-personas.mjs | 13 |
+| `persona` | tool | tooling/scripts/verification/qualify-business-partner-ai.mjs | 238, 240, 245 |
+| `persona` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 69, 77, 118, 129, 140, 156, 205, 213 |
 | `persona` | tool | tooling/tools/scripts/generate-athyper-demo-iam.cjs | 71, 85, 99, 100, 101, 117, 128, 132, 140, 141, 147, 148, 163, 254 |
 | `persona` | tool | tooling/tools/scripts/verify-athyper-demo-iam.cjs | 107, 108, 110 |
-| `personaId` | tool | tooling/scripts/policy/authorization-inventory.ts | 761 |
-| `planeExcluded` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4829 |
+| `personaId` | tool | tooling/scripts/policy/authorization-inventory.ts | 916 |
+| `planeExcluded` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 153 |
+| `planeExcluded` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 168 |
+| `planeExcluded` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 138 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 81 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts | 44 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 47 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/business-partner-company-native-authority.test.ts | 30 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts | 70 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-read-policy.test.ts | 40 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-reveal-policy.test.ts | 103 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 52 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 23 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 41 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 25 |
+| `planeExcluded` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 239 |
+| `planeExcluded` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 9 |
+| `planeExcluded` | runtime | server/apps/platform-host/src/composition/register-services.ts | 5682, 7244 |
+| `planeExcluded` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 163 |
+| `planeExcluded` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 253 |
+| `planeExcluded` | test | server/db/scripts/tests/integration/business-partner-bank-verification.ts | 79 |
+| `planeExcluded` | test | server/db/scripts/tests/integration/identity-replay-live.mjs | 461 |
 | `planeExcluded` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `planeExcluded` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 23 |
-| `planeExcluded` | runtime | server/packages/contracts/auth/src/authorization.ts | 78 |
+| `planeExcluded` | runtime | server/packages/contracts/auth/src/authorization.ts | 82 |
 | `planeExcluded` | test | server/packages/planes/mesh/src/business-partner-bank-disclosure.test.ts | 5 |
+| `planeExcluded` | test | server/packages/planes/mesh/src/business-partner-network-exchange.test.ts | 5 |
 | `planeExcluded` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 3 |
+| `planeExcluded` | test | server/packages/planes/neon/src/__tests__/integration/business-partner-bank-verification.ts | 82 |
 | `planeExcluded` | test | server/packages/planes/neon/src/business-partner-account-bank-linkage.test.ts | 6 |
 | `planeExcluded` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6 |
 | `planeExcluded` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7 |
-| `planeExcluded` | test | server/packages/planes/neon/src/finance-http.test.ts | 7 |
-| `planeExcluded` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 13 |
-| `planeExcluded` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 5 |
+| `planeExcluded` | test | server/packages/planes/neon/src/finance-http.test.ts | 23 |
+| `planeExcluded` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 50 |
+| `planeExcluded` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 29 |
 | `planeExcluded` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 8 |
+| `planeExcluded` | test | server/packages/platform/ai/src/__tests__/business-context.test.ts | 22 |
+| `planeExcluded` | test | server/packages/platform/ai/src/__tests__/business-partner-evaluations.test.ts | 12 |
+| `planeExcluded` | test | server/packages/platform/ai/src/__tests__/business-partner-insight-tools.test.ts | 14 |
+| `planeExcluded` | test | server/packages/platform/ai/src/__tests__/conversation-composition.test.ts | 37 |
 | `planeExcluded` | test | server/packages/platform/ai/src/__tests__/experience-configuration.test.ts | 8 |
 | `planeExcluded` | test | server/packages/platform/ai/src/__tests__/failover.test.ts | 6 |
 | `planeExcluded` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 9 |
+| `planeExcluded` | test | server/packages/platform/ai/src/__tests__/review-fixture.ts | 21 |
+| `planeExcluded` | test | server/packages/platform/ai/src/__tests__/route-review.test.ts | 298 |
 | `planeExcluded` | test | server/packages/platform/ai/src/__tests__/runtime.test.ts | 6 |
 | `planeExcluded` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 7 |
 | `planeExcluded` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
 | `planeExcluded` | runtime | server/packages/platform/ai/src/context.ts | 25 |
-| `planeExcluded` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
-| `planeExcluded` | test | server/packages/platform/experience/src/service.test.ts | 15 |
+| `planeExcluded` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 360 |
+| `planeExcluded` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1103 |
+| `planeExcluded` | test | server/packages/platform/experience/src/service.test.ts | 16 |
 | `planeExcluded` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `planeExcluded` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 441 |
+| `planeExcluded` | test | server/packages/platform/iam/src/__tests__/identity-replay-routes.test.ts | 71 |
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 11 |
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
+| `planeExcluded` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 17, 61 |
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
-| `planeExcluded` | runtime | server/packages/platform/iam/src/iam-service.ts | 185 |
-| `planeExcluded` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 284 |
-| `planeExcluded` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 33 |
+| `planeExcluded` | runtime | server/packages/platform/iam/src/iam-service.ts | 186 |
+| `planeExcluded` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 382 |
+| `planeExcluded` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 80, 275 |
 | `planeExcluded` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `planeExcluded` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
-| `planeExcluded` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 3 |
+| `planeExcluded` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
 | `planeExcluded` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 79 |
-| `planeExcluded` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 3 |
+| `planeExcluded` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 128 |
 | `planeExcluded` | test | server/packages/services/content/src/content-service.test.ts | 2 |
-| `planeExcluded` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 35 |
+| `planeExcluded` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
 | `planeExcluded` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
+| `planeExcluded` | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 84 |
+| `planeExcluded` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 49 |
+| `planeExcluded` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 49 |
 | `planeExcluded` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
-| `planeExcluded` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43 |
+| `planeExcluded` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 44 |
 | `planeExcluded` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
-| `planLocked` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4828 |
+| `planeExcluded` | test | tests/contracts/business-partner-independent-child.test.ts | 23 |
+| `planeExcluded` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 87 |
+| `planLocked` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 152 |
+| `planLocked` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 167 |
+| `planLocked` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 137 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 81 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts | 43 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 46 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/business-partner-company-native-authority.test.ts | 29 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts | 69 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-read-policy.test.ts | 39 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-reveal-policy.test.ts | 102 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 51 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 23 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 41 |
+| `planLocked` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5 |
+| `planLocked` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 24, 102 |
+| `planLocked` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 238 |
+| `planLocked` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 9, 35 |
+| `planLocked` | runtime | server/apps/platform-host/src/composition/register-services.ts | 5679, 7243 |
+| `planLocked` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 162 |
+| `planLocked` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 252 |
+| `planLocked` | test | server/db/scripts/tests/integration/business-partner-bank-verification.ts | 78 |
+| `planLocked` | test | server/db/scripts/tests/integration/identity-replay-live.mjs | 460 |
 | `planLocked` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `planLocked` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 22 |
-| `planLocked` | runtime | server/packages/contracts/auth/src/authorization.ts | 77 |
+| `planLocked` | runtime | server/packages/contracts/auth/src/authorization.ts | 81 |
 | `planLocked` | test | server/packages/planes/mesh/src/business-partner-bank-disclosure.test.ts | 5 |
+| `planLocked` | test | server/packages/planes/mesh/src/business-partner-network-exchange.test.ts | 5 |
 | `planLocked` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 3 |
+| `planLocked` | test | server/packages/planes/neon/src/__tests__/integration/business-partner-bank-verification.ts | 81 |
 | `planLocked` | test | server/packages/planes/neon/src/business-partner-account-bank-linkage.test.ts | 6 |
 | `planLocked` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6 |
 | `planLocked` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7 |
-| `planLocked` | test | server/packages/planes/neon/src/finance-http.test.ts | 7 |
-| `planLocked` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 13 |
-| `planLocked` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 5 |
+| `planLocked` | test | server/packages/planes/neon/src/finance-http.test.ts | 22 |
+| `planLocked` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 49 |
+| `planLocked` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 28 |
 | `planLocked` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 8 |
+| `planLocked` | test | server/packages/platform/ai/src/__tests__/business-context.test.ts | 21 |
+| `planLocked` | test | server/packages/platform/ai/src/__tests__/business-partner-evaluations.test.ts | 12 |
+| `planLocked` | test | server/packages/platform/ai/src/__tests__/business-partner-insight-tools.test.ts | 14 |
+| `planLocked` | test | server/packages/platform/ai/src/__tests__/conversation-composition.test.ts | 37 |
 | `planLocked` | test | server/packages/platform/ai/src/__tests__/experience-configuration.test.ts | 8 |
 | `planLocked` | test | server/packages/platform/ai/src/__tests__/failover.test.ts | 6 |
 | `planLocked` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 9 |
+| `planLocked` | test | server/packages/platform/ai/src/__tests__/review-fixture.ts | 20 |
+| `planLocked` | test | server/packages/platform/ai/src/__tests__/route-review.test.ts | 298 |
 | `planLocked` | test | server/packages/platform/ai/src/__tests__/runtime.test.ts | 6 |
 | `planLocked` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 7 |
 | `planLocked` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
 | `planLocked` | runtime | server/packages/platform/ai/src/context.ts | 24 |
-| `planLocked` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
-| `planLocked` | test | server/packages/platform/experience/src/service.test.ts | 15 |
+| `planLocked` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 359 |
+| `planLocked` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1102 |
+| `planLocked` | test | server/packages/platform/experience/src/service.test.ts | 16 |
 | `planLocked` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `planLocked` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 440 |
+| `planLocked` | test | server/packages/platform/iam/src/__tests__/identity-replay-routes.test.ts | 70 |
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 11 |
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
+| `planLocked` | test | server/packages/platform/iam/src/__tests__/source-permission-constraints.test.ts | 16, 60 |
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
-| `planLocked` | runtime | server/packages/platform/iam/src/iam-service.ts | 184 |
-| `planLocked` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 262, 267, 283 |
-| `planLocked` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 30 |
+| `planLocked` | runtime | server/packages/platform/iam/src/iam-service.ts | 185 |
+| `planLocked` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 336, 349, 381 |
+| `planLocked` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 77, 273 |
 | `planLocked` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `planLocked` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
-| `planLocked` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 3 |
+| `planLocked` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
 | `planLocked` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 79 |
-| `planLocked` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 3 |
+| `planLocked` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 127 |
 | `planLocked` | test | server/packages/services/content/src/content-service.test.ts | 2 |
-| `planLocked` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 35 |
+| `planLocked` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
 | `planLocked` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
+| `planLocked` | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 83 |
+| `planLocked` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 48 |
+| `planLocked` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 48 |
 | `planLocked` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
-| `planLocked` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43 |
+| `planLocked` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 44 |
 | `planLocked` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
-| `planLocked` | tool | tooling/scripts/policy/authorization-inventory.ts | 761 |
-| `principalFingerprint` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4822 |
+| `planLocked` | test | tests/contracts/business-partner-independent-child.test.ts | 22 |
+| `planLocked` | tool | tooling/scripts/policy/authorization-inventory.ts | 916 |
+| `planLocked` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 86 |
+| `principalFingerprint` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 146 |
+| `principalFingerprint` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 161 |
+| `principalFingerprint` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 131 |
+| `principalFingerprint` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `principalFingerprint` | test | server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts | 37 |
+| `principalFingerprint` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 42 |
+| `principalFingerprint` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5 |
+| `principalFingerprint` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 18 |
+| `principalFingerprint` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 8 |
+| `principalFingerprint` | runtime | server/apps/platform-host/src/composition/register-services.ts | 7237 |
+| `principalFingerprint` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 154 |
+| `principalFingerprint` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 246 |
+| `principalFingerprint` | test | server/db/scripts/tests/integration/identity-replay-live.mjs | 454 |
 | `principalFingerprint` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `principalFingerprint` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 16 |
-| `principalFingerprint` | runtime | server/packages/contracts/auth/src/authorization.ts | 69 |
+| `principalFingerprint` | runtime | server/packages/contracts/auth/src/authorization.ts | 73 |
+| `principalFingerprint` | test | server/packages/planes/mesh/src/business-partner-network-exchange.test.ts | 5 |
 | `principalFingerprint` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 3 |
 | `principalFingerprint` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6 |
 | `principalFingerprint` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7 |
-| `principalFingerprint` | test | server/packages/planes/neon/src/finance-http.test.ts | 7 |
-| `principalFingerprint` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 13 |
-| `principalFingerprint` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 5 |
+| `principalFingerprint` | test | server/packages/planes/neon/src/finance-http.test.ts | 26 |
+| `principalFingerprint` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 43 |
+| `principalFingerprint` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 22 |
 | `principalFingerprint` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 8 |
+| `principalFingerprint` | test | server/packages/platform/ai/src/__tests__/business-partner-evaluations.test.ts | 12 |
+| `principalFingerprint` | test | server/packages/platform/ai/src/__tests__/business-partner-insight-tools.test.ts | 14 |
 | `principalFingerprint` | test | server/packages/platform/ai/src/__tests__/experience-configuration.test.ts | 8 |
 | `principalFingerprint` | test | server/packages/platform/ai/src/__tests__/failover.test.ts | 6 |
 | `principalFingerprint` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 9 |
+| `principalFingerprint` | test | server/packages/platform/ai/src/__tests__/review-fixture.ts | 15 |
 | `principalFingerprint` | test | server/packages/platform/ai/src/__tests__/runtime.test.ts | 6 |
 | `principalFingerprint` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 7 |
 | `principalFingerprint` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
-| `principalFingerprint` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
-| `principalFingerprint` | test | server/packages/platform/experience/src/service.test.ts | 15 |
-| `principalFingerprint` | runtime | server/packages/platform/experience/src/service.ts | 987 |
+| `principalFingerprint` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 353 |
+| `principalFingerprint` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1096 |
+| `principalFingerprint` | test | server/packages/platform/experience/src/service.test.ts | 16 |
+| `principalFingerprint` | runtime | server/packages/platform/experience/src/service.ts | 1007 |
 | `principalFingerprint` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 434 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 9 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
-| `principalFingerprint` | runtime | server/packages/platform/iam/src/iam-service.ts | 178 |
-| `principalFingerprint` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 277 |
+| `principalFingerprint` | runtime | server/packages/platform/iam/src/iam-service.ts | 179 |
+| `principalFingerprint` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 375 |
 | `principalFingerprint` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `principalFingerprint` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
-| `principalFingerprint` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 3 |
+| `principalFingerprint` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
 | `principalFingerprint` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 79 |
-| `principalFingerprint` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 3 |
+| `principalFingerprint` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 121 |
 | `principalFingerprint` | test | server/packages/services/content/src/content-service.test.ts | 2 |
-| `principalFingerprint` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 35 |
+| `principalFingerprint` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
 | `principalFingerprint` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
+| `principalFingerprint` | test | server/packages/services/records/src/__tests__/document-collection-read.test.ts | 35 |
+| `principalFingerprint` | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 77 |
+| `principalFingerprint` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 44 |
+| `principalFingerprint` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 44 |
 | `principalFingerprint` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
-| `principalFingerprint` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43, 133 |
+| `principalFingerprint` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 44, 134 |
 | `principalFingerprint` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
-| `principalFingerprint` | runtime | server/packages/services/records/src/entity-list-service.ts | 299 |
-| `principalFingerprint` | runtime | server/packages/services/records/src/query-service.ts | 93 |
+| `principalFingerprint` | runtime | server/packages/services/records/src/entity-list-service.ts | 1515 |
+| `principalFingerprint` | runtime | server/packages/services/records/src/query-service.ts | 441 |
+| `principalFingerprint` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 78 |
+| `profileHash` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/_037dk03._.js | 1 |
+| `profileHash` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/_0wn60dv._.js | 1 |
+| `profileHash` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/_037dk03._.js | 1 |
+| `profileHash` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/_0wn60dv._.js | 1 |
+| `profileHash` | runtime | apps/neon/.next-bp-reveal/server/chunks/_0atf6s2._.js | 1 |
+| `profileHash` | runtime | apps/neon/.next-bp-reveal/server/chunks/_0kwp_fe._.js | 1 |
+| `profileHash` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/_0atf6s2._.js | 1 |
+| `profileHash` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/_0kwp_fe._.js | 1 |
+| `profileHash` | runtime | apps/neon/.next-bp-summary/server/chunks/_037dk03._.js | 1 |
+| `profileHash` | runtime | apps/neon/.next-bp-summary/server/chunks/_0wn60dv._.js | 1 |
+| `profileHash` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/_037dk03._.js | 1 |
+| `profileHash` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/_0wn60dv._.js | 1 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-activation-publication.dev.json | 4407 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-authorization-publication.dev.json | 4407 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-canonical-v2-native-publication.dev.json | 895, 3533 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-case-correction-decisions.dev.json | 16, 71 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-combined-head.dev.json | 4491 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-enter-correction-exact-release.after-signing.dev.json | 12, 2465, 5030, 5362, 8629, 8961 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-enter-correction-exact-release.dev.json | 12, 2465, 5030, 5362, 8629, 8961 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-enter-correction-native-publication.dev.json | 895, 3528, 4490 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-exact-release.dev.json | 12 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-governed-import-decisions.dev.json | 16, 47 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-import-integration-publication.dev.json | 4407 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-native-authoring-publication.dev.json | 4407 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-operation-decisions.dev.json | 16, 347 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.3a22a0df96a2.dev.json | 115, 150, 185, 220, 255, 290, 325, 362, 399, 434, 471, 508, 543, 580, 617, 652, 689, 726, 763, 800, 835, 872, 909, 944, 979, 1014, 1049, 1086, 1121, 1156, 1193, 1230, 1265, 1300, 1337, 1374, 1411, 1448, 1485, 1520, 1557, 1594, 1629, 1666, 1703, 1738, 1773, 1808, 1843, 1880, 1917, 1954, 1991, 2026, 2061, 2096, 2131, 2168, 2205, 2240, 2277, 2314, 2349, 2386, 2423, 2458, 2495, 2532, 2569, 2606, 2641, 2678, 2715, 2750, 2785, 2820, 2855, 2892, 2927, 2962, 2999, 3036, 3071, 3106, 3143, 3180, 3217, 3254, 3291, 3326, 3363, 3400, 3435, 3472, 3509, 3544, 3579, 3614, 3649, 3686, 3723, 3760, 3797, 3832, 3869, 3906, 3943, 3980, 4017, 4054, 4089, 4124, 4159, 4194, 4229, 4266, 4303, 4340, 4377, 4414, 4451, 4488, 4525, 4562, 4599, 4636, 4673, 4708, 4745, 4783, 4820, 4857, 4892, 4929, 4966, 5003, 5040, 5077, 5114, 5151, 5188, 5225, 5260, 5297, 5334, 5371, 5409, 5446, 5481, 5518, 5555, 5592, 5629, 5666, 5703, 5740, 5777, 5814, 5851, 5888, 5925, 5960, 5997, 6035, 6072, 6109, 6144, 6181, 6218, 6255, 6292, 6329, 6366, 6403, 6440, 6477, 6512, 6549, 6586, 6623, 6661, 6698, 6737, 6776, 6815, 6853, 6892, 6931, 6969, 7006, 7041, 7076, 7111, 7148, 7185, 7222, 7259, 7296, 7333, 7370, 7407, 7444, 7481, 7518, 7555, 7590, 7627, 7665, 7702, 7739, 7774, 7811, 7848, 7885, 7922, 7959, 7996, 8033, 8070, 8107, 8142, 8179, 8216, 8253, 8291, 8328, 8363, 8398, 8433, 8470, 8507, 8544, 8581, 8618, 8655, 8692, 8729, 8766, 8803, 8840, 8877, 8912, 8949, 8987, 9024, 9061, 9096, 9133, 9170, 9207, 9244, 9281, 9318, 9355, 9392, 9429, 9464, 9501, 9538, 9575, 9613, 9650, 9685, 9720, 9755, 9792, 9829, 9866, 9903, 9940, 9977, 10014, 10051, 10088, 10125, 10162, 10199, 10234, 10271, 10309, 10346, 10383, 10418, 10455, 10492, 10529, 10566, 10603, 10640, 10677, 10714, 10751, 10786, 10823, 10860, 10897, 10935, 10972, 11007, 11042, 11077, 11114, 11151, 11188, 11225, 11262, 11299, 11336, 11373, 11410, 11447, 11484, 11521, 11556, 11593, 11631, 11668, 11705, 11740, 11777, 11814, 11851, 11888, 11925, 11962, 11999, 12036, 12073, 12108, 12145, 12182, 12219, 12257, 12294, 12329, 12364, 12399, 12436, 12473, 12510, 12547, 12584, 12621, 12658, 12695, 12732, 12769, 12806, 12843, 12878, 12915, 12953, 12990, 13027, 13062, 13099, 13136, 13173, 13210, 13247, 13284, 13321, 13358, 13395, 13430, 13467, 13504, 13541, 13579, 13616, 13654, 13689, 13724, 13759, 13796, 13833, 13870, 13907, 13944, 13981, 14018, 14055, 14092, 14129, 14166, 14203, 14238, 14275, 14313, 14350, 14387, 14422, 14459, 14496, 14533, 14570, 14607, 14644, 14681, 14718, 14755, 14790, 14827, 14864, 14901, 14939, 14976, 15011, 15046, 15081, 15118, 15155, 15192, 15229, 15266, 15303, 15340, 15377, 15414, 15451, 15488, 15525, 15560, 15597, 15635, 15672, 15709, 15744, 15781, 15818, 15855, 15892, 15929, 15966, 16003, 16040, 16077, 16112, 16149, 16186, 16223, 16261, 16298, 16333, 16368, 16403, 16440, 16477, 16514, 16551, 16588, 16625, 16662, 16699, 16736, 16773, 16810, 16847, 16882, 16919, 16957, 16994, 17031, 17066, 17103, 17140, 17177, 17214, 17251, 17288, 17325, 17362, 17399, 17434, 17471, 17508, 17545, 17583, 17620, 17655, 17690, 17725, 17762, 17799, 17836, 17873, 17910, 17947, 17984, 18021, 18058, 18095, 18132, 18169, 18204, 18241, 18279, 18316, 18353, 18388, 18425, 18462, 18499, 18536, 18573, 18610, 18647, 18684, 18721, 18756, 18793, 18830, 18867, 18905, 18942, 18977, 19012, 19047, 19084, 19121, 19158, 19195, 19232, 19269, 19306, 19343, 19380, 19417, 19454, 19491, 19526, 19563, 19601, 19638, 19675, 19710, 19747, 19784, 19821, 19858, 19895, 19932, 19969, 20006, 20043, 20078, 20115, 20152, 20189, 20227, 20264, 20299, 20334, 20369, 20406, 20443, 20480, 20517, 20554, 20591, 20628, 20665, 20702, 20739, 20776, 20813, 20848, 20885, 20923, 20960, 20997, 21032, 21069, 21106, 21143, 21180, 21217, 21254, 21291, 21328, 21365, 21400, 21437, 21474, 21511, 21549, 21588, 21611, 21634, 21657, 21680, 21703, 21726, 21749, 21772, 21795, 21818, 21841, 21864 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.3fbbbaa37628.dev.json | 115, 150, 185, 220, 255, 290, 325, 360, 397, 434, 469, 506, 543, 578, 615, 652, 687, 724, 761, 798, 835, 870, 907, 944, 979, 1014, 1049, 1084, 1121, 1156, 1191, 1228, 1265, 1300, 1335, 1372, 1409, 1446, 1483, 1520, 1555, 1592, 1629, 1664, 1701, 1738, 1773, 1808, 1843, 1878, 1915, 1952, 1989, 2026, 2061, 2096, 2131, 2166, 2203, 2240, 2275, 2312, 2349, 2384, 2421, 2458, 2493, 2530, 2567, 2604, 2641, 2676, 2713, 2750, 2785, 2820, 2855, 2890, 2927, 2962, 2997, 3034, 3071, 3106, 3141, 3178, 3215, 3252, 3289, 3326, 3361, 3398, 3435, 3470, 3507, 3544, 3579, 3614, 3649, 3684, 3721, 3758, 3795, 3832, 3867, 3904, 3941, 3978, 4015, 4052, 4089, 4124, 4159, 4194, 4229, 4264, 4299, 4336, 4373, 4410, 4447, 4484, 4521, 4558, 4595, 4632, 4669, 4706, 4743, 4778, 4815, 4853, 4890, 4927, 4962, 4999, 5036, 5073, 5110, 5147, 5184, 5221, 5258, 5295, 5330, 5367, 5404, 5441, 5479, 5516, 5551, 5588, 5625, 5662, 5699, 5736, 5773, 5810, 5847, 5884, 5921, 5958, 5995, 6030, 6067, 6105, 6142, 6179, 6214, 6251, 6288, 6325, 6362, 6399, 6436, 6473, 6510, 6547, 6582, 6619, 6656, 6693, 6731, 6768, 6807, 6846, 6885, 6923, 6962, 7001, 7039, 7076, 7111, 7146, 7181, 7216, 7253, 7290, 7327, 7364, 7401, 7438, 7475, 7512, 7549, 7586, 7623, 7660, 7695, 7732, 7770, 7807, 7844, 7879, 7916, 7953, 7990, 8027, 8064, 8101, 8138, 8175, 8212, 8247, 8284, 8321, 8358, 8396, 8433, 8468, 8503, 8538, 8573, 8610, 8647, 8684, 8721, 8758, 8795, 8832, 8869, 8906, 8943, 8980, 9017, 9052, 9089, 9127, 9164, 9201, 9236, 9273, 9310, 9347, 9384, 9421, 9458, 9495, 9532, 9569, 9604, 9641, 9678, 9715, 9753, 9790, 9825, 9860, 9895, 9930, 9967, 10004, 10041, 10078, 10115, 10152, 10189, 10226, 10263, 10300, 10337, 10374, 10409, 10446, 10484, 10521, 10558, 10593, 10630, 10667, 10704, 10741, 10778, 10815, 10852, 10889, 10926, 10961, 10998, 11035, 11072, 11110, 11147, 11182, 11217, 11252, 11287, 11324, 11361, 11398, 11435, 11472, 11509, 11546, 11583, 11620, 11657, 11694, 11731, 11766, 11803, 11841, 11878, 11915, 11950, 11987, 12024, 12061, 12098, 12135, 12172, 12209, 12246, 12283, 12318, 12355, 12392, 12429, 12467, 12504, 12539, 12574, 12609, 12644, 12681, 12718, 12755, 12792, 12829, 12866, 12903, 12940, 12977, 13014, 13051, 13088, 13123, 13160, 13198, 13235, 13272, 13307, 13344, 13381, 13418, 13455, 13492, 13529, 13566, 13603, 13640, 13675, 13712, 13749, 13786, 13824, 13861, 13899, 13934, 13969, 14004, 14039, 14076, 14113, 14150, 14187, 14224, 14261, 14298, 14335, 14372, 14409, 14446, 14483, 14518, 14555, 14593, 14630, 14667, 14702, 14739, 14776, 14813, 14850, 14887, 14924, 14961, 14998, 15035, 15070, 15107, 15144, 15181, 15219, 15256, 15291, 15326, 15361, 15396, 15433, 15470, 15507, 15544, 15581, 15618, 15655, 15692, 15729, 15766, 15803, 15840, 15875, 15912, 15950, 15987, 16024, 16059, 16096, 16133, 16170, 16207, 16244, 16281, 16318, 16355, 16392, 16427, 16464, 16501, 16538, 16576, 16613, 16648, 16683, 16718, 16753, 16790, 16827, 16864, 16901, 16938, 16975, 17012, 17049, 17086, 17123, 17160, 17197, 17232, 17269, 17307, 17344, 17381, 17416, 17453, 17490, 17527, 17564, 17601, 17638, 17675, 17712, 17749, 17784, 17821, 17858, 17895, 17933, 17970, 18005, 18040, 18075, 18110, 18147, 18184, 18221, 18258, 18295, 18332, 18369, 18406, 18443, 18480, 18517, 18554, 18589, 18626, 18664, 18701, 18738, 18773, 18810, 18847, 18884, 18921, 18958, 18995, 19032, 19069, 19106, 19141, 19178, 19215, 19252, 19290, 19327, 19362, 19397, 19432, 19467, 19504, 19541, 19578, 19615, 19652, 19689, 19726, 19763, 19800, 19837, 19874, 19911, 19946, 19983, 20021, 20058, 20095, 20130, 20167, 20204, 20241, 20278, 20315, 20352, 20389, 20426, 20463, 20498, 20535, 20572, 20609, 20647, 20684, 20719, 20754, 20789, 20824, 20861, 20898, 20935, 20972, 21009, 21046, 21083, 21120, 21157, 21194, 21231, 21268, 21303, 21340, 21378, 21415, 21452, 21487, 21524, 21561, 21598, 21635, 21672, 21709, 21746, 21783, 21820, 21855, 21892, 21929, 21966, 22004 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.6ce0171efcfd.dev.json | 115, 150, 185, 220, 255, 290, 325, 362, 399, 434, 471, 508, 543, 580, 617, 652, 689, 726, 763, 800, 835, 872, 909, 944, 979, 1014, 1049, 1086, 1121, 1156, 1193, 1230, 1265, 1300, 1337, 1374, 1411, 1448, 1485, 1520, 1557, 1594, 1629, 1666, 1703, 1738, 1773, 1808, 1843, 1880, 1917, 1954, 1991, 2026, 2061, 2096, 2131, 2168, 2205, 2240, 2277, 2314, 2349, 2386, 2423, 2458, 2495, 2532, 2569, 2606, 2641, 2678, 2715, 2750, 2785, 2820, 2855, 2892, 2927, 2962, 2999, 3036, 3071, 3106, 3143, 3180, 3217, 3254, 3291, 3326, 3363, 3400, 3435, 3472, 3509, 3544, 3579, 3614, 3649, 3686, 3723, 3760, 3797, 3832, 3869, 3906, 3943, 3980, 4017, 4054, 4089, 4124, 4159, 4194, 4229, 4266, 4303, 4340, 4377, 4414, 4451, 4488, 4525, 4562, 4599, 4636, 4673, 4708, 4745, 4783, 4820, 4857, 4892, 4929, 4966, 5003, 5040, 5077, 5114, 5151, 5188, 5225, 5260, 5297, 5334, 5371, 5409, 5446, 5481, 5518, 5555, 5592, 5629, 5666, 5703, 5740, 5777, 5814, 5851, 5888, 5925, 5960, 5997, 6035, 6072, 6109, 6144, 6181, 6218, 6255, 6292, 6329, 6366, 6403, 6440, 6477, 6512, 6549, 6586, 6623, 6661, 6698, 6737, 6776, 6815, 6853, 6892, 6931, 6969, 7006, 7041, 7076, 7111, 7148, 7185, 7222, 7259, 7296, 7333, 7370, 7407, 7444, 7481, 7518, 7555, 7590, 7627, 7665, 7702, 7739, 7774, 7811, 7848, 7885, 7922, 7959, 7996, 8033, 8070, 8107, 8142, 8179, 8216, 8253, 8291, 8328, 8363, 8398, 8433, 8470, 8507, 8544, 8581, 8618, 8655, 8692, 8729, 8766, 8803, 8840, 8877, 8912, 8949, 8987, 9024, 9061, 9096, 9133, 9170, 9207, 9244, 9281, 9318, 9355, 9392, 9429, 9464, 9501, 9538, 9575, 9613, 9650, 9685, 9720, 9755, 9792, 9829, 9866, 9903, 9940, 9977, 10014, 10051, 10088, 10125, 10162, 10199, 10234, 10271, 10309, 10346, 10383, 10418, 10455, 10492, 10529, 10566, 10603, 10640, 10677, 10714, 10751, 10786, 10823, 10860, 10897, 10935, 10972, 11007, 11042, 11077, 11114, 11151, 11188, 11225, 11262, 11299, 11336, 11373, 11410, 11447, 11484, 11521, 11556, 11593, 11631, 11668, 11705, 11740, 11777, 11814, 11851, 11888, 11925, 11962, 11999, 12036, 12073, 12108, 12145, 12182, 12219, 12257, 12294, 12329, 12364, 12399, 12436, 12473, 12510, 12547, 12584, 12621, 12658, 12695, 12732, 12769, 12806, 12843, 12878, 12915, 12953, 12990, 13027, 13062, 13099, 13136, 13173, 13210, 13247, 13284, 13321, 13358, 13395, 13430, 13467, 13504, 13541, 13579, 13616, 13654, 13689, 13724, 13759, 13796, 13833, 13870, 13907, 13944, 13981, 14018, 14055, 14092, 14129, 14166, 14203, 14238, 14275, 14313, 14350, 14387, 14422, 14459, 14496, 14533, 14570, 14607, 14644, 14681, 14718, 14755, 14790, 14827, 14864, 14901, 14939, 14976, 15011, 15046, 15081, 15118, 15155, 15192, 15229, 15266, 15303, 15340, 15377, 15414, 15451, 15488, 15525, 15560, 15597, 15635, 15672, 15709, 15744, 15781, 15818, 15855, 15892, 15929, 15966, 16003, 16040, 16077, 16112, 16149, 16186, 16223, 16261, 16298, 16333, 16368, 16403, 16440, 16477, 16514, 16551, 16588, 16625, 16662, 16699, 16736, 16773, 16810, 16847, 16882, 16919, 16957, 16994, 17031, 17066, 17103, 17140, 17177, 17214, 17251, 17288, 17325, 17362, 17399, 17434, 17471, 17508, 17545, 17583, 17620, 17655, 17690, 17725, 17762, 17799, 17836, 17873, 17910, 17947, 17984, 18021, 18058, 18095, 18132, 18169, 18204, 18241, 18279, 18316, 18353, 18388, 18425, 18462, 18499, 18536, 18573, 18610, 18647, 18684, 18721, 18756, 18793, 18830, 18867, 18905, 18942, 18977, 19012, 19047, 19084, 19121, 19158, 19195, 19232, 19269, 19306, 19343, 19380, 19417, 19454, 19491, 19526, 19563, 19601, 19638, 19675, 19710, 19747, 19784, 19821, 19858, 19895, 19932, 19969, 20006, 20043, 20078, 20115, 20152, 20189, 20227, 20264, 20299, 20334, 20369, 20406, 20443, 20480, 20517, 20554, 20591, 20628, 20665, 20702, 20739, 20776, 20813, 20848, 20885, 20923, 20960, 20997, 21032, 21069, 21106, 21143, 21180, 21217, 21254, 21291, 21328, 21365, 21400, 21437, 21474, 21511, 21549, 21588, 21608, 21628, 21648, 21668, 21688, 21708, 21728, 21748, 21768, 21788, 21808, 21828 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.b907d257.dev.json | 115, 150, 185, 220, 255, 290, 327, 364, 399, 436, 473, 508, 545, 582, 617, 654, 691, 728, 765, 800, 837, 874, 909, 944, 979, 1014, 1051, 1086, 1121, 1158, 1195, 1230, 1265, 1302, 1339, 1376, 1413, 1450, 1485, 1522, 1559, 1594, 1631, 1668, 1703, 1738, 1773, 1808, 1845, 1882, 1919, 1956, 1991, 2026, 2061, 2096, 2133, 2170, 2205, 2242, 2279, 2314, 2351, 2388, 2423, 2460, 2497, 2534, 2571, 2606, 2643, 2680, 2715, 2750, 2785, 2820, 2857, 2892, 2927, 2964, 3001, 3036, 3071, 3108, 3145, 3182, 3219, 3256, 3291, 3328, 3365, 3400, 3437, 3474, 3509, 3544, 3579, 3614, 3651, 3688, 3725, 3762, 3797, 3834, 3871, 3908, 3945, 3982, 4019, 4054, 4089, 4124, 4159, 4196, 4233, 4270, 4307, 4344, 4381, 4418, 4455, 4492, 4529, 4566, 4603, 4638, 4675, 4713, 4750, 4787, 4822, 4859, 4896, 4933, 4970, 5007, 5044, 5081, 5118, 5155, 5190, 5227, 5264, 5301, 5339, 5376, 5411, 5448, 5485, 5522, 5559, 5596, 5633, 5670, 5707, 5744, 5781, 5818, 5855, 5890, 5927, 5965, 6002, 6039, 6074, 6111, 6148, 6185, 6222, 6259, 6296, 6333, 6370, 6407, 6442, 6479, 6516, 6553, 6591, 6628, 6667, 6706, 6745, 6783, 6822, 6861, 6899, 6936, 6971, 7006, 7043, 7080, 7117, 7154, 7191, 7228, 7265, 7302, 7339, 7376, 7413, 7450, 7485, 7522, 7560, 7597, 7634, 7669, 7706, 7743, 7780, 7817, 7854, 7891, 7928, 7965, 8002, 8037, 8074, 8111, 8148, 8186, 8223, 8258, 8293, 8330, 8367, 8404, 8441, 8478, 8515, 8552, 8589, 8626, 8663, 8700, 8737, 8772, 8809, 8847, 8884, 8921, 8956, 8993, 9030, 9067, 9104, 9141, 9178, 9215, 9252, 9289, 9324, 9361, 9398, 9435, 9473, 9510, 9545, 9580, 9617, 9654, 9691, 9728, 9765, 9802, 9839, 9876, 9913, 9950, 9987, 10024, 10059, 10096, 10134, 10171, 10208, 10243, 10280, 10317, 10354, 10391, 10428, 10465, 10502, 10539, 10576, 10611, 10648, 10685, 10722, 10760, 10797, 10832, 10867, 10904, 10941, 10978, 11015, 11052, 11089, 11126, 11163, 11200, 11237, 11274, 11311, 11346, 11383, 11421, 11458, 11495, 11530, 11567, 11604, 11641, 11678, 11715, 11752, 11789, 11826, 11863, 11898, 11935, 11972, 12009, 12047, 12084, 12119, 12154, 12191, 12228, 12265, 12302, 12339, 12376, 12413, 12450, 12487, 12524, 12561, 12598, 12633, 12670, 12708, 12745, 12782, 12817, 12854, 12891, 12928, 12965, 13002, 13039, 13076, 13113, 13150, 13185, 13222, 13259, 13296, 13334, 13371, 13409, 13444, 13479, 13516, 13553, 13590, 13627, 13664, 13701, 13738, 13775, 13812, 13849, 13886, 13923, 13958, 13995, 14033, 14070, 14107, 14142, 14179, 14216, 14253, 14290, 14327, 14364, 14401, 14438, 14475, 14510, 14547, 14584, 14621, 14659, 14696, 14731, 14766, 14803, 14840, 14877, 14914, 14951, 14988, 15025, 15062, 15099, 15136, 15173, 15210, 15245, 15282, 15320, 15357, 15394, 15429, 15466, 15503, 15540, 15577, 15614, 15651, 15688, 15725, 15762, 15797, 15834, 15871, 15908, 15946, 15983, 16018, 16053, 16090, 16127, 16164, 16201, 16238, 16275, 16312, 16349, 16386, 16423, 16460, 16497, 16532, 16569, 16607, 16644, 16681, 16716, 16753, 16790, 16827, 16864, 16901, 16938, 16975, 17012, 17049, 17084, 17121, 17158, 17195, 17233, 17270, 17305, 17340, 17377, 17414, 17451, 17488, 17525, 17562, 17599, 17636, 17673, 17710, 17747, 17784, 17819, 17856, 17894, 17931, 17968, 18003, 18040, 18077, 18114, 18151, 18188, 18225, 18262, 18299, 18336, 18371, 18408, 18445, 18482, 18520, 18557, 18592, 18627, 18664, 18701, 18738, 18775, 18812, 18849, 18886, 18923, 18960, 18997, 19034, 19071, 19106, 19143, 19181, 19218, 19255, 19290, 19327, 19364, 19401, 19438, 19475, 19512, 19549, 19586, 19623, 19658, 19695, 19732, 19769, 19807, 19844, 19879, 19914, 19951, 19988, 20025, 20062, 20099, 20136, 20173, 20210, 20247, 20284, 20321, 20358, 20393, 20430, 20468, 20505, 20542, 20577, 20614, 20651, 20688, 20725, 20762, 20799, 20836, 20873, 20910, 20945, 20982, 21019, 21056, 21094, 21133, 21153, 21173, 21193, 21213, 21233, 21253, 21273, 21293, 21313, 21333, 21353, 21373, 21393, 21413, 21433, 21453, 21473, 21493, 21513, 21533, 21553, 21573, 21593, 21613, 21633 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.3a22a0df96a2.dev.json | 115, 150, 185, 220, 255, 290, 325, 362, 399, 436, 473, 510, 545, 580, 615, 652, 687, 722, 759, 796, 833, 870, 907, 942, 979, 1014, 1049, 1084, 1121, 1158, 1195, 1230, 1265, 1300, 1337, 1374, 1411, 1448, 1485, 1520, 1555, 1590, 1627, 1662, 1697, 1734, 1771, 1808, 1845, 1882, 1917, 1954, 1989, 2024, 2059, 2096, 2133, 2170, 2207, 2244, 2281, 2318, 2355, 2392, 2427, 2462, 2497, 2532, 2567, 2604, 2641, 2678, 2715, 2752, 2789, 2824, 2861, 2899, 2936, 2973, 3010, 3047, 3084, 3121, 3158, 3193, 3230, 3267, 3304, 3342, 3377, 3414, 3451, 3488, 3525, 3562, 3599, 3634, 3671, 3709, 3746, 3783, 3820, 3857, 3894, 3931, 3968, 4003, 4040, 4077, 4114, 4152, 4189, 4226, 4263, 4301, 4338, 4375, 4413, 4450, 4485, 4520, 4555, 4592, 4629, 4666, 4703, 4740, 4777, 4812, 4849, 4887, 4924, 4961, 4998, 5035, 5072, 5109, 5146, 5181, 5218, 5255, 5292, 5330, 5365, 5400, 5435, 5472, 5509, 5546, 5583, 5620, 5657, 5692, 5729, 5767, 5804, 5841, 5878, 5915, 5952, 5989, 6026, 6061, 6098, 6135, 6172, 6210, 6245, 6280, 6315, 6352, 6389, 6426, 6463, 6500, 6537, 6572, 6609, 6647, 6684, 6721, 6758, 6795, 6832, 6869, 6906, 6941, 6978, 7015, 7052, 7090, 7125, 7160, 7195, 7232, 7269, 7306, 7343, 7380, 7417, 7452, 7489, 7527, 7564, 7601, 7638, 7675, 7712, 7749, 7786, 7821, 7858, 7895, 7932, 7970, 8005, 8040, 8075, 8112, 8149, 8186, 8223, 8260, 8297, 8332, 8369, 8407, 8444, 8481, 8518, 8555, 8592, 8629, 8666, 8701, 8738, 8775, 8812, 8850, 8888, 8923, 8958, 8993, 9030, 9067, 9104, 9141, 9178, 9215, 9250, 9287, 9325, 9362, 9399, 9436, 9473, 9510, 9547, 9584, 9619, 9656, 9693, 9730, 9768, 9803, 9838, 9873, 9910, 9947, 9984, 10021, 10058, 10095, 10130, 10167, 10205, 10242, 10279, 10316, 10353, 10390, 10427, 10464, 10499, 10536, 10573, 10610, 10648, 10683, 10718, 10753, 10790, 10827, 10864, 10901, 10938, 10975, 11010, 11047, 11085, 11122, 11159, 11196, 11233, 11270, 11307, 11344, 11379, 11416, 11453, 11490, 11528, 11563, 11598, 11633, 11670, 11707, 11744, 11781, 11818, 11855, 11890, 11927, 11965, 12002, 12039, 12076, 12113, 12150, 12187, 12224, 12259, 12296, 12333, 12370, 12408, 12443, 12478, 12513, 12550, 12587, 12624, 12661, 12698, 12735, 12770, 12807, 12845, 12882, 12919, 12956, 12993, 13030, 13067, 13104, 13139, 13176, 13213, 13250, 13288, 13323, 13358, 13393, 13430, 13467, 13504, 13541, 13578, 13615, 13650, 13687, 13725, 13762, 13799, 13836, 13873, 13910, 13947, 13984, 14019, 14056, 14093, 14130, 14170, 14193, 14216, 14239, 14262, 14285, 14308, 14331, 14354, 14377, 14400, 14423, 14446 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.3fbbbaa37628.dev.json | 115, 150, 185, 220, 255, 290, 325, 360, 397, 434, 471, 508, 545, 580, 615, 650, 687, 722, 757, 794, 831, 868, 905, 942, 977, 1014, 1049, 1084, 1119, 1156, 1193, 1230, 1265, 1300, 1335, 1372, 1409, 1446, 1483, 1520, 1555, 1590, 1625, 1662, 1697, 1732, 1769, 1806, 1843, 1880, 1917, 1952, 1989, 2024, 2059, 2094, 2131, 2168, 2205, 2242, 2279, 2316, 2353, 2390, 2427, 2462, 2497, 2532, 2567, 2602, 2637, 2674, 2711, 2748, 2785, 2822, 2859, 2894, 2931, 2969, 3006, 3043, 3080, 3117, 3154, 3191, 3228, 3263, 3300, 3337, 3374, 3412, 3447, 3484, 3521, 3558, 3595, 3632, 3669, 3704, 3741, 3779, 3816, 3853, 3890, 3927, 3964, 4001, 4038, 4073, 4110, 4147, 4184, 4222, 4259, 4296, 4333, 4371, 4408, 4445, 4483, 4520, 4555, 4590, 4625, 4660, 4697, 4734, 4771, 4808, 4845, 4882, 4917, 4954, 4992, 5029, 5066, 5103, 5140, 5177, 5214, 5251, 5286, 5323, 5360, 5397, 5435, 5470, 5505, 5540, 5575, 5612, 5649, 5686, 5723, 5760, 5797, 5832, 5869, 5907, 5944, 5981, 6018, 6055, 6092, 6129, 6166, 6201, 6238, 6275, 6312, 6350, 6385, 6420, 6455, 6490, 6527, 6564, 6601, 6638, 6675, 6712, 6747, 6784, 6822, 6859, 6896, 6933, 6970, 7007, 7044, 7081, 7116, 7153, 7190, 7227, 7265, 7300, 7335, 7370, 7405, 7442, 7479, 7516, 7553, 7590, 7627, 7662, 7699, 7737, 7774, 7811, 7848, 7885, 7922, 7959, 7996, 8031, 8068, 8105, 8142, 8180, 8215, 8250, 8285, 8320, 8357, 8394, 8431, 8468, 8505, 8542, 8577, 8614, 8652, 8689, 8726, 8763, 8800, 8837, 8874, 8911, 8946, 8983, 9020, 9057, 9095, 9133, 9168, 9203, 9238, 9273, 9310, 9347, 9384, 9421, 9458, 9495, 9530, 9567, 9605, 9642, 9679, 9716, 9753, 9790, 9827, 9864, 9899, 9936, 9973, 10010, 10048, 10083, 10118, 10153, 10188, 10225, 10262, 10299, 10336, 10373, 10410, 10445, 10482, 10520, 10557, 10594, 10631, 10668, 10705, 10742, 10779, 10814, 10851, 10888, 10925, 10963, 10998, 11033, 11068, 11103, 11140, 11177, 11214, 11251, 11288, 11325, 11360, 11397, 11435, 11472, 11509, 11546, 11583, 11620, 11657, 11694, 11729, 11766, 11803, 11840, 11878, 11913, 11948, 11983, 12018, 12055, 12092, 12129, 12166, 12203, 12240, 12275, 12312, 12350, 12387, 12424, 12461, 12498, 12535, 12572, 12609, 12644, 12681, 12718, 12755, 12793, 12828, 12863, 12898, 12933, 12970, 13007, 13044, 13081, 13118, 13155, 13190, 13227, 13265, 13302, 13339, 13376, 13413, 13450, 13487, 13524, 13559, 13596, 13633, 13670, 13708, 13743, 13778, 13813, 13848, 13885, 13922, 13959, 13996, 14033, 14070, 14105, 14142, 14180, 14217, 14254, 14291, 14328, 14365, 14402, 14439, 14474, 14511, 14548, 14585 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.6ce0171efcfd.dev.json | 115, 150, 185, 220, 255, 290, 325, 362, 399, 436, 473, 510, 545, 580, 615, 652, 687, 722, 759, 796, 833, 870, 907, 942, 979, 1014, 1049, 1084, 1121, 1158, 1195, 1230, 1265, 1300, 1337, 1374, 1411, 1448, 1485, 1520, 1555, 1590, 1627, 1662, 1697, 1734, 1771, 1808, 1845, 1882, 1917, 1954, 1989, 2024, 2059, 2096, 2133, 2170, 2207, 2244, 2281, 2318, 2355, 2392, 2427, 2462, 2497, 2532, 2567, 2604, 2641, 2678, 2715, 2752, 2789, 2824, 2861, 2899, 2936, 2973, 3010, 3047, 3084, 3121, 3158, 3193, 3230, 3267, 3304, 3342, 3377, 3414, 3451, 3488, 3525, 3562, 3599, 3634, 3671, 3709, 3746, 3783, 3820, 3857, 3894, 3931, 3968, 4003, 4040, 4077, 4114, 4152, 4189, 4226, 4263, 4301, 4338, 4375, 4413, 4450, 4485, 4520, 4555, 4592, 4629, 4666, 4703, 4740, 4777, 4812, 4849, 4887, 4924, 4961, 4998, 5035, 5072, 5109, 5146, 5181, 5218, 5255, 5292, 5330, 5365, 5400, 5435, 5472, 5509, 5546, 5583, 5620, 5657, 5692, 5729, 5767, 5804, 5841, 5878, 5915, 5952, 5989, 6026, 6061, 6098, 6135, 6172, 6210, 6245, 6280, 6315, 6352, 6389, 6426, 6463, 6500, 6537, 6572, 6609, 6647, 6684, 6721, 6758, 6795, 6832, 6869, 6906, 6941, 6978, 7015, 7052, 7090, 7125, 7160, 7195, 7232, 7269, 7306, 7343, 7380, 7417, 7452, 7489, 7527, 7564, 7601, 7638, 7675, 7712, 7749, 7786, 7821, 7858, 7895, 7932, 7970, 8005, 8040, 8075, 8112, 8149, 8186, 8223, 8260, 8297, 8332, 8369, 8407, 8444, 8481, 8518, 8555, 8592, 8629, 8666, 8701, 8738, 8775, 8812, 8850, 8888, 8923, 8958, 8993, 9030, 9067, 9104, 9141, 9178, 9215, 9250, 9287, 9325, 9362, 9399, 9436, 9473, 9510, 9547, 9584, 9619, 9656, 9693, 9730, 9768, 9803, 9838, 9873, 9910, 9947, 9984, 10021, 10058, 10095, 10130, 10167, 10205, 10242, 10279, 10316, 10353, 10390, 10427, 10464, 10499, 10536, 10573, 10610, 10648, 10683, 10718, 10753, 10790, 10827, 10864, 10901, 10938, 10975, 11010, 11047, 11085, 11122, 11159, 11196, 11233, 11270, 11307, 11344, 11379, 11416, 11453, 11490, 11528, 11563, 11598, 11633, 11670, 11707, 11744, 11781, 11818, 11855, 11890, 11927, 11965, 12002, 12039, 12076, 12113, 12150, 12187, 12224, 12259, 12296, 12333, 12370, 12408, 12443, 12478, 12513, 12550, 12587, 12624, 12661, 12698, 12735, 12770, 12807, 12845, 12882, 12919, 12956, 12993, 13030, 13067, 13104, 13139, 13176, 13213, 13250, 13288, 13323, 13358, 13393, 13430, 13467, 13504, 13541, 13578, 13615, 13650, 13687, 13725, 13762, 13799, 13836, 13873, 13910, 13947, 13984, 14019, 14056, 14093, 14130, 14170, 14190, 14210, 14230, 14250, 14270, 14290, 14310, 14330, 14350, 14370, 14390, 14410 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-read-shadow-catl.owner.b907d257.dev.json | 115, 150, 185, 220, 255, 290, 327, 364, 401, 438, 475, 510, 545, 580, 617, 652, 687, 724, 761, 798, 835, 872, 907, 944, 979, 1014, 1049, 1086, 1123, 1160, 1195, 1230, 1265, 1302, 1339, 1376, 1413, 1450, 1485, 1520, 1555, 1592, 1627, 1662, 1699, 1736, 1773, 1810, 1847, 1882, 1919, 1954, 1989, 2024, 2061, 2098, 2135, 2172, 2209, 2246, 2283, 2320, 2357, 2392, 2427, 2462, 2497, 2534, 2571, 2608, 2645, 2682, 2719, 2754, 2791, 2829, 2866, 2903, 2940, 2977, 3014, 3051, 3088, 3123, 3160, 3197, 3234, 3272, 3307, 3344, 3381, 3418, 3455, 3492, 3529, 3564, 3601, 3639, 3676, 3713, 3750, 3787, 3824, 3861, 3898, 3933, 3970, 4007, 4044, 4082, 4119, 4156, 4193, 4231, 4268, 4305, 4343, 4380, 4415, 4450, 4487, 4524, 4561, 4598, 4635, 4672, 4707, 4744, 4782, 4819, 4856, 4893, 4930, 4967, 5004, 5041, 5076, 5113, 5150, 5187, 5225, 5260, 5295, 5332, 5369, 5406, 5443, 5480, 5517, 5552, 5589, 5627, 5664, 5701, 5738, 5775, 5812, 5849, 5886, 5921, 5958, 5995, 6032, 6070, 6105, 6140, 6177, 6214, 6251, 6288, 6325, 6362, 6397, 6434, 6472, 6509, 6546, 6583, 6620, 6657, 6694, 6731, 6766, 6803, 6840, 6877, 6915, 6950, 6985, 7022, 7059, 7096, 7133, 7170, 7207, 7242, 7279, 7317, 7354, 7391, 7428, 7465, 7502, 7539, 7576, 7611, 7648, 7685, 7722, 7760, 7795, 7830, 7867, 7904, 7941, 7978, 8015, 8052, 8087, 8124, 8162, 8199, 8236, 8273, 8310, 8347, 8384, 8421, 8456, 8493, 8530, 8567, 8605, 8643, 8678, 8713, 8750, 8787, 8824, 8861, 8898, 8935, 8970, 9007, 9045, 9082, 9119, 9156, 9193, 9230, 9267, 9304, 9339, 9376, 9413, 9450, 9488, 9523, 9558, 9595, 9632, 9669, 9706, 9743, 9780, 9815, 9852, 9890, 9927, 9964, 10001, 10038, 10075, 10112, 10149, 10184, 10221, 10258, 10295, 10333, 10368, 10403, 10440, 10477, 10514, 10551, 10588, 10625, 10660, 10697, 10735, 10772, 10809, 10846, 10883, 10920, 10957, 10994, 11029, 11066, 11103, 11140, 11178, 11213, 11248, 11285, 11322, 11359, 11396, 11433, 11470, 11505, 11542, 11580, 11617, 11654, 11691, 11728, 11765, 11802, 11839, 11874, 11911, 11948, 11985, 12023, 12058, 12093, 12130, 12167, 12204, 12241, 12278, 12315, 12350, 12387, 12425, 12462, 12499, 12536, 12573, 12610, 12647, 12684, 12719, 12756, 12793, 12830, 12868, 12903, 12938, 12975, 13012, 13049, 13086, 13123, 13160, 13195, 13232, 13270, 13307, 13344, 13381, 13418, 13455, 13492, 13529, 13564, 13601, 13638, 13675, 13715, 13735, 13755, 13775, 13795, 13815, 13835, 13855, 13875, 13895, 13915, 13935, 13955, 13975, 13995, 14015, 14035, 14055, 14075, 14095, 14115, 14135, 14155, 14175, 14195, 14215 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-release-19-api-deployment.dev.json | 31 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-release-19-api-parser-qualification.dev.json | 8, 14 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-release-19-review-state.dev.json | 15, 346 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-release-19-shadow-deployment.dev.json | 7 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-release-19-shadow-gaps.dev.json | 6 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-reset-exact-release.dev.json | 12, 2465, 5035, 5372, 8644, 8981 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-reset-native-publication.dev.json | 895, 3533, 4500 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-shadow-deployment.dev.json | 81, 94, 121, 148, 175, 202, 222, 242, 262, 282, 302, 322, 342, 357, 372, 399, 426, 453, 480, 507, 534, 561, 576, 603, 630, 657, 684, 711, 738, 765, 792, 819, 846, 873, 900, 927, 954, 981, 1008, 1035, 1062, 1089, 1116, 1143, 1170, 1197, 1224, 1251, 1278, 1305, 1332, 1359, 1386, 1413, 1440, 1467, 1494, 1521, 1548, 1575, 1602, 1629, 1656, 1683, 1710, 1737, 1764, 1791, 1818, 1845, 1872, 1899, 1926, 1953, 1980, 2007, 2034, 2061, 2088, 2115, 2142, 2169, 2196, 2223, 2250, 2277, 2304, 2331, 2358, 2385, 2412, 2439, 2466, 2493, 2520, 2547, 2574, 2601, 2628, 2655, 2682, 2709, 2736, 2763, 2790, 2817, 2844, 2871, 2898, 2925, 2952, 2979, 3006, 3033, 3060, 3087, 3114, 3141, 3168, 3195, 3222, 3249, 3276, 3303, 3330, 3357, 3384, 3411, 3438, 3465, 3492, 3519, 3546, 3573, 3600, 3620, 3647, 3662, 3689, 3716, 3743, 3770, 3797, 3824, 3851, 3878, 3905, 3932, 3959, 3986, 4013, 4040, 4067, 4094, 4121, 4148, 4175, 4202, 4229, 4256, 4283, 4310, 4337, 4364, 4391, 4418, 4445, 4472, 4499, 4526, 4553, 4580, 4607, 4634, 4661, 4688, 4715, 4742, 4769, 4796, 4823, 4850, 4877, 4904, 4931, 4958, 4985, 5012, 5039, 5066, 5093, 5120, 5147, 5174, 5201, 5228, 5255, 5282, 5309, 5336, 5363, 5390, 5417, 5444, 5471, 5498, 5525, 5552, 5579, 5606, 5633, 5660, 5687, 5714, 5741, 5768, 5795, 5822, 5849, 5876, 5903, 5930, 5957, 5984, 6011, 6038, 6065, 6092, 6119, 6146, 6173, 6200, 6227, 6254, 6281, 6308, 6335, 6362, 6389, 6416, 6443, 6470, 6497, 6524, 6551, 6578, 6605, 6632, 6659, 6686, 6713, 6740, 6767, 6794, 6821, 6848, 6875, 6902, 6929, 6956, 6983, 7010, 7037, 7064, 7091, 7118, 7145, 7172, 7199, 7226, 7253, 7280, 7307, 7334, 7361, 7388, 7415, 7442, 7469, 7496, 7523, 7550, 7577, 7604, 7631, 7658, 7685, 7712, 7739, 7766, 7793, 7820, 7847, 7874, 7901, 7928, 7955, 7982, 8009, 8036, 8063, 8090, 8117, 8144, 8171, 8198, 8225, 8252, 8279, 8306, 8333, 8360, 8387, 8414, 8441, 8468, 8495, 8522, 8549, 8576, 8603, 8630, 8657, 8684, 8711, 8738, 8765, 8792, 8819, 8846, 8873, 8900, 8927, 8954, 8981, 9008, 9035, 9062, 9089, 9116, 9143, 9170, 9197, 9224, 9251, 9278, 9305, 9332, 9359, 9386, 9413, 9440, 9467, 9494, 9521, 9548, 9575, 9602, 9629, 9656, 9683, 9710, 9737, 9764, 9791, 9818, 9845, 9872, 9899, 9926, 9953, 9980, 10007, 10034, 10061, 10088, 10115, 10142, 10169, 10196, 10223, 10250, 10277, 10304, 10331, 10358, 10385, 10412, 10439, 10466, 10493, 10520, 10547, 10574, 10601, 10628, 10655, 10682, 10709, 10736, 10763, 10790, 10805, 10832, 10859, 10886, 10901, 10928, 10955, 10982, 11009, 11036, 11063, 11090, 11117, 11144, 11171, 11198, 11225, 11252, 11279, 11306, 11321, 11336, 11351, 11378, 11405, 11432, 11459, 11486, 11513, 11540, 11567, 11594, 11621, 11648, 11675, 11702, 11729, 11756, 11783, 11810, 11837, 11864, 11891, 11918, 11945, 11972, 11999, 12026, 12053, 12080, 12107, 12134, 12161, 12188, 12215, 12242, 12269, 12296, 12323, 12350, 12377, 12404, 12431, 12458, 12485, 12512, 12539, 12566, 12593, 12620, 12647, 12674, 12701, 12728, 12755, 12782, 12809, 12836, 12863, 12878, 12905, 12932, 12959, 12986, 13013, 13040, 13067, 13094, 13121, 13148, 13175, 13202, 13229, 13256, 13283, 13310, 13337, 13364, 13391, 13418, 13445, 13472, 13499, 13526, 13553, 13580, 13607, 13634, 13661, 13688, 13715, 13742, 13769, 13796, 13823, 13850, 13877, 13904, 13931, 13958, 13985, 14012, 14039, 14066, 14093, 14120, 14147, 14174, 14201, 14228, 14255, 14282, 14309, 14336, 14363, 14390, 14405, 14432, 14459, 14486, 14513, 14540, 14567, 14594, 14621, 14648, 14675, 14702, 14729, 14756, 14783, 14810, 14837, 14864, 14891, 14918, 14945, 14972, 14999, 15026, 15053, 15080, 15107, 15134, 15161, 15188, 15215, 15242, 15269, 15296, 15323, 15350, 15377, 15404, 15431, 15458, 15485, 15512, 15539, 15566, 15593, 15620, 15647, 15674, 15701, 15728, 15755, 15782, 15809, 15836, 15863, 15890, 15917, 15932, 15959, 15986, 16013, 16040, 16067, 16094, 16121, 16148, 16175, 16202, 16229, 16256, 16283, 16310, 16337, 16364, 16391, 16418, 16445, 16472, 16499, 16526, 16553, 16580, 16607, 16634, 16661, 16688, 16715, 16742, 16769, 16796, 16823, 16850, 16877, 16904, 16931, 16958, 16985, 17012, 17039, 17066, 17093, 17120, 17147, 17174, 17201, 17228, 17255, 17282, 17309, 17336, 17363, 17390, 17417, 17444, 17459, 17486, 17513, 17540, 17567, 17594, 17621, 17648, 17675, 17702, 17729, 17756, 17783, 17810, 17837, 17864, 17891, 17918, 17945, 17972, 17999, 18026, 18053, 18080, 18107, 18134, 18161, 18188, 18215, 18242, 18269, 18296, 18323, 18350, 18377, 18404, 18431, 18458, 18485, 18512, 18539, 18566, 18593, 18620, 18647, 18674, 18701, 18728, 18755, 18782, 18809, 18836, 18863, 18890, 18917, 18944, 18971, 18998, 19025, 19040, 19067, 19094, 19121, 19148, 19175, 19202, 19229, 19256, 19283, 19310, 19337, 19364, 19391, 19418, 19445, 19472, 19499, 19526, 19553, 19580, 19607, 19634, 19661, 19688, 19715, 19742, 19769, 19796, 19823, 19850, 19877, 19904, 19931, 19958, 19985, 20012, 20039, 20066, 20093, 20120, 20147, 20174, 20201, 20228, 20255, 20282, 20309, 20336, 20363, 20390, 20417, 20444, 20471, 20498, 20525, 20552, 20579, 20606, 20633, 20660, 20687, 20714, 20741, 20768, 20795, 20822, 20849, 20876, 20903, 20930, 20957, 20984, 21011, 21038, 21065, 21092, 21119, 21146, 21173, 21200, 21227, 21254, 21281, 21308, 21335, 21362, 21389, 21416, 21443, 21470, 21497, 21524, 21551, 21578, 21605, 21632, 21659, 21686, 21713, 21740, 21767, 21794, 21821, 21848, 21875, 21902, 21929, 21956, 21983, 22010, 22037, 22052 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-two-reviewer-receipts.dev.json | 66, 105 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-v2-exact-release.after-signing.dev.json | 12, 2464, 2893, 4027 |
+| `profileHash` | runtime | governance/policy/reports/business-partner-v2-exact-release.dev.json | 12, 2464, 2893, 4027 |
+| `profileHash` | runtime | governance/policy/reviews/business-partner-canonical-v2-native-graph.dev.json | 2550, 2913 |
+| `profileHash` | runtime | governance/policy/reviews/business-partner-canonical-v2-native-graph.pre-native-hash.dev.json | 2550, 2913 |
+| `profileHash` | runtime | governance/policy/reviews/business-partner-canonical-v2-native.proposal.dev.json | 888 |
+| `profileHash` | runtime | governance/policy/reviews/business-partner-canonical-v2-native.proposal.pre-native-hash.dev.json | 888 |
+| `profileHash` | runtime | governance/policy/reviews/business-partner-enter-correction-runtime-workflow.dev.json | 55, 200, 255, 488, 543, 776, 831, 1064, 1119, 1352, 1407, 1642, 1697, 1931, 1986, 2222, 2277, 2514, 2569, 2806, 2861, 3098, 3153, 3397, 3452, 3689, 3744, 3981, 4036, 4273, 4328, 4586, 4641, 4842, 4897, 5131, 5186, 5420, 5475, 5709, 5764, 5998, 6053, 6287, 6342, 6576, 6631, 6865, 6920, 7161, 7216, 7450, 7505, 7739, 7794, 8035, 8090, 8322, 8377, 8608, 8663, 8897, 8952, 9188, 9243, 9479, 9534, 9754, 9809, 10029, 10084, 10303, 10358, 10577, 10632, 10853, 10908, 11143, 11198, 11438, 11493, 11730, 11785, 12022, 12077, 12314, 12369, 12606, 12661, 12894, 12949, 13171, 13226, 13448, 13503, 13725, 13780, 14025, 14080, 14322, 14377, 14618, 14673 |
+| `profileHash` | runtime | governance/policy/reviews/business-partner-enter-correction.graph.dev.json | 2550, 3515, 5364, 6416 |
+| `profileHash` | runtime | governance/policy/reviews/business-partner-enter-correction.pre-row-rekey.graph.dev.json | 2550, 3515, 5364, 6416 |
+| `profileHash` | runtime | governance/policy/reviews/business-partner-release-19-workflow.dev.json | 59, 204, 402, 600, 798, 996, 1196, 1395, 1596, 1798, 2000, 2202, 2411, 2613, 2815, 3017, 3240, 3406, 3605, 3804, 4003, 4202, 4401, 4600, 4799, 5005, 5204, 5403, 5609, 5806, 6002, 6201, 6402, 6603, 6788, 6973, 7157, 7341, 7527, 7727, 7932, 8134, 8336, 8538, 8740, 8938, 9125, 9312, 9499, 9709, 9916, 10122 |
+| `profileHash` | runtime | governance/policy/reviews/business-partner-release-20-workflow.dev.json | 57, 202, 257, 495, 550, 788, 843, 1081, 1136, 1374, 1429, 1669, 1724, 1963, 2018, 2259, 2314, 2556, 2611, 2853, 2908, 3150, 3205, 3454, 3509, 3751, 3806, 4048, 4103, 4345, 4400, 4663, 4718, 4924, 4979, 5218, 5273, 5512, 5567, 5806, 5861, 6100, 6155, 6394, 6449, 6688, 6743, 6982, 7037, 7283, 7338, 7577, 7632, 7871, 7926, 8172, 8227, 8464, 8519, 8755, 8810, 9049, 9104, 9345, 9400, 9641, 9696, 9921, 9976, 10201, 10256, 10480, 10535, 10759, 10814, 11040, 11095, 11335, 11390, 11635, 11690, 11932, 11987, 12229, 12284, 12526, 12581, 12823, 12878, 13116, 13171, 13398, 13453, 13680, 13735, 13962, 14017, 14267, 14322, 14569, 14624, 14870, 14925 |
+| `profileHash` | runtime | governance/policy/reviews/business-partner-release-20-workflow.pre-head-correction.dev.json | 53, 198, 253, 491, 546, 784, 839, 1077, 1132, 1370, 1425, 1665, 1720, 1959, 2014, 2255, 2310, 2552, 2607, 2849, 2904, 3146, 3201, 3450, 3505, 3747, 3802, 4044, 4099, 4341, 4396, 4659, 4714, 4920, 4975, 5214, 5269, 5508, 5563, 5802, 5857, 6096, 6151, 6390, 6445, 6684, 6739, 6978, 7033, 7279, 7334, 7573, 7628, 7867, 7922, 8168, 8223, 8460, 8515, 8751, 8806, 9045, 9100, 9341, 9396, 9637, 9692, 9917, 9972, 10197, 10252, 10476, 10531, 10755, 10810, 11036, 11091, 11331, 11386, 11631, 11686, 11928, 11983, 12225, 12280, 12522, 12577, 12819, 12874, 13112, 13167, 13394, 13449, 13676, 13731, 13958, 14013, 14263, 14318, 14565, 14620, 14866, 14921 |
+| `profileHash` | runtime | governance/policy/reviews/business-partner-reset-runtime.graph.dev.json | 2550, 3520, 5374, 6431 |
+| `profileHash` | test | packages/contracts/platform/ai/src/__tests__/business-context.test.ts | 36 |
 | `profileHash` | runtime | packages/contracts/platform/authorization/src/index.ts | 2, 18 |
 | `profileHash` | runtime | packages/contracts/platform/fixtures/authorization-snapshot.v1.json | 3 |
 | `profileHash` | runtime | packages/contracts/platform/fixtures/platform-bootstrap.v1.json | 22 |
-| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 7 |
-| `profileHash` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4806, 4815, 4822, 4823, 4824 |
-| `profileHash` | test | server/db/scripts/tests/integration/governed-internal-business-partner-http.mjs | 134 |
+| `profileHash` | runtime | packages/platform/iam/governance-review/src/authenticated-operation-review.mjs | 138 |
+| `profileHash` | runtime | packages/platform/iam/governance-review/src/authenticated-role-review.mjs | 107 |
+| `profileHash` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 141, 147 |
+| `profileHash` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 156, 162 |
+| `profileHash` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 126, 132 |
+| `profileHash` | test | server/apps/platform-host/scripts/db-verification/tests/integration/governed-internal-business-partner-http.mjs | 134 |
+| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts | 71, 81 |
+| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts | 16 |
+| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts | 31, 38 |
+| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-deployment.test.ts | 35 |
+| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 24, 35, 40, 74, 96, 98, 141, 181, 183, 307, 594, 648 |
+| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/business-partner-company-native-authority.test.ts | 21 |
+| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 41 |
+| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 40 |
+| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5 |
+| `profileHash` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 14 |
+| `profileHash` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 11, 19 |
+| `profileHash` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-deployment.ts | 222 |
+| `profileHash` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 25, 69, 74, 104, 114, 229, 441 |
+| `profileHash` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 7, 9 |
+| `profileHash` | runtime | server/apps/platform-host/src/composition/register-services.ts | 5770, 7221, 7230, 7237, 7238, 7239 |
+| `profileHash` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 148, 155 |
+| `profileHash` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 240, 247 |
+| `profileHash` | test | server/db/scripts/tests/integration/identity-replay-live.mjs | 455 |
 | `profileHash` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
+| `profileHash` | test | server/packages/contracts/ai/src/__tests__/business-context.test.ts | 36 |
+| `profileHash` | runtime | server/packages/contracts/ai/src/replay.ts | 39 |
 | `profileHash` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 17, 35 |
-| `profileHash` | runtime | server/packages/contracts/auth/src/authorization.ts | 70, 88 |
+| `profileHash` | runtime | server/packages/contracts/auth/src/authorization.ts | 74, 92 |
+| `profileHash` | test | server/packages/contracts/metadata/src/__tests__/entity-canonical-read-admission.test.ts | 18, 35, 148, 198 |
+| `profileHash` | runtime | server/packages/contracts/metadata/src/entity-canonical-read-admission.ts | 9, 41, 48, 57, 58, 59 |
+| `profileHash` | test | server/packages/planes/mesh/src/business-partner-network-exchange.test.ts | 5 |
 | `profileHash` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 3 |
 | `profileHash` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6 |
 | `profileHash` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7 |
-| `profileHash` | test | server/packages/planes/neon/src/finance-http.test.ts | 7 |
-| `profileHash` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 13 |
-| `profileHash` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 5 |
+| `profileHash` | test | server/packages/planes/neon/src/finance-http.test.ts | 18, 27 |
+| `profileHash` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 37, 44 |
+| `profileHash` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 16, 23 |
 | `profileHash` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 7, 8 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/business-context.test.ts | 12, 18, 167, 173 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/business-partner-case-tools.test.ts | 5 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/business-partner-evaluations.test.ts | 11, 12, 21, 43, 50, 159 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/business-partner-insight-tools.test.ts | 13, 14, 21, 40, 139 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/business-partner-list-insights.test.ts | 118, 312 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/durable-message-lineage.test.ts | 130, 227, 256 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/entity-section-tool.test.ts | 15, 48 |
 | `profileHash` | test | server/packages/platform/ai/src/__tests__/experience-configuration.test.ts | 8 |
 | `profileHash` | test | server/packages/platform/ai/src/__tests__/failover.test.ts | 6 |
 | `profileHash` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 8, 9 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/inference-reauthorization.test.ts | 134, 140 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/insight-disclosure.test.ts | 219 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/local-page-answer-budget.test.ts | 37 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/missing-scope-runtime.test.ts | 33, 66, 99, 129 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/retrieval-f5.test.ts | 103, 104 |
+| `profileHash` | test | server/packages/platform/ai/src/__tests__/review-fixture.ts | 9, 14 |
 | `profileHash` | test | server/packages/platform/ai/src/__tests__/runtime.test.ts | 6 |
 | `profileHash` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 6, 7 |
 | `profileHash` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 14, 15 |
+| `profileHash` | runtime | server/packages/platform/ai/src/business-partner-insight-tools.ts | 35, 45 |
+| `profileHash` | runtime | server/packages/platform/ai/src/business-partner-tools.ts | 34 |
 | `profileHash` | runtime | server/packages/platform/ai/src/context.ts | 10, 16 |
+| `profileHash` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 58 |
+| `profileHash` | runtime | server/packages/platform/ai/src/entity-section-tool.ts | 25 |
+| `profileHash` | runtime | server/packages/platform/ai/src/insight-reuse-policy.ts | 45 |
+| `profileHash` | runtime | server/packages/platform/ai/src/knowledge.ts | 194 |
 | `profileHash` | runtime | server/packages/platform/ai/src/kysely-tool-proposal-store.ts | 176 |
-| `profileHash` | runtime | server/packages/platform/ai/src/record-data-gateway.ts | 36 |
-| `profileHash` | runtime | server/packages/platform/ai/src/tool-service.ts | 77, 78, 81, 121, 130 |
-| `profileHash` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
-| `profileHash` | test | server/packages/platform/experience/src/service.test.ts | 14, 15 |
-| `profileHash` | runtime | server/packages/platform/experience/src/service.ts | 97, 936, 988 |
+| `profileHash` | runtime | server/packages/platform/ai/src/message-lineage.ts | 45, 121 |
+| `profileHash` | runtime | server/packages/platform/ai/src/record-data-gateway.ts | 40 |
+| `profileHash` | runtime | server/packages/platform/ai/src/tool-service.ts | 81, 82, 85, 132, 141 |
+| `profileHash` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 347, 354 |
+| `profileHash` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1091, 1097 |
+| `profileHash` | test | server/packages/platform/experience/src/service.test.ts | 15, 16 |
+| `profileHash` | runtime | server/packages/platform/experience/src/service.ts | 105, 956, 1008 |
 | `profileHash` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 27 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `profileHash` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 428, 435 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 7, 10 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 9, 10 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
-| `profileHash` | runtime | server/packages/platform/iam/src/iam-service.ts | 102, 110, 179, 201 |
-| `profileHash` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 272, 278 |
+| `profileHash` | runtime | server/packages/platform/iam/src/iam-service.ts | 106, 114, 180, 202 |
+| `profileHash` | runtime | server/packages/platform/iam/src/kysely-context-refresh.ts | 43 |
+| `profileHash` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 299, 300, 364, 376 |
 | `profileHash` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `profileHash` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
-| `profileHash` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 3 |
+| `profileHash` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
 | `profileHash` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 79 |
-| `profileHash` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 3 |
+| `profileHash` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 115, 122 |
 | `profileHash` | test | server/packages/services/content/src/content-service.test.ts | 2 |
-| `profileHash` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 35 |
-| `profileHash` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 2 |
-| `profileHash` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 8 |
+| `profileHash` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
+| `profileHash` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 18 |
+| `profileHash` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 26 |
+| `profileHash` | test | server/packages/services/master-data/src/__tests__/business-partner-reveal-revocation.test.ts | 13, 20, 28, 60 |
 | `profileHash` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 14 |
+| `profileHash` | test | server/packages/services/master-data/src/__tests__/integration/governed-internal-business-partner-http.mjs | 132 |
+| `profileHash` | test | server/packages/services/master-data/src/__tests__/supplier-workforce-command-guard.test.ts | 13 |
+| `profileHash` | test | server/packages/services/master-data/src/__tests__/supplier-workforce-requisition-service.test.ts | 2 |
+| `profileHash` | test | server/packages/services/master-data/src/__tests__/worker-engagement-iam-service.test.ts | 11 |
+| `profileHash` | test | server/packages/services/master-data/src/__tests__/worker-engagement-lifecycle-service.test.ts | 22 |
+| `profileHash` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 674, 1588 |
+| `profileHash` | test | server/packages/services/publication/src/__tests__/authenticated-entity-release-review.test.ts | 6 |
+| `profileHash` | test | server/packages/services/publication/src/__tests__/canonical-read-catalog.test.ts | 14 |
+| `profileHash` | test | server/packages/services/publication/src/__tests__/entity-authorization-compiler.test.ts | 598 |
+| `profileHash` | test | server/packages/services/publication/src/__tests__/entity-authorization-publication-review.test.ts | 3 |
+| `profileHash` | runtime | server/packages/services/publication/src/entity-authorization-compiler.ts | 41, 125 |
+| `profileHash` | runtime | server/packages/services/publication/src/entity-authorization-publication-review.ts | 24 |
+| `profileHash` | runtime | server/packages/services/publication/src/kysely-publication-authority-work.ts | 541 |
 | `profileHash` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
+| `profileHash` | test | server/packages/services/records/src/__tests__/canonical-read-backend.test.ts | 51, 101 |
+| `profileHash` | test | server/packages/services/records/src/__tests__/canonical-read-diagnostics.test.ts | 51, 101 |
+| `profileHash` | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 70, 78, 389 |
+| `profileHash` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 36, 42, 83, 522 |
+| `profileHash` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 36, 42, 83 |
 | `profileHash` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
-| `profileHash` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 42, 43 |
+| `profileHash` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43, 44 |
 | `profileHash` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
-| `profileHash` | runtime | server/packages/services/records/src/entity-list-service.ts | 299 |
-| `profileHash` | runtime | server/packages/services/records/src/query-service.ts | 93 |
+| `profileHash` | runtime | server/packages/services/records/src/entity-authorization-rollout.ts | 24, 83, 93, 123 |
+| `profileHash` | runtime | server/packages/services/records/src/entity-backend-authorizer.ts | 107, 161, 300, 347 |
+| `profileHash` | runtime | server/packages/services/records/src/entity-list-service.ts | 1517 |
+| `profileHash` | runtime | server/packages/services/records/src/query-service.ts | 443 |
 | `profileHash` | runtime | server/packages/test-utils/src/index.ts | 15, 22 |
 | `profileHash` | test | tests/contracts/api-client-transport.test.ts | 97 |
 | `profileHash` | test | tests/contracts/frontend-spine-browser-contracts.test.ts | 21 |
-| `required_permission` | tool | tooling/scripts/policy/authorization-inventory.ts | 925, 943 |
-| `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/parsers.ts | 140 |
-| `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/types.ts | 110 |
-| `requiredPermission` | runtime | server/packages/services/records/src/entity-list-service.ts | 178, 179 |
-| `requiredPermission` | test | tests/contracts/entity-list-contract.test.ts | 41, 46 |
-| `requiredPermission` | tool | tooling/scripts/policy/authorization-inventory.ts | 943 |
+| `profileHash` | tool | tooling/scripts/local-dev/graph-preview.integration.test.mts | 194, 308 |
+| `profileHash` | tool | tooling/scripts/verification/attest-business-partner-shadow.mjs | 17, 23, 40, 53 |
+| `profileHash` | tool | tooling/scripts/verification/capture-business-partner-causal-evidence.mjs | 23 |
+| `profileHash` | tool | tooling/scripts/verification/capture-business-partner-enter-after-signing.mts | 76 |
+| `profileHash` | tool | tooling/scripts/verification/capture-business-partner-enter-correction-exact-release.mts | 76 |
+| `profileHash` | tool | tooling/scripts/verification/capture-business-partner-exact-release.mts | 15 |
+| `profileHash` | tool | tooling/scripts/verification/capture-business-partner-reset-exact-release.mts | 76 |
+| `profileHash` | tool | tooling/scripts/verification/capture-business-partner-v2-exact-release.mts | 76 |
+| `profileHash` | tool | tooling/scripts/verification/entity-authorization/authenticated-operation-review.d.mts | 5 |
+| `profileHash` | tool | tooling/scripts/verification/entity-authorization/authenticated-operation-review.test.mjs | 9 |
+| `profileHash` | tool | tooling/scripts/verification/entity-authorization/authenticated-role-review.d.mts | 5 |
+| `profileHash` | tool | tooling/scripts/verification/entity-authorization/authenticated-role-review.test.mjs | 10, 18 |
+| `profileHash` | tool | tooling/scripts/verification/entity-authorization/publication-plan.mts | 501 |
+| `profileHash` | tool | tooling/scripts/verification/isolated-enter/harness/host.mjs | 67 |
+| `profileHash` | tool | tooling/scripts/verification/isolated-enter/prepare-artifacts.mjs | 49 |
+| `profileHash` | tool | tooling/scripts/verification/isolated-execution/host.mjs | 34 |
+| `profileHash` | tool | tooling/scripts/verification/isolated-successor/prepare-approved-execution.mjs | 74 |
+| `profileHash` | tool | tooling/scripts/verification/prepare-business-partner-canonical-v2.mts | 63 |
+| `profileHash` | tool | tooling/scripts/verification/qualify-business-partner-database-adapters.mts | 50, 63 |
+| `profileHash` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 72, 79 |
+| `profileHash` | tool | tooling/scripts/verification/stage-business-partner-authorization-adapter.mjs | 133 |
+| `profileHash` | tool | tooling/scripts/verification/stage-business-partner-v2-compiler.mjs | 133 |
+| `required_permission` | tool | tooling/scripts/policy/authorization-inventory.ts | 1112, 1135 |
+| `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/parsers.ts | 505, 507, 508, 509 |
+| `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/types.ts | 165 |
+| `requiredPermission` | runtime | server/packages/services/records/src/entity-list-service.ts | 1113, 1125 |
+| `requiredPermission` | test | tests/contracts/entity-list-contract.test.ts | 118, 160 |
+| `requiredPermission` | tool | tooling/scripts/policy/authorization-inventory.ts | 1135 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/apps_neon_lib_experience-runtime_tsx_1s629-y._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_1otqo1d._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/apps_neon_lib_experience-runtime_tsx_1s629-y._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_1otqo1d._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/2-vwisattg7if.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/26vimz5ee2k3y.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/3oehbfzpu53ca.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/42x397h50yqoj.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/apps_neon_lib_experience-runtime_tsx_1s629-y._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_1otqo1d._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/apps_neon_lib_experience-runtime_tsx_1s629-y._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_1otqo1d._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/0awy4ee-qwf-4.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/1-wqrr3qesgmm.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/200j3zfgjeu60.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/316d2ipy869xg.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/apps_neon_lib_experience-runtime_tsx_1s629-y._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_1otqo1d._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/apps_neon_lib_experience-runtime_tsx_1s629-y._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_1otqo1d._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/static/chunks/2-vwisattg7if.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/static/chunks/26vimz5ee2k3y.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/static/chunks/3oehbfzpu53ca.js | 1 |
+| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/static/chunks/42x397h50yqoj.js | 1 |
 | `requiredPermissions` | ui | apps/neon/lib/experience-runtime.tsx | 50, 61, 72, 93, 104, 117 |
-| `requiredPermissions` | runtime | packages/planes/mesh/shell/src/navigation.ts | 11 |
+| `requiredPermissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_06s1utk._.js | 1 |
+| `requiredPermissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_10hjbt7._.js | 1 |
+| `requiredPermissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_1cc665t._.js | 1 |
+| `requiredPermissions` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_06s1utk._.js | 1 |
+| `requiredPermissions` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_10hjbt7._.js | 1 |
+| `requiredPermissions` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_1cc665t._.js | 1 |
+| `requiredPermissions` | runtime | apps/studio/.next-bp-consolidated/static/chunks/2v6a_1api22e2.js | 1 |
+| `requiredPermissions` | runtime | apps/studio/.next-bp-consolidated/static/chunks/3bqukjsfsk9p2.js | 1 |
+| `requiredPermissions` | runtime | governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-publication-route-receipt.json | 8 |
+| `requiredPermissions` | runtime | packages/planes/mesh/shell/src/navigation.ts | 11, 35 |
 | `requiredPermissions` | runtime | packages/planes/neon/navigation/src/index.ts | 12 |
-| `requiredPermissions` | runtime | packages/planes/studio/shell/src/navigation.ts | 11 |
+| `requiredPermissions` | runtime | packages/planes/studio/shell/src/navigation.ts | 12, 39, 47, 55, 63 |
 | `requiredPermissions` | runtime | packages/platform/shell/shell-runtime/src/core.ts | 29, 51 |
 | `requiredPermissions` | runtime | packages/platform/shell/shell/src/core.ts | 13, 97, 137 |
 | `requiredPermissions` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 9, 48, 60, 65 |
 | `requiredPermissions` | runtime | server/packages/contracts/ai/src/tools.ts | 19 |
 | `requiredPermissions` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 24, 33, 41 |
 | `requiredPermissions` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 17 |
-| `requiredPermissions` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 17 |
-| `requiredPermissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 57, 79, 119, 197 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/business-partner-case-tools.ts | 9 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/business-partner-insight-tools.ts | 19 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/business-partner-list-insights.ts | 75 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/business-partner-tools.ts | 24, 49 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/entity-record-tool.ts | 38 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/entity-section-tool.ts | 16 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 47 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 60, 83, 106, 130, 190, 245 |
 | `requiredPermissions` | test | tests/contracts/access-consumption-phase9.test.ts | 5, 31, 32 |
 | `requiredPermissions` | test | tests/contracts/app-composition-phase10.test.ts | 24 |
 | `requiredPermissions` | test | tests/contracts/first-business-module-readiness.test.ts | 12 |
@@ -1894,6 +3517,8 @@ Capture DDLs:
 | `requiredPermissions` | test | tests/foundation/activity-center-interactions.test.tsx | 10 |
 | `requiredPermissions` | test | tests/foundation/quick-access-interactions.test.tsx | 10 |
 | `requiredPermissions` | tool | tooling/scripts/policy/verify-shared-shell-phase8.mjs | 12, 26 |
+| `requiredPermissions` | tool | tooling/scripts/verification/capture-atlas-foundation-baseline.mjs | 101 |
+| `requiredPermissions` | tool | tooling/scripts/verification/prepare-bp-ai-release.mjs | 35 |
 | `requiredPermissions` | ui | tooling/scripts/verification/shell-browser-entry.tsx | 6 |
 | `roleIds` | test | server/db/scripts/__tests__/provisioning/three-plane-provision.test.ts | 217, 227, 231 |
 | `roleIds` | tool | server/db/scripts/checks/seeds/authorization-release-gates.ts | 121, 126 |
@@ -1901,10 +3526,10 @@ Capture DDLs:
 | `roleIds` | tool | server/db/scripts/provisioning/three-plane-model.ts | 126 |
 | `roleIds` | tool | server/db/scripts/seed/compile-final-authorization-seed-packs.ts | 80, 81, 82 |
 | `roleIds` | tool | server/db/scripts/seed/tenant-authority-projection.ts | 24, 229, 272, 276, 285 |
-| `roleIds` | runtime | server/db/seed/packs/authorization-v2/mesh/seed-pack.v1.json | 1134, 1982, 2006, 2030, 2054, 2078, 2102, 2126, 2150, 2174, 2198, 2222, 2246, 2270, 2294, 2318, 2342, 2366, 2390, 2414, 2438, 2462, 2486, 2510, 2534, 2558, 2582, 2606, 2630, 2654, 2678, 2702, 2726, 2750, 2774, 2798, 2822, 2846, 2870, 2894, 2918, 2942, 2966, 2990, 3014, 3038, 3062, 3086, 3110, 3134, 3158, 3182, 3206, 3230, 3254 |
+| `roleIds` | runtime | server/db/seed/packs/authorization-v2/mesh/seed-pack.v1.json | 1163, 2011, 2035, 2059, 2083, 2107, 2131, 2155, 2179, 2203, 2227, 2251, 2275, 2299, 2323, 2347, 2371, 2395, 2419, 2443, 2467, 2491, 2515, 2539, 2563, 2587, 2611, 2635, 2659, 2683, 2707, 2731, 2755, 2779, 2803, 2827, 2851, 2875, 2899, 2923, 2947, 2971, 2995, 3019, 3043, 3067, 3091, 3115, 3139, 3163, 3187, 3211, 3235, 3259, 3283 |
 | `roleIds` | runtime | server/db/seed/packs/authorization-v2/neon/seed-pack.v1.json | 773, 2979, 3003, 3027, 3051, 3075, 3099, 3123, 3147, 3171, 3195, 3219, 3243, 3267, 3291, 3315, 3339, 3363, 3387, 3411, 3435, 3459, 3483, 3507, 3531, 3555, 3579, 3603, 3627, 3651, 3675, 3699, 3723, 3747, 3771, 3795, 3819, 3843, 3867, 3891, 3915, 3939, 3963, 3987, 4011, 4035, 4059, 4083, 4107, 4131, 4155, 4179, 4203, 4227, 4251, 4275, 4299, 4323, 4347, 4371, 4395, 4419, 4443, 4467, 4491, 4515, 4539, 4563, 4587, 4611, 4635, 4659, 4683, 4707, 4731, 4755, 4779, 4803, 4827, 4851, 4875, 4899, 4923, 4947, 4971, 4995, 5019, 5043, 5067, 5091, 5115, 5139, 5163, 5187, 5211, 5235, 5259, 5283, 5307, 5331, 5355, 5379, 5403, 5427, 5451, 5475, 5499, 5523, 5547, 5571, 5595, 5619, 5643, 5667, 5691, 5715, 5739, 5763, 5787, 5811, 5835, 5859, 5883, 5907, 5931, 5955, 5979, 6003, 6027, 6051, 6075, 6099, 6123, 6147, 6171, 6195, 6219, 6243, 6267, 6291, 6315, 6339, 6363, 6387, 6411, 6435, 6459, 6483, 6507, 6531, 6555, 6579 |
-| `roleIds` | runtime | server/db/seed/packs/authorization-v2/studio/seed-pack.v1.json | 771, 1255, 1279, 1303, 1327, 1351, 1375, 1399, 1423, 1447, 1471, 1495, 1519, 1543, 1567, 1591, 1615, 1639, 1663, 1687, 1711, 1735, 1759, 1783, 1807, 1831, 1855, 1879, 1903 |
-| `roleIds` | tool | tooling/scripts/policy/authorization-inventory.ts | 744, 761 |
+| `roleIds` | runtime | server/db/seed/packs/authorization-v2/studio/seed-pack.v1.json | 796, 1280, 1304, 1328, 1352, 1376, 1400, 1424, 1448, 1472, 1496, 1520, 1544, 1568, 1592, 1616, 1640, 1664, 1688, 1712, 1736, 1760, 1784, 1808, 1832, 1856, 1880, 1904, 1928 |
+| `roleIds` | tool | tooling/scripts/policy/authorization-inventory.ts | 896, 916 |
 | `roleIds` | tool | tooling/tools/scripts/update-realm-neon.cjs | 94, 96 |
 
 ## Keycloak mapper inventory
@@ -2061,13 +3686,13 @@ Capture DDLs:
 
 | Artifact | Generator | Owner | Present | Generator present |
 |---|---|---|---:|---:|
-| server/db/prisma/schema.mesh.prisma | server/db/prisma/prisma-pull.mjs --target=mesh --schema prisma/schema.mesh.prisma | database-platform | yes | yes |
-| server/db/prisma/schema.neon.prisma | server/db/prisma/prisma-pull.mjs --target=neon --schema prisma/schema.neon.prisma | database-platform | yes | yes |
-| server/db/prisma/schema.studio.prisma | server/db/prisma/prisma-pull.mjs --target=studio --schema prisma/schema.studio.prisma | database-platform | yes | yes |
 | deploy/config/iam/realm-athyper-demosetup.json | tooling/tools/scripts/generate-athyper-demo-iam.cjs | platform-iam | yes | yes |
 | deploy/config/iam/realm-athyper.json | tooling/tools/scripts/prepare-keycloak-realm-import.cjs | platform-iam | yes | yes |
 | deploy/config/iam/realm-platform-control-demosetup.json | tooling/tools/scripts/generate-athyper-demo-iam.cjs | platform-iam | yes | yes |
 | deploy/config/iam/realm-platform-control.json | tooling/tools/scripts/prepare-keycloak-realm-import.cjs | platform-iam | yes | yes |
+| server/db/prisma/schema.mesh.prisma | server/db/prisma/prisma-pull.mjs --target=mesh --schema prisma/schema.mesh.prisma | database-platform | yes | yes |
+| server/db/prisma/schema.neon.prisma | server/db/prisma/prisma-pull.mjs --target=neon --schema prisma/schema.neon.prisma | database-platform | yes | yes |
+| server/db/prisma/schema.studio.prisma | server/db/prisma/prisma-pull.mjs --target=studio --schema prisma/schema.studio.prisma | database-platform | yes | yes |
 
 ## Classification contract
 

@@ -1,5 +1,7 @@
 # DEV rebuild and deployment — 2026-09-06
 
+> Historical deployment record for 6 September 2026. Image tags and health observations below describe that run. For current development and recovery, use [Shared DEV workspace](shared-dev-workspace.md).
+
 Rebuilt the current working tree and deployed the five local qualification images
 listed in `deploy/image-sets/dev.yaml`. The images use tag `rebuild-20260906` and
 retain working-tree provenance; they were not published to a registry.

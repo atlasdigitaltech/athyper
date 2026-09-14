@@ -1792,22 +1792,21 @@ CREATE OR REPLACE FUNCTION authz.fn_retire_entity_operation_projection(p_applied
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,authz AS $$
 DECLARE v_actor uuid:=COALESCE(NULLIF(current_setting('app.current_principal_id',true),'')::uuid,'00000000-0000-0000-0000-000000000000'::uuid); DECLARE v_count integer;
 BEGIN
-  UPDATE authz.entity_operation_binding SET status='retired',effective_until=p_at,retired_at=p_at,retired_by=v_actor,updated_at=p_at,updated_by=v_actor
+  UPDATE authz.entity_operation_binding SET status='retired',effective_until=LEAST(COALESCE(effective_until,p_at),p_at),retired_at=p_at,retired_by=v_actor,updated_at=p_at,updated_by=v_actor
    WHERE applied_release_id=p_applied_release_id AND status='published'; GET DIAGNOSTICS v_count=ROW_COUNT; RETURN v_count;
 END; $$;
 
 CREATE OR REPLACE FUNCTION authz.fn_restore_entity_operation_projection(p_applied_release_id uuid,p_at timestamptz)
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,authz AS $$
-DECLARE v_count integer;
 BEGIN
-  -- Transaction-local marker makes rollback the sole controlled exception to retired-row immutability.
-  PERFORM set_config('authz.rollback_restore','on',true);
-  UPDATE authz.entity_operation_binding SET status='published',effective_until=NULL,retired_at=NULL,retired_by=NULL,updated_at=p_at
-   WHERE applied_release_id=p_applied_release_id AND status='retired'; GET DIAGNOSTICS v_count=ROW_COUNT;
-  PERFORM set_config('authz.rollback_restore','off',true);
-  RETURN v_count;
-EXCEPTION WHEN OTHERS THEN
-  PERFORM set_config('authz.rollback_restore','off',true); RAISE;
+  -- Historical rows do not record whether retirement came from publication,
+  -- revocation or expiry. Never infer permission to republish from that state.
+  -- Recover through a reviewed successor compiled against the current head.
+  IF EXISTS (SELECT 1 FROM authz.entity_operation_binding
+             WHERE applied_release_id=p_applied_release_id) THEN
+    RAISE EXCEPTION 'BINDING_RECOVERY_SUCCESSOR_REQUIRED' USING ERRCODE='check_violation';
+  END IF;
+  RETURN 0;
 END; $$;
 
 REVOKE athyper_projection_owner FROM CURRENT_USER;

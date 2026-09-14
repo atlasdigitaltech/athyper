@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { sourceImports as importSpecifiers } from "./source-imports.mjs";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -26,8 +27,22 @@ const promotedServices = new Map([
   ["workflow", "@athyper/svc-workflow"],
 ]);
 
-const sourceExtensions = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs"]);
-const ignoredDirs = new Set(["node_modules", "dist", ".turbo", ".next", ".git"]);
+const sourceExtensions = new Set([
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".js",
+  ".mjs",
+  ".cjs",
+]);
+const ignoredDirs = new Set([
+  "node_modules",
+  "dist",
+  ".turbo",
+  ".next",
+  ".git",
+]);
 
 function fail(message) {
   console.error(message);
@@ -59,20 +74,6 @@ function* walk(root) {
   }
 }
 
-function importSpecifiers(source) {
-  const specs = [];
-  const patterns = [
-    /(?:import|export)\s+(?:type\s+)?(?:[\s\S]*?\s+from\s+)?["']([^"']+)["']/g,
-    /import\s*\(\s*["']([^"']+)["']\s*\)/g,
-    /\b(?:vi|jest)\.mock\s*\(\s*["']([^"']+)["']/g,
-  ];
-  for (const pattern of patterns) {
-    let match;
-    while ((match = pattern.exec(source)) !== null) specs.push(match[1]);
-  }
-  return specs;
-}
-
 function resolveRelativeImport(file, specifier) {
   if (!specifier.startsWith(".")) return null;
   const base = resolve(dirname(file), specifier);
@@ -88,35 +89,51 @@ const legacyFoundationRoot = join(serverPackagesRoot, "runtime", "foundation");
 const legacyOpenApiRoot = join(serverPackagesRoot, "runtime", "openapi");
 
 if (existsSync(legacyFoundationRoot)) {
-  violations.push("legacy runtime foundation directory still exists; use @athyper/server-foundation");
+  violations.push(
+    "legacy runtime foundation directory still exists; use @athyper/server-foundation",
+  );
 }
 if (existsSync(legacyOpenApiRoot)) {
-  violations.push("legacy runtime OpenAPI directory still exists; use @athyper/server-foundation/openapi/*");
+  violations.push(
+    "legacy runtime OpenAPI directory still exists; use @athyper/server-foundation/openapi/*",
+  );
 }
 
 for (const file of walk(join(repoRoot, "server"))) {
   const relFile = toPosix(relative(repoRoot, file));
   const source = readFileSync(file, "utf8");
-  for (const specifier of importSpecifiers(source)) {
+  for (const specifier of importSpecifiers(source, file)) {
     const resolved = resolveRelativeImport(file, specifier);
     const normalizedSpec = specifier.replaceAll("\\", "/");
 
-    if (isInside(file, serverPackagesRoot) && resolved && isInside(resolved, serverSrcRoot)) {
+    if (
+      isInside(file, serverPackagesRoot) &&
+      resolved &&
+      isInside(resolved, serverSrcRoot)
+    ) {
       violations.push(`${relFile} imports server/src through ${specifier}`);
     }
 
     if (isInside(file, serverDbRoot)) {
-      if (normalizedSpec.includes("packages/services/") || normalizedSpec.startsWith("@athyper/svc-")) {
-        violations.push(`${relFile} imports a service package from db code through ${specifier}`);
+      if (
+        normalizedSpec.includes("packages/services/") ||
+        normalizedSpec.startsWith("@athyper/svc-") ||
+        normalizedSpec.startsWith("@athyper/server-service-")
+      ) {
+        violations.push(
+          `${relFile} imports a service package from db code through ${specifier}`,
+        );
       }
     }
 
     if (
-      normalizedSpec.includes("packages/runtime/foundation")
-      || normalizedSpec.includes("packages/runtime/openapi")
-      || normalizedSpec.includes("runtime/foundation")
+      normalizedSpec.includes("packages/runtime/foundation") ||
+      normalizedSpec.includes("packages/runtime/openapi") ||
+      normalizedSpec.includes("runtime/foundation")
     ) {
-      violations.push(`${relFile} imports legacy runtime namespace through ${specifier}`);
+      violations.push(
+        `${relFile} imports legacy runtime namespace through ${specifier}`,
+      );
     }
 
     if (!resolved) continue;
@@ -126,15 +143,19 @@ for (const file of walk(join(repoRoot, "server"))) {
       const targetRoot = join(servicesRoot, service);
       if (!isInside(resolved, targetRoot)) continue;
       if (isInside(file, targetRoot)) continue;
-      violations.push(`${relFile} reaches ${service} via ${specifier}; use ${packageName}`);
+      violations.push(
+        `${relFile} reaches ${service} via ${specifier}; use ${packageName}`,
+      );
     }
   }
 }
 
 if (violations.length > 0) {
-  fail(["Server boundary violations:", ...violations.map((v) => `- ${v}`)].join("\n"));
+  fail(
+    ["Server boundary violations:", ...violations.map((v) => `- ${v}`)].join(
+      "\n",
+    ),
+  );
 } else {
   console.log("Server package boundaries verified.");
 }
-
-

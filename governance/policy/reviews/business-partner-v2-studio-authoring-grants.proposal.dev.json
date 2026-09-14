@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_v2_temporary_studio_authoring_grant_proposal",
+  "status": "review_required",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "planeKey": "studio",
+  "purpose": "Stage, independently review and compile the exact BP canonical-v2 successor through existing native authoring APIs",
+  "nativeProposalRevision": "0e44f59861fa5c2d7290909d2b41d366f39e3a856e7336fd0e9cf9b5ba4149f8",
+  "effectiveFrom": "2026-09-11T05:15:00Z",
+  "effectiveUntil": "2026-09-11T09:15:00Z",
+  "scopeKind": "tenant",
+  "scopeTargetId": "44444444-4444-4444-8444-444444444444",
+  "propagation": "exact",
+  "assignments": [
+    {
+      "account": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "permissions": [
+        "metadata.entity.author",
+        "metadata.entity.validate",
+        "metadata.entity.test",
+        "metadata.entity.submit",
+        "metadata.entity.publish"
+      ]
+    },
+    {
+      "account": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "permissions": [
+        "metadata.entity.review"
+      ]
+    }
+  ],
+  "conditions": {
+    "mfa": "existing catalog MFA requirements retained for every operation",
+    "separationOfDuties": "Existing native author/submitter versus reviewer separation and persisted approval checks remain required",
+    "permissionDefinitionsChanged": false,
+    "bpPermissionsChanged": false,
+    "activationPermissionsIncluded": false,
+    "sharedDevEnforcementChanged": false,
+    "grantApplication": "requires explicit proposal approval and current authority dry run",
+    "cleanup": "Revoke temporary assignments after qualification; do not restore historical revoked assignments"
+  },
+  "scopeLimitation": "The existing authoring route checks tenant authority and has no entity-specific admission coordinate for draft creation. These temporary permissions therefore authorize native metadata operations within this Studio tenant, not BP alone. Operator execution is restricted to the exact referenced BP proposal; this restriction is not claimed as an IAM-enforced entity boundary.",
+  "approvals": [],
+  "applied": false,
+  "proposalRevision": "61c413253e61dc99006e96da6ab4e8332f4e91dd23ad50b2947ed3e1e730c628"
+}

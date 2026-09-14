@@ -1,3 +1,4 @@
+import ts from "typescript";
 import { createHash } from "node:crypto";
 import {
   existsSync,
@@ -19,6 +20,8 @@ export const AUTHORIZATION_SUMMARY_PATH =
 
 const SOURCE_EXTENSIONS = new Set([
   ".cjs",
+  ".cts",
+  ".mts",
   ".js",
   ".json",
   ".jsx",
@@ -298,9 +301,25 @@ export interface AuthorizationInventory {
   generatedArtifacts: GeneratedArtifact[];
   gates: {
     unknownSources: Array<
-      | { type: "object"; qualifiedName: string; path: string; access: ReferenceAccess; lines: number[] }
-      | { type: "security_symbol"; symbol: string; path: string; lines: number[] }
-      | { type: "database_object"; qualifiedName: string; path: string; line: number }
+      | {
+          type: "object";
+          qualifiedName: string;
+          path: string;
+          access: ReferenceAccess;
+          lines: number[];
+        }
+      | {
+          type: "security_symbol";
+          symbol: string;
+          path: string;
+          lines: number[];
+        }
+      | {
+          type: "database_object";
+          qualifiedName: string;
+          path: string;
+          line: number;
+        }
       | { type: "permission_code"; code: string; path: string; lines: number[] }
     >;
     unknownWriters: UnknownObjectReference[];
@@ -368,13 +387,17 @@ function blankExceptNewlines(value: string): string {
   return value.replace(/[^\r\n]/gu, " ");
 }
 
-export function stripSourceComments(content: string, extension: string): string {
+export function stripSourceComments(
+  content: string,
+  extension: string,
+): string {
   let result = content.replace(/\/\*[\s\S]*?\*\//gu, blankExceptNewlines);
   if (extension === ".sql" || extension === ".prisma") {
     result = result.replace(/--[^\r\n]*/gu, blankExceptNewlines);
   } else if (extension !== ".json") {
     result = result.replace(/(^|[^:\\])\/\/[^\r\n]*/gmu, (match) =>
-      blankExceptNewlines(match));
+      blankExceptNewlines(match),
+    );
   }
   return result;
 }
@@ -390,46 +413,56 @@ function lineNumberAt(content: string, index: number): number {
 export function classifyArtifact(path: string): ArtifactClass {
   const normalized = path.replaceAll("\\", "/");
   if (
-    normalized.includes("/__tests__/")
-    || normalized.includes("/tests/")
-    || normalized.includes("/test-harness/")
-    || normalized.endsWith(".test.ts")
-    || normalized.endsWith(".test.tsx")
-    || normalized.endsWith(".spec.ts")
-    || normalized.endsWith(".spec.tsx")
-  ) return "test";
-  if (normalized.startsWith("deploy/config/iam/") && normalized.endsWith(".json")) {
+    normalized.includes("/__tests__/") ||
+    normalized.includes("/tests/") ||
+    normalized.includes("/test-harness/") ||
+    normalized.endsWith(".test.ts") ||
+    normalized.endsWith(".test.tsx") ||
+    normalized.endsWith(".spec.ts") ||
+    normalized.endsWith(".spec.tsx")
+  )
+    return "test";
+  if (
+    normalized.startsWith("deploy/config/iam/") &&
+    normalized.endsWith(".json")
+  ) {
     return "keycloak";
   }
   if (
-    normalized.endsWith(".prisma")
-    || normalized.includes("/_generated/")
-    || normalized.includes("/generated/")
-    || normalized.includes(".generated.")
-  ) return "generated";
-  if (normalized.includes("/db/seed/") && normalized.endsWith(".sql")) return "seed";
-  if (normalized.includes("/db/ddl/") && normalized.endsWith(".sql")) return "ddl";
+    normalized.endsWith(".prisma") ||
+    normalized.includes("/_generated/") ||
+    normalized.includes("/generated/") ||
+    normalized.includes(".generated.")
+  )
+    return "generated";
+  if (normalized.includes("/db/seed/") && normalized.endsWith(".sql"))
+    return "seed";
+  if (normalized.includes("/db/ddl/") && normalized.endsWith(".sql"))
+    return "ddl";
   if (
-    normalized.includes("/routes/")
-    || normalized.includes("/app/api/")
-    || normalized.endsWith(".route.ts")
-    || normalized.endsWith(".routes.ts")
-    || normalized.endsWith("/routes.ts")
-    || normalized.endsWith("-routes.ts")
-    || normalized.endsWith("-http.ts")
-  ) return "route";
+    normalized.includes("/routes/") ||
+    normalized.includes("/app/api/") ||
+    normalized.endsWith(".route.ts") ||
+    normalized.endsWith(".routes.ts") ||
+    normalized.endsWith("/routes.ts") ||
+    normalized.endsWith("-routes.ts") ||
+    normalized.endsWith("-http.ts")
+  )
+    return "route";
   if (
-    normalized.includes("/api-contracts/")
-    || normalized.includes("/session-plane/")
-    || normalized.includes("/runtime-contracts/")
-  ) return "contract";
+    normalized.includes("/api-contracts/") ||
+    normalized.includes("/session-plane/") ||
+    normalized.includes("/runtime-contracts/")
+  )
+    return "contract";
   if (normalized.endsWith(".tsx") || normalized.endsWith(".jsx")) return "ui";
   if (
-    normalized.startsWith("tooling/scripts/")
-    || normalized.startsWith("tooling/tools/")
-    || normalized.includes("/db/scripts/")
-    || normalized.includes("/scripts/")
-  ) return "tool";
+    normalized.startsWith("tooling/scripts/") ||
+    normalized.startsWith("tooling/tools/") ||
+    normalized.includes("/db/scripts/") ||
+    normalized.includes("/scripts/")
+  )
+    return "tool";
   return "runtime";
 }
 
@@ -437,7 +470,10 @@ function shouldSkipDirectory(name: string, exclusions: Set<string>): boolean {
   return exclusions.has(name);
 }
 
-function discoverFiles(root: string, registry: AuthorizationRegistry): SourceFile[] {
+function discoverFiles(
+  root: string,
+  registry: AuthorizationRegistry,
+): SourceFile[] {
   const exclusions = new Set(registry.contract.excludedDirectories);
   const excludedFiles = new Set(registry.contract.excludedFiles);
   const result: SourceFile[] = [];
@@ -445,7 +481,8 @@ function discoverFiles(root: string, registry: AuthorizationRegistry): SourceFil
   const visit = (directory: string): void => {
     if (!existsSync(directory)) return;
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      if (entry.isDirectory() && shouldSkipDirectory(entry.name, exclusions)) continue;
+      if (entry.isDirectory() && shouldSkipDirectory(entry.name, exclusions))
+        continue;
       const absolutePath = resolve(directory, entry.name);
       if (entry.isDirectory()) {
         visit(absolutePath);
@@ -455,7 +492,10 @@ function discoverFiles(root: string, registry: AuthorizationRegistry): SourceFil
       if (excludedFiles.has(path)) continue;
       const extension = extname(entry.name).toLowerCase();
       if (!SOURCE_EXTENSIONS.has(extension)) continue;
-      const content = readFileSync(absolutePath, "utf8").replaceAll("\r\n", "\n");
+      const content = readFileSync(absolutePath, "utf8").replaceAll(
+        "\r\n",
+        "\n",
+      );
       result.push({
         path,
         absolutePath,
@@ -470,7 +510,9 @@ function discoverFiles(root: string, registry: AuthorizationRegistry): SourceFil
   for (const scanRoot of registry.contract.scanRoots) {
     const absoluteScanRoot = resolve(root, scanRoot);
     if (!existsSync(absoluteScanRoot)) {
-      throw new Error(`Authorization inventory scan root is missing: ${scanRoot}`);
+      throw new Error(
+        `Authorization inventory scan root is missing: ${scanRoot}`,
+      );
     }
     visit(absoluteScanRoot);
   }
@@ -488,18 +530,34 @@ export function classifyReferenceAccess(
   const escaped = escapeRegex(qualifiedName);
   const statement = `${before}${qualifiedName}`.toLowerCase();
   const lowerName = qualifiedName.toLowerCase();
-  const suffix = statement.slice(Math.max(0, statement.length - lowerName.length - 180));
+  const suffix = statement.slice(
+    Math.max(0, statement.length - lowerName.length - 180),
+  );
 
-  if (new RegExp(`create\\s+(?:or\\s+replace\\s+)?(?:materialized\\s+)?${kind}\\s+(?:if\\s+not\\s+exists\\s+)?${escaped}$`, "iu").test(suffix)) {
+  if (
+    new RegExp(
+      `create\\s+(?:or\\s+replace\\s+)?(?:materialized\\s+)?${kind}\\s+(?:if\\s+not\\s+exists\\s+)?${escaped}$`,
+      "iu",
+    ).test(suffix)
+  ) {
     return "define";
   }
-  if (/\.insertinto\(\s*["'`]$/iu.test(before) || /insert\s+into\s+$/iu.test(before)) {
+  if (
+    /\.insertinto\(\s*["'`]$/iu.test(before) ||
+    /insert\s+into\s+$/iu.test(before)
+  ) {
     return "insert";
   }
-  if (/\.updatetable\(\s*["'`]$/iu.test(before) || /update\s+(?:only\s+)?$/iu.test(before)) {
+  if (
+    /\.updatetable\(\s*["'`]$/iu.test(before) ||
+    /update\s+(?:only\s+)?$/iu.test(before)
+  ) {
     return "update";
   }
-  if (/\.deletefrom\(\s*["'`]$/iu.test(before) || /delete\s+from\s+$/iu.test(before)) {
+  if (
+    /\.deletefrom\(\s*["'`]$/iu.test(before) ||
+    /delete\s+from\s+$/iu.test(before)
+  ) {
     return "delete";
   }
   if (/truncate\s+(?:table\s+)?$/iu.test(before)) return "truncate";
@@ -528,11 +586,16 @@ function aggregateReferences(
     map.set(key, { ...reference, lines: [reference.line] });
   }
   return [...map.values()]
-    .map((item) => ({ ...item, lines: [...new Set(item.lines)].sort((a, b) => a - b) }))
-    .sort((left, right) =>
-      compareText(left.objectId, right.objectId)
-      || compareText(left.path, right.path)
-      || compareText(left.access, right.access));
+    .map((item) => ({
+      ...item,
+      lines: [...new Set(item.lines)].sort((a, b) => a - b),
+    }))
+    .sort(
+      (left, right) =>
+        compareText(left.objectId, right.objectId) ||
+        compareText(left.path, right.path) ||
+        compareText(left.access, right.access),
+    );
 }
 
 function aggregateUnknownObjectReferences(
@@ -551,20 +614,32 @@ function aggregateUnknownObjectReferences(
     else map.set(key, { ...reference, lines: [reference.line] });
   }
   return [...map.values()]
-    .map((item) => ({ ...item, lines: [...new Set(item.lines)].sort((a, b) => a - b) }))
-    .sort((left, right) =>
-      compareText(left.qualifiedName, right.qualifiedName)
-      || compareText(left.path, right.path)
-      || compareText(left.access, right.access));
+    .map((item) => ({
+      ...item,
+      lines: [...new Set(item.lines)].sort((a, b) => a - b),
+    }))
+    .sort(
+      (left, right) =>
+        compareText(left.qualifiedName, right.qualifiedName) ||
+        compareText(left.path, right.path) ||
+        compareText(left.access, right.access),
+    );
 }
 
-export function isStrongAuthorizationObjectName(qualifiedName: string): boolean {
+export function isStrongAuthorizationObjectName(
+  qualifiedName: string,
+): boolean {
   const component = qualifiedName.split(".").at(-1) ?? "";
   if (/(?:_ck|_fk|_idx|_pkey|_uq)$/u.test(component)) return false;
-  return /(?:^|_)(?:access_grant|access_log|acl|auth|authorization|decision_log|delegation|entitlement|feature_grant|identity_domain|identity_provider|permission|persona|principal_identity_binding|principal_relationship|tenant_admin_grant)(?:_|$)/iu.test(component);
+  return /(?:^|_)(?:access_grant|access_log|acl|auth|authorization|decision_log|delegation|entitlement|feature_grant|identity_domain|identity_provider|permission|persona|principal_identity_binding|principal_relationship|tenant_admin_grant)(?:_|$)/iu.test(
+    component,
+  );
 }
 
-function isInsideSqlSingleQuotedLiteral(content: string, index: number): boolean {
+function isInsideSqlSingleQuotedLiteral(
+  content: string,
+  index: number,
+): boolean {
   let inside = false;
   for (let cursor = 0; cursor < index; cursor += 1) {
     if (content[cursor] !== "'") continue;
@@ -577,6 +652,54 @@ function isInsideSqlSingleQuotedLiteral(content: string, index: number): boolean
   return inside;
 }
 
+export function isAuthorizationDataLabel(
+  content: string,
+  index: number,
+  qualifiedName: string,
+): boolean {
+  const before = content.slice(Math.max(0, index - 80), index);
+  const after = content.slice(index + qualifiedName.length);
+  // Event and advisory-lock prefixes have more components than a relation name.
+  if (/["'`]$/.test(before) && /^[:.]/.test(after)) return true;
+  // SQL string values inside tagged templates are data, while Kysely table
+  // arguments (including arrays) must remain in the discovery surface.
+  const file = ts.createSourceFile(
+    "source.ts",
+    content,
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  let data = false;
+  function visit(node: ts.Node) {
+    if (
+      ts.isTaggedTemplateExpression(node) &&
+      node.tag.getText(file) === "sql"
+    ) {
+      const parts = ts.isNoSubstitutionTemplateLiteral(node.template)
+        ? [node.template]
+        : [
+            node.template.head,
+            ...node.template.templateSpans.map((span) => span.literal),
+          ];
+      for (const part of parts) {
+        const start = part.getStart(file);
+        if (
+          index >= start &&
+          index < part.end &&
+          isInsideSqlSingleQuotedLiteral(
+            content.slice(start, part.end),
+            index - start,
+          )
+        )
+          data = true;
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(file);
+  return data;
+}
+
 function scanObjectReferences(
   files: SourceFile[],
   objects: AuthorizationRegistryObject[],
@@ -587,8 +710,11 @@ function scanObjectReferences(
   const registeredByName = new Map(
     objects.map((object) => [object.qualifiedName.toLowerCase(), object]),
   );
-  const references: Array<Omit<ObjectReference, "lines"> & { line: number }> = [];
-  const unknown: Array<Omit<UnknownObjectReference, "lines"> & { line: number }> = [];
+  const references: Array<Omit<ObjectReference, "lines"> & { line: number }> =
+    [];
+  const unknown: Array<
+    Omit<UnknownObjectReference, "lines"> & { line: number }
+  > = [];
 
   for (const file of files) {
     for (const object of objects) {
@@ -618,13 +744,18 @@ function scanObjectReferences(
       /(?<![A-Za-z0-9_])(shared|master|control|snapshot|log|event|mesh|mesh_control|mesh_log)\.([a-z][a-z0-9_]*)(?![A-Za-z0-9_])/giu;
     for (const match of file.scanContent.matchAll(qualifiedPattern)) {
       const qualifiedName = `${match[1]}.${match[2]}`.toLowerCase();
-      if (registeredByName.has(qualifiedName) || !isStrongAuthorizationObjectName(qualifiedName)) {
+      if (
+        registeredByName.has(qualifiedName) ||
+        !isStrongAuthorizationObjectName(qualifiedName)
+      ) {
         continue;
       }
       const index = match.index ?? 0;
+      if (isAuthorizationDataLabel(file.scanContent, index, qualifiedName))
+        continue;
       if (
-        file.path.endsWith(".sql")
-        && isInsideSqlSingleQuotedLiteral(file.scanContent, index)
+        file.path.endsWith(".sql") &&
+        isInsideSqlSingleQuotedLiteral(file.scanContent, index)
       ) {
         continue;
       }
@@ -632,8 +763,10 @@ function scanObjectReferences(
         file.scanContent,
         index,
         qualifiedName,
-        qualifiedName.includes("fn_") || qualifiedName.includes("check_")
-          || qualifiedName.includes("resolve_") || qualifiedName.includes("trg_")
+        qualifiedName.includes("fn_") ||
+          qualifiedName.includes("check_") ||
+          qualifiedName.includes("resolve_") ||
+          qualifiedName.includes("trg_")
           ? "function"
           : "table",
       );
@@ -658,12 +791,14 @@ function scanPrismaReferences(
   objects: AuthorizationRegistryObject[],
 ): ObjectReference[] {
   const registered = new Map(
-    objects.filter((object) => object.kind === "table")
+    objects
+      .filter((object) => object.kind === "table")
       .map((object) => [object.qualifiedName.toLowerCase(), object]),
   );
   const raw: Array<Omit<ObjectReference, "lines"> & { line: number }> = [];
   for (const file of files.filter((item) => item.path.endsWith(".prisma"))) {
-    const modelPattern = /\bmodel\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{([\s\S]*?)^\}/gmu;
+    const modelPattern =
+      /\bmodel\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{([\s\S]*?)^\}/gmu;
     for (const match of file.scanContent.matchAll(modelPattern)) {
       const body = match[2] ?? "";
       const schema = body.match(/@@schema\("([^"]+)"\)/u)?.[1];
@@ -685,9 +820,15 @@ function scanPrismaReferences(
 }
 
 function isSecuritySymbolCandidate(symbol: string): boolean {
-  return /^(?:authorize|authorise)[A-Z]/u.test(symbol)
-    || /^(?:check|enforce|get|require|resolve)[A-Za-z0-9_$]*(?:Authorization|Permissions?)(?:$|[A-Z])/u.test(symbol)
-    || /^(?:enforceAuthorized|resolveAccessContext|resolveAccessScope|resolveAccessibleCompany|getEffectiveModuleAccess|requireAuth|resolveCurrentAuthEpoch)$/u.test(symbol);
+  return (
+    /^(?:authorize|authorise)[A-Z]/u.test(symbol) ||
+    /^(?:check|enforce|get|require|resolve)[A-Za-z0-9_$]*(?:Authorization|Permissions?)(?:$|[A-Z])/u.test(
+      symbol,
+    ) ||
+    /^(?:enforceAuthorized|resolveAccessContext|resolveAccessScope|resolveAccessibleCompany|getEffectiveModuleAccess|requireAuth|resolveCurrentAuthEpoch)$/u.test(
+      symbol,
+    )
+  );
 }
 
 function scanSecuritySymbols(
@@ -698,13 +839,18 @@ function scanSecuritySymbols(
   const map = new Map<string, SecuritySymbolReference>();
   const identifierPattern = /\b[A-Za-z_$][A-Za-z0-9_$]*\b/gu;
   for (const file of files.filter((item) =>
-    [".cjs", ".js", ".jsx", ".mjs", ".ts", ".tsx"].includes(extname(item.path).toLowerCase()))) {
+    [".cjs", ".js", ".jsx", ".mjs", ".ts", ".tsx"].includes(
+      extname(item.path).toLowerCase(),
+    ),
+  )) {
     for (const match of file.scanContent.matchAll(identifierPattern)) {
       const symbol = match[0];
       if (!reviewed.has(symbol) && !isSecuritySymbolCandidate(symbol)) continue;
       if (
-        !reviewed.has(symbol)
-        && !/^\s*\(/u.test(file.scanContent.slice((match.index ?? 0) + symbol.length))
+        !reviewed.has(symbol) &&
+        !/^\s*\(/u.test(
+          file.scanContent.slice((match.index ?? 0) + symbol.length),
+        )
       ) {
         continue;
       }
@@ -725,9 +871,15 @@ function scanSecuritySymbols(
     }
   }
   return [...map.values()]
-    .map((item) => ({ ...item, lines: [...new Set(item.lines)].sort((a, b) => a - b) }))
-    .sort((left, right) =>
-      compareText(left.symbol, right.symbol) || compareText(left.path, right.path));
+    .map((item) => ({
+      ...item,
+      lines: [...new Set(item.lines)].sort((a, b) => a - b),
+    }))
+    .sort(
+      (left, right) =>
+        compareText(left.symbol, right.symbol) ||
+        compareText(left.path, right.path),
+    );
 }
 
 function aggregateExactFieldReferences(
@@ -745,7 +897,9 @@ function aggregateExactFieldReferences(
   ]);
   for (const file of files) {
     const authorizationPath =
-      /(?:access|auth|entity[_-]operation|group|iam|keycloak|permission|persona|resolver|role|session-plane)/iu.test(file.path);
+      /(?:access|auth|entity[_-]operation|group|iam|keycloak|permission|persona|resolver|role|session-plane)/iu.test(
+        file.path,
+      );
     for (const field of fields) {
       const pattern = new RegExp(
         `(?<![A-Za-z0-9_$])${escapeRegex(field)}(?![A-Za-z0-9_$])`,
@@ -758,7 +912,11 @@ function aggregateExactFieldReferences(
             Math.max(0, index - 220),
             index + field.length + 220,
           );
-          if (!/(?:authorization|groupIds|matchedGrantId|matchedGroupId|matchedRoleId|permission|personaId|planLocked|roleIds)/u.test(around)) {
+          if (
+            !/(?:authorization|groupIds|matchedGrantId|matchedGroupId|matchedRoleId|permission|personaId|planLocked|roleIds)/u.test(
+              around,
+            )
+          ) {
             continue;
           }
         }
@@ -782,11 +940,16 @@ function aggregateExactFieldReferences(
       ...item,
       lines: [...new Set(item.lines)].sort((left, right) => left - right),
     }))
-    .sort((left, right) =>
-      compareText(left.field, right.field) || compareText(left.path, right.path));
+    .sort(
+      (left, right) =>
+        compareText(left.field, right.field) ||
+        compareText(left.path, right.path),
+    );
 }
 
-function scanPermissionDefinitions(files: SourceFile[]): PermissionDefinition[] {
+function scanPermissionDefinitions(
+  files: SourceFile[],
+): PermissionDefinition[] {
   const definitions = new Map<string, PermissionDefinition>();
   const definitionStatement =
     /\bINSERT\s+INTO\s+shared\.permission(?![A-Za-z0-9_])[\s\S]*?;/giu;
@@ -797,29 +960,36 @@ function scanPermissionDefinitions(files: SourceFile[]): PermissionDefinition[] 
     /\(\s*'([A-Za-z][A-Za-z0-9._-]*)'\s*,\s*'[^']*'\s*,\s*'(?:record|tenant|special)'\s*,\s*'(low|medium|high|critical)'/gu;
 
   for (const file of files.filter((item) =>
-    /\/authorization\/catalog\/[^/]+\/catalog\.v2\.json$/u.test(item.path))) {
+    /\/authorization\/catalog\/[^/]+\/catalog\.v2\.json$/u.test(item.path),
+  )) {
     const catalog = JSON.parse(file.content) as {
       permissions?: Array<{ canonicalCode?: unknown; riskTier?: unknown }>;
     };
     for (const permission of catalog.permissions ?? []) {
       if (typeof permission.canonicalCode !== "string") continue;
-      const riskLevel = ["low", "medium", "high", "critical"].includes(String(permission.riskTier))
-        ? permission.riskTier as PermissionDefinition["riskLevel"]
+      const riskLevel = ["low", "medium", "high", "critical"].includes(
+        String(permission.riskTier),
+      )
+        ? (permission.riskTier as PermissionDefinition["riskLevel"])
         : "unknown";
       const marker = `"canonicalCode": "${permission.canonicalCode}"`;
       definitions.set(permission.canonicalCode, {
         code: permission.canonicalCode,
         riskLevel,
-        sources: [{
-          path: file.path,
-          lines: [lineNumberAt(file.content, file.content.indexOf(marker))],
-        }],
+        sources: [
+          {
+            path: file.path,
+            lines: [lineNumberAt(file.content, file.content.indexOf(marker))],
+          },
+        ],
       });
     }
   }
 
   for (const file of files.filter((item) => item.path.endsWith(".sql"))) {
-    for (const statementMatch of file.scanContent.matchAll(definitionStatement)) {
+    for (const statementMatch of file.scanContent.matchAll(
+      definitionStatement,
+    )) {
       const statement = statementMatch[0];
       const statementOffset = statementMatch.index ?? 0;
       const recordDefinition = (
@@ -827,10 +997,15 @@ function scanPermissionDefinitions(files: SourceFile[]): PermissionDefinition[] 
         riskLevel: PermissionDefinition["riskLevel"],
         codeIndex: number,
       ): void => {
-        const line = lineNumberAt(file.scanContent, statementOffset + codeIndex);
+        const line = lineNumberAt(
+          file.scanContent,
+          statementOffset + codeIndex,
+        );
         const existing = definitions.get(code);
         if (existing) {
-          const source = existing.sources.find((item) => item.path === file.path);
+          const source = existing.sources.find(
+            (item) => item.path === file.path,
+          );
           if (source) source.lines.push(line);
           else existing.sources.push({ path: file.path, lines: [line] });
           if (existing.riskLevel === "unknown" && riskLevel !== "unknown") {
@@ -900,9 +1075,15 @@ function aggregatePermissionUses(
     else map.set(key, { ...use, lines: [use.line] });
   }
   return [...map.values()]
-    .map((item) => ({ ...item, lines: [...new Set(item.lines)].sort((a, b) => a - b) }))
-    .sort((left, right) =>
-      compareText(left.code, right.code) || compareText(left.path, right.path));
+    .map((item) => ({
+      ...item,
+      lines: [...new Set(item.lines)].sort((a, b) => a - b),
+    }))
+    .sort(
+      (left, right) =>
+        compareText(left.code, right.code) ||
+        compareText(left.path, right.path),
+    );
 }
 
 function scanPermissionUses(
@@ -911,22 +1092,31 @@ function scanPermissionUses(
 ): { uses: PermissionUse[]; unknownUses: PermissionUse[] } {
   const byCode = new Map(definitions.map((item) => [item.code, item]));
   const uses: Array<Omit<PermissionUse, "lines"> & { line: number }> = [];
-  const unknownUses: Array<Omit<PermissionUse, "lines"> & { line: number }> = [];
+  const unknownUses: Array<Omit<PermissionUse, "lines"> & { line: number }> =
+    [];
   const quotePattern = /(["'`])([A-Za-z][A-Za-z0-9._-]*)\1/gu;
   for (const file of files) {
     const pathIsPermissionContext =
-      /(?:authorization|entity[_-]operation|iam|permission|access|action-dispatcher|resolver|role|group)/iu.test(file.path);
+      /(?:authorization|entity[_-]operation|iam|permission|access|action-dispatcher|resolver|role|group)/iu.test(
+        file.path,
+      );
     for (const match of file.scanContent.matchAll(quotePattern)) {
       const token = match[2];
       if (!token) continue;
       const index = match.index ?? 0;
-      const around = file.scanContent.slice(Math.max(0, index - 180), index + 180);
+      const around = file.scanContent.slice(
+        Math.max(0, index - 180),
+        index + 180,
+      );
       const contextIsPermission =
-        /(?:allowed\.has|checkPermission|required_permission|permission_code|permissionCode|permissions?)/u.test(around);
+        /(?:allowed\.has|checkPermission|required_permission|permission_code|permissionCode|permissions?)/u.test(
+          around,
+        );
       const definition = byCode.get(token);
       if (definition) {
         const distinctive = token.includes(".") || /[A-Z]/u.test(token);
-        if (!distinctive && !pathIsPermissionContext && !contextIsPermission) continue;
+        if (!distinctive && !pathIsPermissionContext && !contextIsPermission)
+          continue;
         uses.push({
           code: token,
           riskLevel: definition.riskLevel,
@@ -939,14 +1129,18 @@ function scanPermissionUses(
       const before = file.scanContent.slice(Math.max(0, index - 500), index);
       const after = file.scanContent.slice(index, index + 260);
       const directAuthorizationContext =
-        /(?:checkPermission|checkAnyPermission|requireAllowed|requireAllow|allowed\.has)\s*\([^)]*$/u.test(before)
-        || /(?:permissionCode|required_permission|requiredPermission)\s*[:=]\s*$/u.test(before)
-        || /permissions\s*:\s*\{[^}]*$/u.test(before)
-        || /current_setting\(\s*'app\.permissions'/u.test(after)
-        || /002_permission_model/u.test(file.path);
+        /(?:checkPermission|checkAnyPermission|requireAllowed|requireAllow|allowed\.has)\s*\([^)]*$/u.test(
+          before,
+        ) ||
+        /(?:permissionCode|required_permission|requiredPermission)\s*[:=]\s*$/u.test(
+          before,
+        ) ||
+        /permissions\s*:\s*\{[^}]*$/u.test(before) ||
+        /current_setting\(\s*'app\.permissions'/u.test(after) ||
+        /002_permission_model/u.test(file.path);
       if (
-        directAuthorizationContext
-        && /^[A-Z][A-Z0-9_]+(?:\.[A-Z0-9_]+)+$/u.test(token)
+        directAuthorizationContext &&
+        /^[A-Z][A-Z0-9_]+(?:\.[A-Z0-9_]+)+$/u.test(token)
       ) {
         unknownUses.push({
           code: token,
@@ -965,9 +1159,12 @@ function scanPermissionUses(
 }
 
 function routeFromAppFile(path: string): string | null {
-  const match = path.match(/^apps\/[^/]+\/app\/api\/(.+)\/route\.(?:ts|tsx|js|jsx)$/u);
+  const match = path.match(
+    /^apps\/[^/]+\/app\/api\/(.+)\/route\.(?:ts|tsx|js|jsx)$/u,
+  );
   if (!match?.[1]) return null;
-  const segments = match[1].split("/")
+  const segments = match[1]
+    .split("/")
     .filter((segment) => !segment.startsWith("("))
     .map((segment) => {
       const spread = segment.match(/^\[\.\.\.([^\]]+)\]$/u);
@@ -998,7 +1195,9 @@ function scanRoutes(
 
   const routes: RouteEntry[] = [];
   for (const file of files.filter((item) => item.artifactClass === "route")) {
-    const permissionCodes = uniqueSorted(permissionsByPath.get(file.path) ?? []);
+    const permissionCodes = uniqueSorted(
+      permissionsByPath.get(file.path) ?? [],
+    );
     const securitySymbols = uniqueSorted(symbolsByPath.get(file.path) ?? []);
     if (permissionCodes.length === 0 && securitySymbols.length === 0) continue;
 
@@ -1021,10 +1220,14 @@ function scanRoutes(
       )) {
         if (match[1]) methods.add(match[1]);
       }
-      localRoutes.set(appRoute, methods.size > 0 ? methods : new Set(["UNKNOWN"]));
+      localRoutes.set(
+        appRoute,
+        methods.size > 0 ? methods : new Set(["UNKNOWN"]),
+      );
     }
 
-    if (localRoutes.size === 0) localRoutes.set("<dynamic-or-mounted>", new Set(["UNKNOWN"]));
+    if (localRoutes.size === 0)
+      localRoutes.set("<dynamic-or-mounted>", new Set(["UNKNOWN"]));
     for (const [route, methods] of localRoutes) {
       routes.push({
         path: file.path,
@@ -1035,13 +1238,18 @@ function scanRoutes(
       });
     }
   }
-  return routes.sort((left, right) =>
-    compareText(left.path, right.path) || compareText(left.route, right.route));
+  return routes.sort(
+    (left, right) =>
+      compareText(left.path, right.path) ||
+      compareText(left.route, right.route),
+  );
 }
 
 function scanKeycloakMappings(files: SourceFile[]): KeycloakMapping[] {
   const mappings: KeycloakMapping[] = [];
-  for (const file of files.filter((item) => item.artifactClass === "keycloak")) {
+  for (const file of files.filter(
+    (item) => item.artifactClass === "keycloak",
+  )) {
     let root: unknown;
     try {
       root = JSON.parse(file.content);
@@ -1055,33 +1263,45 @@ function scanKeycloakMappings(files: SourceFile[]): KeycloakMapping[] {
         return;
       }
       const record = value as Record<string, unknown>;
-      const mapperType = typeof record.protocolMapper === "string"
-        ? record.protocolMapper
-        : typeof record.identityProviderMapper === "string"
-          ? record.identityProviderMapper
-          : null;
+      const mapperType =
+        typeof record.protocolMapper === "string"
+          ? record.protocolMapper
+          : typeof record.identityProviderMapper === "string"
+            ? record.identityProviderMapper
+            : null;
       if (mapperType) {
-        const config = record.config && typeof record.config === "object" && !Array.isArray(record.config)
-          ? record.config as Record<string, unknown>
-          : {};
+        const config =
+          record.config &&
+          typeof record.config === "object" &&
+          !Array.isArray(record.config)
+            ? (record.config as Record<string, unknown>)
+            : {};
         mappings.push({
           path: file.path,
           jsonPath: path.map(String).join("."),
           name: typeof record.name === "string" ? record.name : null,
           mapperType,
-          userAttribute: typeof config["user.attribute"] === "string"
-            ? config["user.attribute"]
-            : null,
-          claimName: typeof config["claim.name"] === "string" ? config["claim.name"] : null,
+          userAttribute:
+            typeof config["user.attribute"] === "string"
+              ? config["user.attribute"]
+              : null,
+          claimName:
+            typeof config["claim.name"] === "string"
+              ? config["claim.name"]
+              : null,
           hardcodedRole: typeof config.role === "string" ? config.role : null,
         });
       }
-      for (const [key, child] of Object.entries(record)) visit(child, [...path, key]);
+      for (const [key, child] of Object.entries(record))
+        visit(child, [...path, key]);
     };
     visit(root, []);
   }
-  return mappings.sort((left, right) =>
-    compareText(left.path, right.path) || compareText(left.jsonPath, right.jsonPath));
+  return mappings.sort(
+    (left, right) =>
+      compareText(left.path, right.path) ||
+      compareText(left.jsonPath, right.jsonPath),
+  );
 }
 
 function scanCaptureSources(
@@ -1097,8 +1317,8 @@ function scanCaptureSources(
     const content = readFileSync(absolutePath, "utf8").replaceAll("\r\n", "\n");
     const scannable = stripSourceComments(content, ".sql");
     const insertPattern = new RegExp(
-      String.raw`\bINSERT\s+INTO\s+${escapeRegex(sourceContract.registryTable)}`
-        + String.raw`\b[\s\S]*?\bVALUES\b([\s\S]*?)(?=\bON\s+CONFLICT\b)`,
+      String.raw`\bINSERT\s+INTO\s+${escapeRegex(sourceContract.registryTable)}` +
+        String.raw`\b[\s\S]*?\bVALUES\b([\s\S]*?)(?=\bON\s+CONFLICT\b)`,
       "giu",
     );
     for (const insertMatch of scannable.matchAll(insertPattern)) {
@@ -1118,21 +1338,23 @@ function scanCaptureSources(
       }
     }
   }
-  return entries
-    .sort((left, right) =>
-      compareText(left.plane, right.plane)
-      || compareText(left.qualifiedName, right.qualifiedName)
-      || left.line - right.line);
+  return entries.sort(
+    (left, right) =>
+      compareText(left.plane, right.plane) ||
+      compareText(left.qualifiedName, right.qualifiedName) ||
+      left.line - right.line,
+  );
 }
 
 function keycloakResourceKind(endpoint: string): string {
   const value = endpoint.toLowerCase().split("?")[0] ?? endpoint.toLowerCase();
   if (value === "") return "realm";
   if (
-    value.includes("protocol-mappers")
-    || value.includes("protocolmappers")
-    || value.includes("partialimport")
-  ) return "protocol_mapper_or_realm_import";
+    value.includes("protocol-mappers") ||
+    value.includes("protocolmappers") ||
+    value.includes("partialimport")
+  )
+    return "protocol_mapper_or_realm_import";
   if (value.includes("/users") && value.includes("/groups")) {
     return "user_group_membership";
   }
@@ -1156,7 +1378,8 @@ function keycloakResourceKind(endpoint: string): string {
   if (value.includes("/organizations")) return "organization";
   if (value.includes("/identity-provider")) return "identity_provider";
   if (value.includes("/authentication")) return "authentication_flow";
-  if (value.includes("/clients") && value.includes("/roles")) return "client_role";
+  if (value.includes("/clients") && value.includes("/roles"))
+    return "client_role";
   if (value.includes("/clients")) return "client";
   if (/\/admin\/realms\/[^/{}$]+\/?$/u.test(value)) return "realm";
   return "admin_other";
@@ -1231,11 +1454,14 @@ function scanKeycloakRestWriters(
           ...endpoint,
           distance: methodIndex - endpoint.index,
         }))
-        .filter((endpoint) => endpoint.distance >= 0 && endpoint.distance <= 500)
+        .filter(
+          (endpoint) => endpoint.distance >= 0 && endpoint.distance <= 500,
+        )
         .filter((endpoint) =>
           /\bfetch\s*\(/u.test(
             file.scanContent.slice(endpoint.index, methodIndex),
-          ))
+          ),
+        )
         .sort((left, right) => left.distance - right.distance)[0];
       if (nearest) record(match[2] ?? "", nearest.endpoint, methodIndex);
     }
@@ -1243,9 +1469,12 @@ function scanKeycloakRestWriters(
     const rule = rulesByPath.get(file.path);
     const discoveredOperations = [...operations].sort(compareText);
     const allowedOperations = new Set(rule?.allowedOperations ?? []);
-    const exactMatch = Boolean(rule)
-      && discoveredOperations.every((operation) => allowedOperations.has(operation))
-      && rule!.allowedOperations.every((operation) => operations.has(operation));
+    const exactMatch =
+      Boolean(rule) &&
+      discoveredOperations.every((operation) =>
+        allowedOperations.has(operation),
+      ) &&
+      rule!.allowedOperations.every((operation) => operations.has(operation));
     references.push({
       path: file.path,
       owner: rule?.owner ?? null,
@@ -1263,10 +1492,12 @@ function objectDependenciesInBlock(
   objects: AuthorizationRegistryObject[],
 ): string[] {
   return objects
-    .filter((object) => new RegExp(
-      `(?<![A-Za-z0-9_])${escapeRegex(object.qualifiedName)}(?![A-Za-z0-9_])`,
-      "iu",
-    ).test(block))
+    .filter((object) =>
+      new RegExp(
+        `(?<![A-Za-z0-9_])${escapeRegex(object.qualifiedName)}(?![A-Za-z0-9_])`,
+        "iu",
+      ).test(block),
+    )
     .map((object) => object.qualifiedName)
     .sort(compareText);
 }
@@ -1276,13 +1507,17 @@ function derivedOwnership(
   dependencies: string[],
   objects: AuthorizationRegistryObject[],
 ): { owner: string | null; disposition: string } {
-  const direct = objects.find((object) =>
-    object.qualifiedName.toLowerCase() === qualifiedName.toLowerCase());
+  const direct = objects.find(
+    (object) =>
+      object.qualifiedName.toLowerCase() === qualifiedName.toLowerCase(),
+  );
   if (direct) return { owner: direct.owner, disposition: direct.disposition };
   const owners = uniqueSorted(
     dependencies.flatMap((dependency) => {
-      const object = objects.find((candidate) =>
-        candidate.qualifiedName.toLowerCase() === dependency.toLowerCase());
+      const object = objects.find(
+        (candidate) =>
+          candidate.qualifiedName.toLowerCase() === dependency.toLowerCase(),
+      );
       return object?.owner ? [object.owner] : [];
     }),
   );
@@ -1299,17 +1534,24 @@ function derivedOwnership(
       ops: "operations-platform",
       runtime_meta: "metadata-platform",
     };
-    owners.push(...uniqueSorted(objects
-      .filter((object) => object.qualifiedName.split(".")[0] === schema)
-      .map((object) => object.owner)
-      .filter(Boolean)));
+    owners.push(
+      ...uniqueSorted(
+        objects
+          .filter((object) => object.qualifiedName.split(".")[0] === schema)
+          .map((object) => object.owner)
+          .filter(Boolean),
+      ),
+    );
     if (owners.length === 0 && schema && canonicalSchemaOwners[schema]) {
       owners.push(canonicalSchemaOwners[schema]);
     }
   }
   return {
     owner: owners.length > 0 ? owners.join("+") : null,
-    disposition: owners.length > 0 ? "review_with_registered_dependency" : "requires_review",
+    disposition:
+      owners.length > 0
+        ? "review_with_registered_dependency"
+        : "requires_review",
   };
 }
 
@@ -1317,14 +1559,22 @@ function scanDerivedDatabaseObjects(
   files: SourceFile[],
   objects: AuthorizationRegistryObject[],
 ): DerivedDatabaseObject[] {
-  const registeredNames = new Set(objects.map((object) => object.qualifiedName.toLowerCase()));
+  const registeredNames = new Set(
+    objects.map((object) => object.qualifiedName.toLowerCase()),
+  );
   const derived: DerivedDatabaseObject[] = [];
-  for (const file of files.filter((item) => [".sql"].includes(extname(item.path).toLowerCase()))) {
+  for (const file of files.filter((item) =>
+    [".sql"].includes(extname(item.path).toLowerCase()),
+  )) {
     const relationPattern =
       /\bCREATE\s+(?:UNLOGGED\s+)?(?:TABLE|DOMAIN)\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)/giu;
     for (const match of file.scanContent.matchAll(relationPattern)) {
       const qualifiedName = (match[1] ?? "").toLowerCase();
-      if (registeredNames.has(qualifiedName) || !isStrongAuthorizationObjectName(qualifiedName)) continue;
+      if (
+        registeredNames.has(qualifiedName) ||
+        !isStrongAuthorizationObjectName(qualifiedName)
+      )
+        continue;
       const ownership = derivedOwnership(qualifiedName, [], objects);
       derived.push({
         qualifiedName,
@@ -1332,7 +1582,9 @@ function scanDerivedDatabaseObjects(
         path: file.path,
         line: lineNumberAt(file.scanContent, match.index ?? 0),
         dependencies: [],
-        classification: ownership.owner ? "structural_dependency" : "unclassified",
+        classification: ownership.owner
+          ? "structural_dependency"
+          : "unclassified",
         ...ownership,
       });
     }
@@ -1351,7 +1603,11 @@ function scanDerivedDatabaseObjects(
       ).filter((dependency) => dependency.toLowerCase() !== qualifiedName);
       const registered = registeredNames.has(qualifiedName);
       const ownership = derivedOwnership(qualifiedName, dependencies, objects);
-      if (!registered && dependencies.length === 0 && !isStrongAuthorizationObjectName(qualifiedName)) {
+      if (
+        !registered &&
+        dependencies.length === 0 &&
+        !isStrongAuthorizationObjectName(qualifiedName)
+      ) {
         continue;
       }
       derived.push({
@@ -1362,7 +1618,9 @@ function scanDerivedDatabaseObjects(
         dependencies,
         classification: registered
           ? "registered"
-          : dependencies.length > 0 || ownership.owner ? "structural_dependency" : "unclassified",
+          : dependencies.length > 0 || ownership.owner
+            ? "structural_dependency"
+            : "unclassified",
         ...ownership,
       });
     }
@@ -1371,11 +1629,13 @@ function scanDerivedDatabaseObjects(
       /\bCREATE\s+TRIGGER\s+([a-z_][a-z0-9_]*)[^;]*?\bON\s+([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)[^;]*?\bEXECUTE\s+FUNCTION\s+([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)[^;]*?;/giu;
     for (const match of file.scanContent.matchAll(triggerPattern)) {
       const attachedTo = (match[2] ?? "").toLowerCase();
-      const attachedObject = objects.find((object) =>
-        object.qualifiedName.toLowerCase() === attachedTo);
+      const attachedObject = objects.find(
+        (object) => object.qualifiedName.toLowerCase() === attachedTo,
+      );
       const triggerName = match[1] ?? "";
       const qualifiedName = `${attachedTo}.${triggerName}`;
-      if (!attachedObject && !isStrongAuthorizationObjectName(qualifiedName)) continue;
+      if (!attachedObject && !isStrongAuthorizationObjectName(qualifiedName))
+        continue;
       const dependencies = attachedObject ? [attachedObject.qualifiedName] : [];
       const ownership = derivedOwnership(qualifiedName, dependencies, objects);
       derived.push({
@@ -1386,7 +1646,10 @@ function scanDerivedDatabaseObjects(
         attachedTo,
         executes: (match[3] ?? "").toLowerCase(),
         dependencies,
-        classification: attachedObject || ownership.owner ? "structural_dependency" : "unclassified",
+        classification:
+          attachedObject || ownership.owner
+            ? "structural_dependency"
+            : "unclassified",
         ...ownership,
       });
     }
@@ -1396,7 +1659,11 @@ function scanDerivedDatabaseObjects(
     for (const match of file.scanContent.matchAll(viewPattern)) {
       const qualifiedName = (match[1] ?? "").toLowerCase();
       const dependencies = objectDependenciesInBlock(match[2] ?? "", objects);
-      if (dependencies.length === 0 && !isStrongAuthorizationObjectName(qualifiedName)) continue;
+      if (
+        dependencies.length === 0 &&
+        !isStrongAuthorizationObjectName(qualifiedName)
+      )
+        continue;
       const ownership = derivedOwnership(qualifiedName, dependencies, objects);
       derived.push({
         qualifiedName,
@@ -1406,52 +1673,64 @@ function scanDerivedDatabaseObjects(
         dependencies,
         classification: registeredNames.has(qualifiedName)
           ? "registered"
-          : dependencies.length > 0 || ownership.owner ? "structural_dependency" : "unclassified",
+          : dependencies.length > 0 || ownership.owner
+            ? "structural_dependency"
+            : "unclassified",
         ...ownership,
       });
     }
   }
-  return derived.sort((left, right) =>
-    compareText(left.qualifiedName, right.qualifiedName)
-    || compareText(left.path, right.path)
-    || left.line - right.line);
+  return derived.sort(
+    (left, right) =>
+      compareText(left.qualifiedName, right.qualifiedName) ||
+      compareText(left.path, right.path) ||
+      left.line - right.line,
+  );
 }
 
 function generatedArtifactInventory(
   root: string,
   registry: AuthorizationRegistry,
 ): GeneratedArtifact[] {
-  return registry.generatedArtifacts.map((entry) => {
-    const artifactPath = resolve(root, entry.path);
-    const generatorPath = entry.generator.trim().split(/\s+/u)[0] ?? "";
-    const absoluteGenerator = resolve(root, generatorPath);
-    const present = existsSync(artifactPath);
-    return {
-      ...entry,
-      generatorPath,
-      present,
-      generatorPresent: existsSync(absoluteGenerator),
-      sha256: present ? hash(readFileSync(artifactPath, "utf8").replaceAll("\r\n", "\n")) : null,
-    };
-  }).sort((left, right) => compareText(left.path, right.path));
+  return registry.generatedArtifacts
+    .map((entry) => {
+      const artifactPath = resolve(root, entry.path);
+      const generatorPath = entry.generator.trim().split(/\s+/u)[0] ?? "";
+      const absoluteGenerator = resolve(root, generatorPath);
+      const present = existsSync(artifactPath);
+      return {
+        ...entry,
+        generatorPath,
+        present,
+        generatorPresent: existsSync(absoluteGenerator),
+        sha256: present
+          ? hash(readFileSync(artifactPath, "utf8").replaceAll("\r\n", "\n"))
+          : null,
+      };
+    })
+    .sort((left, right) => compareText(left.path, right.path));
 }
 
 function mergeReferences(...groups: ObjectReference[][]): ObjectReference[] {
   const raw = groups.flatMap((group) =>
-    group.flatMap((item) => item.lines.map((line) => ({
-      objectId: item.objectId,
-      qualifiedName: item.qualifiedName,
-      path: item.path,
-      artifactClass: item.artifactClass,
-      access: item.access,
-      line,
-    }))));
+    group.flatMap((item) =>
+      item.lines.map((line) => ({
+        objectId: item.objectId,
+        qualifiedName: item.qualifiedName,
+        path: item.path,
+        artifactClass: item.artifactClass,
+        access: item.access,
+        line,
+      })),
+    ),
+  );
   return aggregateReferences(raw);
 }
 
 export function validateRegistry(registry: AuthorizationRegistry): string[] {
   const failures: string[] = [];
-  if (registry.schemaVersion !== 1) failures.push("Registry schemaVersion must be 1.");
+  if (registry.schemaVersion !== 1)
+    failures.push("Registry schemaVersion must be 1.");
   if (!Array.isArray(registry.contract.captureSourceDdls)) {
     failures.push("Registry contract.captureSourceDdls must be an array.");
   }
@@ -1465,13 +1744,19 @@ export function validateRegistry(registry: AuthorizationRegistry): string[] {
       failures.push(`Duplicate capture-source plane: ${sourceContract.plane}`);
     }
     if (!sourceContract.path?.trim()) {
-      failures.push(`Capture-source DDL contract has no path: ${sourceContract.plane}`);
+      failures.push(
+        `Capture-source DDL contract has no path: ${sourceContract.plane}`,
+      );
     } else if (captureDdlPaths.has(sourceContract.path)) {
-      failures.push(`Duplicate capture-source DDL path: ${sourceContract.path}`);
+      failures.push(
+        `Duplicate capture-source DDL path: ${sourceContract.path}`,
+      );
     }
-    if (!/^[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*$/u.test(
-      sourceContract.registryTable ?? "",
-    )) {
+    if (
+      !/^[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*$/u.test(
+        sourceContract.registryTable ?? "",
+      )
+    ) {
       failures.push(
         `Capture-source registry table is not exact: ${sourceContract.registryTable}`,
       );
@@ -1493,11 +1778,16 @@ export function validateRegistry(registry: AuthorizationRegistry): string[] {
     }
     ids.add(object.id);
     names.add(object.qualifiedName.toLowerCase());
-    if (!object.owner.trim()) failures.push(`Object has no owner: ${object.id}`);
-    if (!object.disposition.trim()) failures.push(`Object has no disposition: ${object.id}`);
-    if (object.planes.length === 0) failures.push(`Object has no plane: ${object.id}`);
+    if (!object.owner.trim())
+      failures.push(`Object has no owner: ${object.id}`);
+    if (!object.disposition.trim())
+      failures.push(`Object has no disposition: ${object.id}`);
+    if (object.planes.length === 0)
+      failures.push(`Object has no plane: ${object.id}`);
     if (!/^[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*$/u.test(object.qualifiedName)) {
-      failures.push(`Object is not an exact qualified SQL identity: ${object.qualifiedName}`);
+      failures.push(
+        `Object is not an exact qualified SQL identity: ${object.qualifiedName}`,
+      );
     }
   }
   for (const plane of Object.keys(registry.captureSourceObjectIds ?? {})) {
@@ -1521,7 +1811,9 @@ export function validateRegistry(registry: AuthorizationRegistry): string[] {
         );
       }
       captureIds.add(objectId);
-      const object = registry.objects.find((candidate) => candidate.id === objectId);
+      const object = registry.objects.find(
+        (candidate) => candidate.id === objectId,
+      );
       if (!object) {
         failures.push(
           `Capture-source object id is not registered for ${sourceContract.plane}: ${objectId}`,
@@ -1551,10 +1843,16 @@ export function validateRegistry(registry: AuthorizationRegistry): string[] {
       failures.push(`Keycloak REST writer has no disposition: ${writer.id}`);
     }
     if (writer.allowedOperations.length === 0) {
-      failures.push(`Keycloak REST writer has no exact operation: ${writer.id}`);
+      failures.push(
+        `Keycloak REST writer has no exact operation: ${writer.id}`,
+      );
     }
-    if (new Set(writer.allowedOperations).size !== writer.allowedOperations.length) {
-      failures.push(`Keycloak REST writer has duplicate operations: ${writer.id}`);
+    if (
+      new Set(writer.allowedOperations).size !== writer.allowedOperations.length
+    ) {
+      failures.push(
+        `Keycloak REST writer has duplicate operations: ${writer.id}`,
+      );
     }
     for (const operation of writer.allowedOperations) {
       if (!/^(?:POST|PUT|PATCH|DELETE):[a-z][a-z0-9_]*$/u.test(operation)) {
@@ -1572,19 +1870,26 @@ export function validateRegistry(registry: AuthorizationRegistry): string[] {
       failures.push(`Duplicate known anomaly id: ${anomaly.id}`);
     }
     if (anomalyIdentities.has(identityKey)) {
-      failures.push(`Duplicate known anomaly identity: ${anomaly.type}:${anomaly.identity}`);
+      failures.push(
+        `Duplicate known anomaly identity: ${anomaly.type}:${anomaly.identity}`,
+      );
     }
     anomalyIds.add(anomaly.id);
     anomalyIdentities.add(identityKey);
-    if (!anomaly.owner.trim()) failures.push(`Known anomaly has no owner: ${anomaly.id}`);
+    if (!anomaly.owner.trim())
+      failures.push(`Known anomaly has no owner: ${anomaly.id}`);
     if (anomaly.currentPaths.length === 0) {
       failures.push(`Known anomaly has no current path: ${anomaly.id}`);
     }
     if (anomaly.type === "configuration" && !anomaly.matchText?.trim()) {
-      failures.push(`Known configuration anomaly has no matchText: ${anomaly.id}`);
+      failures.push(
+        `Known configuration anomaly has no matchText: ${anomaly.id}`,
+      );
     }
     if (anomaly.boundaryClass !== undefined && !anomaly.boundaryClass.trim()) {
-      failures.push(`Known boundary anomaly has no boundary class: ${anomaly.id}`);
+      failures.push(
+        `Known boundary anomaly has no boundary class: ${anomaly.id}`,
+      );
     }
     if (!anomaly.disposition.trim()) {
       failures.push(`Known anomaly has no disposition: ${anomaly.id}`);
@@ -1593,7 +1898,9 @@ export function validateRegistry(registry: AuthorizationRegistry): string[] {
       failures.push(`Known anomaly has no removal wave: ${anomaly.id}`);
     }
     if (anomaly.blocksStrictCertification !== true) {
-      failures.push(`Known anomaly must block strict certification: ${anomaly.id}`);
+      failures.push(
+        `Known anomaly must block strict certification: ${anomaly.id}`,
+      );
     }
   }
   return failures.sort(compareText);
@@ -1603,11 +1910,15 @@ export function buildAuthorizationInventory(
   root = resolve(fileURLToPath(new URL("../../..", import.meta.url))),
 ): AuthorizationInventory {
   const registryPath = resolve(root, AUTHORIZATION_REGISTRY_PATH);
-  const registryText = readFileSync(registryPath, "utf8").replace(/^\uFEFF/, "").replaceAll("\r\n", "\n");
+  const registryText = readFileSync(registryPath, "utf8")
+    .replace(/^\uFEFF/, "")
+    .replaceAll("\r\n", "\n");
   const registry = JSON.parse(registryText) as AuthorizationRegistry;
   const registryFailures = validateRegistry(registry);
   if (registryFailures.length > 0) {
-    throw new Error(`Invalid authorization source registry:\n${registryFailures.join("\n")}`);
+    throw new Error(
+      `Invalid authorization source registry:\n${registryFailures.join("\n")}`,
+    );
   }
 
   const files = discoverFiles(root, registry);
@@ -1617,10 +1928,7 @@ export function buildAuthorizationInventory(
   const captureSourceCounts = new Map<string, number>();
   for (const entry of captureSourceEntries) {
     const key = captureKey(entry.plane, entry.qualifiedName);
-    captureSourceCounts.set(
-      key,
-      (captureSourceCounts.get(key) ?? 0) + 1,
-    );
+    captureSourceCounts.set(key, (captureSourceCounts.get(key) ?? 0) + 1);
   }
   const registryObjectsById = new Map(
     registry.objects.map((object) => [object.id, object]),
@@ -1628,62 +1936,95 @@ export function buildAuthorizationInventory(
   const registryObjectsByName = new Map(
     registry.objects.map((object) => [object.qualifiedName, object]),
   );
-  const registeredCaptureEntries = Object.entries(registry.captureSourceObjectIds)
-    .flatMap(([plane, objectIds]) => objectIds
+  const registeredCaptureEntries = Object.entries(
+    registry.captureSourceObjectIds,
+  ).flatMap(([plane, objectIds]) =>
+    objectIds
       .map((objectId) => registryObjectsById.get(objectId)?.qualifiedName)
-      .filter((qualifiedName): qualifiedName is string => Boolean(qualifiedName))
-      .map((qualifiedName) => ({ plane, qualifiedName })));
+      .filter((qualifiedName): qualifiedName is string =>
+        Boolean(qualifiedName),
+      )
+      .map((qualifiedName) => ({ plane, qualifiedName })),
+  );
   const registeredCaptureKeys = new Set(
     registeredCaptureEntries.map((entry) =>
-      captureKey(entry.plane, entry.qualifiedName)),
+      captureKey(entry.plane, entry.qualifiedName),
+    ),
   );
   const ddlCaptureKeys = new Set(
     captureSourceEntries.map((entry) =>
-      captureKey(entry.plane, entry.qualifiedName)),
+      captureKey(entry.plane, entry.qualifiedName),
+    ),
   );
   const keycloakRestWriters = scanKeycloakRestWriters(files, registry);
   const staticScan = scanObjectReferences(files, registry.objects);
   const prismaReferences = scanPrismaReferences(files, registry.objects);
   const references = mergeReferences(staticScan.references, prismaReferences);
   const securitySymbols = scanSecuritySymbols(files, registry.securitySymbols);
-  const contractFields = aggregateExactFieldReferences(files, registry.contractFields);
+  const contractFields = aggregateExactFieldReferences(
+    files,
+    registry.contractFields,
+  );
   const permissionDefinitions = scanPermissionDefinitions(files);
   const permissionScan = scanPermissionUses(files, permissionDefinitions);
   const routes = scanRoutes(files, permissionScan.uses, securitySymbols);
   const keycloakMappings = scanKeycloakMappings(files);
-  const derivedDatabaseObjects = scanDerivedDatabaseObjects(files, registry.objects);
-  const classifiedDerivedNames = new Set(derivedDatabaseObjects
-    .filter((item) => item.classification !== "unclassified")
-    .map((item) => item.qualifiedName));
+  const derivedDatabaseObjects = scanDerivedDatabaseObjects(
+    files,
+    registry.objects,
+  );
+  const classifiedDerivedNames = new Set(
+    derivedDatabaseObjects
+      .filter((item) => item.classification !== "unclassified")
+      .map((item) => item.qualifiedName),
+  );
   const generatedArtifacts = generatedArtifactInventory(root, registry);
   const isKnownAnomaly = (
     type: "object" | "permission_code",
     identity: string,
     path: string,
-  ): boolean => registry.knownSourceAnomalies.some((anomaly) =>
-    anomaly.type === type
-    && anomaly.identity === identity
-    && anomaly.currentPaths.includes(path));
+  ): boolean =>
+    registry.knownSourceAnomalies.some(
+      (anomaly) =>
+        anomaly.type === type &&
+        anomaly.identity === identity &&
+        anomaly.currentPaths.includes(path),
+    );
 
-  const objects = registry.objects.map((object) => {
-    const objectReferences = references.filter((reference) => reference.objectId === object.id);
-    return {
-      ...object,
-      definitionCount: objectReferences.filter((reference) => reference.access === "define").length,
-      readerCount: objectReferences.filter((reference) =>
-        reference.access === "read" || reference.access === "reference").length,
-      writerCount: objectReferences.filter((reference) => WRITER_ACCESS.has(reference.access)).length,
-      executionCount: objectReferences.filter((reference) =>
-        reference.access === "execute").length,
-      files: uniqueSorted(objectReferences.map((reference) => reference.path)),
-    };
-  }).sort((left, right) => compareText(left.id, right.id));
+  const objects = registry.objects
+    .map((object) => {
+      const objectReferences = references.filter(
+        (reference) => reference.objectId === object.id,
+      );
+      return {
+        ...object,
+        definitionCount: objectReferences.filter(
+          (reference) => reference.access === "define",
+        ).length,
+        readerCount: objectReferences.filter(
+          (reference) =>
+            reference.access === "read" || reference.access === "reference",
+        ).length,
+        writerCount: objectReferences.filter((reference) =>
+          WRITER_ACCESS.has(reference.access),
+        ).length,
+        executionCount: objectReferences.filter(
+          (reference) => reference.access === "execute",
+        ).length,
+        files: uniqueSorted(
+          objectReferences.map((reference) => reference.path),
+        ),
+      };
+    })
+    .sort((left, right) => compareText(left.id, right.id));
 
   const unknownObjectSources = staticScan.unknownObjectReferences
-    .filter((reference) =>
-      reference.artifactClass !== "test"
-      && !classifiedDerivedNames.has(reference.qualifiedName)
-      && !isKnownAnomaly("object", reference.qualifiedName, reference.path))
+    .filter(
+      (reference) =>
+        reference.artifactClass !== "test" &&
+        !classifiedDerivedNames.has(reference.qualifiedName) &&
+        !isKnownAnomaly("object", reference.qualifiedName, reference.path),
+    )
     .map((reference) => ({
       type: "object" as const,
       qualifiedName: reference.qualifiedName,
@@ -1692,10 +2033,12 @@ export function buildAuthorizationInventory(
       lines: reference.lines,
     }));
   const unknownSymbolSources = securitySymbols
-    .filter((reference) =>
-      reference.classification === "unclassified"
-      && reference.artifactClass !== "test"
-      && reference.artifactClass !== "tool")
+    .filter(
+      (reference) =>
+        reference.classification === "unclassified" &&
+        reference.artifactClass !== "test" &&
+        reference.artifactClass !== "tool",
+    )
     .map((reference) => ({
       type: "security_symbol" as const,
       symbol: reference.symbol,
@@ -1711,9 +2054,11 @@ export function buildAuthorizationInventory(
       line: item.line,
     }));
   const unknownPermissionSources = permissionScan.unknownUses
-    .filter((item) =>
-      item.artifactClass !== "test"
-      && !isKnownAnomaly("permission_code", item.code, item.path))
+    .filter(
+      (item) =>
+        item.artifactClass !== "test" &&
+        !isKnownAnomaly("permission_code", item.code, item.path),
+    )
     .map((item) => ({
       type: "permission_code" as const,
       code: item.code,
@@ -1724,12 +2069,13 @@ export function buildAuthorizationInventory(
   const unownedObjects = objects
     .filter((object) => !object.owner.trim() || !object.disposition.trim())
     .map((object) => object.id);
-  const unclassifiedWriters = references.filter((reference) =>
-    WRITER_ACCESS.has(reference.access)
-    && (
-      reference.artifactClass === "generated"
-      || !registry.objects.find((object) => object.id === reference.objectId)?.owner
-    ));
+  const unclassifiedWriters = references.filter(
+    (reference) =>
+      WRITER_ACCESS.has(reference.access) &&
+      (reference.artifactClass === "generated" ||
+        !registry.objects.find((object) => object.id === reference.objectId)
+          ?.owner),
+  );
   const missingDefinitions = objects
     .filter((object) => object.sourceOfTruth && object.definitionCount === 0)
     .map((object) => object.id);
@@ -1737,23 +2083,35 @@ export function buildAuthorizationInventory(
     const failures: string[] = [];
     if (!artifact.present) failures.push(`${artifact.path}: artifact missing`);
     if (!artifact.generatorPresent) {
-      failures.push(`${artifact.path}: generator missing (${artifact.generatorPath})`);
+      failures.push(
+        `${artifact.path}: generator missing (${artifact.generatorPath})`,
+      );
     }
     return failures;
   });
   const unknownCaptureSources = [
     ...registry.contract.captureSourceDdls
-      .filter((sourceContract) => !existsSync(resolve(root, sourceContract.path)))
-      .map((sourceContract) =>
-        `<missing-capture-source-ddl:${sourceContract.plane}:${sourceContract.path}>`),
+      .filter(
+        (sourceContract) => !existsSync(resolve(root, sourceContract.path)),
+      )
+      .map(
+        (sourceContract) =>
+          `<missing-capture-source-ddl:${sourceContract.plane}:${sourceContract.path}>`,
+      ),
     ...captureSourceEntries
-      .filter((entry) =>
-        !registeredCaptureKeys.has(captureKey(entry.plane, entry.qualifiedName)))
+      .filter(
+        (entry) =>
+          !registeredCaptureKeys.has(
+            captureKey(entry.plane, entry.qualifiedName),
+          ),
+      )
       .map((entry) => `${entry.plane}:${entry.qualifiedName}`),
   ].sort(compareText);
   const staleCaptureSourceRegistrations = registeredCaptureEntries
-    .filter((entry) =>
-      !ddlCaptureKeys.has(captureKey(entry.plane, entry.qualifiedName)))
+    .filter(
+      (entry) =>
+        !ddlCaptureKeys.has(captureKey(entry.plane, entry.qualifiedName)),
+    )
     .map((entry) => `${entry.plane}:${entry.qualifiedName}`)
     .sort(compareText);
   const duplicateCaptureSources = [...captureSourceCounts]
@@ -1762,13 +2120,15 @@ export function buildAuthorizationInventory(
     .sort(compareText);
   const registeredPlanesBySource = new Map<string, Set<string>>();
   for (const entry of registeredCaptureEntries) {
-    const planes = registeredPlanesBySource.get(entry.qualifiedName) ?? new Set<string>();
+    const planes =
+      registeredPlanesBySource.get(entry.qualifiedName) ?? new Set<string>();
     planes.add(entry.plane);
     registeredPlanesBySource.set(entry.qualifiedName, planes);
   }
   const ddlPlanesBySource = new Map<string, Set<string>>();
   for (const entry of captureSourceEntries) {
-    const planes = ddlPlanesBySource.get(entry.qualifiedName) ?? new Set<string>();
+    const planes =
+      ddlPlanesBySource.get(entry.qualifiedName) ?? new Set<string>();
     planes.add(entry.plane);
     ddlPlanesBySource.set(entry.qualifiedName, planes);
   }
@@ -1776,58 +2136,84 @@ export function buildAuthorizationInventory(
     ...registeredPlanesBySource.keys(),
     ...ddlPlanesBySource.keys(),
   ]).flatMap((qualifiedName) => {
-    const registeredPlanes = [...(registeredPlanesBySource.get(qualifiedName) ?? [])]
-      .sort(compareText);
-    const ddlPlanes = [...(ddlPlanesBySource.get(qualifiedName) ?? [])]
-      .sort(compareText);
+    const registeredPlanes = [
+      ...(registeredPlanesBySource.get(qualifiedName) ?? []),
+    ].sort(compareText);
+    const ddlPlanes = [...(ddlPlanesBySource.get(qualifiedName) ?? [])].sort(
+      compareText,
+    );
     return registeredPlanes.join(",") === ddlPlanes.join(",")
       ? []
       : [
-        `${qualifiedName}:registry=${registeredPlanes.join(",") || "none"}`
-        + `:ddl=${ddlPlanes.join(",") || "none"}`,
-      ];
+          `${qualifiedName}:registry=${registeredPlanes.join(",") || "none"}` +
+            `:ddl=${ddlPlanes.join(",") || "none"}`,
+        ];
   });
   const keycloakWriterByPath = new Map(
     keycloakRestWriters.map((writer) => [writer.path, writer]),
   );
-  const staleKeycloakRestWriterRules = registry.keycloakRestWriters.flatMap((rule) => {
-    const discovered = new Set(keycloakWriterByPath.get(rule.path)?.operations ?? []);
-    return rule.allowedOperations
-      .filter((operation) => !discovered.has(operation))
-      .map((operation) => `${rule.id}:${operation}`);
-  }).sort(compareText);
-  const anomalyFindings = registry.knownSourceAnomalies.flatMap((anomaly) =>
-    anomaly.currentPaths.map((path) => {
-      const lines = anomaly.type === "object"
-        ? staticScan.unknownObjectReferences.find((reference) =>
-          reference.qualifiedName === anomaly.identity && reference.path === path)?.lines ?? []
-        : anomaly.type === "permission_code"
-          ? permissionScan.unknownUses.find((use) =>
-            use.code === anomaly.identity && use.path === path)?.lines ?? []
-          : (() => {
-            const absolutePath = resolve(root, path);
-            if (!existsSync(absolutePath) || !anomaly.matchText) return [];
-            const content = readFileSync(absolutePath, "utf8").replaceAll("\r\n", "\n");
-            const result: number[] = [];
-            let index = content.indexOf(anomaly.matchText);
-            while (index >= 0) {
-              result.push(lineNumberAt(content, index));
-              index = content.indexOf(anomaly.matchText, index + anomaly.matchText.length);
-            }
-            return result;
-          })();
-      return {
-        ...anomaly,
-        path,
-        lines,
-        currentPaths: undefined,
-      };
-    })).map(({ currentPaths: _currentPaths, ...anomaly }) => anomaly)
-    .filter((anomaly) => anomaly.type !== "configuration" || anomaly.lines.length > 0)
-    .sort((left, right) =>
-      compareText(left.id, right.id) || compareText(left.path, right.path));
-  const knownSourceAnomalies = anomalyFindings
-    .filter((anomaly) => !anomaly.boundaryClass);
+  const staleKeycloakRestWriterRules = registry.keycloakRestWriters
+    .flatMap((rule) => {
+      const discovered = new Set(
+        keycloakWriterByPath.get(rule.path)?.operations ?? [],
+      );
+      return rule.allowedOperations
+        .filter((operation) => !discovered.has(operation))
+        .map((operation) => `${rule.id}:${operation}`);
+    })
+    .sort(compareText);
+  const anomalyFindings = registry.knownSourceAnomalies
+    .flatMap((anomaly) =>
+      anomaly.currentPaths.map((path) => {
+        const lines =
+          anomaly.type === "object"
+            ? (staticScan.unknownObjectReferences.find(
+                (reference) =>
+                  reference.qualifiedName === anomaly.identity &&
+                  reference.path === path,
+              )?.lines ?? [])
+            : anomaly.type === "permission_code"
+              ? (permissionScan.unknownUses.find(
+                  (use) => use.code === anomaly.identity && use.path === path,
+                )?.lines ?? [])
+              : (() => {
+                  const absolutePath = resolve(root, path);
+                  if (!existsSync(absolutePath) || !anomaly.matchText)
+                    return [];
+                  const content = readFileSync(absolutePath, "utf8").replaceAll(
+                    "\r\n",
+                    "\n",
+                  );
+                  const result: number[] = [];
+                  let index = content.indexOf(anomaly.matchText);
+                  while (index >= 0) {
+                    result.push(lineNumberAt(content, index));
+                    index = content.indexOf(
+                      anomaly.matchText,
+                      index + anomaly.matchText.length,
+                    );
+                  }
+                  return result;
+                })();
+        return {
+          ...anomaly,
+          path,
+          lines,
+          currentPaths: undefined,
+        };
+      }),
+    )
+    .map(({ currentPaths: _currentPaths, ...anomaly }) => anomaly)
+    .filter(
+      (anomaly) => anomaly.type !== "configuration" || anomaly.lines.length > 0,
+    )
+    .sort(
+      (left, right) =>
+        compareText(left.id, right.id) || compareText(left.path, right.path),
+    );
+  const knownSourceAnomalies = anomalyFindings.filter(
+    (anomaly) => !anomaly.boundaryClass,
+  );
   const zeroMeshNeonBoundaryFindings = anomalyFindings
     .filter((anomaly) => Boolean(anomaly.boundaryClass))
     .map((anomaly) => ({
@@ -1840,7 +2226,8 @@ export function buildAuthorizationInventory(
     ...securitySymbols.map((reference) => reference.path),
     ...contractFields.map((reference) => reference.path),
     ...permissionDefinitions.flatMap((definition) =>
-      definition.sources.map((source) => source.path)),
+      definition.sources.map((source) => source.path),
+    ),
     ...permissionScan.uses.map((use) => use.path),
     ...permissionScan.unknownUses.map((use) => use.path),
     ...routes.map((route) => route.path),
@@ -1849,9 +2236,13 @@ export function buildAuthorizationInventory(
     ...derivedDatabaseObjects.map((object) => object.path),
     ...generatedArtifacts.map((artifact) => artifact.path),
     ...registry.knownSourceAnomalies.flatMap((anomaly) => anomaly.currentPaths),
-    ...registry.contract.captureSourceDdls.map((sourceContract) => sourceContract.path),
+    ...registry.contract.captureSourceDdls.map(
+      (sourceContract) => sourceContract.path,
+    ),
   ]);
-  const authorizationFiles = files.filter((file) => authorizationPaths.has(file.path));
+  const authorizationFiles = files.filter((file) =>
+    authorizationPaths.has(file.path),
+  );
 
   const inventory: AuthorizationInventory = {
     schemaVersion: 1,
@@ -1871,7 +2262,9 @@ export function buildAuthorizationInventory(
       authorizationFiles: authorizationFiles.length,
       registeredObjects: objects.length,
       objectReferences: references.length,
-      writerReferences: references.filter((reference) => WRITER_ACCESS.has(reference.access)).length,
+      writerReferences: references.filter((reference) =>
+        WRITER_ACCESS.has(reference.access),
+      ).length,
       securitySymbolReferences: securitySymbols.length,
       contractFieldReferences: contractFields.length,
       permissionDefinitions: permissionDefinitions.length,
@@ -1884,8 +2277,9 @@ export function buildAuthorizationInventory(
       captureSourcesByPlane: Object.fromEntries(
         registry.contract.captureSourceDdls.map((sourceContract) => [
           sourceContract.plane,
-          captureSourceEntries.filter((entry) =>
-            entry.plane === sourceContract.plane).length,
+          captureSourceEntries.filter(
+            (entry) => entry.plane === sourceContract.plane,
+          ).length,
         ]),
       ),
       keycloakRestWriters: keycloakRestWriters.length,
@@ -1924,18 +2318,21 @@ export function buildAuthorizationInventory(
         ...unknownSymbolSources,
         ...unknownDerivedSources,
         ...unknownPermissionSources,
-      ].sort((left, right) =>
-        compareText(left.type, right.type)
-        || compareText(
-          "path" in left ? left.path : "",
-          "path" in right ? right.path : "",
-        )),
-      unknownWriters: staticScan.unknownObjectReferences
-        .filter((reference) =>
-          WRITER_ACCESS.has(reference.access)
-          && reference.artifactClass !== "test"
-          && !classifiedDerivedNames.has(reference.qualifiedName)
-          && !isKnownAnomaly("object", reference.qualifiedName, reference.path)),
+      ].sort(
+        (left, right) =>
+          compareText(left.type, right.type) ||
+          compareText(
+            "path" in left ? left.path : "",
+            "path" in right ? right.path : "",
+          ),
+      ),
+      unknownWriters: staticScan.unknownObjectReferences.filter(
+        (reference) =>
+          WRITER_ACCESS.has(reference.access) &&
+          reference.artifactClass !== "test" &&
+          !classifiedDerivedNames.has(reference.qualifiedName) &&
+          !isKnownAnomaly("object", reference.qualifiedName, reference.path),
+      ),
       unownedObjects: unownedObjects.sort(compareText),
       unclassifiedWriters,
       missingDefinitions: missingDefinitions.sort(compareText),
@@ -1944,8 +2341,9 @@ export function buildAuthorizationInventory(
       staleCaptureSourceRegistrations,
       duplicateCaptureSources,
       crossPlaneCaptureSources,
-      unknownKeycloakRestWriters: keycloakRestWriters
-        .filter((writer) => writer.classification === "unclassified"),
+      unknownKeycloakRestWriters: keycloakRestWriters.filter(
+        (writer) => writer.classification === "unclassified",
+      ),
       staleKeycloakRestWriterRules,
       knownSourceAnomalies,
       zeroMeshNeonBoundaryFindings,
@@ -1954,7 +2352,9 @@ export function buildAuthorizationInventory(
   return inventory;
 }
 
-export function serializeAuthorizationInventory(inventory: AuthorizationInventory): string {
+export function serializeAuthorizationInventory(
+  inventory: AuthorizationInventory,
+): string {
   return `${JSON.stringify(inventory, null, 2)}\n`;
 }
 
@@ -1963,7 +2363,10 @@ function markdownCell(value: string): string {
 }
 
 export function gateCount(inventory: AuthorizationInventory): number {
-  return Object.values(inventory.gates).reduce((total, entries) => total + entries.length, 0);
+  return Object.values(inventory.gates).reduce(
+    (total, entries) => total + entries.length,
+    0,
+  );
 }
 
 export function renderAuthorizationInventoryMarkdown(
@@ -1986,7 +2389,9 @@ export function renderAuthorizationInventoryMarkdown(
     `Keycloak mappers: ${inventory.summary.keycloakMappings}`,
     `Canonical capture sources: ${inventory.summary.captureSources} (${Object.entries(
       inventory.summary.captureSourcesByPlane,
-    ).map(([plane, count]) => `${plane}=${count}`).join(", ")})`,
+    )
+      .map(([plane, count]) => `${plane}=${count}`)
+      .join(", ")})`,
     `Keycloak REST writer paths: ${inventory.summary.keycloakRestWriters}`,
     `Open gate findings: ${openGateCount}`,
     "",
@@ -2015,22 +2420,28 @@ export function renderAuthorizationInventoryMarkdown(
     "",
     "| ID | Exact object | Database | Class | Owner | Planes | Disposition | Definitions | Readers | Writers |",
     "|---|---|---|---|---|---|---|---:|---:|---:|",
-    ...inventory.objects.map((object) =>
-      `| ${markdownCell(object.id)} | \`${markdownCell(object.qualifiedName)}\` | ${markdownCell(object.database)} | ${markdownCell(object.authorityClass)} | ${markdownCell(object.owner)} | ${markdownCell(object.planes.join(", "))} | ${markdownCell(object.disposition)} | ${object.definitionCount} | ${object.readerCount} | ${object.writerCount} |`),
+    ...inventory.objects.map(
+      (object) =>
+        `| ${markdownCell(object.id)} | \`${markdownCell(object.qualifiedName)}\` | ${markdownCell(object.database)} | ${markdownCell(object.authorityClass)} | ${markdownCell(object.owner)} | ${markdownCell(object.planes.join(", "))} | ${markdownCell(object.disposition)} | ${object.definitionCount} | ${object.readerCount} | ${object.writerCount} |`,
+    ),
     "",
     "## Authorization-linked database functions, triggers, and views",
     "",
     "| Kind | Exact identity | Classification | Owner | Disposition | Source | Dependencies |",
     "|---|---|---|---|---|---|---|",
-    ...inventory.derivedDatabaseObjects.map((object) =>
-      `| ${object.kind} | \`${markdownCell(object.qualifiedName)}\` | ${object.classification} | ${markdownCell(object.owner ?? "—")} | ${markdownCell(object.disposition)} | ${markdownCell(object.path)}:${object.line} | ${object.dependencies.map((dependency) => `\`${markdownCell(dependency)}\``).join("<br>") || "—"} |`),
+    ...inventory.derivedDatabaseObjects.map(
+      (object) =>
+        `| ${object.kind} | \`${markdownCell(object.qualifiedName)}\` | ${object.classification} | ${markdownCell(object.owner ?? "—")} | ${markdownCell(object.disposition)} | ${markdownCell(object.path)}:${object.line} | ${object.dependencies.map((dependency) => `\`${markdownCell(dependency)}\``).join("<br>") || "—"} |`,
+    ),
     "",
     "## Runtime authorization reader and evaluator symbols",
     "",
     "| Symbol | Classification | Artifact class | Path | Lines |",
     "|---|---|---|---|---|",
-    ...inventory.securitySymbols.map((symbol) =>
-      `| \`${markdownCell(symbol.symbol)}\` | ${symbol.classification} | ${symbol.artifactClass} | ${markdownCell(symbol.path)} | ${symbol.lines.join(", ")} |`),
+    ...inventory.securitySymbols.map(
+      (symbol) =>
+        `| \`${markdownCell(symbol.symbol)}\` | ${symbol.classification} | ${symbol.artifactClass} | ${markdownCell(symbol.path)} | ${symbol.lines.join(", ")} |`,
+    ),
     "",
     "## Unknown source findings",
     "",
@@ -2041,10 +2452,14 @@ export function renderAuthorizationInventoryMarkdown(
   } else {
     lines.push("| Type | Identity | Path | Lines |", "|---|---|---|---|");
     for (const finding of inventory.gates.unknownSources) {
-      const identity = "qualifiedName" in finding
-        ? finding.qualifiedName
-        : "symbol" in finding ? finding.symbol : finding.code;
-      const findingLines = "lines" in finding ? finding.lines.join(", ") : String(finding.line);
+      const identity =
+        "qualifiedName" in finding
+          ? finding.qualifiedName
+          : "symbol" in finding
+            ? finding.symbol
+            : finding.code;
+      const findingLines =
+        "lines" in finding ? finding.lines.join(", ") : String(finding.line);
       lines.push(
         `| ${finding.type} | \`${markdownCell(identity)}\` | ${markdownCell(finding.path)} | ${findingLines} |`,
       );
@@ -2057,8 +2472,10 @@ export function renderAuthorizationInventoryMarkdown(
     "",
     "| ID | Type | Identity | Owner | Current path | Lines | Disposition | Removal wave |",
     "|---|---|---|---|---|---|---|---|",
-    ...inventory.gates.knownSourceAnomalies.map((anomaly) =>
-      `| ${markdownCell(anomaly.id)} | ${anomaly.type} | \`${markdownCell(anomaly.identity)}\` | ${markdownCell(anomaly.owner)} | ${markdownCell(anomaly.path)} | ${anomaly.lines.join(", ") || "not observed"} | ${markdownCell(anomaly.disposition)} | ${markdownCell(anomaly.removalWave)} |`),
+    ...inventory.gates.knownSourceAnomalies.map(
+      (anomaly) =>
+        `| ${markdownCell(anomaly.id)} | ${anomaly.type} | \`${markdownCell(anomaly.identity)}\` | ${markdownCell(anomaly.owner)} | ${markdownCell(anomaly.path)} | ${anomaly.lines.join(", ") || "not observed"} | ${markdownCell(anomaly.disposition)} | ${markdownCell(anomaly.removalWave)} |`,
+    ),
     "",
     "## Zero-Mesh-specific-data Neon boundary findings",
     "",
@@ -2066,20 +2483,26 @@ export function renderAuthorizationInventoryMarkdown(
     "",
     "| ID | Boundary class | Identity | Owner | Current path | Lines | Disposition | Removal wave |",
     "|---|---|---|---|---|---|---|---|",
-    ...inventory.gates.zeroMeshNeonBoundaryFindings.map((finding) =>
-      `| ${markdownCell(finding.id)} | ${markdownCell(finding.boundaryClass)} | \`${markdownCell(finding.identity)}\` | ${markdownCell(finding.owner)} | ${markdownCell(finding.path)} | ${finding.lines.join(", ") || "not observed"} | ${markdownCell(finding.disposition)} | ${markdownCell(finding.removalWave)} |`),
+    ...inventory.gates.zeroMeshNeonBoundaryFindings.map(
+      (finding) =>
+        `| ${markdownCell(finding.id)} | ${markdownCell(finding.boundaryClass)} | \`${markdownCell(finding.identity)}\` | ${markdownCell(finding.owner)} | ${markdownCell(finding.path)} | ${finding.lines.join(", ") || "not observed"} | ${markdownCell(finding.disposition)} | ${markdownCell(finding.removalWave)} |`,
+    ),
     "",
     "## Canonical capture-source parity",
     "",
     "Capture DDLs:",
     "",
-    ...inventory.contract.captureSourceDdls.map((sourceContract) =>
-      `- ${sourceContract.plane}: \`${sourceContract.path}\` -> \`${sourceContract.registryTable}\``),
+    ...inventory.contract.captureSourceDdls.map(
+      (sourceContract) =>
+        `- ${sourceContract.plane}: \`${sourceContract.path}\` -> \`${sourceContract.registryTable}\``,
+    ),
     "",
     "| Plane | Exact source | Object ID | Owner | Disposition | DDL | Line |",
     "|---|---|---|---|---|---|---:|",
-    ...inventory.captureSources.map((source) =>
-      `| ${markdownCell(source.plane)} | \`${markdownCell(source.qualifiedName)}\` | ${markdownCell(source.objectId ?? "unregistered")} | ${markdownCell(source.owner ?? "unowned")} | ${markdownCell(source.disposition ?? "unclassified")} | ${markdownCell(source.path)} | ${source.line} |`),
+    ...inventory.captureSources.map(
+      (source) =>
+        `| ${markdownCell(source.plane)} | \`${markdownCell(source.qualifiedName)}\` | ${markdownCell(source.objectId ?? "unregistered")} | ${markdownCell(source.owner ?? "unowned")} | ${markdownCell(source.disposition ?? "unclassified")} | ${markdownCell(source.path)} | ${source.line} |`,
+    ),
     "",
     "## Writer inventory",
     "",
@@ -2087,50 +2510,64 @@ export function renderAuthorizationInventoryMarkdown(
     "|---|---|---|---|---|",
     ...inventory.references
       .filter((reference) => WRITER_ACCESS.has(reference.access))
-      .map((reference) =>
-        `| \`${markdownCell(reference.qualifiedName)}\` | ${reference.access} | ${reference.artifactClass} | ${markdownCell(reference.path)} | ${reference.lines.join(", ")} |`),
+      .map(
+        (reference) =>
+          `| \`${markdownCell(reference.qualifiedName)}\` | ${reference.access} | ${reference.artifactClass} | ${markdownCell(reference.path)} | ${reference.lines.join(", ")} |`,
+      ),
     "",
     "## Keycloak REST writer inventory",
     "",
     "| Path | Classification | Owner | Operations | Disposition | Lines |",
     "|---|---|---|---|---|---|",
-    ...inventory.keycloakRestWriters.map((writer) =>
-      `| ${markdownCell(writer.path)} | ${writer.classification} | ${markdownCell(writer.owner ?? "unowned")} | ${writer.operations.map((operation) => `\`${markdownCell(operation)}\``).join("<br>")} | ${markdownCell(writer.disposition ?? "unclassified")} | ${writer.lines.join(", ")} |`),
+    ...inventory.keycloakRestWriters.map(
+      (writer) =>
+        `| ${markdownCell(writer.path)} | ${writer.classification} | ${markdownCell(writer.owner ?? "unowned")} | ${writer.operations.map((operation) => `\`${markdownCell(operation)}\``).join("<br>")} | ${markdownCell(writer.disposition ?? "unclassified")} | ${writer.lines.join(", ")} |`,
+    ),
     "",
     "## Permission seed inventory",
     "",
     "| Code | Risk | Definition sources |",
     "|---|---|---|",
-    ...inventory.permissionDefinitions.map((definition) =>
-      `| \`${markdownCell(definition.code)}\` | ${definition.riskLevel} | ${definition.sources.map((source) => `${markdownCell(source.path)}:${source.lines.join(",")}`).join("<br>")} |`),
+    ...inventory.permissionDefinitions.map(
+      (definition) =>
+        `| \`${markdownCell(definition.code)}\` | ${definition.riskLevel} | ${definition.sources.map((source) => `${markdownCell(source.path)}:${source.lines.join(",")}`).join("<br>")} |`,
+    ),
     "",
     "## Authorization-bearing routes",
     "",
     "| Source | Route | Methods | Permissions | Security symbols |",
     "|---|---|---|---|---|",
-    ...inventory.routes.map((route) =>
-      `| ${markdownCell(route.path)} | \`${markdownCell(route.route)}\` | ${route.methods.join(", ")} | ${route.permissionCodes.map((code) => `\`${markdownCell(code)}\``).join("<br>") || "—"} | ${route.securitySymbols.map(markdownCell).join("<br>") || "—"} |`),
+    ...inventory.routes.map(
+      (route) =>
+        `| ${markdownCell(route.path)} | \`${markdownCell(route.route)}\` | ${route.methods.join(", ")} | ${route.permissionCodes.map((code) => `\`${markdownCell(code)}\``).join("<br>") || "—"} | ${route.securitySymbols.map(markdownCell).join("<br>") || "—"} |`,
+    ),
     "",
     "## Contract and UI field inventory",
     "",
     "| Field | Artifact class | Path | Lines |",
     "|---|---|---|---|",
-    ...inventory.contractFields.map((field) =>
-      `| \`${markdownCell(field.field)}\` | ${field.artifactClass} | ${markdownCell(field.path)} | ${field.lines.join(", ")} |`),
+    ...inventory.contractFields.map(
+      (field) =>
+        `| \`${markdownCell(field.field)}\` | ${field.artifactClass} | ${markdownCell(field.path)} | ${field.lines.join(", ")} |`,
+    ),
     "",
     "## Keycloak mapper inventory",
     "",
     "| Source | JSON path | Name | Mapper | User attribute | Claim | Hardcoded role |",
     "|---|---|---|---|---|---|---|",
-    ...inventory.keycloakMappings.map((mapping) =>
-      `| ${markdownCell(mapping.path)} | ${markdownCell(mapping.jsonPath)} | ${markdownCell(mapping.name ?? "—")} | ${markdownCell(mapping.mapperType)} | ${markdownCell(mapping.userAttribute ?? "—")} | ${markdownCell(mapping.claimName ?? "—")} | ${markdownCell(mapping.hardcodedRole ?? "—")} |`),
+    ...inventory.keycloakMappings.map(
+      (mapping) =>
+        `| ${markdownCell(mapping.path)} | ${markdownCell(mapping.jsonPath)} | ${markdownCell(mapping.name ?? "—")} | ${markdownCell(mapping.mapperType)} | ${markdownCell(mapping.userAttribute ?? "—")} | ${markdownCell(mapping.claimName ?? "—")} | ${markdownCell(mapping.hardcodedRole ?? "—")} |`,
+    ),
     "",
     "## Generated authorization artifacts",
     "",
     "| Artifact | Generator | Owner | Present | Generator present |",
     "|---|---|---|---:|---:|",
-    ...inventory.generatedArtifacts.map((artifact) =>
-      `| ${markdownCell(artifact.path)} | ${markdownCell(artifact.generator)} | ${markdownCell(artifact.owner)} | ${artifact.present ? "yes" : "no"} | ${artifact.generatorPresent ? "yes" : "no"} |`),
+    ...inventory.generatedArtifacts.map(
+      (artifact) =>
+        `| ${markdownCell(artifact.path)} | ${markdownCell(artifact.generator)} | ${markdownCell(artifact.owner)} | ${artifact.present ? "yes" : "no"} | ${artifact.generatorPresent ? "yes" : "no"} |`,
+    ),
     "",
     "## Classification contract",
     "",
@@ -2156,8 +2593,16 @@ export function writeAuthorizationInventory(
   const summaryPath = resolve(root, AUTHORIZATION_SUMMARY_PATH);
   mkdirSync(dirname(machinePath), { recursive: true });
   mkdirSync(dirname(summaryPath), { recursive: true });
-  writeFileSync(machinePath, serializeAuthorizationInventory(inventory), "utf8");
-  writeFileSync(summaryPath, renderAuthorizationInventoryMarkdown(inventory), "utf8");
+  writeFileSync(
+    machinePath,
+    serializeAuthorizationInventory(inventory),
+    "utf8",
+  );
+  writeFileSync(
+    summaryPath,
+    renderAuthorizationInventoryMarkdown(inventory),
+    "utf8",
+  );
   return inventory;
 }
 
@@ -2165,7 +2610,7 @@ const entryPath = process.argv[1] ? resolve(process.argv[1]) : "";
 if (entryPath === resolve(fileURLToPath(import.meta.url))) {
   const inventory = writeAuthorizationInventory();
   process.stdout.write(
-    `authorization-inventory: wrote ${inventory.summary.registeredObjects} objects, `
-    + `${inventory.summary.objectReferences} references, ${gateCount(inventory)} open gate finding(s).\n`,
+    `authorization-inventory: wrote ${inventory.summary.registeredObjects} objects, ` +
+      `${inventory.summary.objectReferences} references, ${gateCount(inventory)} open gate finding(s).\n`,
   );
 }

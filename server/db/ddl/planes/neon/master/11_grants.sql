@@ -291,15 +291,6 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON master.person_business_partner_legacy_link FROM PUBLIC;
-REVOKE ALL ON FUNCTION master.trg_reject_person_business_partner_legacy_link_mutation() FROM PUBLIC;
-DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
-        REVOKE ALL ON master.person_business_partner_legacy_link FROM athyperadmin;
-        GRANT SELECT ON master.person_business_partner_legacy_link TO athyperadmin;
-        GRANT EXECUTE ON FUNCTION master.trg_reject_person_business_partner_legacy_link_mutation() TO athyperadmin;
-    END IF;
-END $$;
 
 REVOKE ALL ON master.warehouse FROM PUBLIC;
 
@@ -455,7 +446,7 @@ BEGIN
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
         REVOKE UPDATE ON master.business_partner,master.supplier,master.customer,
             master.business_partner_relationship FROM athyperapp;
-        GRANT UPDATE(name,display_name,legal_name,legal_form,registration_country_code,
+        GRANT UPDATE(name,legal_form,registration_country_code,
             incorporation_date,website_url,parent_business_partner_id,description,metadata,updated_at,updated_by)
             ON master.business_partner TO athyperapp;
         GRANT UPDATE(supplier_type,metadata,updated_at,updated_by) ON master.supplier TO athyperapp;
@@ -466,7 +457,7 @@ BEGIN
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
         REVOKE UPDATE ON master.business_partner,master.supplier,master.customer,
             master.business_partner_relationship FROM athyperadmin;
-        GRANT UPDATE(name,display_name,legal_name,legal_form,registration_country_code,
+        GRANT UPDATE(name,legal_form,registration_country_code,
             incorporation_date,website_url,parent_business_partner_id,description,metadata,updated_at,updated_by)
             ON master.business_partner TO athyperadmin;
         GRANT UPDATE(supplier_type,metadata,updated_at,updated_by) ON master.supplier TO athyperadmin;

@@ -1,8 +1,8 @@
+import { useAuditedReveal } from "../use-audited-reveal";
 import { RelatedRecord } from "@athyper/platform-entity-form-detail";
 import { RelatedSection } from "./related-section";
 import { businessLabel, countryName } from "../display-values";
 import { useRecordFooterSources } from "@athyper/platform-shell";
-import { parseInstant } from "@athyper/platform-temporal";
 import {
   useApiClient,
   useSessionIdentity,
@@ -49,7 +49,11 @@ function LegacyCommonSection({ code }: { readonly code: CommonSectionCode }) {
       ...(summary.scope.legalEntityId
         ? { legalEntityId: summary.scope.legalEntityId }
         : {}),
-      asOf: summary.asOf,
+      ...(new URLSearchParams(
+        typeof window !== "undefined" ? window.location.search : "",
+      ).has("asOf")
+        ? { asOf: summary.asOf }
+        : {}),
       ...(cursor ? { cursor } : {}),
     },
     key = sectionQueryKey(query).join(":");
@@ -138,6 +142,7 @@ function LegacyCommonSection({ code }: { readonly code: CommonSectionCode }) {
             <ItemCard
               key={`${item.kind ?? code}:${item.id}`}
               item={item}
+              revealScope={summary.scope}
               section={code}
               client={client}
               businessPartnerId={summary.identity.id}
@@ -156,11 +161,13 @@ function LegacyCommonSection({ code }: { readonly code: CommonSectionCode }) {
   );
 }
 export function ItemCard({
+  revealScope,
   item,
   section,
   client,
   businessPartnerId,
 }: {
+  revealScope?: { operatingOrganizationId?: string; companyCodeId?: string };
   item: CommonSectionItem;
   section: CommonSectionCode;
   client: ReturnType<typeof createBusinessPartner360SectionClient>;
@@ -171,26 +178,20 @@ export function ItemCard({
   const hasValue = (value: unknown) =>
     value !== undefined && value !== null && value !== "";
   const emptyCount = entries.filter(([, value]) => !hasValue(value)).length;
-  const [reveal, setReveal] = useState(false),
-    [value, setValue] = useState<string>(),
-    [failed, setFailed] = useState(false);
-  useEffect(() => () => setValue(undefined), []);
+  const [reveal, setReveal] = useState(false);
+  const { value, failed, run, clear } = useAuditedReveal(
+    JSON.stringify([businessPartnerId, item.id, revealScope, item.revealable]),
+  );
   async function runReveal() {
-    setFailed(false);
-    const controller = new AbortController();
-    try {
-      const result = await client.revealTax(
+    await run((signal) =>
+      client.revealTax(
         businessPartnerId,
         item.id,
         "business_verification",
-        controller.signal,
-      );
-      setValue(result.value);
-      const delay = Math.max(0, parseInstant(result.expiresAt) - Date.now());
-      window.setTimeout(() => setValue(undefined), delay);
-    } catch {
-      setFailed(true);
-    }
+        signal,
+        revealScope,
+      ),
+    );
   }
   return (
     <Card className="bp360-section-card">
@@ -235,7 +236,7 @@ export function ItemCard({
               <button
                 onClick={() => {
                   setReveal(false);
-                  setValue(undefined);
+                  clear();
                 }}
               >
                 Close
@@ -260,6 +261,7 @@ function title(item: CommonSectionItem, section: CommonSectionCode) {
     if (item.kind === "classification") return "Industry classification";
   }
   return (
+    item.name ??
     item.displayName ??
     item.formattedAddress ??
     item.registrationTypeCode ??
@@ -289,7 +291,7 @@ function fields(
     else
       return [
         ["Code", item.code],
-        ["Legal name", item.legalName],
+        ["Registered name", item.name],
         ["Aliases", item.aliases?.join(", ")],
         ["Lifecycle", businessLabel(item.lifecycleStatus)],
         ["Ownership", businessLabel(item.ownershipClass)],

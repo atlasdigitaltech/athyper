@@ -1,6 +1,8 @@
+import { entityEnglishMessages } from "@athyper/platform-i18n/entity-messages";
 import type { MessageCatalog } from "@athyper/platform-i18n";
 
 export const shellEnglishMessages: MessageCatalog = Object.freeze({
+  ...entityEnglishMessages,
   "shell.skip": "Skip to main content", "shell.navigation.open": "Open navigation", "shell.navigation.close": "Close navigation", "shell.navigation.expand": "Expand navigation", "shell.navigation.collapse": "Collapse navigation", "shell.navigation.application": "Application navigation", "shell.navigation.breadcrumb": "Breadcrumb",
   "shell.actions.label": "Application actions", "shell.actions.search": "Search", "shell.actions.notifications": "Notifications", "shell.actions.inbox": "Inbox", "shell.actions.unread": "unread", "shell.actions.open": "open", "shell.search.title": "Search this workspace", "shell.search.help": "Find an available module or page", "shell.search.placeholder": "Search modules and pages", "shell.search.results": "Search results", "shell.search.empty": "No matching pages", "shell.search.emptyHelp": "Try another module or workspace name.",
   "shell.quick.label": "Quick access", "shell.quick.favourites": "Favourites", "shell.quick.openFavourites": "Open favourites", "shell.quick.recent": "Recent items", "shell.quick.openRecent": "Open recent items",

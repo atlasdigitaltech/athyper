@@ -1,4 +1,4 @@
-import { parseEntityDirectoryScope } from "../../../packages/contracts/metadata/src/directory-scope.js";
+import { parseEntityDirectoryScope } from "@athyper/server-contract-metadata/directory-scope";
 /** Local development publication only; preserves prior releases and never changes IAM grants. */
 import { randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -8,7 +8,7 @@ import {
   hash,
   apply,
 } from "./publish-development-list-experience.js";
-import { parseEntityRuntimeDescriptor } from "../../../packages/platform/metadata/src/descriptor-parser.js";
+import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata/descriptor-parser";
 import { parseEntityRecordPresentation } from "../../../../packages/contracts/platform/entity-runtime/src/record-presentation.js";
 
 const args = process.argv.slice(2),

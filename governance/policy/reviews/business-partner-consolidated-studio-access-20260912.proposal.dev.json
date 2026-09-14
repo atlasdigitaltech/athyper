@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "kind": "isolated_bp_consolidated_studio_access",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "destination": {
+    "container": "athyper-bp-enter-db",
+    "database": "athyper_studio",
+    "network": "athyper-bp-enter-isolated"
+  },
+  "effectiveFrom": "2026-09-12T02:52:45.426Z",
+  "effectiveUntil": "2026-09-12T04:52:45.426Z",
+  "batches": [
+    {
+      "account": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "purpose": "consolidated_authoring_and_metadata_publication",
+      "roleId": "77621dc3-7bc5-4085-919e-4936630827e0",
+      "groupId": "eae0a99f-988f-48d6-a9a1-01497fb94bc5",
+      "assignmentId": "35b79c84-dd06-4261-94ce-825f80a4d598",
+      "code": "bp.consolidated.studio.catl.admin.8f5f6c5d",
+      "scope": {
+        "id": "1d2550e6-6e20-5f74-81d9-388d1e75d20f",
+        "status": "active",
+        "scope_key": "cirrusatlantic",
+        "target_id": "44444444-4444-4444-8444-444444444444",
+        "scope_kind": "tenant"
+      },
+      "propagation": "exact",
+      "permissions": [
+        {
+          "id": "9a0ffd63-cfdb-7c00-ad61-6d52c511c628",
+          "code": "studio.business_partner_definition.author",
+          "kind": "system_action",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "5c257b38-a863-1015-f033-237b773ff9bb",
+          "code": "studio.business_partner_definition.read",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08f9d-14df-78af-97bc-f579919a9c92",
+          "code": "metadata.entity.author",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": true,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08f9d-14df-7f89-9e5b-cc77799d3b66",
+          "code": "metadata.entity.validate",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": true,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08f9d-14df-70e4-9ba9-5d625df67128",
+          "code": "metadata.entity.test",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": true,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08f9d-14df-7646-b92e-9cbf8a89f7cc",
+          "code": "metadata.entity.submit",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "medium",
+          "requires_mfa": true,
+          "requires_sod": false
+        },
+        {
+          "id": "01a08f9d-14df-7ae5-83ed-05b4014ef3f6",
+          "code": "metadata.entity.publish",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "critical",
+          "requires_mfa": true,
+          "requires_sod": true
+        }
+      ]
+    },
+    {
+      "account": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "purpose": "independent_consolidated_review",
+      "roleId": "2b72bc1b-a314-4c6f-9283-3a3fba7d108b",
+      "groupId": "6d1ecf62-f710-45b2-a800-2a8449a93bb2",
+      "assignmentId": "cdae176f-d949-4eab-86fb-b72e5b4a1822",
+      "code": "bp.consolidated.studio.catl.owner.61c9efac",
+      "scope": {
+        "id": "1d2550e6-6e20-5f74-81d9-388d1e75d20f",
+        "status": "active",
+        "scope_key": "cirrusatlantic",
+        "target_id": "44444444-4444-4444-8444-444444444444",
+        "scope_kind": "tenant"
+      },
+      "propagation": "exact",
+      "permissions": [
+        {
+          "id": "5c257b38-a863-1015-f033-237b773ff9bb",
+          "code": "studio.business_partner_definition.read",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "74027553-160f-dd30-9d15-54b69e25ad55",
+          "code": "studio.business_partner_definition.publish",
+          "kind": "system_action",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "critical",
+          "requires_mfa": true,
+          "requires_sod": true
+        },
+        {
+          "id": "01a08f9d-14df-7703-9ce5-daa6b07fbca8",
+          "code": "metadata.entity.review",
+          "kind": "capability",
+          "scopes": [
+            {
+              "status": "active",
+              "scopeKind": "tenant",
+              "propagation": "exact"
+            }
+          ],
+          "status": "published",
+          "risk_tier": "high",
+          "requires_mfa": true,
+          "requires_sod": true
+        }
+      ]
+    }
+  ],
+  "conditions": {
+    "scope": "Exact CirrusAtlantic tenant in isolated Studio only; these permissions are tenant-wide and not technically limited to the BP release",
+    "purpose": "Author consolidated BP/company case definitions and independently review/publish through normal Studio routes",
+    "identity": "Use verified elevated sessions; preserve permission catalog MFA and SoD checks",
+    "cleanup": "Revoke these new memberships after qualification or let them expire at the stated UTC end; preserve prior revoked and expired grants unchanged"
+  },
+  "excluded": [
+    "Shared DEV",
+    "NEON/Mesh execution grants",
+    "Sensitive reveals",
+    "Enforcement approval/activation",
+    "Compatibility retirement",
+    "66-disposition acceptance"
+  ],
+  "evidence": "governance/policy/reports/business-partner-studio-authenticated-resume-1789181531442.dev.json",
+  "approved": false,
+  "applied": false,
+  "proposalRevision": "a75351aca620ebc70d1619c4fffb98127e1ebed537ff03da3fbd93e14e66f4fb"
+}

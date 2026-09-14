@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 // Canonical account codes, roles, lifecycle, tax and bank authority are never
 // writable through a received profile change.
 export const profileChangeFields = Object.freeze([
-  "displayName", "legalName", "legalForm", "countryCode",
+  "legalName", "legalForm", "countryCode",
   "incorporationDate", "websiteUrl", "description",
 ] as const);
 export type ProfileChangeClassification = "unchanged" | "source_only" | "local_only" | "converged" | "conflict" | "unbased";

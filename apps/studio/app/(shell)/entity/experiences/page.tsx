@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { SettingsIcon } from "@athyper/platform-icons";
 import { PageFrame, PageHeader } from "@athyper/platform-shell";
@@ -45,6 +46,11 @@ export default function ExperienceComposerPage() {
           </>
         }
       />
+      <p className="px-4">
+        <Link href="/entity/graphs" className="underline">
+          Open Meta Entity graph drafts
+        </Link>
+      </p>
       <ExperienceComposer initialDefinition={initialDefinition} />
     </PageFrame>
   );

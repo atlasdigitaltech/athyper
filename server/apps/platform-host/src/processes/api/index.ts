@@ -1,6 +1,11 @@
+import { startProcessMetricsEndpoint } from "../process-metrics-endpoint.js";
+import { loadBusinessPartnerAuthorizationDeployment } from "../../composition/business-partner-authorization-deployment.js";
 import { createServer } from "node:http";
 import { createLifecycle } from "@athyper/server-foundation/lifecycle";
-import { createHttpApplication, HttpDrainController } from "@athyper/server-runtime-http";
+import {
+  createHttpApplication,
+  HttpDrainController,
+} from "@athyper/server-runtime-http";
 import { createRedisRateLimitStore } from "@athyper/server-adapter-cache-redis";
 
 import { loadConfig } from "../../config/index.js";
@@ -19,19 +24,48 @@ export async function start(): Promise<void> {
   registerAdapters(container, config, lifecycle);
   registerRuntimes(container, config, lifecycle);
   registerPlatform(container, config);
-  registerServices(container, {}, config);
-  registerBusinessPartnerMetrics(container, lifecycle, config.businessPartnerMetricsTargets ?? []);
+  const authorizationDeployment = loadBusinessPartnerAuthorizationDeployment(
+    process.env.BP_AUTHORIZATION_DEPLOYMENT_CONFIG_PATH,
+    container,
+    config,
+  );
+  registerServices(
+    container,
+    { ...authorizationDeployment?.dependencies },
+    config,
+    lifecycle,
+  );
+  await authorizationDeployment?.verifyStartup();
+  registerBusinessPartnerMetrics(
+    container,
+    lifecycle,
+    config.businessPartnerMetricsTargets ?? [],
+  );
 
   const drainController = new HttpDrainController();
   let startupComplete = false;
   const app = createHttpApplication({
-    jsonRouteLimits: [{method: "POST", path: "/api/neon/business-partner-imports", maxBytes: 4 * 1024 * 1024 + 4096}],
+    jsonRouteLimits: [
+      { method: "PUT", path: "/api/meta-entity-authoring/change-sets/:id/graph", maxBytes: 1024 * 1024 },
+      {
+        method: "POST",
+        path: "/api/neon/business-partner-imports",
+        maxBytes: 4 * 1024 * 1024 + 4096,
+      },
+    ],
     isReady: () => startupComplete,
     healthRegistry: container.runtimes.health,
     environment: config.env,
     openApi: {
-      title: "Athyper API", version: "0.1.0",
-      authenticatedHeaders: { type: "object", required: ["x-plane"], properties: { "x-plane": { type: "string", enum: ["studio", "neon", "mesh"] } } },
+      title: "Athyper API",
+      version: "0.1.0",
+      authenticatedHeaders: {
+        type: "object",
+        required: ["x-plane"],
+        properties: {
+          "x-plane": { type: "string", enum: ["studio", "neon", "mesh"] },
+        },
+      },
     },
     onUnexpectedError(error, request) {
       captureOperationalError(error, {
@@ -47,12 +81,23 @@ export async function start(): Promise<void> {
       maxRequests: 100,
       sourceMaxRequests: 1_000,
       exemptPaths: ["/livez", "/readyz", "/healthz", "/health", "/metrics"],
-      ...(container.adapters.redisCache ? { store: createRedisRateLimitStore(container.adapters.redisCache.client) } : {}),
-      onStoreError(error) { captureOperationalError(error, { capability: "http.rate-limit" }); },
+      ...(container.adapters.redisCache
+        ? {
+            store: createRedisRateLimitStore(
+              container.adapters.redisCache.client,
+            ),
+          }
+        : {}),
+      onStoreError(error) {
+        captureOperationalError(error, { capability: "http.rate-limit" });
+      },
     },
-    ...(container.adapters.processMetrics ? { metrics: { exporter: container.adapters.processMetrics } } : {}),
+    ...(container.adapters.processMetrics
+      ? { metrics: { exporter: container.adapters.processMetrics } }
+      : {}),
     configure(application) {
-      for (const register of container.platform.httpRegistrars) register(application);
+      for (const register of container.platform.httpRegistrars)
+        register(application);
     },
   });
   const server = createServer(app);
@@ -72,12 +117,18 @@ export async function start(): Promise<void> {
     const drainBudgetMs = Math.floor(config.shutdownTimeoutMs * 0.75);
     const drained = await drainController.waitForDrain(drainBudgetMs);
     if (!drained) {
-      drainController.abortActive(new Error(`HTTP shutdown deadline exceeded after ${config.shutdownTimeoutMs}ms`));
+      drainController.abortActive(
+        new Error(
+          `HTTP shutdown deadline exceeded after ${config.shutdownTimeoutMs}ms`,
+        ),
+      );
       server.closeAllConnections();
     }
     await Promise.race([
       lifecycle.shutdown(signal),
-      new Promise<void>((resolve) => setTimeout(resolve, Math.max(0, deadline - Date.now()))),
+      new Promise<void>((resolve) =>
+        setTimeout(resolve, Math.max(0, deadline - Date.now())),
+      ),
     ]);
     process.exit(0);
   };
@@ -87,12 +138,23 @@ export async function start(): Promise<void> {
 
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
-    server.listen(config.port, () => {
-      console.log(`[api] started port=${config.port} env=${config.env} pid=${process.pid}`);
+    server.listen(config.port, process.env["HOST"] ?? "0.0.0.0", () => {
+      console.log(
+        `[api] started port=${config.port} env=${config.env} pid=${process.pid}`,
+      );
       resolve();
     });
   });
 
+  if (
+    process.env["PROCESS_METRICS_PORT"] &&
+    container.adapters.processMetrics
+  ) {
+    const metrics = await startProcessMetricsEndpoint(
+      container.adapters.processMetrics,
+    );
+    lifecycle.onShutdown(() => metrics.stop());
+  }
   await lifecycle.signalReady({ failOnError: true });
   startupComplete = true;
 }

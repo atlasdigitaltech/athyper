@@ -1,19 +1,88 @@
 "use client";
+import { PageHeader, useRecordBreadcrumb, useRegisterEntityTaskHeader } from "@athyper/platform-shell";
+import { RequestLifecycle, RequestWorkspaceOverview, RequestWorkspaceDetails, RequestActivity, requestKind, requestTab } from "./request-workspace";
+import { restoreProfileAnswers } from "./request-relationships";
+import { RequestAttachmentField, RequestAttachmentScope } from "./request-attachment-field";
+import { EntityDataSurface, EntityIntakeBackButton, EntityDraftSaveButton, dataSurfaceDefaults, dataSurfaceValues, EntityIntakeForm, useEntityIntake } from "@athyper/platform-entity-form-detail";
+import { createOperation, entityApplicationDescriptorOperation } from "@athyper/platform-api-client";
+import type { EntityIntakeSurfaceV1 } from "@athyper/contract-platform-entity-runtime";
+import { PartnerReferenceField } from "./partner-reference-field";
+import { requestFormFromSurface } from "./meta-request-form";
+import { submitBusinessPartnerIntake } from "./intake-submit";
+
 import { parseInstant } from "@athyper/platform-temporal";
 import { ApiTransportError } from "@athyper/platform-api-client";
-import { readBrowserCsrfToken, useApiClient, useApplicationNavigation, useFeature, usePermissions, useToasts } from "@athyper/platform-shell-app-foundation";
+import {
+  readBrowserCsrfToken,
+  useApiClient,
+  useSessionIdentity,
+  useApplicationNavigation,
+  useFeature,
+  usePermissions,
+  useToasts,
+} from "@athyper/platform-shell-app-foundation";
 import { PageSurface } from "@athyper/platform-surface-kit";
-import { Badge, Button, Card, Input, Label, Select, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from "@athyper/platform-ui";
-import { useNeonOperatingOrganization, useNeonWorkContext } from "@athyper/product-neon-shell";
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import {
+  Badge,
+  Button,
+  Card,
+  Input,
+  Label,
+  Select,
+  Skeleton,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@athyper/platform-ui";
+import {
+  useNeonOperatingOrganization,
+  useNeonWorkContext,
+} from "@athyper/product-neon-shell";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { statusTone } from "./workflow";
-import { createBusinessPartnerClient, type PartnerAggregate, type PartnerEligibility, type PartnerRequest, type RequestStatus, type RequestView } from "./client";
-import { isRequestFieldVisible, requestFormDefaults, serializeRequestForm, type PublishedRequestForm, type RequestFormField, type RequestFormRepeatableComponent } from "./request-form-descriptor";
-import { buildRelationshipExtensions, newAddress, newContact, type AddressDraft, type ContactDraft } from "./request-relationships";
+import {
+  createBusinessPartnerClient,
+  type PartnerAggregate,
+  type PartnerEligibility,
+  type PartnerRequest,
+  type RequestStatus,
+  type RequestView,
+} from "./client";
+import {
+  serializeRequestForm,
+  type PublishedRequestForm,
+} from "./request-form-descriptor";
+import {
+  buildRelationshipExtensions,
+  buildProfileExtensions,
+  hiddenProfileChangeMessage,
+  type AddressDraft,
+  type ContactDraft,
+} from "./request-relationships";
 import { BusinessPartner360Shell } from "./360/business-partner-360";
-import { caseStatusUiState, DecisionDialog, failureUiState, GovernedCaseContract, GovernedCaseSummary, governedCaseActions, UnsavedChangesDialog, useGuardedNavigation } from "./case-experience";
+import {
+  caseStatusUiState,
+  DecisionDialog,
+  failureUiState,
+  GovernedCaseContract,
+  GovernedCaseSummary,
+  governedCaseActions,
+  UnsavedChangesDialog,
+  useGuardedNavigation,
+} from "./case-experience";
 import { DuplicateEvidence, ValidationEvidence } from "./validation-experience";
 import { MaterializationResultProof } from "./result-experience";
+import { BusinessPartnerRequestEntry } from "./request-entry";
+export { BusinessPartnerRequestEntry } from "./request-entry";
 export * from "./client";
 export * from "./request-form-descriptor";
 export * from "./workflow";
@@ -28,55 +97,103 @@ export * from "./role-extension-experience";
 export * from "./applicant-experience";
 export * from "./mesh-proposal-experience";
 
-export function BusinessPartnerRecord({ businessPartnerId }: { readonly businessPartnerId: string }) {
-  return useFeature("neon.business_partner.view_360") ? <BusinessPartner360Shell businessPartnerId={businessPartnerId} /> : <BusinessPartnerAggregateDetail businessPartnerId={businessPartnerId} />;
+export function BusinessPartnerRecord({
+  businessPartnerId,
+}: {
+  readonly businessPartnerId: string;
+}) {
+  return useFeature("neon.business_partner.view_360") ? (
+    <BusinessPartner360Shell businessPartnerId={businessPartnerId} />
+  ) : (
+    <BusinessPartnerAggregateDetail businessPartnerId={businessPartnerId} />
+  );
 }
 
-export function BusinessPartnerScopeConfiguration({ businessPartnerId, initialCompanyCodeId="", initialOrganizationId="", initialRole="supplier", initialKind="assign_organization" }: { readonly businessPartnerId: string; initialCompanyCodeId?:string; initialOrganizationId?:string; initialRole?:"supplier"|"customer"; initialKind?:"assign_organization"|"configure_company" }) {
+export function BusinessPartnerScopeConfiguration({
+  businessPartnerId,
+  initialCompanyCodeId = "",
+  initialOrganizationId = "",
+  initialRole = "supplier",
+  initialKind = "assign_organization",
+}: {
+  readonly businessPartnerId: string;
+  initialCompanyCodeId?: string;
+  initialOrganizationId?: string;
+  initialRole?: "supplier" | "customer";
+  initialKind?: "assign_organization" | "configure_company";
+}) {
   const api = usePartnerApi(),
     work = useNeonWorkContext(),
     operating = useNeonOperatingOrganization(),
     toast = useToasts(),
     navigation = useApplicationNavigation();
-  const [kind, setKind] = useState<"assign_organization" | "configure_company">(initialKind),
+  const [kind, setKind] = useState<"assign_organization" | "configure_company">(
+      initialKind,
+    ),
     [role, setRole] = useState<"supplier" | "customer">(initialRole),
     [organizationId, setOrganizationId] = useState(initialOrganizationId),
     [companyCodeId, setCompanyCodeId] = useState(initialCompanyCodeId),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string>();
-  const selectedOrganization=operating.organizations.find(o=>o.id===organizationId);
-  const companyAvailable=work.companies.some(c=>c.companyCodeId===companyCodeId)&&selectedOrganization?.companyAssignments.some(a=>a.companyCodeId===companyCodeId);
+  const selectedOrganization = operating.organizations.find(
+    (o) => o.id === organizationId,
+  );
+  const companyAvailable =
+    work.companies.some((c) => c.companyCodeId === companyCodeId) &&
+    selectedOrganization?.companyAssignments.some(
+      (a) => a.companyCodeId === companyCodeId,
+    );
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError(undefined);
     const data = new FormData(event.currentTarget);
     try {
-      if (!selectedOrganization || (companyCodeId && !companyAvailable)) throw new Error("Select an authorized company and operating organization.");
-      if (kind === "configure_company" && !companyCodeId) throw new Error("Select a company before creating a finance configuration request.");
+      if (!selectedOrganization || (companyCodeId && !companyAvailable))
+        throw new Error(
+          "Select an authorized company and operating organization.",
+        );
+      if (kind === "configure_company" && !companyCodeId)
+        throw new Error(
+          "Select a company before creating a finance configuration request.",
+        );
       const proposedPayload =
         kind === "assign_organization"
           ? {
               effectiveFrom: value(data, "effectiveFrom"),
-              ...(optionalValue(data, "effectiveUntil") ? { effectiveUntil: optionalValue(data, "effectiveUntil") } : {}),
+              ...(optionalValue(data, "effectiveUntil")
+                ? { effectiveUntil: optionalValue(data, "effectiveUntil") }
+                : {}),
             }
           : {
               currencyCode: value(data, "currencyCode").toUpperCase(),
               paymentTermId: value(data, "paymentTermId"),
-              defaultAccountingProfileId: value(data, "defaultAccountingProfileId"),
+              defaultAccountingProfileId: value(
+                data,
+                "defaultAccountingProfileId",
+              ),
               ...(optionalValue(data, "defaultDimensionSetId")
                 ? {
-                    defaultDimensionSetId: optionalValue(data, "defaultDimensionSetId"),
+                    defaultDimensionSetId: optionalValue(
+                      data,
+                      "defaultDimensionSetId",
+                    ),
                   }
                 : {}),
               ...(role === "supplier"
                 ? {
-                    preferredRemittanceBankLinkId: value(data, "preferredRemittanceBankLinkId"),
+                    preferredRemittanceBankLinkId: value(
+                      data,
+                      "preferredRemittanceBankLinkId",
+                    ),
                   }
                 : {
                     ...(optionalValue(data, "statementCycleCode")
                       ? {
-                          statementCycleCode: optionalValue(data, "statementCycleCode"),
+                          statementCycleCode: optionalValue(
+                            data,
+                            "statementCycleCode",
+                          ),
                         }
                       : {}),
                   }),
@@ -91,10 +208,14 @@ export function BusinessPartnerScopeConfiguration({ businessPartnerId, initialCo
       });
       toast.push({
         tone: "success",
-        title: result.replayed ? "Existing request opened" : "Configuration request created",
+        title: result.replayed
+          ? "Existing request opened"
+          : "Configuration request created",
         detail: `${result.request.requestNo} must pass validation and independent approval.`,
       });
-      navigation.push(`/mdg/business-partner/requests/${encodeURIComponent(result.request.id)}`);
+      navigation.push(
+        `/mdg/business-partner/requests/${encodeURIComponent(result.request.id)}`,
+      );
     } catch (cause) {
       setError(message(cause));
       setBusy(false);
@@ -105,7 +226,10 @@ export function BusinessPartnerScopeConfiguration({ businessPartnerId, initialCo
       title="Configure Business Partner scope"
       description="Govern role assignment and company finance activation independently from the partner identity."
       actions={
-        <a className="a-button a-button--secondary" href={`/mdg/business-partner/${encodeURIComponent(businessPartnerId)}`}>
+        <a
+          className="a-button a-button--secondary"
+          href={`/mdg/business-partner/${encodeURIComponent(businessPartnerId)}`}
+        >
           Cancel
         </a>
       }
@@ -114,52 +238,163 @@ export function BusinessPartnerScopeConfiguration({ businessPartnerId, initialCo
         <Card className="bp-section">
           <div className="bp-grid">
             <Field label="Configuration" htmlFor="bp-scope-kind">
-              <Select id="bp-scope-kind" value={kind} onChange={(event) => setKind(event.currentTarget.value as typeof kind)}>
-                <option value="assign_organization">Assign operating organization</option>
-                <option value="configure_company">Configure company finance profile</option>
+              <Select
+                id="bp-scope-kind"
+                value={kind}
+                onChange={(event) =>
+                  setKind(event.currentTarget.value as typeof kind)
+                }
+              >
+                <option value="assign_organization">
+                  Assign operating organization
+                </option>
+                <option value="configure_company">
+                  Configure company finance profile
+                </option>
               </Select>
             </Field>
             <Field label="Role" htmlFor="bp-scope-role">
-              <Select id="bp-scope-role" value={role} onChange={(event) => setRole(event.currentTarget.value as typeof role)}>
+              <Select
+                id="bp-scope-role"
+                value={role}
+                onChange={(event) =>
+                  setRole(event.currentTarget.value as typeof role)
+                }
+              >
                 <option value="supplier">Supplier</option>
                 <option value="customer">Customer</option>
               </Select>
             </Field>
-            <Field label="Company" htmlFor="bp-extension-company"><Select id="bp-extension-company" value={companyCodeId} onChange={event=>{const id=event.target.value;setCompanyCodeId(id);const choices=operating.organizations.filter(o=>o.companyAssignments.some(a=>a.companyCodeId===id));setOrganizationId(choices.length===1?choices[0]!.id:"");}}><option value="">Select company</option>{work.companies.map(c=><option key={c.companyCodeId} value={c.companyCodeId}>{c.displayName}</option>)}</Select></Field>
-            <Field label="Operating organization" htmlFor="bp-extension-organization"><Select id="bp-extension-organization" value={organizationId} onChange={e=>setOrganizationId(e.target.value)}><option value="">Select organization</option>{operating.organizations.filter(o=>!companyCodeId||o.companyAssignments.some(a=>a.companyCodeId===companyCodeId)).map(o=><option key={o.id} value={o.id}>{o.displayName}</option>)}</Select></Field>
+            <Field label="Company" htmlFor="bp-extension-company">
+              <Select
+                id="bp-extension-company"
+                value={companyCodeId}
+                onChange={(event) => {
+                  const id = event.target.value;
+                  setCompanyCodeId(id);
+                  const choices = operating.organizations.filter((o) =>
+                    o.companyAssignments.some((a) => a.companyCodeId === id),
+                  );
+                  setOrganizationId(choices.length === 1 ? choices[0]!.id : "");
+                }}
+              >
+                <option value="">Select company</option>
+                {work.companies.map((c) => (
+                  <option key={c.companyCodeId} value={c.companyCodeId}>
+                    {c.displayName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field
+              label="Operating organization"
+              htmlFor="bp-extension-organization"
+            >
+              <Select
+                id="bp-extension-organization"
+                value={organizationId}
+                onChange={(e) => setOrganizationId(e.target.value)}
+              >
+                <option value="">Select organization</option>
+                {operating.organizations
+                  .filter(
+                    (o) =>
+                      !companyCodeId ||
+                      o.companyAssignments.some(
+                        (a) => a.companyCodeId === companyCodeId,
+                      ),
+                  )
+                  .map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.displayName}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
             {kind === "assign_organization" ? (
               <>
                 <Field label="Effective from" htmlFor="bp-effective-from">
-                  <Input id="bp-effective-from" name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+                  <Input
+                    id="bp-effective-from"
+                    name="effectiveFrom"
+                    type="date"
+                    required
+                    defaultValue={new Date().toISOString().slice(0, 10)}
+                  />
                 </Field>
                 <Field label="Effective until" htmlFor="bp-effective-until">
-                  <Input id="bp-effective-until" name="effectiveUntil" type="date" />
+                  <Input
+                    id="bp-effective-until"
+                    name="effectiveUntil"
+                    type="date"
+                  />
                 </Field>
               </>
             ) : (
               <>
                 <Field label="Selected company" htmlFor="bp-selected-company">
-                  <Input id="bp-selected-company" value={work.companies.find(c=>c.companyCodeId===companyCodeId)?.displayName ?? "Select a company"} readOnly />
+                  <Input
+                    id="bp-selected-company"
+                    value={
+                      work.companies.find(
+                        (c) => c.companyCodeId === companyCodeId,
+                      )?.displayName ?? "Select a company"
+                    }
+                    readOnly
+                  />
                 </Field>
                 <Field label="Currency" htmlFor="bp-currency">
-                  <Input id="bp-currency" name="currencyCode" required minLength={3} maxLength={3} pattern="[A-Za-z]{3}" />
+                  <Input
+                    id="bp-currency"
+                    name="currencyCode"
+                    required
+                    minLength={3}
+                    maxLength={3}
+                    pattern="[A-Za-z]{3}"
+                  />
                 </Field>
                 <Field label="Payment term ID" htmlFor="bp-payment-term">
-                  <Input id="bp-payment-term" name="paymentTermId" required pattern="[0-9a-fA-F-]{36}" />
+                  <Input
+                    id="bp-payment-term"
+                    name="paymentTermId"
+                    required
+                    pattern="[0-9a-fA-F-]{36}"
+                  />
                 </Field>
-                <Field label="Accounting profile ID" htmlFor="bp-accounting-profile">
-                  <Input id="bp-accounting-profile" name="defaultAccountingProfileId" required pattern="[0-9a-fA-F-]{36}" />
+                <Field
+                  label="Accounting profile ID"
+                  htmlFor="bp-accounting-profile"
+                >
+                  <Input
+                    id="bp-accounting-profile"
+                    name="defaultAccountingProfileId"
+                    required
+                    pattern="[0-9a-fA-F-]{36}"
+                  />
                 </Field>
                 <Field label="Dimension set ID" htmlFor="bp-dimension-set">
-                  <Input id="bp-dimension-set" name="defaultDimensionSetId" pattern="[0-9a-fA-F-]{36}" />
+                  <Input
+                    id="bp-dimension-set"
+                    name="defaultDimensionSetId"
+                    pattern="[0-9a-fA-F-]{36}"
+                  />
                 </Field>
                 {role === "supplier" ? (
                   <Field label="Remittance bank link ID" htmlFor="bp-bank-link">
-                    <Input id="bp-bank-link" name="preferredRemittanceBankLinkId" required pattern="[0-9a-fA-F-]{36}" />
+                    <Input
+                      id="bp-bank-link"
+                      name="preferredRemittanceBankLinkId"
+                      required
+                      pattern="[0-9a-fA-F-]{36}"
+                    />
                   </Field>
                 ) : (
                   <Field label="Statement cycle" htmlFor="bp-statement-cycle">
-                    <Input id="bp-statement-cycle" name="statementCycleCode" pattern="[a-z][a-z0-9_.-]+" />
+                    <Input
+                      id="bp-statement-cycle"
+                      name="statementCycleCode"
+                      pattern="[a-z][a-z0-9_.-]+"
+                    />
                   </Field>
                 )}
               </>
@@ -168,7 +403,14 @@ export function BusinessPartnerScopeConfiguration({ businessPartnerId, initialCo
         </Card>
         {error ? <ErrorNotice detail={error} /> : null}
         <div className="bp-form-actions">
-          <Button type="submit" loading={busy} disabled={!organizationId || (kind === "configure_company" && !companyCodeId)}>
+          <Button
+            type="submit"
+            loading={busy}
+            disabled={
+              !organizationId ||
+              (kind === "configure_company" && !companyCodeId)
+            }
+          >
             Create governed request
           </Button>
         </div>
@@ -181,23 +423,36 @@ function usePartnerApi() {
   const http = useApiClient();
   return useMemo(() => createBusinessPartnerClient(http), [http]);
 }
-export function BusinessPartnerHome({ children }: { readonly children: ReactNode }) {
+export function BusinessPartnerHome({
+  children,
+}: {
+  readonly children: ReactNode;
+}) {
   const permissions = usePermissions();
   return (
     <PageSurface
       title="Business Partners"
-      description="Organization-scoped partner master and governed onboarding."
+      description="Business partner master data and governed onboarding."
       actions={
         <div className="bp-actions">
-          <a className="a-button a-button--secondary" href="/mdg/business-partner/requests">
+          <a
+            className="a-button a-button--secondary"
+            href="/mdg/business-partner/requests"
+          >
             Onboarding requests
           </a>
           {permissions.has("neon.relationship.entity_case.create") ? (
             <>
-              <a className="a-button a-button--secondary" href="/mdg/business-partner/customer/new">
+              <a
+                className="a-button a-button--secondary"
+                href="/mdg/business-partner/customer/new"
+              >
                 New customer
               </a>
-              <a className="a-button a-button--primary" href="/mdg/business-partner/new">
+              <a
+                className="a-button a-button--primary"
+                href="/mdg/business-partner/new"
+              >
                 New supplier
               </a>
             </>
@@ -213,20 +468,65 @@ function useOrganizationSelection() {
   const operating = useNeonOperatingOrganization(),
     work = useNeonWorkContext(),
     company = work.selection.mode === "company" ? work.selection : undefined;
-  const compatible = useMemo(() => operating.organizations.filter((item) => !company || item.companyAssignments.some((assignment) => assignment.companyCodeId === company.companyCodeId)), [operating.organizations, company?.companyCodeId]);
+  const compatible = useMemo(
+    () =>
+      operating.organizations.filter(
+        (item) =>
+          !company ||
+          item.companyAssignments.some(
+            (assignment) => assignment.companyCodeId === company.companyCodeId,
+          ),
+      ),
+    [operating.organizations, company?.companyCodeId],
+  );
   const [selected, setSelected] = useState("");
-  useEffect(() => setSelected((current) => (compatible.some((item) => item.id === current) ? current : compatible.length === 1 ? compatible[0]!.id : "")), [compatible]);
+  useEffect(
+    () =>
+      setSelected((current) =>
+        compatible.some((item) => item.id === current)
+          ? current
+          : compatible.length === 1
+            ? compatible[0]!.id
+            : "",
+      ),
+    [compatible],
+  );
   return { operating, company, compatible, selected, setSelected };
 }
-function OrganizationField({ value, onChange, required = true }: { value: string; onChange: (value: string) => void; required?: boolean }) {
+function OrganizationField({
+  value,
+  onChange,
+  required = true,
+  label = "Operating organization",
+  placeholder = "Select an authorized procurement or sales organization",
+  name,
+  id = "bp-operating-organization",
+  disabled = false,
+  onDefault,
+}: {
+  onDefault?:(value:string)=>void;
+  label?:string;placeholder?:string;name?:string;id?:string;disabled?:boolean;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+}) {
   const selection = useOrganizationSelection();
   useEffect(() => {
-    if (!value && selection.selected) onChange(selection.selected);
-  }, [value, selection.selected, onChange]);
+    if (!value && selection.selected) (onDefault??onChange)(selection.selected);
+  }, [value, selection.selected, onChange,onDefault]);
   return (
-    <Field label="Operating organization" htmlFor="bp-operating-organization">
-      <Select id="bp-operating-organization" required={required} value={value} onChange={(event) => onChange(event.currentTarget.value)}>
-        <option value="">Select an authorized procurement or sales organization</option>
+    <Field label={label} htmlFor={id}>
+      <Select
+        id={id}
+        name={name}
+        disabled={disabled}
+        required={required}
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+      >
+        <option value="">
+          {placeholder}
+        </option>
         {selection.compatible.map((item) => (
           <option key={item.id} value={item.id}>
             {item.code} · {item.displayName}
@@ -263,7 +563,13 @@ export function BusinessPartnerRequestList() {
       });
     return () => controller.abort();
   }, [api, selection.selected, status]);
-  const state = loading ? "loading" : error ? "error" : !selection.selected || !items.length ? "empty" : "ready";
+  const state = loading
+    ? "loading"
+    : error
+      ? "error"
+      : !selection.selected || !items.length
+        ? "empty"
+        : "ready";
   return (
     <div data-ui-state={state}>
       <PageSurface
@@ -271,19 +577,35 @@ export function BusinessPartnerRequestList() {
         description="Create, validate, approve and materialize governed partner requests."
         actions={
           <div className="bp-actions">
-            <a className="a-button a-button--secondary" href="/mdg/business-partner">
+            <a
+              className="a-button a-button--secondary"
+              href="/mdg/business-partner"
+            >
               Partner master
             </a>
-            <a className="a-button a-button--primary" href="/mdg/business-partner/new">
-              New supplier request
+            <a
+              className="a-button a-button--primary"
+              href="/mdg/business-partner/new"
+            >
+              New request
             </a>
           </div>
         }
       >
         <Card className="bp-filter-bar">
-          <OrganizationSelect selection={selection} value={selection.selected} onChange={selection.setSelected} />
+          <OrganizationSelect
+            selection={selection}
+            value={selection.selected}
+            onChange={selection.setSelected}
+          />
           <Field label="Status" htmlFor="bp-status-filter">
-            <Select id="bp-status-filter" value={status} onChange={(event) => setStatus(event.currentTarget.value as RequestStatus | "")}>
+            <Select
+              id="bp-status-filter"
+              value={status}
+              onChange={(event) =>
+                setStatus(event.currentTarget.value as RequestStatus | "")
+              }
+            >
               <option value="">All statuses</option>
               {statuses.map((item) => (
                 <option key={item} value={item}>
@@ -294,124 +616,290 @@ export function BusinessPartnerRequestList() {
           </Field>
         </Card>
         {error ? <ErrorNotice detail={error} /> : null}
-        {loading ? <RequestSkeleton /> : selection.selected ? <RequestTable items={items} /> : <Empty title="Choose an operating organization" detail="Commercial requests are organization-scoped and contain supplier or customer data only." />}
+        {loading ? (
+          <RequestSkeleton />
+        ) : selection.selected ? (
+          <RequestTable items={items} />
+        ) : (
+          <Empty
+            title="Choose an operating organization"
+            detail="Commercial requests are organization-scoped and contain supplier or customer data only."
+          />
+        )}
       </PageSurface>
     </div>
   );
 }
 
-export function NewBusinessPartnerRequest() {
-  const api = usePartnerApi(),
+const protectProfileValue = createOperation<{protectedValueToken:string;valueHash:string;maskedValue:string},{operatingOrganizationId:string;kind:"tax"|"certificate"|"bank";value:string;bankCountryCode?:string;accountIdType?:string}>({method:"POST",path:()=>"/api/neon/business-partner-intake/protected-values"});
+function RequestHeaderIdentity({labels,request}:{labels:NonNullable<EntityIntakeSurfaceV1["formLabels"]>;request?:PartnerRequest}) {
+  const [copyState,setCopyState]=useState<"idle"|"copied"|"failed">("idle");
+  const copyLabel=copyState==="copied" ? labels.referenceCopied : labels.copyReference;
+  return <><span>{request?.requestedRole==="customer" ? labels.customerRole : labels.supplierRole}</span>{request ? <><span className="a-intake-separator" aria-hidden="true">·</span><Badge>{request.status==="draft" ? labels.draftStatus : label(request.status)}</Badge><span className="a-intake-separator" aria-hidden="true">·</span><span className="a-intake-reference" title={request.requestNo}>{request.requestNo.length>20 ? `${request.requestNo.slice(0,8)}…${request.requestNo.slice(-4)}` : request.requestNo}</span><button className="a-intake-copy" type="button" aria-label={copyLabel} title={copyLabel} onClick={()=>{void navigator.clipboard.writeText(request.requestNo).then(()=>setCopyState("copied"),()=>setCopyState("failed"));}}><svg viewBox="0 0 24 24" aria-hidden="true">{copyState==="copied" ? <path d="m5 12 4 4L19 6"/> : <><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></>}</svg></button><span className="a-intake-progress__sr" role="status">{copyState==="copied" ? labels.referenceCopied : ""}</span>{copyState==="failed" ? <span role="alert">{labels.copyFailed}</span> : null}</> : null}</>;
+}
+
+function RequestDetailSurface({request,caseView,children,actions}:{request:PartnerRequest;caseView:RequestView["case"];children:ReactNode;actions:ReactNode}) {
+  const http = useApiClient();
+  const [labels, setLabels] = useState<EntityIntakeSurfaceV1["formLabels"]>();
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  useEffect(() => {
+    const controller = new AbortController();
+    void http.request(entityApplicationDescriptorOperation, {params: {entityCode: "business_partner"}, signal: controller.signal})
+      .then(value => { if (!controller.signal.aborted) setLabels(value.intakeSurfaces?.find(s => s.key === "intake_details")?.formLabels); }).catch(() => {});
+    return () => controller.abort();
+  }, [http]);
+  useRecordBreadcrumb("Request details");
+  const name = request.proposedPayload.name;
+  const title = typeof name === "string" && name.trim() ? name : labels?.requestTitle ?? "Business partner request";
+  const header = useMemo(() => ({
+    title,
+    actions,
+    metadata: <Badge>{caseView.status === "draft" ? labels?.draftStatus ?? "Draft" : label(caseView.status)}</Badge>,
+    supportingRow: <>
+      <div className="bp-request-header__context">
+        <span className="bp-request-header__reference">
+          <span className="a-intake-reference" title={request.requestNo}>{request.requestNo.length > 20 ? `${request.requestNo.slice(0, 8)}…${request.requestNo.slice(-4)}` : request.requestNo}</span>
+          <button className="a-intake-copy" type="button" aria-label={labels?.copyReference ?? "Copy request reference"} title={labels?.copyReference ?? "Copy request reference"} onClick={() => { void navigator.clipboard.writeText(request.requestNo).then(() => setCopyState("copied"), () => setCopyState("failed")); }}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">{copyState === "copied" ? <path d="m5 12 4 4L19 6"/> : <><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></>}</svg>
+          </button>
+          <span className="a-intake-progress__sr" role="status">{copyState === "copied" ? labels?.referenceCopied ?? "Request reference copied" : ""}</span>
+          {copyState === "failed" ? <span role="alert">{labels?.copyFailed ?? "Unable to copy request reference"}</span> : null}
+        </span>
+        <span>{requestKind(request)}</span>
+        <span>Source: {label(request.source.kind)}</span>
+      </div>
+      <div className="bp-request-header__progress">
+
+        {caseView.progress.blockers > 0 ? <Badge tone="warning">{caseView.progress.blockers} {caseView.progress.blockers === 1 ? "blocker" : "blockers"}</Badge> : null}
+      </div>
+    </>,
+  }), [title, actions, labels, request, caseView, copyState]);
+  const shared = useRegisterEntityTaskHeader(header);
+  return <PageSurface contentOnly title={title}>{!shared ? <PageHeader level="collection" {...header}/> : null}{children}</PageSurface>;
+}
+
+export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {readonly onDirty?:()=>void;readonly onSaved?:()=>void;readonly initialRequest?:RequestView} = {}) {
+  const intake = useEntityIntake();
+  const [savedRequest, setSavedRequest] = useState(initialRequest?.request);
+  const [attachmentProblems, setAttachmentProblems] = useState<readonly string[]>([]);
+  const [savedNotice, setSavedNotice] = useState<string>();
+  const [retryRequired, setRetryRequired] = useState(false);
+  const inFlight = useRef(false);
+  const errorSummary = useRef<HTMLDivElement>(null);
+  const pendingSave = useRef<{ submitRequest: boolean; execute: () => ReturnType<ReturnType<typeof createBusinessPartnerClient>["patch"]> } | undefined>(undefined);
+  const identity = useSessionIdentity();
+  const protectedProfileValues=useRef(new Map<string,{protectedValueToken:string;valueHash:string;maskedValue:string}>());
+  const [intakeCommandKey, setIntakeCommandKey] = useState(() => crypto.randomUUID());
+  const http = useApiClient(),
+    api = usePartnerApi(),
     work = useNeonWorkContext(),
     toast = useToasts(),
     [organizationId, setOrganizationId] = useState(""),
     [publishedForm, setPublishedForm] = useState<PublishedRequestForm>(),
     [answers, setAnswers] = useState<Readonly<Record<string, unknown>>>({}),
-    [addresses,setAddresses]=useState<readonly AddressDraft[]>([newAddress()]),
-    [contacts,setContacts]=useState<readonly ContactDraft[]>([newContact()]),
+    [surfaces, setSurfaces] = useState<readonly EntityIntakeSurfaceV1[]>([]),
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [dirty, setDirty] = useState(false),
     [error, setError] = useState<string>();
-  const navigation = useGuardedNavigation(dirty),
-    companyCodeId = work.selection.mode === "company" ? work.selection.companyCodeId : undefined;
+  const navigation = useGuardedNavigation(dirty || busy || attachmentProblems.length > 0 || retryRequired),
+    companyCodeId = savedRequest?.companyCodeId ?? (
+      work.selection.mode === "company"
+        ? work.selection.companyCodeId
+        : undefined);
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
-    api.requestForm(controller.signal).then(result => {
-      setPublishedForm(result);
-      setAnswers(requestFormDefaults(result.descriptor));
-      const components=result.descriptor.sections.flatMap(section=>section.components??[]),addressComponent=components.find(component=>component.kind==="addresses"),contactComponent=components.find(component=>component.kind==="contacts");
-      if(addressComponent)setAddresses([{...newAddress(),purpose:addressComponent.lookups.purposes[0]!.value}]);
-      if(contactComponent)setContacts([{...newContact(),channels:[{...newContact().channels[0]!,channelType:contactComponent.lookups.channels![0]!.value,purpose:contactComponent.lookups.purposes[0]!.value}]}]);
-      setError(undefined);
-    }).catch(cause => { if (!controller.signal.aborted) setError(message(cause)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    Promise.all([api.requestForm(controller.signal),http.request(entityApplicationDescriptorOperation,{params:{entityCode:"business_partner"},signal:controller.signal})])
+      .then(([result,application]) => {
+        if(controller.signal.aborted)return;
+        const native=application.intakeSurfaces??[],details=native.find(s=>s.key==="intake_details");
+        if(!details?.formLabels)throw Error("The published intake Details surface is unavailable.");
+        if (initialRequest && (initialRequest.case.definition.contentHash !== result.definition.hash || initialRequest.case.definition.version !== result.definition.version))
+          throw Error(details.formLabels.incompatibleDraft ?? "The saved draft definition is unavailable.");
+        setSurfaces(native);
+        setPublishedForm({...result,descriptor:requestFormFromSurface(details)});
+        setAnswers({...dataSurfaceDefaults(details,native),...(initialRequest?restoreProfileAnswers(details,native,initialRequest.request.proposedPayload,initialRequest.request.operatingOrganizationId):{})});
+        if(initialRequest?.request.operatingOrganizationId)setOrganizationId(initialRequest.request.operatingOrganizationId);
+        setError(undefined);
+      })
+      .catch((cause) => {
+        if (!controller.signal.aborted) setError(message(cause));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
     return () => controller.abort();
-  }, [api]);
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!publishedForm) return;
+  }, [api,http,initialRequest]);
+  const headerLabels = surfaces.find(s=>s.key==="intake_details")?.formLabels;
+  const setPresentation = intake?.setPresentation;
+  useRecordBreadcrumb(savedRequest?.requestNo ?? "New request", savedRequest ? `/mdg/business-partner/requests/${encodeURIComponent(savedRequest.id)}` : undefined);
+  useEffect(() => {
+    if (!headerLabels) return;
+    setPresentation?.({
+      title: savedRequest ? headerLabels.editTitle : undefined,
+      description: savedRequest ? headerLabels.editDescription : undefined,
+      exitLabel: savedRequest ? headerLabels.close : undefined,
+      lockedSteps: savedRequest ? ["partner"] : undefined,
+      compact: true,
+      context: <RequestHeaderIdentity labels={headerLabels} request={savedRequest} />,
+      saveState: dirty || retryRequired ? "unsaved" : "saved",
+      saveStatus: busy ? headerLabels.savingDraft : retryRequired ? headerLabels.changesNotSaved : dirty ? headerLabels.unsavedChanges : savedRequest ? <time dateTime={savedRequest.updatedAt ?? savedRequest.createdAt} title={new Date(savedRequest.updatedAt ?? savedRequest.createdAt).toLocaleString(undefined,{timeZoneName:"short"})}>{headerLabels.savedAt} {new Date(savedRequest.updatedAt ?? savedRequest.createdAt).toLocaleDateString()===new Date().toLocaleDateString() ? new Date(savedRequest.updatedAt ?? savedRequest.createdAt).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : formatDate(savedRequest.updatedAt ?? savedRequest.createdAt)}</time> : headerLabels.notSaved,
+    });
+  }, [setPresentation, headerLabels, savedRequest, savedNotice, dirty, busy, retryRequired]);
+  async function submit(event?: FormEvent<HTMLFormElement>, submitRequest = true) {
+    event?.preventDefault();
+    if (!publishedForm || inFlight.current) return;
+    if (attachmentProblems.length) { setError(attachmentProblems.join(" ")); errorSummary.current?.focus(); return; }
+    // An uncertain retry keeps both the original command and its completion intent.
+    submitRequest = pendingSave.current?.submitRequest ?? submitRequest;
+    inFlight.current = true;
+    intake?.setBusy(true);
     setBusy(true);
     setError(undefined);
-    const data = new FormData(event.currentTarget);
+    const data = new FormData();
     try {
-      const serialized = serializeRequestForm(publishedForm.descriptor, data);
-      const componentKinds=new Set(publishedForm.descriptor.sections.flatMap(section=>(section.components??[]).map(component=>component.kind))),extensions=componentKinds.size?await buildRelationshipExtensions(componentKinds.has("addresses")?addresses:[],componentKinds.has("contacts")?contacts:[]):undefined;
-      const result = await api.create({
-        operatingOrganizationId: organizationId || serialized.operatingOrganizationId,
+      const details=surfaces.find(s=>s.key==="intake_details")!;
+      if (!pendingSave.current) {
+      const values=dataSurfaceValues(details,surfaces,answers,submitRequest?"submit":"draft");
+      for(const [key,value] of Object.entries(values)){
+        if(typeof value==='string'||typeof value==='number')data.set(key,String(value));
+        else if(value===true)data.set(key,'on');
+      }
+      const serialized = serializeRequestForm(publishedForm.descriptor, data, { includeEmpty: Boolean(savedRequest) });
+      const extensions = { ...await buildRelationshipExtensions(
+        (values.addresses??[]) as readonly AddressDraft[],
+        (values.contacts??[]) as readonly ContactDraft[],
+      ), ...await buildProfileExtensions(details,values,async(kind,value,bank)=>{
+        const cacheKey=JSON.stringify([organizationId,kind,value,bank]);
+        const previous=protectedProfileValues.current.get(cacheKey);if(previous)return previous;
+        const result=await http.request(protectProfileValue,{body:{operatingOrganizationId:organizationId,kind,value,...bank}});protectedProfileValues.current.set(cacheKey,result);return result;
+      },surfaces,(savedRequest?.proposedPayload.relationshipProposals??{}) as Record<string,readonly Record<string,unknown>[]>) };
+      pendingSave.current = {submitRequest, execute: savedRequest ? () => api.patch(savedRequest.id, {
+        draftCapture:!submitRequest,
+        expectedVersion:savedRequest.rowVersion,
+        operatingOrganizationId:organizationId,
+        ...(companyCodeId?{companyCodeId}:{}),
+        proposedPayload:{...Object.fromEntries(Object.entries(savedRequest.proposedPayload).filter(([key])=>key!=="relationshipProposals")),...serialized.proposedPayload},extensions,
+      },intakeCommandKey) : () => api.create({
+        draftCapture:!submitRequest,
+        operatingOrganizationId:
+          organizationId || serialized.operatingOrganizationId,
         ...(companyCodeId ? { companyCodeId } : {}),
         expectedForm: publishedForm.definition,
         proposedPayload: serialized.proposedPayload,
-        ...(extensions?{extensions}:{}),
-      });
+        ...(extensions ? { extensions } : {}),
+      }, intakeCommandKey)};
+      }
+      const result = await pendingSave.current!.execute();
+      pendingSave.current = undefined;
+      setRetryRequired(false);
+      setSavedRequest(result.request);
+      setIntakeCommandKey(crypto.randomUUID());
+      setSavedNotice(`${details.formLabels?.draftSaved ?? "Draft saved"} · ${result.request.requestNo} · ${new Date(result.request.updatedAt ?? result.request.createdAt).toLocaleString()}`);
+      intake?.markSaved();
+      onSaved?.();
+      setDirty(false);
+      if (!submitRequest) {
+        window.history.replaceState(window.history.state, "", `/mdg/business-partner/requests/${encodeURIComponent(result.request.id)}/edit`);
+        return;
+      }
+      const completion = intake && submitRequest ? await submitBusinessPartnerIntake(api, result.request) : undefined;
       toast.push({
-        tone: "success",
-        title: result.replayed ? "Existing request opened" : "Request created",
-        detail: `${result.request.requestNo} is ready for validation.`,
+        tone: completion && !completion.submitted ? "warning" : "success",
+        title: completion?.submitted ? "Request submitted" : initialRequest ? "Draft saved" : ("replayed" in result && result.replayed) ? "Existing request opened" : "Request created",
+        detail: completion?.detail ?? `${result.request.requestNo} is ready for validation.`,
       });
       setDirty(false);
-      navigation.navigate(`/mdg/business-partner/requests/${encodeURIComponent(result.request.id)}`, true);
+      navigation.navigate(
+        `/mdg/business-partner/requests/${encodeURIComponent(result.request.id)}`,
+        true,
+      );
     } catch (cause) {
+      // Keep the exact command after an uncertain transport outcome; a retry must not become a second create.
+      const uncertain = Boolean(pendingSave.current) && (!(cause instanceof ApiTransportError) || cause.status === 0 || cause.status >= 500);
+      setRetryRequired(uncertain);
+      if (!uncertain) pendingSave.current = undefined;
       setError(message(cause));
+      requestAnimationFrame(() => errorSummary.current?.focus());
+    } finally {
+      inFlight.current = false;
+      intake?.setBusy(false);
       setBusy(false);
     }
   }
   return (
-    <div data-ui-state={busy ? "mutation-pending" : error ? "mutation-failure" : "ready"}>
-      <PageSurface
-        title={publishedForm?.descriptor.title ?? "New supplier onboarding request"}
-        description={publishedForm?.descriptor.description ?? "Loading the published request definition."}
+    <RequestAttachmentScope onReadinessChange={setAttachmentProblems}><div
+      data-ui-state={
+        busy ? "mutation-pending" : error ? "mutation-failure" : "ready"
+      }
+    >
+      <PageSurface contentOnly={Boolean(intake)}
+        title={
+          publishedForm?.descriptor.title ?? "New supplier onboarding request"
+        }
+        description={
+          publishedForm?.descriptor.description ??
+          "Loading the published request definition."
+        }
         actions={
-          <Button variant="secondary" onClick={() => navigation.navigate("/mdg/business-partner/requests")}>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              navigation.navigate("/mdg/business-partner/requests")
+            }
+          >
             Cancel
           </Button>
         }
       >
-        {loading ? <RequestSkeleton /> : publishedForm ? <form className="bp-form" data-definition-release={publishedForm.definition.releaseId} onSubmit={submit} onChangeCapture={(event) => { const target=event.target as unknown as HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement;setDirty(true);if(target.name)setAnswers(current=>({...current,[target.name]:target instanceof HTMLInputElement&&target.type==="checkbox"?target.checked:target.value}));}}>
-          {publishedForm.descriptor.sections.map(section => <Card className="bp-section" key={section.key}>
-            <h2>{section.title}</h2>
-            {section.description ? <p className="bp-context-note">{section.description}</p> : null}
-            <div className="bp-grid">
-              {section.fields.filter(field => isRequestFieldVisible(field, answers)).map(field => field.widget === "operating_organization" ? <div className="bp-field--wide" key={field.key}><OrganizationField value={organizationId} onChange={value => {setOrganizationId(value);setAnswers(current=>({...current,[field.key]:value}));}} required={field.required}/>{companyCodeId ? <p className="bp-context-note">Company context will be pinned to this request.</p> : null}</div> : <DynamicRequestField field={field} key={field.key}/>) }
-              {section.components?.map(component=>component.kind==="addresses"?<AddressCollection key={component.key} component={component} items={addresses} onChange={setAddresses}/>:<ContactCollection key={component.key} component={component} items={contacts} onChange={setContacts}/>) }
+        {loading ? (
+          <RequestSkeleton />
+        ) : publishedForm ? (
+          <EntityIntakeForm detailsBackPlacement="custom" detailsStep="details" reviewStep="review" submissionError={error}
+            className="bp-form"
+            data-definition-release={publishedForm.definition.releaseId}
+            onSubmit={submit}
+            onSubmitCapture={(event)=>{try{dataSurfaceValues(surfaces.find(s=>s.key==="intake_details")!,surfaces,answers)}catch(cause){event.preventDefault();event.stopPropagation();setError(message(cause))}}}
+          >
+            <EntityDataSurface sectionNavigation={{label: surfaces.find(s=>s.key==="intake_details")!.title, mode: "create"}} surface={surfaces.find(s=>s.key==="intake_details")!} surfaces={surfaces} answers={answers} disabled={busy || retryRequired}
+              referenceHistory={{ client: http, entityCode: "business_partner" }}
+              referenceChoiceScope={identity.scope ? { plane: identity.scope.plane, tenantId: identity.scope.tenantId, principalId: identity.scope.principalId, contextKey: JSON.stringify(work.selection) } : undefined}
+              onChange={(next)=>{const details=surfaces.find(s=>s.key==="intake_details")!; const hiddenMessage=hiddenProfileChangeMessage(details,answers,next,surfaces);if(hiddenMessage){setError(hiddenMessage);return;}setAnswers(next);setSavedNotice(undefined);setDirty(true);onDirty?.();setIntakeCommandKey(crypto.randomUUID());intake?.markDirty();if(intake?.state.completed.includes("details"))intake.invalidate("details");setError(undefined)}}
+              handlers={{"business_partner.account_holder":({field,value,onChange,id,name,disabled})=><Field label={field.label} htmlFor={id}><Input id={id} name={name} value={String(value??"")} required={field.required} maxLength={field.maxLength} disabled={disabled} onChange={event=>onChange(event.currentTarget.value)}/><Button type="button" className="a-bank-holder-copy" variant="secondary" disabled={disabled||!answers.name} onClick={()=>onChange(String(answers.name??""))}>{field.placeholder}</Button></Field>,"business_partner.attachment":props=><RequestAttachmentField {...props}/>,"business_partner.reference":props=><PartnerReferenceField {...props}/>,"business_partner.organization":({field,value,onChange,id,name,disabled})=><OrganizationField id={id} name={name} label={field.label} placeholder={field.placeholder} disabled={disabled} required={field.required} value={String(value??"")} onDefault={value=>{setOrganizationId(value);setAnswers(current=>({...current,[field.valueKey]:value}))}} onChange={value=>{setOrganizationId(value);onChange(value)}}/>}}/>
+            <div ref={errorSummary} tabIndex={-1}>
+              {error ? <ErrorNotice detail={error} /> : null}
+              {retryRequired ? <p role="alert">{surfaces.find(s=>s.key==="intake_details")?.formLabels?.draftRetry}</p> : null}
             </div>
-          </Card>)}
-          {error ? <ErrorNotice detail={error} /> : null}
-          <div className="bp-form-actions">
-            <Button type="submit" loading={busy} disabled={!organizationId}>
-              {publishedForm.descriptor.submitLabel}
-            </Button>
-          </div>
-        </form> : <ErrorNotice detail={error ?? "The published Supplier request definition is unavailable."} />}
+            {savedNotice ? <p role="status">{savedNotice}</p> : null}
+            {attachmentProblems.length ? <p role="status">{attachmentProblems.join(" ")}</p> : null}
+            <div className="bp-form-actions bp-form-actions--details">
+              <EntityIntakeBackButton detailsStep="details" className="bp-form-actions__back" />
+              {savedRequest ? <Button type="button" variant="secondary" disabled={busy} onClick={()=>navigation.navigate(`/mdg/business-partner/requests/${encodeURIComponent(savedRequest.id)}`)}>{savedRequest.requestNo}</Button> : null}
+              {surfaces.find(s=>s.key==="intake_details")?.formLabels?.saveDraft ? <EntityDraftSaveButton disabled={busy||!organizationId||attachmentProblems.length>0} onSave={()=>void submit(undefined,false)}>{busy ? surfaces.find(s=>s.key==="intake_details")!.formLabels!.savingDraft : retryRequired ? "Retry previous action" : surfaces.find(s=>s.key==="intake_details")!.formLabels!.saveDraft}</EntityDraftSaveButton>:null}
+              <Button type="submit" loading={busy} disabled={!organizationId||retryRequired||attachmentProblems.length>0}>
+                {intake ? surfaces.find(s=>s.key==="intake_details")!.formLabels?.continue : publishedForm.descriptor.submitLabel}
+              </Button>
+            </div>
+          </EntityIntakeForm>
+        ) : (
+          <ErrorNotice
+            detail={
+              error ??
+              "The published Supplier request definition is unavailable."
+            }
+          />
+        )}
         <UnsavedChangesDialog navigation={navigation} />
       </PageSurface>
-    </div>
+    </div></RequestAttachmentScope>
   );
 }
-
-function AddressCollection({component,items,onChange}:{readonly component:RequestFormRepeatableComponent;readonly items:readonly AddressDraft[];readonly onChange:(items:readonly AddressDraft[])=>void}){
- const update=(index:number,patch:Partial<AddressDraft>)=>onChange(items.map((item,itemIndex)=>itemIndex===index?{...item,...patch}:item));
- return <fieldset className="bp-repeatable bp-field--wide"><legend>{component.title}</legend>{items.map((item,index)=><Card className="bp-repeatable__item" key={item.key}><div className="bp-repeatable__header"><h3>Address {index+1}</h3>{items.length>component.minItems?<Button type="button" variant="secondary" onClick={()=>onChange(items.filter(candidate=>candidate.key!==item.key))}>Remove</Button>:null}</div><div className="bp-grid"><Field label="Purpose" htmlFor={`${item.key}-purpose`}><Select id={`${item.key}-purpose`} value={item.purpose} onChange={event=>update(index,{purpose:event.currentTarget.value})}>{component.lookups.purposes.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</Select></Field><Field label="Country" htmlFor={`${item.key}-country`}><Select id={`${item.key}-country`} required value={item.countryCode} onChange={event=>update(index,{countryCode:event.currentTarget.value})}><option value="">Select country</option>{component.lookups.countries!.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</Select></Field><Field label="Address line 1" htmlFor={`${item.key}-line1`}><Input id={`${item.key}-line1`} required value={item.line1} onChange={event=>update(index,{line1:event.currentTarget.value})}/></Field><Field label="Address line 2" htmlFor={`${item.key}-line2`}><Input id={`${item.key}-line2`} value={item.line2} onChange={event=>update(index,{line2:event.currentTarget.value})}/></Field><Field label="City" htmlFor={`${item.key}-city`}><Input id={`${item.key}-city`} required value={item.city} onChange={event=>update(index,{city:event.currentTarget.value})}/></Field><Field label="Region" htmlFor={`${item.key}-region`}><Input id={`${item.key}-region`} value={item.region} onChange={event=>update(index,{region:event.currentTarget.value})}/></Field><Field label="Postal code" htmlFor={`${item.key}-postal`}><Input id={`${item.key}-postal`} value={item.postalCode} onChange={event=>update(index,{postalCode:event.currentTarget.value})}/></Field><label className="bp-primary-choice"><input type="radio" name="primary-address" checked={item.isPrimary} onChange={()=>onChange(items.map(candidate=>({...candidate,isPrimary:candidate.key===item.key})))}/> Primary address</label></div></Card>)}{items.length<component.maxItems?<Button type="button" variant="secondary" onClick={()=>onChange([...items,{...newAddress(items.length),purpose:component.lookups.purposes[0]!.value}])}>{component.addLabel}</Button>:null}</fieldset>;
-}
-
-function ContactCollection({component,items,onChange}:{readonly component:RequestFormRepeatableComponent;readonly items:readonly ContactDraft[];readonly onChange:(items:readonly ContactDraft[])=>void}){
- const update=(index:number,patch:Partial<ContactDraft>)=>onChange(items.map((item,itemIndex)=>itemIndex===index?{...item,...patch}:item));
- const updateChannel=(contactIndex:number,channelIndex:number,patch:Partial<ContactDraft["channels"][number]>)=>update(contactIndex,{channels:items[contactIndex]!.channels.map((channel,index)=>index===channelIndex?{...channel,...patch}:channel)});
- return <fieldset className="bp-repeatable bp-field--wide"><legend>{component.title}</legend>{items.map((item,index)=><Card className="bp-repeatable__item" key={item.key}><div className="bp-repeatable__header"><h3>Contact {index+1}</h3>{items.length>component.minItems?<Button type="button" variant="secondary" onClick={()=>onChange(items.filter(candidate=>candidate.key!==item.key))}>Remove</Button>:null}</div><div className="bp-grid"><Field label="Contact name" htmlFor={`${item.key}-name`}><Input id={`${item.key}-name`} required value={item.contactName} onChange={event=>update(index,{contactName:event.currentTarget.value})}/></Field><Field label="Business title" htmlFor={`${item.key}-title`}><Input id={`${item.key}-title`} value={item.businessTitle} onChange={event=>update(index,{businessTitle:event.currentTarget.value})}/></Field><Field label="Department" htmlFor={`${item.key}-department`}><Input id={`${item.key}-department`} value={item.departmentName} onChange={event=>update(index,{departmentName:event.currentTarget.value})}/></Field><label className="bp-primary-choice"><input type="radio" name="primary-contact" checked={item.isPrimary} onChange={()=>onChange(items.map(candidate=>({...candidate,isPrimary:candidate.key===item.key})))}/> Primary contact</label></div>{item.channels.map((channel,channelIndex)=><div className="bp-channel-row" key={channel.key}><Select aria-label="Channel type" value={channel.channelType} onChange={event=>updateChannel(index,channelIndex,{channelType:event.currentTarget.value})}>{component.lookups.channels!.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</Select><Select aria-label="Channel purpose" value={channel.purpose} onChange={event=>updateChannel(index,channelIndex,{purpose:event.currentTarget.value})}>{component.lookups.purposes.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</Select><Input aria-label="Channel value" required value={channel.value} onChange={event=>updateChannel(index,channelIndex,{value:event.currentTarget.value})}/><label><input type="radio" name={`primary-channel-${item.key}`} checked={channel.isPrimary} onChange={()=>update(index,{channels:item.channels.map(candidate=>({...candidate,isPrimary:candidate.key===channel.key}))})}/> Primary</label>{item.channels.length>1?<Button type="button" variant="secondary" onClick={()=>update(index,{channels:item.channels.filter(candidate=>candidate.key!==channel.key)})}>Remove</Button>:null}</div>)}<Button type="button" variant="secondary" onClick={()=>update(index,{channels:[...item.channels,{key:`channel-${crypto.randomUUID()}`,channelType:component.lookups.channels![0]!.value,value:"",purpose:component.lookups.purposes[0]!.value,isPrimary:false}]})}>Add channel</Button></Card>)}{items.length<component.maxItems?<Button type="button" variant="secondary" onClick={()=>{const item=newContact(items.length);onChange([...items,{...item,channels:[{...item.channels[0]!,channelType:component.lookups.channels![0]!.value,purpose:component.lookups.purposes[0]!.value}]}]);}}>{component.addLabel}</Button>:null}</fieldset>;
-}
-
-function DynamicRequestField({field}:{readonly field:RequestFormField}) {
-  const id=`bp-dynamic-${field.key}`,
-    common={id,name:field.key,required:field.required} as const,
-    initial=field.defaultValue === undefined ? undefined : String(field.defaultValue);
-  if(field.widget==="lookup")return <Field label={field.label} htmlFor={id} hint={field.helpText}><Select {...common} defaultValue={initial??""}><option value="">{field.required?`Select ${field.label.toLowerCase()}`:"None"}</option>{field.lookup!.options.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</Select></Field>;
-  if(field.widget==="textarea")return <div className="bp-field--wide"><Field label={field.label} htmlFor={id} hint={field.helpText}><textarea {...common} className="a-input bp-textarea" maxLength={field.maxLength} placeholder={field.placeholder} defaultValue={initial}/></Field></div>;
-  if(field.widget==="checkbox")return <Field label={field.label} htmlFor={id} hint={field.helpText}><Input {...common} type="checkbox" defaultChecked={field.defaultValue===true}/></Field>;
-  const type=field.widget==="url"?"url":field.widget==="integer"||field.widget==="decimal"?"number":"text";
-  return <Field label={field.label} htmlFor={id} hint={field.helpText}><Input {...common} type={type} step={field.widget==="decimal"?"any":undefined} maxLength={field.maxLength} placeholder={field.placeholder} autoComplete={field.autoComplete} defaultValue={initial}/></Field>;
-}
-
-export function BusinessPartnerRequestDetail({ requestId }: { readonly requestId: string }) {
+export function BusinessPartnerRequestDetail({
+  requestId,
+}: {
+  readonly requestId: string;
+}) {
   const api = usePartnerApi(),
     toast = useToasts(),
     [view, setView] = useState<RequestView>(),
@@ -440,15 +928,21 @@ export function BusinessPartnerRequestDetail({ requestId }: { readonly requestId
   useEffect(() => {
     const syncTab = () => {
       const tab =
-        window.sessionStorage.getItem(`business-partner-request-tab:${requestId}`) ??
-        window.location.hash.slice(1);
-      if (["overview", "case", "validation", "workflow", "evidence", "result"].includes(tab))
-        setActiveTab(tab);
+        window.sessionStorage.getItem(
+          `business-partner-request-tab:${requestId}`,
+        ) ?? window.location.hash.slice(1);
+      setActiveTab(requestTab(tab));
     };
     syncTab();
     window.addEventListener("hashchange", syncTab);
     return () => window.removeEventListener("hashchange", syncTab);
   }, [requestId]);
+  function selectTab(tab: string) {
+    const next = requestTab(tab);
+    setActiveTab(next);
+    window.sessionStorage.setItem(`business-partner-request-tab:${requestId}`, next);
+    window.history.replaceState(window.history.state, "", `#${next}`);
+  }
   const actions = view ? governedCaseActions(view.case) : [];
   async function run(name: string, work: () => Promise<unknown>) {
     setBusy(name);
@@ -480,114 +974,189 @@ export function BusinessPartnerRequestDetail({ requestId }: { readonly requestId
     return (
       <div data-ui-state="empty">
         <PageSurface title="Business Partner request">
-          <Empty title="Case unavailable" detail="No governed case view was returned." />
+          <Empty
+            title="Case unavailable"
+            detail="No governed case view was returned."
+          />
         </PageSurface>
       </div>
     );
   const request = view.request,
     caseView = view.case,
-    uiState = busy ? "mutation-pending" : (errorState ?? (lastSuccess ? "mutation-success" : caseStatusUiState(caseView.status))),
-    applyLabel = request.kind === "amend_partner"
-      ? "Apply amendment"
-      : request.kind === "configure_company"
-        ? "Apply company configuration"
-        : request.targetBusinessPartnerId
-          ? "Apply role extension"
-          : "Create Business Partner",
-    awaitingMaterializer = request.status === "approved" && !actions.includes("apply"),
-    decisionReady = Boolean(view.workflow&&["open","claimed","in_progress"].includes(view.workflow.workItemStatus));
+    uiState = busy
+      ? "mutation-pending"
+      : (errorState ??
+        (lastSuccess
+          ? "mutation-success"
+          : caseStatusUiState(caseView.status))),
+    applyLabel =
+      request.kind === "amend_partner"
+        ? "Apply amendment"
+        : request.kind === "configure_company"
+          ? "Apply company configuration"
+          : request.targetBusinessPartnerId
+            ? "Apply role extension"
+            : "Create Business Partner",
+    awaitingMaterializer =
+      request.status === "approved" && !actions.includes("apply"),
+    decisionReady = Boolean(
+      view.workflow &&
+      ["open", "claimed", "in_progress"].includes(view.workflow.workItemStatus),
+    );
   return (
     <div data-ui-state={uiState}>
-      <PageSurface
-        title={request.requestNo}
-        description={`${label(caseView.kind)} · created ${formatDate(caseView.timestamps.createdAt)}`}
+      <RequestDetailSurface request={request} caseView={caseView}
         actions={
           <div className="bp-actions">
-            <a className="a-button a-button--secondary" href="/mdg/business-partner/requests">
+            <a
+              className="a-button a-button--secondary"
+              href="/mdg/business-partner/requests"
+            >
               All requests
             </a>
-            {actions.includes("open_partner") && request.materializedBusinessPartnerId ? (
-              <a className="a-button a-button--primary" href={`/mdg/business-partner/${encodeURIComponent(request.materializedBusinessPartnerId)}`}>
+            {actions.includes("open_partner") &&
+            request.materializedBusinessPartnerId ? (
+              <a
+                className="a-button a-button--primary"
+                href={`/mdg/business-partner/${encodeURIComponent(request.materializedBusinessPartnerId)}`}
+              >
                 Open partner
               </a>
             ) : null}
           </div>
         }
       >
-        <GovernedCaseSummary value={caseView} />
-        <div className="bp-summary">
-          <span>Source {label(request.source.kind)}</span>
-          <span>Role {label(request.requestedRole ?? "not_set")}</span>
-        </div>
-        {error ? <ErrorNotice detail={error} mfa={error.toLowerCase().includes("mfa") || error.toLowerCase().includes("assurance")} /> : null}
+        <GovernedCaseSummary value={caseView} showSummary={false} />
+        {error ? (
+          <ErrorNotice
+            detail={error}
+            mfa={
+              error.toLowerCase().includes("mfa") ||
+              error.toLowerCase().includes("assurance")
+            }
+          />
+        ) : null}
         <Tabs
           value={activeTab}
-          onValueChange={(tab) => {
-            setActiveTab(tab);
-            window.sessionStorage.setItem(`business-partner-request-tab:${requestId}`, tab);
-            window.history.replaceState(window.history.state, "", `#${tab}`);
-          }}
+          onValueChange={selectTab}
         >
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="case">Case</TabsTrigger>
-            <TabsTrigger value="validation">Validation ({view.validationFindings.length})</TabsTrigger>
-            <TabsTrigger value="workflow">Workflow</TabsTrigger>
-            <TabsTrigger value="evidence">Evidence</TabsTrigger>
-            <TabsTrigger value="result">Result</TabsTrigger>
+            <TabsTrigger value="details">Request details</TabsTrigger>
+            <TabsTrigger value="review">Review</TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
+          <RequestLifecycle view={view} />
           <TabsContent value="overview">
-            <RequestOverview request={request} editable={actions.includes("edit")} />
+            <RequestWorkspaceOverview view={view} onSelect={selectTab} />
           </TabsContent>
-          <TabsContent value="case">
-            <GovernedCaseContract value={caseView} />
+          <TabsContent value="details">
+            <RequestWorkspaceDetails view={view} />
           </TabsContent>
-          <TabsContent value="validation">
-            <ValidationPanel view={view} />
+          <TabsContent value="review">
+            <div className="bp-request-review">
+              <ValidationPanel view={view} />
+              <EvidencePanel request={request} />
+              <WorkflowPanel view={view} />
+              <Card className="bp-section"><h2>Outcome</h2><p>{request.status === "applied" ? "The approved changes have been applied." : request.status === "failed" ? "The request could not be completed. Review the failure details before retrying." : "No completed changes yet."}</p>{request.appliedAt ? <p>Completed {formatDate(request.appliedAt)}</p> : null}</Card>
+              <details className="bp-request-technical"><summary>Technical details</summary><GovernedCaseContract value={caseView} /><MaterializationResultProof proof={view.materializationProof} /></details>
+            </div>
           </TabsContent>
-          <TabsContent value="workflow">
-            <WorkflowPanel view={view} />
-          </TabsContent>
-          <TabsContent value="evidence">
-            <EvidencePanel request={request} />
-          </TabsContent>
-          <TabsContent value="result">
-            <MaterializationResultProof proof={view.materializationProof} />
+          <TabsContent value="activity">
+            <RequestActivity view={view} />
           </TabsContent>
         </Tabs>
-        <Card className="bp-command-bar">
+        <Card className="bp-command-bar bp-request-command-bar">
           <div>
-            <strong>Available actions</strong>
-            <p>Commands use governed version {caseView.rowVersion} and preserve idempotency evidence.</p>
-            {awaitingMaterializer ? <p>This request is approved and awaiting an authorized materializer. Continue with the designated executor account.</p> : null}
+            <strong>{request.status === "pending_approval" ? `Awaiting ${view.workflow?.stages.filter(stage => stage.status === "active").map(stage => stage.name).join(" and ") || "reviewer"} approval` : request.status === "applied" ? "Completed" : "Next action"}</strong>
+            {actions.includes("validate") ? <p>Validate the request to check for missing or inconsistent information.</p> : null}
+            {awaitingMaterializer ? (
+              <p>
+                This request is approved and awaiting completion by an authorized user.
+              </p>
+            ) : null}
           </div>
           <div className="bp-actions">
+            {actions.includes("edit") ? <a className="a-button a-button--secondary" href={`/mdg/business-partner/requests/${encodeURIComponent(request.id)}/edit`}>Edit request</a> : null}
             {actions.includes("validate") ? (
-              <Button variant="secondary" loading={busy === "validate"} onClick={() => void run("validate", () => api.validate(caseView.id, caseView.rowVersion))}>
+              <Button
+                variant="secondary"
+                loading={busy === "validate"}
+                onClick={() =>
+                  void run("validate", () =>
+                    api.validate(caseView.id, caseView.rowVersion),
+                  )
+                }
+              >
                 Validate
               </Button>
             ) : null}
             {actions.includes("submit") ? (
-              <Button loading={busy === "submit"} onClick={() => void run("submit", () => api.submit(caseView.id, caseView.rowVersion))}>
+              <Button
+                loading={busy === "submit"}
+                onClick={() =>
+                  void run("submit", () =>
+                    api.submit(caseView.id, caseView.rowVersion),
+                  )
+                }
+              >
                 Submit for approval
               </Button>
             ) : null}
-            {decisionReady&&actions.includes("return") ? <DecisionButton label="Return" decision="return" view={view} busy={busy} run={run} api={api} /> : null}
-            {decisionReady&&actions.includes("reject") ? <DecisionButton label="Reject" decision="reject" view={view} busy={busy} run={run} api={api} /> : null}
-            {decisionReady&&actions.includes("approve") ? <DecisionButton label="Approve" decision="approve" view={view} busy={busy} run={run} api={api} /> : null}
+            {decisionReady && actions.includes("return") ? (
+              <DecisionButton
+                label="Return"
+                decision="return"
+                view={view}
+                busy={busy}
+                run={run}
+                api={api}
+              />
+            ) : null}
+            {decisionReady && actions.includes("reject") ? (
+              <DecisionButton
+                label="Reject"
+                decision="reject"
+                view={view}
+                busy={busy}
+                run={run}
+                api={api}
+              />
+            ) : null}
+            {decisionReady && actions.includes("approve") ? (
+              <DecisionButton
+                label="Approve"
+                decision="approve"
+                view={view}
+                busy={busy}
+                run={run}
+                api={api}
+              />
+            ) : null}
             {actions.includes("apply") ? (
-              <Button loading={busy === "apply"} onClick={() => void run("apply", () => api.apply(caseView.id, caseView.rowVersion))}>
+              <Button
+                loading={busy === "apply"}
+                onClick={() =>
+                  void run("apply", () =>
+                    api.apply(caseView.id, caseView.rowVersion),
+                  )
+                }
+              >
                 {applyLabel}
               </Button>
             ) : null}
           </div>
         </Card>
-      </PageSurface>
+      </RequestDetailSurface>
     </div>
   );
 }
 
-export function BusinessPartnerAggregateDetail({ businessPartnerId }: { readonly businessPartnerId: string }) {
+export function BusinessPartnerAggregateDetail({
+  businessPartnerId,
+}: {
+  readonly businessPartnerId: string;
+}) {
   const api = usePartnerApi(),
     selection = useOrganizationSelection(),
     [aggregate, setAggregate] = useState<PartnerAggregate>(),
@@ -599,7 +1168,17 @@ export function BusinessPartnerAggregateDetail({ businessPartnerId }: { readonly
     const controller = new AbortController();
     setLoading(true);
     setError(undefined);
-    Promise.all([api.aggregate(businessPartnerId, selection.selected, controller.signal), api.eligibility(businessPartnerId, selection.selected, "purchasing", new Date().toISOString().slice(0, 10), controller.signal, selection.company?.companyCodeId)])
+    Promise.all([
+      api.aggregate(businessPartnerId, selection.selected, controller.signal),
+      api.eligibility(
+        businessPartnerId,
+        selection.selected,
+        "purchasing",
+        new Date().toISOString().slice(0, 10),
+        controller.signal,
+        selection.company?.companyCodeId,
+      ),
+    ])
       .then(([nextAggregate, nextEligibility]) => {
         setAggregate(nextAggregate);
         setEligibility(nextEligibility);
@@ -611,105 +1190,278 @@ export function BusinessPartnerAggregateDetail({ businessPartnerId }: { readonly
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [api, businessPartnerId, selection.selected, selection.company?.companyCodeId]);
+  }, [
+    api,
+    businessPartnerId,
+    selection.selected,
+    selection.company?.companyCodeId,
+  ]);
   return (
     <PageSurface
-      title={aggregate?.businessPartner.displayName ?? aggregate?.businessPartner.name ?? "Business Partner"}
-      description={aggregate ? `${aggregate.businessPartner.code} · ${label(aggregate.businessPartner.partnerCategory)}` : "Scoped partner aggregate"}
+      title={
+        aggregate?.businessPartner.name ??
+        aggregate?.businessPartner.name ??
+        "Business Partner"
+      }
+      description={
+        aggregate
+          ? `${aggregate.businessPartner.code} · ${label(aggregate.businessPartner.partnerCategory)}`
+          : "Scoped partner aggregate"
+      }
       actions={
         <div className="bp-actions">
-          <a className="a-button a-button--secondary" href="/mdg/business-partner">Back to partners</a>
-          <a className="a-button a-button--secondary" href={`/mdg/business-partner/${encodeURIComponent(businessPartnerId)}/scope/new`}>Assign organization / configure company</a>
-          <a className="a-button a-button--secondary" href={`/mdg/business-partner/${encodeURIComponent(businessPartnerId)}/customer`}>Customer credit &amp; lifecycle</a>
-          <a className="a-button a-button--primary" href={`/mdg/business-partner/${encodeURIComponent(businessPartnerId)}/roles/new`}>Add supplier/customer role</a>
+          <a
+            className="a-button a-button--secondary"
+            href="/mdg/business-partner"
+          >
+            Back to partners
+          </a>
+          <a
+            className="a-button a-button--secondary"
+            href={`/mdg/business-partner/${encodeURIComponent(businessPartnerId)}/scope/new`}
+          >
+            Assign organization / configure company
+          </a>
+          <a
+            className="a-button a-button--secondary"
+            href={`/mdg/business-partner/${encodeURIComponent(businessPartnerId)}/customer`}
+          >
+            Customer credit &amp; lifecycle
+          </a>
+          <a
+            className="a-button a-button--primary"
+            href={`/mdg/business-partner/${encodeURIComponent(businessPartnerId)}/roles/new`}
+          >
+            Add supplier/customer role
+          </a>
         </div>
       }
     >
       <Card className="bp-filter-bar">
-        <OrganizationSelect selection={selection} value={selection.selected} onChange={selection.setSelected} />
+        <OrganizationSelect
+          selection={selection}
+          value={selection.selected}
+          onChange={selection.setSelected}
+        />
       </Card>
       {error ? <ErrorNotice detail={error} /> : null}
-      {loading ? <RequestSkeleton /> : aggregate && eligibility ? <AggregateTabs aggregate={aggregate} eligibility={eligibility} /> : selection.selected ? null : <Empty title="Choose an operating organization" detail="Partner details are authorized and loaded within an organization scope." />}
+      {loading ? (
+        <RequestSkeleton />
+      ) : aggregate && eligibility ? (
+        <AggregateTabs aggregate={aggregate} eligibility={eligibility} />
+      ) : selection.selected ? null : (
+        <Empty
+          title="Choose an operating organization"
+          detail="Partner details are authorized and loaded within an organization scope."
+        />
+      )}
     </PageSurface>
   );
 }
 
-function MeshProfileDecisionEvidence({payload}:{payload:Readonly<Record<string,unknown>>}) {
-  const preview=payload["meshChangePreview"],choices=payload["meshChangeDecisions"];
-  if(!preview||typeof preview!=="object"||!choices||typeof choices!=="object")return null;
-  const fields=(preview as Record<string,unknown>)["fields"];
-  if(!Array.isArray(fields))return null;
-  return <section><h3>Retained profile field decisions</h3><p>Resolution {String(payload["meshChangeResolutionId"])}. These choices are fixed for this case.</p><table><caption>Values reviewed for amendment</caption><thead><tr><th scope="col">Field</th><th scope="col">Last accepted</th><th scope="col">Incoming</th><th scope="col">Current at proposal</th><th scope="col">Decision</th></tr></thead><tbody>{fields.map((raw,index)=>{const field=raw as Record<string,unknown>;return <tr key={index}><th scope="row">{String(field["path"])}</th><td>{String(field["baseline"]??"—")}</td><td>{String(field["incoming"]??"—")}</td><td>{String(field["current"]??"—")}</td><td>{(choices as Record<string,unknown>)[String(field["path"])]==="source"?"Use incoming":"Keep current"}</td></tr>;})}</tbody></table></section>;
-}
-
-function RequestOverview({ request, editable }: { request: PartnerRequest; editable: boolean }) {
-  const payload = request.proposedPayload;
+function MeshProfileDecisionEvidence({
+  payload,
+}: {
+  payload: Readonly<Record<string, unknown>>;
+}) {
+  const preview = payload["meshChangePreview"],
+    choices = payload["meshChangeDecisions"];
+  if (
+    !preview ||
+    typeof preview !== "object" ||
+    !choices ||
+    typeof choices !== "object"
+  )
+    return null;
+  const fields = (preview as Record<string, unknown>)["fields"];
+  if (!Array.isArray(fields)) return null;
   return (
-    <div className="bp-card-grid">
-      <Card className="bp-section">
-        <h2>Proposed identity</h2>
-        <MeshProfileDecisionEvidence payload={payload} />
-        <Definition
-          values={[
-            ["Registered name", payload["name"]],
-            ["Legal name", payload["legalName"] ?? payload["legal_name"]],
-            ["Display name", payload["displayName"] ?? payload["display_name"]],
-            ["Country", payload["registrationCountryCode"] ?? payload["registration_country_code"]],
-            ["Category", payload["partnerCategory"] ?? payload["partner_category"]],
-            ["Supplier type", payload["supplierType"] ?? payload["supplier_type"]],
-          ]}
-        />
-        {editable ? (
-          <p>
-            <a href={`/mdg/business-partner/requests/${encodeURIComponent(request.id)}/edit`}>Edit draft fields</a>
-          </p>
-        ) : null}
-      </Card>
-      <Card className="bp-section">
-        <h2>Lifecycle</h2>
-        <Definition
-          values={[
-            ["Status", label(request.status)],
-            ["Submitted", formatDate(request.submittedAt)],
-            ["Approved", formatDate(request.approvedAt)],
-            ["Applied", formatDate(request.appliedAt)],
-            ["Business Partner ID", request.materializedBusinessPartnerId],
-          ]}
-        />
-      </Card>
-    </div>
+    <section>
+      <h3>Retained profile field decisions</h3>
+      <p>
+        Resolution {String(payload["meshChangeResolutionId"])}. These choices
+        are fixed for this case.
+      </p>
+      <table>
+        <caption>Values reviewed for amendment</caption>
+        <thead>
+          <tr>
+            <th scope="col">Field</th>
+            <th scope="col">Last accepted</th>
+            <th scope="col">Incoming</th>
+            <th scope="col">Current at proposal</th>
+            <th scope="col">Decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          {fields.map((raw, index) => {
+            const field = raw as Record<string, unknown>;
+            return (
+              <tr key={index}>
+                <th scope="row">{String(field["path"])}</th>
+                <td>{String(field["baseline"] ?? "—")}</td>
+                <td>{String(field["incoming"] ?? "—")}</td>
+                <td>{String(field["current"] ?? "—")}</td>
+                <td>
+                  {(choices as Record<string, unknown>)[
+                    String(field["path"])
+                  ] === "source"
+                    ? "Use incoming"
+                    : "Keep current"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
   );
 }
+
 function ValidationPanel({ view }: { view: RequestView }) {
   return <ValidationEvidence view={view} />;
 }
 function WorkflowPanel({ view }: { view: RequestView }) {
   return (
-    <div className="bp-card-grid"><Card className="bp-section">
-      <h2>Onboarding cycle</h2>
-      {view.onboardingCycle?<><Definition values={[["Template",`${view.onboardingCycle.template.code} v${view.onboardingCycle.template.version}`],["Cycle run",view.onboardingCycle.runId],["Status",label(view.onboardingCycle.status)],["Started",formatDate(view.onboardingCycle.startedAt)],["Completed",formatDate(view.onboardingCycle.completedAt)]]}/><ol className="bp-workflow-timeline" aria-label="Onboarding cycle timeline">{view.onboardingCycle.tasks.map((task,index)=><li key={task.id} data-status={task.status}><div><strong>{index+1}. {task.name}</strong> <Badge tone={task.status==="completed"?"success":task.status==="blocked"?"danger":task.status==="ready"?"warning":"neutral"}>{label(task.status)}</Badge></div><p>{label(task.completionMode)}{task.completedAt?` · ${formatDate(task.completedAt)}`:""}</p></li>)}</ol><p>{view.onboardingCycle.subjects.length} linked subject{view.onboardingCycle.subjects.length===1?"":"s"}; the case is the primary cycle subject.</p></>:<p>The supplier onboarding cycle starts when a new supplier request or invitation is created.</p>}
-    </Card><Card className="bp-section">
-      <h2>Approval workflow</h2>
-      {view.workflow ? (
-        <><Definition
-          values={[
-            ["Definition", `${view.workflow.definition.code} v${view.workflow.definition.version}`],
-            ["Workflow request", view.workflow.requestId],
-            ["Work item", view.workflow.workItemId],
-            ["Task owner", view.workflow.ownerPrincipalId],
-            ["Task status", label(view.workflow.workItemStatus)],
-            ["Task version", view.workflow.workItemVersion],
-            ["Submitter", view.request.submittedBy],
-            ["Approver", view.request.approvedBy],
-          ]}
-        />
-        <ol className="bp-workflow-timeline" aria-label="Workflow timeline">
-          {view.workflow.stages.map(stage=><li key={stage.id} data-status={stage.status}><div><strong>{stage.stageNo}. {label(stage.name)}</strong> <Badge tone={stage.status==="completed"?"success":stage.status==="active"?"warning":"neutral"}>{label(stage.outcome??stage.status)}</Badge></div><p>{label(stage.mode)} · {stage.quorum.required} of {stage.quorum.eligibleCount} approvals required</p>{stage.dueAt?<p>Due {formatDate(stage.dueAt)}{stage.escalateAt?` · Escalates ${formatDate(stage.escalateAt)}`:""}</p>:null}{stage.remindersAt.length?<p>Reminders: {stage.remindersAt.map(formatDate).join(", ")}</p>:null}{stage.workItems.length?<ul>{stage.workItems.map(item=><li key={item.id}><span>{item.ownerPrincipalId??"Unassigned"}</span> · <span>{label(item.decision??item.status)}</span>{item.dueAt?` · due ${formatDate(item.dueAt)}`:""}</li>)}</ul>:stage.status==="pending"?<p>Work items are created when this stage becomes active.</p>:null}</li>)}
-        </ol></>
-      ) : (
-        <p>This request has not entered approval.</p>
-      )}
-    </Card></div>
+    <div className="bp-card-grid">
+      <Card className="bp-section">
+        <h2>Onboarding cycle</h2>
+        {view.onboardingCycle ? (
+          <>
+            <details className="bp-request-technical"><summary>Technical details</summary><Definition
+              values={[
+                [
+                  "Template",
+                  `${view.onboardingCycle.template.code} v${view.onboardingCycle.template.version}`,
+                ],
+                ["Cycle run", view.onboardingCycle.runId],
+                ["Status", label(view.onboardingCycle.status)],
+                ["Started", formatDate(view.onboardingCycle.startedAt)],
+                ["Completed", formatDate(view.onboardingCycle.completedAt)],
+              ]}
+            /></details>
+            <ol
+              className="bp-workflow-timeline"
+              aria-label="Onboarding cycle timeline"
+            >
+              {view.onboardingCycle.tasks.map((task, index) => (
+                <li key={task.id} data-status={task.status}>
+                  <div>
+                    <strong>
+                      {index + 1}. {task.name}
+                    </strong>{" "}
+                    <Badge
+                      tone={
+                        task.status === "completed"
+                          ? "success"
+                          : task.status === "blocked"
+                            ? "danger"
+                            : task.status === "ready"
+                              ? "warning"
+                              : "neutral"
+                      }
+                    >
+                      {label(task.status)}
+                    </Badge>
+                  </div>
+                  <p>
+                    {label(task.completionMode)}
+                    {task.completedAt
+                      ? ` · ${formatDate(task.completedAt)}`
+                      : ""}
+                  </p>
+                </li>
+              ))}
+            </ol>
+            <p>
+              {view.onboardingCycle.subjects.length} linked subject
+              {view.onboardingCycle.subjects.length === 1 ? "" : "s"}; the case
+              is the primary cycle subject.
+            </p>
+          </>
+        ) : (
+          <p>No onboarding tasks are recorded yet.</p>
+        )}
+      </Card>
+      <Card className="bp-section">
+        <h2>Approvals</h2>
+        {view.workflow ? (
+          <>
+            <details className="bp-request-technical"><summary>Technical details</summary><Definition
+              values={[
+                [
+                  "Definition",
+                  `${view.workflow.definition.code} v${view.workflow.definition.version}`,
+                ],
+                ["Workflow request", view.workflow.requestId],
+                ["Work item", view.workflow.workItemId],
+                ["Task owner", view.workflow.ownerPrincipalId],
+                ["Task status", label(view.workflow.workItemStatus)],
+                ["Task version", view.workflow.workItemVersion],
+                ["Submitter", view.request.submittedBy],
+                ["Approver", view.request.approvedBy],
+              ]}
+            /></details>
+            <ol className="bp-workflow-timeline" aria-label="Workflow timeline">
+              {view.workflow.stages.map((stage) => (
+                <li key={stage.id} data-status={stage.status}>
+                  <div>
+                    <strong>
+                      {stage.stageNo}. {label(stage.name)}
+                    </strong>{" "}
+                    <Badge
+                      tone={
+                        stage.status === "completed"
+                          ? "success"
+                          : stage.status === "active"
+                            ? "warning"
+                            : "neutral"
+                      }
+                    >
+                      {label(stage.outcome ?? stage.status)}
+                    </Badge>
+                  </div>
+                  <p>
+                    {label(stage.mode)} · {stage.quorum.required} of{" "}
+                    {stage.quorum.eligibleCount} approvals required
+                  </p>
+                  {stage.dueAt ? (
+                    <p>
+                      Due {formatDate(stage.dueAt)}
+                      {stage.escalateAt
+                        ? ` · Escalates ${formatDate(stage.escalateAt)}`
+                        : ""}
+                    </p>
+                  ) : null}
+                  {stage.remindersAt.length ? (
+                    <p>
+                      Reminders: {stage.remindersAt.map(formatDate).join(", ")}
+                    </p>
+                  ) : null}
+                  {stage.workItems.length ? (
+                    <ul>
+                      {stage.workItems.map((item) => (
+                        <li key={item.id}>
+                          <span>{item.ownerDisplayName ?? (item.ownerPrincipalId ? "Assigned reviewer" : "Unassigned")}</span> ·{" "}
+                          <span>{label(item.decision ?? item.status)}</span>
+                          {item.dueAt ? ` · due ${formatDate(item.dueAt)}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : stage.status === "pending" ? (
+                    <p>
+                      Work items are created when this stage becomes active.
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : (
+          <p>This request has not entered approval.</p>
+        )}
+      </Card>
+    </div>
   );
 }
 function EvidencePanel({ request }: { request: PartnerRequest }) {
@@ -718,12 +1470,18 @@ function EvidencePanel({ request }: { request: PartnerRequest }) {
       <DuplicateEvidence request={request} />
       <Card className="bp-section">
         <h2>Change impact</h2>
-        <JsonSummary value={request.changeImpact} />
+        <p>{Object.keys(request.changeImpact).length ? "Change impact information is available." : "No change impact has been recorded."}</p>{Object.keys(request.changeImpact).length ? <details className="bp-request-technical"><summary>View change impact details</summary><JsonSummary value={request.changeImpact} /></details> : null}
       </Card>
     </div>
   );
 }
-function AggregateTabs({ aggregate, eligibility }: { aggregate: PartnerAggregate; eligibility: PartnerEligibility }) {
+function AggregateTabs({
+  aggregate,
+  eligibility,
+}: {
+  aggregate: PartnerAggregate;
+  eligibility: PartnerEligibility;
+}) {
   const partner = aggregate.businessPartner,
     roleCount = aggregate.suppliers.length + aggregate.customers.length;
   return (
@@ -732,8 +1490,12 @@ function AggregateTabs({ aggregate, eligibility }: { aggregate: PartnerAggregate
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="readiness">Readiness</TabsTrigger>
         <TabsTrigger value="roles">Roles ({roleCount})</TabsTrigger>
-        <TabsTrigger value="organizations">Organizations ({aggregate.organizationAssignments.length})</TabsTrigger>
-        <TabsTrigger value="onboarding">Onboarding ({aggregate.onboardingRequests.length})</TabsTrigger>
+        <TabsTrigger value="organizations">
+          Organizations ({aggregate.organizationAssignments.length})
+        </TabsTrigger>
+        <TabsTrigger value="onboarding">
+          Onboarding ({aggregate.onboardingRequests.length})
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="overview">
         <div className="bp-card-grid">
@@ -743,8 +1505,6 @@ function AggregateTabs({ aggregate, eligibility }: { aggregate: PartnerAggregate
               values={[
                 ["Code", partner.code],
                 ["Registered name", partner.name],
-                ["Legal name", partner.legalName],
-                ["Display name", partner.displayName],
                 ["Category", label(partner.partnerCategory)],
                 ["Country", partner.registrationCountryCode],
                 ["Legal form", partner.legalForm],
@@ -771,13 +1531,23 @@ function AggregateTabs({ aggregate, eligibility }: { aggregate: PartnerAggregate
         <Card className="bp-section">
           <h2>Supplier purchasing readiness</h2>
           <p>
-            <Badge tone={eligibility.eligible ? "success" : "danger"}>{eligibility.eligible ? "Eligible" : "Not eligible"}</Badge> <Badge tone={eligibility.preferredSupplier ? "success" : "neutral"}>{eligibility.preferredSupplier ? "Preferred supplier" : "Standard supplier"}</Badge>
+            <Badge tone={eligibility.eligible ? "success" : "danger"}>
+              {eligibility.eligible ? "Eligible" : "Not eligible"}
+            </Badge>{" "}
+            <Badge tone={eligibility.preferredSupplier ? "success" : "neutral"}>
+              {eligibility.preferredSupplier
+                ? "Preferred supplier"
+                : "Standard supplier"}
+            </Badge>
           </p>
           <Definition
             values={[
               ["Business date", eligibility.businessDate],
               ["Operation", label(eligibility.operationCode)],
-              ["Effective preference", eligibility.effectivePreferenceIds.join(", ") || "None"],
+              [
+                "Effective preference",
+                eligibility.effectivePreferenceIds.join(", ") || "None",
+              ],
               ["Decision fingerprint", eligibility.decisionFingerprint],
             ]}
           />
@@ -785,7 +1555,11 @@ function AggregateTabs({ aggregate, eligibility }: { aggregate: PartnerAggregate
             <ul className="bp-findings">
               {eligibility.reasons.map((reason) => (
                 <li key={`${reason.code}:${reason.recordId ?? ""}`}>
-                  <Badge tone={reason.severity === "blocking" ? "danger" : "warning"}>{label(reason.severity)}</Badge>
+                  <Badge
+                    tone={reason.severity === "blocking" ? "danger" : "warning"}
+                  >
+                    {label(reason.severity)}
+                  </Badge>
                   <div>
                     <strong>{label(reason.code)}</strong>
                     {reason.recordId ? <span>{reason.recordId}</span> : null}
@@ -808,7 +1582,8 @@ function AggregateTabs({ aggregate, eligibility }: { aggregate: PartnerAggregate
           render={(item) => (
             <Card className="bp-section" key={item.id}>
               <h2>
-                {item.operatingOrganizationCode} · {item.operatingOrganizationName}
+                {item.operatingOrganizationCode} ·{" "}
+                {item.operatingOrganizationName}
               </h2>
               <Definition
                 values={[
@@ -829,7 +1604,13 @@ function AggregateTabs({ aggregate, eligibility }: { aggregate: PartnerAggregate
   );
 }
 function CommercialRoleCards({ aggregate }: { aggregate: PartnerAggregate }) {
-  if (!aggregate.suppliers.length && !aggregate.customers.length) return <Empty title="Nothing to show" detail="No Supplier or Customer role is visible in this scope." />;
+  if (!aggregate.suppliers.length && !aggregate.customers.length)
+    return (
+      <Empty
+        title="Nothing to show"
+        detail="No Supplier or Customer role is visible in this scope."
+      />
+    );
   return (
     <div className="bp-card-grid">
       {aggregate.suppliers.map((item) => (
@@ -843,7 +1624,11 @@ function CommercialRoleCards({ aggregate }: { aggregate: PartnerAggregate }) {
             ]}
           />
           <p>
-            <a href={`/mdg/business-partner/${encodeURIComponent(aggregate.businessPartner.id)}/supplier`}>Open supplier controls</a>
+            <a
+              href={`/mdg/business-partner/${encodeURIComponent(aggregate.businessPartner.id)}/supplier`}
+            >
+              Open supplier controls
+            </a>
           </p>
         </Card>
       ))}
@@ -859,18 +1644,46 @@ function CommercialRoleCards({ aggregate }: { aggregate: PartnerAggregate }) {
             ]}
           />
           <p>
-            <a href={`/mdg/business-partner/${encodeURIComponent(aggregate.businessPartner.id)}/customer`}>Open customer controls</a>
+            <a
+              href={`/mdg/business-partner/${encodeURIComponent(aggregate.businessPartner.id)}/customer`}
+            >
+              Open customer controls
+            </a>
           </p>
         </Card>
       ))}
     </div>
   );
 }
-function DecisionButton({ label: caption, decision, view, busy, run, api }: { label: string; decision: "return" | "reject" | "approve"; view: RequestView; busy?: string; run: (name: string, work: () => Promise<unknown>) => Promise<void>; api: ReturnType<typeof createBusinessPartnerClient> }) {
+function DecisionButton({
+  label: caption,
+  decision,
+  view,
+  busy,
+  run,
+  api,
+}: {
+  label: string;
+  decision: "return" | "reject" | "approve";
+  view: RequestView;
+  busy?: string;
+  run: (name: string, work: () => Promise<unknown>) => Promise<void>;
+  api: ReturnType<typeof createBusinessPartnerClient>;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant={decision === "reject" ? "danger" : decision === "return" ? "secondary" : "primary"} loading={busy === decision} onClick={() => setOpen(true)}>
+      <Button
+        variant={
+          decision === "reject"
+            ? "danger"
+            : decision === "return"
+              ? "secondary"
+              : "primary"
+        }
+        loading={busy === decision}
+        onClick={() => setOpen(true)}
+      >
         {caption}
       </Button>
       <DecisionDialog
@@ -897,7 +1710,13 @@ function DecisionButton({ label: caption, decision, view, busy, run, api }: { la
   );
 }
 function RequestTable({ items }: { items: readonly PartnerRequest[] }) {
-  if (!items.length) return <Empty title="No onboarding requests" detail="Create a request to start a governed Business Partner lifecycle." />;
+  if (!items.length)
+    return (
+      <Empty
+        title="No onboarding requests"
+        detail="Create a request to start a governed Business Partner lifecycle."
+      />
+    );
   return (
     <div className="bp-table-wrap">
       <table className="bp-table">
@@ -914,12 +1733,24 @@ function RequestTable({ items }: { items: readonly PartnerRequest[] }) {
           {items.map((item) => (
             <tr key={item.id}>
               <td>
-                <a href={`/mdg/business-partner/requests/${encodeURIComponent(item.id)}`}>{item.requestNo}</a>
+                <a
+                  href={`/mdg/business-partner/requests/${encodeURIComponent(item.id)}`}
+                >
+                  {item.requestNo}
+                </a>
               </td>
-              <td>{String(item.proposedPayload["displayName"] ?? item.proposedPayload["legalName"] ?? item.proposedPayload["name"] ?? "—")}</td>
+              <td>
+                {String(
+                  item.proposedPayload["name"] ??
+                    item.proposedPayload["name"] ??
+                    "—",
+                )}
+              </td>
               <td>{label(item.requestedRole ?? "—")}</td>
               <td>
-                <Badge tone={statusTone(item.status)}>{label(item.status)}</Badge>
+                <Badge tone={statusTone(item.status)}>
+                  {label(item.status)}
+                </Badge>
               </td>
               <td>{formatDate(item.updatedAt ?? item.createdAt)}</td>
             </tr>
@@ -929,10 +1760,22 @@ function RequestTable({ items }: { items: readonly PartnerRequest[] }) {
     </div>
   );
 }
-function OrganizationSelect({ selection, value, onChange }: { selection: ReturnType<typeof useOrganizationSelection>; value: string; onChange: (value: string) => void }) {
+function OrganizationSelect({
+  selection,
+  value,
+  onChange,
+}: {
+  selection: ReturnType<typeof useOrganizationSelection>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <Field label="Operating organization" htmlFor="bp-list-organization">
-      <Select id="bp-list-organization" value={value} onChange={(event) => onChange(event.currentTarget.value)}>
+      <Select
+        id="bp-list-organization"
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+      >
         <option value="">Select organization</option>
         {selection.compatible.map((item) => (
           <option key={item.id} value={item.id}>
@@ -943,7 +1786,17 @@ function OrganizationSelect({ selection, value, onChange }: { selection: ReturnT
     </Field>
   );
 }
-function Field({ label: caption, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: string; children: ReactNode }) {
+function Field({
+  label: caption,
+  htmlFor,
+  hint,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  hint?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="bp-field">
       <Label htmlFor={htmlFor}>{caption}</Label>
@@ -952,7 +1805,11 @@ function Field({ label: caption, htmlFor, hint, children }: { label: string; htm
     </div>
   );
 }
-function Definition({ values }: { values: readonly (readonly [string, unknown])[] }) {
+function Definition({
+  values,
+}: {
+  values: readonly (readonly [string, unknown])[];
+}) {
   return (
     <dl className="bp-definition">
       {values.map(([term, value]) => (
@@ -965,10 +1822,26 @@ function Definition({ values }: { values: readonly (readonly [string, unknown])[
   );
 }
 function JsonSummary({ value }: { value: Readonly<Record<string, unknown>> }) {
-  return Object.keys(value).length ? <Definition values={Object.entries(value)} /> : <p>No evidence recorded.</p>;
+  return Object.keys(value).length ? (
+    <Definition values={Object.entries(value)} />
+  ) : (
+    <p>No evidence recorded.</p>
+  );
 }
-function Cards<T>({ items, empty, render }: { items: readonly T[]; empty: string; render: (item: T) => ReactNode }) {
-  return items.length ? <div className="bp-card-grid">{items.map(render)}</div> : <Empty title="Nothing to show" detail={empty} />;
+function Cards<T>({
+  items,
+  empty,
+  render,
+}: {
+  items: readonly T[];
+  empty: string;
+  render: (item: T) => ReactNode;
+}) {
+  return items.length ? (
+    <div className="bp-card-grid">{items.map(render)}</div>
+  ) : (
+    <Empty title="Nothing to show" detail={empty} />
+  );
 }
 function Empty({ title, detail }: { title: string; detail: string }) {
   return (
@@ -978,14 +1851,27 @@ function Empty({ title, detail }: { title: string; detail: string }) {
     </Card>
   );
 }
-function ErrorNotice({ detail, mfa = false }: { detail: string; mfa?: boolean }) {
+function ErrorNotice({
+  detail,
+  mfa = false,
+}: {
+  detail: string;
+  mfa?: boolean;
+}) {
   return (
     <div className="bp-error" role="alert">
       <strong>Unable to complete the request</strong>
       <p>{detail}</p>
       {mfa ? (
-        <form method="post" action={`/api/auth/step-up/start?returnTo=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/mdg/business-partner/requests")}`}>
-          <input type="hidden" name="csrfToken" value={readBrowserCsrfToken() ?? ""} />
+        <form
+          method="post"
+          action={`/api/auth/step-up/start?returnTo=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/mdg/business-partner/requests")}`}
+        >
+          <input
+            type="hidden"
+            name="csrfToken"
+            value={readBrowserCsrfToken() ?? ""}
+          />
           <Button type="submit">Verify with MFA</Button>
         </form>
       ) : null}
@@ -1009,18 +1895,35 @@ function RequestDetailSkeleton() {
     </div>
   );
 }
-const statuses: readonly RequestStatus[] = ["draft", "validation_failed", "pending_approval", "returned", "approved", "rejected", "applying", "applied", "failed", "cancelled", "superseded"];
+const statuses: readonly RequestStatus[] = [
+  "draft",
+  "validation_failed",
+  "pending_approval",
+  "returned",
+  "approved",
+  "rejected",
+  "applying",
+  "applied",
+  "failed",
+  "cancelled",
+  "superseded",
+];
 function value(data: FormData, name: string): string {
   const result = data.get(name);
-  if (typeof result !== "string" || !result.trim()) throw new Error(`${label(name)} is required`);
+  if (typeof result !== "string" || !result.trim())
+    throw new Error(`${label(name)} is required`);
   return result.trim();
 }
 function optionalValue(data: FormData, name: string): string | undefined {
   const result = data.get(name);
-  return typeof result === "string" && result.trim() ? result.trim() : undefined;
+  return typeof result === "string" && result.trim()
+    ? result.trim()
+    : undefined;
 }
 function label(value: string): string {
-  return value.replaceAll(/[._-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return value
+    .replaceAll(/[._-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 function formatDate(value: unknown): string {
   return typeof value === "string" && Number.isFinite(parseInstant(value))
@@ -1036,12 +1939,17 @@ function display(value: unknown): string {
   return String(value);
 }
 function message(cause: unknown): string {
-  if (cause instanceof ApiTransportError) return cause.problem?.detail ?? cause.message;
+  if (cause instanceof ApiTransportError)
+    return cause.problem?.detail ?? cause.message;
   if (cause instanceof Error) return cause.message;
   return "Unexpected Business Partner error";
 }
 
-export function BusinessPartnerRequestEdit({ requestId }: { readonly requestId: string }) {
+export function BusinessPartnerRequestEdit({
+  requestId,
+}: {
+  readonly requestId: string;
+}) {
   const api = usePartnerApi(),
     toast = useToasts(),
     [view, setView] = useState<RequestView>(),
@@ -1083,6 +1991,7 @@ export function BusinessPartnerRequestEdit({ requestId }: { readonly requestId: 
         </PageSurface>
       </div>
     );
+  if(request.kind==="new_partner"&&request.source.kind==="manual"&&request.requestedRole==="supplier") return <BusinessPartnerRequestEntry initialRequest={view}/>;
   const payload = request.proposedPayload;
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1096,9 +2005,10 @@ export function BusinessPartnerRequestEdit({ requestId }: { readonly requestId: 
         proposedPayload: {
           ...payload,
           name: value(data, "name"),
-          legalName: value(data, "legalName"),
-          displayName: optionalValue(data, "displayName"),
-          registrationCountryCode: value(data, "registrationCountryCode").toUpperCase(),
+          registrationCountryCode: value(
+            data,
+            "registrationCountryCode",
+          ).toUpperCase(),
           legalForm: optionalValue(data, "legalForm"),
           websiteUrl: optionalValue(data, "websiteUrl"),
           description: optionalValue(data, "description"),
@@ -1107,7 +2017,8 @@ export function BusinessPartnerRequestEdit({ requestId }: { readonly requestId: 
       toast.push({
         tone: "success",
         title: "Draft saved",
-        detail: "Validation evidence was reset because governed fields changed.",
+        detail:
+          "Validation evidence was reset because governed fields changed.",
       });
       setDirty(false);
       navigation.navigate(href, true);
@@ -1128,31 +2039,67 @@ export function BusinessPartnerRequestEdit({ requestId }: { readonly requestId: 
           </Button>
         }
       >
-        <form className="bp-form" onSubmit={save} onChangeCapture={() => setDirty(true)}>
+        <form
+          className="bp-form"
+          onSubmit={save}
+          onChangeCapture={() => setDirty(true)}
+        >
           <GovernedCaseSummary value={caseView} />
           <Card className="bp-section">
             <div className="bp-grid">
               <Field label="Registered name" htmlFor="bp-edit-name">
-                <Input id="bp-edit-name" name="name" required maxLength={255} defaultValue={textValue(payload["name"])} />
-              </Field>
-              <Field label="Legal name" htmlFor="bp-edit-legal-name">
-                <Input id="bp-edit-legal-name" name="legalName" required maxLength={255} defaultValue={textValue(payload["legalName"] ?? payload["legal_name"])} />
-              </Field>
-              <Field label="Display name" htmlFor="bp-edit-display-name">
-                <Input id="bp-edit-display-name" name="displayName" maxLength={255} defaultValue={textValue(payload["displayName"] ?? payload["display_name"])} />
+                <Input
+                  id="bp-edit-name"
+                  name="name"
+                  required
+                  maxLength={320}
+                  defaultValue={textValue(payload["name"])}
+                />
               </Field>
               <Field label="Registration country" htmlFor="bp-edit-country">
-                <Input id="bp-edit-country" name="registrationCountryCode" required minLength={2} maxLength={2} pattern="[A-Za-z]{2}" defaultValue={textValue(payload["registrationCountryCode"] ?? payload["registration_country_code"])} />
+                <Input
+                  id="bp-edit-country"
+                  name="registrationCountryCode"
+                  required
+                  minLength={2}
+                  maxLength={2}
+                  pattern="[A-Za-z]{2}"
+                  defaultValue={textValue(
+                    payload["registrationCountryCode"] ??
+                      payload["registration_country_code"],
+                  )}
+                />
               </Field>
               <Field label="Legal form" htmlFor="bp-edit-legal-form">
-                <Input id="bp-edit-legal-form" name="legalForm" maxLength={80} defaultValue={textValue(payload["legalForm"] ?? payload["legal_form"])} />
+                <Input
+                  id="bp-edit-legal-form"
+                  name="legalForm"
+                  maxLength={80}
+                  defaultValue={textValue(
+                    payload["legalForm"] ?? payload["legal_form"],
+                  )}
+                />
               </Field>
               <Field label="Website" htmlFor="bp-edit-website">
-                <Input id="bp-edit-website" name="websiteUrl" type="url" maxLength={2048} defaultValue={textValue(payload["websiteUrl"] ?? payload["website_url"])} />
+                <Input
+                  id="bp-edit-website"
+                  name="websiteUrl"
+                  type="url"
+                  maxLength={2048}
+                  defaultValue={textValue(
+                    payload["websiteUrl"] ?? payload["website_url"],
+                  )}
+                />
               </Field>
             </div>
             <Field label="Description" htmlFor="bp-edit-description">
-              <textarea id="bp-edit-description" name="description" className="a-input bp-textarea" maxLength={2000} defaultValue={textValue(payload["description"])} />
+              <textarea
+                id="bp-edit-description"
+                name="description"
+                className="a-input bp-textarea"
+                maxLength={2000}
+                defaultValue={textValue(payload["description"])}
+              />
             </Field>
           </Card>
           {error ? <ErrorNotice detail={error} /> : null}
@@ -1177,12 +2124,15 @@ export function AuthorizedNewBusinessPartnerRequest() {
   if (!permissions.has("neon.relationship.entity_case.create"))
     return (
       <div data-ui-state="unauthorized">
-        <PageSurface title="New supplier onboarding request" description="Create authority is assigned per operating organization.">
+        <PageSurface
+          title="New business partner request"
+          description="Create authority is assigned per operating organization."
+        >
           <ErrorNotice detail="You do not have permission to create Business Partner requests in the selected context." />
         </PageSurface>
       </div>
     );
-  return <NewBusinessPartnerRequest />;
+  return <BusinessPartnerRequestEntry />;
 }
 
 export { BusinessPartnerTransactionSelector } from "./transaction-selector";

@@ -49,21 +49,19 @@ import type {
   RouteSlugRedirectRecord,
 } from "./ports.js";
 
-export class ExperienceAccessError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-  ) {
-    super(message);
-    this.name = "ExperienceAccessError";
-  }
-}
+import { ExperienceAccessError } from "@athyper/server-contract-experience";
+export { ExperienceAccessError } from "@athyper/server-contract-experience";
 
 export interface ExperienceServiceOptions {
   readonly repositories: ExperienceRepositoryProvider;
   readonly cache?: ExperienceCache;
-  readonly readRuntimeDefaults?: (context:VerifiedRequestContext,at:Date)=>Promise<{readonly densityCode:"comfortable"|"compact";readonly configurationRevision:string}>;
+  readonly readRuntimeDefaults?: (
+    context: VerifiedRequestContext,
+    at: Date,
+  ) => Promise<{
+    readonly densityCode: "comfortable" | "compact";
+    readonly configurationRevision: string;
+  }>;
   readonly now?: () => Date;
 }
 
@@ -98,10 +96,13 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       assertSnapshotBoundToContext(context);
       const repository = options.repositories.require(context.planeKey);
       const at = now();
-      const runtimeDefaults = await options.readRuntimeDefaults?.(context,at);
-      const featureRevision = await repository.readFeatureRevision?.(context, at) ?? "unversioned";
-      const entitlementRevision = await repository.readEntitlementRevision?.(context, at) ?? "unversioned";
-      const cacheKey = `experience:${context.planeKey}:${context.tenantId}:${context.principalId}:${context.authEpoch}:${context.profileHash}:${input.clientVersion ?? "-"}:${entitlementRevision}:${featureRevision}:${runtimeDefaults?.configurationRevision??"default"}`;
+      const runtimeDefaults = await options.readRuntimeDefaults?.(context, at);
+      const featureRevision =
+        (await repository.readFeatureRevision?.(context, at)) ?? "unversioned";
+      const entitlementRevision =
+        (await repository.readEntitlementRevision?.(context, at)) ??
+        "unversioned";
+      const cacheKey = `experience:${context.planeKey}:${context.tenantId}:${context.principalId}:${context.authEpoch}:${context.profileHash}:${input.clientVersion ?? "-"}:${entitlementRevision}:${featureRevision}:${runtimeDefaults?.configurationRevision ?? "default"}`;
       const cacheGeneration = options.cache?.generation;
       const cached = await options.cache?.get(cacheKey);
       if (isBootstrap(cached)) return cached;
@@ -136,7 +137,13 @@ export function createExperienceService(options: ExperienceServiceOptions) {
             auth: authorizationRevision(context),
           }),
         );
-        await cache(options.cache, cacheKey, result, tags(context), cacheGeneration);
+        await cache(
+          options.cache,
+          cacheKey,
+          result,
+          tags(context),
+          cacheGeneration,
+        );
         return result;
       }
       const catalog = await repository.readCatalog(
@@ -158,7 +165,13 @@ export function createExperienceService(options: ExperienceServiceOptions) {
             auth: authorizationRevision(context),
           }),
         );
-        await cache(options.cache, cacheKey, result, tags(context), cacheGeneration);
+        await cache(
+          options.cache,
+          cacheKey,
+          result,
+          tags(context),
+          cacheGeneration,
+        );
         return result;
       }
       let featureRows: readonly ExperienceFeatureRecord[] = [];
@@ -216,7 +229,13 @@ export function createExperienceService(options: ExperienceServiceOptions) {
         features,
         nextActions: [],
       };
-      await cache(options.cache, cacheKey, result, tags(context), cacheGeneration);
+      await cache(
+        options.cache,
+        cacheKey,
+        result,
+        tags(context),
+        cacheGeneration,
+      );
       return result;
     },
     async localePolicy(
@@ -303,7 +322,10 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       assertSnapshotBoundToContext(context);
       // Check admission before persisting a preference, even when bootstrap is cached.
       const repository = options.repositories.require(context.planeKey);
-      assertIdentityAdmission(context, await repository.readIdentity(context, now()));
+      assertIdentityAdmission(
+        context,
+        await repository.readIdentity(context, now()),
+      );
       const policy = normalizeLocalePolicy(
           context.planeKey,
           await repository.readLocalePolicy?.(context),
@@ -321,7 +343,11 @@ export function createExperienceService(options: ExperienceServiceOptions) {
           new Error("Locale preference writer is unavailable"),
           { code: "EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" },
         );
-      await repository.updatePrincipalLocale(context, canonical, policy.revision);
+      await repository.updatePrincipalLocale(
+        context,
+        canonical,
+        policy.revision,
+      );
       await options.cache?.invalidate([
         `${context.planeKey}:profile`,
         `${context.planeKey}:principal:${context.principalId}`,
@@ -901,10 +927,13 @@ export function createMemoryExperienceCache(
     { value: unknown; tags: readonly string[] }
   >();
   return {
-    get generation() { return generation; },
+    get generation() {
+      return generation;
+    },
     get: (key) => entries.get(key)?.value,
     set(key, value, entryTags, expectedGeneration) {
-      if (expectedGeneration !== undefined && expectedGeneration !== generation) return;
+      if (expectedGeneration !== undefined && expectedGeneration !== generation)
+        return;
       entries.set(key, { value, tags: [...entryTags] });
       if (entries.size > maxEntries)
         entries.delete(entries.keys().next().value as string);
@@ -1068,8 +1097,7 @@ async function readProfileOrDefault(
       weekendDays: days(tenant.weekendDays) ?? PLATFORM_PROFILE.weekendDays,
       appearanceMode:
         appearance(principal.appearanceMode) ?? PLATFORM_PROFILE.appearanceMode,
-      densityCode:
-        density(principal.densityCode) ?? defaultDensity,
+      densityCode: density(principal.densityCode) ?? defaultDensity,
     };
     return {
       profile,
@@ -1080,7 +1108,7 @@ async function readProfileOrDefault(
     };
   } catch {
     return {
-      profile: {...PLATFORM_PROFILE,densityCode:defaultDensity},
+      profile: { ...PLATFORM_PROFILE, densityCode: defaultDensity },
       localization: effectiveLocalization(PLATFORM_PROFILE, "platform"),
     };
   }
@@ -1214,12 +1242,15 @@ function normalizeLocalePolicy(
       const coveragePct =
         validCoverage(persisted?.coveragePct) ??
         (compatibilityQualified ? 100 : 0);
-      const linguisticReviewPassed =
-        persisted ? persisted.linguisticReviewPassed === true : compatibilityQualified;
-      const layoutReviewPassed =
-        persisted ? persisted.layoutReviewPassed === true : compatibilityQualified;
-      const automatedTestsPassed =
-        persisted ? persisted.automatedTestsPassed === true : compatibilityQualified;
+      const linguisticReviewPassed = persisted
+        ? persisted.linguisticReviewPassed === true
+        : compatibilityQualified;
+      const layoutReviewPassed = persisted
+        ? persisted.layoutReviewPassed === true
+        : compatibilityQualified;
+      const automatedTestsPassed = persisted
+        ? persisted.automatedTestsPassed === true
+        : compatibilityQualified;
       const qualified =
         status === "qualified" &&
         coveragePct === 100 &&
@@ -1365,12 +1396,14 @@ function applyLocalePolicy(
     resolved.localization.source.uiLocale === "principal" &&
     catalog &&
     policy.enabledLocales.includes(catalog)
-  ) return resolved;
+  )
+    return resolved;
   // Preserve regional formatting when the inherited locale matches the policy default.
   if (
     resolved.localization.source.uiLocale !== "principal" &&
     catalog === policy.defaultLocale
-  ) return resolved;
+  )
+    return resolved;
   const profile = Object.freeze({
     ...resolved.profile,
     localeCode: policy.defaultLocale,
@@ -1545,7 +1578,14 @@ function resolveFeatures(
     let enabled = row.defaultEnabled,
       source: EffectiveFeature["source"] = "catalog_default";
     if (row.rolloutPct !== undefined) {
-      enabled = enabled && featurePercentageCohort(row.cohortStrategy, tenantId, principalId, row.code) < row.rolloutPct;
+      enabled =
+        enabled &&
+        featurePercentageCohort(
+          row.cohortStrategy,
+          tenantId,
+          principalId,
+          row.code,
+        ) < row.rolloutPct;
       source = "rollout";
     }
     if (row.kind === "kill_switch") {

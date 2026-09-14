@@ -1,5 +1,7 @@
 # DEV rebuild and deployment — 2026-09-06, second run
 
+> Historical deployment record for 6 September 2026. Image tags and health observations below describe that run. For current development and recovery, use [Shared DEV workspace](shared-dev-workspace.md).
+
 Rebuilt the current IAM theme, identity replay approval, localization and jobs
 changes with Node 24.19.0 and pnpm 10.33.0. Frozen dependency installation and all
 104 forced workspace build tasks passed, with zero cache hits. All five Docker

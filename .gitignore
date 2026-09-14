@@ -44,6 +44,8 @@ test-results/
 **/build/
 **/out/
 **/.next/
+# Alternate Next.js distDir outputs are generated, just like .next/.
+**/.next-*/
 **/storybook-static/
 
 # =========================
@@ -114,6 +116,7 @@ vite.config.ts.timestamp-*
 # =========================
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
 Desktop.ini
 .idea/
 *.iml
@@ -169,6 +172,8 @@ __pycache__/
 
 # pnpm monorepo — ignore accidental npm lock files
 **/package-lock.json
+# Standalone S3 helper image uses npm ci, independently of the pnpm workspace.
+!deploy/config/s3-tools/package-lock.json
 
 # Generated (output dirs only — do NOT ignore source packages)
 **/generated/
@@ -212,3 +217,14 @@ packages-backup/
 
 # Customer-specific docs (local only)
 docs/customer/
+
+# Legacy local-output locations: prevent accidental evidence/export commits.
+# Current tools write outside the checkout; see docs/runbooks/local-artifacts.md.
+/artifacts/
+/metadata/
+
+# Accidental compiler emissions beside the records TypeScript source files.
+/server/packages/services/records/src/address-form-choices.js
+/server/packages/services/records/src/address-form-choices.js.map
+/server/packages/services/records/src/bank-form-choices.js
+/server/packages/services/records/src/bank-form-choices.js.map

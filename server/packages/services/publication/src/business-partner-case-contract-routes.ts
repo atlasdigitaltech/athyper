@@ -15,9 +15,7 @@ import {
   COMPILE_PUBLICATION_ARTIFACT_JOB,
   PUBLICATION_AUTHORITY_QUEUE,
 } from "./publication-jobs.js";
-import {
-  BusinessPartnerDefinitionError,
-} from "./business-partner-definition-service.js";
+import { BusinessPartnerDefinitionError } from "./business-partner-definition-service.js";
 import type { BusinessPartnerCaseContractService } from "./business-partner-case-contract-service.js";
 
 const objectSchema = { type: "object", additionalProperties: true } as const;
@@ -33,7 +31,10 @@ const contracts = {
     request: { body: objectSchema },
     responses: {
       201: { description: "Definition revision", body: objectSchema },
-      409: { description: "Definition version or idempotency conflict", body: objectSchema },
+      409: {
+        description: "Definition version or idempotency conflict",
+        body: objectSchema,
+      },
       400: { description: "Invalid definition" },
       403: { description: "Forbidden" },
     },
@@ -100,11 +101,30 @@ export function registerBusinessPartnerCaseContractRoutes(
     readonly audit: AuditRecorder;
     readonly jobs: JobPublisher;
     readonly service: BusinessPartnerCaseContractService;
+    readonly companyPilot?: boolean;
   },
 ) {
+  const routeContracts = Object.fromEntries(
+    Object.entries(contracts).map(([key, contract]) => [
+      key,
+      options.companyPilot
+        ? {
+            ...contract,
+            path: contract.path.replace(
+              "business-partner-case-contracts",
+              "business-partner-company-case-contracts",
+            ),
+            operationId: contract.operationId.replace(
+              "BusinessPartnerCaseContract",
+              "BusinessPartnerCompanyCaseContract",
+            ),
+          }
+        : contract,
+    ]),
+  ) as typeof contracts;
   registerContractRoute(
     application,
-    contracts.simulate,
+    routeContracts.simulate,
     options.authenticate,
     async (request, response, next) => {
       try {
@@ -131,7 +151,7 @@ export function registerBusinessPartnerCaseContractRoutes(
   );
   registerContractRoute(
     application,
-    contracts.author,
+    routeContracts.author,
     options.authenticate,
     async (request, response, next) => {
       try {
@@ -164,7 +184,7 @@ export function registerBusinessPartnerCaseContractRoutes(
   );
   registerContractRoute(
     application,
-    contracts.get,
+    routeContracts.get,
     options.authenticate,
     async (request, response, next) => {
       try {
@@ -188,7 +208,7 @@ export function registerBusinessPartnerCaseContractRoutes(
   );
   registerContractRoute(
     application,
-    contracts.publish,
+    routeContracts.publish,
     options.authenticate,
     async (request, response, next) => {
       try {
@@ -254,7 +274,11 @@ async function permitted(
   resource?: Readonly<Record<string, unknown>>,
 ) {
   const context = options.readContext(response);
-  const decision = await options.authorizer.authorize({ context, permissionCode, ...(resource ? { resource } : {}) });
+  const decision = await options.authorizer.authorize({
+    context,
+    permissionCode,
+    ...(resource ? { resource } : {}),
+  });
   if (!decision.allowed) {
     response.status(403).json({ error: "FORBIDDEN", reason: decision.reason });
     return undefined;
@@ -264,13 +288,18 @@ async function permitted(
 async function audit(
   options: { readonly audit: AuditRecorder },
   context: VerifiedRequestContext,
-  eventCode: "studio.business_partner_definition.author" | "studio.business_partner_definition.publish",
+  eventCode:
+    | "studio.business_partner_definition.author"
+    | "studio.business_partner_definition.publish",
   entityId: string,
   metadata: Readonly<Record<string, unknown>>,
 ) {
   await options.audit.record({
     eventCode,
-    action: eventCode === "studio.business_partner_definition.author" ? "author" : "publish",
+    action:
+      eventCode === "studio.business_partner_definition.author"
+        ? "author"
+        : "publish",
     outcome: "success",
     severity: "critical",
     actor: { kind: "user", principalId: context.principalId },
@@ -324,16 +353,14 @@ function definitionFailure(
       ? 404
       : error.code.endsWith("SELF_PUBLISH_FORBIDDEN")
         ? 403
-        : (error.code.includes("CONFLICT"))
+        : error.code.includes("CONFLICT")
           ? 409
           : 400;
     response.status(status).json({ error: error.code, message: error.code });
   } else if (error instanceof TypeError) {
-    response
-      .status(400)
-      .json({
-        error: "BUSINESS_PARTNER_DEFINITION_INPUT_INVALID",
-        message: error.message,
-      });
+    response.status(400).json({
+      error: "BUSINESS_PARTNER_DEFINITION_INPUT_INVALID",
+      message: error.message,
+    });
   } else next(error);
 }

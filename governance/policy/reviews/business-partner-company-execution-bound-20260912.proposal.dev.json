@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "kind": "isolated_company_execution_access",
+  "approved": false,
+  "applied": false,
+  "destination": {
+    "container": "athyper-bp-enter-db",
+    "network": "athyper-bp-enter-isolated",
+    "database": "athyper_neon"
+  },
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "releaseId": "ecbf538d-a1b7-4ba3-bb28-147d7263ed76",
+  "artifactHash": "da167c4e96230fdcd2383b812f5c50810c7b165ef431d08adc332a0b60f98f49",
+  "runtimeImage": "sha256:181476b05c51cca94905035f0a6abbb565db1e1e35b4283ee773872f074d8aef",
+  "releaseSetHash": "0a2c882cdc2e229e39d276b2df1752fb5fea9e30f6ae9b8f8b53b04755044a91",
+  "candidateManifest": "governance/policy/reports/business-partner-consolidated-candidate-20260912.dev.json",
+  "candidateManifestSha256": "c7438ff043a3f17fecac0c7291b69ba0b2eaf6528caa4e5d2a362e73a79241ba",
+  "effectiveFrom": "2026-09-12T03:34:47.375Z",
+  "effectiveUntil": "2026-09-12T05:34:47.375Z",
+  "scopeRegistration": {
+    "id": "dc9aa856-7e89-41e9-b032-a6afb4e112a7",
+    "target_id": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+    "scope_kind": "company_code",
+    "scope_key": "catl",
+    "status": "active",
+    "display_name": "CirrusAtlantic UK",
+    "parent_scope_target_id": "1d8314f6-8541-57cf-8748-679cbe318bc8"
+  },
+  "compatibleOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+  "batches": [
+    {
+      "account": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "permissions": [
+        {
+          "id": "5501da5d-5d50-520d-ab62-30f2377210eb",
+          "code": "neon.relationship.bp_company_setup_request.read",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "a7d03b8a-3ac5-5735-ba1c-2a717fd1651c",
+          "code": "neon.relationship.bp_company_setup_request.create",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "bd16524d-88a1-5000-b8d5-6653c2a531cf",
+          "code": "neon.relationship.bp_company_setup_request.update",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "1854e00f-efbc-5497-b398-8fd6b9457365",
+          "code": "neon.relationship.bp_company_setup_request.validate",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "00cc6d29-b788-5cfe-af69-9f3f53120c91",
+          "code": "neon.relationship.bp_company_setup_request.submit",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": true
+        },
+        {
+          "id": "e93f2c94-3a00-5b6d-a3ca-ce752f2eb440",
+          "code": "neon.relationship.bp_company_setup_request.materialize",
+          "risk_tier": "high",
+          "requires_mfa": true,
+          "requires_sod": true
+        }
+      ],
+      "code": "bp.company.qualification.catl.admin.c16d25a7",
+      "roleId": "42d9d44f-9e6c-4134-8331-0cd13d235ee8",
+      "groupId": "0b9229d9-3004-423c-9d7e-c9584d9528aa",
+      "assignmentId": "76806711-2f29-45d8-9dd1-d0272793d116",
+      "scope": {
+        "id": "dc9aa856-7e89-41e9-b032-a6afb4e112a7",
+        "target_id": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+        "scope_kind": "company_code",
+        "scope_key": "catl",
+        "status": "active",
+        "display_name": "CirrusAtlantic UK",
+        "parent_scope_target_id": "1d8314f6-8541-57cf-8748-679cbe318bc8"
+      },
+      "propagation": "exact"
+    },
+    {
+      "account": "catl.owner",
+      "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+      "permissions": [
+        {
+          "id": "5501da5d-5d50-520d-ab62-30f2377210eb",
+          "code": "neon.relationship.bp_company_setup_request.read",
+          "risk_tier": "low",
+          "requires_mfa": false,
+          "requires_sod": false
+        },
+        {
+          "id": "bff4ba92-f62b-5252-9551-16a023cad379",
+          "code": "neon.relationship.bp_company_setup_request.decide",
+          "risk_tier": "high",
+          "requires_mfa": true,
+          "requires_sod": true
+        }
+      ],
+      "code": "bp.company.qualification.catl.owner.7b9a14a5",
+      "roleId": "27c710d6-8c0d-432f-910b-a6bd3a12157e",
+      "groupId": "a46ce30e-141b-43d4-bd6a-24e6bd5631bb",
+      "assignmentId": "6bfa38b7-d7e9-459c-b095-b98a4b47ec81",
+      "scope": {
+        "id": "dc9aa856-7e89-41e9-b032-a6afb4e112a7",
+        "target_id": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+        "scope_kind": "company_code",
+        "scope_key": "catl",
+        "status": "active",
+        "display_name": "CirrusAtlantic UK",
+        "parent_scope_target_id": "1d8314f6-8541-57cf-8748-679cbe318bc8"
+      },
+      "propagation": "exact"
+    }
+  ],
+  "conditions": [
+    "New isolated company-specific groups/roles/memberships only; preserve all expired/revoked access",
+    "Preserve catalog MFA, SoD, deny rules and independent workflow decisions",
+    "Authorize execution only after exact release/image/binding coordinates and exact UTC window are accepted",
+    "Revoke new test memberships after revocation checks; recovery must not restore them",
+    "Retain required case, approval and command audit history; inventory synthetic records separately"
+  ],
+  "excluded": [
+    "Shared DEV",
+    "Ordinary BP access",
+    "Sensitive reveal grants",
+    "Studio publication grants",
+    "Mesh execution",
+    "66-disposition acceptance",
+    "Enforcement activation",
+    "Compatibility retirement"
+  ],
+  "applicationPreconditions": [
+    "Explicit approval of this exact proposal revision and UTC window",
+    "Coherent isolated deployment of the candidate image and five signed artifact bindings",
+    "Fresh normal NEON sessions for the named actors",
+    "Do not revive prior expired or revoked access"
+  ],
+  "proposalRevision": "aa00bf6a4062913c317a95ac1e2bb3894342c3ed917663fc0d31b880b0b881c0"
+}

@@ -29,7 +29,7 @@ test("canonical catalog locks the agreed plane sizes and BP ownership", async ()
   const mdg = PLATFORM_CATALOG_ROUTES.neon.find((workspace) => workspace.code === "mdg");
   assert.equal(mdg.routeSlug, "mdg");
   assert.deepEqual(mdg.modules.find((module: { code: string }) => module.code === "bp"), {
-    code: "bp", routeSlug: "business-partner", name: "Business Partner Management", iconKey: "contact", entities: [],
+    code: "bp", routeSlug: "business-partner", name: "Business Partners", iconKey: "contact", entities: [],
   });
   const knownIcons = new Set<string>(SEMANTIC_ICON_KEYS);
   for (const workspace of PLATFORM_CATALOG_ROUTES.neon) {
@@ -192,7 +192,7 @@ test("tenant publication wins over shared defaults while personal changes stay s
 test("canonical Neon DDL assigns BP permissions to the bp module", async () => {
   const catalog = await readFile(new URL("../../server/db/ddl/planes/neon/master/12_platform_catalog_reference_seed.sql", import.meta.url), "utf8");
   const seed = await readFile(new URL("../../server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql", import.meta.url), "utf8");
-  assert.match(catalog, /'bp', 'Business Partner Management'/);
+  assert.match(catalog, /'bp', 'Business Partners'/);
   assert.match(seed, /canonical_code LIKE 'neon\.relationship\.business_partner%'/);
   assert.match(seed, /module\.code <> 'bp'/);
 });

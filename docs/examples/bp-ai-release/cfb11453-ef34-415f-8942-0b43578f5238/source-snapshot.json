@@ -1,0 +1,2086 @@
+[
+  {
+    "path": "apps/neon/app/(public)/loading.tsx",
+    "sha256": "5fb354f619b7cbea26f670b76a6d5f8625be632d807cd16396ff1c5571f9b1b4"
+  },
+  {
+    "path": "apps/neon/app/(public)/logout/page.tsx",
+    "sha256": "ebf7dd7578ebb664974d71b2e3ffccf6e09088ae021fe08eba5e2975d63168d7"
+  },
+  {
+    "path": "apps/neon/app/(public)/select-context/page.tsx",
+    "sha256": "d62f7b1dec8b684db614481b3596d0e4cf001c574f3157c77bb30d69222166af"
+  },
+  {
+    "path": "apps/neon/app/(public)/sign-in/page.tsx",
+    "sha256": "bc12b3af19245286f0af86ee084d409e440fe3b0c026de5605ddf853491ca904"
+  },
+  {
+    "path": "apps/neon/app/(public)/supplier-application/page.tsx",
+    "sha256": "ec59601ba3803be799d2316d5d729db39fd52525fac3e1fe05cc8ac9c5c966e2"
+  },
+  {
+    "path": "apps/neon/app/(shell)/[workspaceSlug]/[moduleSlug]/[[...segments]]/page.tsx",
+    "sha256": "a3705e73ac1856de8e22238900c26cc58b3be4490a81f990e4010c3dc2276a63"
+  },
+  {
+    "path": "apps/neon/app/(shell)/[workspaceSlug]/page.tsx",
+    "sha256": "79d41bf3fb601a691711775656899b4bfb3de7e771c167e7ab2cd4e203422c4c"
+  },
+  {
+    "path": "apps/neon/app/(shell)/atlas/page.tsx",
+    "sha256": "dc86cb2fb79c6f309daa0c249f089b2fbf4dbc7d3950dfe83fbb48d45873fb9e"
+  },
+  {
+    "path": "apps/neon/app/(shell)/error.tsx",
+    "sha256": "86290ad23f4f7a29c6d6692c230259f3b427ba5679d42d2ae5b6d6d1d750c224"
+  },
+  {
+    "path": "apps/neon/app/(shell)/home/page.tsx",
+    "sha256": "b665abf00282c292f3f897a0acb82c67c5bdff30bcfe611eb06b7f3c51ff472c"
+  },
+  {
+    "path": "apps/neon/app/(shell)/inbox/page.tsx",
+    "sha256": "636595a66118baf3d46ae54f93e9cb218338e7e99ef3b6361a7b89a807157972"
+  },
+  {
+    "path": "apps/neon/app/(shell)/layout.tsx",
+    "sha256": "f571576db8f00a8415dd0fcb706d76ef3dd75dd9a187fa82827e40d9158ea4c7"
+  },
+  {
+    "path": "apps/neon/app/(shell)/loading.tsx",
+    "sha256": "df91b662f659ed4f2822b0ee10fb5349b6ef6637bb9f4d53c914a07f4bc84fc6"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/authorization-review/page.tsx",
+    "sha256": "b3d578426841aff31c78b9705b17176f5eb98b184d0c237da6bacd70c3fb157b"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/authorization-review/review.tsx",
+    "sha256": "59ab87d8eab1d89aca2fb84181087d67926cdd93d2270fd379752b61ee0ef6c3"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/[recordId]/bank-verification/page.tsx",
+    "sha256": "c42320857451ec597e7e27a62cc100d636df68c35dcc32a249eeaa9c14279a8d"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/[recordId]/banking/page.tsx",
+    "sha256": "49304ee5af779ba24883297631a52eafe1574694f21bb135d5c34fcc178fe316"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/[recordId]/customer/page.tsx",
+    "sha256": "53c788c53333d8b24ed4a6719d9223da41cb687ba0de06b3fe2363c1fc86c25b"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx",
+    "sha256": "266be754ec6687d1a381533f222a3a72b69f6f3711fc4f5042f8cec70991593d"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/[recordId]/roles/new/page.tsx",
+    "sha256": "3c3f468f7b6aec1158ba5f37165590dfe99d94417df08eb51cd17a10bea000f2"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/[recordId]/scope/new/page.tsx",
+    "sha256": "7e340edd19d88074b5164196edf76497509680fa103637887acae14122c52eb8"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/[recordId]/supplier/page.tsx",
+    "sha256": "23aeb5c64413f63ef1dcb0946b2adcf7d4ca7dce497001cfc581c5faaf6c43de"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/business-partners/[recordId]/page.tsx",
+    "sha256": "c81e667bba2b396be4acc387a09d04ccea23a829221ed0354e183ac0ff19c31c"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/business-partners/new/page.tsx",
+    "sha256": "79520c16dd4caa76a2f99d4a15470648b17964bc6140c1c703d9f156472c2774"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/business-partners/page.tsx",
+    "sha256": "57a4ed10d360bcdfa59218104f5c19a43b8b8cde2bad060e51db4023cba1cd1e"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/customer/new/page.tsx",
+    "sha256": "e7c79eafb0d48b36179061add4ad8da7792f7ffc9f137687296fc28b755eed90"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/layout.tsx",
+    "sha256": "7c8ce0c662d924c2e59735688dec5e5ca1cb37df5202fa0a40e6908eb7b7cbf2"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/manage/page.tsx",
+    "sha256": "7271776f40169e764f830bfe397622f6108569776140d5fe372b454b35f7d239"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/mesh-proposals/page.tsx",
+    "sha256": "944ee2524ce83c987348f3c29808dabcb78d2f4836f08db798504f8812bab5ef"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/new/page.tsx",
+    "sha256": "f4be2256e17d039158076128bafd2ef312608766227c0467256ea7921068f72d"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/page.tsx",
+    "sha256": "23c6ecb275b5e72e667f4d3977d5cc63e08e2d078b4f6ad61e7d78cdd86b71db"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/partners/page.tsx",
+    "sha256": "57a4ed10d360bcdfa59218104f5c19a43b8b8cde2bad060e51db4023cba1cd1e"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/person/new/page.tsx",
+    "sha256": "bbc93e8806f2a042e568487a972881ce24cf0105ffa860f34c44bc81c9dc3034"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/requests/[requestId]/edit/page.tsx",
+    "sha256": "ec6584867595b161299e4ce4e21cdc7e2e80b169ada38a21c2b121d891adb9ec"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/requests/[requestId]/page.tsx",
+    "sha256": "04526b2d494771187f3ae02c888e98c256f285a83dedf379e85732dbe1c6385d"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/requests/new/page.tsx",
+    "sha256": "79520c16dd4caa76a2f99d4a15470648b17964bc6140c1c703d9f156472c2774"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/business-partner/requests/page.tsx",
+    "sha256": "8f59c3e9d015ce1961a207bca98f08d7f34c8d558a37833be561994b577f4150"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/operation-review/page.tsx",
+    "sha256": "8cc49c417cb40ee264bffd5006e277271035fe2050f6998ba323d1ad418b3f4f"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/operation-review/review.tsx",
+    "sha256": "c8e9e3d565f6db57615e36d93af43d871dfbcd60441580787369660e70c4c3df"
+  },
+  {
+    "path": "apps/neon/app/(shell)/mdg/page.tsx",
+    "sha256": "24518b275d4fc5228277f9bebd58e8e02d648e134ba35c70c10172997a5a3ef8"
+  },
+  {
+    "path": "apps/neon/app/(shell)/not-found.tsx",
+    "sha256": "0ec73ee40b26e651983068cd135e6618f68484f020ef66b7d9946af44ee11330"
+  },
+  {
+    "path": "apps/neon/app/(shell)/notifications/page.tsx",
+    "sha256": "8e6a859b87f9e9af73f6d4d46e7db659a6bf3d03b20a9d74b011978ca3ea6455"
+  },
+  {
+    "path": "apps/neon/app/(shell)/operations/data-transfers/new/page.tsx",
+    "sha256": "8d7b56af7767cb8b0607f0ffe7220b04778d482daacc808cd80b7d002988494c"
+  },
+  {
+    "path": "apps/neon/app/(shell)/operations/data-transfers/page.tsx",
+    "sha256": "bc6d983d1fa11800caf4727714dd81dc87bfeafae95dbbcb293b1d662dc6e57e"
+  },
+  {
+    "path": "apps/neon/app/(shell)/page.tsx",
+    "sha256": "8240c0e07ed42e12f4a6e3f14c994e20522b998fb2b7419420acc1b115f6a296"
+  },
+  {
+    "path": "apps/neon/app/(shell)/people/workforce/requests/[requestId]/page.tsx",
+    "sha256": "13f59c3d1ea3ab3961a9da6b51bd109f76b63ce576561442d9c867b326ba1f62"
+  },
+  {
+    "path": "apps/neon/app/(shell)/people/workforce/requests/new/page.tsx",
+    "sha256": "01192b14e4bff6eb06ab0969d025ec25de4f54b8c2bbfadb913fb2ef2b8d4cfc"
+  },
+  {
+    "path": "apps/neon/app/(shell)/people/workforce/requests/page.tsx",
+    "sha256": "886dc39a2acb173f3f614e19c18bc3e6aeb2c950e65ad1b37e606f81d6128955"
+  },
+  {
+    "path": "apps/neon/app/(shell)/people/workforce/requisitions/page.tsx",
+    "sha256": "8fd14a8dc7d9290f6135ba09f13f0785cb3518a0e652004a8fdb1838cb6fd145"
+  },
+  {
+    "path": "apps/neon/app/api/auth/backchannel-logout/route.ts",
+    "sha256": "25cf50cf8377232af1821280fc90aba3605984e8594787740910813f652ac2f3"
+  },
+  {
+    "path": "apps/neon/app/api/auth/callback/route.ts",
+    "sha256": "a1ed39e914eb1992f6e8cc7445d925f8d276f3db51d35187b4d19edfa08e61f8"
+  },
+  {
+    "path": "apps/neon/app/api/auth/contexts/route.ts",
+    "sha256": "bdd57a55377ddb5e502c76601c34d2a0d5ec06641b45c62cf6cd1db296508b73"
+  },
+  {
+    "path": "apps/neon/app/api/auth/login/route.ts",
+    "sha256": "c1f9f7196298172d6dc7acae11a1400dc26fda7ca9d8d7460a977fc2c4762f80"
+  },
+  {
+    "path": "apps/neon/app/api/auth/logout/callback/route.ts",
+    "sha256": "02468f65086ef71f7a84e643c03990769e377c3ee3f26fed1c5effe430c1be30"
+  },
+  {
+    "path": "apps/neon/app/api/auth/logout/route.ts",
+    "sha256": "ff1d14fc0102fec6d7fe0b5b6b82b3a7c8aee4186e79e22ab5435f489b11a093"
+  },
+  {
+    "path": "apps/neon/app/api/auth/mfa/verify/route.ts",
+    "sha256": "ffaecf279a58bc6ca5e31e30fcea73a7f9e702d6e868f8ab2c3e4750d3af629f"
+  },
+  {
+    "path": "apps/neon/app/api/auth/refresh/route.ts",
+    "sha256": "ff7d05726eaed5fdc5854895b5ea1e30217da4cb7ffc3cc79a803c73617de1cc"
+  },
+  {
+    "path": "apps/neon/app/api/auth/session/context/route.ts",
+    "sha256": "8aa5f217d8b4d5ba94e2f24f908ee32224a3e89234a9e7417132ed6d99b58ba3"
+  },
+  {
+    "path": "apps/neon/app/api/auth/session/route.ts",
+    "sha256": "b7a42e192680166fc714ac5f305a1fe0bd08058c553a9918de543c7415776423"
+  },
+  {
+    "path": "apps/neon/app/api/auth/step-up/start/route.ts",
+    "sha256": "76062f0a47f74a42befc04e9e05372aa8ccc87163084dded8520c0a4fe8b95c9"
+  },
+  {
+    "path": "apps/neon/app/api/auth/touch/route.ts",
+    "sha256": "f5618758c529e35590d56879e50b9f87f9cab03c1c44349b343a4a7007777f9b"
+  },
+  {
+    "path": "apps/neon/app/api/business-partner/discover/route.ts",
+    "sha256": "32bf93c6b9d493aa00b9cb509daa762ffb7646c3c3fe0df88e753cb3ae9ce023"
+  },
+  {
+    "path": "apps/neon/app/api/governance/named-role-review/route.ts",
+    "sha256": "279cbd57d59bac363f4160f206f604b4040831b4d24e5c9e02ad9188fd1589d4"
+  },
+  {
+    "path": "apps/neon/app/api/governance/operation-review/route.ts",
+    "sha256": "e67add0cc0c0ec940b9f7297de29e9e40c8124fb977091c7b72f5912a6d74c20"
+  },
+  {
+    "path": "apps/neon/app/api/relay/[...path]/route.ts",
+    "sha256": "29507b0e6151addbb6d500255ed090b22d8f74cd1e697961743eed8b2f8681a0"
+  },
+  {
+    "path": "apps/neon/app/error.tsx",
+    "sha256": "295cf32636873d3b49309d8756889301c307d8ef1de5370902b52eb0fa237221"
+  },
+  {
+    "path": "apps/neon/app/global-error.tsx",
+    "sha256": "e6c83f97105eeb64f88b79e8bf3dd4d9fe4f42a9f58eaba5b917d7f80df2caec"
+  },
+  {
+    "path": "apps/neon/app/layout.tsx",
+    "sha256": "e39a8bba5d2d953f5aae87ce5466776c0d74c71a59902ae8622256c987b74ff6"
+  },
+  {
+    "path": "apps/neon/app/livez/route.ts",
+    "sha256": "bea76fb2c95c067592df6aee32b6acaff0af9c2d7c2973581973d1b4a97ce69f"
+  },
+  {
+    "path": "apps/neon/app/loading.tsx",
+    "sha256": "303ec43596a594da7a1e80a7552be87f900abecf2627b6134554ded8664bd579"
+  },
+  {
+    "path": "apps/neon/app/not-found.tsx",
+    "sha256": "5c84c9fef9c05fcd8b0e000906a81c944655a3744c15eed5d3ec7f0bc62eef9b"
+  },
+  {
+    "path": "apps/neon/app/notification-sw.js/route.ts",
+    "sha256": "16e8a5821acc93672fcf4bffdbf2a66998098007534ea855db3070ac2e1f178c"
+  },
+  {
+    "path": "apps/neon/app/providers.tsx",
+    "sha256": "682cad3e3934ab2bb98f6b2a7104e555ed068f0e9c20337b8eed9dd47d5d355b"
+  },
+  {
+    "path": "apps/neon/app/readyz/route.ts",
+    "sha256": "214cc4cb0c10fbeef06fc5b4ba4ea818c569d26ef015fa15c4c71cb1e9b3e8a0"
+  },
+  {
+    "path": "apps/neon/instrumentation.ts",
+    "sha256": "fdfeb70a2d42a6f2019d4932e6a8e0e6b900970fbdeac65367bff702c45797c3"
+  },
+  {
+    "path": "apps/neon/lib/auth.ts",
+    "sha256": "a36734845be5619cd1d1bc494122e6db0bfc7f89fe5a406dbdd44b9ea4c66ff3"
+  },
+  {
+    "path": "apps/neon/lib/bootstrap.ts",
+    "sha256": "1af54376c55aa966f17548fd37c2345d606ab840b580bc70d680717382c44e9b"
+  },
+  {
+    "path": "apps/neon/lib/catalog-routes.ts",
+    "sha256": "00892040dd99ff50966a8ec19fb35a24f184b1df95ea7c58daa0f636ed8a2a4d"
+  },
+  {
+    "path": "apps/neon/lib/entity-application-layout.tsx",
+    "sha256": "79c36d6917a00adebf9c5ca1b5eef2c23b8a8122e851df7aeb76482bb5dd41ef"
+  },
+  {
+    "path": "apps/neon/lib/entity-application-route.tsx",
+    "sha256": "d9cdf7a416df816cbd451c3601ba07d3b31c2e4e40b63a9a40791e25f76715e2"
+  },
+  {
+    "path": "apps/neon/lib/entity-route-alias.ts",
+    "sha256": "03da984775f2ed0662559e5b8523242c8aa38494ed42b9fcf1aa924334b2b5c7"
+  },
+  {
+    "path": "apps/neon/lib/environment.ts",
+    "sha256": "44a5dc30b2e9c75cc07ffdafdc44e575b2099b794a16c9ac8c4f95244620647d"
+  },
+  {
+    "path": "apps/neon/lib/experience-runtime.tsx",
+    "sha256": "fec0e2c426d0aee7580385131e94a0336d49d2e431b485340d0834bfd97e44c2"
+  },
+  {
+    "path": "apps/neon/lib/list-density.ts",
+    "sha256": "1f5e814016089bec4791fa3a4561af9668f4bb85edf9b5cc81055b99448e8d5a"
+  },
+  {
+    "path": "apps/neon/lib/named-role-review.ts",
+    "sha256": "d982e8951de94d6b1eda228275d5bdfb1842201ae2c131bb4e3a12545430d2e7"
+  },
+  {
+    "path": "apps/neon/lib/operation-review.ts",
+    "sha256": "d95d08f8e7ba3a58c95ba2f2f903614ce0cd0dab167abe4e91f61e7ea0621344"
+  },
+  {
+    "path": "apps/neon/lib/relay.ts",
+    "sha256": "05b1199fd80b69e9e44b12bb052989f0a7704ea4f8f9fe23aae788f4c0754522"
+  },
+  {
+    "path": "apps/neon/lib/route-params.ts",
+    "sha256": "948a4be1d4a9497291420f4923d6ac5bfa28dc4ee432fd8216caf154dc9d87c0"
+  },
+  {
+    "path": "apps/neon/lib/workspace-module-relevance.ts",
+    "sha256": "0f545a1c4a159e6311150bbb3321463b33bdbb78a79eaec83d70e2cefd43c372"
+  },
+  {
+    "path": "apps/neon/next-env.d.ts",
+    "sha256": "1862ac4bbbc5192d4bf562161df66ea547ed3e67173100656ab606ae9797db2b"
+  },
+  {
+    "path": "apps/neon/next.config.ts",
+    "sha256": "ade211c03b14ab889bbfbf974402c32dace68ad3641909ee3065078ca7cb3bfc"
+  },
+  {
+    "path": "apps/neon/proxy.ts",
+    "sha256": "5912e5c8361eec7b71bcba2014f5818f89fef71f441f9780797de0a1cd2769ea"
+  },
+  {
+    "path": "packages/contracts/platform/entity-runtime/src/access-decision.ts",
+    "sha256": "11dc0d34d3e0361816551bb8af9929d9e5843a0b2571342293e759b32d2d48ed"
+  },
+  {
+    "path": "packages/contracts/platform/entity-runtime/src/governed-workflow.ts",
+    "sha256": "cfe516ad5e9932d9bee634ccfb5f267a21220773179096272102435839a09517"
+  },
+  {
+    "path": "packages/contracts/platform/entity-runtime/src/index.ts",
+    "sha256": "550f5e8ae968a98ee7fd056a1bc9f6249f434b710b35f8d816db7e0a6235c783"
+  },
+  {
+    "path": "packages/contracts/platform/entity-runtime/src/record-360-panel.ts",
+    "sha256": "5eb9b7bcc9f215e6cc3bfdea1c17b44527755b1aa99809b3b4f7e2e2c10030e0"
+  },
+  {
+    "path": "packages/contracts/platform/entity-runtime/src/record-presentation.ts",
+    "sha256": "ca46b9e590cbed1bc675a4a0cd3e6fa9e90155bfb8c8f90a2c86c1656db23b9b"
+  },
+  {
+    "path": "packages/contracts/platform/entity-runtime/src/related-presentation.ts",
+    "sha256": "a44ed3be996629a5197cf71b137ac2430238bc71f3b6f25a7304c6613482d643"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360-client.test.ts",
+    "sha256": "07c9bf85916c1f4afafd7772c0e60d8beb25dde30da2244aaceb23d98aa34422"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360-client.ts",
+    "sha256": "309225fdb8df3cd2fdebf3c240b04813e6c7a38df114e5c9d5481a780bdd25b8"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360-commercial-client.ts",
+    "sha256": "290ddce2a89c87357c8e4f6b289130a975290a8d84235f9df4f039308af68f32"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360-context.tsx",
+    "sha256": "a0b487e150dc5f143b2c87103c1b9f4e176cdf2964e5690b619938d1c020d711"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360-explainability-client.ts",
+    "sha256": "fa9100f32381bbbf44b8ab0f4aa51ef380f06fef1bf3c40354e79d61e668381a"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360-network-client.test.ts",
+    "sha256": "deb4e6d0f7e21e19f80e2ecff0208bfeaa9721b0d89132a3a82632c13b59094c"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360-network-client.ts",
+    "sha256": "e046df02fd7e1c5fd344cfd40fcac3a96606718e9c0d4163913001ebd90370a9"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360-role-client.test.ts",
+    "sha256": "b2e36041d98d53d2db141dd0a6329f4e3c992028af20405564057c0406de28c9"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360-role-client.ts",
+    "sha256": "6532a9a6cf665c7d35a1afbefc511fb9741bca7d0edddf005fb650f0179a15d9"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360-section-client.test.ts",
+    "sha256": "2f08a098829647541676a25bae2c49694ed8f8788f786db13c229be7fcd16ded"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360-section-client.ts",
+    "sha256": "795356bb49fc36b6cc346f1c5f9cd8617790ab54034883f0049677d6fe369a38"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360.test.ts",
+    "sha256": "e4a683412aecb31aba8a782bd45c8e8ebb4fac2603e1032c233380d6103e8e76"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/business-partner-360.tsx",
+    "sha256": "092956ec17d7052977ed5b14c9d3f37061bbfd913622d95dbc888f11f083e778"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/company-relationships.test.ts",
+    "sha256": "544c76f2826798982a63eb2f581168c1008f4a8e1668ec5566219d69d7382f2d"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/company-relationships.ts",
+    "sha256": "f0d4b40ea660f034f1b61f84a337f95bc21c4c4d2f9bd2d8ce9f04e233ae7334"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/access-scope.tsx",
+    "sha256": "5ca066929d678c4b8d9ae73a49dfd99154a5eaed5ef13b6a44e5ccfbc7f7c1ad"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/banking.test.tsx",
+    "sha256": "a240333d01a385328d9cd32281bf8768db73ccda2a88df2d8a5b0e97478d07e4"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/commercial-controls.tsx",
+    "sha256": "9b17b2c7fa40a10ff493420a68d999ec4628bbd4410e3b72188f31848e996987"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/common-section.test.tsx",
+    "sha256": "214dcc73f89afb8facd8945f5a41c9ebbf51ae2f7cb693cbac44ab10ce39bef8"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/common-section.tsx",
+    "sha256": "04b138d0570bc50218132582edf563239eda9cc0d80d67afc3e3bf33dcd066a0"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/explainability-sections.tsx",
+    "sha256": "63dde3935798df003d84ffc3c5b7fe241c1357a818d3a241d7e68a75efc3eec4"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/governed-action.test.tsx",
+    "sha256": "d30ca284b0a56b3c85351377e3d0b9db70c06351f6d8a761bf8d802275d9b3af"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/governed-action.tsx",
+    "sha256": "d7c33a94c0dd5abe33c2a2050b1961e2ee7f46211a2e1dd57141899172b2d655"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/identity-header.tsx",
+    "sha256": "4461cf5d76f2eab01344f4b890fe103fa5153fe39c45c95a1badb7d43925187a"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/network-section.tsx",
+    "sha256": "0b511c622d40fc89ace55c5c1e31458da792ec9f0ed5da44a5d865e076401fa4"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/overview.test.tsx",
+    "sha256": "e80c00d5f971f1d406b56e89d860aba6097bc1c86b9ddf675ca6d6b73c9727f6"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/overview.tsx",
+    "sha256": "684bbbe5be8759638c91803ce5fb0ddd060aa6c47e467b3e6527f28f5a1cd905"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/primary-details.tsx",
+    "sha256": "f125ce1a1681429dc30036fdbba4db98dab9b4d9833709879c0dc5501b4b6bd2"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/related-section.test.tsx",
+    "sha256": "edf8ab3f02f242a73798ad571a86161cc372bf7f30d51b3cb7058bc55cf11215"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/related-section.tsx",
+    "sha256": "1afe8f89d7c3fc3e8630ab6ed6f2a48039ecb65f67ad041add1fb248675f9cf7"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/relationship-overview.test.tsx",
+    "sha256": "fd087ab3584fac57753b56b9f46ec60952de694977691399aabbcefe7fcaf5b4"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/relationship-overview.tsx",
+    "sha256": "90fff99ca6d83dfa81bb9f75ed837c302d88d75e01bd54a556a23d67279368fd"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/resource-section.tsx",
+    "sha256": "03766ecddc2b004c4d48fb1dbb88d9ea4db1439d2d0993cb16c6fd7466ac5282"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/role-company-sections.tsx",
+    "sha256": "7329abe8e4a0238a9cfcca3d74f17141e9f11dc81499aaaab99a7f5785e15dab"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/roles-workspace.test.tsx",
+    "sha256": "aafd26d57ecdfc8e59f4f202f244e35d510b3051976df24313e014907079cdfe"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/roles-workspace.tsx",
+    "sha256": "c210ffd7cb5f9388987a38b13f56ccfecf4ca68d018cfd0d25ca6f84feedbb6e"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/components/section-state.tsx",
+    "sha256": "e956b1199cc48d9c47305d026ab766c6ea4fa8d09cbcd8d4c1070f2d9f35554c"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/display-values.ts",
+    "sha256": "48b8a64ed9483585a5807c2152556bbd0eaed679b06b0d608ffb9960b9008f74"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/panel-contract.test.ts",
+    "sha256": "fbfb6d692339cc8fd3062bcbd0f53ff7cfc4380b2ac64996478499375047d7f8"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/panel-definition.ts",
+    "sha256": "9eaff8c9950bfb3023b6532251651f591bf990cd24293a5d465c209cf6dc5097"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/record-opening.test.tsx",
+    "sha256": "6e028ac3abc08d4d256665b43f8f28e49226c4392ebf18a872a775bab7f85bbf"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/360/section-registry.ts",
+    "sha256": "8ce5e0a5e490456ee86a007b09bcdc49fffff36b4f0d7370cb5dafccd5e9e16d"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/applicant-client.test.ts",
+    "sha256": "88d0b024bf2bae61004c23197ccb0079c5148f7e968c36cd7d51ef6332352eae"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/applicant-client.ts",
+    "sha256": "cff9c75c1671cdacf1798dd3e305f6f68eaba107961c69b0dacf8ea2ff18f316"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/applicant-experience.test.ts",
+    "sha256": "6b3d951b70b4357b18fb58e469a1476cfcc59e20d14c781e4af509ff005dd1d4"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/applicant-experience.tsx",
+    "sha256": "b04a95cf49f11e64e04128056644b6f352ebdf1cbf041b9ba2f6108c5576a70d"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/bank-verification-controls.test.tsx",
+    "sha256": "0f6a7dfb476430f4ca35b754660413add0750ad1088ef0dcabc9166c8861d5c7"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/bank-verification-controls.tsx",
+    "sha256": "91fb761b164cde823b26b72080ab9796ed4c0b4919d6a1ed0664c416049b2637"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/banking-workspace.test.tsx",
+    "sha256": "a9ec4052faa7ae13d870ff2c2efee772a8bd636333b9590c37eeb06d87942bc4"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/banking-workspace.tsx",
+    "sha256": "c2f50ca430ec2bd45057859296c062c8ef35e55e26c32efe4021bff1f474489b"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/case-experience.test.ts",
+    "sha256": "9b95310ded7b88a8fee014608b9d1147c75531fd684b76a48a0e2cf5c2ba7f79"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/case-experience.tsx",
+    "sha256": "5d7a58ad5b8b749408e6f3ca53369d1e7068130046fea4538a2c08a3c204b067"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/client.test.ts",
+    "sha256": "bfbd3fd2951948b3d0f90e1fd33bce8cb6b51a56f4785065fe674839ae84c0f4"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/client.ts",
+    "sha256": "5d6f0ee0bc15e53cd5aef694453ff6f4d829e5083e6bd7c45e84f1338575ec1f"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/customer-controls.test.ts",
+    "sha256": "8713bee08a3848b413485eb67f30835a7488048c54781ed8a5ff5264f7272333"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/customer-controls.tsx",
+    "sha256": "8046f9bee1e87f91309204be7923ba04ef96180d03f07d3711bb0573e51c226f"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/customer-request.tsx",
+    "sha256": "a0b06bb8e23b59419fc7270e1743917bc2e5a4159a1f5efb55de5a1089fc9a8b"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/index.tsx",
+    "sha256": "7929b086b3837734635b309bfe9420282f6c03d9d341cde155e04b08f9ba4d9d"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/mesh-proposal-experience.test.ts",
+    "sha256": "621e5b26310f56d8e6c3e89d6880341ad0341f032a2383566da27425b9f2add2"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/mesh-proposal-experience.tsx",
+    "sha256": "da257431d72e4b988089f4515d72d166ce4af656138935ba86f1b362a6d7b768"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/request-form-descriptor.test.ts",
+    "sha256": "2a0e976dabc729f88b830a301fa3af16ee34a4820bbfe3ab24f2bd2014187e2e"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/request-form-descriptor.ts",
+    "sha256": "5666d65fd46df12ec135e9b69dd7114dcdbaa67b95263d0a4bcc68159f35c54b"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/request-relationships.test.ts",
+    "sha256": "fef4cad401f0af1eb9e1c4e0f4dd68bbc685a4f7c5dae06efafafd2ec43db83b"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/request-relationships.ts",
+    "sha256": "8f355269a6b8874211aa0a3c9f48cdc37d5cfd5492015ec113a27075ffdb6928"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/result-experience.test.ts",
+    "sha256": "0bfadfc14512e1ecca6c5678affbc3ab3d6f70b9592b7b77c65bf3c2346efa0f"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/result-experience.tsx",
+    "sha256": "646ee817f6a94367133206276bb02665901aa0703fbdd851af2fc184d5ca3912"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/role-extension-experience.test.ts",
+    "sha256": "2d5ad7e2e9417888671c7a82c7a1d455fff1c628e8b0a3e7c99e56a0849286de"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/role-extension-experience.tsx",
+    "sha256": "786e0df4c13188effa14c0122fc26f2e28fb8b22297a41071ad44def1e6cc686"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/supplier-controls.test.ts",
+    "sha256": "5da6bdbc43789600e555b8955095a437ca0cbdaed845e4d47e86a1514c883de9"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/supplier-controls.tsx",
+    "sha256": "85214755a50b45a352845660ea449add988c0dd998732017ac715690cfbec45a"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/transaction-selector.tsx",
+    "sha256": "f587eff2b0663bfa32de58e57bbb74f6bdafc409f233bdd18c754f3c95f745d8"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/validation-experience.test.ts",
+    "sha256": "b69fb5faf64b3639f828285d69f019acf4d453eccd03a1d5cd87e624eacf2187"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/validation-experience.tsx",
+    "sha256": "986c69f1b2688a791e9b297e8046b89639d386a3cd57f592c93df7e7d903862d"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/workflow.test.ts",
+    "sha256": "7a24d1ff3152dfba3b7cf82641a25e1c9a1e98e7d36772d2247e9211e6f15c84"
+  },
+  {
+    "path": "packages/planes/neon/business-partner/src/workflow.ts",
+    "sha256": "408e8bfdc75985c6e003bcb7d3402387cc52b32b2cd0c4d2edaaac0a65eb2d3d"
+  },
+  {
+    "path": "packages/platform/ai/agent-runtime/src/index.ts",
+    "sha256": "ea3e6fb7da037ad998a2b7d9d146e2a901abc96c522726688cdddca4c5c3df8e"
+  },
+  {
+    "path": "packages/platform/ai/agent-ui/src/automatic-brief.ts",
+    "sha256": "7f0e7c04743fd039a1e41f8a78f9a5e5c66d426be6aac263057151af1fe1d3d2"
+  },
+  {
+    "path": "packages/platform/ai/agent-ui/src/business-context.ts",
+    "sha256": "379d4006af818cf0262bb63cddb5c2242fac491fac2b9d31a8670167e148cd11"
+  },
+  {
+    "path": "packages/platform/ai/agent-ui/src/index.ts",
+    "sha256": "55bcbe4315191889f86348f9d068b05c7f6a5c48f6d5440715032416579c3da2"
+  },
+  {
+    "path": "packages/platform/shell/activity-center-data/src/index.ts",
+    "sha256": "662ce4bc683776d2abf91af6c9469119fbdc531452285a875aa181ed0b57774c"
+  },
+  {
+    "path": "packages/platform/shell/activity-center-data/src/page.tsx",
+    "sha256": "e1badd7c24aff683474d3866f8417658c6d57cb00e72dd392c07a6b3c0aa12d9"
+  },
+  {
+    "path": "packages/platform/shell/app-foundation/src/boundaries.tsx",
+    "sha256": "b9ae1ca7be706015fa266a247769e043979245ed9709a60e946f46548b8ec9c1"
+  },
+  {
+    "path": "packages/platform/shell/app-foundation/src/error-taxonomy.ts",
+    "sha256": "198d917b8e55d9d43c48a56b9bd3b3c5656406a70c133d9b4ab83d0fb18b8530"
+  },
+  {
+    "path": "packages/platform/shell/app-foundation/src/index.tsx",
+    "sha256": "30f5baa4408395da45f7b2995d6f2be6ddbb5020f8de5f866c44b09a8c1a148f"
+  },
+  {
+    "path": "packages/platform/shell/app-foundation/src/request-destination.ts",
+    "sha256": "2431db3eeee18bbb614c944f4aa634921d52e85b890bf360bc81f840f3f879fc"
+  },
+  {
+    "path": "packages/platform/shell/app-foundation/src/server.ts",
+    "sha256": "9074b88415d0a00de075b28ada2b45fbc953b0a01bfc47b5f2d327cafc47944e"
+  },
+  {
+    "path": "packages/platform/shell/content-hub/src/index.ts",
+    "sha256": "8daf901ecb6536b26e0632b480b6bfadd62d24ec1b886523d10fd0d24392fb7f"
+  },
+  {
+    "path": "packages/platform/shell/dashboard/src/client.tsx",
+    "sha256": "0f99022666390a92c3b8cfd54145d975e2daaee14ff38979fa1925450302e8cc"
+  },
+  {
+    "path": "packages/platform/shell/dashboard/src/index.ts",
+    "sha256": "114d0b75b09c2c739c98d25043934600fcee870dfe8ec8006731fc180d176272"
+  },
+  {
+    "path": "packages/platform/shell/dashboard/src/module-relevance.ts",
+    "sha256": "a7837129d7cab38f86b538c37369941603f272c30b93764f1882acea699e350c"
+  },
+  {
+    "path": "packages/platform/shell/dashboard/src/workspace-navigation.tsx",
+    "sha256": "634655198a61f9d1b0e7fc756f6e15503cf7443ad31f697c4c95a7bdccc638fb"
+  },
+  {
+    "path": "packages/platform/shell/me/src/index.ts",
+    "sha256": "8daf901ecb6536b26e0632b480b6bfadd62d24ec1b886523d10fd0d24392fb7f"
+  },
+  {
+    "path": "packages/platform/shell/saved-views/src/index.ts",
+    "sha256": "8daf901ecb6536b26e0632b480b6bfadd62d24ec1b886523d10fd0d24392fb7f"
+  },
+  {
+    "path": "packages/platform/shell/setup/src/index.ts",
+    "sha256": "8daf901ecb6536b26e0632b480b6bfadd62d24ec1b886523d10fd0d24392fb7f"
+  },
+  {
+    "path": "packages/platform/shell/shell-runtime/src/core.ts",
+    "sha256": "1344cc224daa4228ab7c7fa26e96b5cc2934a2beb84740d0932e12ad64c496fa"
+  },
+  {
+    "path": "packages/platform/shell/shell-runtime/src/index.tsx",
+    "sha256": "ad6327f99f296218f1d9d893949a98cc52c02bf067e17cfdf948683ee977f6bb"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/activity-center.tsx",
+    "sha256": "0dd43930b1d3161bcfe8538fdf98cb662ee21ed069e33d2dae3505e949a4dbf5"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/atlas-answer.tsx",
+    "sha256": "c4492009334dae65234e207df9cca709ff87930f7f0af69885b04757c37b5693"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/atlas-workspace.tsx",
+    "sha256": "32495b1bf3996cc19a7ff684f4956d979a4fc00baceda4b384015e08bdba35e1"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/client.tsx",
+    "sha256": "b73132d2c7e94c46f6e9dbeb99efb37198f3015242e026ba23026c92006a4f76"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/content-header.tsx",
+    "sha256": "17ba9ee4fa623e74c7949c49c51c15a8d12184b2b87db3d2add3f7a093ba677d"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/core.ts",
+    "sha256": "51c926147b01794f95d4e12ed04b8298605c2523cc5e00a8b172bb32d37c0f44"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/entity-page-layout.tsx",
+    "sha256": "833f9380e7ac71f1e233eb07fc1474a6cd0f258896758074d6adc6f4395981e0"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/home-personalization.ts",
+    "sha256": "376c123d29be65758032c85221041dedb8dc44da1dcec28b7092de68ffaf0fc6"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/home.tsx",
+    "sha256": "84bbbaf89bdde7bc0ef1025972244a1ada36061ec4816da2b8714cac807ed80a"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/index.tsx",
+    "sha256": "ef4e34e742886ad1a4eb3a6fb3bbf9e51bcb145d90e237dbf92f4a2b6fa68a69"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/management-workspace.tsx",
+    "sha256": "44a55dcf85c3d04d404d0bb4214607c8fa3b4483ebc7040fe4a19901b50c4f0e"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/messages.ts",
+    "sha256": "3a3b90d5ca61de0b5ca7878466bb74c8f0066218a4c825ba950723ba19cfc165"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/page-foundation.tsx",
+    "sha256": "574f4dbded6527887b025803e503ba2e709a0ca45b09673412169ec699bee540"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/personalization-scope.tsx",
+    "sha256": "e1df7c91815c9ab84797ed851a13b0e72afdf16da9cc2ab452e8face1bd90582"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/quick-access.tsx",
+    "sha256": "44f1d0c0ba89f1fe5c223044a8bd48e8e7a5cf8011556ced460ae09a4a262832"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/record-footer.tsx",
+    "sha256": "4cf3b4018f3534af513bd3c96a5d2f3e5e5c8d8e2c129c6e2d5417ead54b8215"
+  },
+  {
+    "path": "packages/platform/shell/shell/src/route-state.tsx",
+    "sha256": "32f7d214223ac058c27fb2f9a3c5f366b5753313c5179301def2e3dbd43920ae"
+  },
+  {
+    "path": "packages/platform/shell/work-inbox/src/index.ts",
+    "sha256": "abbe0467616dbe3eea08b9976c2a4499cd5fab7f81cda436710733965a4267c3"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts",
+    "sha256": "3100d9a6540188262a306677e26a7067cc99ca45d943058b513f9995f6714d99"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/atlas-attachment-knowledge.test.ts",
+    "sha256": "c7a3bed2c27a9846ee5795961d4f5c92c46451b117b6d361a68153824ac32591"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/atlas-document-grounding.test.ts",
+    "sha256": "f7492af6d81764d1f574bfcdf228a7c13069e537d30f28b8401b430d5d327633"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/atlas-entity-records-vertical.test.ts",
+    "sha256": "44e0b109449b040c17e831bcc665afdfc52a6cd9941f0344c0a4c1ceb62de824"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/atlas-retrieval-disconnect.test.ts",
+    "sha256": "8784d12aa25a887e0b498015bdb9df3e1da174be47e458d12cfc1306b6257c91"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/atlas-semantic-index.test.ts",
+    "sha256": "291317b60dd6e48df366075033813de1156e9c38720ab08d8e8ee967aa407542"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/authorization-management-api.test.ts",
+    "sha256": "fd5e2a14167beaa86c98047ea96f54b131ff7e260ab12846b969dc48cbaac2e2"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/authorization-management-config.test.ts",
+    "sha256": "f650d1cbe0e9e8e5422cca5274e9be92ee6147fb158801b6bbd4c5db33c09d62"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/authorization-writer-databases.test.ts",
+    "sha256": "1733d0c06a02c118c6710ded617459f9bf487e1b700c800cad377a129ccef581"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts",
+    "sha256": "9ce4bd1a26be51a90b9d4b975a9525616a2c24674a764d8f83f951f2de7be32f"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/business-partner-action-runtime.test.ts",
+    "sha256": "b8e36b2ca5655fea0ab7cac7131ca4544b97c5a487db34f1589e4cd4d41a80f2"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts",
+    "sha256": "c057b8a2fd9d97f9420a5519c733e972ed343161b289a2893e4c19abe380ca71"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/business-partner-backend-mapping.test.ts",
+    "sha256": "365d9cac96884a54c505758e15dd4c90816338f9ddeb9c5d659b4248af395d02"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/business-partner-bound-import.test.ts",
+    "sha256": "293b3988df0e9a371ca59f72e56272cb30f2a7cf9a5fc52296221b5b6e773cde"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/business-partner-case-runtime.test.ts",
+    "sha256": "08a7678d02c003688f09dbc79542a43e49ac1b91c4921fc8f6c01735f7b87b4a"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/business-partner-export-runtime.test.ts",
+    "sha256": "53946352e75ab5108f9d81f70a882172087f6c38fb386d40a5f5926e1ae383ef"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts",
+    "sha256": "7e467c95918e3c9e71ebe6859bb3894685721c61abc0aa2190a012fe45d31c74"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/business-partner-qualification-runtime.test.ts",
+    "sha256": "58df2d6b46eb5a9cac99cda6d001b38e2620f277c32d3bbc51d0fb91938d5aef"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/business-partner-read-runtime.test.ts",
+    "sha256": "7e5201c783ef69cd5d9373ce1319c3b150e1c80ad410d0ba037abe4ba3994f25"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/business-partner-reveal-runtime.test.ts",
+    "sha256": "e3bc31fa0f979de0133aaea387bf7b7d4a82c437c69d87dfba48df3b27717425"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/capability-registry.test.ts",
+    "sha256": "4e43c7c7e0d0b061b8da4ac18f5443bba618c9ef60bb72f04671c0573d959437"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/control-runtime-command-composition.test.ts",
+    "sha256": "276b51794a8d6e71692564ddd89703c0db1e079088dd40c133f11d7431ed73c2"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/customer-portal-scheduler.test.ts",
+    "sha256": "319be7bb4ee19cb0110deb2b6594349b01ec2a0aac8ea98ab81d8f3c06b5b899"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/database-qualification.test.ts",
+    "sha256": "63e077529bcd20c835171f46d8bfcb380d2c56fd4804b21eb524887fbd185070"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts",
+    "sha256": "48151a797970dcfb4356b7ed973111c876ee1ce265bb6d2b88a69b6aeec4de59"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/finance-http-review.test.ts",
+    "sha256": "8e4fe1e90fddef0706114b22b89df252372184f2d50e08b9656342e2f58ad71f"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/finance-plane-import-boundary.test.ts",
+    "sha256": "591020e2b82f2209384c1f5aaf260651191f6e59319f89b8ae19f18ba5d1aa0e"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/governance-plane-boundary.test.ts",
+    "sha256": "5c82b12b53ac136f847c0d7060b45322019551d0013863b5e0b3067249184a14"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts",
+    "sha256": "5f3396bc4cabfe6dc8d206384c67821c1b4cf8f8c3d48b797d040e63cc216c9e"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/iam-audit-vertical.test.ts",
+    "sha256": "0dc1a34959a86dc058e785da4fc8c792088f6b7ce53d93cb064a8847e08acdee"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/local-verification-delivery.test.ts",
+    "sha256": "608606b72eecc81763e142d24dc9fc3f061d5591130cde260c92956693dbb3ca"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts",
+    "sha256": "30e735b35f1b1d62251441e77920a3f8b80bda53f262c8c35f2bcfd1a69d43d7"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts",
+    "sha256": "83f0fae21844a800e368bfce824c4ce280984f988e00b33c6ff7df9e88d7a2c0"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/mesh-exchange-readiness.postgres.test.ts",
+    "sha256": "f9e2c2c919cb95ea77de1eaf9eb86c5f513288b5cf7743b6b48d181d85b357b1"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/mesh-exchange-readiness.test.ts",
+    "sha256": "69a830844b5d7f520b778e183a16064cdbd28683ac60638641bf084375ffbedb"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts",
+    "sha256": "4419480af161d2428e06c8da3b2e5ea69fc0acd66a7d4103627903cff90f08ca"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/metadata-records-vertical.test.ts",
+    "sha256": "6f0d385e2046cf855da50b7d7d1f54ed07f86181324de834303031abf1f24fc0"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/notification-capture.test.ts",
+    "sha256": "7ce43830499c7041eb109d96031c1d8689ed2e05752ae4975ac1e8aac5ea9d3a"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/notification-vertical.test.ts",
+    "sha256": "4c57296544895dffbfc8491fe5e3d1fbe3b71349323baba49220c9b01ea04f20"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/optional-capability-readiness.test.ts",
+    "sha256": "ab141c3fc2111dfccaa1defc5984bb026f9c33fe10589bc283053395be1bea3d"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/plane-transaction-coordinator.test.ts",
+    "sha256": "6c43d7bad9abd4a959e261e08717a52309bba2e2405fc8eb20cddc86aaaae325"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/policy-vertical.test.ts",
+    "sha256": "1b9ff6c0f76ce11c27a80d9ad8f3423f554713d0b5f87691a0fbe31f8e505036"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/publication-api-signer.test.ts",
+    "sha256": "83d4aece0d1602d1547812b3b0734fd5cf2be6fa4b3abbe9b53c8cc2e606f73c"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/publication-plane.test.ts",
+    "sha256": "8c1960f7135ec9bd774e8934deeb4312ac34bbcd65bd47e7a58965d481517ed7"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/register-adapters.test.ts",
+    "sha256": "bb91c29f5af2ccb033775b5384ad38c41db588357eb3e8adfeaed40378c0b7c2"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/register-runtimes.test.ts",
+    "sha256": "fe7a438f0310a981b065fda19990d6b33e33e7d0f5c01313884a9f71dc34b582"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts",
+    "sha256": "6d6e53222c7aadc4018be8e9e10729e219f2812e6f1d2f0c6e39f7da7e54dfde"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts",
+    "sha256": "8b78ad259a75fb6249be2b9edd6a504f1f9818360f6efe3e07ccf18604573292"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts",
+    "sha256": "7d3263b08d63d91f99a1dfaeed07ec0cb8ac4dc8729fda3929ba20ef2296516d"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/atlas-document-grounding.ts",
+    "sha256": "8140f4059c7879da8f05c419154731666adce336ed6c77db3c0718c8fb861134"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/atlas-inference-admission.ts",
+    "sha256": "3d240842997ec53a3cd8ec77f8f389a0d85d2b25f8a557f9914c9ce29af670d9"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/atlas-semantic-index.ts",
+    "sha256": "c322d37afba0eb747d7242ea1d333a134d682cacd9a18bcb95707ed071a499a5"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/authorization-management-config.ts",
+    "sha256": "3f85fa9e54c87e2903f27a3476f6483d609bc4e71931006ca3e957f60763af5b"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/authorization-writer-databases.ts",
+    "sha256": "d27507a189a4287fe069fca0b948183bcff84ce705034dd03c2f830f241b1549"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts",
+    "sha256": "391ff26ed1d641aad1891121449fe7e57b66c19b8b6b468d8e1d4b5afd160272"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/bank-directory-authorizer.ts",
+    "sha256": "d612a54729124c31ef6737a09b92ea6103cafd8b351ab2662f41cdea3853839d"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-action-runtime.ts",
+    "sha256": "c89da03487794723970b9a708055c82b830f1848c8c2dcf6f6e3d96a5b654a95"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts",
+    "sha256": "61a5794da6a9d49cf0aeead55b30630c6ec30624feaa8504d608c56adca3418c"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-backend-mapping.ts",
+    "sha256": "889497761383706232b3097b9e02439ea0510143bfbe07ab2ec998eadce8f55a"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-bound-import.ts",
+    "sha256": "1aa1731c7354c50a10d0755072e70cee93a304fd88293d8526ba8933c330b622"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-case-runtime.ts",
+    "sha256": "b60829a52c2dcbfa532d95f6ba9ee65c2a2cb2d3f4463308de8a2a1d6f36bed9"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts",
+    "sha256": "74f9ffe325cd3e228f27837ecc4c77b2d0b746a5e92a084cc01712f5c28a3c57"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-definition-authorizer.ts",
+    "sha256": "c70eb0bb57cb7417c2538e39b982404936e0d0105049e6a52600bcbad5ffa523"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-export-runtime.ts",
+    "sha256": "d11bad6cf9843fd038b9c7314c889d8c61994f30fdaf063c700ad31365180e2a"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-import-runtime.ts",
+    "sha256": "871423ca2b0ce53f93e29045b71bcd04396cc4aba1789dcb0e36b9e5610bfdbf"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-permission-transitions.ts",
+    "sha256": "cc8d11c963e9be6da67243152fb8cd8a9f5126e03b67a10ac4925e0539e51cf5"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-qualification-runtime.ts",
+    "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-read-runtime.ts",
+    "sha256": "e74de05e643e3cbf671de96bdd1125cccc225c3fcdee17711cf9e723e4eafe9d"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-reveal-runtime.ts",
+    "sha256": "414c8bc359d5f6fac3d69bd0c33f665eea606c9eb3c900f67346b11b92170b30"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/business-partner-stored-scopes.ts",
+    "sha256": "432a0f45fbfb70bf59b273393af3c00650780631c4ec393993f855704dc77f20"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/capability-registry.ts",
+    "sha256": "7d15096b88e0b67d625eebb25516f0e0a0e02c2150786a602ee5b3d568a9b644"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/create-container.ts",
+    "sha256": "9e61c56d884066b5a981b3c3b5c08575f94c2b3b747c7404b94a1b91cb7d0931"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/database-qualification.ts",
+    "sha256": "936b2b0dc2f5b8e1530caa0be8405b68f3a6b756881f7065edcd35fae8b8f50e"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/entity-case-backend-mapping.ts",
+    "sha256": "777c190496553f42da14137fae4ea494e96d4762cf17a667ac9ace9073073f02"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/entity-case-preflight.ts",
+    "sha256": "b7a9c3c380f221438fd0bf57ff101cbd68b2c84ab1b975734b92569eda3cef9b"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/entity-release-review-deployment.ts",
+    "sha256": "0b24f35926f36c7570d94128935522c3d9c5b4952730ae35902fea69ab06e293"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/finance-routes.ts",
+    "sha256": "d12c9d441654c54d5c4cfb5b71ea380cd29284172f421e460e9d5d40a77ce400"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/local-verification-delivery.ts",
+    "sha256": "c0b6da0d39a8a8f8faf1603c246edab79a1ee48133889c1108fcfca3b27328ea"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/mesh-exchange-readiness.ts",
+    "sha256": "85d26c01f4d3d704b165f3a1a2555542872d5eae5483dd60c0b2d337005abc43"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/meta-entity-authoring-authorizer.ts",
+    "sha256": "16c089a3768560c3af92248b878130bddd762fbceeb8cf78c3c32a4900b3490b"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/publication-plane.ts",
+    "sha256": "fd493f6ce2e8ae520a0ce73928a072de84d8d74f16ef1ad20296d89382391315"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/register-adapters.ts",
+    "sha256": "e75ed4874385ed218f6674e68740c79332952c6f1a4ee944952860dee41a3b21"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/register-business-partner-metrics.ts",
+    "sha256": "9367335fb3fcfff0c70b104811454356b952b09eb53dc5a72c901eef023a28ed"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/register-invalidation-workers.ts",
+    "sha256": "ea9bc5cf1d1b7c0ee8e014f99f13c3d3862c70d780039f918189a4770e19173a"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/register-master-data.ts",
+    "sha256": "ef5c5f15fda8f1af0b2d3298d857594ea0256fd61867ae6c0565a3b1a97a922b"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/register-platform.ts",
+    "sha256": "9d371c4aa754104678669ce33f4404abf0a9b9c92504f5f3aafba11cf1d42787"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/register-runtimes.ts",
+    "sha256": "f3461ecae351c37a6587a1f9fc4325d88f90508f5a926357612d66107ee923d9"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/register-services.ts",
+    "sha256": "31ad94f6ce7dd4673d8528a26ebdc23b0341577a6689cbf851d3d13d200756cc"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/scoped-meta-entity-authoring.ts",
+    "sha256": "1b917e76511b5d3a4e4746e85d12f71f8217e95f9a7b3fb24582aac0c94e606c"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/tenant-publication-orchestrator.ts",
+    "sha256": "810a6d70cf30080f51bcb71b8fbd768c13f855b659e6bf25c975253b1e62f122"
+  },
+  {
+    "path": "server/apps/platform-host/src/composition/verification-routes.ts",
+    "sha256": "52c7ce013c079bbc2887a0d8674af00949204d04f4450cc1d81553cd0ae64f10"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/a2-operations.test.ts",
+    "sha256": "6917a374234f51122798a3ebf764f2d078c4f1d3251d3076ebab1e347494174a"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/admin-contracts.test.ts",
+    "sha256": "04f9e651e392ebb83ad044d8d9f04b5c89281cc2ceaf06b1206e90de25530ee5"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/atlas-experience-runtime-review.test.ts",
+    "sha256": "40c41ad62df65da13fe80bb585c13c53303d45408722a56e96b9f586216663d6"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/atlas-routes.test.ts",
+    "sha256": "6b7a406a1eb1fb146ec4b91933ab6fac694f830bbb0817ba9e2e5c2af138b70c"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/business-context-http.test.ts",
+    "sha256": "1e70c453ce6bc3205c38f66611e1a5c74a5d98e449c5ae2f3a566e6f87f77dd2"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/business-context.test.ts",
+    "sha256": "3e0d16aea8337e708ef292a559bd8ae7c8841239834027e63a8e16309dba6155"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/business-partner-assistance.test.ts",
+    "sha256": "57915d0fed11cfdba4c6bb1773092cdbba2c1215be6f58e41ec85f9d1c6b9047"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/business-partner-case-tools.test.ts",
+    "sha256": "0117c376156c5cf254a69a142b46ef88732db355fbc69952937c9045e21d5801"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/business-partner-evaluations.test.ts",
+    "sha256": "a0386559f2e9a6414638915d0aaed518145763d8a73a6dcd434be9939157347c"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/business-partner-insight-tools.test.ts",
+    "sha256": "ae93e293e5160fb0749fe9973af7a44503e03d9265bc2e9fa65fcf33a5899060"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/business-partner-list-insights.test.ts",
+    "sha256": "6cdd7ca73a0dcc1021a5352bbcf93af100b94a85468efa655296389dafabc425"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/conversation-composition.test.ts",
+    "sha256": "cbab1b2309db4c72db7e64766035c22d4be8168b8a397ab95d579f29c992d6ab"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/direct-section-selection.test.ts",
+    "sha256": "57e5bf6cd73ac05ef5ec5fd7fd37e4a08d81496070cbbed1ee76cf631d6c56fd"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/durable-message-lineage.test.ts",
+    "sha256": "70485bad041317a8ec1c7f02aec03b096c88a50f40cbb8b671b3456e53b69a8f"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/entity-record-tool.test.ts",
+    "sha256": "615a63c544647359ab5936bdbeec1b9f24488980689af61aac93bd03e469ec7d"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/entity-section-answer.test.ts",
+    "sha256": "e71bf631fa8b744fe7326af28a1d0951aeefabd6b54efe205c72f608e20a058f"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/entity-section-tool.test.ts",
+    "sha256": "21c91f454bce5f9510b0c0e5731117f027118bfabbfe399123e4b5db30ff3d88"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/experience-configuration.test.ts",
+    "sha256": "40b3ad8639d9cce7ea2a32f5d130c25bc1d1eb515a1d6aa18fa2d6fb179a30bd"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/experience-routes.test.ts",
+    "sha256": "d5febc773361d20e4da6e141313ce19ae217ebf015d7f3af974ccadd955fe306"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/failover.test.ts",
+    "sha256": "20b340c270b84a0fdc77d656712f0f12b861cffb1831156224d2ca5ef006a90b"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/governance.test.ts",
+    "sha256": "e2dda0b8ef1ad0e7842505fecb611b95c0fcd01f013998f4e77a0d99792fcf7e"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/inference-reauthorization.test.ts",
+    "sha256": "ad109a3cff4a3ca12986752006e8d5cb5ad31099296e4b63afbb2a15ba6bcd73"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/insight-disclosure.test.ts",
+    "sha256": "fd6af77830358b2f441b97b84deada909cd51b4bea296ab88bcd6796ba978c7c"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/insight-history.test.ts",
+    "sha256": "d0d41a3c58483af7de42f4eadd437ec39c6d402a9077b91710f8ba5ba01aa89e"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/local-generation.test.ts",
+    "sha256": "d108457c3ac41df114998dd78a3a2c129769ba8d285ebe3111530f3b06919d43"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/local-page-answer-budget.test.ts",
+    "sha256": "0f76fe651573639fec685c97a92b2d62e024c0f7e494d1334d5dbd6a814e090d"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/missing-scope-runtime.test.ts",
+    "sha256": "20d53b432fbe05328cb063d5f9a673091298523505fe35f58ad905e84a987bc7"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/quota-ddl.test.ts",
+    "sha256": "a5b426d859e1b5d3a41de1bbb078b1f26bb468dd876a1036ec0addcdbef955c5"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/quota.test.ts",
+    "sha256": "f2809297c803ca6e3085efb70ffd0cfdf98d14708e5832078d0bcade573c7bd6"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/record-citation.test.ts",
+    "sha256": "0ade877d0b3540691b06683c2c0a7e0e9a5c4de8fc9bce632c273a08d1030a48"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/repository-review.test.ts",
+    "sha256": "2e1cc972799b9e2ba93b11972149b3a60f2b568497f19856e5ed536eb9cc76ff"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/response-feedback.test.ts",
+    "sha256": "1b1f90a7ce7486f1f930f24688045a8817dba6ba23d1f93cc83b048dd92f9bc6"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/retrieval-f5.test.ts",
+    "sha256": "d911c2d29fc0b0072901bc06a4bf7e12b368321769b654f14de49cbb4d489be1"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/review-fixture.ts",
+    "sha256": "8b30c3b5bbdbca07718dc2b09b898c64880d0a12b03193fecc6faa06ed5e2faa"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/route-review.test.ts",
+    "sha256": "e2a3aa1e432ca189aafecac1ab0515ec7be0f68e7346b716812c2d69d2a77794"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/runtime.test.ts",
+    "sha256": "01222a5f9b0c334a2f72cf757d3cae4e06f43d2fcff491d72eca895d1519612d"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/structured-intent.test.ts",
+    "sha256": "50a1178e9d5405b77494bd3d3d054ad5809e3cf4f0cec1765df1ec94450c57f1"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts",
+    "sha256": "8f1fe8561afff0a86859c3e28ead7b35aeff118bdfe40476ee852e252982db18"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/surface-draft-routes.test.ts",
+    "sha256": "9a2d7bb70cfc33c77add45c37582c350a5d30f5c4d7a6f58fdd3d584ea72e0c8"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts",
+    "sha256": "47927611a26fbfae666a686536c1c8311368806b4f07f78edda3bf7fb7216ddf"
+  },
+  {
+    "path": "server/packages/platform/ai/src/__tests__/tool-store-fixture.ts",
+    "sha256": "2448490e5b74eb29bfc18b6b24c68f268264c4e5cda82911555c67eb614d9c80"
+  },
+  {
+    "path": "server/packages/platform/ai/src/a2-composition.ts",
+    "sha256": "0b577881e547c9fd68d89c243890661cd66c01f67639265de751fedeb7d3b3b3"
+  },
+  {
+    "path": "server/packages/platform/ai/src/admission.ts",
+    "sha256": "eeb2333813f17c4bc9c4e3f5027693240a38d06ee0f6f046054a41008d289d67"
+  },
+  {
+    "path": "server/packages/platform/ai/src/agent-runtime.ts",
+    "sha256": "2a35961a0f51bc0c1d3b07cca9dec434574ed6e8a21b43edd823f923086ad752"
+  },
+  {
+    "path": "server/packages/platform/ai/src/atlas-admin-routes.ts",
+    "sha256": "b9f40651db94e198f37ac2658507e1acf6b7aea9e3b6b64f70d4455d007c0b74"
+  },
+  {
+    "path": "server/packages/platform/ai/src/atlas-experience-routes.ts",
+    "sha256": "e51681f398713e9430c9f02c39005ebcb204b3fc854c46877ce19337ffcbac4d"
+  },
+  {
+    "path": "server/packages/platform/ai/src/atlas-route-schemas.ts",
+    "sha256": "2216f95383db9a7e9fd75238b774ae7ad9dab658e481ffb06916f5bef18359ee"
+  },
+  {
+    "path": "server/packages/platform/ai/src/atlas-routes.ts",
+    "sha256": "6f2b48f022da4cadc5ef3f4849fda5f7f20ef944e2b2b04e1da2cb36f8edf40b"
+  },
+  {
+    "path": "server/packages/platform/ai/src/atlas-surface-draft-routes.ts",
+    "sha256": "e41d96b08582fb7e60e05f361a335aa21a8c6a8bb83b2a3465be781c6cf2c0f9"
+  },
+  {
+    "path": "server/packages/platform/ai/src/attachment-context.ts",
+    "sha256": "370e0ce9f1aab7ce1823be3b326aa526837a49dd400d5c55da2f8f1ab83f5b0a"
+  },
+  {
+    "path": "server/packages/platform/ai/src/bindings.ts",
+    "sha256": "335e87bb3e1136d1c26e38f3e8b091aea99c40c69ccd24c134b49c697f7bfeac"
+  },
+  {
+    "path": "server/packages/platform/ai/src/bounded-cache.ts",
+    "sha256": "ce1026b58dc3533802d16ad32036f8f3e0efa9c25e52b91a8d27cdb463aebcf5"
+  },
+  {
+    "path": "server/packages/platform/ai/src/business-context.ts",
+    "sha256": "69ebef25433d45b2bce818182925007ebdba3b6feb50cb00e0a83a44f5fc93e3"
+  },
+  {
+    "path": "server/packages/platform/ai/src/business-partner-address-tool.ts",
+    "sha256": "472ed7c1118948d2a9825610d3785f1087fb0cb86bf9fbfbce3b4755e87de1f2"
+  },
+  {
+    "path": "server/packages/platform/ai/src/business-partner-assistance.ts",
+    "sha256": "789d10291aa031027c575eea4606cbc3348072d89acba61d68af3c8fe1043fba"
+  },
+  {
+    "path": "server/packages/platform/ai/src/business-partner-case-tools.ts",
+    "sha256": "5174fc8fcc0d5ffa45e5332cdd16b42c46af69c7550aa7f70598abc358dc6f26"
+  },
+  {
+    "path": "server/packages/platform/ai/src/business-partner-contact-tool.ts",
+    "sha256": "6be0d93eff21273391106f51510689311c47daa6f55e749d5b62927f1c0b5286"
+  },
+  {
+    "path": "server/packages/platform/ai/src/business-partner-insight-tools.ts",
+    "sha256": "3d03e8b43f99ffcdf9b4514bc7caa10d0c8f91634d8d45a1997aa067edd68bb9"
+  },
+  {
+    "path": "server/packages/platform/ai/src/business-partner-list-insights.ts",
+    "sha256": "3d19bab98e11fdb459afbf75a5ce3a51a4aaabc66d03337c7c70fc89d484d794"
+  },
+  {
+    "path": "server/packages/platform/ai/src/business-partner-tool-selection.ts",
+    "sha256": "c0784e19ecb57bf7ef042fcc862276b87442a3c06d2351ffa4562fdf1e355758"
+  },
+  {
+    "path": "server/packages/platform/ai/src/business-partner-tools.ts",
+    "sha256": "01c23e28c80af454a333fd8e48b3bd9d6e64516f6386e008f1fcb0443ea92e94"
+  },
+  {
+    "path": "server/packages/platform/ai/src/context.ts",
+    "sha256": "fc1286b877a7d8a84478962e6439f05dd2aed0a163068fa39bdd1a610cc8cff8"
+  },
+  {
+    "path": "server/packages/platform/ai/src/conversation-composition.ts",
+    "sha256": "d489ec7745f14fa7570d07a96334f2c5d6929429171cf39acaf9c0b630b73777"
+  },
+  {
+    "path": "server/packages/platform/ai/src/credentials.ts",
+    "sha256": "eadd6f13ccffc0bc9f78b7db1f439d937c09ca54b27ad5749ef49293291279de"
+  },
+  {
+    "path": "server/packages/platform/ai/src/entity-record-tool.ts",
+    "sha256": "1402fa7f8d611ff198b17db8528c3527048a1f065184b24955b52a1612c28c71"
+  },
+  {
+    "path": "server/packages/platform/ai/src/entity-section-answer.ts",
+    "sha256": "68389ecf011fd2c12fe76658bb81da6f34d741b7a088556d5f951d9ea3817a43"
+  },
+  {
+    "path": "server/packages/platform/ai/src/entity-section-intent.ts",
+    "sha256": "4655743d8ff5685de45f3d31ca3a7561797b6da31cd2012403119c7d1ce9ca22"
+  },
+  {
+    "path": "server/packages/platform/ai/src/entity-section-tool-selection.ts",
+    "sha256": "ebb7d1845579ca20262fc504c724283bb2442f382710eb9d2994ab8aae660498"
+  },
+  {
+    "path": "server/packages/platform/ai/src/entity-section-tool.ts",
+    "sha256": "0156b3c29fd68d70ed07dd4115821cdb3a38c803a55bed4b952ed4c22de9f2d9"
+  },
+  {
+    "path": "server/packages/platform/ai/src/errors.ts",
+    "sha256": "311d4e7bc7977388b568d5d56cafc839f8573779bd5d27d0e0ac7b9dacbd0438"
+  },
+  {
+    "path": "server/packages/platform/ai/src/experience-configuration.ts",
+    "sha256": "09ad41397299c9f480f5fc0784dd9ccac7b9411dc5cebcb01ebd643a70a6481e"
+  },
+  {
+    "path": "server/packages/platform/ai/src/index.ts",
+    "sha256": "f0decaff3a26e1b37c174a7ab7cd5edf80976ac1aecea82b4c19f9f4466b511f"
+  },
+  {
+    "path": "server/packages/platform/ai/src/insight-disclosure.ts",
+    "sha256": "9d8f7d220e9ba249988554242687f916d6202f6763f20d922a4b8a789ab6be71"
+  },
+  {
+    "path": "server/packages/platform/ai/src/insight-reuse-policy.ts",
+    "sha256": "433735b521f8d2aa17e41b45ce65a696d8f6fe9415a522a9665ef7a08d51a639"
+  },
+  {
+    "path": "server/packages/platform/ai/src/invoice-extraction-service.ts",
+    "sha256": "490a545e3dd849826e341dd5daa283249228fe166a9efe4b2870cb9d673ec1d5"
+  },
+  {
+    "path": "server/packages/platform/ai/src/knowledge.ts",
+    "sha256": "dc525875c4a12ff8931e45df525b1810e00e53763bec3a280e0a5ed90b19c086"
+  },
+  {
+    "path": "server/packages/platform/ai/src/kysely-message-lineage.ts",
+    "sha256": "52964a4409dbc8487ab2b461c770885387a06a47fd2571d804f27c7df41ac973"
+  },
+  {
+    "path": "server/packages/platform/ai/src/kysely-run-repository.ts",
+    "sha256": "469d972a4adfb4fefc55c3025ff0104f69a2730c51c46741214aa44e37e3c87d"
+  },
+  {
+    "path": "server/packages/platform/ai/src/kysely-thread-repository.ts",
+    "sha256": "94d1f15d62e6b0f26875ba151264d912b9a82e576e5ec32ec93dce1ff9991f00"
+  },
+  {
+    "path": "server/packages/platform/ai/src/kysely-tool-proposal-store.ts",
+    "sha256": "6da81620b072fd2e8c1fcb1ab9303058773752221c84588133e8540602456b81"
+  },
+  {
+    "path": "server/packages/platform/ai/src/learning-candidates.ts",
+    "sha256": "ee11f9eb3ca2dd34e471ba8bd71f49e710c9b954eb9589c526c8e205d282149c"
+  },
+  {
+    "path": "server/packages/platform/ai/src/learning-evaluation.ts",
+    "sha256": "4191db7d8615085897176592b3bdd6460a4fc1bb04f50b2b83ccdf261d604d7f"
+  },
+  {
+    "path": "server/packages/platform/ai/src/local-generation-composition.ts",
+    "sha256": "2d7b1f4dc97e15d7ebf6748597c5155e5868a48cd82b882798fe0ad46380a43b"
+  },
+  {
+    "path": "server/packages/platform/ai/src/message-lineage.ts",
+    "sha256": "762ff4f6617aab86ab8e6bd34cd9328c6000609f1b9fd7887f55a855b7f9663d"
+  },
+  {
+    "path": "server/packages/platform/ai/src/monitoring.ts",
+    "sha256": "8b64fab061f288ede903362cca1b67e588bb5c0d011d01ab903dae05365c9f89"
+  },
+  {
+    "path": "server/packages/platform/ai/src/policy-administration.ts",
+    "sha256": "f79dc84377ce14073453be2fbccfba0595ab7c725922e2564365e5aa1f20c0d7"
+  },
+  {
+    "path": "server/packages/platform/ai/src/quota.ts",
+    "sha256": "51d5cddeefdb84d14b6d32b8c1873e0401d8e84bb540f8fb4b06e0f9eb3ac2e5"
+  },
+  {
+    "path": "server/packages/platform/ai/src/record-data-gateway.ts",
+    "sha256": "f3fb2c5b629d8f85c7ae0617ec44ae9e315110f21d421cb21c8c4a875071df5d"
+  },
+  {
+    "path": "server/packages/platform/ai/src/response-feedback.ts",
+    "sha256": "ee1c36eaecbd55bbe4613985aa3a94b8152fcb6769b1207fc370d4d0311cbdac"
+  },
+  {
+    "path": "server/packages/platform/ai/src/runtime-tool-coordinator.ts",
+    "sha256": "740754ac176cb13e7bfec028407ba18534a3826aa9456c8c4dd7f5fc4d878fa4"
+  },
+  {
+    "path": "server/packages/platform/ai/src/stream.ts",
+    "sha256": "f9485f1f84c282305b6be410f83f89527e690cf68d3ffae18d278658d6282ba5"
+  },
+  {
+    "path": "server/packages/platform/ai/src/structured-intent.ts",
+    "sha256": "66766766bbac291fe9410e2937408f7adbdfafbf88b4566c5def1ff761293f16"
+  },
+  {
+    "path": "server/packages/platform/ai/src/surface-draft-generation.ts",
+    "sha256": "833ed0b347095268b9f384cce16004e9202b10b86ccd02f09a830676032eab5c"
+  },
+  {
+    "path": "server/packages/platform/ai/src/thread-service.ts",
+    "sha256": "8bf53ed218185c044814b0de7dc969a6b1f76d0766ae48125c7218e42b09883d"
+  },
+  {
+    "path": "server/packages/platform/ai/src/tool-service.ts",
+    "sha256": "e38efafd77709b2e18356290b7324f357977bb5175ffc33a430c3bc2d1341913"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-360-activity-mapper.test.ts",
+    "sha256": "8545549b2b82376b0f9249341600c2b64ab5a016dfa9567e39631d15e527cf70"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-360-commercial-controls.test.ts",
+    "sha256": "0a4c3aea829729fbb080e6c478baec5343d4bedce0afa2a6f951f231e07a948b"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-360-completeness.test.ts",
+    "sha256": "f1387a7ed67246c4671a28d351eeb00d4cbb7176987ed11474146f0ffcce8370"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-360-explainability.test.ts",
+    "sha256": "4ef52e94a93cd22fb8a4fc1d9622625e969fe0c4a02f48b2fa7ed31a86bb21b6"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-360-mesh-network-adapter.test.ts",
+    "sha256": "d1654e1c296e10b85732d7d46f08321078997b2e04a21cd43f5576f43c43ac9c"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-360-policy.test.ts",
+    "sha256": "56f4bde8b74467b8352f5dd55d81d89d5241c194c4f97e4f621141f44fd0c548"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-360-production-integrations.test.ts",
+    "sha256": "f7b5a6be6f93788cd3e19d6e726596d4d527972aec4bfea9d77d89165f6fd3d7"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-360-release-gates.test.ts",
+    "sha256": "e26f15c7fcde9355a3d1718cf5fb6fec937c726fe90c5132e69cea1db3c42f2d"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-360-resources.test.ts",
+    "sha256": "0dd3284f77095af3809d674514b9db5e6f0c0a3a438b4148cd7301b8202daf13"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-360-route-contracts.test.ts",
+    "sha256": "997b215770d1fa4231ca13d23766c739fb93712ac1c320b4e3a88ce5805fa7ac"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts",
+    "sha256": "2c488385a23e27065d5f95a40935083178bfa57112f8e4a12f9037b369913dd3"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-bank-disclosure-card.test.ts",
+    "sha256": "39f6d4545610e44e5fc17ada0950ca07a630e2d6c385e4c7762b27c47cdc120a"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-case-explanation.test.ts",
+    "sha256": "ebb2ee84ec9b4045ce70cabc9fc8236254e1f4e12bf579f369466e140731b194"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts",
+    "sha256": "366f94fd21106aa76d856dbe1a4b392d8d6f815342c30328d28d065615301205"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-case-view.test.ts",
+    "sha256": "90baab8982232a8cd5de73802f19e81840c3e99aa0111b3ca42b9063f94ec752"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-company-relationships.test.ts",
+    "sha256": "df663a9c1e897a61d5139fe146c0193819628e751a7fcdf767165253c3414aba"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-display-references.test.ts",
+    "sha256": "e6938c50bf7d7ddbce746a99b01550f72c6943e0e03be7c9be19ccccb02e06b3"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts",
+    "sha256": "646dd33259e1cdee6ca6ed4cf40671ebfa1cb08b64430c46617c93c478acd76a"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-governed-import-routes.test.ts",
+    "sha256": "a30f8226ea2911095def49d0f4dfc037d296b0c2df66aa339a4cb9cf636af151"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-governed-import.test.ts",
+    "sha256": "fc5b6244f81c4dc2305f72157665b6dbb96114f1a17f8414307a5d5a0175801d"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-invitation-service.test.ts",
+    "sha256": "e196da5fd4c02444c8b203c6dc0ac731ccd8c6c45617e4bdd1c0dc1f39a5d367"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-notifications.test.ts",
+    "sha256": "1524c22b0cc9a897407dfa9936570d1811a4e784ac26245956b393663eec8d6e"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-provider-projection.test.ts",
+    "sha256": "28a1829f4fcc8840d76cc5b83bd33b75fe0cd3e76a4e5a17db0fdfa56be01480"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-qualification-preflight.test.ts",
+    "sha256": "b5a3d169b2e16a12df38b1e3c4c915f2358d78de778bd709590d799c56f52afb"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-record-header.test.ts",
+    "sha256": "5dd9e73af183d779a9c6d8fc9cb469dae5b2a8413a1700d3c092aabbd00e4d7e"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-related-presentation.test.ts",
+    "sha256": "1925d82b31df509066d3939f0d0323f87870a42c23888946b53ad03981262ae2"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/business-partner-reveal-preflight.test.ts",
+    "sha256": "cc0dd521954d0f765c9fbc67a1403a01d3143a26f7c5123f7d719a32674b2ae7"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts",
+    "sha256": "f84b950e5866b0669f6dbbde4c5619e1eb181fc7cb47b4b89fa90091dd88aced"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/customer-readiness-repository.test.ts",
+    "sha256": "7df24f754cdfac4c24344ff0ec5f2820fa0005142feab13193ceb047ed88f12a"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/governed-import-creation-replay.test.ts",
+    "sha256": "b414db7a2cb1b32a122849d96eb981e4d672b977d505c0bb7b71570aa55f4eec"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts",
+    "sha256": "b0064c1551cfb9da047caa8575b497c11c595cd4ccf851554c7d6150313ef1f5"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/local-contact-challenge-routes.test.ts",
+    "sha256": "88ca8831cefa5bcd0955e0ba780b59d50f623a8e66e1bdce3061fb9acce03dfe"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts",
+    "sha256": "4576830d812b4cd9257aecb224a6664aae2c0c5b5b1743eced58e544131010f9"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/master-data-routes.test.ts",
+    "sha256": "6a8f0c894818a4694a3e0e0c3ab6d31b75d328071973ded51b70b484284b87c5"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/master-data-services.test.ts",
+    "sha256": "00f80a415f35acfd565ca5f0560aa0705d762ef6603071d165d1775a11483f89"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/master-data.test.ts",
+    "sha256": "2902e8ee2e998ea001a95fe28f2b22efd37924d6a468e0714143a0c12e13284d"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/neon-route-review.test.ts",
+    "sha256": "46ba80d1be8eb2163f176eb9523a2aa873faf92f3bf19b508088348e5aa4f356"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/provider-evidence-verifier.test.ts",
+    "sha256": "f863959d7c992673ec62a49f70ab0690eb2abfbf639fffcd505585e992343ad3"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/supplier-workforce-command-guard.test.ts",
+    "sha256": "3f6a4dac0caab6919769de9ee9b0ef1966f1235317e0aa07efba95ee59d698bf"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/supplier-workforce-requisition-service.test.ts",
+    "sha256": "252b44b485e105a241d41b17bf9395fdbd1b35ddb37d0e141b59761848c1fa32"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/worker-engagement-iam-service.test.ts",
+    "sha256": "490c348fb0245d12b9fe1978bda11cb20f26bb9f99fab6f3e7255cf2cdf6bce9"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/worker-engagement-lifecycle-service.test.ts",
+    "sha256": "8ad7b331a1cdd4ee3250bd8af563f12320bacdfba2a35e0982968aae7c73dd13"
+  },
+  {
+    "path": "server/packages/services/master-data/src/__tests__/workforce-service.test.ts",
+    "sha256": "efc52ef05f319cf61cc8746ac60a3306c07486f78b1e53dc4dfa078803826b04"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-360-activity-mapper.ts",
+    "sha256": "311d020a1e5c6b41fe5c6e53e87ee44cdd81626377b423cd0e8a998fd89cf6a2"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-360-business-activity-providers.ts",
+    "sha256": "96002862d5dcbe90298e25687576b09551735d09c88f9c06d776e9cb0dae3b54"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-360-completeness.ts",
+    "sha256": "c8a24407dd923a663de48b9e63dc7422d069f44b8c6581d2992f8d146c104896"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-360-definition-resolver.ts",
+    "sha256": "6b6f04a36ebc25e837d2f925cf9f00579d380f484eb665c5f4aa6f584a82da79"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-360-mesh-http-transport.ts",
+    "sha256": "afc3d61b6c38718ed264398a422519bddb9e9b5cef36b983d028faf8d5092f28"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts",
+    "sha256": "1aec21550fbdd44c83e122ac34eda0ddf1e27229d01527411b6445c80c4e6679"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-360-policy.ts",
+    "sha256": "4d1ebe8ec44d32ed4bac06a0f8439374bbffc69221ba3bd06a479d59f6c9c836"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-360-release-gates.ts",
+    "sha256": "96ce0d4723299df5dd1eb3c9044e2f1098e40476bcfd85b217406969d34faaf3"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-360-response-schemas.ts",
+    "sha256": "4cefeda25a090886bb78cf9a4ed8a14d1e81aaafd0bef63e7955331a8c6c7b99"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-360-route-contracts.ts",
+    "sha256": "1a37817d92e23e5d66c845bf1f1631f6da590789637aab38005bd70100608c2e"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-360-routes.ts",
+    "sha256": "c71f90b591f841a5877dcbd36e75420d7ab7a5b341e5a5cbc2fc1c20ee543b64"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+    "sha256": "233c36a511eba3a96f1d6e0fc4438edf5b018dcbde8a5ad774175afc413df66a"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-atlas-addresses.test.ts",
+    "sha256": "df8219a26a981ebe953a1053f1725be1295129c95bca98760f239ab4ed8716ce"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-atlas-addresses.ts",
+    "sha256": "86065d812dafc0d452e736df8dde7c094a3ce4c7d0ebdd7f6bee41146ceb68be"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-atlas-contacts.test.ts",
+    "sha256": "6622f3410fb2ed3923387b653e951075a89731d8dda68a9dee6ff67898de6bc4"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-atlas-contacts.ts",
+    "sha256": "90f7e1decd0e6b4ce7d36b0d0a288c488dac3bd0a5b8ce6ae11e798ba2b02176"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-atlas-insights.test.ts",
+    "sha256": "059d7a8c80254119ea200607bb44608c09e32f11506732589ff88814dfdf07cf"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-atlas-insights.ts",
+    "sha256": "145a6eb4dab68d5ac678dc4ae720165292b6781125e0773619c95c0b8874a6a5"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-bank-disclosure-card.ts",
+    "sha256": "db61038640d526701cc204825e6cc1f5ff7e31b11dc23e66367eb82686053324"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-case-explanation.ts",
+    "sha256": "245186f4f37096f25971a3f84e9bc91d9137061ec4413651778e39cd2d4b1ac6"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-case-view.ts",
+    "sha256": "38b4c539f145f37ca9974310bf5fe3f06026834a11cb013ee60c732585b15484"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-display-references.ts",
+    "sha256": "c30f05d094e4523d5e7051f0603f9b01e7efc31e7b92534b606dbf091ea3b6ae"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
+    "sha256": "5559ade2ae60a8f3f18df96794165c143fa7ae1878c5d1c35786a68d3057de17"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-eligibility-service.ts",
+    "sha256": "88fabc889a1748a6c8dac868e61b0667ac6ac0f554f7bc57af4867003f2ae9e9"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-governed-import-routes.ts",
+    "sha256": "04fd64db265580b15b7256d8337b6bda3cba8158fe9d67a705e35445ba3506db"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-governed-import.ts",
+    "sha256": "a7701776454c5e4110c8440de276b0d4869faece057af0c260b1f9496baab471"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-invitation-jobs.ts",
+    "sha256": "b5a833d48ad2914436e4661dd14011899f4d83108870425217d12f3c3f5f238d"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
+    "sha256": "d10357a0b82e522478c0a598043dcd4546fe6b98b78f78327a0fe85cd3a2efb5"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-invitation-service.ts",
+    "sha256": "c2cc64248cf1d2a2b0db41a30bdf4f70f95eb38fda65b2c03d5c4397b9aff16f"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-notifications.ts",
+    "sha256": "d0c893473db4b4fd99f0a223c0e40ef904e3d09f52d4c158dfb3baa11dfdc247"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-onboarding-cycle.ts",
+    "sha256": "d7036de5eaf13d352df5dbc32a6a8b5699d23f3a41454b0249b20e73bdb34a8f"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-provider-projection.ts",
+    "sha256": "3b4e0c93ddec973d7abac2529899fb69daee7f2c81d9555bac81461a153bd264"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-readiness-jobs.ts",
+    "sha256": "dd694d28494bdc7ab21621fdb0d144ca28ef061a30abeb1e707c6ecf78cf8154"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-record-header.ts",
+    "sha256": "c874cd7fdfe0d18184b210f16f7cd9b7718701b97a435acf4b8c431e9dd85874"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-request-routes.ts",
+    "sha256": "3082f5c6e8c02499efef45048a74695de4b04f3f73af701478f46b6ac1979785"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+    "sha256": "c50bd0fc344b295ff3962f252e2ddde8433df40995f10c155410b4647c90921e"
+  },
+  {
+    "path": "server/packages/services/master-data/src/business-partner-request-validator.ts",
+    "sha256": "c9a572f86fd81ea57ad6ba891cca0f670ca142b3cd359eba21e8d96dcd736cd4"
+  },
+  {
+    "path": "server/packages/services/master-data/src/errors.ts",
+    "sha256": "3d60dd14b5b104e0b96579c29c6cf337e46827017ff84a1e3d364ff4e3567c2c"
+  },
+  {
+    "path": "server/packages/services/master-data/src/governed-internal-business-partner-routes.ts",
+    "sha256": "e1c2f786f013c5c3c90ddc2e94ba2616af2d7691ec326c9480c786ec744a368f"
+  },
+  {
+    "path": "server/packages/services/master-data/src/governed-internal-business-partner-service.ts",
+    "sha256": "489b6e7c53297e26509ffb42eed899ddbfa0a349e88aecc7ee85a3f238608c43"
+  },
+  {
+    "path": "server/packages/services/master-data/src/index.ts",
+    "sha256": "12b0538874b9e7e08b68c13f4067980b6962713a10215b98b42088fe333fbf23"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-business-partner-360-bank-reveal.ts",
+    "sha256": "e1e96a81baf1ff7027e70d89bb9cb7fbdb0d13bb3647dc455ef273eea1a638e0"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts",
+    "sha256": "f59a6f1a14b1d342151b7d172f430cd7f26835a0a9a9f86038fcb7ab42c41c72"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-business-partner-360-explainability.ts",
+    "sha256": "ba616edcc48b5002a69d294c4af652b71f6b5c1848777bb84152ababe77d0904"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-business-partner-360-network.ts",
+    "sha256": "0b3e666675d8cb3cb221a6d0ab76a3562e86b7511e41e8942a2680d6a6ffd601"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+    "sha256": "f5d3bb245a7832e8e697793182c518333d87fb09805526f562c0299e31ade78c"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
+    "sha256": "e4dea163d76f1dfcd48172f0d1327dfe42cc789a1fab2c00de43d89d3297802b"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+    "sha256": "9beeb3725d08e0850829efe953908b71ffe940d56b8075cd6191d39e5d66aca1"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-business-partner-case-repository.ts",
+    "sha256": "2c0cdc35eb1449bcb7edb115891240015fc85f880f537238fb26a21b4ae784c4"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+    "sha256": "7880abf3a9b147d54c86c963ea690b6ef90d16c09577df13f2ede2ebd17be3ca"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-business-partner-invitation-repository.ts",
+    "sha256": "5d120b105944d4ca6c43ad740d5d82deb226b96d8490516dc794c18777e63e2b"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-contact-challenge.ts",
+    "sha256": "d063128944636d84b6bb67605683a2910735ac92c479790430b6bf23e298e923"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-governed-internal-business-partner-repository.ts",
+    "sha256": "7ef3fb39f6c458b5550a7a5442bc1635a1ebcb46be2259ec346754c5e561a850"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-master-data-repository.ts",
+    "sha256": "7971fc645a2f64467c935347248aec6242b946fa9678dbc6b94f96f13f26b6f6"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-workforce-repository.ts",
+    "sha256": "3b9b1a58aba58b65be0b0ae902356cf765ef9498163b4571a2534d187555b090"
+  },
+  {
+    "path": "server/packages/services/master-data/src/kysely-workforce-request-repository.ts",
+    "sha256": "b6d98b8406e56f3e105a69b65ee818dd9f59d6b708fe7ebbb5a3d900b10ee183"
+  },
+  {
+    "path": "server/packages/services/master-data/src/local-contact-challenge-routes.ts",
+    "sha256": "96a60c0f0dc2443000211332a24f75d00e15ec91a9d49ae3ce03332a713112c2"
+  },
+  {
+    "path": "server/packages/services/master-data/src/local-contact-challenge.ts",
+    "sha256": "dbc6f2991f6755b5dcc596a6588c03b2666240d46cf546ecc6d45343f2619a42"
+  },
+  {
+    "path": "server/packages/services/master-data/src/master-data-authority.ts",
+    "sha256": "aafc7b922257c9636f56cfa4a1734dc606c7b64484d0b84a03a9638d64c0896c"
+  },
+  {
+    "path": "server/packages/services/master-data/src/master-data-locks.ts",
+    "sha256": "e38b6a97bbf7268f86c4edbb74f363ec76a1a6ee54d1e94e105d03604971655f"
+  },
+  {
+    "path": "server/packages/services/master-data/src/master-data-routes.ts",
+    "sha256": "f933515ada87b01e6ae2d931abcdc34b35342beb08b0a16d2ecf3f1304df08dd"
+  },
+  {
+    "path": "server/packages/services/master-data/src/normalization.ts",
+    "sha256": "d3c285f49999619a47d10abe311716920a2d93f47048b8fadbe1e0e59861e508"
+  },
+  {
+    "path": "server/packages/services/master-data/src/provider-evidence-verifier.ts",
+    "sha256": "2173887348a0f028afe65671d743efa84d97d753a795f6b73408c602886accb8"
+  },
+  {
+    "path": "server/packages/services/master-data/src/secret-store-protected-value-resolver.ts",
+    "sha256": "a8b6e5bcb74ab17e38e9ccad36b82d42d08a383f11aa4d2a745532d8e8a875da"
+  },
+  {
+    "path": "server/packages/services/master-data/src/services.ts",
+    "sha256": "9d0480ccef18fc33cb0637a3c339aa97f46cbbfe3909d2270c2403b3754f6e70"
+  },
+  {
+    "path": "server/packages/services/master-data/src/supplier-workforce-command-guard.ts",
+    "sha256": "aaa1e073d3d267e799a02788a1ed52f879d1d81d46e8c792636dd996760a955c"
+  },
+  {
+    "path": "server/packages/services/master-data/src/supplier-workforce-distribution-http-adapter.ts",
+    "sha256": "ea90c59cf750dfe05cae040cb6dec66d5eb4f63fdeffd7c4f6ef85d2c0d31e84"
+  },
+  {
+    "path": "server/packages/services/master-data/src/supplier-workforce-requisition-repository.ts",
+    "sha256": "e33659adb01629795f240a5e9300b8e4e2ff724166ce1c0b60dca2d666212553"
+  },
+  {
+    "path": "server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts",
+    "sha256": "91647b0d1a2ef2afd473c522b83a5a2e8f5b9da1907bdbe37b434576641c4441"
+  },
+  {
+    "path": "server/packages/services/master-data/src/supplier-workforce-requisition-service.ts",
+    "sha256": "b7cbf3d0aec7968af79d7f2373afb742d1a9fffef902cc93e67be492058ac107"
+  },
+  {
+    "path": "server/packages/services/master-data/src/validation.ts",
+    "sha256": "2172d431e3d67081cf5da697d550d20d66ddfca21c131a6d97683c4ff2793364"
+  },
+  {
+    "path": "server/packages/services/master-data/src/verification-authority.ts",
+    "sha256": "28575d161156fe639ff2076a2b3312a158f077ea61bf0ac476f688d8e2861285"
+  },
+  {
+    "path": "server/packages/services/master-data/src/worker-engagement-iam-repository.ts",
+    "sha256": "4f8c8904fe334ccae23754f5cf1cc4f7da371ec3ad99e6c0a73a6bbc2aeaf2c1"
+  },
+  {
+    "path": "server/packages/services/master-data/src/worker-engagement-iam-routes.ts",
+    "sha256": "66d1c6999349bfe9b7f6b47ad053fca1843f4d135b5a88a08175c8717cfc596c"
+  },
+  {
+    "path": "server/packages/services/master-data/src/worker-engagement-iam-service.ts",
+    "sha256": "5a02540f0609de4e32aaf47d9f8a31c83b778fd938b3a0180c40ad0f91ded849"
+  },
+  {
+    "path": "server/packages/services/master-data/src/worker-engagement-lifecycle-repository.ts",
+    "sha256": "076ac468f4a95f4e00f01c26b227f6a4acb63623eb6d02810c00fcbfc29a0932"
+  },
+  {
+    "path": "server/packages/services/master-data/src/worker-engagement-lifecycle-routes.ts",
+    "sha256": "738f2ada2525f64420c6d80314407fc00fd2a15da74c65a959fc08a4bc05f6be"
+  },
+  {
+    "path": "server/packages/services/master-data/src/worker-engagement-lifecycle-service.ts",
+    "sha256": "e025f94efadaa05f75e76fb8aa06bec947dd1b30c4bcc6d9950a52aa8ed8c311"
+  },
+  {
+    "path": "server/packages/services/master-data/src/workforce-routes.ts",
+    "sha256": "5f7693dfbf6aeee5dff9bea28ec2d8704a03d652702c19981622b6953d3bf14b"
+  },
+  {
+    "path": "server/packages/services/master-data/src/workforce-service.ts",
+    "sha256": "4b253e374d5e8808cea3488af687068c7a60c4bbf24cc9c0d9a4528a50ab5fd5"
+  }
+]

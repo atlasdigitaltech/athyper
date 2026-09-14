@@ -18,7 +18,7 @@ function fixture(kind:"projection"|"match"|"bank") {
   if(kind==="match")registerBusinessPartnerProfileMatchRoutes(app,options as unknown as Parameters<typeof registerBusinessPartnerProfileMatchRoutes>[1]);
   if(kind==="bank")registerBusinessPartnerAccountBankLinkageRoutes(app,options as unknown as Parameters<typeof registerBusinessPartnerAccountBankLinkageRoutes>[1]);
   return {calls,routes,authenticate,async invoke(path:string,input:Partial<Request>={}) {
-    const response={statusCode:200,headersSent:false,status(code:number){this.statusCode=code;return this;},type(){return this;},json:vi.fn()};
+    const response={setHeader:vi.fn(),statusCode:200,headersSent:false,status(code:number){this.statusCode=code;return this;},type(){return this;},json:vi.fn()};
     const next=vi.fn();
     await routes.get(path)!.at(-1)!({body:{},params:{},query:{},get:()=>undefined,...input} as Request,response as unknown as Response,next);
     expect(next).not.toHaveBeenCalled();

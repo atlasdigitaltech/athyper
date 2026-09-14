@@ -1,6 +1,6 @@
 /** Read-only rollout eligibility review. Run with tsx; DATABASE_URL stays out of output. */
 import { Pool } from "pg";
-import { featurePercentageCohort } from "../../../foundation/src/stable-cohort.js";
+import { featurePercentageCohort } from "@athyper/server-foundation";
 
 const at = new Date(process.argv[2] ?? "");
 if (!Number.isFinite(at.getTime()) || !process.env["DATABASE_URL"])

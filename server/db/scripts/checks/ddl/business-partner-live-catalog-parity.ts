@@ -198,7 +198,6 @@ const queries: Record<string, string> = {
       LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
      WHERE (n.nspname, c.relname) IN (
        ('master','person'),
-       ('master','person_business_partner_legacy_link'),
        ('document','workforce_request')
      ) AND a.attnum > 0 AND NOT a.attisdropped
      ORDER BY 1`,
@@ -211,7 +210,6 @@ const queries: Record<string, string> = {
       JOIN pg_namespace n ON n.oid = c.relnamespace
      WHERE (n.nspname, c.relname) IN (
        ('master','person'),
-       ('master','person_business_partner_legacy_link'),
        ('document','workforce_request')
      ) OR con.conname IN (
        'business_partner_organization_only_chk',
@@ -227,7 +225,6 @@ const queries: Record<string, string> = {
       JOIN pg_class i ON i.oid = x.indexrelid
      WHERE (n.nspname, c.relname) IN (
        ('master','person'),
-       ('master','person_business_partner_legacy_link'),
        ('document','workforce_request')
      )
      ORDER BY 1`,
@@ -237,7 +234,6 @@ const queries: Record<string, string> = {
       FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
      WHERE (n.nspname, c.relname) IN (
        ('master','person'),
-       ('master','person_business_partner_legacy_link'),
        ('document','workforce_request')
      ) ORDER BY 1`,
   s2Policies: `
@@ -249,7 +245,6 @@ const queries: Record<string, string> = {
       FROM pg_policy p
       JOIN pg_class c ON c.oid=p.polrelid JOIN pg_namespace n ON n.oid=c.relnamespace
      WHERE (n.nspname, c.relname) IN (
-       ('master','person_business_partner_legacy_link'),
        ('document','workforce_request')
      ) ORDER BY 1`,
   s2Triggers: `
@@ -259,7 +254,6 @@ const queries: Record<string, string> = {
       JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace
      WHERE (n.nspname,c.relname) IN (
        ('master','person'),
-       ('master','person_business_partner_legacy_link'),
        ('document','workforce_request')
      ) AND NOT t.tgisinternal ORDER BY 1`,
   s2Functions: `
@@ -269,7 +263,6 @@ const queries: Record<string, string> = {
       FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
       JOIN pg_language l ON l.oid=p.prolang
      WHERE (n.nspname,p.proname) IN (
-       ('master','trg_reject_person_business_partner_legacy_link_mutation'),
        ('document','fn_workforce_request_payload_has_restricted_key'),
        ('document','trg_guard_workforce_request')
      ) ORDER BY 1`,
@@ -278,7 +271,6 @@ const queries: Record<string, string> = {
       FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
       JOIN pg_roles role_row ON role_row.oid=c.relowner
      WHERE (n.nspname,c.relname) IN (
-       ('master','person_business_partner_legacy_link'),
        ('document','workforce_request')
      ) ORDER BY 1`,
   s2TableGrants: `
@@ -286,7 +278,6 @@ const queries: Record<string, string> = {
            string_agg(privilege_type,',' ORDER BY privilege_type) AS definition
       FROM information_schema.role_table_grants
      WHERE (table_schema,table_name) IN (
-       ('master','person_business_partner_legacy_link'),
        ('document','workforce_request')
      ) AND grantee IN ('athyperapp','athyperadmin','PUBLIC')
      GROUP BY table_schema,table_name,grantee ORDER BY 1`,
@@ -296,7 +287,6 @@ const queries: Record<string, string> = {
       FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
      WHERE (n.nspname,c.relname) IN (
        ('master','person'),
-       ('master','person_business_partner_legacy_link'),
        ('document','workforce_request')
      ) ORDER BY 1`,
   s3Columns: `

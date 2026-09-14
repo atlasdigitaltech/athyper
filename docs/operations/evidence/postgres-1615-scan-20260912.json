@@ -1,0 +1,192 @@
+{
+  "image": "postgres:16.15-bookworm@sha256:bb3e1a57e5407e0a5280b4211980a5e537f4abd234a87014ac979849a78dd825",
+  "scanReportSha256": "4c32cc2334f213ddc7a699a6ff4c8885f90d3dabb2c797d6ce7ba3b0cfbb0f2e",
+  "scanner": "Trivy 0.74.0",
+  "severityCounts": {
+    "LOW": 157,
+    "HIGH": 94,
+    "MEDIUM": 190,
+    "UNKNOWN": 13,
+    "CRITICAL": 16
+  },
+  "fixableHighCritical": 22,
+  "releaseGate": "blocked",
+  "findings": [
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2025-68121",
+      "severity": "CRITICAL",
+      "installed": "v1.24.6",
+      "fixed": "1.24.13, 1.25.7, 1.26.0-rc.3"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2025-61726",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.24.12, 1.25.6"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2025-61729",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.24.11, 1.25.5"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-25679",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.8, 1.26.1"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-27145",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.11, 1.26.4"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-32280",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.9, 1.26.2"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-32281",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.9, 1.26.2"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-32283",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.9, 1.26.2"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-33811",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.10, 1.26.3"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-33814",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.10, 1.26.3"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-33818",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.13, 1.26.6, 1.27.0-rc.3"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-39820",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.10, 1.26.3"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-39821",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.13, 1.26.6, 1.27.0-rc.3"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-39822",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.12, 1.26.5, 1.27.0-rc.2"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-39836",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.10, 1.26.3"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-42499",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.10, 1.26.3"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-42504",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.11, 1.26.4"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-56853",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.13, 1.26.6, 1.27.0-rc.3"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-56858",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.13, 1.26.6, 1.27.0-rc.3"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-56859",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.13, 1.26.6, 1.27.0-rc.3"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-56860",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.13, 1.26.6, 1.27.0-rc.3"
+    },
+    {
+      "target": "usr/local/bin/gosu",
+      "package": "stdlib",
+      "id": "CVE-2026-56862",
+      "severity": "HIGH",
+      "installed": "v1.24.6",
+      "fixed": "1.25.13, 1.26.6, 1.27.0-rc.3"
+    }
+  ]
+}

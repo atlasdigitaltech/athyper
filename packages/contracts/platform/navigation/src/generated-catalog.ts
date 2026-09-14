@@ -381,7 +381,7 @@ export const PLATFORM_CATALOG_ROUTES = Object.freeze({
         {
           "code": "bp",
           "routeSlug": "business-partner",
-          "name": "Business Partner Management",
+          "name": "Business Partners",
           "iconKey": "contact",
           "entities": []
         },

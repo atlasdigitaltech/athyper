@@ -56,6 +56,119 @@ export const bp360ResponseSchemas = {
                         },
                         "href": {
                           "type": "string"
+                        },
+                        "decision": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "schemaVersion": {
+                                  "const": 1,
+                                  "type": "number"
+                                },
+                                "state": {
+                                  "anyOf": [
+                                    {
+                                      "const": "allowed",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "context_required",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "denied",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "not_applicable",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "preflight_required",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "unavailable",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "verification_required",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "workflow_blocked",
+                                      "type": "string"
+                                    }
+                                  ]
+                                },
+                                "reasonCode": {
+                                  "anyOf": [
+                                    {
+                                      "const": "ACCESS_DENIED",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "AUTHORIZED",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "CONTEXT_REQUIRED",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "NOT_APPLICABLE",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "POLICY_UNAVAILABLE",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "PREFLIGHT_REQUIRED",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "VERIFICATION_REQUIRED",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "WORKFLOW_BLOCKED",
+                                      "type": "string"
+                                    }
+                                  ]
+                                },
+                                "operationKey": {
+                                  "type": "string"
+                                },
+                                "authorityRevision": {
+                                  "type": "string"
+                                },
+                                "decisionRef": {
+                                  "type": "string"
+                                },
+                                "missingCoordinates": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "schemaVersion",
+                                "state",
+                                "reasonCode",
+                                "operationKey",
+                                "authorityRevision",
+                                "decisionRef"
+                              ],
+                              "additionalProperties": true
+                            }
+                          ]
                         }
                       },
                       "required": [
@@ -717,6 +830,126 @@ export const bp360ResponseSchemas = {
                           "type": "string"
                         }
                       ]
+                    },
+                    "operationKey": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "decision": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "schemaVersion": {
+                              "const": 1,
+                              "type": "number"
+                            },
+                            "state": {
+                              "anyOf": [
+                                {
+                                  "const": "allowed",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "context_required",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "denied",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "not_applicable",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "preflight_required",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "unavailable",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "verification_required",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "workflow_blocked",
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "reasonCode": {
+                              "anyOf": [
+                                {
+                                  "const": "ACCESS_DENIED",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "AUTHORIZED",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "CONTEXT_REQUIRED",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "NOT_APPLICABLE",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "POLICY_UNAVAILABLE",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "PREFLIGHT_REQUIRED",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "VERIFICATION_REQUIRED",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "WORKFLOW_BLOCKED",
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "operationKey": {
+                              "type": "string"
+                            },
+                            "authorityRevision": {
+                              "type": "string"
+                            },
+                            "decisionRef": {
+                              "type": "string"
+                            },
+                            "missingCoordinates": {
+                              "anyOf": [
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "schemaVersion",
+                            "state",
+                            "reasonCode",
+                            "operationKey",
+                            "authorityRevision",
+                            "decisionRef"
+                          ],
+                          "additionalProperties": true
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -895,26 +1128,11 @@ export const bp360ResponseSchemas = {
             "type": "string"
           },
           "category": {
-            "anyOf": [
-              {
-                "const": "organization",
-                "type": "string"
-              },
-              {
-                "const": "person",
-                "type": "string"
-              }
-            ]
-          },
-          "displayName": {
+            "const": "organization",
             "type": "string"
           },
-          "legalName": {
-            "anyOf": [
-              {
-                "type": "string"
-              }
-            ]
+          "name": {
+            "type": "string"
           },
           "lifecycleStatus": {
             "type": "string"
@@ -924,7 +1142,7 @@ export const bp360ResponseSchemas = {
           "id",
           "code",
           "category",
-          "displayName",
+          "name",
           "lifecycleStatus"
         ],
         "additionalProperties": true
@@ -1621,19 +1839,11 @@ export const bp360ResponseSchemas = {
                       "type": "string"
                     },
                     {
-                      "const": "person_base",
-                      "type": "string"
-                    },
-                    {
                       "const": "supplier_payable",
                       "type": "string"
                     },
                     {
                       "const": "supplier_scope",
-                      "type": "string"
-                    },
-                    {
-                      "const": "workforce_active",
                       "type": "string"
                     }
                   ]
@@ -1877,10 +2087,18 @@ export const bp360ResponseSchemas = {
         "type": "object",
         "properties": {
           "activeRequestCount": {
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              }
+            ]
           },
           "returnedRequestCount": {
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              }
+            ]
           },
           "expiringQualificationCount": {
             "type": "number"
@@ -1893,8 +2111,6 @@ export const bp360ResponseSchemas = {
           }
         },
         "required": [
-          "activeRequestCount",
-          "returnedRequestCount",
           "expiringQualificationCount",
           "expiringCertificateCount",
           "pendingBankVerificationCount"

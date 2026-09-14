@@ -61,14 +61,25 @@ import {
   type ClamAvMalwareScanner,
   type ClamAvMalwareScannerConfig,
 } from "@athyper/server-adapter-malware-clamav";
-import {createTikaContentExtractor,type TikaContentExtractor,type TikaContentExtractorConfig} from "@athyper/server-adapter-document-parser-tika";
-import {createMeilisearchIndex,type MeilisearchIndex,type MeilisearchIndexConfig} from "@athyper/server-adapter-search-meilisearch";
+import {
+  createTikaContentExtractor,
+  type TikaContentExtractor,
+  type TikaContentExtractorConfig,
+} from "@athyper/server-adapter-document-parser-tika";
+import {
+  createMeilisearchIndex,
+  type MeilisearchIndex,
+  type MeilisearchIndexConfig,
+} from "@athyper/server-adapter-search-meilisearch";
 import {
   createGotenbergRenderer,
   type GotenbergRendererConfig,
 } from "@athyper/server-adapter-rendering";
 import type { PdfRenderer } from "@athyper/server-contract-rendering";
-import { createPreviewRendererAdapter, type PreviewRendererConfig } from "@athyper/server-adapter-preview-renderer";
+import {
+  createPreviewRendererAdapter,
+  type PreviewRendererConfig,
+} from "@athyper/server-adapter-preview-renderer";
 import type { DerivativeRenderer } from "@athyper/server-contract-derivatives";
 import {
   createOpenTelemetryMetricsRegistry,
@@ -79,8 +90,16 @@ import {
 } from "@athyper/server-adapter-telemetry-otel";
 import { tryGetRequestContext } from "@athyper/server-foundation/context";
 import type { LifecycleManager } from "@athyper/server-foundation/lifecycle";
-import { CachedPublicationKeyResolver, Ed25519PublicationSigner, Ed25519PublicationVerifier, sha256 } from "@athyper/server-adapter-publication-signing";
-import { createInfisicalSecretStore, type InfisicalSecretStoreConfig } from "@athyper/server-adapter-secretstore-infisical";
+import {
+  CachedPublicationKeyResolver,
+  Ed25519PublicationSigner,
+  Ed25519PublicationVerifier,
+  sha256,
+} from "@athyper/server-adapter-publication-signing";
+import {
+  createInfisicalSecretStore,
+  type InfisicalSecretStoreConfig,
+} from "@athyper/server-adapter-secretstore-infisical";
 import type { SecretStore } from "@athyper/server-contract-secrets";
 import { ImmutablePublicationArtifactStore } from "@athyper/server-service-publication";
 import { deterministicEmailProviderTenantName } from "@athyper/server-platform-notifications";
@@ -91,7 +110,9 @@ import type { Container } from "./create-container.js";
 export interface AdapterRegistrationDependencies {
   createKeycloakAuth(config: KeycloakAuthAdapterConfig): KeycloakAuthAdapter;
   createRedisCache(config: RedisCacheAdapterConfig): RedisCacheAdapter;
-  createNotificationEvents(client: RedisCacheAdapter["client"]): RedisNotificationEventBus;
+  createNotificationEvents(
+    client: RedisCacheAdapter["client"],
+  ): RedisNotificationEventBus;
   createNeonDatabase(config: NeonDatabaseAdapterConfig): NeonDatabaseAdapter;
   createAthyperDatabase(
     config: AthyperDatabaseAdapterConfig,
@@ -100,17 +121,24 @@ export interface AdapterRegistrationDependencies {
   createObjectStorage(
     config: S3ObjectStorageAdapterConfig,
   ): S3ObjectStorageAdapter;
-  createMalwareScanner(config: ClamAvMalwareScannerConfig): ClamAvMalwareScanner;
-  createContentExtractor(config:TikaContentExtractorConfig):TikaContentExtractor;
-  createSearchIndex(config:MeilisearchIndexConfig):MeilisearchIndex;
-  createOpenTelemetry(
-    config: OpenTelemetryAdapterConfig,
-  ): OpenTelemetryAdapter;
+  createMalwareScanner(
+    config: ClamAvMalwareScannerConfig,
+  ): ClamAvMalwareScanner;
+  createContentExtractor(
+    config: TikaContentExtractorConfig,
+  ): TikaContentExtractor;
+  createSearchIndex(config: MeilisearchIndexConfig): MeilisearchIndex;
+  createOpenTelemetry(config: OpenTelemetryAdapterConfig): OpenTelemetryAdapter;
   createEmail(config: EmailAdapterConfig): NotificationChannelHandler;
   createSesEmail(config: SesEmailAdapterConfig): NotificationChannelHandler;
-  createSesEventSource(config: SesEventSqsAdapterConfig, handler: SesEventMessageHandler): SesEventSqsAdapter;
+  createSesEventSource(
+    config: SesEventSqsAdapterConfig,
+    handler: SesEventMessageHandler,
+  ): SesEventSqsAdapter;
   createSms(config: SmsAdapterConfig): NotificationChannelHandler;
-  createMetaWhatsApp(config: MetaWhatsAppAdapterConfig): NotificationChannelHandler;
+  createMetaWhatsApp(
+    config: MetaWhatsAppAdapterConfig,
+  ): NotificationChannelHandler;
   createFcmPush(config: FcmPushAdapterConfig): PushTransport;
   createWebPush(config: WebPushAdapterConfig): PushTransport;
   createPdfRenderer(config: GotenbergRendererConfig): PdfRenderer;
@@ -127,8 +155,8 @@ const DEFAULT_DEPENDENCIES: AdapterRegistrationDependencies = {
   createMeshDatabase: createMeshDatabaseAdapter,
   createObjectStorage: createS3ObjectStorageAdapter,
   createMalwareScanner: createClamAvMalwareScanner,
-  createContentExtractor:createTikaContentExtractor,
-  createSearchIndex:createMeilisearchIndex,
+  createContentExtractor: createTikaContentExtractor,
+  createSearchIndex: createMeilisearchIndex,
   createOpenTelemetry: createOpenTelemetryAdapter,
   createEmail: createEmailAdapter,
   createSesEmail: createSesEmailAdapter,
@@ -165,14 +193,23 @@ export function registerAdapters(
     container.adapters.openTelemetry = openTelemetry;
     lifecycle.onReady(() => openTelemetry!.start());
   }
-  container.adapters.processMetrics=openTelemetry?.prometheus??createPrometheusMetricsRegistry(createOpenTelemetryMetricsRegistry(`${config.openTelemetry.serviceName}-${config.mode}`,config.openTelemetry.serviceVersion));
+  container.adapters.processMetrics =
+    openTelemetry?.prometheus ??
+    createPrometheusMetricsRegistry(
+      createOpenTelemetryMetricsRegistry(
+        `${config.openTelemetry.serviceName}-${config.mode}`,
+        config.openTelemetry.serviceVersion,
+      ),
+    );
 
   if (config.keycloak.issuerUrl && config.keycloak.audience) {
     const keycloakAuth = dependencies.createKeycloakAuth({
       defaultRealm: {
         issuerUrl: config.keycloak.issuerUrl,
         audience: config.keycloak.audience,
-        ...(config.keycloak.jwksUrl ? { jwksUrl: config.keycloak.jwksUrl } : {}),
+        ...(config.keycloak.jwksUrl
+          ? { jwksUrl: config.keycloak.jwksUrl }
+          : {}),
       },
       jwksCacheTtlMs: config.keycloak.jwksCacheTtlMs,
     });
@@ -181,27 +218,54 @@ export function registerAdapters(
   }
 
   if (config.redis.url) {
-    const redisOperations = container.adapters.openTelemetry?.metrics.counter("athyper_redis_operations_total", "Redis operations by operation and outcome");
+    const redisOperations = container.adapters.openTelemetry?.metrics.counter(
+      "athyper_redis_operations_total",
+      "Redis operations by operation and outcome",
+    );
     const redisCache = dependencies.createRedisCache({
       url: config.redis.url,
       connectTimeoutMs: config.redis.connectTimeoutMs,
       maxRetriesPerRequest: config.redis.maxRetriesPerRequest,
       ...(config.redis.keyPrefix ? { keyPrefix: config.redis.keyPrefix } : {}),
-      ...(redisOperations ? { observer: { operation(name, outcome) { redisOperations.increment({ operation: name, outcome, capability: "redis" }); } } } : {}),
+      ...(redisOperations
+        ? {
+            observer: {
+              operation(name, outcome) {
+                redisOperations.increment({
+                  operation: name,
+                  outcome,
+                  capability: "redis",
+                });
+              },
+            },
+          }
+        : {}),
     });
     container.adapters.redisCache = redisCache;
-    const notificationEvents=dependencies.createNotificationEvents(redisCache.client);
-    container.adapters.notificationEvents=notificationEvents;
+    const notificationEvents = dependencies.createNotificationEvents(
+      redisCache.client,
+    );
+    container.adapters.notificationEvents = notificationEvents;
     lifecycle.onReady(() => redisCache.connect());
     lifecycle.onShutdown(() => redisCache.close());
     lifecycle.onShutdown(() => notificationEvents.close());
   }
 
   if (config.notificationCapture) {
-    if (config.env !== "local" || config.email.provider !== "smtp" ||
-        !config.email.host || !["mailtrap", "localhost", "127.0.0.1", "::1"].includes(config.email.host) ||
-        !config.email.fromAddress || config.email.user || config.email.password) {
-      throw new Error("Notification capture requires local unauthenticated Mailpit SMTP");
+    if (
+      config.env !== "local" ||
+      config.email.provider !== "smtp" ||
+      !config.email.host ||
+      !["mailtrap", "localhost", "127.0.0.1", "::1"].includes(
+        config.email.host,
+      ) ||
+      !config.email.fromAddress ||
+      config.email.user ||
+      config.email.password
+    ) {
+      throw new Error(
+        "Notification capture requires local unauthenticated Mailpit SMTP",
+      );
     }
     const inbox = dependencies.createEmail({
       host: config.email.host,
@@ -211,127 +275,151 @@ export function registerAdapters(
     });
     const captureDomain = config.email.fromAddress.split("@").at(-1)!;
     for (const channel of ["email", "sms", "whatsapp"] as const) {
-      container.adapters.notificationChannels.set(channel, createCaptureChannel(channel, inbox, captureDomain));
+      container.adapters.notificationChannels.set(
+        channel,
+        createCaptureChannel(channel, inbox, captureDomain),
+      );
     }
-    container.adapters.pushTransports.push(createCapturePush(inbox, captureDomain));
+    container.adapters.pushTransports.push(
+      createCapturePush(inbox, captureDomain),
+    );
     lifecycle.onShutdown(() => inbox.close?.());
   } else {
-  if (config.email.provider === "smtp" && config.email.host && config.email.fromAddress) {
-    const email = dependencies.createEmail({
-      host: config.email.host,
-      port: config.email.port,
-      secure: config.email.secure,
-      fromAddress: config.email.fromAddress,
-      ...(config.email.user ? { user: config.email.user } : {}),
-      ...(config.email.password ? { password: config.email.password } : {}),
-    });
-    container.adapters.notificationChannels.set("email", email);
-    lifecycle.onShutdown(() => email.close?.());
-  } else if (
-    config.email.provider === "ses" &&
-    config.email.sesRegion &&
-    config.email.sesConfigurationSetName &&
-    config.email.sesFromAddress
-  ) {
-    const email = dependencies.createSesEmail({
-      region: config.email.sesRegion,
-      configurationSetName: config.email.sesConfigurationSetName,
-      fromAddress: config.email.sesFromAddress,
-      environment: config.env,
-      ...(config.email.sesReplyToAddress
-        ? { replyToAddress: config.email.sesReplyToAddress }
-        : {}),
-      resolveTenantName(tenantId) {
-        return deterministicEmailProviderTenantName(tenantId);
-      },
-    });
-    container.adapters.notificationChannels.set("email", email);
-    lifecycle.onShutdown(() => email.close?.());
-  }
-
-  if (config.email.provider === "ses" && config.mode === "worker" && config.sesEvents.region && config.sesEvents.queueUrl) {
-    const sesEventSource = dependencies.createSesEventSource({
-      region: config.sesEvents.region,
-      queueUrl: config.sesEvents.queueUrl,
-      waitTimeSeconds: config.sesEvents.waitTimeSeconds,
-      visibilityTimeoutSeconds: config.sesEvents.visibilityTimeoutSeconds,
-      maxMessages: config.sesEvents.maxMessages,
-      failureBackoffMs: config.sesEvents.failureBackoffMs,
-    }, {
-      process(body) {
-        const handler = container.adapters.sesEventHandler;
-        if (!handler) throw new Error("SES event handler is not composed");
-        return handler.process(body);
-      },
-    });
-    container.adapters.sesEventSource = sesEventSource;
-    container.runtimes.health.register("notifications.ses-event-source", () => sesEventSource.health());
-    lifecycle.onReady(() => {
-      void sesEventSource.run().catch(() => {
-        console.error("[notifications] ses_event_source_stopped_unexpectedly");
+    if (
+      config.email.provider === "smtp" &&
+      config.email.host &&
+      config.email.fromAddress
+    ) {
+      const email = dependencies.createEmail({
+        host: config.email.host,
+        port: config.email.port,
+        secure: config.email.secure,
+        fromAddress: config.email.fromAddress,
+        ...(config.email.user ? { user: config.email.user } : {}),
+        ...(config.email.password ? { password: config.email.password } : {}),
       });
-    });
-    lifecycle.onShutdown(() => sesEventSource.close());
+      container.adapters.notificationChannels.set("email", email);
+      lifecycle.onShutdown(() => email.close?.());
+    } else if (
+      config.email.provider === "ses" &&
+      config.email.sesRegion &&
+      config.email.sesConfigurationSetName &&
+      config.email.sesFromAddress
+    ) {
+      const email = dependencies.createSesEmail({
+        region: config.email.sesRegion,
+        configurationSetName: config.email.sesConfigurationSetName,
+        fromAddress: config.email.sesFromAddress,
+        environment: config.env,
+        ...(config.email.sesReplyToAddress
+          ? { replyToAddress: config.email.sesReplyToAddress }
+          : {}),
+        resolveTenantName(tenantId) {
+          return deterministicEmailProviderTenantName(tenantId);
+        },
+      });
+      container.adapters.notificationChannels.set("email", email);
+      lifecycle.onShutdown(() => email.close?.());
+    }
+
+    if (
+      config.email.provider === "ses" &&
+      config.mode === "worker" &&
+      config.sesEvents.region &&
+      config.sesEvents.queueUrl
+    ) {
+      const sesEventSource = dependencies.createSesEventSource(
+        {
+          region: config.sesEvents.region,
+          queueUrl: config.sesEvents.queueUrl,
+          waitTimeSeconds: config.sesEvents.waitTimeSeconds,
+          visibilityTimeoutSeconds: config.sesEvents.visibilityTimeoutSeconds,
+          maxMessages: config.sesEvents.maxMessages,
+          failureBackoffMs: config.sesEvents.failureBackoffMs,
+        },
+        {
+          process(body) {
+            const handler = container.adapters.sesEventHandler;
+            if (!handler) throw new Error("SES event handler is not composed");
+            return handler.process(body);
+          },
+        },
+      );
+      container.adapters.sesEventSource = sesEventSource;
+      container.runtimes.health.register("notifications.ses-event-source", () =>
+        sesEventSource.health(),
+      );
+      lifecycle.onReady(() => {
+        void sesEventSource.run().catch(() => {
+          console.error(
+            "[notifications] ses_event_source_stopped_unexpectedly",
+          );
+        });
+      });
+      lifecycle.onShutdown(() => sesEventSource.close());
+    }
+
+    if (config.sms.accountSid && config.sms.authToken) {
+      const sms = dependencies.createSms({
+        accountSid: config.sms.accountSid,
+        authToken: config.sms.authToken,
+        ...(config.sms.fromNumber ? { fromNumber: config.sms.fromNumber } : {}),
+        ...(config.sms.messagingServiceSid
+          ? { messagingServiceSid: config.sms.messagingServiceSid }
+          : {}),
+      });
+      container.adapters.notificationChannels.set("sms", sms);
+    }
+
+    if (
+      config.metaWhatsApp.apiVersion &&
+      config.metaWhatsApp.phoneNumberId &&
+      config.metaWhatsApp.accessToken
+    ) {
+      const whatsApp = dependencies.createMetaWhatsApp({
+        apiVersion: config.metaWhatsApp.apiVersion,
+        phoneNumberId: config.metaWhatsApp.phoneNumberId,
+        accessToken: config.metaWhatsApp.accessToken,
+        ...(config.metaWhatsApp.graphBaseUrl
+          ? { graphBaseUrl: config.metaWhatsApp.graphBaseUrl }
+          : {}),
+      });
+      container.adapters.notificationChannels.set("whatsapp", whatsApp);
+    }
+
+    if (
+      config.fcm.projectId &&
+      config.fcm.clientEmail &&
+      config.fcm.privateKey
+    ) {
+      container.adapters.pushTransports.push(
+        dependencies.createFcmPush({
+          projectId: config.fcm.projectId,
+          clientEmail: config.fcm.clientEmail,
+          privateKey: config.fcm.privateKey,
+        }),
+      );
+    }
+
+    if (
+      config.webPush.subject &&
+      config.webPush.publicKey &&
+      config.webPush.privateKey
+    ) {
+      container.adapters.pushTransports.push(
+        dependencies.createWebPush({
+          subject: config.webPush.subject,
+          publicKey: config.webPush.publicKey,
+          privateKey: config.webPush.privateKey,
+        }),
+      );
+    }
   }
 
-  if (config.sms.accountSid && config.sms.authToken) {
-    const sms = dependencies.createSms({
-      accountSid: config.sms.accountSid,
-      authToken: config.sms.authToken,
-      ...(config.sms.fromNumber ? { fromNumber: config.sms.fromNumber } : {}),
-      ...(config.sms.messagingServiceSid
-        ? { messagingServiceSid: config.sms.messagingServiceSid }
-        : {}),
-    });
-    container.adapters.notificationChannels.set("sms", sms);
-  }
-
-  if (
-    config.metaWhatsApp.apiVersion &&
-    config.metaWhatsApp.phoneNumberId &&
-    config.metaWhatsApp.accessToken
-  ) {
-    const whatsApp = dependencies.createMetaWhatsApp({
-      apiVersion: config.metaWhatsApp.apiVersion,
-      phoneNumberId: config.metaWhatsApp.phoneNumberId,
-      accessToken: config.metaWhatsApp.accessToken,
-      ...(config.metaWhatsApp.graphBaseUrl
-        ? { graphBaseUrl: config.metaWhatsApp.graphBaseUrl }
-        : {}),
-    });
-    container.adapters.notificationChannels.set("whatsapp", whatsApp);
-  }
-
-  if (config.fcm.projectId && config.fcm.clientEmail && config.fcm.privateKey) {
-    container.adapters.pushTransports.push(
-      dependencies.createFcmPush({
-        projectId: config.fcm.projectId,
-        clientEmail: config.fcm.clientEmail,
-        privateKey: config.fcm.privateKey,
-      }),
-    );
-  }
-
-  if (
-    config.webPush.subject &&
-    config.webPush.publicKey &&
-    config.webPush.privateKey
-  ) {
-    container.adapters.pushTransports.push(
-      dependencies.createWebPush({
-        subject: config.webPush.subject,
-        publicKey: config.webPush.publicKey,
-        privateKey: config.webPush.privateKey,
-      }),
-    );
-  }
-
-  }
-
-  if (config.objectStorage.bucket) {
-    const objectStorage = dependencies.createObjectStorage({
+  if (config.objectStorage.buckets) {
+    const { buckets } = config.objectStorage;
+    const sharedObjectStorageOptions = {
       region: config.objectStorage.region,
-      bucket: config.objectStorage.bucket,
       multipartPartSizeMb: config.objectStorage.multipartPartSizeMb,
       multipartQueueSize: config.objectStorage.multipartQueueSize,
       maxUploadMb: config.objectStorage.maxUploadMb,
@@ -342,17 +430,74 @@ export function registerAdapters(
       ...(config.objectStorage.publicEndpoint
         ? { publicEndpoint: config.objectStorage.publicEndpoint }
         : {}),
+    };
+    const appCredentials = {
+      ...(config.objectStorage.credentialProfile
+        ? { credentialProfile: config.objectStorage.credentialProfile }
+        : {}),
       ...(config.objectStorage.accessKeyId
         ? { accessKeyId: config.objectStorage.accessKeyId }
         : {}),
       ...(config.objectStorage.secretAccessKey
         ? { secretAccessKey: config.objectStorage.secretAccessKey }
         : {}),
+    };
+    const artifactsWriterCredentials = {
+      ...(config.objectStorage.artifactsWriterCredentialProfile
+        ? {
+            credentialProfile:
+              config.objectStorage.artifactsWriterCredentialProfile,
+          }
+        : {}),
+      ...(config.objectStorage.artifactsWriterAccessKeyId
+        ? { accessKeyId: config.objectStorage.artifactsWriterAccessKeyId }
+        : {}),
+      ...(config.objectStorage.artifactsWriterSecretAccessKey
+        ? {
+            secretAccessKey:
+              config.objectStorage.artifactsWriterSecretAccessKey,
+          }
+        : {}),
+    };
+
+    const objectStorageDocuments = dependencies.createObjectStorage({
+      ...sharedObjectStorageOptions,
+      bucket: buckets.documents,
+      ...appCredentials,
     });
-    container.adapters.objectStorage = objectStorage;
-    container.adapters.objectStorageBucket = config.objectStorage.bucket;
-    lifecycle.onReady(() => objectStorage.validateAccess());
-    lifecycle.onShutdown(() => objectStorage.close());
+    container.adapters.objectStorageDocuments = objectStorageDocuments;
+    container.adapters.objectStorageDocumentsBucket = buckets.documents;
+    lifecycle.onReady(() => objectStorageDocuments.validateAccess());
+    lifecycle.onShutdown(() => objectStorageDocuments.close());
+
+    const objectStorageTransfers = dependencies.createObjectStorage({
+      ...sharedObjectStorageOptions,
+      bucket: buckets.transfers,
+      ...appCredentials,
+    });
+    container.adapters.objectStorageTransfers = objectStorageTransfers;
+    container.adapters.objectStorageTransfersBucket = buckets.transfers;
+    lifecycle.onReady(() => objectStorageTransfers.validateAccess());
+    lifecycle.onShutdown(() => objectStorageTransfers.close());
+
+    // Bound to the writer credential, not athyper-app: athyper-app only ever
+    // reads this bucket, and probing under a credential other than the one
+    // artifact writers actually use would not catch a write-path misconfig.
+    const objectStorageArtifacts = dependencies.createObjectStorage({
+      ...sharedObjectStorageOptions,
+      bucket: buckets.artifacts,
+      ...artifactsWriterCredentials,
+    });
+    container.adapters.objectStorageArtifacts = objectStorageArtifacts;
+    container.adapters.objectStorageArtifactsBucket = buckets.artifacts;
+    // Read-only reachability probe: HeadBucket + GetObject on a sentinel
+    // reconciled by the s3-tools initializer. This does not prove PutObject works --
+    // that is a live acceptance test, not a startup gate (see the storage
+    // architecture plan, §05).
+    lifecycle.onReady(() =>
+      objectStorageArtifacts.validateReadAccess("_probes/artifacts-sentinel"),
+    );
+    lifecycle.onShutdown(() => objectStorageArtifacts.close());
   }
 
   if (config.malwareScanning.host) {
@@ -361,18 +506,56 @@ export function registerAdapters(
       port: config.malwareScanning.port,
       timeoutMs: config.malwareScanning.timeoutMs,
       maxBytes: config.malwareScanning.maxBytes,
+      signatureMaxAgeMs: config.malwareScanning.signatureMaxAgeMs,
+      signatureCheckIntervalMs: config.malwareScanning.signatureCheckIntervalMs,
     });
     container.adapters.malwareScanner = malwareScanner;
     lifecycle.onReady(async () => {
       const health = await malwareScanner.health();
-      if (health.status === "unhealthy") throw new Error(health.message ?? "Configured malware scanner is unhealthy");
+      if (health.status === "unhealthy")
+        throw new Error(
+          health.message ?? "Configured malware scanner is unhealthy",
+        );
     });
     lifecycle.onShutdown(() => malwareScanner.close());
   }
 
-  if(config.contentExtraction.baseUrl){const contentExtractor=dependencies.createContentExtractor({baseUrl:config.contentExtraction.baseUrl,timeoutMs:config.contentExtraction.timeoutMs,maxInputBytes:config.contentExtraction.maxInputBytes,maxTextChars:config.contentExtraction.maxTextChars});container.adapters.contentExtractor=contentExtractor;lifecycle.onReady(async()=>{const health=await contentExtractor.health();if(health.status==="unhealthy")throw new Error(health.message??"Configured content extractor is unhealthy");});lifecycle.onShutdown(()=>contentExtractor.close());}
+  if (config.contentExtraction.baseUrl) {
+    const contentExtractor = dependencies.createContentExtractor({
+      baseUrl: config.contentExtraction.baseUrl,
+      timeoutMs: config.contentExtraction.timeoutMs,
+      maxInputBytes: config.contentExtraction.maxInputBytes,
+      maxTextChars: config.contentExtraction.maxTextChars,
+    });
+    container.adapters.contentExtractor = contentExtractor;
+    lifecycle.onReady(async () => {
+      const health = await contentExtractor.health();
+      if (health.status === "unhealthy")
+        throw new Error(
+          health.message ?? "Configured content extractor is unhealthy",
+        );
+    });
+    lifecycle.onShutdown(() => contentExtractor.close());
+  }
 
-  if(config.search.baseUrl&&config.search.apiKey){const searchIndex=dependencies.createSearchIndex({baseUrl:config.search.baseUrl,apiKey:config.search.apiKey,indexUid:config.search.indexUid,timeoutMs:config.search.timeoutMs});container.adapters.searchIndex=searchIndex;lifecycle.onReady(async()=>{const health=await searchIndex.health();if(health.status==="unhealthy")throw new Error(health.message??"Configured search index is unhealthy");if(config.mode==="api")await searchIndex.initialize();});lifecycle.onShutdown(()=>searchIndex.close());}
+  if (config.search.baseUrl && config.search.apiKey) {
+    const searchIndex = dependencies.createSearchIndex({
+      baseUrl: config.search.baseUrl,
+      apiKey: config.search.apiKey,
+      indexUid: config.search.indexUid,
+      timeoutMs: config.search.timeoutMs,
+    });
+    container.adapters.searchIndex = searchIndex;
+    lifecycle.onReady(async () => {
+      const health = await searchIndex.health();
+      if (health.status === "unhealthy")
+        throw new Error(
+          health.message ?? "Configured search index is unhealthy",
+        );
+      if (config.mode === "api") await searchIndex.initialize();
+    });
+    lifecycle.onShutdown(() => searchIndex.close());
+  }
 
   if (config.rendering.baseUrl) {
     const pdfRenderer = dependencies.createPdfRenderer({
@@ -392,11 +575,15 @@ export function registerAdapters(
     lifecycle.onReady(async () => {
       const health = await pdfRenderer.health();
       if (health.status === "unhealthy") {
-        throw new Error(health.message ?? "Configured PDF renderer is unhealthy");
+        throw new Error(
+          health.message ?? "Configured PDF renderer is unhealthy",
+        );
       }
       const previewHealth = await previewRenderer.health();
       if (previewHealth.status === "unhealthy") {
-        throw new Error(previewHealth.message ?? "Configured preview renderer is unhealthy");
+        throw new Error(
+          previewHealth.message ?? "Configured preview renderer is unhealthy",
+        );
       }
     });
   }
@@ -416,7 +603,9 @@ export function registerAdapters(
       observer: poolObserver("neon", container),
     });
     container.adapters.neonDatabase = neonDatabase;
-    lifecycle.onReady(async () => { await qualifyRuntimePlaneDatabase(neonDatabase.database as never, "neon"); });
+    lifecycle.onReady(async () => {
+      await qualifyRuntimePlaneDatabase(neonDatabase.database as never, "neon");
+    });
     lifecycle.onShutdown(() => neonDatabase.close());
   }
 
@@ -432,7 +621,12 @@ export function registerAdapters(
       observer: poolObserver("studio", container),
     });
     container.adapters.athyperDatabase = athyperDatabase;
-    lifecycle.onReady(async () => { await qualifyRuntimePlaneDatabase(athyperDatabase.database as never, "studio"); });
+    lifecycle.onReady(async () => {
+      await qualifyRuntimePlaneDatabase(
+        athyperDatabase.database as never,
+        "studio",
+      );
+    });
     lifecycle.onShutdown(() => athyperDatabase.close());
   }
 
@@ -448,29 +642,119 @@ export function registerAdapters(
       observer: poolObserver("mesh", container),
     });
     container.adapters.meshDatabase = meshDatabase;
-    lifecycle.onReady(async () => { await qualifyRuntimePlaneDatabase(meshDatabase.database as never, "mesh"); });
+    lifecycle.onReady(async () => {
+      await qualifyRuntimePlaneDatabase(meshDatabase.database as never, "mesh");
+    });
     lifecycle.onShutdown(() => meshDatabase.close());
   }
 
   if (config.wave0.authorizationWriterConnectionsPath) {
-    const writers = createAuthorizationWriterDatabases(config.wave0.authorizationWriterConnectionsPath);
+    const writers = createAuthorizationWriterDatabases(
+      config.wave0.authorizationWriterConnectionsPath,
+    );
     container.adapters.authorizationWriterDatabases = writers.databases;
     lifecycle.onReady(() => writers.qualify());
     lifecycle.onShutdown(() => writers.close());
   }
-  const publicationEnabled=config.publication?.authoringEnabled||config.publication?.compileEnabled||config.publication?.dispatchEnabled||config.publication?.applyEnabled;
-  if(publicationEnabled){
-    if(!container.adapters.objectStorage||!container.adapters.objectStorageBucket)throw new Error("Publication requires configured object storage");
-    container.adapters.publicationArtifactStore=new ImmutablePublicationArtifactStore({storage:container.adapters.objectStorage,bucket:container.adapters.objectStorageBucket,canonicalizer:{sha256}});
-    container.runtimes.health.register("publication.object-storage",async()=>{const result=await (container.adapters.publicationArtifactStore as ImmutablePublicationArtifactStore).health();return{status:result.healthy?"healthy":"unhealthy",...(result.message?{message:result.message}:{})};});
-    if(!config.infisical.endpoint||!config.infisical.token||!config.infisical.workspaceId)throw new Error("Publication requires Infisical configuration");
-    const secretStore=(dependencies.createSecretStore??createInfisicalSecretStore)({endpoint:config.infisical.endpoint,token:config.infisical.token,workspaceId:config.infisical.workspaceId,environment:config.infisical.environment,secretPath:config.infisical.secretPath});
-    container.adapters.secretStore=secretStore;lifecycle.onShutdown(()=>secretStore.close?.());
-    if(!config.publication.signingKeyId||!config.publication.publicKeyReference)throw new Error("Publication requires signing key ID and public key reference");
-    const resolver=new CachedPublicationKeyResolver(secretStore,[{keyId:config.publication.signingKeyId,...(config.publication.privateKeyReference?{privateKeyReference:config.publication.privateKeyReference}:{}),publicKeyReferences:[config.publication.publicKeyReference]}]);
-    container.adapters.publicationVerifier=new Ed25519PublicationVerifier(resolver);
-    if(config.publication.authoringEnabled||config.publication.compileEnabled||config.publication.dispatchEnabled){if(!config.publication.privateKeyReference)throw new Error("Publication authority requires private signing key reference");container.adapters.publicationSigner=new Ed25519PublicationSigner(resolver);}
-    container.runtimes.health.register("publication.trust-keys",async()=>{const result=await resolver.health(config.publication.signingKeyId!,!!config.publication.authoringEnabled||config.publication.compileEnabled||config.publication.dispatchEnabled);return{status:result.healthy?"healthy":"unhealthy",...(result.message?{message:result.message}:{})};});
+  // Protected business values need the configured store independently of publication.
+  if (
+    config.infisical?.endpoint &&
+    config.infisical.token &&
+    config.infisical.workspaceId
+  ) {
+    const secretStore = (
+      dependencies.createSecretStore ?? createInfisicalSecretStore
+    )({
+      endpoint: config.infisical.endpoint,
+      token: config.infisical.token,
+      workspaceId: config.infisical.workspaceId,
+      environment: config.infisical.environment,
+      secretPath: config.infisical.secretPath,
+    });
+    container.adapters.secretStore = secretStore;
+    lifecycle.onShutdown(() => secretStore.close?.());
+  }
+  const publicationEnabled =
+    config.publication?.authoringEnabled ||
+    config.publication?.compileEnabled ||
+    config.publication?.dispatchEnabled ||
+    config.publication?.applyEnabled;
+  if (publicationEnabled) {
+    if (
+      !container.adapters.objectStorageArtifacts ||
+      !container.adapters.objectStorageArtifactsBucket
+    )
+      throw new Error("Publication requires configured object storage");
+    container.adapters.publicationArtifactStore =
+      new ImmutablePublicationArtifactStore({
+        storage: container.adapters.objectStorageArtifacts,
+        bucket: container.adapters.objectStorageArtifactsBucket,
+        canonicalizer: { sha256 },
+      });
+    container.runtimes.health.register(
+      "publication.object-storage",
+      async () => {
+        const result = await (
+          container.adapters
+            .publicationArtifactStore as ImmutablePublicationArtifactStore
+        ).health();
+        return {
+          status: result.healthy ? "healthy" : "unhealthy",
+          ...(result.message ? { message: result.message } : {}),
+        };
+      },
+    );
+    if (
+      !config.infisical.endpoint ||
+      !config.infisical.token ||
+      !config.infisical.workspaceId
+    )
+      throw new Error("Publication requires Infisical configuration");
+    const secretStore = container.adapters.secretStore!;
+    if (
+      !config.publication.signingKeyId ||
+      !config.publication.publicKeyReference
+    )
+      throw new Error(
+        "Publication requires signing key ID and public key reference",
+      );
+    const resolver = new CachedPublicationKeyResolver(secretStore, [
+      {
+        keyId: config.publication.signingKeyId,
+        ...(config.publication.privateKeyReference
+          ? { privateKeyReference: config.publication.privateKeyReference }
+          : {}),
+        publicKeyReferences: [config.publication.publicKeyReference],
+      },
+    ]);
+    container.adapters.publicationVerifier = new Ed25519PublicationVerifier(
+      resolver,
+    );
+    if (
+      config.publication.authoringEnabled ||
+      config.publication.compileEnabled ||
+      config.publication.dispatchEnabled
+    ) {
+      if (!config.publication.privateKeyReference)
+        throw new Error(
+          "Publication authority requires private signing key reference",
+        );
+      container.adapters.publicationSigner = new Ed25519PublicationSigner(
+        resolver,
+      );
+    }
+    container.runtimes.health.register("publication.trust-keys", async () => {
+      const result = await resolver.health(
+        config.publication.signingKeyId!,
+        !!config.publication.authoringEnabled ||
+          config.publication.compileEnabled ||
+          config.publication.dispatchEnabled,
+      );
+      return {
+        status: result.healthy ? "healthy" : "unhealthy",
+        ...(result.message ? { message: result.message } : {}),
+      };
+    });
   }
 
   if (config.mode === "worker" && config.jobs.workerDatabaseUrls.neon) {
@@ -480,7 +764,9 @@ export function registerAdapters(
       observer: poolObserver("neon", container),
     });
     container.adapters.jobNeonDatabase = database;
-    lifecycle.onReady(async () => { await qualifyRuntimePlaneDatabase(database.database as never, "neon"); });
+    lifecycle.onReady(async () => {
+      await qualifyRuntimePlaneDatabase(database.database as never, "neon");
+    });
     lifecycle.onShutdown(() => database.close());
   }
   if (config.mode === "worker" && config.jobs.workerDatabaseUrls.studio) {
@@ -490,7 +776,9 @@ export function registerAdapters(
       observer: poolObserver("studio", container),
     });
     container.adapters.jobAthyperDatabase = database;
-    lifecycle.onReady(async () => { await qualifyRuntimePlaneDatabase(database.database as never, "studio"); });
+    lifecycle.onReady(async () => {
+      await qualifyRuntimePlaneDatabase(database.database as never, "studio");
+    });
     lifecycle.onShutdown(() => database.close());
   }
   if (config.mode === "worker" && config.jobs.workerDatabaseUrls.mesh) {
@@ -500,7 +788,9 @@ export function registerAdapters(
       observer: poolObserver("mesh", container),
     });
     container.adapters.jobMeshDatabase = database;
-    lifecycle.onReady(async () => { await qualifyRuntimePlaneDatabase(database.database as never, "mesh"); });
+    lifecycle.onReady(async () => {
+      await qualifyRuntimePlaneDatabase(database.database as never, "mesh");
+    });
     lifecycle.onShutdown(() => database.close());
   }
 
@@ -511,13 +801,27 @@ export function registerAdapters(
 }
 
 function poolObserver(plane: "studio" | "neon" | "mesh", container: Container) {
-  const gauge = container.adapters.openTelemetry?.metrics?.gauge("athyper_db_pool_connections", "PostgreSQL pool connections by state");
+  const gauge = container.adapters.openTelemetry?.metrics?.gauge(
+    "athyper_db_pool_connections",
+    "PostgreSQL pool connections by state",
+  );
   return {
     onPoolError(error: Error) {
       console.error(`[database] ${plane}_pool_error`, error.message);
     },
-    onPoolStats(stats: { totalCount: number; idleCount: number; waitingCount: number; max: number }) {
-      for (const [state, value] of [["total", stats.totalCount], ["idle", stats.idleCount], ["active", Math.max(0, stats.totalCount - stats.idleCount)], ["waiting", stats.waitingCount], ["max", stats.max]] as const) {
+    onPoolStats(stats: {
+      totalCount: number;
+      idleCount: number;
+      waitingCount: number;
+      max: number;
+    }) {
+      for (const [state, value] of [
+        ["total", stats.totalCount],
+        ["idle", stats.idleCount],
+        ["active", Math.max(0, stats.totalCount - stats.idleCount)],
+        ["waiting", stats.waitingCount],
+        ["max", stats.max],
+      ] as const) {
         gauge?.set(value, { plane, state, capability: "database" });
       }
     },

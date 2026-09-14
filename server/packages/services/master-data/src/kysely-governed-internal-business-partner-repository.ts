@@ -46,6 +46,17 @@ export class KyselyGovernedInternalBusinessPartnerCaseRepository implements Gove
     >[0],
     transaction: Tx,
   ) {
+    const ordinary = await sql`SELECT 1 FROM document.entity_case
+      WHERE tenant_id=${command.context.tenantId}::uuid AND id=${command.caseId}::uuid
+        AND entity_code='master.business_partner' FOR SHARE`.execute(
+      transaction,
+    );
+    if (!ordinary.rows.length)
+      throw new MasterDataError(
+        404,
+        "BUSINESS_PARTNER_REQUEST_NOT_FOUND",
+        "An ordinary Business Partner case is required",
+      );
     return execute(async () =>
       map(
         (
@@ -67,7 +78,9 @@ export class KyselyGovernedInternalBusinessPartnerCaseRepository implements Gove
   ) {
     return execute(async () => {
       const role = (
-        await sql<{ requested_role: string | null }>`SELECT snapshot.payload_json->>'requestedRole' requested_role
+        await sql<{
+          requested_role: string | null;
+        }>`SELECT snapshot.payload_json->>'requestedRole' requested_role
         FROM document.entity_case governed_case
         JOIN snapshot.entity_snapshot snapshot
           ON snapshot.tenant_id=governed_case.tenant_id AND snapshot.snapshot_id=governed_case.decision_snapshot_id
@@ -102,9 +115,14 @@ function map(row: Row | undefined): GovernedEntityCaseResult {
   if (
     !snapshotId ||
     !status ||
-    !["draft", "submitted", "approved", "rejected", "returned", "materialized"].includes(
-      status,
-    )
+    ![
+      "draft",
+      "submitted",
+      "approved",
+      "rejected",
+      "returned",
+      "materialized",
+    ].includes(status)
   )
     throw new Error("GOVERNED_CASE_RESULT_INVALID");
   return {

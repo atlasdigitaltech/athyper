@@ -12,7 +12,7 @@ import {
   KyselyDesiredOrganizationReader,
   KyselyIdentitySagaRepository,
   KyselyPlaneLocalIdentityAuthority,
-} from "../../../../packages/platform/iam/src/index.ts";
+} from "@athyper/server-platform-iam";
 
 const neonUrl =
   process.env.ATHYPER_NEON_DATABASE_ADMIN_URL ?? process.env.DATABASE_ADMIN_URL;

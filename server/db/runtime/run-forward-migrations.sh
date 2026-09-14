@@ -11,6 +11,8 @@ fail() {
 
 [ -r "$PASSWORD_FILE" ] || fail "Postgres password file is unavailable"
 [ -d "$MIGRATION_ROOT" ] || fail "migration directory is unavailable: $MIGRATION_ROOT"
+TRANSACTION_MANIFEST="$MIGRATION_ROOT/manifests/runner-transactions.sha256"
+[ -r "$TRANSACTION_MANIFEST" ] || fail "runner transaction manifest is unavailable"
 command -v psql >/dev/null 2>&1 || fail "psql is unavailable"
 command -v sha256sum >/dev/null 2>&1 || fail "sha256sum is unavailable"
 
@@ -58,6 +60,16 @@ SQL
     [ -f "$file" ] || fail "migration is absent: $file"
     checksum=$(sha256sum "$file" | cut -d ' ' -f 1)
 
+    # Preserve the bytes/checksums of already-applied unwrapped migrations.
+    # psql supplies their transaction; ordinary migrations keep their own wrapper.
+    set --
+    while read -r expected migration; do
+      if [ "$migration" = "$name" ]; then
+        [ "$expected" = "$checksum" ] || fail "$database/$name checksum differs from the runner transaction manifest"
+        set -- --single-transaction
+      fi
+    done < "$TRANSACTION_MANIFEST"
+
     state=$(run_sql "$database" --tuples-only --no-align \
       --set "migration=$name" --set "checksum=$checksum" --set "runner=$RUNNER_ID" <<'SQL'
 INSERT INTO public.athyper_schema_migration_v1(migration_name, sha256, status, runner_id)
@@ -80,7 +92,7 @@ SQL
     [ "$status" = applying ] && [ "$recorded_runner" = "$RUNNER_ID" ] \
       || fail "$database/$name is $status under runner $recorded_runner; operator resolution is required"
 
-    if run_sql "$database" --file "$file"; then
+    if run_sql "$database" "$@" --file "$file"; then
       run_sql "$database" --set "migration=$name" --set "runner=$RUNNER_ID" <<'SQL'
 UPDATE public.athyper_schema_migration_v1
    SET status = 'applied', completed_at = clock_timestamp(), failure_message = NULL

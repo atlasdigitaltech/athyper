@@ -1,4 +1,5 @@
 "use client";
+import { useOverviewMessage } from "./overview-messages";
 import React, { useEffect, useRef, useState } from "react";
 import {
   addRecordBookmarksOperation,
@@ -40,19 +41,20 @@ export function EntityFavourites({
   onUndo,
   onRetry,
 }: EntityFavouritesProps) {
+  const message = useOverviewMessage();
   const [expanded, setExpanded] = useState(false);
   return (
     <section
       className="a-entity-pulse__panel a-entity-pulse__favourites"
-      aria-label="Favourites"
+      aria-label={message("entity.overview.favourites.title")}
     >
       <div className="a-entity-pulse__panel-heading">
         <div>
           <h3>
             <StarIcon size={19} />
-            Favourites
+            {message("entity.overview.favourites.title")}
           </h3>
-          <p>Your go-to records, close at hand.</p>
+          <p>{message("entity.overview.favourites.description")}</p>
         </div>
         {records.length > 5 ? (
           <button
@@ -140,11 +142,11 @@ export function EntityFavourites({
           <span>
             <StarIcon size={26} />
           </span>
-          <strong>Keep your go-to records close</strong>
-          <p>Star a record in Manage to find it here.</p>
+          <strong>{message("entity.overview.favourites.empty")}</strong>
+          <p>{message("entity.overview.favourites.emptyDescription")}</p>
           {browseHref ? (
             <a className="a-entity-pulse__text-link" href={browseHref}>
-              Browse records
+              {message("entity.overview.browseRecords")}
               <ChevronRightIcon size={15} />
             </a>
           ) : null}

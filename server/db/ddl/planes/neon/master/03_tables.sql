@@ -1860,8 +1860,6 @@ CREATE TABLE master.business_partner (
     representation_purpose_code text                            NOT NULL DEFAULT 'default',
     code                       text                             NOT NULL,
     name                       text                             NOT NULL,
-    display_name               text,
-    legal_name                 text,
     partner_category           master.business_partner_category_d NOT NULL DEFAULT 'organization',
     ownership_class            master.business_partner_ownership_d NOT NULL DEFAULT 'external',
     legal_classification       master.business_partner_legal_classification_d,
@@ -1892,28 +1890,8 @@ CREATE TABLE master.business_partner (
     CONSTRAINT business_partner_purpose_chk
         CHECK (representation_purpose_code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
     CONSTRAINT business_partner_name_nonempty_chk
-        CHECK (btrim(name) <> '' AND length(name) <= 240),
+        CHECK (btrim(name) <> '' AND length(name) <= 320),
     CONSTRAINT business_partner_record_version_chk CHECK (record_version >= 1),
-    CONSTRAINT business_partner_person_facts_chk CHECK (
-        partner_category <> 'person'
-        OR (
-            legal_classification IS NULL
-            AND legal_form IS NULL
-            AND registration_country_code IS NULL
-            AND incorporation_date IS NULL
-            AND website_url IS NULL
-        )
-    ),
-    CONSTRAINT business_partner_display_name_chk
-        CHECK (
-            display_name IS NULL
-            OR (btrim(display_name) <> '' AND length(display_name) <= 240)
-        ),
-    CONSTRAINT business_partner_legal_name_chk
-        CHECK (
-            legal_name IS NULL
-            OR (btrim(legal_name) <> '' AND length(legal_name) <= 320)
-        ),
     CONSTRAINT business_partner_legal_form_chk
         CHECK (
             legal_form IS NULL
@@ -1953,10 +1931,10 @@ CREATE TABLE master.business_partner (
 
 COMMENT ON TABLE master.business_partner IS
   'Neon canonical commercial counterparty identity. Supplier and customer are optional thin roles; registration identifiers, tax profiles, addresses, contacts, and banking remain capability-owned.';
-COMMENT ON COLUMN master.business_partner.display_name IS
-  'Optional canonical UI label for this identity. Supplier and customer do not carry role-level display-name duplicates.';
+COMMENT ON COLUMN master.business_partner.name IS
+  'Required registered organization name. Alternate names are owned by master.business_partner_alias.';
 COMMENT ON COLUMN master.business_partner.partner_category IS
-  'Immutable structural party kind. Ownership and supplier/customer roles are separate axes.';
+  'Organization-only identity. Ownership and supplier/customer roles are separate axes.';
 COMMENT ON COLUMN master.business_partner.ownership_class IS
   'External or tenant-internal ownership. Internal organization roles must be intercompany.';
 COMMENT ON COLUMN master.business_partner.legal_classification IS
@@ -2431,28 +2409,6 @@ CREATE TABLE master.person (
 
 COMMENT ON TABLE master.person IS
   'People/Workforce-owned controlled PII profile. A Person is not a Business Partner; employee, employment, work assignment and external-worker engagement own workforce facts.';
-
-CREATE TABLE master.person_business_partner_legacy_link (
-    tenant_id              uuid        NOT NULL,
-    person_id              uuid        NOT NULL,
-    business_partner_id    uuid        NOT NULL,
-    partner_category       text        NOT NULL,
-    partner_status         text        NOT NULL,
-    captured_at            timestamptz NOT NULL,
-    captured_by_migration  text        NOT NULL,
-
-    CONSTRAINT person_business_partner_legacy_link_pkey
-        PRIMARY KEY (tenant_id, person_id),
-    CONSTRAINT person_business_partner_legacy_link_partner_uq
-        UNIQUE (tenant_id, business_partner_id),
-    CONSTRAINT person_business_partner_legacy_link_category_chk
-        CHECK (partner_category IN ('person', 'group', 'organization')),
-    CONSTRAINT person_business_partner_legacy_link_migration_chk
-        CHECK (captured_by_migration ~ '^[0-9]{8}_[a-z0-9_]+\.sql$')
-);
-
-COMMENT ON TABLE master.person_business_partner_legacy_link IS
-  'Immutable S2 migration evidence for the retired Person-to-Business-Partner association. It is not an identity, authorization, lookup, or join authority.';
 
 CREATE TABLE master.person_sensitive_profile (
     id                      uuid        NOT NULL DEFAULT shared.uuidv7(),

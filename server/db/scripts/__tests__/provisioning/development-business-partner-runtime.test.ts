@@ -34,7 +34,8 @@ test("development business-partner publication is deterministic and browser-safe
       .importAdapterKey,
     "neon.business_partner.operating_organization.v1",
   );
-  assert.equal(first.releaseNo, 10);
+  assert.equal(first.releaseNo, 11);
+  assert.equal(first.projection.descriptor.compiled_json.listPresentation.filterPresentation.quickFields.find(item => item.field === "registration_country_code")?.defaultOperator, "eq");
   assert.equal(first.projection.descriptor.compiled_json.storage.versionField, "record_version");
   assert.ok(first.projection.descriptor.compiled_json.fields.some(field => field.key === "record_version"));
   assert.equal(

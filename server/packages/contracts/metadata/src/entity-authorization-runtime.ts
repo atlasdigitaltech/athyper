@@ -1,3 +1,8 @@
+import { createHash } from "node:crypto";
+import {
+  parseEntityCanonicalReadAdmission,
+  type EntityCanonicalReadAdmissionV1,
+} from "./entity-canonical-read-admission.js";
 import {
   parseEntityAuthorizationProfile,
   type EntityAuthorizationProfileV1,
@@ -15,11 +20,81 @@ export interface EntityAuthorizationRuntimeV1 {
   }[];
 }
 
+export interface EntityAuthorizationRuntimeV2 extends Omit<
+  EntityAuthorizationRuntimeV1,
+  "schemaVersion" | "runtimeVersion"
+> {
+  readonly schemaVersion: 2;
+  readonly runtimeVersion: "entity-authorization.v2";
+  readonly canonicalReadAdmission: EntityCanonicalReadAdmissionV1;
+}
+export type EntityAuthorizationRuntime =
+  EntityAuthorizationRuntimeV1 | EntityAuthorizationRuntimeV2;
+function profileDigest(value: unknown): string {
+  const canonical = (v: unknown): unknown =>
+    Array.isArray(v)
+      ? v.map(canonical)
+      : v && typeof v === "object"
+        ? Object.fromEntries(
+            Object.entries(v)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([k, x]) => [k, canonical(x)]),
+          )
+        : v;
+  return createHash("sha256")
+    .update(JSON.stringify(canonical(value)))
+    .digest("hex");
+}
+
 export function parseEntityAuthorizationRuntime(
   raw: unknown,
   profile: EntityAuthorizationProfileV1,
-): EntityAuthorizationRuntimeV1 {
+): EntityAuthorizationRuntime {
   parseEntityAuthorizationProfile(profile);
+  if (
+    raw &&
+    typeof raw === "object" &&
+    Reflect.get(raw, "schemaVersion") === 2
+  ) {
+    if (
+      Array.isArray(raw) ||
+      ![Object.prototype, null].includes(Object.getPrototypeOf(raw))
+    )
+      throw new TypeError("Invalid authorization runtime object");
+    const v = raw as Record<string, unknown>;
+    if (
+      Object.keys(v).length !== 4 ||
+      Object.keys(v).some(
+        (k) =>
+          ![
+            "schemaVersion",
+            "runtimeVersion",
+            "bindings",
+            "canonicalReadAdmission",
+          ].includes(k),
+      ) ||
+      v.runtimeVersion !== "entity-authorization.v2"
+    )
+      throw new TypeError("Authorization runtime v2 contract mismatch");
+    const legacy = parseEntityAuthorizationRuntime(
+      {
+        schemaVersion: 1,
+        runtimeVersion: "entity-authorization.v1",
+        bindings: v.bindings,
+      },
+      profile,
+    );
+    return Object.freeze({
+      schemaVersion: 2,
+      runtimeVersion: "entity-authorization.v2",
+      bindings: legacy.bindings,
+      canonicalReadAdmission: parseEntityCanonicalReadAdmission(
+        v.canonicalReadAdmission,
+        profile,
+        profileDigest(profile),
+      ),
+    });
+  }
   const object = (value: unknown, keys: readonly string[]) => {
     if (
       !value ||

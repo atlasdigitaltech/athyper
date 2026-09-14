@@ -1,3 +1,4 @@
+import { useBusinessPartner360 } from "../business-partner-360-context";
 import { Card } from "@athyper/platform-ui";
 import type { SectionState } from "../business-partner-360-client";
 const copy: Record<SectionState, string> = {
@@ -36,12 +37,20 @@ export function RestrictedSection() {
   );
 }
 export function ScopeSelectionState() {
+  const { openTransactionContext } = useBusinessPartner360();
   return (
     <Card className="bp360-section-state">
-      <h2>Select a scope</h2>
-      <p>
-        Choose a compatible operating organization and company or legal entity.
-      </p>
+      <h2>Choose a transaction context</h2>
+      <p>Select an organization and company to view this section.</p>
+      {openTransactionContext ? (
+        <button
+          type="button"
+          className="a-button a-button--secondary"
+          onClick={() => openTransactionContext()}
+        >
+          Select context
+        </button>
+      ) : null}
     </Card>
   );
 }

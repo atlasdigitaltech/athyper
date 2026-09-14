@@ -84,9 +84,9 @@ export async function provisionBusinessPartnerR2Fixtures(options: {
     for (const item of fixtures) {
       await client.query(
         `INSERT INTO master.business_partner(
-        id,tenant_id,code,name,display_name,legal_name,partner_category,ownership_class,
+        id,tenant_id,code,name,partner_category,ownership_class,
         category_locked_by,registration_country_code,metadata,status,created_by
-      ) VALUES($1::uuid,$2::uuid,$3,$4,$4,$4,'organization','external',$5::uuid,'MY',$6::jsonb,'active',$5::uuid)
+      ) VALUES($1::uuid,$2::uuid,$3,$4,'organization','external',$5::uuid,'MY',$6::jsonb,'active',$5::uuid)
       ON CONFLICT(tenant_id,id) DO NOTHING`,
         [
           item.businessPartnerId,

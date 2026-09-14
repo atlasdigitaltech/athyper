@@ -247,7 +247,7 @@ ALTER DOMAIN master.business_partner_category_d
     DROP CONSTRAINT IF EXISTS business_partner_category_d_check;
 ALTER DOMAIN master.business_partner_category_d
     ADD CONSTRAINT business_partner_category_d_check
-    CHECK (VALUE IN ('organization', 'person', 'group'));
+    CHECK (VALUE = 'organization');
 
 ALTER DOMAIN master.business_partner_status_d
     DROP CONSTRAINT IF EXISTS business_partner_status_d_check;
@@ -274,7 +274,7 @@ CREATE DOMAIN master.business_partner_legal_classification_d AS text
     CHECK (VALUE IN ('government', 'nonprofit', 'sole_proprietor'));
 
 COMMENT ON DOMAIN master.business_partner_category_d IS
-  'Compatibility structural kind. S2 permits only organization on new NEON Business Partner rows; person and group remain readable only for pre-S2 history.';
+  'Business Partners are organizations. People and workforce identities are managed separately.';
 COMMENT ON DOMAIN master.business_partner_ownership_d IS
   'Tenant ownership axis, independent of structural party kind and commercial role.';
 COMMENT ON DOMAIN master.business_partner_legal_classification_d IS

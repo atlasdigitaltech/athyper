@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
-import { KeycloakIdentityProviderAdapter } from "../../../../packages/platform/iam/src/index.ts";
+import { KeycloakIdentityProviderAdapter } from "@athyper/server-platform-iam";
 
 const baseUrl = process.env.G5_KEYCLOAK_BASE_URL?.replace(/\/$/, "");
 const bootstrapUser = process.env.G5_KEYCLOAK_BOOTSTRAP_USER;

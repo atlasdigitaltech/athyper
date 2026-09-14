@@ -23,6 +23,8 @@ cp /athyper/provisioning-source/dashboards/business-partner.yaml \
 mkdir -p "${provisioning}/dashboards/json"
 cp /athyper/provisioning-source/dashboards/json/business-partner-p9.json \
   "${provisioning}/dashboards/json/business-partner-p9.json"
+cp /athyper/provisioning-source/dashboards/json/business-partner-360.json \
+  "${provisioning}/dashboards/json/business-partner-360.json"
 if [[ "${ATHYPER_OPERATIONS_MODE:-lite}" == "tracing" ]]; then
   cp /athyper/provisioning-source/tracing/tempo.yaml \
     "${provisioning}/datasources/tempo.yaml"

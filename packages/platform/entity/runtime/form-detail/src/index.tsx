@@ -61,3 +61,16 @@ export { EntityRecord360Panel, type Record360Section } from "./record-360-panel"
 export { RelatedRecord, RelatedSectionError, PostalAddress, AddressSummary, ContactSummary, postalAddressLines, detailValue, safeChannelHref } from "./related-record";
 
 export { EntityRecordAction, type EntityActionHandlers, type RecordAction } from "./record-action";
+
+export * from "./intake";
+export * from "./intake-surface";
+export * from "./intake-classification";
+
+export * from "./entity-lookup";
+export * from "./reference-lookup";
+export * from "./data-surface";
+
+export { CollectionSection, AddressesSection, ContactsSection, BankAccountsSection, CertificationsSection, SupportingDocumentsSection } from "./collection-section";
+
+export {EntityFormLayout} from "./form-layout";
+export {EntitySectionNavigation, useEntitySectionScroll, type EntitySectionItem} from "./section-navigation";

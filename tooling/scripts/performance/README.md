@@ -14,7 +14,7 @@ export PERF_NEON_STORAGE_STATE=path/to/storage-state.json
 Example:
 
 ```bash
-export PERF_NEON_STORAGE_STATE=artifacts/storage-state.local.json
+export PERF_NEON_STORAGE_STATE="$HOME/.athyper/instances/dev/storage-state.local.json"
 export PERF_NEON_BASE_URL="https://your-neon-env.example.com"
 pnpm tsx tooling/scripts/performance/capture-cache-observability-baseline.mjs
 ```

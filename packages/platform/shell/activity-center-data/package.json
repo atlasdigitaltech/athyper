@@ -3,11 +3,19 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "sideEffects": ["./src/styles.css"],
+  "sideEffects": [
+    "./src/styles.css"
+  ],
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "exports": { ".": "./src/index.ts", "./page": "./src/page.tsx", "./styles.css": "./src/styles.css" },
-  "scripts": { "typecheck": "tsc --noEmit" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./page": "./src/page.tsx",
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@athyper/platform-api-client": "workspace:*",
     "@athyper/platform-communications-notifications-client": "workspace:*",
@@ -16,6 +24,13 @@
     "@athyper/platform-shell-app-foundation": "workspace:*",
     "@athyper/platform-shell-work-inbox": "workspace:*"
   },
-  "peerDependencies": { "react": "^19.2.5" },
-  "devDependencies": { "@athyper/config": "workspace:*", "@types/react": "^19.2.14", "react": "^19.2.5", "typescript": "^6.0.3" }
+  "peerDependencies": {
+    "react": "^19.2.5"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@types/react": "^19.2.14",
+    "react": "^19.2.5",
+    "typescript": "^6.0.3"
+  }
 }

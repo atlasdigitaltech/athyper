@@ -52,7 +52,6 @@ returns 200 and anonymous deployed API access returns 401. Owner MFA and live re
 decisions were submitted.
 Synthetic test receipts live only in disposable test directories.
 
-
 ## Authenticated DEV qualification
 
 The [owner evidence](../../governance/policy/reports/business-partner-operation-review-owner.dev.json)
@@ -125,3 +124,18 @@ separate rollback compose file. Original and correction approvals are preserved.
 Only the review service was recreated; runtime API, grants and enforcement were
 not changed. MFA automation must use an interactive PTY so stdin remains open
 between user turns; disable terminal echo before receiving a code.
+
+## Route activation after the default-gateway cleanup
+
+The default DEV gateway no longer includes these review routes. Append
+`deploy/compose/instance/reviews/operation.compose.yaml` to the same Compose
+file set that includes the DEV base stack and this review backend's generated
+`review.compose.json`. Keep `deploy/compose/instance/compose.yaml` first so mount
+paths resolve correctly. The overlay requires the backend service to be declared;
+rendering fails when it is missing. Recreate the gateway with that file set to
+activate the routes. Apply only to DEV. Both review overlays can be combined.
+
+For rollback, omit this route overlay and recreate the gateway with the remaining
+approved file set. Preserve review state and stop only the retired review backend.
+The older instructions to edit route blocks in `dev.yaml` are superseded by this
+procedure. Historical backend-only deployment scripts do not activate gateway routes.

@@ -1,16 +1,44 @@
 import type { EffectiveEntitySectionV1 } from "./experience";
 export type ListPlane = "neon" | "mesh" | "studio";
-export type ListViewMode = "table" | "compact" | "board" | "dashboard" | "spreadsheet";
+export type ListViewMode =
+  "table" | "compact" | "board" | "dashboard" | "spreadsheet";
 export type ListDensity = "compact" | "comfortable" | "spacious";
 export type ListCountMode = "none" | "cached" | "approximate" | "exact";
 export type DataOperationState = "enabled" | "disabled" | "hidden";
 export type RecordExportFormat = "xlsx" | "csv" | "json" | "ndjson";
 export type RecordImportFormat = "xlsx" | "csv" | "json";
-export type ListValueKind = "string" | "text" | "integer" | "decimal" | "money" | "boolean" | "date" | "datetime" | "uuid" | "enum" | "reference" | "json";
-export type ListFilterOperator = "eq" | "ne" | "in" | "contains" | "starts_with" | "gt" | "gte" | "lt" | "lte" | "between" | "is_null" | "is_not_null" | "relative";
+export type ListValueKind =
+  | "string"
+  | "text"
+  | "integer"
+  | "decimal"
+  | "money"
+  | "boolean"
+  | "date"
+  | "datetime"
+  | "uuid"
+  | "enum"
+  | "reference"
+  | "json";
+export type ListFilterOperator =
+  | "eq"
+  | "ne"
+  | "in"
+  | "contains"
+  | "starts_with"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte"
+  | "between"
+  | "is_null"
+  | "is_not_null"
+  | "relative";
 export type JsonPrimitive = string | number | boolean | null;
 export interface JsonArray extends ReadonlyArray<JsonValue> {}
-export interface JsonObject { readonly [key: string]: JsonValue; }
+export interface JsonObject {
+  readonly [key: string]: JsonValue;
+}
 export type JsonValue = JsonPrimitive | JsonArray | JsonObject;
 
 /** Browser and service limits are deliberately shared so metadata-rich entities
@@ -41,6 +69,15 @@ export interface ListSortV1 {
  * They are intentionally separate from saveable/location state: a server must
  * validate every value against the current principal snapshot before use.
  */
+/** Server-derived requirements for one collection operation, independent of directory filters. */
+export interface EntityWorkContextRequirementV1 {
+  readonly schemaVersion: 1;
+  readonly resolver: string;
+  readonly requiredCoordinates: readonly (
+    "operatingOrganizationId" | "companyCodeId" | "legalEntityId"
+  )[];
+}
+
 export interface EntityListScopeCoordinateV1 {
   readonly companyCodeIds?: readonly string[];
   readonly operatingOrganizationIds?: readonly string[];
@@ -87,14 +124,19 @@ export interface ListFieldDescriptorV1 {
   readonly rendererKey?: string;
   readonly formatting?: Readonly<Record<string, JsonValue>>;
   /** Authorized, bounded choices suitable for enum or reference filter editors. */
-  readonly filterOptions?: readonly Readonly<{ value: string | number | boolean; label: string }>[];
+  readonly filterOptions?: readonly Readonly<{
+    value: string | number | boolean;
+    label: string;
+  }>[];
   readonly defaultVisible: boolean;
   readonly defaultOrder: number;
   readonly defaultWidth?: number;
   readonly filterOperators: readonly ListFilterOperator[];
   readonly sortable: boolean;
   readonly groupable: boolean;
-  readonly aggregations: readonly ("count" | "sum" | "average" | "minimum" | "maximum")[];
+  readonly aggregations: readonly (
+    "count" | "sum" | "average" | "minimum" | "maximum"
+  )[];
 }
 
 export interface EffectiveListActionV1 {
@@ -104,11 +146,15 @@ export interface EffectiveListActionV1 {
   readonly href?: string;
   readonly disabledMessage?: import("./experience").EntityLocalizedTextV1;
   readonly iconKey?: string;
-  readonly placement: "primary" | "secondary" | "toolbar" | "row" | "selection" | "overflow";
+  readonly placement:
+    "primary" | "secondary" | "toolbar" | "row" | "selection" | "overflow";
   readonly selection: "none" | "single" | "multiple";
   readonly execution: "navigate" | "synchronous" | "asynchronous";
   readonly state: "enabled" | "disabled" | "hidden";
-  readonly disabledReason?: { readonly code: string; readonly messageKey: string };
+  readonly disabledReason?: {
+    readonly code: string;
+    readonly messageKey: string;
+  };
   readonly requiresPreflight: boolean;
   readonly supportsAllMatching: boolean;
 }
@@ -183,7 +229,10 @@ export interface EntityListDescriptorV1 {
       readonly minimumQueryLength: number;
     };
     readonly filterPresentation: {
-      readonly quickFields: readonly Readonly<{ readonly field: string; readonly defaultOperator: ListFilterOperator }>[];
+      readonly quickFields: readonly Readonly<{
+        readonly field: string;
+        readonly defaultOperator: ListFilterOperator;
+      }>[];
       readonly source: "metadata" | "fallback";
       readonly allowUserPinning: boolean;
     };
@@ -198,8 +247,13 @@ export interface EntityListDescriptorV1 {
   readonly scope: {
     readonly quickFilters?: readonly import("./scope-filters").EntityScopeFilterV1[];
     readonly filterKinds?: readonly ("organization" | "company")[];
+    readonly workContext?: EntityWorkContextRequirementV1;
     readonly status: "ready" | "context_required";
-    readonly labels: readonly { readonly key: string; readonly label: string; readonly value: string }[];
+    readonly labels: readonly {
+      readonly key: string;
+      readonly label: string;
+      readonly value: string;
+    }[];
     readonly fingerprint: string;
   };
   readonly limits: {
@@ -238,21 +292,59 @@ export interface EntityListResultV1 {
     readonly requestedCountMode?: ListCountMode;
     readonly totalAsOf?: string;
   };
-  readonly facets?: Readonly<Record<string, readonly { readonly value: JsonValue; readonly label: string; readonly count?: number }[]>>;
-  readonly groups?: readonly { readonly value: JsonValue; readonly label: string; readonly count?: number }[];
+  readonly facets?: Readonly<
+    Record<
+      string,
+      readonly {
+        readonly value: JsonValue;
+        readonly label: string;
+        readonly count?: number;
+      }[]
+    >
+  >;
+  readonly groups?: readonly {
+    readonly value: JsonValue;
+    readonly label: string;
+    readonly count?: number;
+  }[];
 }
 
 export interface EntityApplicationDescriptorV1 {
+  readonly intakeSurfaces?: readonly import("@athyper/contract-platform-entity-runtime").EntityIntakeSurfaceV1[];
+  readonly intakeFlows?: readonly import("@athyper/contract-platform-entity-runtime").EntityIntakeFlowV1[];
   readonly schemaVersion: 1;
   readonly plane: EntityListDescriptorV1["plane"];
-  readonly entity: Pick<EntityListDescriptorV1["entity"], "code" | "label" | "pluralLabel">;
+  readonly entity: Pick<
+    EntityListDescriptorV1["entity"],
+    "code" | "label" | "pluralLabel"
+  >;
   readonly revision: EntityListDescriptorV1["revision"];
-  readonly surface: Pick<EntityListDescriptorV1["surface"], "key" | "title" | "header" | "description">;
+  readonly surface: Pick<
+    EntityListDescriptorV1["surface"],
+    "key" | "title" | "header" | "description"
+  >;
   readonly actions: EntityListDescriptorV1["actions"];
   readonly scope: EntityListDescriptorV1["scope"];
   readonly navigation?: EntityListDescriptorV1["navigation"];
   readonly application?: EntityListDescriptorV1["application"];
 }
 
-export interface EntitySavedView {readonly id:string;readonly name:string;readonly scope:"personal"|"shared"|"system";readonly state:SaveableListStateV1;readonly version:number;readonly compatible:boolean;}
-export interface EntityViewCatalog {readonly views:readonly EntitySavedView[];readonly personalDefault?:string;readonly sharedDefault?:string;readonly createdId?:string;readonly capabilities:{readonly createShared:boolean;readonly manageShared:boolean;readonly setSharedDefault:boolean};}
+export interface EntitySavedView {
+  readonly id: string;
+  readonly name: string;
+  readonly scope: "personal" | "shared" | "system";
+  readonly state: SaveableListStateV1;
+  readonly version: number;
+  readonly compatible: boolean;
+}
+export interface EntityViewCatalog {
+  readonly views: readonly EntitySavedView[];
+  readonly personalDefault?: string;
+  readonly sharedDefault?: string;
+  readonly createdId?: string;
+  readonly capabilities: {
+    readonly createShared: boolean;
+    readonly manageShared: boolean;
+    readonly setSharedDefault: boolean;
+  };
+}

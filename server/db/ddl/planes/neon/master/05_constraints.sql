@@ -1375,11 +1375,10 @@ ALTER TABLE master.person
     ADD CONSTRAINT person_country_fk
     FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT;
 
--- NOT VALID preserves pre-S2 person/group Business Partner history while
--- enforcing the organization-only boundary for every new or changed row.
+-- Business Partners are organizations; People/Workforce owns individual identities.
 ALTER TABLE master.business_partner
     ADD CONSTRAINT business_partner_organization_only_chk
-    CHECK (partner_category = 'organization') NOT VALID;
+    CHECK (partner_category = 'organization');
 
 ALTER TABLE master.person_sensitive_profile
     ADD CONSTRAINT person_sensitive_profile_tenant_fk

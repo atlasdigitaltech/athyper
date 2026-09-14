@@ -217,3 +217,5 @@ common/control/15_lookup_reference_governance.sql
 planes/mesh/mesh/15_bank_disclosure_source.sql
 common/master/19_entity_saved_views.sql
 common/shared/99_security_definer_hardening.sql
+
+common/master/21_reference_choice_recent.sql

@@ -47,6 +47,9 @@ GRANT CONNECT ON DATABASE athyper_mesh TO athyper_worker;
 GRANT CONNECT ON DATABASE athyper_studio TO athyper_worker;
 SQL
 
+# Bootstrap public-schema grants only. Foundation DDL defines service privileges;
+# run-foundation.sh grants service-role memberships and applies
+# runtime-worker-grants-v1.sql to reconcile worker permissions in all three planes.
 for database in athyper_neon athyper_mesh athyper_studio; do
   psql --set=ON_ERROR_STOP=1 --dbname="$database" <<'SQL'
 GRANT USAGE ON SCHEMA public TO athyper_worker;

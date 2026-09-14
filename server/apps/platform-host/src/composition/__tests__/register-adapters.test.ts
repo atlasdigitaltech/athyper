@@ -6,6 +6,35 @@ import { createContainer } from "../create-container.js";
 import { registerAdapters } from "../register-adapters.js";
 
 describe("registerAdapters", () => {
+  it("configures protected-value storage without enabling publication", async () => {
+    const hostConfig = config();
+    hostConfig.publication = {
+      ...hostConfig.publication,
+      authoringEnabled: false,
+      compileEnabled: false,
+      dispatchEnabled: false,
+      applyEnabled: false,
+    };
+    hostConfig.infisical = {
+      ...hostConfig.infisical,
+      endpoint: "https://secrets.example.test",
+      token: "fixture-service-token",
+      workspaceId: "fixture-workspace",
+      environment: "dev",
+    };
+    const close = vi.fn(),
+      store = { resolve: vi.fn(), close },
+      createSecretStore = vi.fn(() => store),
+      container = createContainer(),
+      lifecycle = createLifecycle();
+    registerAdapters(container, hostConfig, lifecycle, { createSecretStore });
+    expect(container.adapters.secretStore).toBe(store);
+    expect(container.adapters.publicationSigner).toBeUndefined();
+    expect(container.adapters.publicationArtifactStore).toBeUndefined();
+    await lifecycle.shutdown("test");
+    expect(close).toHaveBeenCalledOnce();
+  });
+
   it("does not create an adapter without host database configuration", () => {
     const createNeonDatabase = vi.fn();
 
@@ -339,16 +368,23 @@ describe("registerAdapters", () => {
 
   it("constructs S3 storage in the composition root and owns readiness validation", async () => {
     const validateAccess = vi.fn().mockResolvedValue(undefined);
+    const validateReadAccess = vi.fn().mockResolvedValue(undefined);
     const close = vi.fn();
-    const objectStorage = { validateAccess, close };
+    const objectStorage = { validateAccess, validateReadAccess, close };
     const createObjectStorage = vi.fn().mockReturnValue(objectStorage);
     const hostConfig = config();
     hostConfig.objectStorage = {
       endpoint: "http://localhost:9000",
       region: "us-east-1",
-      bucket: "documents",
+      buckets: {
+        documents: "documents",
+        artifacts: "artifacts",
+        transfers: "transfers",
+      },
       accessKeyId: "app",
       secretAccessKey: "secret",
+      artifactsWriterAccessKeyId: "writer",
+      artifactsWriterSecretAccessKey: "writer-secret",
       multipartPartSizeMb: 5,
       multipartQueueSize: 4,
       maxUploadMb: 100,
@@ -361,7 +397,9 @@ describe("registerAdapters", () => {
       createObjectStorage: createObjectStorage as never,
     });
 
-    expect(container.adapters.objectStorage).toBe(objectStorage);
+    expect(container.adapters.objectStorageDocuments).toBe(objectStorage);
+    expect(container.adapters.objectStorageArtifacts).toBe(objectStorage);
+    expect(container.adapters.objectStorageTransfers).toBe(objectStorage);
     expect(createObjectStorage).toHaveBeenCalledWith({
       endpoint: "http://localhost:9000",
       region: "us-east-1",
@@ -373,10 +411,35 @@ describe("registerAdapters", () => {
       maxUploadMb: 100,
       presignedTtlSeconds: 900,
     });
+    expect(createObjectStorage).toHaveBeenCalledWith({
+      endpoint: "http://localhost:9000",
+      region: "us-east-1",
+      bucket: "artifacts",
+      accessKeyId: "writer",
+      secretAccessKey: "writer-secret",
+      multipartPartSizeMb: 5,
+      multipartQueueSize: 4,
+      maxUploadMb: 100,
+      presignedTtlSeconds: 900,
+    });
+    expect(createObjectStorage).toHaveBeenCalledWith({
+      endpoint: "http://localhost:9000",
+      region: "us-east-1",
+      bucket: "transfers",
+      accessKeyId: "app",
+      secretAccessKey: "secret",
+      multipartPartSizeMb: 5,
+      multipartQueueSize: 4,
+      maxUploadMb: 100,
+      presignedTtlSeconds: 900,
+    });
     await lifecycle.signalReady();
-    expect(validateAccess).toHaveBeenCalledOnce();
+    expect(validateAccess).toHaveBeenCalledTimes(2);
+    expect(validateReadAccess).toHaveBeenCalledWith(
+      "_probes/artifacts-sentinel",
+    );
     await lifecycle.shutdown("test");
-    expect(close).toHaveBeenCalledOnce();
+    expect(close).toHaveBeenCalledTimes(3);
   });
 
   it("constructs ClamAV centrally and requires a healthy scanner at readiness", async () => {
@@ -391,6 +454,8 @@ describe("registerAdapters", () => {
       timeoutMs: 30_000,
       maxBytes: 104_857_600,
       onUnavailable: "fail-closed",
+      signatureMaxAgeMs: 172_800_000,
+      signatureCheckIntervalMs: 300_000,
     };
     const container = createContainer();
     const lifecycle = createLifecycle();
@@ -405,6 +470,8 @@ describe("registerAdapters", () => {
       port: 3310,
       timeoutMs: 30_000,
       maxBytes: 104_857_600,
+      signatureMaxAgeMs: 172_800_000,
+      signatureCheckIntervalMs: 300_000,
     });
     await lifecycle.signalReady();
     expect(health).toHaveBeenCalledOnce();
@@ -535,7 +602,10 @@ function adapter(name: string, shutdownOrder: string[]) {
 
 function config(connectionString?: string): HostConfig {
   return {
-    wave0: { ...loadConfig().wave0, authorizationWriterConnectionsPath: undefined },
+    wave0: {
+      ...loadConfig().wave0,
+      authorizationWriterConnectionsPath: undefined,
+    },
     port: 4000,
     logLevel: "info",
     shutdownTimeoutMs: 15_000,
@@ -557,14 +627,21 @@ function config(connectionString?: string): HostConfig {
     },
     objectStorage: {
       endpoint: undefined,
+      publicEndpoint: undefined,
       region: "us-east-1",
-      bucket: undefined,
+      buckets: undefined,
       accessKeyId: undefined,
       secretAccessKey: undefined,
+      artifactsWriterAccessKeyId: undefined,
+      artifactsWriterSecretAccessKey: undefined,
       multipartPartSizeMb: 5,
       multipartQueueSize: 4,
       maxUploadMb: 100,
       presignedTtlSeconds: 900,
+      tenantQuotaGb: 10,
+      tenantQuotaItems: 50_000,
+      quotaReservationTtlSeconds: 1_800,
+      quotaRetryAfterSeconds: 900,
     },
     malwareScanning: {
       host: undefined,
@@ -572,6 +649,8 @@ function config(connectionString?: string): HostConfig {
       timeoutMs: 30_000,
       maxBytes: 104_857_600,
       onUnavailable: "fail-closed",
+      signatureMaxAgeMs: 172_800_000,
+      signatureCheckIntervalMs: 300_000,
     },
     contentExtraction: {
       baseUrl: undefined,

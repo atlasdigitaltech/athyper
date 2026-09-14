@@ -58,10 +58,17 @@ ${assertions}`;
   });
 
   it("rejects corrupted seed text", () => {
-    for (const corrupted of ["broken ?? separator", "broken \uFFFD character"]) {
-      const findings = lintSeedSource(`${header}\n-- ${corrupted}\n${assertions}`);
+    for (const corrupted of [
+      "broken ?? separator",
+      "broken \uFFFD character",
+    ]) {
+      const findings = lintSeedSource(
+        `${header}\n-- ${corrupted}\n${assertions}`,
+      );
       assert(
-        findings.some((finding) => finding.ruleId === "content.encoding-corruption"),
+        findings.some(
+          (finding) => finding.ruleId === "content.encoding-corruption",
+        ),
       );
     }
   });
@@ -173,4 +180,62 @@ ${assertions}`;
       false,
     );
   });
+});
+
+it("accepts key-only membership replay but rejects mutable payload and incomplete conflict keys", () => {
+  const statement =
+    "INSERT INTO control.owner_type_purpose(owner_type_id,capability,purpose_code,created_by) SELECT o.id,'contact','default',o.created_by FROM control.owner_type o ON CONFLICT(owner_type_id,capability,purpose_code) DO NOTHING;";
+  const convergence = (sql: string) =>
+    lintSeedSource(sql).filter((finding) =>
+      finding.ruleId.startsWith("convergence."),
+    );
+  assert.deepEqual(convergence(statement), []);
+  assert(
+    convergence(
+      statement.replace(
+        "purpose_code,created_by",
+        "purpose_code,status,created_by",
+      ),
+    ).some((finding) => finding.ruleId === "convergence.do-nothing"),
+  );
+  assert(
+    convergence(
+      statement.replace(
+        "ON CONFLICT(owner_type_id,capability,purpose_code)",
+        "ON CONFLICT(owner_type_id)",
+      ),
+    ).some((finding) => finding.ruleId === "convergence.do-nothing"),
+  );
+  assert(
+    convergence(
+      statement.replaceAll(
+        "control.owner_type_purpose",
+        "control.lookup_value",
+      ),
+    ).some((finding) => finding.ruleId === "convergence.do-nothing"),
+  );
+});
+it("parses LATERAL while still rejecting its unqualified underlying relation", () => {
+  const relations = (sql: string) =>
+    lintSeedSource(sql).filter(
+      (finding) => finding.ruleId === "relation.unqualified",
+    );
+  assert.deepEqual(
+    relations(
+      "SELECT * FROM control.owner_type o CROSS JOIN LATERAL (SELECT * FROM control.lookup_value) v",
+    ),
+    [],
+  );
+  assert.equal(
+    relations(
+      "SELECT * FROM control.owner_type o CROSS JOIN LATERAL (SELECT * FROM lookup_value) v",
+    ).length,
+    1,
+  );
+  assert.equal(
+    relations(
+      "SELECT * FROM control.owner_type o JOIN LATERAL lookup_value v ON true",
+    ).length,
+    1,
+  );
 });

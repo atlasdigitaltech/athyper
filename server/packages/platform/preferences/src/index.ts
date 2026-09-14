@@ -187,3 +187,5 @@ function requireEntity(view: SavedView, entityCode?: string): void {
 }
 
 export {registerEntityViewRoutes} from "./entity-views-routes.js";
+
+export { createReferenceHistoryStore, registerReferenceChoiceRoutes } from "./reference-choice-routes.js";

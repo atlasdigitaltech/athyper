@@ -509,3 +509,32 @@ BEGIN
   END IF;
 END
 $assertions$;
+
+-- Account/bank linkage permission reference restored from migration
+-- 20260828_neon_business_partner_account_bank_linkage.sql after baseline squash.
+-- Preserve the original IDs, MFA, separation of duties and exact scopes.
+INSERT INTO authz.permission(id,canonical_code,permission_kind,module_id,risk_tier,requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,metadata,status,created_by) SELECT definition.id,definition.code,'entity_operation',module.id,definition.risk::authz.risk_tier_d,definition.mfa,definition.sod,false,false,false,'{"_seed":{"pack":"neon.mesh-account-bank-linkage","version":"1.0.0"}}','published','00000000-0000-0000-0000-000000000000' FROM control.module module CROSS JOIN(VALUES('43b1d1d7-9e31-5076-ab90-584063d732f5'::uuid,'neon.mesh_account_link.request','high',false,true),('285138d7-31c0-5506-a504-abfe00a13c87'::uuid,'neon.mesh_account_link.decide','critical',true,true),('1eb5268c-f686-5dc2-95db-333a1bdb1b32'::uuid,'neon.mesh_account_link.read','medium',false,false),('9c1966b9-9144-5186-b9bd-e51c668600ee'::uuid,'neon.mesh_bank_projection.receive','critical',true,false),('d8fdc899-fe16-5593-97a9-4206c643ef05'::uuid,'neon.business_partner_bank.verify','critical',true,true),('0d777b02-9325-5883-8b1a-775fa7f598b7'::uuid,'neon.business_partner_bank.apply','critical',true,true))definition(id,code,risk,mfa,sod) WHERE module.code='fnd' ON CONFLICT(canonical_code) DO UPDATE SET risk_tier=EXCLUDED.risk_tier,requires_mfa=EXCLUDED.requires_mfa,requires_sod=EXCLUDED.requires_sod,status='published';
+INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by) SELECT id,CASE WHEN canonical_code LIKE 'neon.business_partner_bank.%' THEN 'company_code'::authz.scope_kind_d ELSE 'network_relationship'::authz.scope_kind_d END,'exact','active','00000000-0000-0000-0000-000000000000' FROM authz.permission WHERE canonical_code LIKE 'neon.mesh_account_link.%' OR canonical_code LIKE 'neon.mesh_bank_projection.%' OR canonical_code LIKE 'neon.business_partner_bank.%' ON CONFLICT(permission_id,scope_kind,propagation_mode) DO UPDATE SET status='active';
+
+-- Company setup reference permissions. No role assignment or human access.
+INSERT INTO authz.permission(id,canonical_code,permission_kind,module_id,risk_tier,requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,metadata,status,created_by)
+SELECT value.id,value.code,'entity_operation',module.id,CASE WHEN value.mfa THEN 'high' ELSE 'low' END,value.mfa,value.sod,false,false,false,
+ '{"_seed":{"pack":"neon.company-setup-case-permissions","version":"1.0.0"}}'::jsonb,'published','00000000-0000-0000-0000-000000000000'::uuid
+FROM (VALUES
+('5501da5d-5d50-520d-ab62-30f2377210eb'::uuid,'neon.relationship.bp_company_setup_request.read',false,false),
+('a7d03b8a-3ac5-5735-ba1c-2a717fd1651c'::uuid,'neon.relationship.bp_company_setup_request.create',false,false),
+('bd16524d-88a1-5000-b8d5-6653c2a531cf'::uuid,'neon.relationship.bp_company_setup_request.update',false,false),
+('1854e00f-efbc-5497-b398-8fd6b9457365'::uuid,'neon.relationship.bp_company_setup_request.validate',false,false),
+('00cc6d29-b788-5cfe-af69-9f3f53120c91'::uuid,'neon.relationship.bp_company_setup_request.submit',false,true),
+('bff4ba92-f62b-5252-9551-16a023cad379'::uuid,'neon.relationship.bp_company_setup_request.decide',true,true),
+('e93f2c94-3a00-5b6d-a3ca-ce752f2eb440'::uuid,'neon.relationship.bp_company_setup_request.materialize',true,true)
+) value(id,code,mfa,sod)
+JOIN control.module module ON module.code='fnd' AND module.status='active'
+ON CONFLICT(canonical_code) DO NOTHING;
+INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by)
+SELECT id,'company_code','exact','active','00000000-0000-0000-0000-000000000000'::uuid FROM authz.permission
+WHERE canonical_code LIKE 'neon.relationship.bp_company_setup_request.%'
+ON CONFLICT(permission_id,scope_kind,propagation_mode) DO NOTHING;
+DO $catalog$ BEGIN
+ IF (SELECT count(*) FROM authz.permission WHERE canonical_code LIKE 'neon.relationship.bp_company_setup_request.%' AND status='published')<>7 THEN RAISE EXCEPTION 'Company setup permission catalog incomplete'; END IF;
+END $catalog$;

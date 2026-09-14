@@ -43,6 +43,6 @@
     "server/packages/services/attachments/src/retrieval-admission.test.ts": "bb09928d992c2a2bdfe4d056cbc229fb6b9af25da4de7c9adcad7939a0c56946",
     "server/apps/platform-host/src/composition/register-services.ts": "a80e9193e85cfbc1ca9964684851b8712540c2120508e6b4020c6e13ff57ebaa",
     "server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts": "3100d9a6540188262a306677e26a7067cc99ca45d943058b513f9995f6714d99",
-    "server/db/scripts/tests/integration/atlas/attachment-admission-qualification.mts": "170c8e15c8d80fc1acc6c6e8e8050630642ce1c376d79bdbceb1ed76dcaa52a3"
+    "server/apps/platform-host/scripts/db-verification/tests/integration/atlas/attachment-admission-qualification.mts": "170c8e15c8d80fc1acc6c6e8e8050630642ce1c376d79bdbceb1ed76dcaa52a3"
   }
 }

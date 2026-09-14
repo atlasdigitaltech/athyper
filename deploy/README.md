@@ -1,8 +1,19 @@
 # ATHYPER Stack v2 foundation
 
 Stack v2 is the only supported runtime architecture. `deploy/config` holds the
-shared IAM, telemetry, and memorycache build/realm assets consumed by this
-stack.
+shared IAM, telemetry, and infrastructure build/configuration assets consumed by
+this stack.
+
+For daily local development, use `pnpm devfull` or `pnpm devsimple` from the
+repository root. See [Personal DEV workspace](../docs/runbooks/shared-dev-workspace.md)
+for source mode and recovery. The phase sections below record the Stack v2
+implementation history; use the current instance templates and
+[container wiring runbook](docs/operations/container-wiring.md) for configuration.
+
+Keep generated credentials, database dumps, cleanup archives and operator receipts
+under `~/.athyper/`, outside this source directory. Retain versioned release
+manifests, schemas, test fixtures and build inputs even when they are not used by
+the current DEV preset.
 
 ## Filesystem contract
 
@@ -96,7 +107,7 @@ for that live qualification.
 
 The non-mutating Phase 6 composition now covers the per-instance Traefik gateway and its outage
 fallback, PostgreSQL and its idempotent database initializer, transaction and
-session PgBouncer pools, Redis, MinIO and its bucket initializer, and IAM. It
+session PgBouncer pools, Valkey, SeaweedFS and its S3 bucket initializer, and IAM. It
 uses project-scoped networks and volumes, an internal-only data network,
 loopback-only host ports, resource limits, health checks, and file-backed
 Compose secrets.
@@ -183,8 +194,9 @@ Published images receive BuildKit SBOM/provenance plus a GitHub registry-backed
 provenance attestation. The final artifact is a schema-compatible `ImageSet`
 containing digest references and the exact 40-character source revision.
 No moving image tag is published, preventing a partially successful matrix from
-advancing only part of an environment. Promotion consumes the complete digest
-artifact after all five jobs pass.
+advancing only part of an environment. Promotion consumes the complete digest artifact, including PostgreSQL and the
+derived/upstream infrastructure image inventories under `deploy/compose/scripts/`.
+The five application images alone do not form a complete release ImageSet.
 
 All referenced actions and external Docker bases are pinned to immutable commit
 or image digests. Publication is not authorized merely by committing the
@@ -202,8 +214,8 @@ against laptop-32 limits of 14,336 MiB and 16 CPU.
 
 Runtime, worker, and PostgreSQL owner identities are separate. PgBouncer knows
 all three identities, while the scheduler receives only database and Redis
-credentials. MinIO initialization installs a bucket-scoped application policy;
-applications never receive the root credential. Compose-mounted secrets and
+credentials. SeaweedFS uses separate application and artifact-writer identities;
+the S3 initializer reconciles buckets, and applications never receive the root credential. Compose-mounted secrets and
 CPU/memory limits must exactly match the service catalog or policy validation
 fails.
 

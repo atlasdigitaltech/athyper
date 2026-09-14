@@ -114,7 +114,7 @@ ALTER DOMAIN document.attachment_series_status_d ADD CONSTRAINT attachment_serie
 
 ALTER DOMAIN document.attachment_derivative_status_d DROP CONSTRAINT IF EXISTS attachment_derivative_status_d_check;
 ALTER DOMAIN document.attachment_derivative_status_d ADD CONSTRAINT attachment_derivative_status_d_check
-    CHECK (VALUE IN ('pending', 'processing', 'ready', 'skipped', 'failed', 'deleted'));
+    CHECK (VALUE IN ('pending', 'processing', 'ready', 'quarantined', 'skipped', 'failed', 'deleted'));
 
 ALTER DOMAIN document.attachment_hold_event_type_d DROP CONSTRAINT IF EXISTS attachment_hold_event_type_d_check;
 ALTER DOMAIN document.attachment_hold_event_type_d ADD CONSTRAINT attachment_hold_event_type_d_check

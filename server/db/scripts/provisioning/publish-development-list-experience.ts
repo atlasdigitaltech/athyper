@@ -4,9 +4,9 @@ import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { compileListExperience } from "../../../packages/planes/studio/meta-entity-authoring/src/list-experience.js";
-import { parseEntityRuntimeDescriptor } from "../../../packages/platform/metadata/src/descriptor-parser.js";
-import type { MetaEntityGraph } from "../../../packages/contracts/meta-entity-authoring/src/model.js";
+import { compileListExperience } from "@athyper/server-plane-studio-meta-entity-authoring/list-experience";
+import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata/descriptor-parser";
+import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring/model";
 
 const CONTAINER = "athyper-dev-db-1";
 const DATABASE = "athyper_neon";
@@ -53,7 +53,7 @@ export function businessPartnerHeaderGraph(
         id: operationId,
         operationKey: "request_supplier",
         operationKind: "create",
-        label: "New supplier request",
+        label: "New request",
         inputSurfaceKey: "supplier_request_form",
         auditEventCode: "business_partner.case.created",
       },
@@ -93,8 +93,8 @@ export function businessPartnerHeaderGraph(
               new_supplier_request: {
                 defaultLocale: "en",
                 values: {
-                  en: "New supplier request",
-                  ms: "Permohonan pembekal baharu",
+                  en: "New request",
+                  ms: "Permohonan baharu",
                 },
               },
             },
@@ -105,7 +105,7 @@ export function businessPartnerHeaderGraph(
         id: formId,
         surfaceKey: "supplier_request_form",
         surfaceKind: "form",
-        title: "New supplier request",
+        title: "New request",
       },
     ],
     surfaceOperations: [
@@ -504,7 +504,15 @@ function plan() {
   return artifacts;
 }
 function requestCollectionArtifact(seed: any): any {
-  const collectionRelationship = {schemaVersion:1,sourceRef:"entity_case",subject:{fieldRef:"subject_entity",value:"master.business_partner"},scope:{fieldRef:"current_snapshot.organization",contextRef:"operatingOrganizationId"}};
+  const collectionRelationship = {
+    schemaVersion: 1,
+    sourceRef: "entity_case",
+    subject: { fieldRef: "subject_entity", value: "master.business_partner" },
+    scope: {
+      fieldRef: "current_snapshot.organization",
+      contextRef: "operatingOrganizationId",
+    },
+  };
   const result = structuredClone(seed),
     entityId = randomUUID(),
     releaseId = randomUUID();

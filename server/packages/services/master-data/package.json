@@ -4,12 +4,17 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./kysely-business-partner-360-sections": "./src/kysely-business-partner-360-sections.ts",
+    "./kysely-business-partner-case-repository": "./src/kysely-business-partner-case-repository.ts",
+    "./kysely-business-partner-invitation-repository": "./src/kysely-business-partner-invitation-repository.ts",
+    "./kysely-business-partner-360-repository": "./src/kysely-business-partner-360-repository.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration:governed-internal-business-partner-http": "tsx src/__tests__/integration/governed-internal-business-partner-http.mjs"
   },
   "dependencies": {
     "@athyper/server-contract-ai": "workspace:*",
@@ -24,11 +29,11 @@
     "@athyper/server-contract-secrets": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
-    "express": "^5.0.0",
+    "express": "^5.2.1",
     "kysely": "^0.28.17"
   },
   "devDependencies": {
-    "@types/express": "^5.0.1",
+    "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
     "@types/pg": "^8.20.0",
     "pg": "^8.20.0",

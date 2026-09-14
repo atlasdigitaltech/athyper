@@ -4,8 +4,8 @@ import {sql,save} from './atlas-f6-common.mjs';
 const apply=process.argv.includes('--apply');
 if(process.argv.slice(2).some(x=>x!=='--apply'))throw Error('Use --apply or no arguments');
 const results=[];
-for(const [plane,name] of [['mesh','20260910_operation_projection_release_identity.sql'],['mesh','20260910_mesh_tenant_fork_activation.sql'],['studio','20260910_mesh_tenant_fork_publication.sql']]){
- const source=readFileSync('server/db/migrations/'+name,'utf8'),hash=createHash('sha256').update(source).digest('hex');
+for(const [plane,name,path] of [['mesh','20260910_operation_projection_release_identity.sql','server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_operation_projection_release_identity.sql'],['mesh','20260910_mesh_tenant_fork_activation.sql','server/db/scripts/operations/upgrades/publication/20260910_mesh_tenant_fork_activation.sql'],['studio','20260910_mesh_tenant_fork_publication.sql','server/db/scripts/operations/upgrades/publication/20260910_mesh_tenant_fork_publication.sql']]){
+ const source=readFileSync(path,'utf8'),hash=createHash('sha256').update(source).digest('hex');
  const body=source.replace(/^BEGIN;\s*/,'').replace(/COMMIT;\s*$/,'');
  sql(plane,`BEGIN; SET LOCAL lock_timeout='5s';
  SELECT pg_advisory_xact_lock(hashtextextended('${name}',0));

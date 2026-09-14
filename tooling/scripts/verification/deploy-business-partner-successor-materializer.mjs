@@ -51,7 +51,7 @@ const imageId=run(['image','inspect','--format','{{.Id}}',tag]).trim();const sou
 writeFileSync(join(root,'override.json'),JSON.stringify({services:{api:{image:imageId}}},null,2)+'\n',{mode:0o600});writeFileSync(join(root,'rollback.json'),JSON.stringify({services:{api:{image:before.Image}}},null,2)+'\n',{mode:0o600});
 if(apply){
  const rehearsal=JSON.parse(readFileSync('governance/policy/reports/business-partner-successor-sql.dev.json'));if(!rehearsal.rolledBack||!rehearsal.checks.transactionalMaterialization)throw Error('SQL rehearsal required');
- let migration=readFileSync('server/db/migrations/20260910_authorization_successor_materializer.sql','utf8');const proposal=JSON.parse(readFileSync('governance/policy/reports/business-partner-combined-successor.dev.json'));
+ let migration=readFileSync('server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql','utf8');const proposal=JSON.parse(readFileSync('governance/policy/reports/business-partner-combined-successor.dev.json'));
  const lit=v=>"'"+String(v).replaceAll("'","''")+"'";
  migration=migration.replace(/COMMIT;\s*$/,`SET LOCAL app.current_tenant_id='44444444-4444-4444-8444-444444444444';\nINSERT INTO publication.entity_authorization_successor_payload(content_hash,tenant_id,descriptor) VALUES(${lit(proposal.descriptorHash)},'44444444-4444-4444-8444-444444444444',${lit(JSON.stringify(proposal.descriptor))}::jsonb);\nCOMMIT;`);
  if(JSON.parse(run(['inspect','athyper-dev-api-1']))[0].Image!==before.Image)throw Error('Running API changed');

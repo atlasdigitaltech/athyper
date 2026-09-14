@@ -4,12 +4,16 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./mesh-external-reference-code": "./src/mesh-external-reference-code.ts",
+    "./business-partner-account-bank-linkage": "./src/business-partner-account-bank-linkage.ts",
+    "./business-partner-profile-match": "./src/business-partner-profile-match.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration:bank-verification": "tsx src/__tests__/integration/business-partner-bank-verification.ts"
   },
   "dependencies": {
     "@athyper/server-contract-auth": "workspace:*",

@@ -1,0 +1,91 @@
+{
+  "stage": 6,
+  "scope": "deployed dev Postgres/RLS, MinIO, Gotenberg and ClamAV; service entrypoints",
+  "seed": {
+    "runId": "21d2cc6f-961c-4c77-9835-56d9a86a8961",
+    "tenantId": "d17f5873-f56c-41e1-8100-788594de67f8",
+    "principalId": "64fc6517-6e4b-47fa-8ae3-18250e2e55f6",
+    "otherTenantId": "10c65143-9a77-4fc2-b4ac-3d855fad007d",
+    "templateId": "ca0c3abf-acc1-4162-9b2c-4147274a1318",
+    "versionId": "e3667767-c804-45d2-a3ae-4a5dbdf45d5d",
+    "bindingId": "8a63567d-ce8f-459d-91ff-40b0edaa19b6"
+  },
+  "results": [
+    {
+      "path": "upload",
+      "scenario": "clean",
+      "passed": true,
+      "id": "12c19a91-957c-4a1b-945d-144e9b46c52f",
+      "recoveredSameRequest": false
+    },
+    {
+      "path": "upload",
+      "scenario": "eicar",
+      "passed": true,
+      "id": "bed866c4-a4a7-4d42-8427-3832620fbb88",
+      "recoveredSameRequest": false
+    },
+    {
+      "path": "upload",
+      "scenario": "outage",
+      "passed": true,
+      "id": "fd88d1c1-8f9a-4e67-b62a-4139a7e0fae6",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "upload",
+      "scenario": "scan-outage",
+      "passed": true,
+      "id": "068d3f21-a188-4dcb-860f-51ad149eb6d9",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "upload",
+      "scenario": "stale",
+      "passed": true,
+      "id": "e6e697ba-fb72-4dd2-a9f6-e593637db52d",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "render",
+      "scenario": "clean",
+      "passed": true,
+      "id": "9648d0c4-f4f1-4094-8531-bfcebf2f170c",
+      "recoveredSameRequest": false
+    }
+  ],
+  "passed": false,
+  "startedAt": "2026-09-11T13:13:05.487Z",
+  "databaseRole": {
+    "role": "athyper_runtime",
+    "superuser": false,
+    "bypass_rls": false
+  },
+  "initialHealth": {
+    "status": "healthy",
+    "signature": {
+      "fresh": true,
+      "version": "28119",
+      "builtAt": "2026-09-10T06:24:09.000Z",
+      "ageMs": 110936499
+    }
+  },
+  "bucket": "athyper-documents",
+  "renderingEndpoint": "http://docrender:3000",
+  "objectStorageEndpoint": "http://objectstorage:9000",
+  "failure": "Missing expected rejection.",
+  "cleanup": {
+    "removedObjects": 15,
+    "retainedDatabaseEvidence": true,
+    "errors": [
+      "row:12c19a91-957c-4a1b-945d-144e9b46c52f",
+      "row:bed866c4-a4a7-4d42-8427-3832620fbb88",
+      "row:fd88d1c1-8f9a-4e67-b62a-4139a7e0fae6",
+      "row:068d3f21-a188-4dcb-860f-51ad149eb6d9",
+      "row:e6e697ba-fb72-4dd2-a9f6-e593637db52d",
+      "row:9648d0c4-f4f1-4094-8531-bfcebf2f170c",
+      "row:79d9a5d5-db98-4676-bb3e-ed3125022289"
+    ]
+  },
+  "finishedAt": "2026-09-11T13:13:07.501Z"
+}

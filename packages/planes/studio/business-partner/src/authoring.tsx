@@ -1,7 +1,7 @@
 "use client";
 
 import { useApiClient } from "@athyper/platform-shell-app-foundation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createBusinessPartnerDefinitionClient,
   createDefinitionCommandKeys,
@@ -71,8 +71,28 @@ export function BusinessPartnerAuthoringWorkspace() {
   const [simulation, setSimulation] = useState<DefinitionSimulation>();
   const [saved, setSaved] = useState<DefinitionRevision>();
   const [publication, setPublication] = useState<DefinitionPublication>();
+  const [localPreview, setLocalPreview] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [minimumRuntimeVersion, setMinimumRuntimeVersion] = useState("");
+
+  useEffect(() => {
+    let disposed = false;
+    void client
+      .preview()
+      .then((current) => {
+        if (disposed || !current.preview) return;
+        setLocalPreview(true);
+        setBundle(JSON.stringify(current.bundle, null, 2));
+        setPlanes([...current.targetPlanes]);
+        setSaved(current);
+      })
+      .catch(() => {
+        /* Normal deployed environments have no local preview. */
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [client]);
 
   async function run(action: () => Promise<void>) {
     if (lock.current) return;
@@ -109,8 +129,26 @@ export function BusinessPartnerAuthoringWorkspace() {
       setError(`Enter valid JSON for ${key} before applying the section.`);
     }
   }
-  function editSupplierRequestForm(value:Record<string,unknown>){const parsed=JSON.parse(bundle)as Record<string,unknown>,forms=parsed.formDescriptors&&typeof parsed.formDescriptors==="object"&&!Array.isArray(parsed.formDescriptors)?parsed.formDescriptors as Record<string,unknown>:{};parsed.formDescriptors={...forms,supplierRequest:value};setBundle(JSON.stringify(parsed,null,2));invalidateDraft();setError(undefined);}
-  function editWorkflows(value:Record<string,unknown>){const parsed=JSON.parse(bundle)as Record<string,unknown>;parsed.workflowDefinitions=value;setBundle(JSON.stringify(parsed,null,2));invalidateDraft();setError(undefined);}
+  function editSupplierRequestForm(value: Record<string, unknown>) {
+    const parsed = JSON.parse(bundle) as Record<string, unknown>,
+      forms =
+        parsed.formDescriptors &&
+        typeof parsed.formDescriptors === "object" &&
+        !Array.isArray(parsed.formDescriptors)
+          ? (parsed.formDescriptors as Record<string, unknown>)
+          : {};
+    parsed.formDescriptors = { ...forms, supplierRequest: value };
+    setBundle(JSON.stringify(parsed, null, 2));
+    invalidateDraft();
+    setError(undefined);
+  }
+  function editWorkflows(value: Record<string, unknown>) {
+    const parsed = JSON.parse(bundle) as Record<string, unknown>;
+    parsed.workflowDefinitions = value;
+    setBundle(JSON.stringify(parsed, null, 2));
+    invalidateDraft();
+    setError(undefined);
+  }
   let parsed: Record<string, unknown> | undefined;
   try {
     const value: unknown = JSON.parse(bundle);
@@ -123,12 +161,13 @@ export function BusinessPartnerAuthoringWorkspace() {
   return (
     <div className="athyper-governance-list">
       <section aria-labelledby="definition-authoring-heading">
-        <h2 id="definition-authoring-heading">Author definition revision</h2>
+        <h2 id="definition-authoring-heading">
+          {localPreview ? "Edit local metadata" : "Author definition revision"}
+        </h2>
         <p>
-          Edit schemas, rules, forms and journeys as one immutable bundle.
-          Import a reviewed bundle or copy a loaded revision, then advance its
-          semantic version. Source contract hashes must come from the applicable
-          contracts.
+          {localPreview
+            ? "Edit supported form text, layout or workflow settings, then save to preview in NEON. Each save gets a revision automatically. No image build or release approval is needed for local preview."
+            : "Edit schemas, rules, forms and journeys as one immutable bundle. Import a reviewed bundle or copy a loaded revision, then advance its semantic version. Source contract hashes must come from the applicable contracts."}
         </p>
         <fieldset disabled={busy}>
           <legend>Proposed definition</legend>
@@ -145,22 +184,37 @@ export function BusinessPartnerAuthoringWorkspace() {
             />
           </label>
           {parsed ? (
-            <><SupplierRequestFormDesigner value={(parsed.formDescriptors as Record<string,unknown>|undefined)?.supplierRequest} onChange={editSupplierRequestForm}/><BusinessPartnerWorkflowDesigner value={parsed.workflowDefinitions} onChange={editWorkflows}/><details>
-              <summary>Edit definition sections</summary>
-              {sections.map((key) => (
-                <DefinitionSection
-                  key={`${key}:${bundle}`}
-                  name={key}
-                  value={JSON.stringify(
-                    parsed?.[key] ??
-                      (key === "validationDeclarations" ? [] : {}),
-                    null,
-                    2,
-                  )}
-                  apply={(value) => editSection(key, value)}
-                />
-              ))}
-            </details></>
+            <>
+              <SupplierRequestFormDesigner
+                value={
+                  (
+                    parsed.formDescriptors as
+                      Record<string, unknown> | undefined
+                  )?.supplierRequest
+                }
+                onChange={editSupplierRequestForm}
+              />
+              <BusinessPartnerWorkflowDesigner
+                value={parsed.workflowDefinitions}
+                onChange={editWorkflows}
+              />
+              <details>
+                <summary>Edit definition sections</summary>
+                {sections.map((key) => (
+                  <DefinitionSection
+                    key={`${key}:${bundle}`}
+                    name={key}
+                    value={JSON.stringify(
+                      parsed?.[key] ??
+                        (key === "validationDeclarations" ? [] : {}),
+                      null,
+                      2,
+                    )}
+                    apply={(value) => editSection(key, value)}
+                  />
+                ))}
+              </details>
+            </>
           ) : null}
           <fieldset>
             <legend>Target consumers</legend>
@@ -213,7 +267,7 @@ export function BusinessPartnerAuthoringWorkspace() {
           </button>
           <button
             type="button"
-            disabled={!simulation || !!saved}
+            disabled={(!localPreview && !simulation) || !!saved}
             onClick={() =>
               void run(async () => {
                 const body = draft();
@@ -221,7 +275,9 @@ export function BusinessPartnerAuthoringWorkspace() {
               })
             }
           >
-            Save immutable revision
+            {localPreview
+              ? "Save and preview locally"
+              : "Save immutable revision"}
           </button>
         </fieldset>
         {simulation ? (
@@ -243,17 +299,33 @@ export function BusinessPartnerAuthoringWorkspace() {
         ) : null}
         {saved ? (
           <div role="status">
-            <p>Saved revision: {saved.id}</p>
+            <p>Saved revision: {saved.preview?.savedRevision ?? saved.id}</p>
+            {saved.preview && (
+              <div role="status">
+                <p>Local preview: {saved.preview.state}</p>
+                <p>
+                  Active revision:{" "}
+                  {saved.preview.activeRevision ?? "Published baseline"}
+                </p>
+                {saved.preview.error && <p>{saved.preview.error}</p>}
+              </div>
+            )}
             <p>Bundle hash: {saved.bundleHash}</p>
             <p>
-              Share this revision ID with an independent checker for approval.
+              {saved.preview
+                ? "Local metadata preview is development evidence. Release qualification remains a separate step."
+                : "Share this revision ID with an independent checker for approval."}
             </p>
           </div>
         ) : null}
       </section>
 
       <section aria-labelledby="definition-approval-heading">
-        <h2 id="definition-approval-heading">Review and approve release</h2>
+        <h2 id="definition-approval-heading">
+          {localPreview
+            ? "Release approval — separate from local preview"
+            : "Review and approve release"}
+        </h2>
         <p>
           Load the immutable revision and review its author, consumers and
           content. The server requires publish permission and rejects approval

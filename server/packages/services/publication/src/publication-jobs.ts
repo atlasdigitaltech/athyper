@@ -151,7 +151,11 @@ export function createPublicationRollbackHandler(
 export function createPublicationAuthorityHandlers(
   work: PublicationAuthorityWork,
   jobs: JobPublisher,
-  resolveApplyExecution?: (execution: JobExecutionCoordinate, plane: PublicationPlane) => Promise<JobExecutionCoordinate>,
+  resolveApplyExecution?: (
+    execution: JobExecutionCoordinate,
+    plane: PublicationPlane,
+  ) => Promise<JobExecutionCoordinate>,
+  options: { readonly dispatchEnabled?: boolean } = {},
 ): Readonly<Record<string, JobHandler>> {
   return {
     [COMPILE_PUBLICATION_ARTIFACT_JOB]: delegate(async (job) => {
@@ -170,18 +174,27 @@ export function createPublicationAuthorityHandlers(
     [SIGN_PUBLICATION_ARTIFACT_JOB]: delegate(async (job) => {
       const compilationId = requiredId(job.data, "compilationId");
       const { deploymentId } = await work.sign(compilationId);
-      await jobs.enqueue(
-        PUBLICATION_AUTHORITY_QUEUE,
-        DISPATCH_PUBLICATION_JOB,
-        { deploymentId },
-        { ...deterministic(deploymentId, "dispatch"), execution: job.execution },
-      );
+      if (options.dispatchEnabled !== false)
+        await jobs.enqueue(
+          PUBLICATION_AUTHORITY_QUEUE,
+          DISPATCH_PUBLICATION_JOB,
+          { deploymentId },
+          {
+            ...deterministic(deploymentId, "dispatch"),
+            execution: job.execution,
+          },
+        );
       return { deploymentId };
     }),
     [DISPATCH_PUBLICATION_JOB]: delegate(async (job) => {
       const deploymentId = requiredId(job.data, "deploymentId");
+      if (options.dispatchEnabled === false)
+        return { deploymentId, dispatchDeferred: true };
       const payload = await work.dispatch(deploymentId);
-      const execution = job.execution && resolveApplyExecution ? await resolveApplyExecution(job.execution, payload.targetPlane) : job.execution;
+      const execution =
+        job.execution && resolveApplyExecution
+          ? await resolveApplyExecution(job.execution, payload.targetPlane)
+          : job.execution;
       await enqueueApply(jobs, payload, execution);
       return payload;
     }),
@@ -239,7 +252,10 @@ export async function enqueueApply(
       maxAttempts: 5,
       backoff: { kind: "exponential", delayMs: 2_000, jitter: 0.25 },
       execution: {
-        ...(execution ?? { scope: "plane" as const, principalId: "publication-worker" }),
+        ...(execution ?? {
+          scope: "plane" as const,
+          principalId: "publication-worker",
+        }),
         planeKey: payload.targetPlane,
       },
       payloadSchema: { name: APPLY_PUBLICATION_RELEASE_JOB, version: 1 },

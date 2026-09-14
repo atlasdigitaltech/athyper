@@ -30,9 +30,13 @@ export function createKyselyContextRefresh(
       ).rows[0];
       if (!principal || principal.auth_epoch !== context.authEpoch)
         throw new Error("AUTH_CONTEXT_REAUTHENTICATION_REQUIRED");
-      const permissions = await createKyselyPermissionResolver({
-        run: (_identity, work) => work(transaction),
-      }).resolve(context);
+      const permissions = await createKyselyPermissionResolver(
+        {
+          run: (_identity, work) => work(transaction),
+        },
+        Date.now,
+        context.permissions.localGraphPreview,
+      ).resolve(context);
       return Object.freeze({
         ...context,
         permissions,

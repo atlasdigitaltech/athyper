@@ -8,11 +8,11 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 
 | Measure | Count |
 | --- | ---: |
-| Matched identities | 62 |
-| Legacy-only identities | 806 |
-| Current-only identities | 363 |
+| Matched identities | 66 |
+| Legacy-only identities | 802 |
+| Current-only identities | 423 |
 | Legacy occurrences | 898 |
-| Current occurrences | 425 |
+| Current occurrences | 489 |
 
 | Status | Method | Normalized path | Legacy sources | Current sources |
 | --- | --- | --- | ---: | ---: |
@@ -132,6 +132,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | GET | `/api/audit/status` | 0 | 1 |
 | legacy-only | GET | `/api/audit/timeline/:param/:param` | 1 | 0 |
 | legacy-only | GET | `/api/auth/verify` | 1 | 0 |
+| current-only | GET | `/api/bank-directory/reference` | 0 | 1 |
 | legacy-only | GET | `/api/collab/activity/stream` | 1 | 0 |
 | legacy-only | GET | `/api/collab/attachments/:param/download` | 2 | 0 |
 | legacy-only | GET | `/api/collab/bookmarks` | 1 | 0 |
@@ -166,6 +167,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | GET | `/api/content/quota/usage` | 1 | 0 |
 | matched | GET | `/api/content/search` | 1 | 1 |
 | current-only | GET | `/api/control-admin/authorization` | 0 | 1 |
+| current-only | GET | `/api/control-admin/bank-validation/rules` | 0 | 1 |
 | current-only | GET | `/api/control-admin/cycle-config/:param/revisions/:param` | 0 | 1 |
 | current-only | GET | `/api/control-admin/cycle-config/:param/revisions/latest` | 0 | 1 |
 | current-only | GET | `/api/control-admin/entitlements/modules` | 0 | 1 |
@@ -184,11 +186,13 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | GET | `/api/documents/:param/:param/attachments` | 2 | 0 |
 | legacy-only | GET | `/api/documents/:param/:param/attachments/:param/download` | 2 | 0 |
 | legacy-only | GET | `/api/documents/:param/:param/folders` | 1 | 0 |
+| current-only | GET | `/api/entity-runtime/:param/application-descriptor` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/detail-descriptor` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/form-descriptor` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/list` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/list-descriptor` | 0 | 1 |
 | current-only | GET | `/api/entity-runtime/:param/records/:param` | 0 | 1 |
+| current-only | GET | `/api/entity-runtime/:param/views` | 0 | 1 |
 | legacy-only | GET | `/api/entity/pii-inventory` | 1 | 0 |
 | legacy-only | GET | `/api/finance/account-analysis` | 1 | 0 |
 | legacy-only | GET | `/api/finance/accounting-profiles` | 1 | 0 |
@@ -348,6 +352,8 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | GET | `/api/mesh/notifications/preferences` | 1 | 0 |
 | legacy-only | GET | `/api/mesh/runtime/entities/:param` | 1 | 0 |
 | legacy-only | GET | `/api/mesh/runtime/entities/:param/:param` | 1 | 0 |
+| current-only | GET | `/api/meta-entity-authoring/change-sets` | 0 | 1 |
+| current-only | GET | `/api/meta-entity-authoring/change-sets/:param/graph` | 0 | 1 |
 | legacy-only | GET | `/api/meta-entity/capabilities` | 1 | 0 |
 | legacy-only | GET | `/api/meta-entity/change-sets/:param/graph` | 1 | 0 |
 | legacy-only | GET | `/api/meta-entity/change-sets/:param/numbering-previews` | 1 | 0 |
@@ -396,9 +402,6 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | GET | `/api/moderation/flags` | 1 | 0 |
 | legacy-only | GET | `/api/moderation/flags/:param` | 1 | 0 |
 | current-only | GET | `/api/neon/business-partner-bank-verifications/:param` | 0 | 1 |
-| current-only | GET | `/api/neon/business-partner-cases` | 0 | 1 |
-| current-only | GET | `/api/neon/business-partner-cases/:param` | 0 | 1 |
-| current-only | GET | `/api/neon/business-partner-cases/:param/view` | 0 | 1 |
 | current-only | GET | `/api/neon/business-partner-definitions/active-descriptors` | 0 | 1 |
 | current-only | GET | `/api/neon/business-partner-definitions/active-request-form` | 0 | 1 |
 | current-only | GET | `/api/neon/business-partner-invitation-templates/:param` | 0 | 1 |
@@ -407,9 +410,6 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | GET | `/api/neon/business-partner-profile-events/receipts` | 0 | 1 |
 | current-only | GET | `/api/neon/business-partner-profile-matches/:param` | 0 | 1 |
 | current-only | GET | `/api/neon/business-partner-profile-projections` | 0 | 1 |
-| current-only | GET | `/api/neon/business-partner-requests` | 0 | 1 |
-| current-only | GET | `/api/neon/business-partner-requests/:param` | 0 | 1 |
-| current-only | GET | `/api/neon/business-partner-requests/:param/view` | 0 | 1 |
 | current-only | GET | `/api/neon/business-partners/:param` | 0 | 1 |
 | current-only | GET | `/api/neon/business-partners/:param/360/:param` | 0 | 1 |
 | current-only | GET | `/api/neon/business-partners/:param/360/summary` | 0 | 1 |
@@ -564,7 +564,12 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | GET | `/api/records/:param/:param/workflow` | 1 | 0 |
 | legacy-only | GET | `/api/records/:param/export/download` | 1 | 0 |
 | legacy-only | GET | `/api/records/:param/import` | 1 | 0 |
+| current-only | GET | `/api/records/:param/import-template.xlsx` | 0 | 1 |
 | legacy-only | GET | `/api/records/:param/import/:param` | 1 | 0 |
+| current-only | GET | `/api/records/exports/:param/download` | 0 | 1 |
+| current-only | GET | `/api/records/imports/:param` | 0 | 1 |
+| current-only | GET | `/api/records/imports/:param/error-report` | 0 | 1 |
+| current-only | GET | `/api/records/transfers` | 0 | 1 |
 | legacy-only | GET | `/api/runtime/v1/bindings/:param` | 1 | 0 |
 | legacy-only | GET | `/api/runtime/v1/change-reason-codes` | 1 | 0 |
 | legacy-only | GET | `/api/runtime/v1/entities/:param` | 1 | 0 |
@@ -594,10 +599,20 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | GET | `/api/session` | 1 | 0 |
 | legacy-only | GET | `/api/session/bootstrap` | 1 | 0 |
 | legacy-only | GET | `/api/session/contexts` | 1 | 0 |
+| current-only | GET | `/api/studio/atlas-learning` | 0 | 1 |
+| current-only | GET | `/api/studio/bank-directory` | 0 | 1 |
+| current-only | GET | `/api/studio/bank-directory/:param` | 0 | 1 |
+| current-only | GET | `/api/studio/bank-directory/reconcile` | 0 | 1 |
 | current-only | GET | `/api/studio/business-partner-case-contracts/:param` | 0 | 1 |
 | current-only | GET | `/api/studio/business-partner-definitions/:param` | 0 | 1 |
 | current-only | GET | `/api/studio/experience-surfaces` | 0 | 1 |
+| current-only | GET | `/api/studio/local-business-partner-preview` | 0 | 1 |
 | legacy-only | GET | `/api/user/tenant-admin` | 1 | 0 |
+| current-only | GET | `/api/v1/records/:param/import-template.xlsx` | 0 | 1 |
+| current-only | GET | `/api/v1/records/exports/:param/download` | 0 | 1 |
+| current-only | GET | `/api/v1/records/imports/:param` | 0 | 1 |
+| current-only | GET | `/api/v1/records/imports/:param/error-report` | 0 | 1 |
+| current-only | GET | `/api/v1/records/transfers` | 0 | 1 |
 | legacy-only | GET | `/api/workflow/definitions` | 1 | 0 |
 | matched | GET | `/api/workflow/inbox` | 1 | 1 |
 | legacy-only | GET | `/api/workflow/inbox/count` | 1 | 0 |
@@ -620,13 +635,13 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | GET | `/docservices/profiles` | 1 | 0 |
 | legacy-only | GET | `/docservices/templates` | 1 | 0 |
 | legacy-only | GET | `/docservices/versions` | 1 | 0 |
-| legacy-only | GET | `/health` | 1 | 0 |
-| legacy-only | GET | `/healthz` | 1 | 0 |
-| legacy-only | GET | `/livez` | 1 | 0 |
+| matched | GET | `/health` | 1 | 1 |
+| matched | GET | `/healthz` | 1 | 1 |
+| matched | GET | `/livez` | 1 | 1 |
 | matched | GET | `/metrics` | 1 | 1 |
 | legacy-only | GET | `/openapi.json` | 1 | 0 |
 | legacy-only | GET | `/openapi.yaml` | 1 | 0 |
-| legacy-only | GET | `/readyz` | 1 | 0 |
+| matched | GET | `/readyz` | 1 | 1 |
 | legacy-only | PATCH | `/api/ai/agent/threads/:param` | 1 | 0 |
 | current-only | PATCH | `/api/atlas/threads/:param` | 0 | 1 |
 | legacy-only | PATCH | `/api/audit/legal-holds/:param/release` | 1 | 0 |
@@ -664,8 +679,6 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | PATCH | `/api/metadata/lookups/:param/values/:param` | 1 | 0 |
 | legacy-only | PATCH | `/api/metadata/studio/entity-versions/:param` | 1 | 0 |
 | legacy-only | PATCH | `/api/metadata/studio/entity-versions/:param/contract-v2.1/:param` | 1 | 0 |
-| current-only | PATCH | `/api/neon/business-partner-cases/:param` | 0 | 1 |
-| current-only | PATCH | `/api/neon/business-partner-requests/:param` | 0 | 1 |
 | current-only | PATCH | `/api/neon/external/business-partner-invitations/:param/requests/:param/correction` | 0 | 1 |
 | matched | PATCH | `/api/notifications/preferences` | 1 | 1 |
 | legacy-only | PATCH | `/api/notifications/routing-rules/:param` | 1 | 0 |
@@ -700,6 +713,10 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | POST | `/api/ai/agent/runs` | 1 | 0 |
 | legacy-only | POST | `/api/ai/agent/threads` | 1 | 0 |
 | legacy-only | POST | `/api/ai/feedback` | 1 | 0 |
+| current-only | POST | `/api/atlas/feedback` | 0 | 1 |
+| current-only | POST | `/api/atlas/knowledge/attachments/reindex` | 0 | 1 |
+| current-only | POST | `/api/atlas/knowledge/search` | 0 | 1 |
+| current-only | POST | `/api/atlas/learning-candidates` | 0 | 1 |
 | current-only | POST | `/api/atlas/threads` | 0 | 1 |
 | current-only | POST | `/api/atlas/threads/:param/archive` | 0 | 1 |
 | current-only | POST | `/api/atlas/threads/:param/runs` | 0 | 1 |
@@ -744,6 +761,13 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | POST | `/api/control-admin/authorization/break-glass` | 0 | 1 |
 | current-only | POST | `/api/control-admin/authorization/manage` | 0 | 1 |
 | current-only | POST | `/api/control-admin/authorization/revoke` | 0 | 1 |
+| current-only | POST | `/api/control-admin/bank-validation/rules/publish` | 0 | 1 |
+| current-only | POST | `/api/control-admin/bank-validation/verify` | 0 | 1 |
+| current-only | POST | `/api/control-admin/connectors/:param/activate` | 0 | 1 |
+| current-only | POST | `/api/control-admin/connectors/:param/deprecate` | 0 | 1 |
+| current-only | POST | `/api/control-admin/connectors/:param/health-checks` | 0 | 1 |
+| current-only | POST | `/api/control-admin/connectors/:param/suspend` | 0 | 1 |
+| current-only | POST | `/api/control-admin/connectors/validate` | 0 | 1 |
 | current-only | POST | `/api/control-admin/cycle-config/desired-state/apply` | 0 | 1 |
 | current-only | POST | `/api/control-admin/cycle-config/preview` | 0 | 1 |
 | current-only | POST | `/api/control-admin/cycle-config/publish` | 0 | 1 |
@@ -767,6 +791,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | POST | `/api/documents/:param/:param/transition` | 1 | 0 |
 | current-only | POST | `/api/documents/:param/download` | 0 | 1 |
 | current-only | POST | `/api/documents/render` | 0 | 1 |
+| current-only | POST | `/api/entity-runtime/:param/views` | 0 | 1 |
 | legacy-only | POST | `/api/finance/ap/invoices` | 1 | 0 |
 | legacy-only | POST | `/api/finance/ap/invoices/:param/discard-session` | 1 | 0 |
 | legacy-only | POST | `/api/finance/ap/invoices/:param/lines` | 1 | 0 |
@@ -979,14 +1004,12 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | POST | `/api/moderation/flags/:param/action` | 1 | 0 |
 | legacy-only | POST | `/api/moderation/flags/:param/dismiss` | 1 | 0 |
 | legacy-only | POST | `/api/moderation/flags/:param/review` | 1 | 0 |
+| current-only | POST | `/api/neon/bank-account-links/:param/company-usage` | 0 | 1 |
+| current-only | POST | `/api/neon/bank-account-links/:param/usage-scope` | 0 | 1 |
 | current-only | POST | `/api/neon/business-partner-bank-verifications` | 0 | 1 |
 | current-only | POST | `/api/neon/business-partner-bank-verifications/:param/applications` | 0 | 1 |
 | current-only | POST | `/api/neon/business-partner-bank-verifications/:param/decisions` | 0 | 1 |
-| current-only | POST | `/api/neon/business-partner-cases` | 0 | 1 |
-| current-only | POST | `/api/neon/business-partner-cases/:param/decisions` | 0 | 1 |
-| current-only | POST | `/api/neon/business-partner-cases/:param/materialize` | 0 | 1 |
-| current-only | POST | `/api/neon/business-partner-cases/:param/submit` | 0 | 1 |
-| current-only | POST | `/api/neon/business-partner-cases/:param/validate` | 0 | 1 |
+| current-only | POST | `/api/neon/business-partner-imports` | 0 | 1 |
 | current-only | POST | `/api/neon/business-partner-invitations` | 0 | 1 |
 | current-only | POST | `/api/neon/business-partner-invitations/:param/cancel` | 0 | 1 |
 | current-only | POST | `/api/neon/business-partner-invitations/:param/resend` | 0 | 1 |
@@ -1000,12 +1023,8 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | POST | `/api/neon/business-partner-profile-matches` | 0 | 1 |
 | current-only | POST | `/api/neon/business-partner-profile-matches/:param/requests` | 0 | 1 |
 | current-only | POST | `/api/neon/business-partner-qualifications/:param/decisions` | 0 | 1 |
-| current-only | POST | `/api/neon/business-partner-requests` | 0 | 1 |
-| current-only | POST | `/api/neon/business-partner-requests/:param/apply` | 0 | 1 |
-| current-only | POST | `/api/neon/business-partner-requests/:param/decisions` | 0 | 1 |
-| current-only | POST | `/api/neon/business-partner-requests/:param/submit` | 0 | 1 |
-| current-only | POST | `/api/neon/business-partner-requests/:param/validate` | 0 | 1 |
 | current-only | POST | `/api/neon/business-partners/:param/360/banking/reveal` | 0 | 1 |
+| current-only | POST | `/api/neon/business-partners/:param/360/comments` | 0 | 1 |
 | current-only | POST | `/api/neon/business-partners/:param/360/identifiers-tax/reveal` | 0 | 1 |
 | current-only | POST | `/api/neon/business-partners/:param/customer-credit-reviews` | 0 | 1 |
 | current-only | POST | `/api/neon/business-partners/:param/customer-designations` | 0 | 1 |
@@ -1135,12 +1154,26 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | POST | `/api/records/:param/bulk-preflight` | 1 | 0 |
 | legacy-only | POST | `/api/records/:param/draft/initiate` | 1 | 0 |
 | legacy-only | POST | `/api/records/:param/export` | 1 | 0 |
+| current-only | POST | `/api/records/:param/exports` | 0 | 1 |
 | legacy-only | POST | `/api/records/:param/import` | 1 | 0 |
 | legacy-only | POST | `/api/records/:param/import/upload` | 1 | 0 |
+| current-only | POST | `/api/records/:param/imports` | 0 | 1 |
 | legacy-only | POST | `/api/records/:param/op/:param` | 1 | 0 |
 | legacy-only | POST | `/api/records/business_partner/check-duplicates` | 1 | 0 |
 | legacy-only | POST | `/api/records/business_partner/extend` | 1 | 0 |
 | legacy-only | POST | `/api/records/business_partner/intake` | 1 | 0 |
+| current-only | POST | `/api/records/exports/:param/cancel` | 0 | 1 |
+| current-only | POST | `/api/records/exports/:param/restart` | 0 | 1 |
+| current-only | POST | `/api/records/imports/:param/cancel` | 0 | 1 |
+| current-only | POST | `/api/records/imports/:param/commit` | 0 | 1 |
+| current-only | POST | `/api/records/imports/:param/complete` | 0 | 1 |
+| current-only | POST | `/api/records/imports/:param/file-complete` | 0 | 1 |
+| current-only | POST | `/api/records/imports/:param/file-upload` | 0 | 1 |
+| current-only | POST | `/api/records/imports/:param/preview` | 0 | 1 |
+| current-only | POST | `/api/records/imports/:param/restart` | 0 | 1 |
+| current-only | POST | `/api/records/imports/:param/validate` | 0 | 1 |
+| current-only | POST | `/api/records/imports/:param/workbook-complete` | 0 | 1 |
+| current-only | POST | `/api/records/imports/:param/workbook-upload` | 0 | 1 |
 | legacy-only | POST | `/api/records/supplier/check-duplicates` | 1 | 0 |
 | legacy-only | POST | `/api/records/supplier/intake` | 1 | 0 |
 | legacy-only | POST | `/api/resolvers/:param` | 1 | 0 |
@@ -1160,6 +1193,16 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | POST | `/api/runtime/v1/entities/:param/op/:param` | 1 | 0 |
 | legacy-only | POST | `/api/runtime/v1/reference-labels/resolve` | 1 | 0 |
 | legacy-only | POST | `/api/runtime/v1/resolvers/:param` | 1 | 0 |
+| current-only | POST | `/api/studio/atlas-learning/:param/approve` | 0 | 1 |
+| current-only | POST | `/api/studio/atlas-learning/:param/publish` | 0 | 1 |
+| current-only | POST | `/api/studio/atlas-learning/:param/reject` | 0 | 1 |
+| current-only | POST | `/api/studio/atlas-learning/:param/resume` | 0 | 1 |
+| current-only | POST | `/api/studio/atlas-learning/:param/stage` | 0 | 1 |
+| current-only | POST | `/api/studio/atlas-learning/:param/submit` | 0 | 1 |
+| current-only | POST | `/api/studio/bank-directory/:param/resume` | 0 | 1 |
+| current-only | POST | `/api/studio/bank-directory/:param/review` | 0 | 1 |
+| current-only | POST | `/api/studio/bank-directory/import` | 0 | 1 |
+| current-only | POST | `/api/studio/bank-directory/references` | 0 | 1 |
 | current-only | POST | `/api/studio/business-partner-case-contracts` | 0 | 1 |
 | current-only | POST | `/api/studio/business-partner-case-contracts/:param/publish` | 0 | 1 |
 | current-only | POST | `/api/studio/business-partner-case-contracts/simulations` | 0 | 1 |
@@ -1175,6 +1218,20 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | current-only | POST | `/api/studio/onboarding/cases/:param/actions/:param` | 0 | 1 |
 | current-only | POST | `/api/studio/onboarding/cases/:param/reconcile` | 0 | 1 |
 | current-only | POST | `/api/studio/onboarding/cases/:param/work-items/:param/resolve` | 0 | 1 |
+| current-only | POST | `/api/v1/records/:param/exports` | 0 | 1 |
+| current-only | POST | `/api/v1/records/:param/imports` | 0 | 1 |
+| current-only | POST | `/api/v1/records/exports/:param/cancel` | 0 | 1 |
+| current-only | POST | `/api/v1/records/exports/:param/restart` | 0 | 1 |
+| current-only | POST | `/api/v1/records/imports/:param/cancel` | 0 | 1 |
+| current-only | POST | `/api/v1/records/imports/:param/commit` | 0 | 1 |
+| current-only | POST | `/api/v1/records/imports/:param/complete` | 0 | 1 |
+| current-only | POST | `/api/v1/records/imports/:param/file-complete` | 0 | 1 |
+| current-only | POST | `/api/v1/records/imports/:param/file-upload` | 0 | 1 |
+| current-only | POST | `/api/v1/records/imports/:param/preview` | 0 | 1 |
+| current-only | POST | `/api/v1/records/imports/:param/restart` | 0 | 1 |
+| current-only | POST | `/api/v1/records/imports/:param/validate` | 0 | 1 |
+| current-only | POST | `/api/v1/records/imports/:param/workbook-complete` | 0 | 1 |
+| current-only | POST | `/api/v1/records/imports/:param/workbook-upload` | 0 | 1 |
 | matched | POST | `/api/webhooks/:param` | 1 | 1 |
 | legacy-only | POST | `/api/workflow/definitions` | 1 | 0 |
 | legacy-only | POST | `/api/workflow/items/:param/action` | 1 | 0 |
@@ -1210,6 +1267,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | PUT | `/api/ai/policy/autonomy` | 1 | 0 |
 | legacy-only | PUT | `/api/ai/policy/threshold` | 1 | 0 |
 | current-only | PUT | `/api/atlas/threads/:param/participants/:param` | 0 | 1 |
+| current-only | PUT | `/api/control-admin/connectors/:param/draft` | 0 | 1 |
 | current-only | PUT | `/api/control-admin/entitlements/overrides/:param` | 0 | 1 |
 | current-only | PUT | `/api/control-admin/features/:param/override` | 0 | 1 |
 | current-only | PUT | `/api/control-admin/parameters/:param/value` | 0 | 1 |
@@ -1239,9 +1297,11 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | PUT | `/api/records/:param/:param` | 1 | 0 |
 | legacy-only | PUT | `/api/records/:param/:param/lines/:param/distributions` | 1 | 0 |
 | legacy-only | PUT | `/api/records/:param/:param/lock/heartbeat` | 1 | 0 |
+| current-only | PUT | `/api/records/imports/:param/chunks/:param` | 0 | 1 |
 | legacy-only | PUT | `/api/runtime/v1/entities/:param/:param` | 1 | 0 |
 | legacy-only | PUT | `/api/runtime/v1/entities/:param/:param/lines/:param/distributions` | 1 | 0 |
 | legacy-only | PUT | `/api/runtime/v1/entities/:param/:param/lock/heartbeat` | 1 | 0 |
+| current-only | PUT | `/api/v1/records/imports/:param/chunks/:param` | 0 | 1 |
 | legacy-only | PUT | `/api/workflow/definitions/:param` | 1 | 0 |
 | legacy-only | PUT | `/api/workflow/sla-policies/:param` | 1 | 0 |
 | legacy-only | PUT | `/api/workflow/template-rules/:param` | 1 | 0 |

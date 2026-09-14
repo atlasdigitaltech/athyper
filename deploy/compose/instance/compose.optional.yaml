@@ -2,77 +2,118 @@ services:
   memorycache-exporter:
     profiles: [observability]
     image: oliver006/redis_exporter:v1.82.0-alpine
+    user: "${ATHYPER_RUNTIME_UID:-1000}:${ATHYPER_RUNTIME_GID:-1000}"
+    restart: unless-stopped
+    entrypoint: [/bin/sh, /athyper/bin/start-redis-exporter.sh]
+    volumes:
+      [
+        ./scripts/start-redis-exporter.sh:/athyper/bin/start-redis-exporter.sh:ro,
+      ]
+    cap_drop: [ALL]
     depends_on:
       memorycache: { condition: service_healthy }
     environment:
       REDIS_ADDR: redis://memorycache:6379
-      REDIS_PASSWORD_FILE: /run/secrets/redis-password
     secrets: [redis-password]
-    networks: [data, ops]
+    networks:
+      data: {}
+      ops: {}
+      platform-observability:
+        aliases: ["memorycache-exporter-${ATHYPER_INSTANCE:-dev}"]
     security_opt: [no-new-privileges:true]
     read_only: true
+    tmpfs: ["/tmp:size=8m,mode=1777"]
     mem_limit: 64m
     cpus: 0.1
 
   metrics:
     profiles: [observability]
     image: prom/prometheus:v3.11.2
-    command: [--config.file=/etc/prometheus/prometheus.yaml, --storage.tsdb.path=/prometheus, --storage.tsdb.retention.time=7d]
+    restart: unless-stopped
+    command:
+      [
+        --config.file=/etc/prometheus/prometheus.yaml,
+        --storage.tsdb.path=/prometheus,
+        --storage.tsdb.retention.time=7d,
+      ]
     volumes:
       - metrics-data:/prometheus
+      - ../../config/telemetry/metrics/redis-alerts.yml:/etc/prometheus/redis-alerts.yml:ro
+      - ../../config/telemetry/metrics/record-transfer-alerts.yml:/etc/prometheus/record-transfer-alerts.yml:ro
+      - ../../config/telemetry/metrics/business-partner-case-alerts.yml:/etc/prometheus/business-partner-case-alerts.yml:ro
+      - ../../config/telemetry/metrics/api-alerts.yml:/etc/prometheus/api-alerts.yml:ro
       - ./config/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
       - ./config/prometheus/business-partner-rules.yaml:/etc/prometheus/business-partner-rules.yaml:ro
     networks: [ops]
+    healthcheck:
+      test: [CMD, wget, -q, -T, "4", --spider, http://127.0.0.1:9090/-/ready]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
     read_only: true
+    tmpfs: ["/tmp:size=32m,mode=1777"]
     mem_limit: 512m
     cpus: 0.5
 
-  logging:
-    profiles: [observability]
-    image: grafana/loki:3.6.10
-    command: [-config.file=/etc/loki/loki.yaml]
-    volumes:
-      - logging-data:/loki
-      - ./config/loki/loki.yaml:/etc/loki/loki.yaml:ro
-    networks: [ops]
-    security_opt: [no-new-privileges:true]
-    read_only: true
-    mem_limit: 768m
-    cpus: 0.75
-
   tracing:
     profiles: [observability]
-    image: grafana/tempo:2.10.4
+    image: ${ATHYPER_IMAGE_TEMPO:-athyper/tempo:2.10.4-ready}
+    build: { context: ../../config/observability-readiness, target: tempo }
+    restart: unless-stopped
     command: [-config.file=/etc/tempo/tempo.yaml]
     volumes:
       - tracing-data:/var/tempo
       - ./config/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
     networks: [ops]
+    healthcheck:
+      test: [CMD, /usr/local/bin/readiness, http://127.0.0.1:3200/ready]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
     read_only: true
+    tmpfs: ["/tmp:size=32m,mode=1777"]
     mem_limit: 512m
     cpus: 0.5
 
   alertmanager:
     profiles: [observability]
     image: prom/alertmanager:v0.32.0
+    restart: unless-stopped
     command: [--config.file=/etc/alertmanager/alertmanager.yaml]
     volumes:
       - ./config/alertmanager/alertmanager.yaml:/etc/alertmanager/alertmanager.yaml:ro
+      - alertmanager-data:/alertmanager
     networks: [ops]
+    healthcheck:
+      test: [CMD, wget, -q, -T, "4", --spider, http://127.0.0.1:9093/-/ready]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
     read_only: true
+    tmpfs: ["/tmp:size=8m,mode=1777"]
     mem_limit: 128m
     cpus: 0.25
 
   telemetry:
     profiles: [observability]
     image: grafana/grafana:12.4.3
+    restart: unless-stopped
+    # Root bootstrap reads the owner-only admin-password secret, then su
+    # drops to the image's non-root grafana account before exec'ing Grafana.
+    user: "0:0"
+    entrypoint: [/bin/bash, /athyper/bin/start-grafana.sh]
     depends_on:
-      metrics: { condition: service_started }
-      logging: { condition: service_started }
-      tracing: { condition: service_started }
+      metrics: { condition: service_healthy }
+      tracing: { condition: service_healthy }
     environment:
       GF_SECURITY_ADMIN_USER: athyper-admin
       GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-admin-password
@@ -84,14 +125,26 @@ services:
     volumes:
       - telemetry-data:/var/lib/grafana
       - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./scripts/start-grafana.sh:/athyper/bin/start-grafana.sh:ro
     networks: [ops]
+    healthcheck:
+      test: [CMD, wget, -q, -T, "4", --spider, http://127.0.0.1:3000/api/health]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [DAC_READ_SEARCH, SETUID, SETGID]
+    read_only: true
+    tmpfs: [/tmp]
     mem_limit: 384m
     cpus: 0.5
 
   secretstore-db-init:
     profiles: [secretstore]
-    image: postgres:16.13-bookworm
+    image: ${ATHYPER_IMAGE_POSTGRES:-athyper/postgres:16.15-hardened}
+    build: { context: ../../config/postgres }
     depends_on:
       db: { condition: service_healthy }
     environment:
@@ -107,6 +160,11 @@ services:
       - ./scripts/init-optional-db.sh:/athyper/bin/init-optional-db.sh:ro
     networks: [data]
     security_opt: [no-new-privileges:true]
+    # Runs as the image's default root user (psql only, no privilege drop);
+    # DAC_READ_SEARCH is required to read the owner-only postgres/role secrets
+    # once all other capabilities are dropped.
+    cap_drop: [ALL]
+    cap_add: [DAC_READ_SEARCH]
     read_only: true
     tmpfs: [/tmp]
     mem_limit: 128m
@@ -122,27 +180,55 @@ services:
       secretstore-db-init: { condition: service_completed_successfully }
       memorycache: { condition: service_healthy }
     entrypoint: [/bin/sh, /athyper/bin/start-infisical.sh]
-    command: ["./standalone-entrypoint.sh"]
+    # Use the image's built-in CA bundle; its entrypoint updates /etc at runtime.
+    command: [node, --enable-source-maps, dist/main.mjs]
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: "8080"
       SITE_URL: ${ATHYPER_INFISICAL_URL:-http://127.0.0.1:53001}
       TELEMETRY_ENABLED: "false"
-    secrets: [infisical-encryption-key, infisical-auth-secret, infisical-db-password, redis-password]
+    secrets:
+      [
+        infisical-encryption-key,
+        infisical-auth-secret,
+        infisical-db-password,
+        redis-password,
+      ]
     ports:
       - "${ATHYPER_INFISICAL_BIND:-127.0.0.1:53001}:8080"
     volumes:
       - ./scripts/start-infisical.sh:/athyper/bin/start-infisical.sh:ro
     networks: [app, data]
+    healthcheck:
+      test:
+        [
+          CMD,
+          curl,
+          --fail,
+          --silent,
+          --show-error,
+          --max-time,
+          "4",
+          http://127.0.0.1:8080/api/status,
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [DAC_READ_SEARCH, SETUID, SETGID]
+    read_only: true
+    tmpfs: [/tmp]
     init: true
     mem_limit: 768m
     cpus: 1.0
 
   analytics-db-init:
     profiles: [analytics]
-    image: postgres:16.13-bookworm
+    image: ${ATHYPER_IMAGE_POSTGRES:-athyper/postgres:16.15-hardened}
+    build: { context: ../../config/postgres }
     depends_on:
       db: { condition: service_healthy }
     environment:
@@ -158,6 +244,8 @@ services:
       - ./scripts/init-optional-db.sh:/athyper/bin/init-optional-db.sh:ro
     networks: [data]
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [DAC_READ_SEARCH]
     read_only: true
     tmpfs: [/tmp]
     mem_limit: 128m
@@ -165,24 +253,60 @@ services:
 
   analyticsboard:
     profiles: [analytics]
-    image: metabase/metabase:v0.51.10
+    image: ${ATHYPER_IMAGE_METABASE:-athyper/metabase:0.51.10-hardened}
+    build: { context: ../../config/metabase }
+    restart: unless-stopped
     depends_on:
       analytics-db-init: { condition: service_completed_successfully }
     entrypoint: [/bin/sh, /athyper/bin/start-metabase.sh]
+    command: [/app/run_metabase.sh]
+    user: "0:0"
+    working_dir: /tmp
     environment:
+      HOME: /tmp
+      MB_PLUGINS_DIR: /plugins
+      # Leave room inside the 1 GiB cgroup for JVM native memory and plugin tmpfs.
+      JAVA_OPTS: -Xms128m -Xmx384m -XX:MaxMetaspaceSize=256m
       MB_DB_TYPE: postgres
       MB_DB_HOST: db
       MB_DB_PORT: "5432"
       MB_DB_DBNAME: athyper_analytics
       MB_DB_USER: athyper_analytics
       MB_CHECK_FOR_UPDATES: "false"
+      MB_ANON_TRACKING_ENABLED: "false"
     secrets: [analytics-db-password]
     ports:
       - "${ATHYPER_ANALYTICS_BIND:-127.0.0.1:53002}:3000"
     volumes:
       - ./scripts/start-metabase.sh:/athyper/bin/start-metabase.sh:ro
     networks: [app, data]
+    healthcheck:
+      test:
+        [
+          CMD,
+          curl,
+          --fail,
+          --silent,
+          --show-error,
+          --max-time,
+          "4",
+          http://127.0.0.1:3000/api/health,
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
     security_opt: [no-new-privileges:true]
+    # Read the host-owned secret, then take upstream's non-root startup path.
+    # The application database is PostgreSQL; extracted plugins are ephemeral.
+    cap_drop: [ALL]
+    cap_add: [DAC_READ_SEARCH, SETUID, SETGID]
+    read_only: true
+    tmpfs:
+      [
+        "/tmp:size=128m,mode=1777",
+        "/plugins:size=256m,uid=2000,gid=2000,mode=0700",
+      ]
     init: true
     mem_limit: 1024m
     cpus: 1.0
@@ -190,6 +314,7 @@ services:
   dbconsole:
     profiles: [admin-db]
     image: sosedoff/pgweb:0.16.2
+    restart: unless-stopped
     depends_on:
       dbpool-session: { condition: service_healthy }
     entrypoint: [/bin/sh, /athyper/bin/start-pgweb.sh]
@@ -199,43 +324,61 @@ services:
     volumes:
       - ./scripts/start-pgweb.sh:/athyper/bin/start-pgweb.sh:ro
     networks: [app]
+    healthcheck:
+      test:
+        [
+          CMD,
+          curl,
+          --fail,
+          --silent,
+          --show-error,
+          --max-time,
+          "4",
+          http://127.0.0.1:8081/api/bookmarks,
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
     read_only: true
     tmpfs: [/tmp]
     mem_limit: 128m
     cpus: 0.25
 
-  memorycache-jobs:
-    profiles: [admin-queue]
-    image: redis:7.4.8-alpine
-    entrypoint: [/bin/sh, /athyper/bin/start-jobs-redis.sh]
-    secrets: [jobs-redis-password]
-    volumes:
-      - memorycache-jobs-data:/data
-      - ./scripts/start-jobs-redis.sh:/athyper/bin/start-jobs-redis.sh:ro
-    networks: [data]
-    security_opt: [no-new-privileges:true]
-    mem_limit: 512m
-    cpus: 0.5
-
   queueconsole:
     profiles: [admin-queue]
     image: venatum/bull-board:3.3.17
+    restart: unless-stopped
     depends_on:
-      memorycache-jobs: { condition: service_started }
+      memorycache: { condition: service_healthy }
     entrypoint: [/bin/sh, /athyper/bin/start-bull-board.sh]
     environment:
-      REDIS_HOST: memorycache-jobs
+      REDIS_HOST: memorycache
       REDIS_PORT: "6379"
       REDIS_USE_TLS: "false"
       BULL_VERSION: BULLMQ
-    secrets: [jobs-redis-password]
+    secrets: [redis-password]
     ports:
       - "${ATHYPER_QUEUE_BIND:-127.0.0.1:53004}:3000"
     volumes:
       - ./scripts/start-bull-board.sh:/athyper/bin/start-bull-board.sh:ro
     networks: [app, data]
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/healthcheck', {signal: AbortSignal.timeout(4000)}).then(async r => {if (!r.ok || (await r.json()).status !== 'ok') process.exit(1)}).catch(() => process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
     read_only: true
     tmpfs: [/tmp]
     mem_limit: 256m
@@ -243,10 +386,9 @@ services:
 
 volumes:
   metrics-data: {}
-  logging-data: {}
   tracing-data: {}
   telemetry-data: {}
-  memorycache-jobs-data: {}
+  alertmanager-data: {}
 
 secrets:
   grafana-admin-password:
@@ -259,5 +401,3 @@ secrets:
     file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/infisical-db-password
   analytics-db-password:
     file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/analytics-db-password
-  jobs-redis-password:
-    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/jobs-redis-password

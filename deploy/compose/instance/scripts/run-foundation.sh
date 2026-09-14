@@ -51,7 +51,7 @@ apply_plane() {
     exit 1
   fi
 
-  transaction="$(mktemp "/tmp/athyper-foundation-${plane}.XXXXXX.sql")"
+  transaction="$(mktemp "/tmp/athyper-foundation-${plane}.XXXXXX")"
   trap 'rm -f -- "$transaction"' EXIT HUP INT TERM
   {
     echo "BEGIN;"

@@ -40,14 +40,15 @@ random_base64_32() { openssl rand -base64 32 | tr -d '\r\n'; }
 
 for name in \
   analytics-db-password grafana-admin-password infisical-auth-secret \
-  infisical-db-password infisical-encryption-key jobs-redis-password \
+  infisical-db-password infisical-encryption-key \
   iam-admin-password iam-db-password mesh-iam-client-secret minio-root-password \
-  neon-iam-client-secret objectstorage-app-secret-key postgres-password redis-password \
+  neon-iam-client-secret objectstorage-app-secret-key objectstorage-artifacts-writer-secret-key postgres-password redis-password \
   runtime-db-password runtime-iam-client-secret search-master-key \
   studio-iam-client-secret worker-db-password; do
   random_urlsafe > "$staging/$name"
 done
 openssl rand -hex 10 > "$staging/objectstorage-app-access-key"
+openssl rand -hex 10 > "$staging/objectstorage-artifacts-writer-access-key"
 random_base64_32 > "$staging/session-token-encryption-key"
 node - "$staging" <<'NODE'
 const { generateKeyPairSync } = require("node:crypto");
@@ -61,8 +62,9 @@ writeFileSync(`${root}/vapid-private-key`, `${d}\n`, { mode: 0o600 });
 NODE
 
 chmod 600 "$staging"/*
+expected=25
 count="$(find "$staging" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')"
-[[ "$count" == "24" ]] || { echo "Expected 24 secrets, generated $count" >&2; exit 1; }
+[[ "$count" == "$expected" ]] || { echo "Expected $expected secrets, generated $count" >&2; exit 1; }
 mv "$staging" "$secret_root"
 trap - EXIT INT TERM
 
@@ -74,7 +76,7 @@ cat > "$receipt" <<EOF
   "kind": "DevSecretsReceipt",
   "generatedAt": "$generated_at",
   "instance": "dev",
-  "secretCount": 24,
+  "secretCount": $expected,
   "directoryMode": "0700",
   "fileMode": "0600",
   "source": "cryptographic-random-clean-slate",
@@ -82,4 +84,4 @@ cat > "$receipt" <<EOF
 }
 EOF
 chmod 600 "$receipt"
-echo "Generated 24 owner-only DEV secrets under $secret_root; values were not printed."
+echo "Generated $expected owner-only DEV secrets under $secret_root; values were not printed."

@@ -1,3 +1,4 @@
+import { readAppEnvironment } from "@/lib/environment";
 import { LoginGatePage } from "@athyper/platform-iam-identity-gate";
 import { resolveExistingSessionLanding } from "@athyper/platform-shell-app-foundation/server";
 import type { Metadata } from "next";
@@ -14,10 +15,7 @@ export default async function SignInPage({
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = readSignInQuery(await searchParams);
-  const origin =
-    process.env.APP_ORIGIN ??
-    process.env.NEXT_PUBLIC_APP_ORIGIN ??
-    "http://localhost:3200";
+  const origin = readAppEnvironment().appOrigin;
   const landing = await resolveExistingSessionLanding({
     request: new Request(new URL("/sign-in", origin), {
       headers: new Headers(await headers()),

@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { readLocalGraphProjections } from "@athyper/server-foundation";
+import { overlayLocalGraphBindings } from "./local-graph-bindings.js";
 import { sql, type Kysely, type Transaction } from "kysely";
 import type {
   EffectiveAuthorizationEvidence,
@@ -11,10 +13,14 @@ import type {
   VerifiedIdentity,
 } from "@athyper/server-contract-auth";
 
-type AuthorizationTransaction = Kysely<Record<string, never>> | Transaction<Record<string, never>>;
+type AuthorizationTransaction =
+  Kysely<Record<string, never>> | Transaction<Record<string, never>>;
 
 export interface ExactPlaneAuthorizationTransactions {
-  run<Result>(identity: VerifiedIdentity, work: (transaction: AuthorizationTransaction) => Promise<Result>): Promise<Result>;
+  run<Result>(
+    identity: VerifiedIdentity,
+    work: (transaction: AuthorizationTransaction) => Promise<Result>,
+  ): Promise<Result>;
 }
 
 type EvidenceRow = {
@@ -31,15 +37,26 @@ type EvidenceRow = {
 };
 
 type RequirementRow = {
-  permission_code: string; module_id: string; risk_tier: EffectivePermissionRequirement["riskTier"];
-  requires_mfa: boolean; requires_sod: boolean; entitled: boolean;
+  permission_code: string;
+  module_id: string;
+  risk_tier: EffectivePermissionRequirement["riskTier"];
+  requires_mfa: boolean;
+  requires_sod: boolean;
+  entitled: boolean;
 };
 type OperationBindingRow = {
-  entity_code: string; operation_key: string; permission_code: string; decision_mode: string; required_scope_kinds: string[] | null;
+  entity_code: string;
+  operation_key: string;
+  permission_code: string;
+  decision_mode: string;
+  required_scope_kinds: string[] | null;
 };
 
 export class ExactPlaneAuthorizationError extends Error {
-  constructor(readonly code: "AUTHZ_PLANE_ADMISSION_INACTIVE" | "AUTHZ_PLANE_DATABASE_UNAVAILABLE") {
+  constructor(
+    readonly code:
+      "AUTHZ_PLANE_ADMISSION_INACTIVE" | "AUTHZ_PLANE_DATABASE_UNAVAILABLE",
+  ) {
     super(code);
   }
 }
@@ -47,6 +64,7 @@ export class ExactPlaneAuthorizationError extends Error {
 export function createKyselyPermissionResolver(
   transactions: ExactPlaneAuthorizationTransactions,
   now: () => number = Date.now,
+  previewPins?: Readonly<Record<string, string>>,
 ): PermissionResolver {
   return {
     resolve(identity) {
@@ -64,7 +82,10 @@ export function createKyselyPermissionResolver(
               AND (membership.effective_until IS NULL OR membership.effective_until>statement_timestamp())
           ) AS admitted
         `.execute(transaction);
-        if (!admission.rows[0]?.admitted) throw new ExactPlaneAuthorizationError("AUTHZ_PLANE_ADMISSION_INACTIVE");
+        if (!admission.rows[0]?.admitted)
+          throw new ExactPlaneAuthorizationError(
+            "AUTHZ_PLANE_ADMISSION_INACTIVE",
+          );
 
         const result = await sql<EvidenceRow>`
           WITH RECURSIVE scope_tree AS (
@@ -210,8 +231,16 @@ export function createKyselyPermissionResolver(
           SELECT * FROM evidence
           ORDER BY permission_code,effect,proof,scope_kind,target_id,record_id NULLS FIRST
         `.execute(transaction);
-        const evidenceCodes = [...new Set(result.rows.map((row) => row.permission_code))];
-        const catalog = { rows: await readEntitlementRequirements(transaction, identity.tenantId, evidenceCodes) };
+        const evidenceCodes = [
+          ...new Set(result.rows.map((row) => row.permission_code)),
+        ];
+        const catalog = {
+          rows: await readEntitlementRequirements(
+            transaction,
+            identity.tenantId,
+            evidenceCodes,
+          ),
+        };
         const operationRows = await sql<OperationBindingRow>`
           SELECT binding.entity_code,binding.operation_key,permission.canonical_code AS permission_code,
                  binding.decision_mode::text AS decision_mode,
@@ -237,7 +266,40 @@ export function createKyselyPermissionResolver(
             AND (binding.effective_until IS NULL OR binding.effective_until>statement_timestamp())
           GROUP BY binding.id,binding.entity_code,binding.operation_key,permission.canonical_code,binding.decision_mode
         `.execute(transaction);
-        return snapshotFromEvidence(identity, result.rows.map(evidenceFromRow), now(), catalog.rows.map(requirementFromRow), operationRows.rows.map(operationBindingFromRow));
+        const previews = readLocalGraphProjections(
+          identity.tenantId,
+          identity.planeKey,
+          previewPins,
+        );
+        const bindings = overlayLocalGraphBindings(
+          operationRows.rows.map(operationBindingFromRow),
+          previews,
+        );
+        const snapshot = snapshotFromEvidence(
+          identity,
+          result.rows.map(evidenceFromRow),
+          now(),
+          catalog.rows.map(requirementFromRow),
+          bindings,
+        );
+        if (!process.env.ATHYPER_LOCAL_PREVIEW_ROOT) return snapshot;
+        const localGraphPreview = Object.freeze(
+          Object.fromEntries(
+            previews
+              .map(
+                (preview) =>
+                  [preview.entityCode, preview.artifactHash] as const,
+              )
+              .sort(([left], [right]) => left.localeCompare(right)),
+          ),
+        );
+        return Object.freeze({
+          ...snapshot,
+          localGraphPreview,
+          profileHash: digest(
+            JSON.stringify([snapshot.profileHash, localGraphPreview]),
+          ),
+        });
       });
     },
   };
@@ -250,25 +312,62 @@ export function snapshotFromEvidence(
   requirements: readonly EffectivePermissionRequirement[] = [],
   operationBindings: readonly EffectiveOperationBinding[] = [],
 ): EffectivePermissionSnapshot {
-  const deniedCodes = new Set(evidence
-    .filter((item) => item.effect === "deny" && item.scopeKind === "tenant")
-    .map((item) => item.permissionCode));
-  const candidates = [...new Set(evidence
-    .filter((item) => item.effect === "allow" && !deniedCodes.has(item.permissionCode))
-    .map((item) => item.permissionCode))].sort();
-  const locked = new Set(requirements.filter((item) => !item.entitled).map((item) => item.permissionCode));
+  const deniedCodes = new Set(
+    evidence
+      .filter((item) => item.effect === "deny" && item.scopeKind === "tenant")
+      .map((item) => item.permissionCode),
+  );
+  const candidates = [
+    ...new Set(
+      evidence
+        .filter(
+          (item) =>
+            item.effect === "allow" && !deniedCodes.has(item.permissionCode),
+        )
+        .map((item) => item.permissionCode),
+    ),
+  ].sort();
+  const locked = new Set(
+    requirements
+      .filter((item) => !item.entitled)
+      .map((item) => item.permissionCode),
+  );
   const allowedCodes = candidates.filter((code) => !locked.has(code));
   const planLocked = candidates.filter((code) => locked.has(code));
   const denied = [...deniedCodes].sort();
   const entries: EffectivePermissionEntry[] = [
-    ...allowedCodes.map((code) => ({ code, status: "allow" as const, reason: "allowed" as const })),
-    ...denied.map((code) => ({ code, status: "deny" as const, reason: "denied_by_grant" as const })),
-    ...planLocked.map((code) => ({ code, status: "not_in_plan" as const, reason: "plan_locked" as const })),
+    ...allowedCodes.map((code) => ({
+      code,
+      status: "allow" as const,
+      reason: "allowed" as const,
+    })),
+    ...denied.map((code) => ({
+      code,
+      status: "deny" as const,
+      reason: "denied_by_grant" as const,
+    })),
+    ...planLocked.map((code) => ({
+      code,
+      status: "not_in_plan" as const,
+      reason: "plan_locked" as const,
+    })),
   ].sort((left, right) => left.code.localeCompare(right.code));
   const canonicalEvidence = [...evidence].sort(compareEvidence);
-  const canonicalRequirements = [...requirements].sort((left, right) => left.permissionCode.localeCompare(right.permissionCode));
-  const canonicalBindings = [...operationBindings].sort((left, right) => `${left.entityCode}\0${left.operationKey}`.localeCompare(`${right.entityCode}\0${right.operationKey}`));
-  const profileHash = digest(JSON.stringify({ evidence: canonicalEvidence, requirements: canonicalRequirements, operationBindings: canonicalBindings }));
+  const canonicalRequirements = [...requirements].sort((left, right) =>
+    left.permissionCode.localeCompare(right.permissionCode),
+  );
+  const canonicalBindings = [...operationBindings].sort((left, right) =>
+    `${left.entityCode}\0${left.operationKey}`.localeCompare(
+      `${right.entityCode}\0${right.operationKey}`,
+    ),
+  );
+  const profileHash = digest(
+    JSON.stringify({
+      evidence: canonicalEvidence,
+      requirements: canonicalRequirements,
+      operationBindings: canonicalBindings,
+    }),
+  );
   return Object.freeze({
     planeKey: identity.planeKey,
     tenantId: identity.tenantId,
@@ -289,11 +388,28 @@ export function snapshotFromEvidence(
   });
 }
 
-function requirementFromRow(row: RequirementRow): EffectivePermissionRequirement {
-  return Object.freeze({ permissionCode: row.permission_code, moduleId: row.module_id, riskTier: row.risk_tier, requiresMfa: row.requires_mfa, requiresSod: row.requires_sod, entitled: row.entitled });
+function requirementFromRow(
+  row: RequirementRow,
+): EffectivePermissionRequirement {
+  return Object.freeze({
+    permissionCode: row.permission_code,
+    moduleId: row.module_id,
+    riskTier: row.risk_tier,
+    requiresMfa: row.requires_mfa,
+    requiresSod: row.requires_sod,
+    entitled: row.entitled,
+  });
 }
-function operationBindingFromRow(row: OperationBindingRow): EffectiveOperationBinding {
-  return Object.freeze({ entityCode: row.entity_code, operationKey: row.operation_key, permissionCode: row.permission_code, decisionMode: row.decision_mode, requiredScopeKinds: Object.freeze(row.required_scope_kinds ?? []) });
+function operationBindingFromRow(
+  row: OperationBindingRow,
+): EffectiveOperationBinding {
+  return Object.freeze({
+    entityCode: row.entity_code,
+    operationKey: row.operation_key,
+    permissionCode: row.permission_code,
+    decisionMode: row.decision_mode,
+    requiredScopeKinds: Object.freeze(row.required_scope_kinds ?? []),
+  });
 }
 
 function evidenceFromRow(row: EvidenceRow): EffectiveAuthorizationEvidence {
@@ -307,14 +423,31 @@ function evidenceFromRow(row: EvidenceRow): EffectiveAuthorizationEvidence {
     propagationMode: row.propagation_mode,
     ...(row.resource_code ? { resourceCode: row.resource_code } : {}),
     ...(row.record_id ? { recordId: row.record_id } : {}),
-    ...(row.effective_until ? { effectiveUntil: new Date(row.effective_until).toISOString() } : {}),
+    ...(row.effective_until
+      ? { effectiveUntil: new Date(row.effective_until).toISOString() }
+      : {}),
   });
 }
 
-function scopes(codes: readonly string[], evidence: readonly EffectiveAuthorizationEvidence[]): EffectiveAuthorizationScope[] {
+function scopes(
+  codes: readonly string[],
+  evidence: readonly EffectiveAuthorizationEvidence[],
+): EffectiveAuthorizationScope[] {
   return codes.map((permissionCode) => {
-    const rows = evidence.filter((item) => item.effect === "allow" && item.permissionCode === permissionCode && item.proof !== "record_acl");
-    const values = (kind: string) => [...new Set(rows.filter((item) => item.scopeKind === kind).map((item) => item.targetId))].sort();
+    const rows = evidence.filter(
+      (item) =>
+        item.effect === "allow" &&
+        item.permissionCode === permissionCode &&
+        item.proof !== "record_acl",
+    );
+    const values = (kind: string) =>
+      [
+        ...new Set(
+          rows
+            .filter((item) => item.scopeKind === kind)
+            .map((item) => item.targetId),
+        ),
+      ].sort();
     const tenantWide = rows.some((item) => item.scopeKind === "tenant");
     return Object.freeze({
       permissionCode,
@@ -322,23 +455,55 @@ function scopes(codes: readonly string[], evidence: readonly EffectiveAuthorizat
       legalEntityIds: Object.freeze(values("legal_entity")),
       companyCodeIds: Object.freeze(values("company_code")),
       operatingOrganizationIds: Object.freeze(values("operating_organization")),
-      networkMembershipIds: Object.freeze([...values("network_account"), ...values("network_relationship")]),
-      visibility: tenantWide ? "all" as const : "team" as const,
+      networkMembershipIds: Object.freeze([
+        ...values("network_account"),
+        ...values("network_relationship"),
+      ]),
+      visibility: tenantWide ? ("all" as const) : ("team" as const),
     });
   });
 }
 
-function compareEvidence(left: EffectiveAuthorizationEvidence, right: EffectiveAuthorizationEvidence): number {
-  return [left.permissionCode,left.effect,left.proof,left.scopeKind,left.targetId,left.resourceCode ?? "",left.recordId ?? ""]
-    .join("\0").localeCompare([right.permissionCode,right.effect,right.proof,right.scopeKind,right.targetId,right.resourceCode ?? "",right.recordId ?? ""].join("\0"));
+function compareEvidence(
+  left: EffectiveAuthorizationEvidence,
+  right: EffectiveAuthorizationEvidence,
+): number {
+  return [
+    left.permissionCode,
+    left.effect,
+    left.proof,
+    left.scopeKind,
+    left.targetId,
+    left.resourceCode ?? "",
+    left.recordId ?? "",
+  ]
+    .join("\0")
+    .localeCompare(
+      [
+        right.permissionCode,
+        right.effect,
+        right.proof,
+        right.scopeKind,
+        right.targetId,
+        right.resourceCode ?? "",
+        right.recordId ?? "",
+      ].join("\0"),
+    );
 }
 
-function digest(value: string): string { return createHash("sha256").update(value).digest("hex"); }
+function digest(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
 
 /** Shared by permission snapshot construction and the database integration tests. */
-export async function readEntitlementRequirements(transaction: AuthorizationTransaction, tenantId: string, evidenceCodes: readonly string[]): Promise<readonly RequirementRow[]> {
+export async function readEntitlementRequirements(
+  transaction: AuthorizationTransaction,
+  tenantId: string,
+  evidenceCodes: readonly string[],
+): Promise<readonly RequirementRow[]> {
   if (!evidenceCodes.length) return [];
-  return (await sql<RequirementRow>`
+  return (
+    await sql<RequirementRow>`
           SELECT permission.canonical_code AS permission_code,permission.module_id::text AS module_id,
                  permission.risk_tier::text AS risk_tier,permission.requires_mfa,permission.requires_sod,
                  EXISTS(
@@ -348,5 +513,18 @@ export async function readEntitlementRequirements(transaction: AuthorizationTran
                  ) AS entitled
           FROM authz.permission permission
           WHERE permission.status='published' AND permission.canonical_code = ANY(${sql.val(evidenceCodes)}::text[])
-        `.execute(transaction)).rows;
+        `.execute(transaction)
+  ).rows;
+}
+
+/** Resolve published constraints even when the principal has no source grant. */
+export async function readSourcePermissionRequirement(
+  transaction: AuthorizationTransaction,
+  tenantId: string,
+  permissionCode: string,
+): Promise<EffectivePermissionRequirement | null> {
+  const rows = await readEntitlementRequirements(transaction, tenantId, [
+    permissionCode,
+  ]);
+  return rows.length === 1 ? requirementFromRow(rows[0]!) : null;
 }

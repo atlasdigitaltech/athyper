@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
-import { CustomerPortalIntentConsumer } from "../../../../packages/platform/iam/src/customer-portal-delivery.js";
+import { CustomerPortalIntentConsumer } from "@athyper/server-platform-iam/customer-portal-delivery";
 const url = process.env.ATHYPER_PLATFORM_DATABASE_ADMIN_URL;
 if (
   !url ||

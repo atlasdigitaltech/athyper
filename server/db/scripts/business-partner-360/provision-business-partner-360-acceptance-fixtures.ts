@@ -8,7 +8,7 @@ import { assertLoopbackDatabaseTarget } from "../lib/database-target.js";
 const CONFIRMATION = "LOAD-BS360-ACCEPTANCE-FIXTURES";
 const PACK = "business-partner-360.acceptance.v1";
 const NAMESPACE = "athyper:business-partner-360:acceptance:v1:";
-const FAMILIES = Object.freeze(["organization", "supplier", "customer", "dual_role", "person_workforce", "external_worker", "mesh_linked"] as const);
+const FAMILIES = Object.freeze(["organization", "supplier", "customer", "dual_role", "mesh_linked"] as const);
 type Family = (typeof FAMILIES)[number];
 
 export async function provisionBusinessPartner360AcceptanceFixtures(options: { readonly neonDatabaseUrl: string; readonly meshDatabaseUrl: string; readonly confirmation?: string; readonly dryRun?: boolean }) {
@@ -45,23 +45,18 @@ export async function provisionBusinessPartner360AcceptanceFixtures(options: { r
     await neon.query("UPDATE master.operating_organization SET domain='both',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND domain='shared_services'", [context.tenantId, context.customerOrganizationId, context.actorId]);
     const metadata = (family: Family) => JSON.stringify({ _seed: { pack: PACK, version: "1.0.0" }, environment: "disposable_local", acceptanceFamily: family });
     for (const definition of definitions) {
-      const person = definition.family === "person_workforce" || definition.family === "external_worker";
-      await neon.query(`INSERT INTO master.business_partner(id,tenant_id,code,name,display_name,legal_name,partner_category,registration_country_code,metadata,status,created_by)
-        VALUES($1::uuid,$2::uuid,$3,$4,$4,$5,$6::master.business_partner_category_d,CASE WHEN $6='person' THEN NULL ELSE 'MY' END,$7::jsonb,'active',$8::uuid)
-        ON CONFLICT(tenant_id,id) DO NOTHING`, [definition.businessPartnerId, context.tenantId, definition.code, `${definition.family.replaceAll("_", " ")} acceptance fixture`, person ? null : `${definition.family.replaceAll("_", " ")} acceptance fixture Sdn Bhd`, person ? "person" : "organization", metadata(definition.family), context.actorId]);
+      await neon.query(`INSERT INTO master.business_partner(id,tenant_id,code,name,partner_category,category_locked_by,registration_country_code,metadata,status,created_by)
+        VALUES($1::uuid,$2::uuid,$3,$4,'organization',$6::uuid,'MY',$5::jsonb,'active',$6::uuid)
+        ON CONFLICT(tenant_id,id) DO NOTHING`, [definition.businessPartnerId, context.tenantId, definition.code, `${definition.family.replaceAll("_", " ")} acceptance fixture`, metadata(definition.family), context.actorId]);
     }
     const byFamily = new Map(definitions.map((value) => [value.family, value]));
     for (const family of ["supplier", "dual_role", "mesh_linked"] as const) await role(neon, context, byFamily.get(family)!, "supplier", metadata(family));
     for (const family of ["customer", "dual_role"] as const) await role(neon, context, byFamily.get(family)!, "customer", metadata(family));
-    await workforce(neon, context, byFamily.get("person_workforce")!, metadata("person_workforce"));
-    await externalWorker(neon, context, byFamily.get("external_worker")!, metadata("external_worker"));
     await meshLink(neon, context, byFamily.get("mesh_linked")!, relationship);
-    const rows = await neon.query<{ family: Family; businessPartnerId: string; supplier: boolean; customer: boolean; workforce: boolean; externalWorker: boolean; meshLinked: boolean }>(`
+    const rows = await neon.query<{ family: Family; businessPartnerId: string; supplier: boolean; customer: boolean; meshLinked: boolean }>(`
       SELECT partner.metadata->>'acceptanceFamily' AS family,partner.id::text AS "businessPartnerId",
              EXISTS(SELECT 1 FROM master.supplier value WHERE value.tenant_id=partner.tenant_id AND value.business_partner_id=partner.id) supplier,
              EXISTS(SELECT 1 FROM master.customer value WHERE value.tenant_id=partner.tenant_id AND value.business_partner_id=partner.id) customer,
-             EXISTS(SELECT 1 FROM master.person person JOIN master.employee value ON value.tenant_id=person.tenant_id AND value.person_id=person.id WHERE person.tenant_id=partner.tenant_id AND person.business_partner_id=partner.id) workforce,
-             EXISTS(SELECT 1 FROM master.person person JOIN master.external_worker value ON value.tenant_id=person.tenant_id AND value.person_id=person.id WHERE person.tenant_id=partner.tenant_id AND person.business_partner_id=partner.id) AS "externalWorker",
              EXISTS(SELECT 1 FROM control.mesh_business_partner_account_link value WHERE value.tenant_id=partner.tenant_id AND value.business_partner_id=partner.id) AS "meshLinked"
       FROM master.business_partner partner WHERE partner.tenant_id=$1::uuid AND partner.metadata->'_seed'->>'pack'=$2 ORDER BY family`, [context.tenantId, PACK]);
     if (rows.rows.length !== FAMILIES.length || FAMILIES.some((family) => !rows.rows.some((row) => row.family === family))) throw new Error("acceptance fixture family coverage is incomplete");
@@ -76,17 +71,6 @@ async function role(client: Client, context: Context, fixture: Fixture, kind: "s
   if (kind === "supplier") await client.query("INSERT INTO master.supplier(id,tenant_id,business_partner_id,supplier_code,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4,$5::jsonb,'active',$6::uuid) ON CONFLICT(tenant_id,id) DO NOTHING", [roleId, context.tenantId, fixture.businessPartnerId, roleCode, metadata, context.actorId]);
   else await client.query("INSERT INTO master.customer(id,tenant_id,business_partner_id,customer_code,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4,$5::jsonb,'active',$6::uuid) ON CONFLICT(tenant_id,id) DO NOTHING", [roleId, context.tenantId, fixture.businessPartnerId, roleCode, metadata, context.actorId]);
   await client.query("INSERT INTO master.business_partner_operating_organization_assignment(id,tenant_id,business_partner_id,operating_organization_id,partner_role,effective_from,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,'2026-01-01',$6::jsonb,'active',$7::uuid) ON CONFLICT(tenant_id,id) DO NOTHING", [id(`assignment:${fixture.family}:${kind}`), context.tenantId, fixture.businessPartnerId, kind === "customer" ? context.customerOrganizationId : context.organizationId, kind, metadata, context.actorId]);
-}
-async function workforce(client: Client, context: Context, fixture: Fixture, metadata: string) {
-  const personId = id(`person:${fixture.family}`), employeeId = id(`employee:${fixture.family}`);
-  await client.query("INSERT INTO master.person(id,tenant_id,business_partner_id,code,name,person_number,first_name,last_name,display_name,country_code,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'BS360-PERSON-WORKFORCE','Workforce Acceptance','BS360-P001','Workforce','Acceptance','Workforce Acceptance','MY',$4::jsonb,'active',$5::uuid) ON CONFLICT(tenant_id,id) DO NOTHING", [personId, context.tenantId, fixture.businessPartnerId, metadata, context.actorId]);
-  await client.query("INSERT INTO master.employee(id,tenant_id,code,name,person_id,employee_number,first_name,last_name,company_code_id,hire_date,metadata,status,created_by) VALUES($1::uuid,$2::uuid,'BS360-EMPLOYEE','Workforce Acceptance',$3::uuid,'BS360-E001','Workforce','Acceptance',$4::uuid,'2026-01-01',$5::jsonb,'active',$6::uuid) ON CONFLICT(tenant_id,id) DO NOTHING", [employeeId, context.tenantId, personId, context.companyCodeId, metadata, context.actorId]);
-  await client.query("INSERT INTO master.employment(id,tenant_id,code,name,person_id,employee_id,legal_entity_id,company_code_id,employment_number,employment_type,is_primary,employment_status,hire_date,metadata,status,created_by) VALUES($1::uuid,$2::uuid,'BS360-EMPLOYMENT','Workforce Acceptance',$3::uuid,$4::uuid,$5::uuid,$6::uuid,'BS360-E001','full_time',true,'active','2026-01-01',$7::jsonb,'active',$8::uuid) ON CONFLICT(tenant_id,id) DO NOTHING", [id(`employment:${fixture.family}`), context.tenantId, personId, employeeId, context.legalEntityId, context.companyCodeId, metadata, context.actorId]);
-}
-async function externalWorker(client: Client, context: Context, fixture: Fixture, metadata: string) {
-  const personId = id(`person:${fixture.family}`);
-  await client.query("INSERT INTO master.person(id,tenant_id,business_partner_id,code,name,person_number,first_name,last_name,display_name,country_code,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'BS360-PERSON-EXTERNAL','External Worker Acceptance','BS360-P002','External','Worker','External Worker Acceptance','MY',$4::jsonb,'active',$5::uuid) ON CONFLICT(tenant_id,id) DO NOTHING", [personId, context.tenantId, fixture.businessPartnerId, metadata, context.actorId]);
-  await client.query("INSERT INTO master.external_worker(id,tenant_id,person_id,worker_number,default_classification,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'BS360-X001','consultant',$4::jsonb,'active',$5::uuid) ON CONFLICT(tenant_id,id) DO NOTHING", [id(`external-worker:${fixture.family}`), context.tenantId, personId, metadata, context.actorId]);
 }
 async function meshLink(client: Client, context: Context, fixture: Fixture, relationship: Relationship) {
   const inboxId = id("mesh:inbox"), eventId = id("mesh:event"), publicationId = id("mesh:publication"), snapshotId = id("mesh:snapshot"), projectionId = id("mesh:projection"), payload = { partner: { accountCode: "dev-supplier-catl-002", displayName: "MESH Linked Acceptance", legalName: "MESH Linked Acceptance Limited", countryCode: "GB" } }, envelope = { fixture: PACK, payload }, payloadHash = hash(JSON.stringify(payload)), envelopeHash = hash(JSON.stringify(envelope));

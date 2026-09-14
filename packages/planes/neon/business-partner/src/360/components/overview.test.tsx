@@ -5,7 +5,9 @@ import { BusinessPartner360Provider } from "../business-partner-360-context";
 import { Overview } from "./overview";
 import { SectionStatePanel } from "./section-state";
 
-vi.mock("./relationship-overview",()=>({RelationshipOverview:()=>null}));
+vi.mock("./relationship-overview", () => ({
+  RelationshipOverview: () => null,
+}));
 
 const summary: Summary = {
   schemaVersion: 1,
@@ -17,7 +19,7 @@ const summary: Summary = {
     id: "bp-1",
     code: "BP-0001",
     category: "organization",
-    displayName: "Northwind Industrial Supplies Ltd",
+    name: "Northwind Industrial Supplies Ltd",
     lifecycleStatus: "active",
   },
   roles: [{ id: "role-1", code: "supplier", status: "active" }],
@@ -111,6 +113,11 @@ describe("Partner overview presentation", () => {
     });
     expect(html).toContain("Historical view is read-only.");
     expect(html).not.toContain('href="/change"');
+    expect(html).not.toContain("View requests");
+  });
+  it("does not render a numeric total or request link when the summary count is restricted", () => {
+    const html = render({ ...summary, openWork: {} });
+    expect(html).toContain("Restricted");
     expect(html).not.toContain("View requests");
   });
 });

@@ -1,8 +1,9 @@
+import { migrationSourcePath } from "./migration-source.mjs";
 import {readFileSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 const apply=process.argv.includes('--apply');if(process.argv.slice(2).some(x=>x!=='--apply'))throw Error('Use --apply or no arguments for rehearsal');
-const name='20260910_neon_attachment_knowledge_writer.sql',migration=readFileSync('server/db/migrations/'+name,'utf8'),hash=createHash('sha256').update(migration).digest('hex');
+const name='20260910_neon_attachment_knowledge_writer.sql',migration=readFileSync(migrationSourcePath(name),'utf8'),hash=createHash('sha256').update(migration).digest('hex');
 const body=migration.replace(/^BEGIN;\s*/,'').replace(/COMMIT;\s*$/,'');
 const input=`BEGIN; SET LOCAL lock_timeout='5s';
 DO $$ BEGIN IF current_database()<>'athyper_neon' OR NOT EXISTS(SELECT 1 FROM master.tenant WHERE id='44444444-4444-4444-8444-444444444444' AND code='cirrusatlantic') THEN RAISE EXCEPTION 'Unexpected target'; END IF; END $$;

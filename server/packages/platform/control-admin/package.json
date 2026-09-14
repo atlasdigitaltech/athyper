@@ -17,7 +17,7 @@
     "@athyper/server-contract-control-admin": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
-    "express": "^5.0.0",
+    "express": "^5.2.1",
     "kysely": "^0.28.17",
     "@athyper/server-contract-integration": "workspace:*"
   },
@@ -26,7 +26,7 @@
     "@athyper/server-platform-entitlements": "workspace:*",
     "@athyper/server-platform-experience": "workspace:*",
     "@athyper/server-platform-iam": "workspace:*",
-    "@types/express": "^5.0.1",
+    "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
     "@types/pg": "^8.20.0",
     "pg": "^8.20.0",

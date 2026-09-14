@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "explicit_user_runtime_dependency_amendment_approval",
+  "decision": "approved",
+  "proposalRevision": "52c03baf5ccdd276558ca8533a6e3927233bbc61c1f0c28f519edbfcba880c8d",
+  "approvedAt": "2026-09-12T06:32:40.670Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "approved",
+    "respondingTo": "Approve the corrected protected-reference amendment, revision 52c03baf, for deployment and qualification?"
+  },
+  "effectiveUntil": "2026-09-12T08:00:00.000Z",
+  "grantChanges": [],
+  "activationAuthorized": false,
+  "compatibilityRetirementAuthorized": false,
+  "dispositionAcceptance": false
+}

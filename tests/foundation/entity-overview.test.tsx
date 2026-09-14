@@ -1,3 +1,6 @@
+import { IntlProvider } from "../../packages/platform/foundation/i18n/src/react";
+import { createEffectiveLocalization } from "../../packages/platform/foundation/i18n/src/index";
+import { shellEnglishMessages } from "../../packages/platform/shell/shell/src/messages";
 import assert from "node:assert/strict";
 import test from "node:test";
 import React, { act } from "react";
@@ -284,4 +287,20 @@ test("runtime uses scoped authorized data, linked views, and suppresses results 
     }
     dom.window.close();
   }
+});
+
+test("overview resolves catalog overrides and falls back without changing metadata labels", () => {
+  const markup = renderToStaticMarkup(
+    <IntlProvider
+      localization={createEffectiveLocalization({ uiLocale: "fr" })}
+      messages={{ "entity.overview.focus.title": "À traiter" }}
+      fallbackMessages={shellEnglishMessages}
+    >
+      <EntityOverview metrics={[]} focus={[]} records={[]} shortcuts={[{ key: "manage", label: "Published view name", href: "/records" }]} />
+    </IntlProvider>,
+  );
+  assert.match(markup, /À traiter/);
+  assert.match(markup, /No favourites yet/);
+  assert.match(markup, /Published view name/);
+  assert.doesNotMatch(markup, /entity\.overview\.|shortcut-number/);
 });

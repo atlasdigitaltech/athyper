@@ -25,16 +25,16 @@ status, time windows and assurance still affect effective authority.
 
 ## Findings requiring explicit decisions
 
-| Finding | Candidate combinations | Review consequence |
-| --- | ---: | --- |
-| “Reader” role includes mutation or sensitive capabilities | 27 | Review capabilities individually; do not approve based on the role name |
-| Legal-entity scope | 22 | Do not reinterpret as company-code ownership or assign company configuration automatically |
-| Legacy direct mutation capabilities | 72 | These are not evidence of global stewardship; use a separate governed capability proposal |
-| Sensitive read/write/reveal capabilities | 30 | Review data class, purpose, scope and MFA separately |
-| Scoped directory read | 49 | Does not establish explicit global-record authority |
-| Subtree propagation | 49 | Review coverage of both current and future descendants |
-| Principal has requester and approver candidates across memberships | 61 | Preserve command-level maker/checker separation |
-| Principal has approver and applier candidates across memberships | 61 | Preserve independent approval/application boundaries |
+| Finding                                                            | Candidate combinations | Review consequence                                                                         |
+| ------------------------------------------------------------------ | ---------------------: | ------------------------------------------------------------------------------------------ |
+| “Reader” role includes mutation or sensitive capabilities          |                     27 | Review capabilities individually; do not approve based on the role name                    |
+| Legal-entity scope                                                 |                     22 | Do not reinterpret as company-code ownership or assign company configuration automatically |
+| Legacy direct mutation capabilities                                |                     72 | These are not evidence of global stewardship; use a separate governed capability proposal  |
+| Sensitive read/write/reveal capabilities                           |                     30 | Review data class, purpose, scope and MFA separately                                       |
+| Scoped directory read                                              |                     49 | Does not establish explicit global-record authority                                        |
+| Subtree propagation                                                |                     49 | Review coverage of both current and future descendants                                     |
+| Principal has requester and approver candidates across memberships |                     61 | Preserve command-level maker/checker separation                                            |
+| Principal has approver and applier candidates across memberships   |                     61 | Preserve independent approval/application boundaries                                       |
 
 Counts overlap and refer to combinations, not distinct people. Combined candidate
 capabilities do not establish a separation-of-duties violation or effective access.
@@ -83,7 +83,6 @@ node tooling/scripts/verification/prepare-business-partner-named-role-review.mjs
 
 The final command exits 2 while the cohort review is incomplete. Preparation
 refuses to overwrite an existing review packet, so it cannot erase approvals.
-
 
 ## Complete recommendation revision
 
@@ -272,3 +271,18 @@ not the migration: `activationEligible: false`, no grant changes and no activati
 authorization. Compatible publication, deployment/command qualification, policy
 resolution and enforcement approval remain separate gates. Current revocations
 must be checked again before any activation.
+
+## Route activation after the default-gateway cleanup
+
+The default DEV gateway no longer includes these review routes. Append
+`deploy/compose/instance/reviews/role.compose.yaml` to the same Compose
+file set that includes the DEV base stack and this review backend's generated
+`review.compose.json`. Keep `deploy/compose/instance/compose.yaml` first so mount
+paths resolve correctly. The overlay requires the backend service to be declared;
+rendering fails when it is missing. Recreate the gateway with that file set to
+activate the routes. Apply only to DEV. Both review overlays can be combined.
+
+For rollback, omit this route overlay and recreate the gateway with the remaining
+approved file set. Preserve review state and stop only the retired review backend.
+The older instructions to edit route blocks in `dev.yaml` are superseded by this
+procedure. Historical backend-only deployment scripts do not activate gateway routes.

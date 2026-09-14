@@ -11,7 +11,11 @@ it("returns exactly the existing decision and never combines it with shadow", as
     unavailable: () => {},
   }).authorize(request);
   expect(result).toBe(decision);
-  expect(observe).toHaveBeenCalledWith(request, decision, expect.any(AbortSignal));
+  expect(observe).toHaveBeenCalledWith(
+    request,
+    decision,
+    expect.any(AbortSignal),
+  );
 });
 it("bounds failed and hung observers without changing authorization", async () => {
   const unavailable = vi.fn(),
@@ -57,11 +61,15 @@ it("aborts expired observations so late previews cannot be reported as completed
   let observedSignal: AbortSignal | undefined;
   const unavailable = vi.fn();
   const result = await createShadowAuthorizer({
-    authority: { authorize: async () => ({ allowed: false, reason: "selected_deny" }) },
+    authority: {
+      authorize: async () => ({ allowed: false, reason: "selected_deny" }),
+    },
     timeoutMs: 1,
     observe: async (_request, _decision, signal) => {
       observedSignal = signal;
-      await new Promise<void>(resolve => signal.addEventListener("abort", () => resolve(), { once: true }));
+      await new Promise<void>((resolve) =>
+        signal.addEventListener("abort", () => resolve(), { once: true }),
+      );
     },
     unavailable,
   }).authorize(request);
@@ -70,8 +78,50 @@ it("aborts expired observations so late previews cannot be reported as completed
   expect(unavailable).toHaveBeenCalledOnce();
 });
 
-it("preserves the selected enforcement marker through advisory wrapping",()=>{
- const wrapped=createShadowAuthorizer({authority:{authorize:async()=>({allowed:true}),enforcedEntityProfile:(plane,entity)=>plane==="neon"&&entity==="business_partner"?"pinned":undefined},observe:async()=>{},unavailable:()=>{}});
- expect(wrapped.enforcedEntityProfile?.("neon","business_partner")).toBe("pinned");
- expect(wrapped.enforcedEntityProfile?.("mesh","business_partner")).toBeUndefined();
+it("preserves the selected enforcement marker through advisory wrapping", () => {
+  const wrapped = createShadowAuthorizer({
+    authority: {
+      authorize: async () => ({ allowed: true }),
+      enforcedEntityProfile: (plane, entity) =>
+        plane === "neon" && entity === "business_partner"
+          ? "pinned"
+          : undefined,
+    },
+    observe: async () => {},
+    unavailable: () => {},
+  });
+  expect(wrapped.enforcedEntityProfile?.("neon", "business_partner")).toBe(
+    "pinned",
+  );
+  expect(
+    wrapped.enforcedEntityProfile?.("mesh", "business_partner"),
+  ).toBeUndefined();
+});
+
+it("delegates source constraints without treating them as an allow or observing them", async () => {
+  const observe = vi.fn(async () => {}),
+    check = vi.fn(async () => ({
+      state: "denied" as const,
+      reason: "source_deny",
+    }));
+  const wrapped = createShadowAuthorizer({
+    authority: {
+      authorize: async () => ({ allowed: false }),
+      checkSourceConstraints: check,
+    },
+    observe,
+    unavailable: () => {},
+  });
+  expect(await wrapped.checkSourceConstraints!(request)).toEqual({
+    state: "denied",
+    reason: "source_deny",
+  });
+  expect(check).toHaveBeenCalledWith(request);
+  expect(observe).not.toHaveBeenCalled();
+  const absent = createShadowAuthorizer({
+    authority: { authorize: async () => ({ allowed: false }) },
+    observe,
+    unavailable: () => {},
+  });
+  expect(absent.checkSourceConstraints).toBeUndefined();
 });

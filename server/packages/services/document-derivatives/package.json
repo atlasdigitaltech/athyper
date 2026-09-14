@@ -14,6 +14,7 @@
   "dependencies": {
     "@athyper/server-contract-derivatives": "workspace:*",
     "@athyper/server-contract-jobs": "workspace:*",
+    "@athyper/server-contract-malware-scanning": "workspace:*",
     "@athyper/server-contract-object-storage": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "kysely": "^0.28.17"

@@ -2,6 +2,8 @@ export type RequestFormFieldWidget =
   | "text"
   | "textarea"
   | "url"
+    | "date"
+    | "password"
   | "integer"
   | "decimal"
   | "checkbox"
@@ -124,7 +126,7 @@ export function requestFormDefaults(descriptor: RequestFormDescriptor): Readonly
   return Object.freeze(Object.fromEntries(descriptor.sections.flatMap(section => section.fields.filter(field => field.defaultValue !== undefined).map(field => [field.key, field.defaultValue!]))));
 }
 
-export function serializeRequestForm(descriptor: RequestFormDescriptor, data: FormData): Readonly<{
+export function serializeRequestForm(descriptor: RequestFormDescriptor, data: FormData, options: { includeEmpty?: boolean } = {}): Readonly<{
   operatingOrganizationId: string;
   proposedPayload: Readonly<Record<string, unknown>>;
 }> {
@@ -133,8 +135,11 @@ export function serializeRequestForm(descriptor: RequestFormDescriptor, data: Fo
   for (const field of descriptor.sections.flatMap(section => section.fields)) {
     if (!isRequestFieldVisible(field, current)) continue;
     const raw = field.widget === "checkbox" ? data.has(field.key) : data.get(field.key);
-    if (raw === null || raw === "") continue;
-    let value: unknown = field.widget === "checkbox" ? true : String(raw);
+    if (raw === null || raw === "") {
+      if (options.includeEmpty && field.target === "canonical") proposed[field.path] = null;
+      continue;
+    }
+    let value: unknown = field.widget === "checkbox" ? data.has(field.key) : String(raw);
     if (field.widget === "integer") value = Number.parseInt(String(raw), 10);
     if (field.widget === "decimal") value = Number(String(raw));
     if (field.normalize === "uppercase") value = String(value).toUpperCase();
@@ -146,12 +151,12 @@ export function serializeRequestForm(descriptor: RequestFormDescriptor, data: Fo
     if (field.target === "request_only") tenantFields[field.path] = value;
     else proposed[field.path] = value;
   }
-  if (Object.keys(tenantFields).length) proposed.tenantFields = tenantFields;
+  if (Object.keys(tenantFields).length || options.includeEmpty) proposed.tenantFields = tenantFields;
   return Object.freeze({ operatingOrganizationId, proposedPayload: Object.freeze(proposed) });
 }
 
 function parseField(value: unknown): RequestFormField {
-  const field = record(value), widget = enumeration(field.widget, ["text", "textarea", "url", "integer", "decimal", "checkbox", "lookup", "operating_organization"] as const, "field widget"), target = enumeration(field.target, ["context", "canonical", "request_only"] as const, "field target");
+  const field = record(value), widget = enumeration(field.widget, ["text", "textarea", "url", "date", "password", "integer", "decimal", "checkbox", "lookup", "operating_organization"] as const, "field widget"), target = enumeration(field.target, ["context", "canonical", "request_only"] as const, "field target");
   const lookup = field.lookup === undefined ? undefined : parseLookup(field.lookup);
   if (widget === "lookup" && !lookup) throw new TypeError("Lookup fields require published options");
   const required = field.required;

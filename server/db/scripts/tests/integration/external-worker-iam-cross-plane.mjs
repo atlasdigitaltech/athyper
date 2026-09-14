@@ -14,7 +14,7 @@ import {
   KyselyDesiredOrganizationReader,
   KyselyIdentitySagaRepository,
   KyselyPlaneLocalIdentityAuthority,
-} from "../../../../packages/platform/iam/src/index.ts";
+} from "@athyper/server-platform-iam";
 
 const neonUrl =
   process.env.ATHYPER_NEON_DATABASE_ADMIN_URL ?? process.env.DATABASE_ADMIN_URL;
@@ -462,22 +462,63 @@ try {
         assert.ok(deadLetter?.id);
         assert.equal(deadLetter?.replay_requested_at, null);
         const replay = new IdentityReplayApprovalService(
-          new KyselyIdentityReplayApprovalRepository(work => work(stx), {
+          new KyselyIdentityReplayApprovalRepository((work) => work(stx), {
             async record(event, tx) {
-              await sql`INSERT INTO event.outbox(tenant_id,topic,event_type,payload,created_by) VALUES(${tenant}::uuid,'iam.authority',${event.eventCode},${JSON.stringify(event)}::jsonb,${event.actor.principalId}::uuid)`.execute(tx);
-              return { ...event, id: randomUUID(), occurredAt: new Date().toISOString(), severity: 'info' };
+              await sql`INSERT INTO event.outbox(tenant_id,topic,event_type,payload,created_by) VALUES(${tenant}::uuid,'iam.authority',${event.eventCode},${JSON.stringify(event)}::jsonb,${event.actor.principalId}::uuid)`.execute(
+                tx,
+              );
+              return {
+                ...event,
+                id: randomUUID(),
+                occurredAt: new Date().toISOString(),
+                severity: "info",
+              };
             },
           }),
-          { authorize: async () => ({ allowed: true }) }, true,
+          { authorize: async () => ({ allowed: true }) },
+          true,
         );
-        const context = { planeKey: "studio", tenantId: tenant, principalId: studioActor, assurance: "elevated", requestId: "g5-replay" };
-        await sql`SELECT set_config('app.current_tenant_id',${tenant},true),set_config('app.current_principal_id',${studioActor},true)`.execute(stx);
-        const approval = await replay.create(context, { attemptId: String(deadLetter.id), reason: "Live cross-plane replay verification" });
-        await assert.rejects(() => replay.decide(context, { approvalId: approval.id, decision: "approve", reason: "Self approval rejected" }), /SOD_REQUIRED/);
-        await sql`SELECT set_config('app.current_principal_id',${studioApprover},true)`.execute(stx);
-        await replay.decide({ ...context, principalId: studioApprover }, { approvalId: approval.id, decision: "approve", reason: "Independent live review" });
-        await sql`SELECT set_config('app.current_principal_id',${studioActor},true)`.execute(stx);
-        await replay.replay(context, { attemptId: String(deadLetter.id), approvalId: approval.id });
+        const context = {
+          planeKey: "studio",
+          tenantId: tenant,
+          principalId: studioActor,
+          assurance: "elevated",
+          requestId: "g5-replay",
+        };
+        await sql`SELECT set_config('app.current_tenant_id',${tenant},true),set_config('app.current_principal_id',${studioActor},true)`.execute(
+          stx,
+        );
+        const approval = await replay.create(context, {
+          attemptId: String(deadLetter.id),
+          reason: "Live cross-plane replay verification",
+        });
+        await assert.rejects(
+          () =>
+            replay.decide(context, {
+              approvalId: approval.id,
+              decision: "approve",
+              reason: "Self approval rejected",
+            }),
+          /SOD_REQUIRED/,
+        );
+        await sql`SELECT set_config('app.current_principal_id',${studioApprover},true)`.execute(
+          stx,
+        );
+        await replay.decide(
+          { ...context, principalId: studioApprover },
+          {
+            approvalId: approval.id,
+            decision: "approve",
+            reason: "Independent live review",
+          },
+        );
+        await sql`SELECT set_config('app.current_principal_id',${studioActor},true)`.execute(
+          stx,
+        );
+        await replay.replay(context, {
+          attemptId: String(deadLetter.id),
+          approvalId: approval.id,
+        });
         assert.equal(
           String(
             (

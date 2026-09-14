@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { atlasRequestsRecordOverview } from "./atlas-record-question.js";
 import { sql } from "kysely";
 import type {
   AtlasAttachmentContextResolver,
@@ -39,7 +40,11 @@ export function createAtlasDocumentGrounding(
         !input.attachmentIds.length ||
         input.attachmentIds.length > 3 ||
         new Set(input.attachmentIds).size !== input.attachmentIds.length ||
-        (input.attachmentChunkIds !== undefined && (input.attachmentChunkIds.length !== input.attachmentIds.length || input.attachmentChunkIds.some(id=>!/^[0-9a-f-]{36}$/i.test(id))))
+        (input.attachmentChunkIds !== undefined &&
+          (input.attachmentChunkIds.length !== input.attachmentIds.length ||
+            input.attachmentChunkIds.some(
+              (id) => !/^[0-9a-f-]{36}$/i.test(id),
+            )))
       )
         return denied();
       const context = await options.refresh(input.context);
@@ -92,8 +97,8 @@ export function createAtlasDocumentGrounding(
         authorizeParent,
       });
       const result: AtlasAttachmentContext[] = [];
-      for (const [position,id] of input.attachmentIds.entries()) {
-        const selectedChunkId=input.attachmentChunkIds?.[position];
+      for (const [position, id] of input.attachmentIds.entries()) {
+        const selectedChunkId = input.attachmentChunkIds?.[position];
         if (!/^[0-9a-f-]{36}$/i.test(id)) return denied();
         // Read only canonical locators until both owner permissions have been checked.
         const source = await options.transactions.run(
@@ -204,6 +209,7 @@ export function createAtlasDocumentGrounding(
     ) {
       if (context.planeKey !== "neon" || page?.kind !== "record" || page.asOf)
         return undefined;
+      if (atlasRequestsRecordOverview(query)) return undefined;
       const current = await options.refresh(context);
       const found = await knowledge.execute(
         current,
@@ -211,22 +217,36 @@ export function createAtlasDocumentGrounding(
           entityCode: page.entityCode,
           recordId: page.recordId,
           scopeCoordinate: page.workContext,
-          query:options.semantic?query:atlasDocumentSearchTerms(query),
+          query: options.semantic ? query : atlasDocumentSearchTerms(query),
         },
         false,
         signal,
       );
       if (!("citations" in found) || !found.citations?.length) return undefined;
       // Pack whole ranked passages without silently truncating canonical evidence.
-      if(options.semantic){
-        const selected:typeof found.citations=[];let characters=0;
-        for(const item of found.citations){
-          const length=item.citation.characterEnd-item.citation.characterStart;
-          if(selected.some(x=>x.citation.sourceId===item.citation.sourceId)||characters+length>2000)continue;
-          selected.push(item);characters+=length;if(selected.length===3)break;
+      if (options.semantic) {
+        const selected: typeof found.citations = [];
+        let characters = 0;
+        for (const item of found.citations) {
+          const length =
+            item.citation.characterEnd - item.citation.characterStart;
+          if (
+            selected.some(
+              (x) => x.citation.sourceId === item.citation.sourceId,
+            ) ||
+            characters + length > 2000
+          )
+            continue;
+          selected.push(item);
+          characters += length;
+          if (selected.length === 3) break;
         }
-        if(!selected.length)return undefined;
-        return {attachmentContextId:page.recordId,attachmentIds:selected.map(x=>x.citation.sourceId),attachmentChunkIds:selected.map(x=>x.citation.chunkId)};
+        if (!selected.length) return undefined;
+        return {
+          attachmentContextId: page.recordId,
+          attachmentIds: selected.map((x) => x.citation.sourceId),
+          attachmentChunkIds: selected.map((x) => x.citation.chunkId),
+        };
       }
       return {
         attachmentContextId: page.recordId,

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import YAML from "yaml";
@@ -14,11 +15,33 @@ import { inspectRemainingGates } from "../src/gates.mjs";
 import { checkPolicy } from "../src/policy.mjs";
 import { createValidator } from "../src/schema.mjs";
 
+// Model fixtures must not inherit the developer's live QA publication receipt.
+const priorRuntimeRoot = process.env.ATHYPER_RUNTIME_ROOT;
+const fixtureRuntimeRoot = mkdtempSync(join(tmpdir(), "athyper-model-"));
+test.before(() => {
+  process.env.ATHYPER_RUNTIME_ROOT = fixtureRuntimeRoot;
+});
+test.after(() => {
+  if (priorRuntimeRoot === undefined) delete process.env.ATHYPER_RUNTIME_ROOT;
+  else process.env.ATHYPER_RUNTIME_ROOT = priorRuntimeRoot;
+  rmSync(fixtureRuntimeRoot, { recursive: true, force: true });
+});
+
 test("catalog accounts for all Stack v2 services", () => {
   const model = loadModel(defaultRepoRoot, "dev");
-  assert.equal(model.services.filter((service) => service.ledger === "v2-native").length, 35);
-  assert.equal(model.services.filter((service) => service.ledger === "test-fixture").length, 1);
-  assert.equal(model.services.filter((service) => service.ledger === "v2-addition").length, 8);
+  assert.equal(
+    model.services.filter((service) => service.ledger === "v2-native").length,
+    34,
+  );
+  assert.equal(
+    model.services.filter((service) => service.ledger === "test-fixture")
+      .length,
+    1,
+  );
+  assert.equal(
+    model.services.filter((service) => service.ledger === "v2-addition").length,
+    8,
+  );
 });
 
 test("DEV render is project-scoped and uses the laptop-32 envelope", () => {
@@ -43,7 +66,11 @@ test("DEV plan is bounded and names only project-scoped resources", () => {
     runtimeRoot: "/runtime/fixture",
     secretProblem: () => null,
     listeningPorts: () => new Set([5432]),
-    liveProjectObjects: () => ({ containers: ["fixture-container"], networks: [], volumes: [] }),
+    liveProjectObjects: () => ({
+      containers: ["fixture-container"],
+      networks: [],
+      volumes: [],
+    }),
   });
   assert.ok(plan.resources.memoryMiB <= plan.resources.limitMemoryMiB);
   assert.ok(plan.resources.cpu <= plan.resources.limitCpu);
@@ -51,12 +78,28 @@ test("DEV plan is bounded and names only project-scoped resources", () => {
   assert.ok(plan.volumes.every((name) => name.startsWith("athyper-dev_")));
   assert.equal(plan.platform.project, "athyper-platform");
   assert.equal(plan.platform.gatewayAlias, "gateway-dev");
-  assert.deepEqual(plan.actions, ["No action: this command only validates and reports."]);
+  assert.deepEqual(plan.actions, [
+    "No action: this command only validates and reports.",
+  ]);
   assert.equal(plan.status, "blocked");
-  assert.ok(plan.blockers.some((message) => message.includes("already listening")));
-  assert.ok(plan.blockers.some((message) => message.includes("already owns Docker resources")));
-  assert.ok(!plan.blockers.some((message) => message.startsWith("Host qualification gate incomplete:")));
-  assert.ok(!plan.blockers.some((message) => message.startsWith("Required secret file is absent:")));
+  assert.ok(
+    plan.blockers.some((message) => message.includes("already listening")),
+  );
+  assert.ok(
+    plan.blockers.some((message) =>
+      message.includes("already owns Docker resources"),
+    ),
+  );
+  assert.ok(
+    !plan.blockers.some((message) =>
+      message.startsWith("Host qualification gate incomplete:"),
+    ),
+  );
+  assert.ok(
+    !plan.blockers.some((message) =>
+      message.startsWith("Required secret file is absent:"),
+    ),
+  );
   assert.equal(plan.deferredPreflights.length, 4);
 });
 
@@ -74,23 +117,55 @@ test("DEV plan accepts live resources owned by its valid controller receipt", ()
     runtimeRoot: "/runtime/fixture",
     secretProblem: () => null,
     listeningPorts: () => new Set(),
-    liveProjectObjects: () => ({ containers: ["fixture-container"], networks: ["fixture-network"], volumes: [] }),
-    projectOwnership: { owned: true, path: "/runtime/fixture/instances/dev/receipts/active.json", state: "running" },
+    liveProjectObjects: () => ({
+      containers: ["fixture-container"],
+      networks: ["fixture-network"],
+      volumes: [],
+    }),
+    projectOwnership: {
+      owned: true,
+      path: "/runtime/fixture/instances/dev/receipts/active.json",
+      state: "running",
+    },
   });
   assert.equal(plan.status, "ready");
   assert.equal(plan.ownershipReceipt.owned, true);
-  assert.ok(!plan.blockers.some((message) => message.includes("already owns Docker resources")));
+  assert.ok(
+    !plan.blockers.some((message) =>
+      message.includes("already owns Docker resources"),
+    ),
+  );
 });
 
 test("remaining-gate inspection is read-only and evidence-backed", () => {
-  const cleanSlate = { path: "/qualification/disposition.json", document: { decision: "clean-slate" }, problem: null };
+  const cleanSlate = {
+    path: "/qualification/disposition.json",
+    document: { decision: "clean-slate" },
+    problem: null,
+  };
   const report = inspectRemainingGates(defaultRepoRoot, {
     qualification: { path: "/qualification/phase-status.yaml", failures: [] },
-    cold: { path: "/qualification/cold-start.json", document: {}, problem: null },
+    cold: {
+      path: "/qualification/cold-start.json",
+      document: {},
+      problem: null,
+    },
     disposition: cleanSlate,
-    intake: { path: "/qualification/export-intake.json", document: null, problem: "fixture absent" },
-    restore: { path: "/qualification/restore-receipt.json", document: null, problem: "fixture absent" },
-    devPlan: { blockers: [], requiredSecrets: [], sources: { imageSet: "/images/dev.yaml" } },
+    intake: {
+      path: "/qualification/export-intake.json",
+      document: null,
+      problem: "fixture absent",
+    },
+    restore: {
+      path: "/qualification/restore-receipt.json",
+      document: null,
+      problem: "fixture absent",
+    },
+    devPlan: {
+      blockers: [],
+      requiredSecrets: [],
+      sources: { imageSet: "/images/dev.yaml" },
+    },
     qaPlan: {
       blockers: ["Release image set is incomplete: fixture is absent."],
       requiredSecrets: [],
@@ -107,7 +182,9 @@ test("remaining-gate inspection is read-only and evidence-backed", () => {
   assert.equal(report.gates.stackV1Restore.status, "waived-clean-slate");
   assert.equal(report.gates.devSecrets.status, "pass");
   assert.equal(report.gates.immutableImages.status, "blocked");
-  assert.deepEqual(report.actions, ["No action: this command only validates and reports remaining gates."]);
+  assert.deepEqual(report.actions, [
+    "No action: this command only validates and reports remaining gates.",
+  ]);
 });
 
 test("DEV core Compose is isolated and contains the Phase 6 dependency spine", () => {
@@ -118,40 +195,93 @@ test("DEV core Compose is isolated and contains the Phase 6 dependency spine", (
 test("DEV-full parity is bounded and includes every Phase 8 service", () => {
   const plan = createPlan(defaultRepoRoot, "dev");
   assert.equal(plan.preset, "dev-full");
-  assert.equal(plan.resources.memoryMiB, 13_312);
+  assert.equal(plan.resources.memoryMiB, 13_440);
   assert.equal(plan.resources.cpu, 15.95);
   assert.ok(plan.services.some((service) => service.id === "db-migration"));
-  assert.equal(plan.sources.compose.filter(file => !file.endsWith("local-atlas.compose.json")).length, plan.sources.localMasterData ? 2 + (plan.sources.compose.some(file => file.endsWith("local-runtime-preserved.compose.json")) ? 4 : 3) : 2);
+  assert.equal(
+    plan.sources.compose.filter(
+      (file) => !file.endsWith("local-atlas.compose.json"),
+    ).length,
+    plan.sources.localMasterData
+      ? 2 +
+          (plan.sources.compose.some((file) =>
+            file.endsWith("local-runtime-preserved.compose.json"),
+          )
+            ? 4
+            : 3)
+      : 3,
+  );
   assert.ok(plan.domains.includes("mail.dev.athyper.test"));
-  assert.ok(plan.domains.includes("minio.dev.athyper.test"));
+  assert.ok(!plan.domains.includes("minio.dev.athyper.test"));
   assert.ok(plan.domains.includes("objects.dev.athyper.test"));
   for (const id of [
-    "api", "worker", "scheduler", "neon-web", "mesh-web", "studio-web",
-    "virusscan", "docrender", "docparser", "searchcore", "mailtrap",
+    "api",
+    "worker",
+    "scheduler",
+    "neon-web",
+    "mesh-web",
+    "studio-web",
+    "virusscan",
+    "docrender",
+    "docparser",
+    "searchcore",
+    "mailtrap",
   ]) {
-    assert.ok(plan.services.some((service) => service.id === id), `${id} is absent`);
+    assert.ok(
+      plan.services.some((service) => service.id === id),
+      `${id} is absent`,
+    );
   }
 });
 
-test("QA plan is independently addressed and uses complete immutable candidate images", () => {
+test("QA plan preserves application pins and requires qualified infrastructure image pins", () => {
   const plan = createPlan(defaultRepoRoot, "qa");
   assert.equal(plan.project, "athyper-qa");
   assert.equal(plan.preset, "qa-standard");
-  assert.equal(plan.sources.compose.filter(file => !file.endsWith("local-atlas.compose.json")).length, plan.sources.localMasterData ? 2 + (plan.sources.compose.some(file => file.endsWith("local-runtime-preserved.compose.json")) ? 4 : 3) : 2);
+  assert.equal(
+    plan.sources.compose.filter(
+      (file) => !file.endsWith("local-atlas.compose.json"),
+    ).length,
+    plan.sources.localMasterData
+      ? 2 +
+          (plan.sources.compose.some((file) =>
+            file.endsWith("local-runtime-preserved.compose.json"),
+          )
+            ? 4
+            : 3)
+      : 3,
+  );
   assert.deepEqual(plan.debugPorts, { postgres: "127.0.0.1:55432" });
-  assert.deepEqual(plan.platform.ingressPorts, ["127.0.0.1:80", "127.0.0.1:443"]);
+  assert.deepEqual(plan.platform.ingressPorts, [
+    "127.0.0.1:80",
+    "127.0.0.1:443",
+  ]);
   assert.ok(plan.networks.every((name) => name.startsWith("athyper-qa_")));
   assert.ok(plan.volumes.every((name) => name.startsWith("athyper-qa_")));
   assert.ok(plan.domains.every((name) => name.endsWith(".qa.athyper.test")));
-  assert.ok(!plan.blockers.some((message) => message.includes("image set is incomplete")));
-  assert.ok(!plan.blockers.some((message) => message.includes("source revision is an all-zero placeholder")));
-  assert.ok(!plan.blockers.some((message) => message.includes("digest is an all-zero placeholder")));
+  assert.ok(
+    !plan.blockers.some((message) =>
+      message.includes("image set is incomplete"),
+    ),
+  );
+  for (const service of plan.services)
+    assert.match(service.image, /@sha256:[a-f0-9]{64}$/u);
+  assert.ok(
+    !plan.blockers.some((message) =>
+      message.includes("source revision is an all-zero placeholder"),
+    ),
+  );
+  assert.ok(
+    !plan.blockers.some((message) =>
+      message.includes("digest is an all-zero placeholder"),
+    ),
+  );
   assert.ok(plan.services.some(({ id }) => id === "db-migration-baseline"));
   assert.ok(plan.resources.memoryMiB <= plan.resources.limitMemoryMiB);
   assert.ok(plan.resources.cpu <= plan.resources.limitCpu);
   assert.match(
     plan.services.find(({ id }) => id === "api").image,
-    /athyper\/runtime-server@sha256:[a-f0-9]{64}$/u,
+    /ghcr\.io\/atlasdigitaltech\/athyper-runtime-server@sha256:[a-f0-9]{64}$/u,
   );
 });
 
@@ -162,16 +292,30 @@ test("QA lifecycle plans are read-only and cannot target DEV", () => {
     assert.equal(plan.executionAuthorized, false);
     assert.equal(plan.isolation.project, "athyper-qa");
     assert.equal(plan.isolation.forbiddenProject, "athyper-dev");
-    assert.match(plan.isolation.receipt, /instances\/qa\/receipts\/active\.json$/u);
-    assert.deepEqual(plan.actions, ["No action: lifecycle commands are emitted as an unexecuted future-operation contract."]);
+    assert.match(
+      plan.isolation.receipt,
+      /instances\/qa\/receipts\/active\.json$/u,
+    );
+    assert.deepEqual(plan.actions, [
+      "No action: lifecycle commands are emitted as an unexecuted future-operation contract.",
+    ]);
     for (const stage of plan.stages) {
       if (!stage.command) continue;
       assert.ok(stage.command.arguments.includes("athyper-qa"));
       assert.ok(!stage.command.arguments.includes("athyper-dev"));
       assert.equal(stage.command.environment.ATHYPER_INSTANCE, "qa");
-      assert.equal(Object.hasOwn(stage.command.environment, "ATHYPER_HTTP_BIND"), false);
-      assert.equal(stage.command.environment.ATHYPER_POSTGRES_BIND, "127.0.0.1:55432");
-      assert.match(stage.command.environment.ATHYPER_IMAGE_RUNTIME_SERVER, /@sha256:[a-f0-9]{64}$/u);
+      assert.equal(
+        Object.hasOwn(stage.command.environment, "ATHYPER_HTTP_BIND"),
+        false,
+      );
+      assert.equal(
+        stage.command.environment.ATHYPER_POSTGRES_BIND,
+        "127.0.0.1:55432",
+      );
+      assert.match(
+        stage.command.environment.ATHYPER_IMAGE_RUNTIME_SERVER,
+        /@sha256:[a-f0-9]{64}$/u,
+      );
     }
   }
   assert.throws(
@@ -181,14 +325,14 @@ test("QA lifecycle plans are read-only and cannot target DEV", () => {
 });
 
 test("QA routing and Compose environment defaults cannot inherit DEV identity", () => {
-  const qaRoutes = readFileSync(join(
-    defaultRepoRoot,
-    "deploy/compose/instance/config/traefik/qa.yaml",
-  ), "utf8");
-  const parity = readFileSync(join(
-    defaultRepoRoot,
-    "deploy/compose/instance/compose.parity.yaml",
-  ), "utf8");
+  const qaRoutes = readFileSync(
+    join(defaultRepoRoot, "deploy/compose/instance/config/traefik/qa.yaml"),
+    "utf8",
+  );
+  const parity = readFileSync(
+    join(defaultRepoRoot, "deploy/compose/instance/compose.parity.yaml"),
+    "utf8",
+  );
   assert.match(qaRoutes, /iam\.qa\.athyper\.test/u);
   assert.doesNotMatch(qaRoutes, /\.dev\.athyper\.test/u);
   assert.match(parity, /ATHYPER_IMAGE_RUNTIME_SERVER/u);
@@ -204,62 +348,122 @@ test("STG rehearsal is digest-preserving, sanitized, backup-first, and read-only
   assert.equal(plan.status, "blocked");
   assert.equal(plan.promotion.rebuildAllowed, false);
   assert.equal(plan.promotion.images.length, 5);
-  assert.equal(plan.promotion.exactDigestMatch, true);
-  assert.equal(plan.promotion.sourceRevisionMatch, true);
+  assert.equal(plan.promotion.exactDigestMatch, false);
+  assert.equal(plan.promotion.sourceRevisionMatch, false);
   assert.equal(plan.dataPolicy.classification, "sanitized");
   assert.ok(plan.dataPolicy.prohibitedContent.includes("credentials"));
   assert.equal(plan.integrationPolicy.defaultAction, "deny");
   assert.equal(plan.integrationPolicy.productionCredentialsAllowed, false);
   assert.deepEqual(plan.integrationPolicy.allowedDestinations, []);
   assert.equal(plan.isolation.project, "athyper-stg");
-  assert.deepEqual(plan.isolation.protectedProjects, ["athyper-dev", "athyper-qa"]);
-  assert.deepEqual(plan.isolation.hostBindings, { postgres: "127.0.0.1:56432" });
-  assert.ok(!plan.blockers.some((message) => message.includes("Promotion digest mismatch or absence")));
-  assert.ok(plan.blockers.some((message) => message.includes("sanitizedDataManifest")));
+  assert.deepEqual(plan.isolation.protectedProjects, [
+    "athyper-dev",
+    "athyper-qa",
+  ]);
+  assert.deepEqual(plan.isolation.hostBindings, {
+    postgres: "127.0.0.1:56432",
+  });
+  assert.ok(
+    plan.blockers.some((message) =>
+      message.includes("Promotion digest mismatch or absence"),
+    ),
+  );
+  assert.ok(
+    plan.blockers.some((message) => message.includes("sanitizedDataManifest")),
+  );
   const stageIds = plan.stages.map(({ id }) => id);
-  assert.ok(stageIds.indexOf("capture-pre-migration-backup") < stageIds.indexOf("run-stg-migration"));
-  assert.ok(stageIds.indexOf("run-stg-migration") < stageIds.indexOf("restore-backup-into-disposable-target"));
+  assert.ok(
+    stageIds.indexOf("capture-pre-migration-backup") <
+      stageIds.indexOf("run-stg-migration"),
+  );
+  assert.ok(
+    stageIds.indexOf("run-stg-migration") <
+      stageIds.indexOf("restore-backup-into-disposable-target"),
+  );
   assert.equal(plan.actions.length, 3);
-  assert.ok(plan.actions.every((action) => action.includes("athyper") || action.includes("pnpm")));
-  assert.equal(plan.stages.find(({ id }) => id === "capture-pre-migration-backup").execution, "controller-backup-requires-explicit-confirmation");
-  assert.equal(plan.stages.find(({ id }) => id === "restore-backup-into-disposable-target").execution, "controller-restore-requires-double-confirmation");
+  assert.ok(
+    plan.actions.every(
+      (action) => action.includes("athyper") || action.includes("pnpm"),
+    ),
+  );
+  assert.equal(
+    plan.stages.find(({ id }) => id === "capture-pre-migration-backup")
+      .execution,
+    "controller-backup-requires-explicit-confirmation",
+  );
+  assert.equal(
+    plan.stages.find(({ id }) => id === "restore-backup-into-disposable-target")
+      .execution,
+    "controller-restore-requires-double-confirmation",
+  );
   assert.throws(
     () => createRehearsalPlan(defaultRepoRoot, "stg", "dev"),
     /permits only qa -> stg/u,
   );
 });
 
-test("production rehearsal is isolated, immutable, canary-first, and read-only",()=>{
-  const plan=createRehearsalPlan(defaultRepoRoot,"production","stg");
-  assert.equal(plan.kind,"ProductionRehearsalPlan");
-  assert.equal(plan.readOnly,true);
-  assert.equal(plan.executionAuthorized,false);
-  assert.equal(plan.status,"blocked");
-  assert.equal(plan.target.dataClassification,"production");
-  assert.equal(plan.credentialPolicy.stagingReuseAllowed,false);
-  assert.equal(plan.credentialPolicy.authority.namespace,"athyper/production");
-  assert.ok(plan.credentialPolicy.authority.prohibitedNamespaces.includes("athyper/stg"));
-  assert.equal(plan.promotion.rebuildAllowed,false);
-  assert.equal(plan.promotion.images.length,5);
-  assert.ok(!plan.blockers.some((message)=>message.includes("Production promotion image")));
-  assert.ok(plan.blockers.some((message)=>message.includes("emailCanary")));
-  assert.equal(plan.rollout.automaticPauseOnFailure,true);
-  assert.deepEqual(plan.actions,["No action: this command only validates and emits the production activation contract."]);
-  assert.throws(()=>createRehearsalPlan(defaultRepoRoot,"production","qa"),/permits only stg -> production/u);
+test("production rehearsal is isolated, immutable, canary-first, and read-only", () => {
+  const plan = createRehearsalPlan(defaultRepoRoot, "production", "stg");
+  assert.equal(plan.kind, "ProductionRehearsalPlan");
+  assert.equal(plan.readOnly, true);
+  assert.equal(plan.executionAuthorized, false);
+  assert.equal(plan.status, "blocked");
+  assert.equal(plan.target.dataClassification, "production");
+  assert.equal(plan.credentialPolicy.stagingReuseAllowed, false);
+  assert.equal(plan.credentialPolicy.authority.namespace, "athyper/production");
+  assert.ok(
+    plan.credentialPolicy.authority.prohibitedNamespaces.includes(
+      "athyper/stg",
+    ),
+  );
+  assert.equal(plan.promotion.rebuildAllowed, false);
+  assert.equal(plan.promotion.images.length, 5);
+  assert.ok(
+    !plan.blockers.some((message) =>
+      message.includes("Production promotion image"),
+    ),
+  );
+  assert.ok(plan.blockers.some((message) => message.includes("emailCanary")));
+  assert.equal(plan.rollout.automaticPauseOnFailure, true);
+  assert.deepEqual(plan.actions, [
+    "No action: this command only validates and emits the production activation contract.",
+  ]);
+  assert.throws(
+    () => createRehearsalPlan(defaultRepoRoot, "production", "qa"),
+    /permits only stg -> production/u,
+  );
 });
 
 test("STG routes expose no DEV, QA, or mail-capture identity", () => {
-  const routes = readFileSync(join(
-    defaultRepoRoot,
-    "deploy/compose/instance/config/traefik/stg.yaml",
-  ), "utf8");
+  const routes = readFileSync(
+    join(defaultRepoRoot, "deploy/compose/instance/config/traefik/stg.yaml"),
+    "utf8",
+  );
   assert.match(routes, /iam\.stg\.athyper\.test/u);
   assert.doesNotMatch(routes, /\.(dev|qa)\.athyper\.test/u);
   assert.doesNotMatch(routes, /mailtrap|mail\.stg/u);
-  const plan = createPlan(defaultRepoRoot, "stg", { runtimeRoot: "/nonexistent/athyper-test-runtime" });
-  assert.ok(plan.sources.compose.at(-1).endsWith("compose.notification-providers.yaml"));
-  assert.equal(plan.services.some(({ id }) => id === "mailtrap"), false);
-  assert.equal(plan.services.some(({ id }) => id === "db-forward-migration"), true);
+  const plan = createPlan(defaultRepoRoot, "stg", {
+    runtimeRoot: "/nonexistent/athyper-test-runtime",
+  });
+  assert.ok(
+    plan.sources.compose.some((file) =>
+      file.endsWith("compose.notification-providers.yaml"),
+    ),
+  );
+  assert.ok(plan.sources.compose.at(-1).endsWith("compose.aws-storage.yaml"));
+  assert.ok(
+    plan.blockers.some((message) =>
+      message.includes("storage pending provisioning"),
+    ),
+  );
+  assert.equal(
+    plan.services.some(({ id }) => id === "mailtrap"),
+    false,
+  );
+  assert.equal(
+    plan.services.some(({ id }) => id === "db-forward-migration"),
+    true,
+  );
   for (const secret of ["vapid-private-key", "vapid-public-key"]) {
     assert.ok(plan.requiredSecrets.includes(secret));
     assert.ok(plan.blockers.some((message) => message.includes(secret)));
@@ -267,31 +471,82 @@ test("STG routes expose no DEV, QA, or mail-capture identity", () => {
   for (const rollbackSecret of ["smtp-password", "smtp-user"]) {
     assert.equal(plan.requiredSecrets.includes(rollbackSecret), false);
   }
-  assert.ok(plan.blockers.some((message) => message.includes("STAGING notification provider configuration")));
+  assert.ok(
+    plan.blockers.some((message) =>
+      message.includes("STAGING notification provider configuration"),
+    ),
+  );
 });
 
 test("optional capability plans are profile-scoped, bounded, and read-only", () => {
   const expected = {
-    observability: { services: 6, memoryMiB: 2_368, cpu: 2.6, port: "127.0.0.1:53000" },
-    secretstore: { services: 2, memoryMiB: 896, cpu: 1.25, port: "127.0.0.1:53001" },
-    analytics: { services: 2, memoryMiB: 1_152, cpu: 1.25, port: "127.0.0.1:53002" },
-    "admin-db": { services: 1, memoryMiB: 128, cpu: 0.25, port: "127.0.0.1:53003" },
-    "admin-queue": { services: 2, memoryMiB: 768, cpu: 0.75, port: "127.0.0.1:53004" },
+    observability: {
+      services: 5,
+      memoryMiB: 1_600,
+      cpu: 1.85,
+      port: "127.0.0.1:53000",
+    },
+    secretstore: {
+      services: 2,
+      memoryMiB: 896,
+      cpu: 1.25,
+      port: "127.0.0.1:53001",
+    },
+    analytics: {
+      services: 2,
+      memoryMiB: 1_152,
+      cpu: 1.25,
+      port: "127.0.0.1:53002",
+    },
+    "admin-db": {
+      services: 1,
+      memoryMiB: 128,
+      cpu: 0.25,
+      port: "127.0.0.1:53003",
+    },
+    "admin-queue": {
+      services: 1,
+      memoryMiB: 256,
+      cpu: 0.25,
+      port: "127.0.0.1:53004",
+    },
   };
   for (const [profile, contract] of Object.entries(expected)) {
     const plan = createCapabilityPlan(defaultRepoRoot, "dev", profile);
     assert.equal(plan.readOnly, true);
     assert.equal(plan.executionAuthorized, false);
     assert.deepEqual(plan.composeProfiles, [profile]);
-    assert.equal(plan.composeFiles.length, createPlan(defaultRepoRoot, "dev").sources.compose.length + 1);
+    assert.equal(
+      plan.composeFiles.some((path) =>
+        path.endsWith("compose.observability.yaml"),
+      ),
+      profile === "observability",
+    );
+    if (profile === "observability")
+      assert.ok(!plan.services.some((service) => service.id === "logging"));
+    assert.equal(
+      plan.composeFiles.length,
+      createPlan(defaultRepoRoot, "dev").sources.compose.length +
+        (profile === "observability" ? 2 : 1),
+    );
     assert.equal(plan.services.length, contract.services);
     assert.equal(plan.resources.additionalMemoryMiB, contract.memoryMiB);
     assert.equal(plan.resources.additionalCpu, contract.cpu);
     assert.ok(Object.values(plan.bindings).includes(contract.port));
-    assert.deepEqual(plan.actions, ["No action: this command only validates an optional capability profile."]);
+    assert.deepEqual(plan.actions, [
+      "No action: this command only validates an optional capability profile.",
+    ]);
   }
-  const observability = createCapabilityPlan(defaultRepoRoot, "dev", "observability");
-  assert.ok(observability.blockers.some((message) => message.includes("host profile permits")));
+  const observability = createCapabilityPlan(
+    defaultRepoRoot,
+    "dev",
+    "observability",
+  );
+  assert.ok(
+    observability.blockers.some((message) =>
+      message.includes("host profile permits"),
+    ),
+  );
   assert.throws(
     () => createCapabilityPlan(defaultRepoRoot, "dev", "unknown"),
     /Unsupported optional capability profile/u,
@@ -307,25 +562,52 @@ test("K3s remains deferred until runtime acceptance and approved multi-host need
   assert.equal(assessment.readOnly, true);
   assert.equal(assessment.executionAuthorized, false);
   assert.equal(assessment.status, "deferred");
-  assert.equal(assessment.recommendation, "Keep Docker Compose as the active single-host orchestrator.");
+  assert.equal(
+    assessment.recommendation,
+    "Keep Docker Compose as the active single-host orchestrator.",
+  );
   assert.equal(assessment.policy.currentOrchestrator, "compose");
   assert.equal(assessment.policy.candidateOrchestrator, "k3s");
   assert.equal(assessment.policy.laptopK3sAllowed, false);
   assert.equal(assessment.policy.dockerDesktopKubernetesAllowed, false);
   assert.equal(assessment.policy.automaticMigrationAllowed, false);
-  assert.ok(assessment.blockers.some((message) => message.includes("Machine phase evidence is absent")));
-  assert.ok(assessment.blockers.some((message) => message.includes("Compose acceptance evidence is absent")));
-  assert.ok(assessment.blockers.some((message) => message.includes("Approved multi-host topology requirement evidence is absent")));
-  assert.ok(assessment.prohibitedOutputsWhileDeferred.includes("K3s installation"));
-  assert.deepEqual(assessment.actions, ["No action: this command only assesses the Compose-to-K3s decision gate."]);
+  assert.ok(
+    assessment.blockers.some((message) =>
+      message.includes("Machine phase evidence is absent"),
+    ),
+  );
+  assert.ok(
+    assessment.blockers.some((message) =>
+      message.includes("Compose acceptance evidence is absent"),
+    ),
+  );
+  assert.ok(
+    assessment.blockers.some((message) =>
+      message.includes(
+        "Approved multi-host topology requirement evidence is absent",
+      ),
+    ),
+  );
+  assert.ok(
+    assessment.prohibitedOutputsWhileDeferred.includes("K3s installation"),
+  );
+  assert.deepEqual(assessment.actions, [
+    "No action: this command only assesses the Compose-to-K3s decision gate.",
+  ]);
 
   const malformed = assessOrchestrator(defaultRepoRoot, {
     qualificationPath: "/qualification/fixture/phase-status.yaml",
     qualificationRoot: "/qualification/fixture",
     exists: (path) => path.endsWith(".yaml"),
-    readYaml: () => { throw new Error("truncated YAML"); },
+    readYaml: () => {
+      throw new Error("truncated YAML");
+    },
   });
-  assert.ok(malformed.blockers.some((message) => message.includes("Machine phase evidence is invalid: truncated YAML")));
+  assert.ok(
+    malformed.blockers.some((message) =>
+      message.includes("Machine phase evidence is invalid: truncated YAML"),
+    ),
+  );
 });
 
 test("v2 schemas and static policies pass", () => {
@@ -340,40 +622,100 @@ test("deliberately invalid instance fixtures fail schema validation", () => {
   invalid.metadata.id = "DEV_INVALID";
   invalid.spec.composeProject = "fixed-global-name";
   invalid.spec.debugPorts.postgres = "0.0.0.0:5432";
-  assert.throws(() => validate(invalid, "invalid-instance-fixture"), /must match pattern/u);
-  assert.throws(() => validate({
-    apiVersion: "athyper.io/v1alpha1",
-    kind: "PreMigrationBackupReceipt",
-    metadata: { instance: "stg" },
-    spec: {
-      createdAt: "2026-08-21T00:00:00Z",
-      sourceRevision: "0".repeat(40),
-      database: { sha256: "0".repeat(64), sizeBytes: 0, format: "postgres-custom" },
-    },
-  }, "placeholder-backup-receipt"), /must match pattern|must be >= 1/u);
-  assert.throws(() => validate({
-    apiVersion: "athyper.io/v1alpha1",
-    kind: "TopologyRequirement",
-    metadata: { id: "laptop", approvedBy: "operator", approvedAt: "2026-08-21T00:00:00Z" },
-    spec: { multiHostRequired: false, minimumNodeCount: 1, placementRequirements: [], approved: false },
-  }, "unapproved-single-host-topology"), /must be equal to constant|must be >= 2|must NOT have fewer than 1 items/u);
+  assert.throws(
+    () => validate(invalid, "invalid-instance-fixture"),
+    /must match pattern/u,
+  );
+  assert.throws(
+    () =>
+      validate(
+        {
+          apiVersion: "athyper.io/v1alpha1",
+          kind: "PreMigrationBackupReceipt",
+          metadata: { instance: "stg" },
+          spec: {
+            createdAt: "2026-08-21T00:00:00Z",
+            sourceRevision: "0".repeat(40),
+            database: {
+              sha256: "0".repeat(64),
+              sizeBytes: 0,
+              format: "postgres-custom",
+            },
+          },
+        },
+        "placeholder-backup-receipt",
+      ),
+    /must match pattern|must be >= 1/u,
+  );
+  assert.throws(
+    () =>
+      validate(
+        {
+          apiVersion: "athyper.io/v1alpha1",
+          kind: "TopologyRequirement",
+          metadata: {
+            id: "laptop",
+            approvedBy: "operator",
+            approvedAt: "2026-08-21T00:00:00Z",
+          },
+          spec: {
+            multiHostRequired: false,
+            minimumNodeCount: 1,
+            placementRequirements: [],
+            approved: false,
+          },
+        },
+        "unapproved-single-host-topology",
+      ),
+    /must be equal to constant|must be >= 2|must NOT have fewer than 1 items/u,
+  );
 });
 
 test("container publication is manual, scan-before-push, and attestable", () => {
-  const workflow = YAML.parse(readFileSync(
-    join(defaultRepoRoot, ".github/workflows/stack-v2-images.yml"),
-    "utf8",
-  ));
+  const workflow = YAML.parse(
+    readFileSync(
+      join(defaultRepoRoot, ".github/workflows/stack-v2-images.yml"),
+      "utf8",
+    ),
+  );
   assert.deepEqual(Object.keys(workflow.on), ["workflow_dispatch"]);
   assert.equal(workflow.permissions.contents, "read");
   assert.deepEqual(
     workflow.jobs.publish.strategy.matrix.include.map(({ id }) => id).sort(),
-    ["iam", "mesh-web", "neon-web", "runtime-server", "studio-web"],
+    [
+      "iam",
+      "mesh-web",
+      "neon-web",
+      "postgres",
+      "runtime-server",
+      "studio-web",
+      "redis",
+      "pgbouncer",
+      "traefik",
+      "meilisearch",
+      "gotenberg",
+      "tika",
+      "seaweedfs",
+      "s3-tools",
+      "virusscan",
+      "searchcore-key-init",
+    ].sort(),
   );
   const steps = workflow.jobs.publish.steps;
-  const scanIndex = steps.findIndex(({ name }) => name === "Enforce vulnerability gate");
-  const pushIndex = steps.findIndex(({ name }) => name === "Publish image with BuildKit SBOM and provenance");
+  const scanIndex = steps.findIndex(
+    ({ name }) => name === "Enforce vulnerability gate",
+  );
+  const pushIndex = steps.findIndex(
+    ({ name }) => name === "Publish image with BuildKit SBOM and provenance",
+  );
   assert.ok(scanIndex >= 0 && pushIndex > scanIndex);
+  const finalGate = steps.findIndex(
+    ({ name }) => name === "Enforce published digest gate",
+  );
+  const record = steps.findIndex(
+    ({ name }) => name === "Record immutable image result",
+  );
+  assert.ok(finalGate > pushIndex && record > finalGate);
   const publish = steps[pushIndex].with;
   assert.equal(publish.push, true);
   assert.equal(publish.sbom, true);
@@ -381,7 +723,11 @@ test("container publication is manual, scan-before-push, and attestable", () => 
   const metadata = steps.find(({ name }) => name === "Generate OCI metadata");
   assert.doesNotMatch(metadata.with.tags, /type=raw/u);
   assert.match(metadata.with.tags, /type=sha/u);
-  assert.ok(steps.some(({ uses }) => uses?.startsWith("actions/attest-build-provenance@")));
+  assert.ok(
+    steps.some(({ uses }) =>
+      uses?.startsWith("actions/attest-build-provenance@"),
+    ),
+  );
   for (const { uses } of steps) {
     if (uses) assert.match(uses, /@[a-f0-9]{40}$/u);
   }
@@ -392,29 +738,59 @@ test("every external base for a published image is digest-pinned", () => {
     "apps/Dockerfile",
     "server/Dockerfile.prod",
     "deploy/config/iam/Dockerfile",
+    "deploy/config/postgres/Dockerfile",
+    ...JSON.parse(
+      readFileSync(
+        join(
+          defaultRepoRoot,
+          "deploy/compose/scripts/derived-infrastructure-images.json",
+        ),
+        "utf8",
+      ),
+    ).include.map((item) => `${item.context}/Dockerfile`),
   ];
   for (const target of targets) {
     const text = readFileSync(join(defaultRepoRoot, target), "utf8");
-    const externalBases = [...text.matchAll(/^FROM\s+(\S*:\S+)/gmu)].map((match) => match[1]);
+    const externalBases = [...text.matchAll(/^FROM\s+(\S*:\S+)/gmu)].map(
+      (match) => match[1],
+    );
     assert.ok(externalBases.length > 0, `${target} has no external base`);
     for (const image of externalBases) {
-      assert.match(image, /@sha256:[a-f0-9]{64}$/u, `${target}: ${image} is mutable`);
+      assert.match(
+        image,
+        /@sha256:[a-f0-9]{64}$/u,
+        `${target}: ${image} is mutable`,
+      );
     }
   }
 });
 
 test("Keycloak optimized builds retain every recorded runtime dependency", () => {
-  const dockerfile = readFileSync(join(defaultRepoRoot, "deploy/config/iam/Dockerfile"), "utf8");
+  const dockerfile = readFileSync(
+    join(defaultRepoRoot, "deploy/config/iam/Dockerfile"),
+    "utf8",
+  );
   assert.match(dockerfile, /kc\.sh build --db=postgres/u);
   assert.doesNotMatch(dockerfile, /rm\s+-f[\s\S]*mssql-jdbc/u);
 });
 
 test("DEV browser secrets and proxied realms use deployable formats", () => {
-  const bootstrap = readFileSync(join(defaultRepoRoot, "deploy/bootstrap/generate-dev-secrets.sh"), "utf8");
+  const bootstrap = readFileSync(
+    join(defaultRepoRoot, "deploy/bootstrap/generate-dev-secrets.sh"),
+    "utf8",
+  );
   assert.match(bootstrap, /openssl rand -base64 32/u);
-  assert.doesNotMatch(bootstrap, /random_hex > "\$staging\/session-token-encryption-key"/u);
-  for (const realm of ["realm-platform-control.json", "realm-platform-control-clean-slate.json"]) {
-    const document = JSON.parse(readFileSync(join(defaultRepoRoot, "deploy/config/iam", realm), "utf8"));
+  assert.doesNotMatch(
+    bootstrap,
+    /random_hex > "\$staging\/session-token-encryption-key"/u,
+  );
+  for (const realm of [
+    "realm-platform-control.json",
+    "realm-platform-control-clean-slate.json",
+  ]) {
+    const document = JSON.parse(
+      readFileSync(join(defaultRepoRoot, "deploy/config/iam", realm), "utf8"),
+    );
     assert.equal(document.sslRequired, "external");
   }
 });

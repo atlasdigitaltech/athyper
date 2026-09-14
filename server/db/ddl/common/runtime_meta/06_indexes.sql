@@ -31,7 +31,7 @@ CREATE INDEX runtime_entity_contract_lookup_idx
 CREATE INDEX runtime_entity_contract_publication_idx
     ON runtime_meta.entity_contract (publication_key, status, release_no DESC);
 CREATE UNIQUE INDEX runtime_entity_contract_published_uq
-    ON runtime_meta.entity_contract (tenant_id, entity_id)
+    ON runtime_meta.entity_contract (tenant_id, entity_id, entity_code)
     NULLS NOT DISTINCT WHERE status = 'published';
 
 CREATE INDEX runtime_entity_descriptor_contract_idx

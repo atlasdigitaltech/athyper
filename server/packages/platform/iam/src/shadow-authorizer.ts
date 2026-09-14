@@ -21,7 +21,20 @@ export function createShadowAuthorizer(options: {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2000)
     throw new TypeError("Invalid authorization shadow deadline");
   return {
-    ...(options.authority.enforcedEntityProfile ? {enforcedEntityProfile: options.authority.enforcedEntityProfile.bind(options.authority)} : {}),
+    ...(options.authority.checkSourceConstraints
+      ? {
+          checkSourceConstraints: options.authority.checkSourceConstraints.bind(
+            options.authority,
+          ),
+        }
+      : {}),
+    ...(options.authority.enforcedEntityProfile
+      ? {
+          enforcedEntityProfile: options.authority.enforcedEntityProfile.bind(
+            options.authority,
+          ),
+        }
+      : {}),
     async authorize(request) {
       const decision = await options.authority.authorize(request);
       const controller = new AbortController();

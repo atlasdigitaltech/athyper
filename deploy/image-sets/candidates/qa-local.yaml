@@ -1,18 +1,44 @@
 apiVersion: athyper.io/v1alpha1
 kind: ImageSet
 metadata:
-  id: qa-local-qualified-dev
+  id: candidate-f02e10107af4
   channel: candidate
 spec:
-  sourceRevision: 2853d624ad1b0ecd53db37f28519e09ec6c4d914
+  sourceRevision: f02e10107af4797541f585b3cde89bde13fcbdf7
   images:
-    - id: neon-web
-      reference: athyper/neon-web@sha256:dfd768be19ccce6a7d7c881cfe9aa8942f05c0c3ee56e6171857da6ced41d4d2
-    - id: mesh-web
-      reference: athyper/mesh-web@sha256:9e59aa709f1f86431eea72d2c4ac86b5102e4df8789bee8aa1c18cff4f0418cb
-    - id: studio-web
-      reference: athyper/studio-web@sha256:66cfcb68351419c257f12a7fd3a62606869ca067a1fd44ce5809bd1ea8055f11
-    - id: runtime-server
-      reference: athyper/runtime-server@sha256:6eceee4552c7b4b36096ad303d01b4259a260afe48dccc1764507635dff834a0
+    - id: gotenberg
+      reference: ghcr.io/atlasdigitaltech/athyper-gotenberg@sha256:6d7d74c8db6e6dee5919334b99dd7582ed1c9b7a986172edf56c8035b4b36208
     - id: iam
-      reference: athyper/keycloak@sha256:0c6a5ae3654e0f872101fa2168b40bc28d37f3f96e9f647c629434f6f77c9a5b
+      reference: ghcr.io/atlasdigitaltech/athyper-keycloak@sha256:3925ad2702d2533b867a8f7c91ce817565748237a7c334f0d13a8b9a6391ddfa
+    - id: mailpit
+      reference: axllent/mailpit:v1.31.1@sha256:98b916bd3c8d61f7633a52d3ea2f58d00620cb01ca57ab59edde68c347a95365
+    - id: meilisearch
+      reference: ghcr.io/atlasdigitaltech/athyper-meilisearch@sha256:89efe6d69827c2a809baeb4db8ac0b044bac744702623da0a071c62638c05ede
+    - id: mesh-web
+      reference: ghcr.io/atlasdigitaltech/athyper-mesh-web@sha256:a1736971112c7c1451fb7327b080deecccfd25213ac1183fe702f1527b01ec33
+    - id: neon-web
+      reference: ghcr.io/atlasdigitaltech/athyper-neon-web@sha256:216b17d6a6362613922634b54b313dd53621e702731f577290fe95b82610b49e
+    - id: nginx
+      reference: nginxinc/nginx-unprivileged:stable-alpine@sha256:442753882674b49ae2c1de83ed67896131c0777f56df5005e356e62bc3f7e7ce
+    - id: pgbouncer
+      reference: ghcr.io/atlasdigitaltech/athyper-pgbouncer@sha256:6b399e70894ded09935d725fd9890ba49e9b7482ba0c5cd3bd69e2e4ff8ff2da
+    - id: postgres
+      reference: ghcr.io/atlasdigitaltech/athyper-postgres@sha256:ab63d06bd46fb70dc46d5e16007b38b19617aee9bb38a9ebe07349f287a5cf77
+    - id: redis
+      reference: ghcr.io/atlasdigitaltech/athyper-valkey@sha256:cdb3fb5a25dd016f9a6136ad5c5c85e02a3e1beaf0fe87497399dda5779debe1
+    - id: runtime-server
+      reference: ghcr.io/atlasdigitaltech/athyper-runtime-server@sha256:19563b098e7a543e8192ae614be4c402011a129413cd028793c2202f15c0b73f
+    - id: s3-tools
+      reference: ghcr.io/atlasdigitaltech/athyper-s3-tools@sha256:91224c12cead1d9449a0495709b5c38afd0f264a59fd1fe16513d541bc919624
+    - id: searchcore-key-init
+      reference: ghcr.io/atlasdigitaltech/athyper-searchcore-key-init@sha256:6c08b2a1a1f2c823712273ea547858d5f84bc46649c929f54c49cd7939477729
+    - id: seaweedfs
+      reference: ghcr.io/atlasdigitaltech/athyper-seaweedfs@sha256:3a2f6f99a879a527092f2a963e4e39c9edabde104a211879548dbd1f47662104
+    - id: studio-web
+      reference: ghcr.io/atlasdigitaltech/athyper-studio-web@sha256:de85742c648317cf6b149755d6d7e8f6ca5cd39576438dfabd3ad0c5915b2260
+    - id: tika
+      reference: ghcr.io/atlasdigitaltech/athyper-tika@sha256:08f4084791b0bab1226f3c68c42ef4970fadb80b66967c9baf6568e331899404
+    - id: traefik
+      reference: ghcr.io/atlasdigitaltech/athyper-traefik@sha256:1a56bca771affb30bac34c1ddeaa79653b4967e076d2dc7df7498e2ed156fed3
+    - id: virusscan
+      reference: ghcr.io/atlasdigitaltech/athyper-clamav@sha256:f1058448e622aef0e934c7a9b6c9962e929f040de2d070f3d0d0742a1604101d

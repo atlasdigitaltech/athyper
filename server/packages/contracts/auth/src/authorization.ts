@@ -46,7 +46,8 @@ export interface EffectiveAuthorizationScope {
   readonly visibility: "all" | "team" | "own";
 }
 
-export type EffectiveAuthorizationProofKind = "role" | "delegation" | "record_acl" | "override" | "deny";
+export type EffectiveAuthorizationProofKind =
+  "role" | "delegation" | "record_acl" | "override" | "deny";
 
 /** Exact-plane evidence retained in the immutable request snapshot. */
 export interface EffectiveAuthorizationEvidence {
@@ -56,13 +57,16 @@ export interface EffectiveAuthorizationEvidence {
   readonly scopeTargetId: string;
   readonly scopeKind: string;
   readonly targetId: string;
-  readonly propagationMode: "exact" | "subtree" | "member_companies" | "relationship_participants";
+  readonly propagationMode:
+    "exact" | "subtree" | "member_companies" | "relationship_participants";
   readonly resourceCode?: string;
   readonly recordId?: string;
   readonly effectiveUntil?: string;
 }
 
 export interface EffectivePermissionSnapshot {
+  /** Server-selected development artifacts; never populated from client claims. */
+  readonly localGraphPreview?: Readonly<Record<string, string>>;
   readonly planeKey: PlaneKey;
   readonly tenantId: string;
   readonly principalId: string;
@@ -97,7 +101,16 @@ export interface AuthorizationRequest {
     readonly entityCode: string;
     readonly operationKey?: string;
     readonly recordId?: string;
-    readonly surface?: "application" | "workspace" | "list" | "record" | "section" | "field" | "action" | "command" | "transfer";
+    readonly surface?:
+      | "application"
+      | "workspace"
+      | "list"
+      | "record"
+      | "section"
+      | "field"
+      | "action"
+      | "command"
+      | "transfer";
     readonly phase?: "discover" | "execute";
   };
   readonly context: VerifiedRequestContext;

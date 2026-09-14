@@ -206,3 +206,5 @@ function classifyCaught(cause: unknown, timedOut: boolean, aborted: boolean): Ap
 function transport(kind: TransportFailureKind, message: string, status = 0, problem?: ApiProblem, requestId?: string, correlationId?: string, retryAfter?: string, cause?: unknown): ApiTransportError { return new ApiTransportError(kind, message, status, problem, requestId, correlationId, retryAfter, cause === undefined ? undefined : { cause }); }
 
 export { uploadSignedObject } from "./signed-upload";
+
+export * from "./reference-history";

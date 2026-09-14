@@ -2,25 +2,25 @@
   "$schema": "https://unpkg.com/syncpack@14/dist/schema.json",
   "versionGroups": [
     {
-      "label": "typescript — single workspace version",
+      "label": "typescript \u2014 single workspace version",
       "dependencies": ["typescript"],
       "pinVersion": "^6.0.3"
     },
     {
-      "label": "@types/react — single workspace version",
+      "label": "@types/react \u2014 single workspace version",
       "dependencies": ["@types/react"],
       "pinVersion": "^19.2.14"
     },
     {
-      "label": "@types/react-dom — single workspace version",
+      "label": "@types/react-dom \u2014 single workspace version",
       "dependencies": ["@types/react-dom"],
       "pinVersion": "^19.2.3"
     },
     {
-      "label": "@tanstack/react-query — single workspace version for non-peer usage",
+      "label": "@tanstack/react-query \u2014 single workspace version for non-peer usage",
       "dependencies": ["@tanstack/react-query"],
       "dependencyTypes": ["dev", "prod"],
-      "pinVersion": "^5.99.0"
+      "pinVersion": "^5.101.4"
     }
   ],
   "semverGroups": [
@@ -29,5 +29,27 @@
       "dependencies": ["@athyper/**"],
       "range": "workspace:"
     }
+  ],
+  "source": [
+    "package.json",
+    "apps/*/package.json",
+    "packages/*/*/package.json",
+    "packages/*/*/*/package.json",
+    "packages/*/*/*/*/package.json",
+    "server/package.json",
+    "server/db/package.json",
+    "server/apps/*/package.json",
+    "server/packages/*/package.json",
+    "server/packages/*/*/package.json",
+    "server/packages/adapters/database/*/package.json",
+    "server/packages/planes/*/*/package.json",
+    "tooling/*/package.json",
+    "deploy/stackctl/package.json",
+    "governance/config/governance/package.json",
+    "!**/.next*/**",
+    "!**/__tests__/**",
+    "!**/fixtures/**",
+    "!**/node_modules/**",
+    "!**/dist/**"
   ]
 }

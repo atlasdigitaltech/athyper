@@ -1,0 +1,12 @@
+{
+  "include": [
+    {
+      "id": "nginx",
+      "reference": "nginxinc/nginx-unprivileged:stable-alpine@sha256:442753882674b49ae2c1de83ed67896131c0777f56df5005e356e62bc3f7e7ce"
+    },
+    {
+      "id": "mailpit",
+      "reference": "axllent/mailpit:v1.31.1@sha256:98b916bd3c8d61f7633a52d3ea2f58d00620cb01ca57ab59edde68c347a95365"
+    }
+  ]
+}

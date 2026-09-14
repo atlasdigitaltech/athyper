@@ -1,12 +1,18 @@
-import { createHash } from "node:crypto";
-import type {
-  AttachmentDerivativeRecord,
-  DerivativeRenderer,
-  DerivativeRepository,
-  DerivativeScheduleRequest,
-  DerivativeScheduler,
+import { createHash, randomUUID } from "node:crypto";
+import {
+  isDerivativeUsable,
+  type AttachmentDerivativeRecord,
+  type DerivativeRenderer,
+  type DerivativeRepository,
+  type DerivativeScheduleRequest,
+  type DerivativeScheduler,
 } from "@athyper/server-contract-derivatives";
-import type { JobExecutionResult, JobHandler, JobPublisher } from "@athyper/server-contract-jobs";
+import type {
+  JobExecutionResult,
+  JobHandler,
+  JobPublisher,
+} from "@athyper/server-contract-jobs";
+import type { MalwareScanner } from "@athyper/server-contract-malware-scanning";
 import type { ObjectStorage } from "@athyper/server-contract-object-storage";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
 import type { PlaneKey } from "@athyper/server-foundation/context";
@@ -16,10 +22,26 @@ export const DOCUMENT_DERIVATIVES_QUEUE = "documents.derivatives";
 export const RENDER_DERIVATIVE_JOB = "documents.render-derivative";
 
 export const SUPPORTED_RENDITIONS = [
-  { derivativeType: "preview_pdf",  renditionCode: "preview_default", contentType: "application/pdf"  },
-  { derivativeType: "thumbnail",    renditionCode: "thumbnail_sm",    contentType: "image/webp"        },
-  { derivativeType: "thumbnail",    renditionCode: "thumbnail_md",    contentType: "image/webp"        },
-  { derivativeType: "page_preview", renditionCode: "page_preview",    contentType: "image/webp"        },
+  {
+    derivativeType: "preview_pdf",
+    renditionCode: "preview_default",
+    contentType: "application/pdf",
+  },
+  {
+    derivativeType: "thumbnail",
+    renditionCode: "thumbnail_sm",
+    contentType: "image/webp",
+  },
+  {
+    derivativeType: "thumbnail",
+    renditionCode: "thumbnail_md",
+    contentType: "image/webp",
+  },
+  {
+    derivativeType: "page_preview",
+    renditionCode: "page_preview",
+    contentType: "image/webp",
+  },
 ] as const;
 
 export interface DerivativeRenderRequest {
@@ -32,7 +54,11 @@ export interface DerivativeRenderRequest {
   readonly renditionCode: string;
   readonly specificationHash: string;
   readonly expectedContentType: string;
-  readonly rebuild?: { readonly mode: "missing" | "failed" | "all"; readonly reason: string; readonly requestId: string };
+  readonly rebuild?: {
+    readonly mode: "missing" | "failed" | "all";
+    readonly reason: string;
+    readonly requestId: string;
+  };
 }
 
 export interface DerivativeSourceRepository<Transaction> {
@@ -40,10 +66,17 @@ export interface DerivativeSourceRepository<Transaction> {
     tenantId: string,
     attachmentId: string,
     tx: Transaction,
-  ): Promise<{ storageKey: string; contentType: string; sha256: string; sizeBytes: number } | null>;
+  ): Promise<{
+    storageKey: string;
+    contentType: string;
+    sha256: string;
+    sizeBytes: number;
+  } | null>;
 }
 
-export function createDerivativeScheduler(jobs: JobPublisher): DerivativeScheduler {
+export function createDerivativeScheduler(
+  jobs: JobPublisher,
+): DerivativeScheduler {
   return {
     async schedule(request: DerivativeScheduleRequest): Promise<void> {
       await Promise.all(
@@ -82,6 +115,7 @@ export interface DerivativeHandlerOptions<T> {
   readonly transactions: PlaneTransactionCoordinator<T>;
   readonly storage: ObjectStorage;
   readonly renderer: DerivativeRenderer;
+  readonly scanner: MalwareScanner;
 }
 
 export function createDerivativeRenderHandler<T>(
@@ -91,7 +125,10 @@ export function createDerivativeRenderHandler<T>(
     async handle(job, context): Promise<JobExecutionResult> {
       const request = validateRequest(job.data);
       throwIfAborted(context.signal);
-      const actor = { tenantId: request.tenantId, principalId: request.principalId };
+      const actor = {
+        tenantId: request.tenantId,
+        principalId: request.principalId,
+      };
 
       const existing = await options.transactions.run(
         request.planeKey,
@@ -108,43 +145,71 @@ export function createDerivativeRenderHandler<T>(
           ),
       );
 
-      if (existing?.status === "ready" && request.rebuild?.mode !== "all") {
-        return { status: "completed", output: { skipped: true, reason: "already_ready" } };
+      if (isDerivativeUsable(existing) && request.rebuild?.mode !== "all") {
+        return {
+          status: "completed",
+          output: { skipped: true, reason: "already_ready" },
+        };
       }
-      if (request.rebuild?.mode === "failed" && existing && existing.status !== "failed") {
-        return { status: "completed", output: { skipped: true, reason: "not_failed" } };
+      if (
+        request.rebuild?.mode === "failed" &&
+        existing &&
+        existing.status !== "failed"
+      ) {
+        return {
+          status: "completed",
+          output: { skipped: true, reason: "not_failed" },
+        };
       }
 
-      const record = await options.transactions.run(request.planeKey, actor, (tx) =>
-        options.repository.upsertPending(
-          {
-            tenantId: request.tenantId,
-            attachmentId: request.attachmentId,
-            derivativeType: request.derivativeType,
-            renditionCode: request.renditionCode,
-            sourceSha256: request.sourceSha256,
-            specificationHash: request.specificationHash,
-            contentType: request.expectedContentType,
-            principalId: request.principalId,
-            forceRebuild: request.rebuild?.mode === "all",
-          },
-          tx,
-        ),
+      const record = await options.transactions.run(
+        request.planeKey,
+        actor,
+        (tx) =>
+          options.repository.upsertPending(
+            {
+              tenantId: request.tenantId,
+              attachmentId: request.attachmentId,
+              derivativeType: request.derivativeType,
+              renditionCode: request.renditionCode,
+              sourceSha256: request.sourceSha256,
+              specificationHash: request.specificationHash,
+              contentType: request.expectedContentType,
+              principalId: request.principalId,
+              forceRebuild: request.rebuild?.mode === "all",
+            },
+            tx,
+          ),
       );
 
-      if (record.status === "ready") {
-        return { status: "completed", output: { skipped: true, reason: "already_ready" } };
+      if (isDerivativeUsable(record)) {
+        return {
+          status: "completed",
+          output: { skipped: true, reason: "already_ready" },
+        };
       }
 
       await options.transactions.run(request.planeKey, actor, (tx) =>
-        options.repository.markProcessing(record.id, request.tenantId, tx),
+        options.repository.markProcessing(
+          record.id,
+          request.tenantId,
+          request.principalId,
+          tx,
+        ),
       );
 
       await context.reportProgress({ stage: "download" });
       throwIfAborted(context.signal);
 
-      const source = await options.transactions.run(request.planeKey, actor, (tx) =>
-        options.sourceRepository.loadSource(request.tenantId, request.attachmentId, tx),
+      const source = await options.transactions.run(
+        request.planeKey,
+        actor,
+        (tx) =>
+          options.sourceRepository.loadSource(
+            request.tenantId,
+            request.attachmentId,
+            tx,
+          ),
       );
 
       if (!source) {
@@ -193,48 +258,92 @@ export function createDerivativeRenderHandler<T>(
           );
           return { status: "discarded", reason: "unsupported_media_type" };
         }
-        await options.transactions.run(request.planeKey, actor, (tx) =>
-          options.repository.markFailed(
-            record.id,
-            request.tenantId,
-            "render_failed",
-            error instanceof Error ? error.message : "render failed",
-            request.principalId,
-            tx,
-          ),
-        ).catch(() => undefined);
+        await options.transactions
+          .run(request.planeKey, actor, (tx) =>
+            options.repository.markFailed(
+              record.id,
+              request.tenantId,
+              "render_failed",
+              error instanceof Error ? error.message : "render failed",
+              request.principalId,
+              tx,
+            ),
+          )
+          .catch(() => undefined);
         throw error;
       }
 
-      const outputSha256 = createHash("sha256").update(output.bytes).digest("hex");
-      const specSlice = request.specificationHash.slice(0, 8);
-      const storageKey = `derivatives/${request.planeKey}/${request.tenantId}/${request.attachmentId}/${request.renditionCode}/${specSlice}`;
+      await context.reportProgress({ stage: "scan" });
+      throwIfAborted(context.signal);
+      const scan = await options.scanner.scan({
+        content: output.bytes,
+        contentType: output.contentType,
+        fileName: `${request.attachmentId}-${request.renditionCode}`,
+        sizeBytes: output.bytes.byteLength,
+        signal: context.signal,
+      });
+      throwIfAborted(context.signal);
+      if (scan.status !== "clean") {
+        await options.transactions.run(request.planeKey, actor, (tx) =>
+          options.repository.markQuarantined(
+            {
+              id: record.id,
+              tenantId: request.tenantId,
+              reason: "malware_detected",
+              principalId: request.principalId,
+            },
+            tx,
+          ),
+        );
+        // Nothing was ever written to object storage — the infected bytes never leave this job.
+        return { status: "discarded", reason: "malware_detected" };
+      }
+
+      const outputSha256 = createHash("sha256")
+        .update(output.bytes)
+        .digest("hex");
+      // Content hash in the path for observability/debugging, but the key is made unique to this
+      // attempt with a fresh UUID — not purely content-addressed. Two renders producing different
+      // bytes were already guaranteed never to collide (different hash); the UUID additionally
+      // guarantees that two renders producing byte-identical output (a retried or duplicate job
+      // for the same source) never share a key either. That sharing was the actual bug: whichever
+      // attempt's markReady() failed would unconditionally delete the key, and a concurrent
+      // attempt's successful commit could depend on that exact key — no read-before-delete check
+      // closes that race completely, since the check-then-act window (and a failed check) can
+      // still get it wrong. Giving every attempt an exclusively-owned key removes the shared
+      // ownership itself, so this attempt's own cleanup can never touch another attempt's object.
+      const storageKey = `derivatives/${request.planeKey}/${request.tenantId}/${request.attachmentId}/${request.renditionCode}/${outputSha256}-${randomUUID()}`;
 
       await context.reportProgress({ stage: "store" });
       throwIfAborted(context.signal);
-      await options.storage.put(storageKey, output.bytes, { contentType: output.contentType });
+      await options.storage.put(storageKey, output.bytes, {
+        contentType: output.contentType,
+      });
 
       try {
         await options.transactions.run(request.planeKey, actor, (tx) =>
           options.repository.markReady(
-          {
-            id: record.id,
-            tenantId: request.tenantId,
-            storageBucket: "",
-            storageKey,
-            sizeBytes: output.bytes.byteLength,
-            sha256: outputSha256,
-            width: output.width,
-            height: output.height,
-            pageNumber: output.pageNumber,
-            provider: output.provider,
-            providerVersion: output.providerVersion,
-            principalId: request.principalId,
-          },
+            {
+              id: record.id,
+              tenantId: request.tenantId,
+              storageBucket: "",
+              storageKey,
+              sizeBytes: output.bytes.byteLength,
+              sha256: outputSha256,
+              width: output.width,
+              height: output.height,
+              pageNumber: output.pageNumber,
+              provider: output.provider,
+              providerVersion: output.providerVersion,
+              principalId: request.principalId,
+            },
             tx,
           ),
         );
       } catch (error) {
+        // Safe unconditionally: storageKey is exclusively this attempt's own (see above), so no
+        // other row or attempt can ever be depending on it — no read-before-delete check needed,
+        // and none of its failure modes (a stale read, a failed lookup) can misfire here.
         await options.storage.delete(storageKey).catch(() => undefined);
         throw error;
       }
@@ -253,7 +362,12 @@ export function createDerivativeRenderHandler<T>(
   };
 }
 
-function throwIfAborted(signal: AbortSignal): void { if (signal.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Derivative job aborted"); }
+function throwIfAborted(signal: AbortSignal): void {
+  if (signal.aborted)
+    throw signal.reason instanceof Error
+      ? signal.reason
+      : new Error("Derivative job aborted");
+}
 
 // --- Kysely implementations ---
 
@@ -265,25 +379,32 @@ export function createKyselyDerivativeRepository(): DerivativeRepository<Derivat
       const result = await sql<Record<string, unknown>>`
         INSERT INTO document.attachment_derivative
           (tenant_id, attachment_id, derivative_type, rendition_code, source_sha256,
-           specification_hash, content_type, status, attempt_count, created_at, updated_at,
+           specification_hash, content_type, status, attempt_count, created_at,
            created_by)
         VALUES
           (${input.tenantId}::uuid, ${input.attachmentId}::uuid, ${input.derivativeType},
            ${input.renditionCode}, ${input.sourceSha256}, ${input.specificationHash},
-           ${input.contentType}, 'pending', 0, now(), now(), ${input.principalId}::uuid)
+           ${input.contentType}, 'pending', 0, now(), ${input.principalId}::uuid)
         ON CONFLICT (tenant_id, attachment_id, derivative_type, rendition_code, source_sha256, specification_hash)
         DO UPDATE SET
-          status = CASE WHEN document.attachment_derivative.status = 'ready' AND NOT ${input.forceRebuild ?? false} THEN 'ready' ELSE 'pending' END,
-          updated_at = now()
+          status = CASE
+            WHEN document.attachment_derivative.status = 'ready'
+             AND document.attachment_derivative.scan_status = 'clean'
+             AND NOT ${input.forceRebuild ?? false}
+            THEN 'ready'
+            ELSE 'pending'
+          END,
+          updated_at = now(),
+          updated_by = ${input.principalId}::uuid
         RETURNING *
       `.execute(tx);
       return mapRow(result.rows[0]!);
     },
 
-    async markProcessing(id, tenantId, tx) {
+    async markProcessing(id, tenantId, principalId, tx) {
       await sql`
         UPDATE document.attachment_derivative
-        SET status = 'processing', attempt_count = attempt_count + 1, updated_at = now()
+        SET status = 'processing', attempt_count = attempt_count + 1, updated_at = now(), updated_by = ${principalId}::uuid
         WHERE id = ${id}::uuid AND tenant_id = ${tenantId}::uuid
       `.execute(tx);
     },
@@ -303,8 +424,29 @@ export function createKyselyDerivativeRepository(): DerivativeRepository<Derivat
           provider = ${input.provider},
           provider_version = ${input.providerVersion},
           generated_at = now(),
+          scanned_at = now(),
+          scan_status = 'clean',
           last_error_code = NULL,
           last_error_message = NULL,
+          updated_at = now(),
+          updated_by = ${input.principalId}::uuid
+        WHERE id = ${input.id}::uuid AND tenant_id = ${input.tenantId}::uuid
+      `.execute(tx);
+    },
+
+    async markQuarantined(input, tx) {
+      // Deliberately leaves storage_bucket/storage_key untouched: this call only ever follows a
+      // scan of freshly rendered bytes that were never written to storage (scan runs before
+      // put()), so any existing reference belongs to a prior, unrelated ready render (e.g. a
+      // rejected `rebuild.mode: "all"` attempt) and must not be clobbered.
+      await sql`
+        UPDATE document.attachment_derivative
+        SET
+          status = 'quarantined',
+          scanned_at = now(),
+          scan_status = 'quarantined',
+          last_error_code = ${input.reason},
+          last_error_message = ${input.reason.slice(0, 1000)},
           updated_at = now(),
           updated_by = ${input.principalId}::uuid
         WHERE id = ${input.id}::uuid AND tenant_id = ${input.tenantId}::uuid
@@ -347,7 +489,15 @@ export function createKyselyDerivativeRepository(): DerivativeRepository<Derivat
       return row ? mapRow(row) : null;
     },
 
-    async loadBySpec(tenantId, attachmentId, derivativeType, renditionCode, sourceSha256, specificationHash, tx) {
+    async loadBySpec(
+      tenantId,
+      attachmentId,
+      derivativeType,
+      renditionCode,
+      sourceSha256,
+      specificationHash,
+      tx,
+    ) {
       const result = await sql<Record<string, unknown>>`
         SELECT * FROM document.attachment_derivative
         WHERE tenant_id = ${tenantId}::uuid
@@ -415,13 +565,20 @@ function mapRow(row: Record<string, unknown>): AttachmentDerivativeRecord {
     attemptCount: Number(row["attempt_count"] ?? 0),
     lastErrorCode: nullable(row["last_error_code"]),
     lastErrorMessage: nullable(row["last_error_message"]),
-    generatedAt: row["generated_at"] != null ? dateTime(row["generated_at"]) : null,
+    generatedAt:
+      row["generated_at"] != null ? dateTime(row["generated_at"]) : null,
+    scannedAt: row["scanned_at"] != null ? dateTime(row["scanned_at"]) : null,
+    scanStatus: nullable(
+      row["scan_status"],
+    ) as AttachmentDerivativeRecord["scanStatus"],
     createdAt: dateTime(row["created_at"]),
     updatedAt: row["updated_at"] != null ? dateTime(row["updated_at"]) : null,
   };
 }
 
-function validateRequest(value: DerivativeRenderRequest): DerivativeRenderRequest {
+function validateRequest(
+  value: DerivativeRenderRequest,
+): DerivativeRenderRequest {
   if (
     !["studio", "neon", "mesh"].includes(value.planeKey) ||
     !uuid(value.tenantId) ||
@@ -447,7 +604,9 @@ function specHash(renditionCode: string): string {
 }
 
 function uuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 }
 
 function nullable(value: unknown): string | null {
@@ -455,5 +614,7 @@ function nullable(value: unknown): string | null {
 }
 
 function dateTime(value: unknown): string {
-  return value instanceof Date ? value.toISOString() : new Date(String(value)).toISOString();
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(String(value)).toISOString();
 }

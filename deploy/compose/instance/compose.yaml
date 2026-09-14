@@ -3,10 +3,11 @@
 # appear in this file, Compose environment variables, or image metadata.
 services:
   gateway:
-    image: traefik:v3.6.13
+    image: ${ATHYPER_IMAGE_TRAEFIK:-athyper/traefik:3.7.13-hardened}
+    build: { context: ../../config/traefik }
+    user: "${ATHYPER_RUNTIME_UID:-1000}:${ATHYPER_RUNTIME_GID:-1000}"
     restart: unless-stopped
     command:
-      - --api.dashboard=false
       - --entrypoints.web.address=:8080
       - --entrypoints.health.address=:8082
       - --ping=true
@@ -23,36 +24,56 @@ services:
         aliases:
           - gateway-${ATHYPER_INSTANCE:-dev}
     healthcheck:
-      test: [CMD, wget, -q, --spider, http://127.0.0.1:8082/ping]
+      test:
+        [
+          CMD,
+          traefik,
+          healthcheck,
+          --ping,
+          --ping.entrypoint=health,
+          --entrypoints.health.address=:8082,
+        ]
       interval: 10s
       timeout: 3s
       retries: 12
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
     read_only: true
     tmpfs: [/tmp]
+    init: true
     mem_limit: 256m
     cpus: 0.5
 
   gateway-outage:
-    image: nginxinc/nginx-unprivileged:1.27-alpine
+    image: ${ATHYPER_IMAGE_NGINX:-nginxinc/nginx-unprivileged:stable-alpine@sha256:442753882674b49ae2c1de83ed67896131c0777f56df5005e356e62bc3f7e7ce}
+    # nginx's master process manages/reaps its workers; no separate init needed.
     restart: unless-stopped
     volumes:
       - ./config/nginx/outage.conf:/etc/nginx/conf.d/default.conf:ro
       - ./config/nginx/status.html:/usr/share/nginx/html/status.html:ro
     networks: [app]
     healthcheck:
-      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/healthz]
+      test:
+        - CMD-SHELL
+        - >-
+          wget -q -T 2 --spider http://127.0.0.1:8080/healthz &&
+          wget -q -T 2 --spider http://127.0.0.1:8081/healthz &&
+          wget -q -T 2 --spider http://127.0.0.1:8082/healthz
       interval: 15s
-      timeout: 3s
+      timeout: 7s
       retries: 5
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
     read_only: true
     tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    # Catalog budget for three endpoints (outage, maintenance, problem JSON).
+    # Measure representative load before reducing this allocation.
     mem_limit: 128m
     cpus: 0.1
 
   db:
-    image: postgres:16.13-bookworm
+    image: ${ATHYPER_IMAGE_POSTGRES:-athyper/postgres:16.15-hardened}
+    build: { context: ../../config/postgres }
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -73,12 +94,19 @@ services:
       start_period: 10s
     shm_size: 256m
     security_opt: [no-new-privileges:true]
+    # Root bootstrap reads owner-only secrets, fixes volume/socket ownership,
+    # then setpriv drops to postgres. Persistent writes stay on db-data.
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER, DAC_READ_SEARCH, SETUID, SETGID]
+    read_only: true
+    tmpfs: [/tmp, /var/run/postgresql]
     mem_limit: 2048m
     cpus: 2.0
 
   db-init:
-    image: postgres:16.13-bookworm
-    restart: no
+    image: ${ATHYPER_IMAGE_POSTGRES:-athyper/postgres:16.15-hardened}
+    build: { context: ../../config/postgres }
+    restart: "no"
     depends_on:
       db: { condition: service_healthy }
     environment:
@@ -87,122 +115,178 @@ services:
       PGUSER: postgres
       PGDATABASE: postgres
     entrypoint: [/bin/bash, /athyper/bin/init-postgres.sh]
-    secrets: [postgres-password, iam-db-password, runtime-db-password, worker-db-password]
+    secrets:
+      [
+        postgres-password,
+        iam-db-password,
+        runtime-db-password,
+        worker-db-password,
+      ]
     volumes:
       - ./scripts/init-postgres.sh:/athyper/bin/init-postgres.sh:ro
     networks: [data]
     security_opt: [no-new-privileges:true]
+    # Read owner-only host secret files; no other capabilities are needed.
+    cap_drop: [ALL]
+    cap_add: [DAC_READ_SEARCH]
     read_only: true
     tmpfs: [/tmp]
     mem_limit: 128m
     cpus: 0.25
 
   dbpool-apps:
-    image: edoburu/pgbouncer:v1.25.1-p0
+    image: ${ATHYPER_IMAGE_PGBOUNCER:-athyper/pgbouncer:1.25.2-hardened}
+    build: { context: ../../config/pgbouncer }
     user: "0:0"
     restart: unless-stopped
     depends_on:
       db-init: { condition: service_completed_successfully }
     environment:
       ATHYPER_POOL_MODE: transaction
+      ATHYPER_PGBOUNCER_MAX_CLIENT_CONN: "${ATHYPER_PGBOUNCER_APPS_MAX_CLIENT_CONN:-200}"
+      ATHYPER_PGBOUNCER_DEFAULT_POOL_SIZE: "${ATHYPER_PGBOUNCER_APPS_DEFAULT_POOL_SIZE:-20}"
+      ATHYPER_PGBOUNCER_RESERVE_POOL_SIZE: "${ATHYPER_PGBOUNCER_APPS_RESERVE_POOL_SIZE:-5}"
+      ATHYPER_PGBOUNCER_MAX_DB_CONNECTIONS: "${ATHYPER_PGBOUNCER_APPS_MAX_DB_CONNECTIONS:-0}"
+      ATHYPER_PGBOUNCER_MAX_USER_CONNECTIONS: "${ATHYPER_PGBOUNCER_APPS_MAX_USER_CONNECTIONS:-0}"
     entrypoint: [/bin/sh, /athyper/bin/start-pgbouncer.sh]
-    secrets: [postgres-password, runtime-db-password, worker-db-password]
+    secrets: [runtime-db-password, worker-db-password]
     volumes:
       - ./scripts/start-pgbouncer.sh:/athyper/bin/start-pgbouncer.sh:ro
+      - ./scripts/healthcheck-pgbouncer.sh:/athyper/bin/healthcheck-pgbouncer.sh:ro
     networks: [app, data]
     healthcheck:
-      test: [CMD-SHELL, pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres]
+      test: [CMD, /bin/sh, /athyper/bin/healthcheck-pgbouncer.sh]
       interval: 10s
-      timeout: 3s
+      timeout: 10s
       retries: 12
     security_opt: [no-new-privileges:true]
+    # Root reads owner-only host secrets, then chown/su drops to uid 70.
+    cap_drop: [ALL]
+    cap_add: [DAC_READ_SEARCH, CHOWN, SETUID, SETGID]
     read_only: true
     tmpfs: [/tmp]
     mem_limit: 128m
     cpus: 0.25
 
   dbpool-session:
-    image: edoburu/pgbouncer:v1.25.1-p0
+    image: ${ATHYPER_IMAGE_PGBOUNCER:-athyper/pgbouncer:1.25.2-hardened}
+    build: { context: ../../config/pgbouncer }
     user: "0:0"
     restart: unless-stopped
     depends_on:
       db-init: { condition: service_completed_successfully }
     environment:
       ATHYPER_POOL_MODE: session
+      ATHYPER_PGBOUNCER_MAX_CLIENT_CONN: "${ATHYPER_PGBOUNCER_SESSION_MAX_CLIENT_CONN:-200}"
+      ATHYPER_PGBOUNCER_DEFAULT_POOL_SIZE: "${ATHYPER_PGBOUNCER_SESSION_DEFAULT_POOL_SIZE:-20}"
+      ATHYPER_PGBOUNCER_RESERVE_POOL_SIZE: "${ATHYPER_PGBOUNCER_SESSION_RESERVE_POOL_SIZE:-5}"
+      ATHYPER_PGBOUNCER_MAX_DB_CONNECTIONS: "${ATHYPER_PGBOUNCER_SESSION_MAX_DB_CONNECTIONS:-0}"
+      ATHYPER_PGBOUNCER_MAX_USER_CONNECTIONS: "${ATHYPER_PGBOUNCER_SESSION_MAX_USER_CONNECTIONS:-0}"
     entrypoint: [/bin/sh, /athyper/bin/start-pgbouncer.sh]
-    secrets: [postgres-password, runtime-db-password, worker-db-password]
+    secrets: [runtime-db-password, worker-db-password]
     volumes:
       - ./scripts/start-pgbouncer.sh:/athyper/bin/start-pgbouncer.sh:ro
+      - ./scripts/healthcheck-pgbouncer.sh:/athyper/bin/healthcheck-pgbouncer.sh:ro
     networks: [app, data]
     healthcheck:
-      test: [CMD-SHELL, pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres]
+      test: [CMD, /bin/sh, /athyper/bin/healthcheck-pgbouncer.sh]
       interval: 10s
-      timeout: 3s
+      timeout: 10s
       retries: 12
     security_opt: [no-new-privileges:true]
+    # Root reads owner-only host secrets, then chown/su drops to uid 70.
+    cap_drop: [ALL]
+    cap_add: [DAC_READ_SEARCH, CHOWN, SETUID, SETGID]
     read_only: true
     tmpfs: [/tmp]
     mem_limit: 128m
     cpus: 0.25
 
   memorycache:
-    image: redis:7.4.8-alpine
+    image: ${ATHYPER_IMAGE_REDIS:-athyper/valkey:8.1.10}
+    build: { context: ../../config/redis }
     restart: unless-stopped
     entrypoint: [/bin/sh, /athyper/bin/start-redis.sh]
     secrets: [redis-password]
     volumes:
-      - memorycache-data:/data
+      - valkey-data:/data
       - ./scripts/start-redis.sh:/athyper/bin/start-redis.sh:ro
     # Browser sessions are server-side and fail closed through Redis. Expose
     # Redis only to the private application network in addition to data; the
     # web containers deliberately do not join the broader data network.
     networks: [app, data]
     healthcheck:
-      test: [CMD-SHELL, 'redis-cli --no-auth-warning -a "$$(cat /run/secrets/redis-password)" ping | grep -qx PONG']
+      test:
+        [
+          CMD-SHELL,
+          'REDISCLI_AUTH="$$(cat /run/secrets/redis-password)" redis-cli ping | grep -qx PONG',
+        ]
       interval: 10s
       timeout: 3s
       retries: 12
     security_opt: [no-new-privileges:true]
+    # Read the owner-only secret before the upstream entrypoint chowns /data
+    # and drops to valkey. AOF and snapshots stay on valkey-data.
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_READ_SEARCH, SETUID, SETGID]
+    read_only: true
+    tmpfs: [/tmp]
     mem_limit: 512m
     cpus: 0.5
 
+  # Local DEV/QA only. Cloud environments use provisioned Amazon S3.
   objectstorage:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: ${ATHYPER_IMAGE_SEAWEEDFS:-athyper/seaweedfs:4.46-hardened}
+    build: { context: ../../config/seaweedfs }
     restart: unless-stopped
-    command: [server, /data, --address, :9000, --console-address, :9001]
-    environment:
-      MINIO_ROOT_USER: athyper-admin
-      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio-root-password
-    secrets: [minio-root-password]
-    volumes:
-      - objectstorage-data:/data
+    user: "1000:1000"
+    secrets:
+      [
+        minio-root-password,
+        objectstorage-app-access-key,
+        objectstorage-app-secret-key,
+        objectstorage-artifacts-writer-access-key,
+        objectstorage-artifacts-writer-secret-key,
+      ]
+    volumes: [seaweedfs-data:/data]
     networks: [app, data]
     healthcheck:
-      test: [CMD, mc, ready, local]
+      test:
+        [
+          CMD-SHELL,
+          "nc -z 127.0.0.1 9000 && wget -qO- http://127.0.0.1:9333/cluster/status >/dev/null",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 10s
+      start_period: 15s
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
     mem_limit: 1024m
     cpus: 1.0
 
   objectstorage-init:
-    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
-    restart: no
+    image: ${ATHYPER_IMAGE_S3_TOOLS:-athyper/s3-tools:1}
+    build: { context: ../../config/s3-tools }
+    restart: "no"
+    user: "1000:1000"
     depends_on:
       objectstorage: { condition: service_healthy }
-    entrypoint: [/bin/sh, /athyper/bin/init-minio.sh]
-    environment:
-      MC_CONFIG_DIR: /tmp/.mc
-    secrets: [minio-root-password, objectstorage-app-access-key, objectstorage-app-secret-key]
-    volumes:
-      - ./scripts/init-minio.sh:/athyper/bin/init-minio.sh:ro
+    secrets:
+      [
+        minio-root-password,
+        objectstorage-app-access-key,
+        objectstorage-app-secret-key,
+        objectstorage-artifacts-writer-access-key,
+        objectstorage-artifacts-writer-secret-key,
+      ]
     networks: [data]
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
     read_only: true
-    tmpfs: [/tmp]
-    mem_limit: 128m
+    mem_limit: 256m
     cpus: 0.1
 
   iam:
@@ -233,12 +317,22 @@ services:
       - ./scripts/start-keycloak.sh:/athyper/bin/start-keycloak.sh:ro
     networks: [app, data]
     healthcheck:
-      test: [CMD-SHELL, 'exec 3<>/dev/tcp/127.0.0.1/9000; printf "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; grep -q "200 OK" <&3']
+      test:
+        [
+          CMD-SHELL,
+          'exec 3<>/dev/tcp/127.0.0.1/9000; printf "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; grep -q "200 OK" <&3',
+        ]
       interval: 15s
       timeout: 5s
       retries: 20
       start_period: 30s
     security_opt: [no-new-privileges:true]
+    # Image runs as UID 1000 (also the generated secret owner); no capabilities.
+    # Quarkus augmentation and health support are baked into the IAM image.
+    # Only persistent data and temporary files are writable at runtime.
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
     mem_limit: 1024m
     cpus: 1.0
 
@@ -261,8 +355,9 @@ networks:
 
 volumes:
   db-data: {}
-  memorycache-data: {}
-  objectstorage-data: {}
+  valkey-data: {}
+  # Retain old MinIO volumes externally for rollback; never mount them in SeaweedFS.
+  seaweedfs-data: {}
   iam-data: {}
 
 secrets:
@@ -284,3 +379,7 @@ secrets:
     file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/objectstorage-app-access-key
   objectstorage-app-secret-key:
     file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/objectstorage-app-secret-key
+  objectstorage-artifacts-writer-access-key:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/objectstorage-artifacts-writer-access-key
+  objectstorage-artifacts-writer-secret-key:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/objectstorage-artifacts-writer-secret-key

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "kind": "isolated_neon_protected_reference_amendment",
+  "approved": false,
+  "applied": false,
+  "parentProposalRevision": "01d4baa18931c72025a4cea425b7b34ff111f5e76c54767d7f7c428c15fc6d45",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "previousRuntimeImage": "sha256:09f65ba5550ab4344ecf46dd627c1060b173652c8b65029b778e31b2f1882f0a",
+  "runtimeImage": "sha256:05907dc2e051dec838ef29bd27416add855f9fb437aecd4841d4a5ef9bbe0036",
+  "releaseSetHash": "dd00cbf836e81d3c6185559fa77b5d27e92e547a7123ba8160cea0c732303735",
+  "artifacts": [
+    {
+      "releaseId": "145f6381-50c7-4450-8e16-7d66bf30b237",
+      "artifactHash": "4e9657a33a6b0957abe9826f935e2e2c6d7c0965ad52a1bc5e103bfffcdb4728"
+    },
+    {
+      "releaseId": "9827ce80-766d-4262-9b4f-835307ac33d2",
+      "artifactHash": "2bb595b521bedf15ee79f5182c2e0394ae3166b1382df1d8b21e00f655aff8d8"
+    },
+    {
+      "releaseId": "c2cc6900-26c1-47ca-8dfc-1d488000950c",
+      "artifactHash": "45ddc85ece1f453e84b1eccc0cea9ca141fe9847c68ab7d2500e7d347d7b75fc"
+    },
+    {
+      "releaseId": "ecbf538d-a1b7-4ba3-bb28-147d7263ed76",
+      "artifactHash": "da167c4e96230fdcd2383b812f5c50810c7b165ef431d08adc332a0b60f98f49"
+    },
+    {
+      "releaseId": "ff8168be-3136-41d5-9d07-df65c91d5c83",
+      "artifactHash": "b361dd52ce154c6e611f3064bfc97ad226de073d688238a09d97df72e420a708"
+    }
+  ],
+  "candidateManifest": "governance/policy/reports/business-partner-protected-reference-candidate-20260912.dev.json",
+  "candidateManifestSha256": "6f3cc7bfc3efcffe90429cd94c710300fd52f8aefba5e37dce64c0c39320e39c",
+  "effectiveFrom": "2026-09-12T06:00:00.000Z",
+  "effectiveUntil": "2026-09-12T08:00:00.000Z",
+  "auditMigration": {
+    "path": "server/db/migrations/20260912_business_partner_reveal_audit_contract.sql",
+    "sha256": "e5351ddc1aee628668e97236f09430d7149bbb16077370de11433d44d0d75e99",
+    "applied": false
+  },
+  "bankFixtureMigration": {
+    "path": "tooling/scripts/verification/isolated-enter/create-protected-bank-fixture-20260912.sql",
+    "sha256": "c405c1c8e844aea74f74a2858231cbaacfce2316b2bc090e36312c659fe250ee"
+  },
+  "bankFixture": {
+    "accountId": "b19c9b40-398c-4b73-a5c4-e2d13f541531",
+    "linkId": "b19c9b40-398c-4b73-a5c4-e2d13f541532",
+    "businessPartnerId": "01a092d1-8242-7948-9ce9-6f19c38c4b27",
+    "verified": false
+  },
+  "secret": {
+    "endpoint": "https://secrets.dev.athyper.test:8443",
+    "workspaceId": "ed696684-8309-4e0f-903a-8adece9246b7",
+    "environment": "dev",
+    "secretPath": "/",
+    "caSha256": "19bc5a31f2721713364b8e489d5b62727b832aca7b8f28934d539a51da8024a7",
+    "reference": "protected-values/44444444-4444-4444-8444-444444444444/qualification.bp.finance-reveal.01d4baa18931c720.bank",
+    "valueClass": "One public synthetic IBAN fixture; no customer data",
+    "overwriteExisting": false,
+    "retention": "Retain this synthetic secret while the associated test bank fixture is retained; inventory both as qualification artifacts.",
+    "physicalSecretName": "athyper_ref_3968521d7cc032fc6501b1adafe379071783fb1e7ca375d0c20135af354c3271"
+  },
+  "network": "Only a new TLS pass-through relay joins isolated and dev app networks; API/worker remain exclusively isolated. Existing shared containers unchanged.",
+  "access": "Use only existing parent-approved access until 16:00 MYT. Add, renew, extend or restore no grants.",
+  "sharedDevException": "Create one dedicated synthetic fixture secret in the existing dev Infisical project. Existing secrets and shared DEV application data/access remain unchanged.",
+  "activationAuthorized": false,
+  "compatibilityRetirementAuthorized": false,
+  "dispositionAcceptance": false,
+  "supersedesUnappliedRevision": "5c4316658e4dc8205ca620e4f008a7ef2e360c4dc603eaec06c951fe8a213c57",
+  "additionalChange": "Map Infisical-incompatible opaque references to a deterministic SHA-256 key; preserve existing compatible flat names. Read and write use identical mapping. No new grants or fixture scope.",
+  "validation": {
+    "adapterTests": 4,
+    "adapterBuild": "passed",
+    "canaryHealth": 200,
+    "tlsVerified": true,
+    "structuredSecretNotFound": true,
+    "secretCreated": false
+  },
+  "limitations": [
+    "Positive authenticated reveals still require execution after approval.",
+    "Admin session refresh reduced assurance to baseline; normal MFA is required for positive reveals.",
+    "No full UI, full Atlas conversation, Mesh, enforcement activation or compatibility retirement qualification."
+  ],
+  "proposalRevision": "52c03baf5ccdd276558ca8533a6e3927233bbc61c1f0c28f519edbfcba880c8d"
+}

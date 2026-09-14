@@ -17,6 +17,12 @@
       "node": "./src/environment.ts",
       "browser": "./src/browser-denied.ts",
       "default": "./src/browser-denied.ts"
+    },
+    "./runtime-environment": {
+      "types": "./src/runtime-environment.ts",
+      "node": "./src/runtime-environment.ts",
+      "browser": "./src/browser-denied.ts",
+      "default": "./src/browser-denied.ts"
     }
   },
   "scripts": {
@@ -30,7 +36,7 @@
   },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",
-    "@types/node": "^24.10.1",
+    "@types/node": "^25.6.0",
     "typescript": "^6.0.3"
   }
 }

@@ -77,7 +77,7 @@ export class AtlasBusinessContextStore {
   }
   /** Explicit same-tab fullscreen handoff, bound to the shell identity and a short expiry. */
   handoff(scope: string, threadId?: string): string | undefined {
-    if (!this.current) return;
+    if (!this.current && !threadId) return;
     try {
       const token = globalThis.crypto.randomUUID();
       sessionStorage.setItem(
@@ -85,7 +85,9 @@ export class AtlasBusinessContextStore {
         JSON.stringify({
           page: this.current,
           threadId:
-            threadId && this.isThreadBound(threadId, this.current.generationId)
+            threadId &&
+            (!this.current ||
+              this.isThreadBound(threadId, this.current.generationId))
               ? threadId
               : undefined,
           expiresAt: Date.now() + 300000,
@@ -109,6 +111,12 @@ export class AtlasBusinessContextStore {
       ) {
         sessionStorage.removeItem(key);
         return;
+      }
+      if (saved.page === undefined) {
+        return typeof saved.threadId === "string" &&
+          /^[0-9a-f-]{36}$/i.test(saved.threadId)
+          ? saved.threadId
+          : undefined;
       }
       const page = parseAtlasBusinessContext(saved.page);
       this.entries.set("fullscreen", { page, signature: JSON.stringify(page) });

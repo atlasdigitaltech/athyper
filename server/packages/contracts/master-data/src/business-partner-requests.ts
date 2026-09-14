@@ -93,7 +93,14 @@ export interface BusinessPartnerRequestAddress extends BusinessPartnerRequestExt
   readonly city?: string;
   readonly region?: string;
   readonly postalCode?: string;
+  readonly stateRegionCode?: string;
+  readonly regionEntryMode?: "directory" | "manual";
   readonly poBox?: string;
+  readonly buildingName?: string;
+  readonly floor?: string;
+  readonly unit?: string;
+  readonly houseNumber?: string;
+  readonly streetName?: string;
   readonly countryCode: string;
   readonly isPrimary?: boolean;
   readonly normalizedHash: string;
@@ -159,7 +166,17 @@ export interface BusinessPartnerRequestCertification extends BusinessPartnerRequ
   readonly companyCodeId?: string;
 }
 
+export interface BusinessPartnerRequestProfileRow extends BusinessPartnerRequestExtensionBase {
+  readonly [key: string]: unknown;
+}
+
 export interface BusinessPartnerRequestExtensions {
+  /** Captured request data only; not operational bank proposals. */
+  readonly bankAccounts?: readonly BusinessPartnerRequestProfileRow[];
+  readonly supportingDocuments?: readonly BusinessPartnerRequestProfileRow[];
+  readonly aliases?: readonly BusinessPartnerRequestProfileRow[];
+  readonly governanceRelations?: readonly BusinessPartnerRequestProfileRow[];
+  readonly relationships?: readonly BusinessPartnerRequestProfileRow[];
   readonly addresses?: readonly BusinessPartnerRequestAddress[];
   readonly contactPersons?: readonly BusinessPartnerRequestContactPerson[];
   readonly contactChannels?: readonly BusinessPartnerRequestContactChannel[];
@@ -265,14 +282,41 @@ export interface BusinessPartnerRequest {
 
 /** Stable case-native contracts for new UI and integration clients. */
 export type BusinessPartnerCase = BusinessPartnerRequest;
-export type CreateBusinessPartnerCaseCommand = CreateBusinessPartnerRequestCommand;
-export type PatchBusinessPartnerCaseCommand = Omit<PatchBusinessPartnerRequestCommand,"requestId"> & { readonly caseId:string };
-export type ValidateBusinessPartnerCaseCommand = Omit<ValidateBusinessPartnerRequestCommand,"requestId"> & { readonly caseId:string };
-export type SubmitBusinessPartnerCaseCommand = Omit<SubmitBusinessPartnerRequestCommand,"requestId"> & { readonly caseId:string };
-export type DecideBusinessPartnerCaseCommand = Omit<DecideBusinessPartnerRequestCommand,"requestId"|"workflowRequestId"|"workItemId"|"expectedRequestVersion"|"expectedWorkItemVersion"> & { readonly caseId:string;readonly cycleRunId:string;readonly cycleTaskId:string;readonly expectedVersion:number;readonly expectedTaskVersion:number };
-export type MaterializeBusinessPartnerCaseCommand = Omit<ApplyBusinessPartnerRequestCommand,"requestId"> & { readonly caseId:string };
+export type CreateBusinessPartnerCaseCommand =
+  CreateBusinessPartnerRequestCommand;
+export type PatchBusinessPartnerCaseCommand = Omit<
+  PatchBusinessPartnerRequestCommand,
+  "requestId"
+> & { readonly caseId: string };
+export type ValidateBusinessPartnerCaseCommand = Omit<
+  ValidateBusinessPartnerRequestCommand,
+  "requestId"
+> & { readonly caseId: string };
+export type SubmitBusinessPartnerCaseCommand = Omit<
+  SubmitBusinessPartnerRequestCommand,
+  "requestId"
+> & { readonly caseId: string };
+export type DecideBusinessPartnerCaseCommand = Omit<
+  DecideBusinessPartnerRequestCommand,
+  | "requestId"
+  | "workflowRequestId"
+  | "workItemId"
+  | "expectedRequestVersion"
+  | "expectedWorkItemVersion"
+> & {
+  readonly caseId: string;
+  readonly cycleRunId: string;
+  readonly cycleTaskId: string;
+  readonly expectedVersion: number;
+  readonly expectedTaskVersion: number;
+};
+export type MaterializeBusinessPartnerCaseCommand = Omit<
+  ApplyBusinessPartnerRequestCommand,
+  "requestId"
+> & { readonly caseId: string };
 
 export interface CreateBusinessPartnerRequestCommand {
+  readonly draftCapture?: boolean;
   readonly context: VerifiedRequestContext;
   readonly idempotencyKey: string;
   readonly kind: BusinessPartnerRequestKind;
@@ -295,6 +339,7 @@ export interface CreateBusinessPartnerRequestCommand {
 }
 
 export interface PatchBusinessPartnerRequestCommand {
+  readonly draftCapture?: boolean;
   readonly context: VerifiedRequestContext;
   readonly requestId: string;
   readonly expectedVersion: number;
@@ -334,11 +379,16 @@ export interface BusinessPartnerRequestValidationResult {
 export interface BusinessPartnerRequestView {
   readonly request: BusinessPartnerRequest;
   readonly validationFindings: readonly BusinessPartnerRequestValidationFinding[];
+  readonly validationRun?: Readonly<{evaluationId:string;evaluatedAt:string;snapshotId:string;requestVersion:number;stale:boolean}>;
   /** Whether the persisted evaluation belongs to the current saved snapshot. */
   readonly validationCurrent?: boolean;
   readonly snapshotId?: string;
   /** Owner-only previous saved snapshot; consumers must authorize its scope. */
-  readonly previousSnapshot?: { readonly id: string; readonly revision: number; readonly payload: Readonly<Record<string, unknown>> };
+  readonly previousSnapshot?: {
+    readonly id: string;
+    readonly revision: number;
+    readonly payload: Readonly<Record<string, unknown>>;
+  };
   readonly materializationProof?: BusinessPartnerRequestMaterializationProof;
   readonly onboardingCycle?: BusinessPartnerOnboardingCycleView;
   readonly workflow?: Readonly<{
@@ -356,7 +406,12 @@ export interface BusinessPartnerRequestView {
 
 export interface BusinessPartnerOnboardingCycleTaskView {
   readonly id: string;
-  readonly code: "INVITATION" | "REGISTRATION" | "DUPLICATE_REVIEW" | "QUALIFICATION" | string;
+  readonly code:
+    | "INVITATION"
+    | "REGISTRATION"
+    | "DUPLICATE_REVIEW"
+    | "QUALIFICATION"
+    | string;
   readonly name: string;
   readonly status: string;
   readonly completionMode: "manual" | "system" | "hybrid";
@@ -387,6 +442,7 @@ export interface BusinessPartnerWorkflowWorkItemView {
   readonly status: string;
   readonly rowVersion: number;
   readonly ownerPrincipalId?: string;
+  readonly ownerDisplayName?: string;
   readonly dueAt?: string;
   readonly priority: string;
   readonly decision?: string;
@@ -402,7 +458,12 @@ export interface BusinessPartnerWorkflowStageView {
   readonly mode: "serial" | "parallel";
   readonly status: string;
   readonly outcome?: string;
-  readonly quorum: Readonly<{ kind: "all" | "any" | "count" | "percentage"; value?: number; required: number; eligibleCount: number }>;
+  readonly quorum: Readonly<{
+    kind: "all" | "any" | "count" | "percentage";
+    value?: number;
+    required: number;
+    eligibleCount: number;
+  }>;
   readonly startedAt?: string;
   readonly completedAt?: string;
   readonly dueAt?: string;
@@ -483,7 +544,10 @@ export interface BusinessPartnerRequestWorkflowStageDefinition {
   readonly code: string;
   readonly name: string;
   readonly mode: "serial" | "parallel";
-  readonly quorum: Readonly<{ kind: "all" | "any" | "count" | "percentage"; value?: number }>;
+  readonly quorum: Readonly<{
+    kind: "all" | "any" | "count" | "percentage";
+    value?: number;
+  }>;
   readonly approverPrincipalIds: readonly string[];
   readonly routed: boolean;
   readonly routeEvidence?: Readonly<Record<string, unknown>>;
@@ -504,6 +568,7 @@ export interface BusinessPartnerRequestWorkflow {
   readonly workItemVersion?: number;
   readonly workItemStatus?: string;
   readonly ownerPrincipalId?: string;
+  readonly ownerDisplayName?: string;
 }
 
 export interface SubmitBusinessPartnerRequestCommand {
@@ -581,7 +646,8 @@ export interface BusinessPartnerRequestQuery {
 
 export interface BusinessPartnerRequestListQuery {
   readonly context: VerifiedRequestContext;
-  readonly operatingOrganizationId: string;
+  readonly operatingOrganizationId?: string;
+  readonly companyCodeId?: string;
   readonly status?: BusinessPartnerRequestStatus;
   readonly limit?: number;
   readonly beforeCreatedAt?: string;
@@ -598,8 +664,6 @@ export interface BusinessPartnerAggregate {
     id: string;
     code: string;
     name: string;
-    displayName?: string;
-    legalName?: string;
     partnerCategory: string;
     legalForm?: string;
     registrationCountryCode?: string;
@@ -676,13 +740,20 @@ export interface BusinessPartnerCaseExplanation {
   readonly descriptorHash: string;
   readonly status: string;
   readonly validation: "passed" | "failed" | "not_evaluated";
-  readonly findings: readonly { readonly code: string; readonly message: string }[];
+  readonly findings: readonly {
+    readonly code: string;
+    readonly message: string;
+  }[];
   readonly coverage: "partial";
   readonly diff: {
     readonly state: "partial" | "unavailable";
     readonly baseline: "previous_saved_snapshot";
     readonly baselineSnapshotId?: string;
     readonly baselineRevision?: number;
-    readonly changes: readonly { readonly field: string; readonly before: string | null; readonly after: string | null }[];
+    readonly changes: readonly {
+      readonly field: string;
+      readonly before: string | null;
+      readonly after: string | null;
+    }[];
   };
 }

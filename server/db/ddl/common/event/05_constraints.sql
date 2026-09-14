@@ -129,7 +129,7 @@ ALTER TABLE event.notification_delivery
 ALTER TABLE event.invalidation_dead_letter
   ADD CONSTRAINT invalidation_dead_letter_kind_chk CHECK (kind IN ('metadata','authorization')),
   ADD CONSTRAINT invalidation_dead_letter_plane_chk CHECK (plane_key IN ('studio','neon','mesh')),
-  ADD CONSTRAINT invalidation_dead_letter_scope_chk CHECK (scope_key ~ '^[A-Za-z0-9_.:-]{1,256}$'),
+  ADD CONSTRAINT invalidation_dead_letter_scope_chk CHECK (length(scope_key) BETWEEN 1 AND 256 AND scope_key ~ '^[A-Za-z0-9_.:-]+$'),
   ADD CONSTRAINT invalidation_dead_letter_attempt_chk CHECK (attempt_count > 0),
   ADD CONSTRAINT invalidation_dead_letter_payload_object_chk CHECK (jsonb_typeof(sanitized_payload)='object'),
   ADD CONSTRAINT invalidation_dead_letter_payload_size_chk CHECK (octet_length(sanitized_payload::text) <= 4096);

@@ -90,7 +90,7 @@ END $$;
 CREATE OR REPLACE FUNCTION document.trg_guard_entity_case_mutation() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,event AS $$
 DECLARE execution uuid:=NULLIF(current_setting('app.entity_case_command_execution_id',true),'')::uuid;tenant uuid:=COALESCE(NEW.tenant_id,OLD.tenant_id);
 BEGIN
- IF execution IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution e WHERE e.id=execution AND e.tenant_id=tenant AND e.command_code IN('entity.case.draft.write','entity.case.lifecycle','entity.case.materialize.internal_business_partner','entity.case.materialize.business_partner_role','entity.case.materialize.business_partner_company','entity.case.materialize.business_partner_change','entity.case.backfill.business_partner_request') AND e.status='processing' AND e.actor_principal_id=master.current_principal_id_soft()) THEN RAISE EXCEPTION 'Entity case mutations require the governed command' USING ERRCODE='insufficient_privilege';END IF;RETURN COALESCE(NEW,OLD);
+ IF execution IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution e WHERE e.id=execution AND e.tenant_id=tenant AND e.command_code IN('entity.case.draft.write','entity.case.validation','entity.case.lifecycle','entity.case.materialize.internal_business_partner','entity.case.materialize.business_partner_role','entity.case.materialize.business_partner_company','entity.case.materialize.business_partner_change','entity.case.backfill.business_partner_request') AND e.status='processing' AND e.actor_principal_id=master.current_principal_id_soft()) THEN RAISE EXCEPTION 'Entity case mutations require the governed command' USING ERRCODE='insufficient_privilege';END IF;RETURN COALESCE(NEW,OLD);
 END $$;
 
 CREATE OR REPLACE FUNCTION document.command_entity_case_lifecycle(
@@ -161,7 +161,7 @@ BEGIN
  IF NOT FOUND THEN
   IF p_expected_version<>0 OR p_base_snapshot_id IS NOT NULL THEN RAISE EXCEPTION 'Entity case was not found at expected version' USING ERRCODE='serialization_failure';END IF;candidate:=p_proposed_payload;before_version:=0;new_version:=1;outcome:='accepted';
   new_snapshot:=snapshot.fn_capture_entity('document.entity_case',p_case_id,p_case_code,1,p_entity_contract_hash,1,'entity.case.draft.created','create',candidate,p_correlation_id,NULL,NULL,NULL,'legal','governed-entity-case');
-  INSERT INTO document.entity_case(id,tenant_id,case_code,entity_code,operation_code,target_entity_id,pre_materialization_ref,entity_contract_id,entity_contract_hash,form_template_release_id,form_template_release_no,form_template_hash,current_snapshot_id,status,row_version,idempotency_key,created_by) VALUES(p_case_id,p_tenant_id,p_case_code,p_entity_code,p_operation_code,p_target_entity_id,p_pre_materialization_ref,p_entity_contract_id,p_entity_contract_hash,p_form_template_release_id,p_form_template_release_no,p_form_template_hash,new_snapshot,'draft',1,p_idempotency_key,p_actor_id);
+  INSERT INTO document.entity_case(id,tenant_id,case_code,entity_code,operation_code,target_entity_id,pre_materialization_ref,entity_contract_id,entity_contract_hash,form_template_release_id,form_template_release_no,form_template_hash,current_snapshot_id,status,row_version,idempotency_key,created_by,owner_company_code_id) VALUES(p_case_id,p_tenant_id,p_case_code,p_entity_code,p_operation_code,p_target_entity_id,p_pre_materialization_ref,p_entity_contract_id,p_entity_contract_hash,p_form_template_release_id,p_form_template_release_no,p_form_template_hash,new_snapshot,'draft',1,p_idempotency_key,p_actor_id,CASE WHEN p_entity_code='master.business_partner_company_setup_request' THEN NULLIF(candidate->>'companyCodeId','')::uuid ELSE NULL END);
  ELSE
   IF ROW(current.case_code,current.entity_code,current.operation_code,current.target_entity_id,current.pre_materialization_ref,current.entity_contract_id,current.entity_contract_hash,current.form_template_release_id,current.form_template_release_no,current.form_template_hash) IS DISTINCT FROM ROW(p_case_code,p_entity_code,p_operation_code,p_target_entity_id,p_pre_materialization_ref,p_entity_contract_id,p_entity_contract_hash,p_form_template_release_id,p_form_template_release_no,p_form_template_hash) OR current.status<>'draft' THEN RAISE EXCEPTION 'Entity case identity or lifecycle is not draft-editable' USING ERRCODE='object_not_in_prerequisite_state';END IF;
   IF p_expected_version>current.row_version THEN RAISE EXCEPTION 'Entity case expected version is ahead of current state' USING ERRCODE='serialization_failure';END IF;before_version:=current.row_version;
@@ -207,3 +207,36 @@ BEGIN
      LIMIT p_limit;
 END;
 $$;
+
+
+CREATE OR REPLACE FUNCTION document.trg_company_owned_case() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE payload jsonb;
+BEGIN
+ IF TG_OP='UPDATE' AND OLD.entity_code='master.business_partner_company_setup_request' AND
+    (NEW.tenant_id,NEW.id,NEW.entity_code,NEW.owner_company_code_id,NEW.target_entity_id)
+    IS DISTINCT FROM (OLD.tenant_id,OLD.id,OLD.entity_code,OLD.owner_company_code_id,OLD.target_entity_id) THEN
+   RAISE EXCEPTION 'COMPANY_CASE_OWNER_IMMUTABLE' USING ERRCODE='check_violation';
+ END IF;
+ IF TG_OP='UPDATE' AND OLD.entity_code<>NEW.entity_code AND NEW.entity_code='master.business_partner_company_setup_request' THEN
+   RAISE EXCEPTION 'COMPANY_CASE_RECLASSIFICATION_FORBIDDEN' USING ERRCODE='check_violation';
+ END IF;
+ IF NEW.entity_code<>'master.business_partner_company_setup_request' THEN RETURN NEW; END IF;
+ SELECT payload_json INTO STRICT payload FROM snapshot.entity_snapshot
+ WHERE tenant_id=NEW.tenant_id AND snapshot_id=NEW.current_snapshot_id;
+ IF NEW.owner_company_code_id IS NULL OR NEW.target_entity_id IS NULL
+    OR payload->>'companyCodeId' IS DISTINCT FROM NEW.owner_company_code_id::text
+    OR NEW.operation_code IS DISTINCT FROM 'configure_company' THEN
+   RAISE EXCEPTION 'COMPANY_CASE_SNAPSHOT_OWNER_MISMATCH' USING ERRCODE='check_violation';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM master.business_partner WHERE tenant_id=NEW.tenant_id AND id=NEW.target_entity_id)
+    OR NOT EXISTS(SELECT 1 FROM master.company_code WHERE tenant_id=NEW.tenant_id AND id=NEW.owner_company_code_id AND status='active' AND is_active)
+    OR NOT EXISTS(SELECT 1 FROM master.operating_organization o
+      JOIN master.operating_organization_company_assignment a ON a.tenant_id=o.tenant_id AND a.operating_organization_id=o.id
+      WHERE o.tenant_id=NEW.tenant_id AND o.id::text=payload->>'operatingOrganizationId' AND o.status='active'
+       AND a.company_code_id=NEW.owner_company_code_id AND a.status='active'
+       AND a.effective_from<=current_date AND (a.effective_until IS NULL OR a.effective_until>current_date)) THEN
+   RAISE EXCEPTION 'COMPANY_CASE_CATALOG_INCOMPATIBLE' USING ERRCODE='check_violation';
+ END IF;
+ RETURN NEW;
+END $$;

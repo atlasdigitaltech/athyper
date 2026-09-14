@@ -27,6 +27,10 @@ COPY --from=installer /repo/ ./
 COPY --from=pruner /repo/out/full/ ./
 COPY tooling/tools/scripts/prepare-server-runtime-packages.mjs /tmp/prepare-server-runtime-packages.mjs
 
+# Tests are qualified separately; test-only helpers must not enter production
+# package compilation or the deployed runtime graph. This affects the build copy only.
+RUN find server packages -type d -name __tests__ -prune -exec rm -rf '{}' '+'
+
 # Build workspace dependencies first, then the host
 RUN pnpm --filter "@athyper/platform-i18n" run build
 RUN pnpm --filter "@athyper/platform-temporal" run build
@@ -34,7 +38,10 @@ RUN pnpm --filter "@athyper/contract-platform-entity-runtime" run build
 RUN pnpm --filter "@athyper/contract-platform-entity-list" run build
 RUN pnpm --filter "@athyper/contract-athyper-onboarding" run build
 RUN pnpm --filter "@athyper/contract-platform-dashboard" run build
-RUN pnpm --filter "@athyper/server-adapter-db-neon" run --if-present codegen
+RUN pnpm --filter "@athyper/contract-platform-ai" run build
+# Generate every plane's types from the committed Prisma schemas. A clean
+# candidate must not depend on ignored files left by a developer's local pull.
+RUN pnpm --filter "@athyper/server-db" run codegen
 RUN find server -name '*.tsbuildinfo' -delete
 RUN pnpm --filter "@athyper/server-platform-host^..." --if-present run build
 RUN pnpm --filter "@athyper/server-platform-host" run build
@@ -45,10 +52,17 @@ RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platf
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/entity-runtime
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/athyper/onboarding
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/dashboard
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/ai
 
+# Cache registry metadata as well as package tarballs: legacy deployment
+# re-resolves metadata, and failed build layers otherwise discard successful fetches.
 # Deploy the production dependency graph
 RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharing=locked \
+    --mount=type=cache,id=athyper-server-pnpm-metadata-v1,target=/root/.cache/pnpm,sharing=locked \
     pnpm config set store-dir /pnpm/store && \
+    pnpm config set network-concurrency 4 && \
+    pnpm config set fetch-timeout 120000 && \
+    pnpm config set prefer-offline true && \
     pnpm --filter "@athyper/server-platform-host" --prod deploy --legacy /runtime && \
     pnpm --filter "@athyper/server-db" --prod deploy --legacy /db-runtime && \
     node /tmp/prepare-server-runtime-packages.mjs /repo/server/packages /runtime && \
@@ -57,15 +71,17 @@ RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharin
     node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/entity-list /runtime && \
     node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/entity-runtime /runtime && \
     node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/athyper/onboarding /runtime && \
-    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/dashboard /runtime
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/dashboard /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/ai /runtime
 
 # Exercise the emitted dependency graph before an image can replace a running API.
 RUN cd /runtime && node --input-type=module -e \
-    "await import('@athyper/server-service-master-data'); await import('@athyper/server-service-publication')"
+    "await import('@athyper/server-service-master-data'); await import('@athyper/server-service-publication'); await import('./dist/processes/api/index.js'); await import('./dist/processes/worker/index.js')"
 
 FROM node:24.19.0-alpine3.23@sha256:244cc2b53f46f9e876304391d17682b0ddae9ac33491f4857e25e35a36ba7995 AS runtime
 
-RUN apk add --no-cache postgresql-client wget \
+RUN apk upgrade --no-cache libcrypto3 libssl3 \
+ && apk add --no-cache postgresql-client wget \
  && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
     /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/pnpm /usr/local/bin/pnpx
 

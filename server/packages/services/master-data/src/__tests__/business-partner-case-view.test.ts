@@ -80,6 +80,29 @@ describe("GovernedCaseViewV1 Business Partner producer", () => {
     expect(Object.isFrozen(value)).toBe(true);
   });
 
+  it("uses separate company permissions for lifecycle action projection", () => {
+    expect(
+      toGovernedBusinessPartnerCaseView(request(), {
+        companyPilot: true,
+        permissionCodes: allPermissions,
+      }).allowedActions,
+    ).toEqual([]);
+    const independent = allPermissions.map((code) =>
+      code.replace(".entity_case.", ".bp_company_setup_request."),
+    );
+    expect(
+      toGovernedBusinessPartnerCaseView(request(), {
+        companyPilot: true,
+        permissionCodes: independent,
+      }).allowedActions.map((action) => action.id),
+    ).toEqual(["edit", "validate", "submit"]);
+    expect(
+      toGovernedBusinessPartnerCaseView(request(), {
+        permissionCodes: independent,
+      }).allowedActions,
+    ).toEqual([]);
+  });
+
   it("projects validation and terminal failures without inventing evidence", () => {
     const value = toGovernedBusinessPartnerCaseView(
       request({

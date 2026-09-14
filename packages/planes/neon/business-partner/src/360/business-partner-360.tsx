@@ -3,7 +3,11 @@ import { BUSINESS_PARTNER_360_PANEL } from "./panel-definition";
 import { EntityRecord360Panel } from "@athyper/platform-entity-form-detail";
 import { PrimaryDetails } from "./components/primary-details";
 import { ResourceSection } from "./components/resource-section";
-import { PageHeader, useRecordPage, useAtlasBusinessContextPublisher } from "@athyper/platform-shell";
+import {
+  PageHeader,
+  useRecordPage,
+  useAtlasBusinessContextPublisher,
+} from "@athyper/platform-shell";
 
 import {
   useApiClient,
@@ -23,6 +27,7 @@ import {
   RecordTechnicalDetails,
 } from "./components/access-scope";
 import { Overview } from "./components/overview";
+import { TransactionContextBar } from "./components/transaction-context-bar";
 import { IdentityHeader } from "./components/identity-header";
 import {
   RestrictedSection,
@@ -65,7 +70,8 @@ export function BusinessPartner360Shell({
     [revision, setRevision] = useState(0),
     [retry, setRetry] = useState(0),
     [showTransactionContext, setShowTransactionContext] = useState(false),
-    [requiredCoordinates, setRequiredCoordinates] = useState<readonly string[]>(),
+    [requiredCoordinates, setRequiredCoordinates] =
+      useState<readonly string[]>(),
     [, setScrollRevision] = useState(0);
   const url = readUrl();
   const authEpoch = identity.scope?.authEpoch ?? 0;
@@ -98,11 +104,20 @@ export function BusinessPartner360Shell({
       authEpoch,
     ],
   );
-  const panel = realignPartnerPanel(summary?.recordHeader?.panel ?? BUSINESS_PARTNER_360_PANEL);
+  const panel = realignPartnerPanel(
+    summary?.recordHeader?.panel ?? BUSINESS_PARTNER_360_PANEL,
+  );
   const overviewTab = panel.tabs.find((tab) => tab.provider === "360")!;
   const legacyTab = panel.tabs.find((tab) => tab.sectionKey === url.section);
   const tab =
-    (["roles-scope", "supplier-company", "customer-company"].includes(url.section) ? panel.tabs.find(tab=>tab.key==="roles") : undefined) ?? panel.tabs.find((tab) => tab.key === url.tab) ?? legacyTab ?? overviewTab;
+    (["roles-scope", "supplier-company", "customer-company"].includes(
+      url.section,
+    )
+      ? panel.tabs.find((tab) => tab.key === "roles")
+      : undefined) ??
+    panel.tabs.find((tab) => tab.key === url.tab) ??
+    legacyTab ??
+    overviewTab;
   const railSections = panel.sections.filter((code) =>
     summary?.sections.some((item) => item.code === code),
   );
@@ -112,7 +127,41 @@ export function BusinessPartner360Shell({
       ? url.section
       : (railSections[0] ?? "overview"));
   const key = summaryQueryKey(query).join(":");
-  useAtlasBusinessContextPublisher({kind:"record",entityCode:"business_partner",recordId:businessPartnerId,section,savedRevision:loadedKey===key&&summary?String(summary.businessPartnerVersion):undefined,roleLens:url.roleLens,dirty:false,asOf:url.asOf?`${url.asOf}T00:00:00.000Z`:undefined,workContext:operatingOrganizationId||companyCodeId||legalEntityId?{operatingOrganizationId,companyCodeId,legalEntityId}:undefined});
+  useAtlasBusinessContextPublisher(
+    loadedKey === key && summary && summary.identity.id === businessPartnerId
+      ? {
+          kind: "record",
+          entityCode: "business_partner",
+          recordId: businessPartnerId,
+          section,
+          savedRevision: String(summary.businessPartnerVersion),
+          roleLens: url.roleLens,
+          dirty: false,
+          asOf: url.asOf ? `${url.asOf}T00:00:00.000Z` : undefined,
+          workContext:
+            summary.scope.operatingOrganizationId ||
+            summary.scope.companyCodeId ||
+            summary.scope.legalEntityId
+              ? {
+                  operatingOrganizationId:
+                    summary.scope.operatingOrganizationId,
+                  companyCodeId: summary.scope.companyCodeId,
+                  legalEntityId: summary.scope.legalEntityId,
+                }
+              : undefined,
+        }
+      : undefined,
+  );
+
+  useEffect(() => {
+    if (!showTransactionContext) return;
+    const frame = window.requestAnimationFrame(() => {
+      const editor = document.getElementById("bp-transaction-context");
+      editor?.focus({ preventScroll: true });
+      editor?.scrollIntoView?.({ block: "nearest" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [showTransactionContext]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -214,10 +263,7 @@ export function BusinessPartner360Shell({
     return manifest?.authorization === "restricted" ? (
       <RestrictedSection />
     ) : manifest?.reasonCode === "BP_360_SCOPE_REQUIRED" ? (
-      <div className="bp360-section-list">
-        <ScopeSelectionState />
-        <AccessScopeCard />
-      </div>
+      <ScopeSelectionState />
     ) : section === "comments" || section === "attachments" ? (
       <ResourceSection key={section} code={section} />
     ) : isCommon(section) ? (
@@ -260,7 +306,10 @@ export function BusinessPartner360Shell({
     navigate({
       section: code,
       tab:
-        (["supplier-company","customer-company"].includes(code)?"roles":undefined) ?? panel.tabs.find((tab) => tab.sectionKey === code)?.key ??
+        (["supplier-company", "customer-company"].includes(code)
+          ? "roles"
+          : undefined) ??
+        panel.tabs.find((tab) => tab.sectionKey === code)?.key ??
         overviewTab.key,
     });
   const observeSection = (code: string) => {
@@ -278,19 +327,27 @@ export function BusinessPartner360Shell({
         section,
         roleLens: url.roleLens,
         selectSection,
-        openTransactionContext: decision => { setRequiredCoordinates(decision?.missingCoordinates); setShowTransactionContext(true); },
-        retryDecisions: () => { setSummary(undefined); setRetry(value => value + 1); },
+        openTransactionContext: (decision) => {
+          setRequiredCoordinates(decision?.missingCoordinates);
+          setShowTransactionContext(true);
+        },
+        retryDecisions: () => {
+          setSummary(undefined);
+          setRetry((value) => value + 1);
+        },
         selectRole: (roleLens) => navigate({ roleLens }),
         selectScope: (operatingOrganizationId, companyCodeId) => {
           setShowTransactionContext(false);
           setSummary(undefined);
-          setRetry(value => value + 1);
+          setRetry((value) => value + 1);
           const next = new URL(window.location.href);
           next.searchParams.set(
             "operatingOrganizationId",
             operatingOrganizationId,
           );
-          if (companyCodeId) next.searchParams.set("companyCodeId", companyCodeId); else next.searchParams.delete("companyCodeId");
+          if (companyCodeId)
+            next.searchParams.set("companyCodeId", companyCodeId);
+          else next.searchParams.delete("companyCodeId");
           next.searchParams.delete("legalEntityId");
           window.history.pushState({}, "", next);
           setRevision((value) => value + 1);
@@ -305,8 +362,22 @@ export function BusinessPartner360Shell({
         data-bp360-historical={url.asOf ? "true" : "false"}
       >
         <IdentityHeader />
-        <button type="button" onClick={() => { setRequiredCoordinates(undefined); setShowTransactionContext(value => !value); }} aria-expanded={showTransactionContext} aria-controls="bp-transaction-context">Select transaction context</button>
-        {showTransactionContext ? <section id="bp-transaction-context" aria-label="Transaction context"><AccessScopeCard requiredCoordinates={requiredCoordinates} /></section> : null}
+        <TransactionContextBar
+          expanded={showTransactionContext}
+          onToggle={() => {
+            setRequiredCoordinates(undefined);
+            setShowTransactionContext((value) => !value);
+          }}
+        />
+        {showTransactionContext ? (
+          <section
+            id="bp-transaction-context"
+            tabIndex={-1}
+            aria-label="Transaction context"
+          >
+            <AccessScopeCard requiredCoordinates={requiredCoordinates} />
+          </section>
+        ) : null}
         <EntityRecord360Panel
           key={key}
           panel={panel}
@@ -325,7 +396,12 @@ export function BusinessPartner360Shell({
             ...(item.authorization === "restricted"
               ? { status: "Restricted" }
               : item.reasonCode === "BP_360_SCOPE_REQUIRED"
-                ? { status: summary.recordHeader?.sections.find(section => section.key === item.code)?.scopePrompt ?? "Select scope" }
+                ? {
+                    status:
+                      summary.recordHeader?.sections.find(
+                        (section) => section.key === item.code,
+                      )?.scopePrompt ?? "Select scope",
+                  }
                 : item.state === "stale"
                   ? { status: "Needs refresh" }
                   : {}),

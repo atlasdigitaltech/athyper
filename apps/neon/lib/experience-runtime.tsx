@@ -8,6 +8,7 @@ import { SEMANTIC_ICONS } from "@athyper/platform-icons";
 import {
   useApiClient,
   useExperienceNavigation,
+  usePermissions,
 } from "@athyper/platform-shell-app-foundation";
 import { useActivityCenterData } from "@athyper/platform-shell-activity-center-data";
 import type { ExperienceRuntimeRegistry } from "@athyper/platform-shell-dashboard";
@@ -36,20 +37,18 @@ const HOME_PROPS = {
         "Create, validate, approve, and maintain trusted master records.",
       href: "/mdg",
       status: "Available workspace",
-      modules: ["Business Partner"],
+      modules: ["Business Partners"],
       access: { moduleCode: "bp" },
     },
   ],
   quickActions: [
     {
-      label: "New supplier request",
-      description: "Start governed supplier onboarding",
+      label: "New request",
+      description: "Onboard a supplier or customer",
       href: "/mdg/business-partner/new",
       access: {
         moduleCode: "bp",
-        requiredPermissions: [
-          "neon.relationship.entity_case.create",
-        ],
+        requiredPermissions: ["neon.relationship.entity_case.create"],
       },
     },
     {
@@ -58,9 +57,7 @@ const HOME_PROPS = {
       href: "/mdg/business-partner/requests",
       access: {
         moduleCode: "bp",
-        requiredPermissions: [
-          "neon.relationship.entity_case.read",
-        ],
+        requiredPermissions: ["neon.relationship.entity_case.read"],
       },
     },
     {
@@ -101,22 +98,18 @@ const HOME_PROPS = {
       keywords: ["pending approval", "priority tasks", "review"],
       access: {
         moduleCode: "bp",
-        requiredPermissions: [
-          "neon.relationship.entity_case.read",
-        ],
+        requiredPermissions: ["neon.relationship.entity_case.read"],
       },
     },
     {
-      title: "New supplier request",
-      description: "Start a governed supplier onboarding request",
+      title: "New request",
+      description: "Onboard a supplier or customer",
       href: "/mdg/business-partner/new",
       category: "Action",
-      keywords: ["create supplier", "onboard"],
+      keywords: ["create supplier", "create customer", "onboard"],
       access: {
         moduleCode: "bp",
-        requiredPermissions: [
-          "neon.relationship.entity_case.create",
-        ],
+        requiredPermissions: ["neon.relationship.entity_case.create"],
       },
     },
   ],
@@ -220,6 +213,18 @@ function NeonWorkspaceExperience({
   readonly surfaceKey: string;
   readonly context?: Readonly<Record<string, string>>;
 }) {
+  const navigation = useExperienceNavigation();
+  const permissions = usePermissions();
+  const directoryRole =
+    workspaceCode === "scm"
+      ? "supplier"
+      : workspaceCode === "com"
+        ? "customer"
+        : undefined;
+  const canBrowsePartners =
+    navigation.some((workspace) =>
+      workspace.modules.some((module) => module.code === "bp"),
+    ) && permissions.has("neon.relationship.business_partner.read");
   const relevance = useWorkspaceModuleRelevance(
       workspaceCode,
       entitledModuleCodes,
@@ -249,6 +254,16 @@ function NeonWorkspaceExperience({
         badges={badgeState.badges}
         onTogglePinned={relevance.togglePinned}
       />
+      {directoryRole && canBrowsePartners ? (
+        <nav aria-label="Business partner shortcuts">
+          <a
+            className="a-button a-button--secondary"
+            href={`/mdg/business-partner/manage?role=${directoryRole}`}
+          >
+            {directoryRole === "supplier" ? "Suppliers" : "Customers"}
+          </a>
+        </nav>
+      ) : null}
       <ResolvedNeonExperienceSurface
         surfaceKey={surfaceKey}
         context={context}

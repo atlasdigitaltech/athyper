@@ -1,3 +1,5 @@
-import { NewCustomerRequest } from "@athyper/product-neon-business-partner";
+import { BusinessPartnerRequestEntry } from "@athyper/product-neon-business-partner";
 
-export default function NewCustomerPage(){return <NewCustomerRequest/>;}
+export default function NewCustomerPage() {
+  return <BusinessPartnerRequestEntry initialRole="customer" />;
+}

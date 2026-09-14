@@ -90,6 +90,21 @@ export function registerAttachmentRoutes(
     "/api/attachments/:attachmentId/finalize",
     options.authenticate,
     async (request, response, next) => {
+      // A client that disconnects mid-finalize (navigated away, timed out its own request) has
+      // no one left waiting on the download+scan stream — release it instead of running it to
+      // completion for nobody. `response`'s "close" is the connection-terminated signal; `request`
+      // "close" is documented to fire once the request stream ends, including after a normal
+      // response completes, and would misfire here. `writableEnded` distinguishes a premature
+      // close (the response was never finished) from an ordinary one.
+      const abortOnDisconnect = new AbortController();
+      const onResponseClose = () => {
+        if (!response.writableEnded) {
+          abortOnDisconnect.abort(
+            new Error("Client disconnected before finalize completed"),
+          );
+        }
+      };
+      response.once("close", onResponseClose);
       try {
         const context = options.readContext(response),
           attachmentId = uuidValue(
@@ -112,12 +127,15 @@ export function registerAttachmentRoutes(
             attachmentId,
           },
           text(value, "contentType", 255),
+          { signal: abortOnDisconnect.signal },
         );
         response
           .status(200)
           .json({ attachmentId: result.id, status: result.status });
       } catch (error) {
         handle(error, response, next);
+      } finally {
+        response.off("close", onResponseClose);
       }
     },
   );

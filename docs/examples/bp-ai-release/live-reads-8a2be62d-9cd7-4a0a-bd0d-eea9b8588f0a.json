@@ -1,0 +1,192 @@
+{
+  "schema": "bp-ai-live-read-probe/1",
+  "observedAt": "2026-09-10T10:14:55.015Z",
+  "id": "8a2be62d-9cd7-4a0a-bd0d-eea9b8588f0a",
+  "images": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "digest": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "digest": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "sha256:473cd291449c3cd5e7aff50138e20d186f3f792adf30f3de0386d2982d8a223f",
+      "digest": "sha256:473cd291449c3cd5e7aff50138e20d186f3f792adf30f3de0386d2982d8a223f",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:0dc4c1d5cb629e7d8532ff6b7f2e01d05beaa228248c3c995f4697858e662d27",
+      "digest": "sha256:0dc4c1d5cb629e7d8532ff6b7f2e01d05beaa228248c3c995f4697858e662d27",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:c0140022752e58f3f1d901d3adb3948210bb161c519eec52ac45175f18cc3608",
+      "digest": "sha256:c0140022752e58f3f1d901d3adb3948210bb161c519eec52ac45175f18cc3608",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "checks": [
+    "elevated owner remains denied by existing Atlas admission; no grants changed"
+  ],
+  "trials": [
+    {
+      "name": "record-summary",
+      "expectation": "cited",
+      "threadId": "3d8d8ec2-a4f3-468a-b2ec-b1963a9931d4",
+      "status": 200,
+      "elapsedMs": 1863,
+      "traceSha256": "a0b1ff10f3da4120835ae3fe2950e094e5fb643b6c58588116e8350bf999fcd0",
+      "runId": "076b764b-c8c8-4c8b-9c8c-54a26ca3ebb6",
+      "terminal": "run.completed",
+      "intents": [
+        {
+          "kind": "read"
+        }
+      ],
+      "tools": [
+        {
+          "code": "entity_read_record",
+          "outcome": "completed"
+        }
+      ],
+      "citations": [
+        {
+          "entityCode": "business_partner",
+          "recordId": "f7688c3d-8c92-5651-a469-da3f4f786375"
+        }
+      ],
+      "providerCalls": 0,
+      "replayPassed": true,
+      "passed": true
+    },
+    {
+      "name": "readiness-missing-scope",
+      "expectation": "clarify",
+      "threadId": "5ab55110-8244-449d-9325-b1d9e6f5a899",
+      "status": 200,
+      "elapsedMs": 11667,
+      "traceSha256": "aa1b92856865b665e1f01691de4c479e9fdfa5f80338a34c2e01157a3cc4f231",
+      "runId": "59016302-f558-44b1-af4f-8199c81cecce",
+      "terminal": "run.completed",
+      "intents": [
+        {
+          "kind": "delegate"
+        }
+      ],
+      "tools": [],
+      "citations": [],
+      "providerCalls": 1,
+      "passed": false,
+      "errorCode": "ERR_ASSERTION",
+      "error": "Fixture assertion failed"
+    },
+    {
+      "name": "eligibility-missing-scope",
+      "expectation": "clarify",
+      "threadId": "fca43290-e557-4f19-bf8c-ab0224611760",
+      "status": 200,
+      "elapsedMs": 6431,
+      "traceSha256": "a994a7e25b61b169297b5d9b59ad2257bc0ed6b13027ef97a6bc3436f521abd5",
+      "runId": "82fdb7e6-bfcd-4dd4-9af8-5c9c50a75a71",
+      "terminal": "run.completed",
+      "intents": [
+        {
+          "kind": "delegate"
+        }
+      ],
+      "tools": [],
+      "citations": [],
+      "providerCalls": 1,
+      "passed": false,
+      "errorCode": "ERR_ASSERTION",
+      "error": "Fixture assertion failed"
+    },
+    {
+      "name": "selected-manage-insights",
+      "expectation": "observe",
+      "threadId": "1eceea18-d1e2-491a-880f-c1c5af58cd2d",
+      "status": 200,
+      "elapsedMs": 122,
+      "traceSha256": "1d974a01090dd9cf2b8ee6507a9645f56aaa8c0e81a0f7ad7794206257f42f8a",
+      "runId": "9a2e4a74-fc5c-479c-9cf5-58d823c40f5e",
+      "terminal": "run.completed",
+      "intents": [
+        {
+          "kind": "denied"
+        }
+      ],
+      "tools": [],
+      "citations": [],
+      "providerCalls": 0,
+      "replayPassed": true,
+      "passed": false,
+      "limit": "Observation only; needs scoped owner facts and population/count parity before qualification."
+    }
+  ],
+  "releaseQualified": false,
+  "admin": {
+    "authenticated": true,
+    "assurance": "elevated",
+    "policyRevision": "atlas-local-v4:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+  },
+  "owner": {
+    "authenticated": true,
+    "assurance": "elevated",
+    "chatAllowed": false
+  },
+  "finalImages": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "digest": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "digest": "sha256:76e1aa863708c5697cf625b6dce195a89811a7f52cea7e55b4e4aaecfce911e9",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "sha256:473cd291449c3cd5e7aff50138e20d186f3f792adf30f3de0386d2982d8a223f",
+      "digest": "sha256:473cd291449c3cd5e7aff50138e20d186f3f792adf30f3de0386d2982d8a223f",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:0dc4c1d5cb629e7d8532ff6b7f2e01d05beaa228248c3c995f4697858e662d27",
+      "digest": "sha256:0dc4c1d5cb629e7d8532ff6b7f2e01d05beaa228248c3c995f4697858e662d27",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:c0140022752e58f3f1d901d3adb3948210bb161c519eec52ac45175f18cc3608",
+      "digest": "sha256:c0140022752e58f3f1d901d3adb3948210bb161c519eec52ac45175f18cc3608",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "stableDeployment": true,
+  "passed": false
+}

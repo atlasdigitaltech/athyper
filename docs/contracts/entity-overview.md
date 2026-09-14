@@ -69,3 +69,26 @@ Removal uses the existing bookmark mutation and emits the shared bookmark-change
 event. Undo restores the record through the scoped add operation. Failed mutations
 retain the row or Undo action. Scope changes unmount the panel and suppress stale
 responses. Loading and error states remain local to Favourites.
+
+## Label ownership
+
+Overview panel titles, descriptions, empty states, and record-view link copy use
+`entity.overview.*` keys from the platform i18n entity catalog. The shared shell
+includes its English defaults in the fallback catalog. Locale catalogs can
+supply translations; untranslated keys currently use English. Published section,
+view, and record labels remain descriptor-owned. Shortcut links are not numbered
+because they are destinations, not ordered steps.
+
+Business Partner request copy is owned by intake flow/surface/lookup metadata.
+The role field retains its required legend (`Role`) without a duplicate section
+heading. Creation actions use `New supplier request` and `New customer request`;
+their visibility conditions and operation keys are unchanged. The pre-surface
+compatibility UI uses the same wording.
+
+For existing authoring graphs, apply `withBusinessPartnerLabels` from
+`server/db/scripts/provisioning/business-partner-labels.ts` before the normal
+review and publication process. Both Business Partner intake provisioning and
+entry-policy provisioning call this transform. It updates exact old defaults,
+preserves custom copy, and is idempotent. Rebuilding the frontend updates shared
+Overview copy; existing published request descriptors require a new metadata
+publication. Do not modify immutable published release payloads in place.

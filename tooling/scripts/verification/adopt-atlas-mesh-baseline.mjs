@@ -1,3 +1,4 @@
+import { migrationSourcePath } from "./migration-source.mjs";
 // DEV Cirrus operator migration. No browser identity, grants or approvals are used.
 import { spawn, execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -16,9 +17,9 @@ const expected = { ...base, tenantId, entityCode: 'network_relationship' };
 const quote = value => "'" + String(value).replaceAll("'", "''") + "'";
 const psqlArgs = plane => ['exec', '-i', 'athyper-dev-db-1', 'psql', '-X', '-qAt', '-U', 'postgres', '-d', `athyper_${plane}`, '-v', 'ON_ERROR_STOP=1'];
 const runStudio = input => { try { return execFileSync('docker', psqlArgs('studio'), { input, encoding: 'utf8', timeout: 20000, maxBuffer: 4e6, stdio: ['pipe', 'pipe', 'pipe'] }); } catch { throw Error('Studio adoption transaction failed; rolled back. Inspect database diagnostics locally.'); } };
-const schema = readFileSync('server/db/migrations/20260910_mesh_global_baseline_import.sql', 'utf8').replace(/^BEGIN;\s*/, '').replace(/COMMIT;\s*$/, '');
+const schema = readFileSync('server/db/scripts/operations/upgrades/publication/20260910_mesh_global_baseline_import.sql', 'utf8').replace(/^BEGIN;\s*/, '').replace(/COMMIT;\s*$/, '');
 const migrationName = '20260910_mesh_global_baseline_import.sql';
-const migrationHash = createHash('sha256').update(readFileSync('server/db/migrations/'+migrationName)).digest('hex');
+const migrationHash = createHash('sha256').update(readFileSync(migrationSourcePath(migrationName))).digest('hex');
 const end = apply ? 'COMMIT;' : 'ROLLBACK;';
 const preamble = `BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='15s';
  SELECT set_config('app.current_tenant_id',${quote(tenantId)},true);

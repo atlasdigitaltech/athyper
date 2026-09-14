@@ -62,7 +62,7 @@ FROM (VALUES
     ('cms', 'Content Services', 'Document storage', '{"tier":"Core"}'::jsonb, 'core'),
     ('act', 'Activity & Commentary', 'Comments and timelines', '{"tier":"Core"}'::jsonb, 'core'),
     ('rel', 'Reference & Shared Data', 'Reference & Shared Data', '{"tier":"Core"}'::jsonb, 'core'),
-    ('bp', 'Business Partner Management', 'Governed organizations, persons, roles, relationships, and domain profiles', '{"tier":"Base","dependencies":["rel","wfl","aud"]}'::jsonb, 'mdg'),
+    ('bp', 'Business Partners', 'Governed organizations, persons, roles, relationships, and domain profiles', '{"tier":"Base","dependencies":["rel","wfl","aud"]}'::jsonb, 'mdg'),
     ('item', 'Product & Item Governance', 'Governed products, items, classifications, specifications, packaging, and lifecycle data', '{"tier":"Base","dependencies":["rel","wfl","aud"]}'::jsonb, 'mdg'),
     ('finmd', 'Financial Master Data', 'Governed accounts, financial dimensions, payment terms, banks, and tax reference data', '{"tier":"Base","dependencies":["rel","wfl","aud"]}'::jsonb, 'mdg'),
     ('org', 'Organization & Reference Data', 'Governed legal entities, business units, departments, sites, and enterprise reference data', '{"tier":"Base","dependencies":["rel","wfl","aud"]}'::jsonb, 'mdg'),

@@ -71,7 +71,7 @@ export const businessPartnerRecordPresentation = parseEntityRecordPresentation({
   schemaVersion: 1,
   panel: BUSINESS_PARTNER_360_PANEL,
   iconKey: "contact",
-  titleField: "display_name",
+  titleField: "name",
   codeField: "code",
   badges: [
     {
@@ -141,10 +141,7 @@ export function businessPartnerRecordHeader(
 ): EntityRecordHeaderV1 {
   // Only canonical, already authorized summary values can participate in header bindings.
   const values = {
-    display_name: summary.identity.displayName,
-    displayName: summary.identity.displayName,
-    legal_name: summary.identity.legalName,
-    legalName: summary.identity.legalName,
+    name: summary.identity.name,
     code: summary.identity.code,
     status: summary.identity.lifecycleStatus,
     lifecycleStatus: summary.identity.lifecycleStatus,
@@ -164,7 +161,7 @@ export function businessPartnerRecordHeader(
   }] as const] : []));
   const header = resolveRecordHeader(presentation, values, {
     entityLabel: "Business Partner",
-    fallbackTitle: summary.identity.displayName,
+    fallbackTitle: summary.identity.name,
     readOnly: summary.completeness.readOnly,
     actions: presentation.actions.flatMap((placement) => {
       const action = bindings.get(placement.operationKey);

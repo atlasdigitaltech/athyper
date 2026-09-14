@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 import type { Application, RequestHandler } from "express";
 import { registerAttachmentRoutes } from "./attachment-routes.js";
@@ -52,6 +53,7 @@ describe("attachment quota HTTP contract", () => {
         purge: async () => false,
         cleanupRetention: async () => ({ examined: 0, purged: 0, deferred: 0 }),
         rebuildDerivatives: async () => undefined,
+        close: () => undefined,
       },
     });
     const output: {
@@ -184,6 +186,7 @@ describe("Atlas attachment authorization", () => {
         purge: async () => false,
         cleanupRetention: async () => ({ examined: 0, purged: 0, deferred: 0 }),
         rebuildDerivatives: async () => undefined,
+        close: () => undefined,
       },
     });
     const output: { status?: number; body?: unknown } = {};
@@ -252,6 +255,7 @@ describe("attachment route security regressions", () => {
       purge: async () => false,
       cleanupRetention: async () => ({ examined: 0, purged: 0, deferred: 0 }),
       rebuildDerivatives: async () => undefined,
+      close: () => undefined,
     };
     const authorize = vi.fn(
       async ({ permissionCode }: { permissionCode: string }) =>
@@ -282,7 +286,8 @@ describe("attachment route security regressions", () => {
       body?: unknown;
       headers: Record<string, string>;
     } = { status: 200, headers: {} };
-    const response = {
+    const response = Object.assign(new EventEmitter(), {
+      writableEnded: false,
       status: (value: number) => {
         output.status = value;
         return response;
@@ -290,13 +295,14 @@ describe("attachment route security regressions", () => {
       type: () => response,
       json: (value: unknown) => {
         output.body = value;
+        response.writableEnded = true;
         return response;
       },
       end: vi.fn(),
       setHeader: (key: string, value: string) => {
         output.headers[key] = value;
       },
-    };
+    });
     const next = vi.fn();
     return {
       attachments,
@@ -346,6 +352,138 @@ describe("attachment route security regressions", () => {
     expect(f.output.status).toBe(200);
     expect(f.attachments.finalize).toHaveBeenCalledOnce();
   });
+  describe("finalize() cancellation over a real HTTP connection", () => {
+    async function startServer(
+      finalize: (
+        identity: unknown,
+        contentType: unknown,
+        options?: { signal?: AbortSignal },
+      ) => Promise<{ id: string; status: "active" }>,
+    ) {
+      const expressModule = await import("express");
+      const express = expressModule.default;
+      const app = express();
+      app.use(express.json());
+      registerAttachmentRoutes(app, {
+        authenticate: (_req, _res, next) => next(),
+        readContext: context,
+        authorizer: { authorize: async () => ({ allowed: true }) },
+        attachments: {
+          stage: vi.fn(),
+          status: vi.fn(async () => ({
+            id: attachmentId,
+            status: "uploaded" as const,
+            storageKey: "quarantine/key",
+            isCurrent: true,
+            isActive: true,
+            hasLegalHold: false,
+          })),
+          finalize: finalize as never,
+          deactivate: async () => undefined,
+          createAuthorizedDownload: vi.fn(),
+          expire: async () => undefined,
+          purge: async () => false,
+          cleanupRetention: async () => ({
+            examined: 0,
+            purged: 0,
+            deferred: 0,
+          }),
+          rebuildDerivatives: async () => undefined,
+          close: () => undefined,
+        } as never,
+        maxUploadBytes: 100,
+      });
+      const { createServer } = await import("node:http");
+      const server = createServer(app);
+      await new Promise<void>((resolve) =>
+        server.listen(0, "127.0.0.1", resolve),
+      );
+      const address = server.address();
+      if (!address || typeof address === "string")
+        throw new Error("Test server address unavailable");
+      return { server, port: address.port };
+    }
+
+    it("does not abort finalize() for a normal request, even though the request stream's own 'close' fires after completion", async () => {
+      let capturedSignal: AbortSignal | undefined;
+      const { server, port } = await startServer(
+        async (_identity, _contentType, options) => {
+          capturedSignal = options?.signal;
+          return { id: attachmentId, status: "active" as const };
+        },
+      );
+      try {
+        const { request } = await import("node:http");
+        const body = JSON.stringify({ contentType: "application/pdf" });
+        const responseStatus = await new Promise<number>((resolve, reject) => {
+          const req = request(
+            {
+              host: "127.0.0.1",
+              port,
+              method: "POST",
+              path: `/api/attachments/${attachmentId}/finalize`,
+              headers: {
+                "content-type": "application/json",
+                "content-length": Buffer.byteLength(body),
+              },
+            },
+            (res) => {
+              res.resume();
+              res.on("end", () => resolve(res.statusCode ?? 0));
+            },
+          );
+          req.on("error", reject);
+          req.end(body);
+        });
+        expect(responseStatus).toBe(200);
+        // Give the request stream's own "close" (which Node fires after the request completes,
+        // independent of the response) a chance to fire before asserting.
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(capturedSignal?.aborted).toBe(false);
+      } finally {
+        await new Promise((resolve) => server.close(resolve));
+      }
+    });
+
+    it("aborts finalize()'s signal when the client actually disconnects before the response completes", async () => {
+      let capturedSignal: AbortSignal | undefined;
+      let finalizeStarted = false;
+      const { server, port } = await startServer(
+        (_identity, _contentType, options) =>
+          new Promise((_resolve, reject) => {
+            finalizeStarted = true;
+            capturedSignal = options?.signal;
+            options?.signal?.addEventListener("abort", () =>
+              reject(options.signal!.reason),
+            );
+          }),
+      );
+      try {
+        const { request } = await import("node:http");
+        const body = JSON.stringify({ contentType: "application/pdf" });
+        const req = request({
+          host: "127.0.0.1",
+          port,
+          method: "POST",
+          path: `/api/attachments/${attachmentId}/finalize`,
+          headers: {
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(body),
+          },
+        });
+        req.on("error", () => undefined); // destroying the socket ourselves is expected to surface here
+        req.end(body);
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        expect(finalizeStarted).toBe(true);
+        req.destroy();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(capturedSignal?.aborted).toBe(true);
+      } finally {
+        await new Promise((resolve) => server.close(resolve));
+      }
+    });
+  });
+
   it("enforces content item write access before staging a link", async () => {
     const f = fixture(["document.attachment.create"]);
     await f.invoke("/api/attachments/stage", {

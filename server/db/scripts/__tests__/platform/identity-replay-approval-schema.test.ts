@@ -7,10 +7,10 @@ test("durable replay schema is installed in Studio and matches the upgrade chain
   const path = "planes/studio/trustiam/12_identity_replay_approval.sql";
   const ddl = await readFile(resolve(root, "ddl", path), "utf8");
   const migration = await readFile(
-    resolve(root, "migrations/20260906_identity_replay_approval.sql"),
+    resolve(root, "scripts/operations/upgrades/legacy-baseline-20260914/20260906_identity_replay_approval.sql"),
     "utf8",
   );
-  const upgrade = await readFile(resolve(root, "migrations/20260910_identity_replay_context_hardening.sql"), "utf8");
+  const upgrade = await readFile(resolve(root, "scripts/operations/upgrades/legacy-baseline-20260914/20260910_identity_replay_context_hardening.sql"), "utf8");
   // Historical snapshots remain immutable. Only explicitly replaced functions
   // may diverge; the remainder of the original schema must still match exactly.
   const replacements = [...upgrade.matchAll(/CREATE OR REPLACE FUNCTION ([\w.]+)\([\s\S]*?END\s*\$\$;/g)];

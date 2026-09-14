@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./customer-portal-delivery": "./src/customer-portal-delivery.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -19,11 +20,11 @@
     "@athyper/server-contract-secrets": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
-    "express": "^5.0.0",
+    "express": "^5.2.1",
     "kysely": "^0.28.17"
   },
   "devDependencies": {
-    "@types/express": "^5.0.1",
+    "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"

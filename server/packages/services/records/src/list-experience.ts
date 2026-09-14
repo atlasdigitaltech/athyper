@@ -1,3 +1,4 @@
+import { canDiscoverScopedNavigation } from "./navigation-context-discovery.js";
 import {
   resolveEntityText,
   type EffectiveListActionV1,
@@ -56,15 +57,16 @@ export async function effectiveListActions(
       )
     )
       continue;
+    const permissionOnlyEntry = action.entryPolicy === "permission_only";
     const rules = action.rules
       .filter((rule) => !rule.plane || rule.plane === context.planeKey)
       .sort((a, b) => a.priority - b.priority || a.key.localeCompare(b.key));
     let denied = false,
       unresolved =
-        action.requiresPreflight ||
-        publishedScopes.some((item) =>
+        (!permissionOnlyEntry && action.requiresPreflight) ||
+        (!permissionOnlyEntry && publishedScopes.some((item) =>
           ["request_field", "record_field"].includes(item.coordinateSource),
-        );
+        ));
     for (const rule of rules) {
       // Collection headers have no lifecycle record or verified capability decision.
       // Such conditions require a registered preflight, never a guessed permission.
@@ -86,18 +88,44 @@ export async function effectiveListActions(
       resourceCode: descriptor.entityCode,
       operationKey: action.operationKey,
     };
-    const observation = { entityCode: descriptor.entityCode, operationKey: action.operationKey, surface: "action" as const, phase: "discover" as const };
+    const observation = {
+      entityCode: descriptor.entityCode,
+      operationKey: action.operationKey,
+      surface: "action" as const,
+      phase: "discover" as const,
+    };
     let decision = await authorizer.authorize({
       observation,
       context,
       permissionCode: permission.permissionCode,
-      resource,
+      ...(permissionOnlyEntry ? {} : { resource }),
     });
-    if (!decision.allowed && decision.reason === "scope_not_contained" &&
-        directoryNavigation && descriptor.directoryScope && scope.status === "ready") {
-      decision = await authorizer.authorize({ context, permissionCode: permission.permissionCode, observation });
+    if (
+      !decision.allowed &&
+      decision.reason === "scope_not_contained" &&
+      directoryNavigation &&
+      descriptor.directoryScope &&
+      scope.status === "ready"
+    ) {
+      decision = await authorizer.authorize({
+        context,
+        permissionCode: permission.permissionCode,
+        observation,
+      });
     }
-    if (!decision.allowed) {
+    const discoveredContext =
+      directoryNavigation &&
+      !decision.allowed &&
+      decision.reason !== "entity_authorization_unavailable" &&
+      !action.requiresPreflight &&
+      (await canDiscoverScopedNavigation(
+        authorizer,
+        context,
+        descriptor,
+        action.operationKey,
+        permission.permissionCode,
+      ));
+    if (!decision.allowed && !discoveredContext) {
       // Only contextual failures are useful to display; inaccessible actions stay hidden.
       if (decision.reason === "scope_coordinate_missing") {
         const baseAuthority = await authorizer.authorize({
@@ -111,6 +139,7 @@ export async function effectiveListActions(
       continue;
     }
     if (
+      !permissionOnlyEntry && !discoveredContext &&
       publishedScopes.some(
         (item) =>
           !scopeSatisfied(item.scopeKind, resource) ||
@@ -135,7 +164,7 @@ export async function effectiveListActions(
     );
     if (!route) continue;
     result.push(
-      Object.freeze({ ...base(action), state: "enabled", href: route.href }),
+      Object.freeze({ ...base(action), ...(permissionOnlyEntry ? { requiresPreflight: false } : {}), state: "enabled", href: route.href }),
     );
   }
   return Object.freeze(result);
@@ -165,7 +194,10 @@ function disabled(
     state: "disabled",
     requiresPreflight:
       reason === "preflight_required" || action.requiresPreflight,
-    disabledReason: { code: reason, messageKey: `entity.action.${reason}` },
+    disabledReason: {
+      code: reason.toUpperCase(),
+      messageKey: `entity.action.${reason}`,
+    },
     disabledMessage: { defaultLocale: "en", values: { en: message } },
   });
 }
@@ -239,7 +271,10 @@ export async function effectiveEntityNavigation(
     if (
       section.attentionCountKey &&
       Object.hasOwn(counts, section.attentionCountKey) &&
-      scope.status === "ready"
+      scope.status === "ready" &&
+      section.scopes
+        .filter((s) => s.plane === context.planeKey)
+        .every((s) => scopeSatisfied(s.scopeKind, scope.authorizationResource))
     ) {
       try {
         const count = await counts[section.attentionCountKey]!({
@@ -258,7 +293,7 @@ export async function effectiveEntityNavigation(
         label: section.label,
         placement: section.placement,
         surfaceKey: section.targetSurfaceKey,
-        ...(section.content ? {content:section.content} : {}),
+        ...(section.content ? { content: section.content } : {}),
         href: action.href,
         aliases: route.aliases ?? [],
         ...(attentionCount === undefined ? {} : { attentionCount }),

@@ -19,10 +19,10 @@ import {
   KeycloakIdentityProviderAdapter,
   registerIdentityReplayRoutes,
   providerKey,
-} from "../../../../packages/platform/iam/src/index.ts";
-import { createKeycloakAuthAdapter } from "../../../../packages/adapters/auth-keycloak/src/index.ts";
-import { createHttpApplication } from "../../../../packages/runtime/http/src/index.ts";
-import { getRequestContext } from "../../../../packages/foundation/src/context/index.ts";
+} from "@athyper/server-platform-iam";
+import { createKeycloakAuthAdapter } from "@athyper/server-adapter-auth-keycloak";
+import { createHttpApplication } from "@athyper/server-runtime-http";
+import { getRequestContext } from "@athyper/server-foundation/context";
 
 const root = resolve(import.meta.dirname, "../../../..");
 const tag = `iam-replay-${randomUUID().slice(0, 8)}`;
@@ -384,7 +384,7 @@ try {
     "utf8",
   );
   const replayMigration = await readFile(
-    resolve(root, "db/migrations/20260906_identity_replay_approval.sql"),
+    resolve(root, "db/scripts/operations/upgrades/legacy-baseline-20260914/20260906_identity_replay_approval.sql"),
     "utf8",
   );
   assert.ok(replayMigration.includes(replayDdl));
@@ -834,10 +834,14 @@ try {
   // Force expiry after the UPDATE predicate succeeds but before the production
   // approval guard runs. The trigger exists only in this disposable database.
   const boundary = await requested();
-  const boundaryRead = await call(`identity-replay-approvals/${boundary.approvalId}`);
+  const boundaryRead = await call(
+    `identity-replay-approvals/${boundary.approvalId}`,
+  );
   // Wait outside the transaction so the deliberate trigger delay stays below
   // the test pool's query timeout.
-  await pause(Math.max(0, Date.parse(boundaryRead.body.expiresAt) - Date.now() - 3000));
+  await pause(
+    Math.max(0, Date.parse(boundaryRead.body.expiresAt) - Date.now() - 3000),
+  );
   await sql
     .raw(
       `CREATE FUNCTION public.delay_replay_approval() RETURNS trigger LANGUAGE plpgsql AS $$

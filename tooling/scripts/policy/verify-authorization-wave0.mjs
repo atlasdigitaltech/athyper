@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { artifactDirectory } from "../artifact-paths.mjs";
+
 import { spawnSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -12,7 +14,7 @@ const repositoryRevision = currentGitRevision(repositoryRoot);
 const strict = process.argv.includes("--strict");
 const evidenceDirectory = resolve(
   repositoryRoot,
-  argumentValue("--evidence-dir=") ?? "artifacts/authorization-wave0",
+  argumentValue("--evidence-dir=") ?? artifactDirectory("authorization-wave0"),
 );
 const outputArgument = argumentValue("--output=");
 const dispositionArtifactCheck = runCommand(
@@ -31,11 +33,15 @@ const inventoryArtifactCheck = runCommand(
   ],
   repositoryRoot,
 );
-const authorizationInvalidationArtifactCheck = await staticInvalidationContract();
+const authorizationInvalidationArtifactCheck =
+  await staticInvalidationContract();
 
 const checks = [];
 const inventory = await optionalJson(
-  resolve(repositoryRoot, "governance/config/governance/authorization-inventory.v1.json"),
+  resolve(
+    repositoryRoot,
+    "governance/config/governance/authorization-inventory.v1.json",
+  ),
 );
 const disposition = await requiredJson(
   resolve(
@@ -52,7 +58,10 @@ const recovery = await requiredJson(
   "migration recovery contract",
 );
 const rollout = await requiredJson(
-  resolve(repositoryRoot, "governance/config/governance/authorization-rollout-contract.json"),
+  resolve(
+    repositoryRoot,
+    "governance/config/governance/authorization-rollout-contract.json",
+  ),
   "authorization rollout contract",
 );
 const highRisk = await requiredJson(
@@ -110,11 +119,10 @@ if (!inventory) {
     !Array.isArray(knownSourceAnomalies)
       ? "Inventory gate knownSourceAnomalies is missing or invalid."
       : knownSourceAnomalies.length > 0
-      ? `${knownSourceAnomalies.length} owned catalog/reference anomalies require repair or retirement.`
-      : "No owned source anomaly remains.",
+        ? `${knownSourceAnomalies.length} owned catalog/reference anomalies require repair or retirement.`
+        : "No owned source anomaly remains.",
   );
-  const meshBoundaryFindings =
-    inventory?.gates?.zeroMeshNeonBoundaryFindings;
+  const meshBoundaryFindings = inventory?.gates?.zeroMeshNeonBoundaryFindings;
   check(
     "zero_mesh_specific_data_neon_boundary_implemented",
     "static",
@@ -124,8 +132,8 @@ if (!inventory) {
     !Array.isArray(meshBoundaryFindings)
       ? "Inventory gate zeroMeshNeonBoundaryFindings is missing or invalid."
       : meshBoundaryFindings.length > 0
-      ? `${meshBoundaryFindings.length} owned legacy table/seed/reader/configuration or RLS-bypass findings still violate the target boundary.`
-      : "No Mesh-specific Neon source, cross-plane fallback, or RLS-bypassing Mesh runtime identity remains.",
+        ? `${meshBoundaryFindings.length} owned legacy table/seed/reader/configuration or RLS-bypass findings still violate the target boundary.`
+        : "No Mesh-specific Neon source, cross-plane fallback, or RLS-bypassing Mesh runtime identity remains.",
   );
 }
 
@@ -136,8 +144,8 @@ check(
     rollout?.percentageRolloutAllowed === false &&
     rollout?.decisionComposition === "select_one_never_union" &&
     rollout?.policySources?.mesh?.authority === "mesh"
-      ? "pass"
-      : "fail",
+    ? "pass"
+    : "fail",
   "Rollout must default to legacy, prohibit percentage rollout/union, and keep Mesh policy Mesh-local.",
 );
 
@@ -147,8 +155,8 @@ check(
   dispositionArtifactCheck.passed &&
     disposition?.gates?.everyDiscoveredTableHasOneDisposition === true &&
     disposition?.gates?.everyExternalObjectHasOneDisposition === true
-      ? "pass"
-      : "fail",
+    ? "pass"
+    : "fail",
   dispositionArtifactCheck.passed
     ? "The deterministic DDL/runtime/external-object inventory contains no unclassified object."
     : `Disposition inventory is stale or invalid: ${dispositionArtifactCheck.detail}`,
@@ -173,9 +181,7 @@ check(
 check(
   "authorization_change_capture_baseline_present",
   "static",
-  authorizationInvalidationArtifactCheck.passed
-    ? "pass"
-    : "fail",
+  authorizationInvalidationArtifactCheck.passed ? "pass" : "fail",
   authorizationInvalidationArtifactCheck.passed
     ? "The common plane-local authorization invalidation outbox, epoch capture, immutable evidence, and trigger installation contracts are present."
     : `Invalidation verifier blockers: ${authorizationInvalidationArtifactCheck.detail}`,
@@ -187,8 +193,8 @@ check(
   highRisk?.selection?.includeEverySelectedPermission === true &&
     highRisk?.selection?.riskLevels?.includes("high") &&
     highRisk?.selection?.riskLevels?.includes("critical")
-      ? "pass"
-      : "fail",
+    ? "pass"
+    : "fail",
   "The capture contract must select every active high/critical permission from the live catalog; live completeness is certified by the corpus gate.",
 );
 
@@ -237,10 +243,12 @@ if (!golden) {
       golden?.coverage?.gates?.activeNeonUserInventoryNonEmpty === true &&
       golden?.coverage?.gates?.everyActiveNeonPrincipalIncluded === true &&
       golden?.coverage?.gates?.everyActiveNeonUserIncluded === true &&
-      golden?.coverage?.gates?.everyActivePrincipalHasIdentityBinding === true &&
+      golden?.coverage?.gates?.everyActivePrincipalHasIdentityBinding ===
+        true &&
       golden?.coverage?.gates?.activeMeshPrincipalInventoryNonEmpty === true &&
       golden?.coverage?.gates?.activeMeshUserInventoryNonEmpty === true &&
-      golden?.coverage?.gates?.everyActiveMeshPrincipalHasIdentityBinding === true &&
+      golden?.coverage?.gates?.everyActiveMeshPrincipalHasIdentityBinding ===
+        true &&
       golden?.coverage?.gates?.identityAuthorityReconciled === true &&
       goldenArtifactCheck?.passed === true
       ? "pass"
@@ -444,8 +452,7 @@ if (correlationInputs.some((value) => !value)) {
       databaseName: meshLegacyWrites?.databaseIdentity?.database_name,
     },
     dataQuality: {
-      sourceDatabaseId:
-        meshDataQuality?.captureProvenance?.source_database_id,
+      sourceDatabaseId: meshDataQuality?.captureProvenance?.source_database_id,
       contractVersion:
         meshDataQuality?.captureProvenance?.capture_contract_version,
       watermark: meshDataQuality?.captureProvenance?.current_watermark,
@@ -526,7 +533,10 @@ async function adrDecisionStatus() {
 
 async function rolloutStaticStatus(value) {
   const service = await readFile(
-    resolve(repositoryRoot, "server/packages/platform/control-admin/src/authorization-management-service.ts"),
+    resolve(
+      repositoryRoot,
+      "server/packages/platform/control-admin/src/authorization-management-service.ts",
+    ),
     "utf8",
   ).catch(() => "");
   return value?.supportedModes?.join(",") === "legacy,shadow,enforce" &&
@@ -534,9 +544,10 @@ async function rolloutStaticStatus(value) {
     value?.initialSnapshots?.studio?.defaultMode === "legacy" &&
     value?.initialSnapshots?.mesh?.defaultMode === "legacy" &&
     value?.failureBehavior?.missingOrMismatchedCertification === "legacy" &&
-    ["goldenCorpusSha256", "sourceDatabaseId", "minimumAppliedWatermark"]
-      .every((field) => value?.requiredApprovalFields?.includes(field)) &&
-    service.includes('options.mutationsEnabled ?? false') &&
+    ["goldenCorpusSha256", "sourceDatabaseId", "minimumAppliedWatermark"].every(
+      (field) => value?.requiredApprovalFields?.includes(field),
+    ) &&
+    service.includes("options.mutationsEnabled ?? false") &&
     service.includes('selected.mode === "legacy"') &&
     service.includes('selected.mode === "shadow"') &&
     service.includes("requireQualifiedWriterSwitch(writerSwitch)") &&
@@ -571,10 +582,15 @@ async function staticInvalidationContract() {
     [functions, "FOR UPDATE SKIP LOCKED"],
     [triggers, "event.trg_capture_authorization_invalidation"],
     [triggers, "AFTER INSERT OR UPDATE OR DELETE ON authz.%I"],
-  ].filter(([source, token]) => !source.includes(token)).map(([, token]) => token);
+  ]
+    .filter(([source, token]) => !source.includes(token))
+    .map(([, token]) => token);
   return {
     passed: missing.length === 0,
-    detail: missing.length === 0 ? "current plane-local invalidation contract verified" : `missing ${missing.join(", ")}`,
+    detail:
+      missing.length === 0
+        ? "current plane-local invalidation contract verified"
+        : `missing ${missing.join(", ")}`,
   };
 }
 
@@ -596,16 +612,15 @@ function collectInventoryUnknowns(value) {
   const blockers = requiredGates
     .filter((name) => !Array.isArray(value?.gates?.[name]))
     .map((name) => `${name}=missing_or_invalid`);
-  const candidates = [
-    value?.summary?.gates,
-    value?.gates,
-  ].filter(Boolean);
+  const candidates = [value?.summary?.gates, value?.gates].filter(Boolean);
   const pattern = /(unknown|unowned|unclassified|stale)/i;
   for (const candidate of candidates) {
     for (const [name, result] of Object.entries(candidate)) {
       if (!pattern.test(name)) continue;
-      if (Array.isArray(result) && result.length > 0) blockers.push(`${name}=${result.length}`);
-      else if (typeof result === "number" && result > 0) blockers.push(`${name}=${result}`);
+      if (Array.isArray(result) && result.length > 0)
+        blockers.push(`${name}=${result.length}`);
+      else if (typeof result === "number" && result > 0)
+        blockers.push(`${name}=${result}`);
       else if (result === false) blockers.push(`${name}=false`);
     }
   }
@@ -619,7 +634,8 @@ function recoveryApprovalComplete(value, expectedRevision) {
     value?.lastReviewedRevision !== expectedRevision ||
     !Array.isArray(value?.invariants) ||
     value.invariants.length === 0
-  ) return false;
+  )
+    return false;
   const requiredContractIds = [
     "resolver-read-switch",
     "authorization-writer-switch",
@@ -632,9 +648,10 @@ function recoveryApprovalComplete(value, expectedRevision) {
     new Set(value.contracts.map((contract) => contract?.id)).size !==
       requiredContractIds.length ||
     !requiredContractIds.every((id) =>
-      value.contracts.some((contract) => contract?.id === id)
+      value.contracts.some((contract) => contract?.id === id),
     )
-  ) return false;
+  )
+    return false;
   const global = value?.globalApproval;
   if (
     !approvedText(global?.changeOwner) ||
@@ -644,49 +661,49 @@ function recoveryApprovalComplete(value, expectedRevision) {
     !approvedText(global?.operationsApprover) ||
     !approvedText(global?.ticket) ||
     !validPastDate(global?.approvedAt)
-  ) return false;
-  return value.contracts.every((contract) =>
-    contract?.approval?.status === "approved" &&
-    contract?.approval?.approvedBy?.length > 0 &&
-    contract.approval.approvedBy.every(approvedText) &&
-    validPastDate(contract?.approval?.approvedAt) &&
-    approvedText(contract?.approval?.ticket) &&
-    approvedText(contract?.strategy) &&
-    (
-      !Array.isArray(contract?.allowedStrategies) ||
-      contract.allowedStrategies.includes(contract.strategy)
-    ) &&
-    approvedText(contract?.sourceWriter) &&
-    contract?.targetWritable === false &&
-    approvedText(contract?.rpo?.target) &&
-    nonNegativeInteger(contract?.rpo?.maximumDataLossSeconds) &&
-    approvedText(contract?.rpo?.basis) &&
-    approvedText(contract?.rto?.target) &&
-    positiveInteger(contract?.rto?.maximumRecoveryMinutes) &&
-    contract?.rto?.approvalStatus === "approved" &&
-    approvedText(contract?.freezeMaximum) &&
-    nonNegativeInteger(contract?.freezeMaximumSeconds) &&
-    approvedText(contract?.maximumCaptureLag) &&
-    nonNegativeInteger(contract?.maximumCaptureLagTransactions) &&
-    Array.isArray(contract?.promotionEvidence) &&
-    contract.promotionEvidence.length > 0 &&
-    contract.promotionEvidence.every(approvedText) &&
-    approvedText(contract?.rollback?.mechanism) &&
-    approvedText(contract?.rollback?.owner) &&
-    approvedText(contract?.rollback?.trigger) &&
-    approvedText(contract?.rollback?.deadline) &&
-    positiveInteger(contract?.rollback?.deadlineMinutes) &&
-    typeof contract?.rollback?.reverseReplayRequired === "boolean" &&
-    approvedText(contract?.observationWindow?.duration) &&
-    positiveInteger(contract?.observationWindow?.durationMinutes) &&
-    validDate(contract?.observationWindow?.startsAt) &&
-    validDate(contract?.observationWindow?.endsAt) &&
-    Date.parse(contract.observationWindow.endsAt) >
-      Date.parse(contract.observationWindow.startsAt) &&
-    Date.parse(contract.observationWindow.endsAt) -
-      Date.parse(contract.observationWindow.startsAt) >=
-      contract.observationWindow.durationMinutes * 60_000 &&
-    contract?.observationWindow?.approvalStatus === "approved"
+  )
+    return false;
+  return value.contracts.every(
+    (contract) =>
+      contract?.approval?.status === "approved" &&
+      contract?.approval?.approvedBy?.length > 0 &&
+      contract.approval.approvedBy.every(approvedText) &&
+      validPastDate(contract?.approval?.approvedAt) &&
+      approvedText(contract?.approval?.ticket) &&
+      approvedText(contract?.strategy) &&
+      (!Array.isArray(contract?.allowedStrategies) ||
+        contract.allowedStrategies.includes(contract.strategy)) &&
+      approvedText(contract?.sourceWriter) &&
+      contract?.targetWritable === false &&
+      approvedText(contract?.rpo?.target) &&
+      nonNegativeInteger(contract?.rpo?.maximumDataLossSeconds) &&
+      approvedText(contract?.rpo?.basis) &&
+      approvedText(contract?.rto?.target) &&
+      positiveInteger(contract?.rto?.maximumRecoveryMinutes) &&
+      contract?.rto?.approvalStatus === "approved" &&
+      approvedText(contract?.freezeMaximum) &&
+      nonNegativeInteger(contract?.freezeMaximumSeconds) &&
+      approvedText(contract?.maximumCaptureLag) &&
+      nonNegativeInteger(contract?.maximumCaptureLagTransactions) &&
+      Array.isArray(contract?.promotionEvidence) &&
+      contract.promotionEvidence.length > 0 &&
+      contract.promotionEvidence.every(approvedText) &&
+      approvedText(contract?.rollback?.mechanism) &&
+      approvedText(contract?.rollback?.owner) &&
+      approvedText(contract?.rollback?.trigger) &&
+      approvedText(contract?.rollback?.deadline) &&
+      positiveInteger(contract?.rollback?.deadlineMinutes) &&
+      typeof contract?.rollback?.reverseReplayRequired === "boolean" &&
+      approvedText(contract?.observationWindow?.duration) &&
+      positiveInteger(contract?.observationWindow?.durationMinutes) &&
+      validDate(contract?.observationWindow?.startsAt) &&
+      validDate(contract?.observationWindow?.endsAt) &&
+      Date.parse(contract.observationWindow.endsAt) >
+        Date.parse(contract.observationWindow.startsAt) &&
+      Date.parse(contract.observationWindow.endsAt) -
+        Date.parse(contract.observationWindow.startsAt) >=
+        contract.observationWindow.durationMinutes * 60_000 &&
+      contract?.observationWindow?.approvalStatus === "approved",
   );
 }
 
@@ -703,8 +720,10 @@ function validPastDate(value) {
 }
 
 function approvedText(value) {
-  return nonBlank(value) &&
-    !/\b(?:tbd|todo|pending|unknown|unassigned|placeholder)\b/i.test(value);
+  return (
+    nonBlank(value) &&
+    !/\b(?:tbd|todo|pending|unknown|unassigned|placeholder)\b/i.test(value)
+  );
 }
 
 function nonNegativeInteger(value) {
@@ -722,17 +741,20 @@ function numericValue(value) {
 }
 
 function writerEvidenceResult(report, expectedPlane) {
-  const expectedSchema = expectedPlane === "mesh"
-    ? "wave0.mesh-authorization-legacy-write-report.v1"
-    : "wave0.authorization-legacy-write-report.v1";
+  const expectedSchema =
+    expectedPlane === "mesh"
+      ? "wave0.mesh-authorization-legacy-write-report.v1"
+      : "wave0.authorization-legacy-write-report.v1";
   const unknownWriteCount = numericValue(
-    report?.summary?.unknownWriteCount ??
-      report?.summary?.unknownWriterCount,
+    report?.summary?.unknownWriteCount ?? report?.summary?.unknownWriterCount,
   );
-  const ambiguousWriterCount = expectedPlane === "neon"
-    ? numericValue(report?.summary?.ambiguousWriterBucketCount)
-    : 0;
-  const expectedSourceCount = numericValue(report?.summary?.expectedSourceCount);
+  const ambiguousWriterCount =
+    expectedPlane === "neon"
+      ? numericValue(report?.summary?.ambiguousWriterBucketCount)
+      : 0;
+  const expectedSourceCount = numericValue(
+    report?.summary?.expectedSourceCount,
+  );
   const registeredSourceCount = numericValue(
     report?.summary?.registeredSourceCount,
   );
@@ -750,22 +772,20 @@ function writerEvidenceResult(report, expectedPlane) {
     ...(ambiguousWriterCount === 0
       ? []
       : [`ambiguous_writers=${ambiguousWriterCount ?? "unreported"}`]),
-    ...(
-      expectedSourceCount !== null &&
-      expectedSourceCount > 0 &&
-      registeredSourceCount === expectedSourceCount
-        ? []
-        : [
-            `source_set=${registeredSourceCount ?? "unreported"}/`
-              + `${expectedSourceCount ?? "unreported"}`,
-          ]
-    ),
+    ...(expectedSourceCount !== null &&
+    expectedSourceCount > 0 &&
+    registeredSourceCount === expectedSourceCount
+      ? []
+      : [
+          `source_set=${registeredSourceCount ?? "unreported"}/` +
+            `${expectedSourceCount ?? "unreported"}`,
+        ]),
     ...(report?.gate?.passed === true
       ? []
-      : report?.gate?.blockingReasons ?? ["gate_not_passed"]),
+      : (report?.gate?.blockingReasons ?? ["gate_not_passed"])),
   ];
   const writerBlockers = blockers.filter((blocker) =>
-    /schema|plane|read_only|unknown|ambiguous/i.test(blocker)
+    /schema|plane|read_only|unknown|ambiguous/i.test(blocker),
   );
   return {
     plane: expectedPlane,
@@ -776,9 +796,10 @@ function writerEvidenceResult(report, expectedPlane) {
 }
 
 function dataQualityEvidenceResult(report, expectedPlane) {
-  const expectedSchema = expectedPlane === "mesh"
-    ? "wave0.mesh-authorization-data-quality-report.v1"
-    : "wave0.authorization-data-quality-report.v1";
+  const expectedSchema =
+    expectedPlane === "mesh"
+      ? "wave0.mesh-authorization-data-quality-report.v1"
+      : "wave0.authorization-data-quality-report.v1";
   const unclassified = numericValue(
     report?.summary?.unclassifiedOrUnresolvedFindingCount ??
       report?.summary?.unclassifiedFindingCount ??
@@ -797,7 +818,7 @@ function dataQualityEvidenceResult(report, expectedPlane) {
       : [`unclassified=${unclassified ?? "unreported"}`]),
     ...(report?.gate?.passed === true
       ? []
-      : report?.gate?.blockingReasons ?? ["gate_not_passed"]),
+      : (report?.gate?.blockingReasons ?? ["gate_not_passed"])),
   ];
   return {
     plane: expectedPlane,
@@ -807,9 +828,8 @@ function dataQualityEvidenceResult(report, expectedPlane) {
 }
 
 function planeEvidenceResult(plane, evidence) {
-  const expectedContractVersion = plane === "mesh"
-    ? "wave0.mesh-authz-capture.v1"
-    : "wave0.authz-capture.v1";
+  const expectedContractVersion =
+    plane === "mesh" ? "wave0.mesh-authz-capture.v1" : "wave0.authz-capture.v1";
   const entries = Object.entries(evidence);
   const blockers = [];
   for (const [label, boundary] of entries) {
@@ -832,7 +852,8 @@ function planeEvidenceResult(plane, evidence) {
   const databaseNames = new Set(
     entries.map(([, boundary]) => boundary?.databaseName).filter(nonBlank),
   );
-  if (sourceDatabaseIds.size !== 1) blockers.push("source_database_id_mismatch");
+  if (sourceDatabaseIds.size !== 1)
+    blockers.push("source_database_id_mismatch");
   if (databaseNames.size !== 1) blockers.push("database_name_mismatch");
 
   const goldenWatermark = watermarkValue(evidence.golden?.watermark);
@@ -870,16 +891,20 @@ function planeEvidenceResult(plane, evidence) {
 }
 
 function uuidValue(value) {
-  return typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-      .test(value);
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  );
 }
 
 function watermarkValue(value) {
   if (
     (typeof value !== "string" && typeof value !== "number") ||
     !/^\d+$/.test(String(value))
-  ) return null;
+  )
+    return null;
   try {
     return BigInt(value);
   } catch {
@@ -894,8 +919,7 @@ function dispositionEvidenceResult(report, expectedPlane) {
       report?.gates?.unmatchedCount,
   );
   const multiple = numericValue(
-    report?.summary?.multiplyMatched ??
-      report?.gates?.multiplyMatchedCount,
+    report?.summary?.multiplyMatched ?? report?.gates?.multiplyMatchedCount,
   );
   const blockers = [
     ...(report?.plane !== expectedPlane
@@ -903,11 +927,9 @@ function dispositionEvidenceResult(report, expectedPlane) {
       : []),
     ...(report?.gate?.passed === true
       ? []
-      : report?.gate?.blockingReasons ?? ["gate_not_passed"]),
+      : (report?.gate?.blockingReasons ?? ["gate_not_passed"])),
     ...(unknown === 0 ? [] : [`unmatched=${unknown ?? "unreported"}`]),
-    ...(multiple === 0
-      ? []
-      : [`multiplyMatched=${multiple ?? "unreported"}`]),
+    ...(multiple === 0 ? [] : [`multiplyMatched=${multiple ?? "unreported"}`]),
   ];
   return {
     plane: expectedPlane,
@@ -919,7 +941,12 @@ function dispositionEvidenceResult(report, expectedPlane) {
 async function requiredJson(path, label) {
   const value = await optionalJson(path);
   if (!value) {
-    check(`missing_${label.replaceAll(/\W+/g, "_")}`, "static", "fail", `Missing ${path}.`);
+    check(
+      `missing_${label.replaceAll(/\W+/g, "_")}`,
+      "static",
+      "fail",
+      `Missing ${path}.`,
+    );
   }
   return value;
 }
@@ -941,7 +968,9 @@ async function firstOptionalJson(paths) {
 }
 
 function argumentValue(prefix) {
-  return process.argv.find((argument) => argument.startsWith(prefix))?.slice(prefix.length);
+  return process.argv
+    .find((argument) => argument.startsWith(prefix))
+    ?.slice(prefix.length);
 }
 
 function runCommand(command, args, cwd) {
@@ -954,7 +983,9 @@ function runCommand(command, args, cwd) {
     result.error?.message,
     result.stderr?.trim(),
     result.stdout?.trim(),
-  ].filter(Boolean).join(" | ");
+  ]
+    .filter(Boolean)
+    .join(" | ");
   return {
     passed: result.status === 0 && !result.error,
     detail: detail || `exit=${result.status ?? "unknown"}`,

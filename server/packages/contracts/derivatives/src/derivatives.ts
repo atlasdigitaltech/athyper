@@ -3,20 +3,24 @@ export type DerivativeType = "preview_pdf" | "thumbnail" | "page_preview";
 
 /** Named rendition codes within a derivative type. */
 export type RenditionCode =
-  | "thumbnail_sm"    // 256×256 WebP
-  | "thumbnail_md"    // 768×768 WebP
+  | "thumbnail_sm" // 256×256 WebP
+  | "thumbnail_md" // 768×768 WebP
   | "preview_default" // normalized PDF
-  | "page_preview"    // first-page 1440px WebP
-  | string;           // extensible
+  | "page_preview" // first-page 1440px WebP
+  | string; // extensible
 
 /** Lifecycle status of a derivative row. */
 export type AttachmentDerivativeStatus =
   | "pending"
   | "processing"
   | "ready"
+  | "quarantined"
   | "skipped"
   | "failed"
   | "deleted";
+
+/** Outcome of the malware scan run against a derivative's rendered bytes. */
+export type AttachmentDerivativeScanStatus = "clean" | "quarantined";
 
 export interface AttachmentDerivativeRecord {
   readonly id: string;
@@ -41,8 +45,25 @@ export interface AttachmentDerivativeRecord {
   readonly lastErrorCode: string | null;
   readonly lastErrorMessage: string | null;
   readonly generatedAt: string | null;
+  readonly scannedAt: string | null;
+  readonly scanStatus: AttachmentDerivativeScanStatus | null;
   readonly createdAt: string;
   readonly updatedAt: string | null;
+}
+
+/**
+ * The only correct readiness check. A `status: "ready"` row that predates the scan-before-store
+ * gate — or one whose evidence a concurrent rebuild has invalidated — must never be treated as
+ * usable just because its status says "ready". Anything that serves, downloads, or otherwise
+ * authorizes use of a derivative must gate on this, not on `status` alone.
+ */
+export function isDerivativeUsable(
+  record:
+    | Pick<AttachmentDerivativeRecord, "status" | "scanStatus">
+    | null
+    | undefined,
+): boolean {
+  return record?.status === "ready" && record.scanStatus === "clean";
 }
 
 /** Input to the preview renderer. */
@@ -70,7 +91,11 @@ export interface DerivativeRenderOutput {
 /** Renders a source document/image into a derivative rendition. */
 export interface DerivativeRenderer {
   render(input: DerivativeRenderInput): Promise<DerivativeRenderOutput>;
-  health(): Promise<{ status: "healthy" | "degraded" | "unhealthy"; latencyMs: number; message?: string }>;
+  health(): Promise<{
+    status: "healthy" | "degraded" | "unhealthy";
+    latencyMs: number;
+    message?: string;
+  }>;
 }
 
 /** Request to schedule derivative generation for an attachment version. */
@@ -81,7 +106,11 @@ export interface DerivativeScheduleRequest {
   readonly principalId: string;
   /** Hex SHA-256 of the source file — used as deduplication key. */
   readonly sourceSha256: string;
-  readonly rebuild?: { readonly mode: "missing" | "failed" | "all"; readonly reason: string; readonly requestId: string };
+  readonly rebuild?: {
+    readonly mode: "missing" | "failed" | "all";
+    readonly reason: string;
+    readonly requestId: string;
+  };
 }
 
 /** Schedules derivative generation jobs. */
@@ -117,6 +146,7 @@ export interface DerivativeRepository<Transaction> {
   markProcessing(
     id: string,
     tenantId: string,
+    principalId: string,
     tx: Transaction,
   ): Promise<void>;
 
@@ -138,7 +168,24 @@ export interface DerivativeRepository<Transaction> {
     tx: Transaction,
   ): Promise<void>;
 
-  markSkipped(id: string, tenantId: string, reason: string, principalId: string, tx: Transaction): Promise<void>;
+  /** Rendered bytes failed the malware scan: no object is stored, and the row is never marked ready. */
+  markQuarantined(
+    input: {
+      id: string;
+      tenantId: string;
+      reason: string;
+      principalId: string;
+    },
+    tx: Transaction,
+  ): Promise<void>;
+
+  markSkipped(
+    id: string,
+    tenantId: string,
+    reason: string,
+    principalId: string,
+    tx: Transaction,
+  ): Promise<void>;
 
   markFailed(
     id: string,
@@ -149,7 +196,11 @@ export interface DerivativeRepository<Transaction> {
     tx: Transaction,
   ): Promise<void>;
 
-  load(id: string, tenantId: string, tx: Transaction): Promise<AttachmentDerivativeRecord | null>;
+  load(
+    id: string,
+    tenantId: string,
+    tx: Transaction,
+  ): Promise<AttachmentDerivativeRecord | null>;
 
   loadBySpec(
     tenantId: string,

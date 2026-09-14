@@ -68,7 +68,7 @@ export function projectApplicantPayload(
   payload: Readonly<Record<string, unknown>>,
 ) {
   return {
-    legalName: String(payload["legalName"] ?? ""),
+    name: String(payload["name"] ?? ""),
     registrationNumber: String(payload["registrationNumber"] ?? ""),
   };
 }
@@ -89,7 +89,7 @@ export function SupplierApplicantExperience({
     [requestId, setRequestId] = useState(initialRequestId ?? ""),
     [token, setToken] = useState(""),
     [email, setEmail] = useState(""),
-    [legalName, setLegalName] = useState(""),
+    [name, setName] = useState(""),
     [registrationNumber, setRegistrationNumber] = useState(""),
     [file, setFile] = useState<File>(),
     [busy, setBusy] = useState(false),
@@ -121,7 +121,7 @@ export function SupplierApplicantExperience({
       const value = await api.status(id);
       setRequest(value);
       const payload = projectApplicantPayload(value.editablePayload);
-      setLegalName(payload.legalName);
+      setName(payload.name);
       setRegistrationNumber(payload.registrationNumber);
       setMessage(undefined);
     } catch (cause) {
@@ -138,7 +138,7 @@ export function SupplierApplicantExperience({
         token,
         inviteeEmail: email,
         requestIdempotencyKey: key,
-        proposedPayload: payload(legalName, registrationNumber),
+        proposedPayload: payload(name, registrationNumber),
       });
       sessionStorage.setItem(
         "athyper.bp.supplier-application.request",
@@ -159,7 +159,7 @@ export function SupplierApplicantExperience({
     try {
       await api.correction(request.requestId, {
         expectedVersion: request.rowVersion,
-        proposedPayload: payload(legalName, registrationNumber),
+        proposedPayload: payload(name, registrationNumber),
       });
       await refresh();
       setMessage("Correction saved.");
@@ -232,11 +232,11 @@ export function SupplierApplicantExperience({
               onChange={(event) => setEmail(event.target.value)}
               required
             />
-            <Label htmlFor="supplier-legal-name">Legal name</Label>
+            <Label htmlFor="supplier-legal-name">Registered name</Label>
             <Input
               id="supplier-legal-name"
-              value={legalName}
-              onChange={(event) => setLegalName(event.target.value)}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
               required
             />
             <Label htmlFor="supplier-registration-number">
@@ -276,11 +276,11 @@ export function SupplierApplicantExperience({
             </dl>
             {editable ? (
               <>
-                <Label htmlFor="applicant-legal-name">Legal name</Label>
+                <Label htmlFor="applicant-legal-name">Registered name</Label>
                 <Input
                   id="applicant-legal-name"
-                  value={legalName}
-                  onChange={(event) => setLegalName(event.target.value)}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
                 />
                 <Label htmlFor="applicant-registration-number">
                   Registration number
@@ -332,9 +332,9 @@ export function SupplierApplicantExperience({
   );
 }
 
-function payload(legalName: string, registrationNumber: string) {
+function payload(name: string, registrationNumber: string) {
   return {
-    legalName: legalName.trim(),
+    name: name.trim(),
     ...(registrationNumber.trim()
       ? { registrationNumber: registrationNumber.trim() }
       : {}),

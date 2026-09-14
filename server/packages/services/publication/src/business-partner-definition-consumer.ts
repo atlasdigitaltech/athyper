@@ -1,3 +1,4 @@
+import { overlayLocalDefinitionPreview } from "./local-definition-preview.js";
 import type {
   LocalProjectionRepository,
   PublicationCanonicalizer,
@@ -24,7 +25,10 @@ export class LocalBusinessPartnerDefinitionConsumer {
     readonly requestedRole?: string;
     readonly sourceKind: string;
   }) {
-    const active = await this.active(),
+    const active = await overlayLocalDefinitionPreview(
+        await this.active(),
+        "request",
+      ),
       key = requestKey(input.kind, input.requestedRole),
       schema = active.bundle.requestSchemas[key];
     if (!record(schema))
@@ -63,7 +67,10 @@ export class LocalBusinessPartnerDefinitionConsumer {
     readonly requestedRole?: string;
     readonly proposedPayload?: Readonly<Record<string, unknown>>;
   }) {
-    const active = await this.active(),
+    const active = await overlayLocalDefinitionPreview(
+        await this.active(),
+        "workflow",
+      ),
       journey = journeyFor(input.kind, input.requestedRole),
       definition = active.bundle.workflowDefinitions[journey];
     if (
@@ -104,8 +111,10 @@ export class LocalBusinessPartnerDefinitionConsumer {
     };
   }
   async descriptors() {
-    const active = await this.active();
+    // Cosmetic local previews must not change command/workflow definition coordinates.
+    const active = await overlayLocalDefinitionPreview(await this.active());
     return {
+      revisionId: active.revisionId,
       releaseId: active.releaseId,
       bundleHash: active.bundleHash,
       releaseNo: active.releaseNo,
@@ -190,16 +199,12 @@ function requestKey(kind: string, role?: string) {
       return "supplier.add";
     case "add_customer":
       return "customer.add";
-    case "add_workforce":
-      return "workforce.add";
     case "configure_company":
       return `${commercialRole(role)}.company`;
     case "change_bank":
       return "supplier.bank";
     case "activate_supplier":
       return "supplier.activate";
-    case "change_employment":
-      return "workforce.change";
     case "amend_partner":
       return "partner.amend";
     case "assign_organization":
@@ -218,10 +223,13 @@ function requestKey(kind: string, role?: string) {
   }
 }
 function journeyFor(kind: string, role?: string) {
-  if (kind === "add_supplier" || kind === "change_bank" || kind === "activate_supplier") return "supplier";
+  if (
+    kind === "add_supplier" ||
+    kind === "change_bank" ||
+    kind === "activate_supplier"
+  )
+    return "supplier";
   if (kind === "add_customer") return "customer";
-  if (kind === "add_workforce" || kind === "change_employment")
-    return "workforce";
   if (
     [
       "amend_partner",
@@ -235,7 +243,7 @@ function journeyFor(kind: string, role?: string) {
   return requiredRole(role);
 }
 function requiredRole(role?: string) {
-  if (role !== "supplier" && role !== "customer" && role !== "workforce")
+  if (role !== "supplier" && role !== "customer")
     throw new BusinessPartnerDefinitionError(
       "BUSINESS_PARTNER_DEFINITION_ROLE_REQUIRED",
     );
@@ -263,21 +271,21 @@ function workflowStage(
     quorum = record(rawQuorum)
       ? {
           kind: String(rawQuorum["kind"] ?? "any") as
-            | "all"
-            | "any"
-            | "count"
-            | "percentage",
+            "all" | "any" | "count" | "percentage",
           ...(Number.isFinite(Number(rawQuorum["value"]))
             ? { value: Number(rawQuorum["value"]) }
             : {}),
         }
       : typeof rawQuorum === "number"
         ? { kind: "count" as const, value: rawQuorum }
-        : { kind: stage["mode"] === "all" ? ("all" as const) : ("any" as const) };
+        : {
+            kind: stage["mode"] === "all" ? ("all" as const) : ("any" as const),
+          };
   return {
     code,
     name: String(stage["name"] ?? code.replaceAll("_", " ")),
-    mode: stage["mode"] === "serial" ? ("serial" as const) : ("parallel" as const),
+    mode:
+      stage["mode"] === "serial" ? ("serial" as const) : ("parallel" as const),
     quorum,
     routed,
     ...(condition ? { routeEvidence: { condition, matched: routed } } : {}),

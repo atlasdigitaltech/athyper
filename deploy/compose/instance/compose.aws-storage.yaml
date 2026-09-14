@@ -1,0 +1,81 @@
+# Include only for provisioned STG/PROD. Missing settings fail at render time.
+x-aws-storage-environment: &aws-storage-environment
+  ATHYPER_ENV: ${ATHYPER_ENV:-staging}
+  AWS_CONFIG_FILE: /run/aws/config
+  S3_REGION: ${S3_REGION:?STG/PROD storage pending provisioning - set S3_REGION}
+  S3_BUCKET_DOCUMENTS: ${S3_BUCKET_DOCUMENTS:?STG/PROD storage pending provisioning - set S3_BUCKET_DOCUMENTS}
+  S3_BUCKET_ARTIFACTS: ${S3_BUCKET_ARTIFACTS:?STG/PROD storage pending provisioning - set S3_BUCKET_ARTIFACTS}
+  S3_BUCKET_TRANSFERS: ${S3_BUCKET_TRANSFERS:?STG/PROD storage pending provisioning - set S3_BUCKET_TRANSFERS}
+  APP_S3_PROFILE: ${APP_S3_PROFILE:?STG/PROD storage pending provisioning - set APP_S3_PROFILE}
+  ARTIFACTS_WRITER_S3_PROFILE: ${ARTIFACTS_WRITER_S3_PROFILE:?STG/PROD storage pending provisioning - set ARTIFACTS_WRITER_S3_PROFILE}
+  S3_ENDPOINT: ""
+  S3_PUBLIC_ENDPOINT: ""
+services:
+  # Compatibility opt-in only; never select this profile with external storage.
+  objectstorage:
+    profiles: [local-storage-opt-in]
+  objectstorage-init:
+    profiles: [local-storage-opt-in]
+  api:
+    environment: *aws-storage-environment
+    volumes:
+      - ${ATHYPER_AWS_AUTH_ROOT:?Set the read-only AWS authentication bundle directory}:/run/aws:ro
+    secrets: !override
+      - runtime-db-password
+      - worker-db-password
+      - redis-password
+      - runtime-iam-client-secret
+      - vapid-subject
+      - vapid-public-key
+      - vapid-private-key
+    depends_on: !override
+      dbpool-apps: { condition: service_healthy }
+      dbpool-session: { condition: service_healthy }
+      iam: { condition: service_healthy }
+      memorycache: { condition: service_healthy }
+      virusscan: { condition: service_healthy }
+      docrender: { condition: service_healthy }
+      docparser: { condition: service_healthy }
+      searchcore: { condition: service_healthy }
+      searchcore-key-init: { condition: service_completed_successfully }
+  worker:
+    environment: *aws-storage-environment
+    volumes:
+      - ${ATHYPER_AWS_AUTH_ROOT:?Set the read-only AWS authentication bundle directory}:/run/aws:ro
+    secrets: !override
+      - runtime-db-password
+      - worker-db-password
+      - redis-password
+      - runtime-iam-client-secret
+      - vapid-subject
+      - vapid-public-key
+      - vapid-private-key
+    depends_on: !override
+      dbpool-apps: { condition: service_healthy }
+      dbpool-session: { condition: service_healthy }
+      iam: { condition: service_healthy }
+      memorycache: { condition: service_healthy }
+      virusscan: { condition: service_healthy }
+      docrender: { condition: service_healthy }
+      docparser: { condition: service_healthy }
+      searchcore: { condition: service_healthy }
+      searchcore-key-init: { condition: service_completed_successfully }
+  scheduler:
+    environment: *aws-storage-environment
+    volumes:
+      - ${ATHYPER_AWS_AUTH_ROOT:?Set the read-only AWS authentication bundle directory}:/run/aws:ro
+    secrets: !override
+      - runtime-db-password
+      - worker-db-password
+      - redis-password
+      - runtime-iam-client-secret
+    depends_on: !override
+      dbpool-apps: { condition: service_healthy }
+      dbpool-session: { condition: service_healthy }
+      iam: { condition: service_healthy }
+      memorycache: { condition: service_healthy }
+      virusscan: { condition: service_healthy }
+      docrender: { condition: service_healthy }
+      docparser: { condition: service_healthy }
+      searchcore: { condition: service_healthy }
+      searchcore-key-init: { condition: service_completed_successfully }

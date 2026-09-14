@@ -1,0 +1,54 @@
+{
+  "include": [
+    {
+      "id": "redis",
+      "image": "athyper/valkey:8.1.10",
+      "context": "deploy/config/redis"
+    },
+    {
+      "id": "pgbouncer",
+      "image": "athyper/pgbouncer:1.25.2-hardened",
+      "context": "deploy/config/pgbouncer"
+    },
+    {
+      "id": "traefik",
+      "image": "athyper/traefik:3.7.13-hardened",
+      "context": "deploy/config/traefik"
+    },
+    {
+      "id": "meilisearch",
+      "image": "athyper/meilisearch:1.13.3-hardened",
+      "context": "deploy/config/meilisearch"
+    },
+    {
+      "id": "gotenberg",
+      "image": "athyper/gotenberg:8.37.0-hardened",
+      "context": "deploy/config/gotenberg"
+    },
+    {
+      "id": "tika",
+      "image": "athyper/tika:4.0.0-hardened",
+      "context": "deploy/config/tika"
+    },
+    {
+      "id": "seaweedfs",
+      "image": "athyper/seaweedfs:4.46-hardened",
+      "context": "deploy/config/seaweedfs"
+    },
+    {
+      "id": "s3-tools",
+      "image": "athyper/s3-tools:1",
+      "context": "deploy/config/s3-tools"
+    },
+    {
+      "id": "virusscan",
+      "image": "athyper/clamav:1.5.2-zip-limit-1",
+      "context": "deploy/config/virusscan"
+    },
+    {
+      "id": "searchcore-key-init",
+      "image": "athyper/searchcore-key-init:1",
+      "context": "deploy/config/searchcore-key-init"
+    }
+  ]
+}

@@ -100,3 +100,12 @@ describe("published Business Partner request forms", () => {
     expect(() => parsePublishedRequestForm({ requestForm: { ...envelope.requestForm, descriptor: { ...envelope.requestForm.descriptor, schema: "unknown" } } })).toThrow(/incompatible/);
   });
 });
+
+it("explicitly clears previously saved visible fields when serializing a draft update", () => {
+  const {descriptor}=parsePublishedRequestForm(envelope);
+  const data=new FormData();
+  data.set("ownershipClass","external");
+  const saved=serializeRequestForm(descriptor,data,{includeEmpty:true});
+  expect(saved.proposedPayload).toMatchObject({legalName:null,qualificationTypeCode:null,tenantFields:{}});
+  expect(serializeRequestForm(descriptor,data).proposedPayload).not.toHaveProperty("legalName");
+});

@@ -22,6 +22,20 @@ import {
 
 const objectSchema = { type: "object", additionalProperties: true } as const;
 const contracts = {
+  preview: defineRouteContract({
+    method: "get",
+    path: "/api/studio/local-business-partner-preview",
+    operationId: "studio.localBusinessPartnerPreview",
+    summary: "Read the personal local BP preview revision",
+    tags: ["STUDIO Business Partner Definitions"],
+    authenticated: true,
+    permission: "studio.business_partner_definition.read",
+    responses: {
+      200: { description: "Local preview revision", body: objectSchema },
+      403: { description: "Forbidden" },
+      404: { description: "Local preview unavailable" },
+    },
+  }),
   author: defineRouteContract({
     method: "post",
     path: "/api/studio/business-partner-definitions",
@@ -33,7 +47,10 @@ const contracts = {
     request: { body: objectSchema },
     responses: {
       201: { description: "Definition revision", body: objectSchema },
-      409: { description: "Definition version or idempotency conflict", body: objectSchema },
+      409: {
+        description: "Definition version or idempotency conflict",
+        body: objectSchema,
+      },
       400: { description: "Invalid definition" },
       403: { description: "Forbidden" },
     },
@@ -102,6 +119,29 @@ export function registerBusinessPartnerDefinitionRoutes(
     readonly service: BusinessPartnerDefinitionService;
   },
 ) {
+  registerContractRoute(
+    application,
+    contracts.preview,
+    options.authenticate,
+    async (_request, response, next) => {
+      try {
+        const context = await permitted(
+          options,
+          response,
+          "studio.business_partner_definition.read",
+        );
+        if (!context) return;
+        const revision = await options.service.localPreview(context.tenantId);
+        if (!revision) {
+          response.status(404).json({ error: "LOCAL_PREVIEW_UNAVAILABLE" });
+          return;
+        }
+        response.status(200).json(revision);
+      } catch (error) {
+        definitionFailure(error, response, next);
+      }
+    },
+  );
   registerContractRoute(
     application,
     contracts.simulate,
@@ -254,7 +294,11 @@ async function permitted(
   resource?: Readonly<Record<string, unknown>>,
 ) {
   const context = options.readContext(response);
-  const decision = await options.authorizer.authorize({ context, permissionCode, ...(resource ? { resource } : {}) });
+  const decision = await options.authorizer.authorize({
+    context,
+    permissionCode,
+    ...(resource ? { resource } : {}),
+  });
   if (!decision.allowed) {
     response.status(403).json({ error: "FORBIDDEN", reason: decision.reason });
     return undefined;
@@ -264,13 +308,18 @@ async function permitted(
 async function audit(
   options: { readonly audit: AuditRecorder },
   context: VerifiedRequestContext,
-  eventCode: "studio.business_partner_definition.author" | "studio.business_partner_definition.publish",
+  eventCode:
+    | "studio.business_partner_definition.author"
+    | "studio.business_partner_definition.publish",
   entityId: string,
   metadata: Readonly<Record<string, unknown>>,
 ) {
   await options.audit.record({
     eventCode,
-    action: eventCode === "studio.business_partner_definition.author" ? "author" : "publish",
+    action:
+      eventCode === "studio.business_partner_definition.author"
+        ? "author"
+        : "publish",
     outcome: "success",
     severity: "critical",
     actor: { kind: "user", principalId: context.principalId },
@@ -319,11 +368,15 @@ function definitionFailure(
   response: Response,
   next: (error: unknown) => void,
 ) {
-  if (record(error) && error["code"] === "23505" &&
-      error["constraint"] === "business_partner_definition_revision_version_uq") {
+  if (
+    record(error) &&
+    error["code"] === "23505" &&
+    error["constraint"] === "business_partner_definition_revision_version_uq"
+  ) {
     response.status(409).json({
       error: "BUSINESS_PARTNER_DEFINITION_VERSION_CONFLICT",
-      message: "This definition version already exists. Review the saved revision, or advance the version for changed content.",
+      message:
+        "This definition version already exists. Review the saved revision, or advance the version for changed content.",
     });
   } else if (error instanceof BusinessPartnerDefinitionError) {
     const status = error.code.endsWith("NOT_FOUND")
@@ -335,11 +388,9 @@ function definitionFailure(
           : 400;
     response.status(status).json({ error: error.code, message: error.code });
   } else if (error instanceof TypeError) {
-    response
-      .status(400)
-      .json({
-        error: "BUSINESS_PARTNER_DEFINITION_INPUT_INVALID",
-        message: error.message,
-      });
+    response.status(400).json({
+      error: "BUSINESS_PARTNER_DEFINITION_INPUT_INVALID",
+      message: error.message,
+    });
   } else next(error);
 }

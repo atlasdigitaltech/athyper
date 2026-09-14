@@ -2152,3 +2152,9 @@ ALTER TABLE document.mesh_profile_change_case
     ADD CONSTRAINT mesh_profile_change_case_entity_case_fk
     FOREIGN KEY (tenant_id, entity_case_id)
     REFERENCES document.entity_case (tenant_id, id);
+
+-- Company ownership is NEON-local; STUDIO and MESH do not have company_code.
+ALTER TABLE document.entity_case
+    ADD CONSTRAINT entity_case_company_owner_fk
+    FOREIGN KEY (tenant_id, owner_company_code_id)
+    REFERENCES master.company_code(tenant_id, id) ON DELETE RESTRICT;

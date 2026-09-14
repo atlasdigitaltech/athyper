@@ -36,7 +36,9 @@ export function Overview({ summary }: { readonly summary: Summary }) {
         </div>
         <div>
           <span>Open requests</span>
-          {canOpenRequests ? (
+          {summary.openWork.activeRequestCount === undefined ? (
+            <strong>Restricted</strong>
+          ) : canOpenRequests ? (
             <button type="button" onClick={() => selectSection("requests")}>
               {summary.openWork.activeRequestCount}
               <span>View requests →</span>
@@ -52,7 +54,7 @@ export function Overview({ summary }: { readonly summary: Summary }) {
           <div>
             <dt>Registered name</dt>
             <dd>
-              {summary.identity.legalName ?? summary.identity.displayName}
+              {summary.identity.name}
             </dd>
           </div>
           <div>

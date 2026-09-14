@@ -6,7 +6,7 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285`
 - Approval: **pending**
-- Cataloged database tables: 695
+- Cataloged database tables: 737
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
 - Unclassified tables: 0
@@ -23,34 +23,34 @@ or multiply classified runtime objects.
 
 | Data class | Objects |
 | --- | ---: |
-| ai_governance_and_runtime | 24 |
+| ai_governance_and_runtime | 29 |
 | audit_log | 17 |
 | authentication_authority | 1 |
-| authorization_authority | 20 |
+| authorization_authority | 21 |
 | authorization_cache | 1 |
-| business_master_transactional | 145 |
+| business_master_transactional | 148 |
 | business_scope_context_non_authorizing | 2 |
 | business_workflow_transactional | 10 |
 | database_backup_object | 1 |
-| ddl_catalog_reference | 112 |
-| derived_projection | 20 |
-| derived_runtime_projection | 12 |
-| document_metadata | 164 |
+| ddl_catalog_reference | 126 |
+| derived_projection | 23 |
+| derived_runtime_projection | 13 |
+| document_metadata | 166 |
 | document_object | 2 |
 | event_outbox_inbox | 21 |
 | event_stream | 1 |
 | governance_audit | 11 |
-| identity_desired_state_authority | 10 |
+| identity_desired_state_authority | 11 |
 | identity_projection | 3 |
 | ledger_regulatory | 16 |
-| mesh_owned | 41 |
+| mesh_owned | 43 |
 | mesh_owned_document_object | 1 |
 | mesh_provisioning_ledger | 1 |
-| metadata_authority | 30 |
+| metadata_authority | 32 |
 | operational_log | 1 |
 | operational_state_and_evidence | 20 |
 | provisioning_ledger | 1 |
-| published_definition_authority | 8 |
+| published_definition_authority | 16 |
 | secret | 1 |
 | session_token | 2 |
 | tenant_business_context_non_authorizing | 1 |
@@ -75,10 +75,15 @@ or multiply classified runtime objects.
 | `ai.ai_monitoring_log` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.ai_tool_invocation` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_conversation_retention_policy` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_experience_release` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_knowledge_chunk` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_knowledge_revision` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_knowledge_source` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_learning_candidate` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_learning_candidate_event` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_learning_inbox` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_message` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_provider_usage` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_run` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_support_session` | session_token | revoke_and_do_not_migrate | exact_table_override |
 | `ai.atlas_tenant_provider_credential` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
@@ -108,6 +113,7 @@ or multiply classified runtime objects.
 | `authz.entity_operation_scope_binding` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
 | `authz.group_member` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
 | `authz.group_role` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.management_receipt` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
 | `authz.override` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
 | `authz.permission` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
 | `authz.permission_scope_kind` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
@@ -137,6 +143,7 @@ or multiply classified runtime objects.
 | `control.commodity_category_sell_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.commodity_code_classification_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.company_fiscal_calendar_assignment` | tenant_finance_configuration | migrate_after_fiscal_calendar_period_rule | exact_table_override |
+| `control.connector_health_job` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.connector_instance` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.connector_type` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.cron_schedule` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -169,7 +176,11 @@ or multiply classified runtime objects.
 | `control.integration_endpoint` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.item_inventory_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.lookup_domain` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.lookup_publication_receipt` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.lookup_revision` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.lookup_tenant_revision` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.lookup_value` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.lookup_value_reference` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.mesh_bank_account_disclosure_inbox` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.mesh_bank_account_projection` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.mesh_business_partner_account_link` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -216,6 +227,7 @@ or multiply classified runtime objects.
 | `control.tax_group_component` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.tax_rate_schedule` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.tax_resolution_rule` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.tenant_module_entitlement_override` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.tenant_parameter_value` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.tenant_usage_limit_override` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.ui_locale_catalog` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -314,6 +326,8 @@ or multiply classified runtime objects.
 | `document.mesh_business_partner_acceptance` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.mesh_business_partner_acceptance_event` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.mesh_business_partner_match` | document_metadata | migrate_with_referenced_objects | schema_default |
+| `document.mesh_profile_change_case` | document_metadata | migrate_with_referenced_objects | schema_default |
+| `document.mesh_profile_change_resolution` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.multipart_upload` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.multipart_upload_part` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.netting_batch` | document_metadata | migrate_with_referenced_objects | schema_default |
@@ -453,9 +467,11 @@ or multiply classified runtime objects.
 | `master.audit_event_contract` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.audit_reason_code` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bank_account` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.bank_account_company_usage` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bank_account_house_config` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bank_account_link` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.bank_party` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.bank_account_usage` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.bank_provisional_reference` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bom` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bom_component` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.brand_profile` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
@@ -575,6 +591,7 @@ or multiply classified runtime objects.
 | `master.risk_source` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.sales_organization_profile` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.saved_view` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.saved_view_default` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.shift_type` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.site` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.statutory_scheme` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
@@ -600,7 +617,8 @@ or multiply classified runtime objects.
 | `mesh.bank_account_link` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.bank_account_retrieval_evidence` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.bank_disclosure_purpose` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
-| `mesh.bank_party` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.bank_provisional_reference` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.business_partner_delivery_acknowledgement` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.canonical_party_correlation_case` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.catalog` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.catalog_audience` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
@@ -629,6 +647,7 @@ or multiply classified runtime objects.
 | `mesh.network_account_reference` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.network_account_tax_registration` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.network_command_evidence` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.network_discovery_receipt` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.network_lifecycle_event` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.network_relationship` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.network_relationship_capability` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
@@ -636,6 +655,8 @@ or multiply classified runtime objects.
 | `mesh.network_relationship_kind` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.registration_exchange` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `metadata.entity` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_baseline_import` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_baseline_import_revocation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_change_set` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_class_profile` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_contract_test_case` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
@@ -699,11 +720,19 @@ or multiply classified runtime objects.
 | `public.schema_provisions` | provisioning_ledger | recreate_empty_then_rebuild_from_executed_manifest | exact_table_override |
 | `publication.artifact` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.artifact_compilation` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.bank_directory_authority` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.bank_directory_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.bank_directory_review` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.business_partner_case_contract_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.business_partner_definition_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.deployment` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.deployment_acknowledgement` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.deployment_event` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.entity_authorization_successor_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.entity_authorization_successor_payload` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.entity_baseline_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.entity_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.entity_runtime_restoration_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `publication.release` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
 | `runtime_meta.applied_release` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
 | `runtime_meta.applied_release_payload` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
@@ -712,11 +741,20 @@ or multiply classified runtime objects.
 | `runtime_meta.entity_descriptor` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
 | `runtime_meta.entity_number_allocation` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
 | `runtime_meta.entity_number_counter` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `runtime_meta.experience_surface_projection` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
 | `runtime_meta.mfa_credential_projection` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
 | `runtime_meta.release_activation_event` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
 | `runtime_meta.release_activation_head` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
 | `runtime_meta.tenant_usage_counter` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
 | `runtime_meta.usage_reservation` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `shared.bank_branch` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `shared.bank_branch_version` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `shared.bank_directory_activation` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `shared.bank_directory_release` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `shared.bank_directory_source_record` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `shared.bank_identifier` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `shared.bank_institution` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `shared.bank_institution_version` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.classification_scheme` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.commodity_code` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.commodity_crosswalk` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -730,8 +768,10 @@ or multiply classified runtime objects.
 | `shared.timezone` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.uom` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `snapshot.bank_account_disclosure` | derived_projection | rebuild_from_authoritative_data | schema_default |
+| `snapshot.bank_directory_revision` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.bom` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.bom_component` | derived_projection | rebuild_from_authoritative_data | schema_default |
+| `snapshot.business_partner_case_contract_revision` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.business_partner_definition_revision` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.compiled_artifact` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.content_item_version` | derived_projection | rebuild_from_authoritative_data | schema_default |
@@ -746,11 +786,13 @@ or multiply classified runtime objects.
 | `snapshot.mesh_bank_account_disclosure_received` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.mesh_business_partner_profile_received` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.network_account_profile_publication` | derived_projection | rebuild_from_authoritative_data | schema_default |
+| `snapshot.subscription_plan_entitlement` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.template_version` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `trustiam.application_projection` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
 | `trustiam.identity_projection` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
 | `trustiam.identity_provisioning_attempt` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
 | `trustiam.identity_provisioning_request` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
+| `trustiam.identity_replay_approval` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
 | `trustiam.identity_saga_attempt` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
 | `trustiam.organization` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
 | `trustiam.organization_provider` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |

@@ -86,7 +86,7 @@
     "server/packages/platform/ai/src/business-partner-insight-tools.ts": "3d03e8b43f99ffcdf9b4514bc7caa10d0c8f91634d8d45a1997aa067edd68bb9",
     "server/packages/platform/ai/src/a2-composition.ts": "0b577881e547c9fd68d89c243890661cd66c01f67639265de751fedeb7d3b3b3",
     "server/packages/platform/ai/src/__tests__/retrieval-f5.test.ts": "d911c2d29fc0b0072901bc06a4bf7e12b368321769b654f14de49cbb4d489be1",
-    "server/db/scripts/tests/integration/atlas/retrieval.mts": "efcb3c5ecafcf269c430e0670f3c9a6db65c156228343c39683fd9a85e795786",
-    "server/db/scripts/tests/integration/atlas/retrieval-qualification.mts": "f60300805d157967276c03343dfda9f45ac34694579ad8f5e80329c6a0db062f"
+    "server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts": "efcb3c5ecafcf269c430e0670f3c9a6db65c156228343c39683fd9a85e795786",
+    "server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval-qualification.mts": "f60300805d157967276c03343dfda9f45ac34694579ad8f5e80329c6a0db062f"
   }
 }

@@ -128,7 +128,11 @@ function fixture(): EntityAuthorizationPublicationInput {
   };
   return {
     // Synthetic governance fixture; never represents DEV reviewer acceptance.
-    review:{async qualify(){return {receiptSha256:"a".repeat(64)};}},
+    review: {
+      async qualify() {
+        return { receiptSha256: "a".repeat(64) };
+      },
+    },
     canonicalizer,
     signer,
     signingKeyId: "test",
@@ -180,7 +184,9 @@ function fixture(): EntityAuthorizationPublicationInput {
             idField: "id",
             tenantField: "tenant_id",
           },
-          fields: [{ key: "id", type: "uuid", storagePath:"id", writableOn:[] }],
+          fields: [
+            { key: "id", type: "uuid", storagePath: "id", writableOn: [] },
+          ],
           operations: Object.fromEntries(
             profile.operations.map((o) => [
               o.key,
@@ -307,16 +313,24 @@ describe("native entity authorization publication (synthetic approved catalog)",
     const baseline = await compileEntityAuthorizationPublication(input);
     const compiled = await compileEntityAuthorizationPublication({
       ...input,
-      catalog: input.catalog.map(p => ({...p, scopeKinds: [...p.scopeKinds, "operating_organization"]})),
+      catalog: input.catalog.map((p) => ({
+        ...p,
+        scopeKinds: [...p.scopeKinds, "operating_organization"],
+      })),
     });
     expect(compiled.envelope.payload).toEqual(baseline.envelope.payload);
   });
   it("rejects undecoded PostgreSQL scope arrays", async () => {
     const input = fixture();
-    await expect(compileEntityAuthorizationPublication({
-      ...input,
-      catalog: input.catalog.map(p => ({...p, scopeKinds: "{tenant}" as unknown as string[]})),
-    })).rejects.toThrow("Permission scope review required");
+    await expect(
+      compileEntityAuthorizationPublication({
+        ...input,
+        catalog: input.catalog.map((p) => ({
+          ...p,
+          scopeKinds: "{tenant}" as unknown as string[],
+        })),
+      }),
+    ).rejects.toThrow("Permission scope review required");
   });
   it("rejects missing source operation IDs", async () => {
     await expect(
@@ -483,26 +497,155 @@ it("runtime parser rejects missing preflight, extra properties, and duplicate op
   ).toThrow("duplicate");
 });
 
-
-it("requires verified publication review before signing",async()=>{
- const base=fixture();let signs=0;const input={...base,signer:{async sign(){signs++;return{signature:"unused"};}}};
- await expect(compileEntityAuthorizationPublication({...input,review:undefined})).rejects.toThrow("review adapter required");
- await expect(compileEntityAuthorizationPublication({...input,review:{async qualify(){throw Error("Unresolved operation review");}}})).rejects.toThrow("Unresolved operation review");
- await expect(compileEntityAuthorizationPublication({...input,review:{async qualify(){return{receiptSha256:"pending"};}}})).rejects.toThrow("review receipt");
- expect(signs).toBe(0);
+it("requires verified publication review before signing", async () => {
+  const base = fixture();
+  let signs = 0;
+  const input = {
+    ...base,
+    signer: {
+      async sign() {
+        signs++;
+        return { signature: "unused" };
+      },
+    },
+  };
+  await expect(
+    compileEntityAuthorizationPublication({ ...input, review: undefined }),
+  ).rejects.toThrow("review adapter required");
+  await expect(
+    compileEntityAuthorizationPublication({
+      ...input,
+      review: {
+        async qualify() {
+          throw Error("Unresolved operation review");
+        },
+      },
+    }),
+  ).rejects.toThrow("Unresolved operation review");
+  await expect(
+    compileEntityAuthorizationPublication({
+      ...input,
+      review: {
+        async qualify() {
+          return { receiptSha256: "pending" };
+        },
+      },
+    }),
+  ).rejects.toThrow("review receipt");
+  expect(signs).toBe(0);
 });
 
-it("pins catalog and authored IDs before asynchronous governance review",async()=>{
- const input=fixture();const result=await compileEntityAuthorizationPublication({...input,review:{async qualify(){(input.catalog as unknown[]).splice(0);for(const key of Object.keys(input.operationIds))delete (input.operationIds as Record<string,string>)[key];return{receiptSha256:"a".repeat(64)};}}});
- expect(result.manifest.evidence).toMatchObject({authorizationReviewReceiptSha256:"a".repeat(64)});
+it("pins catalog and authored IDs before asynchronous governance review", async () => {
+  const input = fixture();
+  const result = await compileEntityAuthorizationPublication({
+    ...input,
+    review: {
+      async qualify() {
+        (input.catalog as unknown[]).splice(0);
+        for (const key of Object.keys(input.operationIds))
+          delete (input.operationIds as Record<string, string>)[key];
+        return { receiptSha256: "a".repeat(64) };
+      },
+    },
+  });
+  expect(result.manifest.evidence).toMatchObject({
+    authorizationReviewReceiptSha256: "a".repeat(64),
+  });
 });
 
 it("normalizes authored binding order while retaining exact binding values and contract evidence", async () => {
-  const input=fixture();
-  const contract=input.projection.entityContract.contract as Record<string,any>;
-  contract.authorizationRuntime={...contract.authorizationRuntime,bindings:[...contract.authorizationRuntime.bindings].reverse()};
-  const compiled=await compileEntityAuthorizationPublication(input);
-  expect(compiled.manifest.evidence).toMatchObject({authorizationReviewReceiptSha256:"a".repeat(64)});
-  contract.authorizationRuntime.bindings[0]={...contract.authorizationRuntime.bindings[0],handler:"unreviewed.handler.v1"};
-  await expect(compileEntityAuthorizationPublication(input)).rejects.toThrow("Authoring contract/runtime authorization mismatch");
+  const input = fixture();
+  const contract = input.projection.entityContract.contract as Record<
+    string,
+    any
+  >;
+  contract.authorizationRuntime = {
+    ...contract.authorizationRuntime,
+    bindings: [...contract.authorizationRuntime.bindings].reverse(),
+  };
+  const compiled = await compileEntityAuthorizationPublication(input);
+  expect((await load(input)).verification.signatureVerified).toBe(true);
+  expect(compiled.manifest.evidence).toMatchObject({
+    authorizationReviewReceiptSha256: "a".repeat(64),
+  });
+  contract.authorizationRuntime.bindings[0] = {
+    ...contract.authorizationRuntime.bindings[0],
+    handler: "unreviewed.handler.v1",
+  };
+  await expect(compileEntityAuthorizationPublication(input)).rejects.toThrow(
+    "Authoring contract/runtime authorization mismatch",
+  );
+});
+
+it("rejects unresolved v2 source constraints before review or signing", async () => {
+  const input = fixture();
+  const descriptor = input.projection.entityDescriptor.descriptor;
+  const profile = parseEntityAuthorizationProfile(descriptor["authorization"]);
+  const previous = parseEntityAuthorizationRuntime(
+    descriptor["authorizationRuntime"],
+    profile,
+  );
+  const runtime = parseEntityAuthorizationRuntime(
+    {
+      schemaVersion: 2,
+      runtimeVersion: "entity-authorization.v2",
+      bindings: previous.bindings,
+      canonicalReadAdmission: {
+        schemaVersion: 1,
+        kind: "entity_canonical_read_admission",
+        entityCode: profile.entityCode,
+        planeKey: profile.planeKey,
+        profileHash: canonicalizer.sha256(
+          canonicalizer.canonicalBytes(profile),
+        ),
+        reviewRevision: "b".repeat(64),
+        transitions: [
+          {
+            operationKey: "read",
+            sourcePermissionCode: "legacy.missing.read",
+            targetPermissionCode: profile.operations.find(
+              (o) => o.key === "read",
+            )!.permissionCode,
+          },
+        ],
+      },
+    },
+    profile,
+  );
+  let reviews = 0,
+    signatures = 0;
+  await expect(
+    compileEntityAuthorizationPublication({
+      ...input,
+      projection: {
+        entityContract: {
+          ...input.projection.entityContract,
+          contract: {
+            ...input.projection.entityContract.contract,
+            authorizationRuntime: runtime,
+          },
+        },
+        entityDescriptor: {
+          ...input.projection.entityDescriptor,
+          descriptor: { ...descriptor, authorizationRuntime: runtime },
+        },
+      },
+      review: {
+        qualify: async () => {
+          reviews++;
+          return { receiptSha256: "a".repeat(64) };
+        },
+      },
+      signer: {
+        sign: async () => {
+          signatures++;
+          throw Error("must not sign");
+        },
+      },
+    }),
+  ).rejects.toThrow(
+    "Canonical read source catalog unresolved: read:legacy.missing.read",
+  );
+  expect(reviews).toBe(0);
+  expect(signatures).toBe(0);
 });

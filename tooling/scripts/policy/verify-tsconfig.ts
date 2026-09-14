@@ -9,13 +9,13 @@
  *   - [extends] workspace tsconfigs must extend a shared base config.
  *
  * Notes on intentional divergences (not flagged):
- *   - server/tsconfig.json uses NodeNext directly (sub-monorepo, separate resolution).
+ *   - server/tsconfig.json is the shared server compiler base.
  *   - packages/shared/data-integration/config/* are the shared bases themselves.
  *   - Casing on `module` / `target` is left to the TS schema's mixed-case
  *     conventions ("ESNext", "ES2022") â€” both are canonical.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
@@ -44,7 +44,14 @@ const STRICT_OPTIONS_FORBIDDEN_FALSE = [
 ];
 
 const SCAN_ROOTS = ["apps", "packages", "server", "tooling"];
-const IGNORE_DIR = new Set(["node_modules", ".next", "dist", ".turbo", "coverage", ".git"]);
+const IGNORE_DIR = new Set([
+  "node_modules",
+  ".next",
+  "dist",
+  ".turbo",
+  "coverage",
+  ".git",
+]);
 const TSCONFIG_RE = /^tsconfig(\.[\w.-]+)?\.json$/;
 
 function walk(dir: string, out: string[]): void {
@@ -55,7 +62,7 @@ function walk(dir: string, out: string[]): void {
     return;
   }
   for (const name of entries) {
-    if (IGNORE_DIR.has(name)) continue;
+    if (IGNORE_DIR.has(name) || name.startsWith(".next")) continue;
     const full = join(dir, name);
     let st;
     try {
@@ -173,7 +180,9 @@ for (const abs of files) {
   }
 
   // Rule 3: workspace tsconfig.json must extend a shared base
-  const isWorkspaceEntry = /^(apps|packages|server)\/.+\/tsconfig\.json$/.test(rel);
+  const isWorkspaceEntry = /^(apps|packages|server)\/.+\/tsconfig\.json$/.test(
+    rel,
+  );
   if (isWorkspaceEntry && !isSharedBaseOrIndependent(rel)) {
     const ext = json.extends;
     const list = Array.isArray(ext) ? ext : ext ? [ext] : [];
@@ -181,11 +190,14 @@ for (const abs of files) {
       (e) =>
         e.includes("@athyper/config") ||
         e.includes("@athyper/tsconfig") ||
-        e.includes("tooling/tsconfig"),
+        e.includes("tooling/tsconfig") ||
+        (rel.startsWith("server/") &&
+          e.startsWith(".") &&
+          resolve(dirname(abs), e) === join(REPO_ROOT, "server/tsconfig.json")),
     );
     if (!ok) {
       errors.push(
-        `${rel}: [extends] tsconfig.json must extend @athyper/config (or @athyper/tsconfig). Got: ${JSON.stringify(ext ?? null)}`,
+        `${rel}: [extends] tsconfig.json must extend a shared workspace base (server packages may extend server/tsconfig.json). Got: ${JSON.stringify(ext ?? null)}`,
       );
     }
   }

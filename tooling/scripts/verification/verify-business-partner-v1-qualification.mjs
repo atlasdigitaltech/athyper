@@ -97,7 +97,7 @@ export function verifyBusinessPartnerV1Qualification() {
       "server/apps/platform-host/src/composition/register-services.ts",
     ),
     alerts = read(
-      "deploy/config/telemetry/metrics/business-partner-alerts.yml",
+      "deploy/config/telemetry/metrics/business-partner-case-alerts.yml",
     ),
     dashboard = read(
       "deploy/config/telemetry/provisioning/dashboards/json/business-partner-v1.json",

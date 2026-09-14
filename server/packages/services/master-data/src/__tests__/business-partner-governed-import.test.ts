@@ -7,7 +7,7 @@ import { createBusinessPartnerRequestValidator } from "../business-partner-reque
 
 const context = {planeKey: "neon", tenantId: "11111111-1111-4111-8111-111111111111", principalId: "22222222-2222-4222-8222-222222222222", requestId: "request-1"} as VerifiedRequestContext;
 const schema = {code: "neon.business_partner_request", version: 1, hash: "a".repeat(64), releaseId: "33333333-3333-4333-8333-333333333333"};
-const row = (rowKey = "row-0001") => ({rowKey, operatingOrganizationId: "44444444-4444-4444-8444-444444444444", proposedPayload: {legalName: "Internal supplier", ownershipClass: "internal", supplierType: "intercompany"}, extensions: {
+const row = (rowKey = "row-0001") => ({rowKey, operatingOrganizationId: "44444444-4444-4444-8444-444444444444", proposedPayload: {name: "Internal supplier", ownershipClass: "internal", supplierType: "intercompany"}, extensions: {
   addresses: [{clientItemKey: "address-1", definitionFieldCode: "relationship.address.primary", purpose: "default", countryCode: "GB", normalizedHash: "b".repeat(64), isPrimary: true}],
   contactPersons: [{clientItemKey: "contact-1", definitionFieldCode: "relationship.contact.primary", contactName: "Supplier contact", isPrimary: true}],
   contactChannels: [{clientItemKey: "channel-1", definitionFieldCode: "relationship.contact.email", contactClientItemKey: "contact-1", channelType: "email" as const, value: "supplier@example.test", purpose: "default", isPrimary: true}],
@@ -16,7 +16,7 @@ const batch = (...rows: ReturnType<typeof row>[]) => ({schemaVersion: 1, batchKe
 function fixture() {
   const repository = {create: vi.fn(() => {throw Error("PREFLIGHT_MUST_NOT_WRITE");})};
   const audit = {record: vi.fn()}, outbox = {append: vi.fn()};
-  const owner = createBusinessPartnerRequestService({repository: repository as never, authorizer: {authorize: async () => ({allowed: true})}, schemas: {resolve: async () => schema}, validator: createBusinessPartnerRequestValidator({duplicates: {findExactLegalName: async () => []}}), workflows: {} as never, transactions: {run: async (_plane, _actor, work) => work({})}, audit: audit as never, outbox});
+  const owner = createBusinessPartnerRequestService({repository: repository as never, authorizer: {authorize: async () => ({allowed: true})}, schemas: {resolve: async () => schema}, validator: createBusinessPartnerRequestValidator({duplicates: {findExactName: async () => []}}), workflows: {} as never, transactions: {run: async (_plane, _actor, work) => work({})}, audit: audit as never, outbox});
   const preflightCreate = vi.fn(owner.preflightCreate!.bind(owner));
   const saved = new Map<string, unknown>();
   const create = vi.fn(async (command: CreateBusinessPartnerRequestCommand) => {
@@ -45,7 +45,7 @@ it("pins the checked schema, creates only supplier drafts, and reuses stable row
   expect((await f.service.execute(context, batch(row()))).outcomes[0]?.status).toBe("created");
   expect((await f.service.execute(context, batch(row()))).outcomes[0]?.status).toBe("replayed");
   expect(f.create.mock.calls[0]![0]).toMatchObject({kind: "new_partner", requestedRole: "supplier", source: {kind: "import"}, registrationMode: "integration", expectedForm: schema});
-  const changed = row(); changed.proposedPayload.legalName = "Changed";
+  const changed = row(); changed.proposedPayload.name = "Changed";
   expect((await f.service.execute(context, batch(changed))).outcomes[0]?.status).toBe("failed");
 });
 it("stops on revocation between rows and reports prior committed work without continuing", async () => {

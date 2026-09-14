@@ -18,6 +18,7 @@ Neon live-model/replay, document-grounded browser answers, deployed database
 transaction probes and fresh disposable database suites for all three planes
 passed. The six qualification-gate tests also passed. Previous receipts were
 archived in `docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/`.
+Duplicate copies were later consolidated; the [archive index and recovery notes](../examples/atlas-f6/archive-before-refresh-20260910T091357Z/README.md) preserve their original checksums and backup location.
 
 The first Neon arithmetic request completed with an incorrect answer, 42 instead
 of 63. It is retained as `model-neon-refresh-first-attempt.json`. A separate new

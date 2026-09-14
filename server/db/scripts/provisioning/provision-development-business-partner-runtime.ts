@@ -32,7 +32,7 @@ const BUSINESS_PARTNER_360_PERMISSION_CODES = [
 ] as const;
 const PRIMARY_TENANT_ADMINS = ["athyper.admin", "tksa.admin", "catl.admin"] as const;
 const PUBLISHED_AT = "2026-08-26T00:00:00.000Z";
-const SOURCE_VERSION = "development-v10";
+const SOURCE_VERSION = "development-v11";
 const CASE_CONTRACT_SOURCE_VERSION = "development-v4";
 const UUID_NAMESPACE = Buffer.from("7bbaa1b7700b5b54a7eecf62699013ca", "hex");
 
@@ -66,13 +66,11 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
       field("record_version", "integer", true, false, false, { label: "Record Version", defaultVisible: false, defaultOrder: 91, defaultWidth: 120 }),
       field("id", "uuid", true, true, true, { label: "Record ID", defaultVisible: false, defaultOrder: 90, defaultWidth: 300 }),
       field("code", "string", true, true, true, { label: "Business Partner Code", semanticRole: "identity", defaultVisible: true, defaultOrder: 0, defaultWidth: 190 }),
-      field("display_name", "string", false, true, true, { label: "Display Name", semanticRole: "title", defaultVisible: true, defaultOrder: 1, defaultWidth: 280 }),
+      field("name", "string", true, true, true, { label: "Registered name", semanticRole: "title", defaultVisible: true, defaultOrder: 1, defaultWidth: 280 }, { maxLength: 320 }),
       field("status", "enum", true, true, true, { label: "Status", semanticRole: "status", defaultVisible: true, defaultOrder: 2, defaultWidth: 130, groupable: true }, { options: ["active", "draft", "inactive", "archived"] }),
-      field("partner_category", "enum", true, true, true, { label: "Partner Category", defaultVisible: true, defaultOrder: 3, defaultWidth: 170, groupable: true }, { options: ["organization", "person"] }),
+      field("partner_category", "enum", true, true, true, { label: "Partner Category", defaultVisible: false, defaultOrder: 3, defaultWidth: 170, groupable: true }, { options: ["organization"] }),
       field("registration_country_code", "string", false, true, true, { label: "Country", semanticRole: "country_code", defaultVisible: true, defaultOrder: 4, defaultWidth: 120, groupable: true }),
       field("updated_at", "datetime", false, true, true, { label: "Updated", semanticRole: "updated_at", defaultVisible: true, defaultOrder: 5, defaultWidth: 190 }),
-      field("name", "string", true, true, true, { label: "Registered Name", defaultVisible: false, defaultOrder: 10, defaultWidth: 280 }),
-      field("legal_name", "string", false, true, true, { label: "Legal Name", defaultVisible: false, defaultOrder: 11, defaultWidth: 300 }),
       field("is_active", "boolean", false, true, true, { label: "Active", defaultVisible: false, defaultOrder: 12, defaultWidth: 110 }),
     ],
     listPresentation: {
@@ -83,13 +81,13 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
       defaultState: {
         filters: [],
         sort: [{ field: "code", direction: "asc" }],
-        columns: ["code", "display_name", "status", "partner_category", "registration_country_code", "updated_at"],
+        columns: ["code", "name", "status", "partner_category", "registration_country_code", "updated_at"],
         density: "comfortable",
         mode: "table",
       },
       supportedModes: ["table", "compact"],
       search: { minimumQueryLength: 1 },
-      filterPresentation: { quickFields: [{ field: "status", defaultOperator: "eq" }, { field: "partner_category", defaultOperator: "eq" }, { field: "registration_country_code", defaultOperator: "in" }, { field: "updated_at", defaultOperator: "relative" }], allowUserPinning: true },
+      filterPresentation: { quickFields: [{ field: "status", defaultOperator: "eq" }, { field: "partner_category", defaultOperator: "eq" }, { field: "registration_country_code", defaultOperator: "eq" }, { field: "updated_at", defaultOperator: "relative" }], allowUserPinning: true },
       limits: { defaultPageSize: 10, allowedPageSizes: [10, 25, 50, 100], maxSortLevels: 3, countMode: "exact" },
       dataOperations:{exportFormats:["xlsx","csv","json","ndjson"],importAdapterKey:"neon.business_partner.operating_organization.v1",importOperations:["create","update","upsert","delete","replace"],importOperationPermissions:{create:[IMPORT_PERMISSION_CODE],update:["neon.relationship.business_partner.update"],upsert:[IMPORT_PERMISSION_CODE,"neon.relationship.business_partner.update"],delete:["neon.relationship.business_partner.update"],replace:[IMPORT_PERMISSION_CODE,"neon.relationship.business_partner.update"]},importFormats:["xlsx","csv","json"],importMaxRows:50000,importMaxFileBytes:26214400,allowTemplateDownload:true},
     },
@@ -117,7 +115,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
     sourceVersion: SOURCE_VERSION,
     publicationKey: PUBLICATION_KEY,
     releaseId,
-    releaseNo: 10,
+    releaseNo: 11,
     targetPlane: "neon",
     contractHash,
     compiledHash,
@@ -126,7 +124,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
   return {
     publicationKey: PUBLICATION_KEY,
     releaseId,
-    releaseNo: 10,
+    releaseNo: 11,
     deploymentId,
     artifactHash,
     manifest,
@@ -138,7 +136,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
         entity_code: "business_partner",
         release_id: releaseId,
         revision_id: revisionId,
-        release_no: 10,
+        release_no: 11,
         contract_schema_code: "athyper.meta-entity-contract",
         contract_schema_version: "2.1",
         contract_hash: contractHash,
@@ -188,20 +186,19 @@ export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string,r
   const deploymentId = deterministicUuid(`${coordinate}:deployment:neon`);
   const contract = {
     type: "object",
-    required: ["businessPartnerCode", "name", "ownershipClass"],
+    // Drafts may omit business fields; intake submission enforces published field requirements.
+    required: ["businessPartnerCode"],
     additionalProperties: false,
     properties: {
       businessPartnerCode: { type: "string", minLength: 1 },
-      name: { type: "string", minLength: 1 },
-      displayName: { type: "string" },
-      legalName: { type: "string" },
+      name: { type: "string", minLength: 1, maxLength: 320 },
       legalForm: { type: "string" },
       registrationCountryCode: { type: "string" },
       incorporationDate: { type: "string" },
       websiteUrl: { type: "string" },
       description: { type: "string" },
       ownershipClass: { type: "string", enum: ["internal", "external"] },
-      partnerCategory: { type: "string", enum: ["organization", "person"] },
+      partnerCategory: { type: "string", enum: ["organization"] },
       legalClassification: { type: "string" },
       requestedRole: { type: "string", enum: ["supplier", "customer"] },
       roleCode: { type: "string" },
@@ -466,8 +463,8 @@ async function provisionDevelopmentReaders(client: QueryClient, permissions: rea
 }
 
 function field(key: string, type: string, required: boolean, filterable: boolean, sortable: boolean, list: Readonly<Record<string, unknown>>, validation?: Readonly<Record<string, unknown>>) {
-  const writable=new Set(["code","name","display_name","legal_name","status","partner_category","registration_country_code"]);
-  return { key, storagePath: key, type, required, writableOn: writable.has(key)?["create","patch"]:[], filterable, sortable, searchable: ["code", "name", "display_name", "legal_name"].includes(key), ...(validation ? { validation } : {}), list };
+  const writable=new Set(["code","name","status","partner_category","registration_country_code"]);
+  return { key, storagePath: key, type, required, writableOn: writable.has(key)?["create","patch"]:[], filterable, sortable, searchable: ["code", "name"].includes(key), ...(validation ? { validation } : {}), list };
 }
 function canonical(value: unknown): string { if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`; if (value && typeof value === "object") return `{${Object.entries(value as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`).join(",")}}`; return JSON.stringify(value); }
 function sha256(value: unknown): string { return createHash("sha256").update(canonical(value)).digest("hex"); }

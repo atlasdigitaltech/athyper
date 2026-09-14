@@ -10,7 +10,8 @@
   ],
   "exports": {
     ".": "./src/index.tsx",
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./lookup-directory": "./src/lookup-directory.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -22,7 +23,8 @@
     "@athyper/platform-shell": "workspace:*",
     "@athyper/platform-temporal": "workspace:*",
     "@athyper/platform-ui": "workspace:*",
-    "@athyper/platform-i18n": "workspace:*"
+    "@athyper/platform-i18n": "workspace:*",
+    "@athyper/contract-platform-entity-runtime": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5",

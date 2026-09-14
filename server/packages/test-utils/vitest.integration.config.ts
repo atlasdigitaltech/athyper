@@ -12,8 +12,17 @@ export default defineConfig({
     // named qualification owners and cannot become stale when another owner adds one.
     include: ["server/packages/**/*.postgres.test.ts"],
     exclude: ["**/node_modules/**", "**/dist/**"],
-    globalSetup: [fileURLToPath(new URL("./src/postgres-global-setup.ts", import.meta.url))],
-    reporters: ["default", new NoSkippedPostgresReporter()],
+    globalSetup: [
+      fileURLToPath(new URL("./src/postgres-global-setup.ts", import.meta.url)),
+    ],
+    reporters: [
+      "default",
+      ...(process.env["ATHYPER_POSTGRES_JSON_REPORT"] ? ["json" as const] : []),
+      new NoSkippedPostgresReporter(),
+    ],
+    ...(process.env["ATHYPER_POSTGRES_JSON_REPORT"]
+      ? { outputFile: { json: process.env["ATHYPER_POSTGRES_JSON_REPORT"] } }
+      : {}),
     passWithNoTests: false,
     testTimeout: 30_000,
     hookTimeout: 30_000,

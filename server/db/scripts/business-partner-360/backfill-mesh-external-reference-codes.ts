@@ -1,7 +1,7 @@
 /** Plan by default; update only missing codes on approved links with matching local publications. */
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
-import { resolveMeshExternalReferenceCode } from "../../../packages/planes/neon/src/mesh-external-reference-code.js";
+import { resolveMeshExternalReferenceCode } from "@athyper/server-plane-neon/mesh-external-reference-code";
 
 export async function backfillMeshExternalReferenceCodes(options: {
   databaseUrl: string;

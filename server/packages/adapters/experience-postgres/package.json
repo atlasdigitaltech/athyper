@@ -1,1 +1,27 @@
-{"name":"@athyper/server-adapter-experience-postgres","version":"0.1.0","private":true,"type":"module","exports":{".":"./src/index.ts"},"scripts":{"build":"tsc -p tsconfig.json","test":"vitest run","test:localization-rls":"node scripts/run-localization-rls.mjs"},"dependencies":{"@athyper/server-contract-auth":"workspace:*","@athyper/server-platform-experience":"workspace:*","kysely":"^0.28.17","pg":"^8.13.0"},"devDependencies":{"@athyper/server-test-utils":"workspace:*","@types/node":"^25.6.0","@types/pg":"^8.11.10","typescript":"^6.0.3","vitest":"^4.1.4"}}
+{
+  "name": "@athyper/server-adapter-experience-postgres",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:localization-rls": "node scripts/run-localization-rls.mjs"
+  },
+  "dependencies": {
+    "@athyper/server-contract-auth": "workspace:*",
+    "kysely": "^0.28.17",
+    "pg": "^8.20.0",
+    "@athyper/server-contract-experience": "workspace:*"
+  },
+  "devDependencies": {
+    "@athyper/server-test-utils": "workspace:*",
+    "@types/node": "^25.6.0",
+    "@types/pg": "^8.20.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}
