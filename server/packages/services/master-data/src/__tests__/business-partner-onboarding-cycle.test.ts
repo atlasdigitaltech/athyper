@@ -7,6 +7,7 @@ function database(templateAvailable:boolean){
  let started=false;
  const client={release:()=>{},query:vi.fn(async(sql:string,parameters:readonly unknown[]=[])=>{
   statements.push({sql,parameters});
+  if(sql.includes("governance.evaluate_cycle_completion"))return {rows:[{result:{ready:false}}]};
   if(sql.includes("FROM control.cycle_type"))return {rows:templateAvailable?[{id:"template",cycle_type_id:"type",revision_number:1,template_hash:"hash",template_json:{template:{tasks:[{id:"task",phaseId:"phase",code:"INVITATION",name:"Invitation",completionMode:"system",isMandatory:true,isWaivable:false}],dependencies:[]}}}]:[]};
   if(sql.includes("SELECT * FROM governance.cycle_run"))return {rows:started?[{id:"run",status:"running"}]:[]};
   if(sql.includes("INSERT INTO governance.cycle_run"))started=true;

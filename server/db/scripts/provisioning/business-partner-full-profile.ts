@@ -1,5 +1,5 @@
-import { withBusinessPartnerRequestCapture } from "./business-partner-request-capture.js";
-import { createHash } from "node:crypto";
+import { applyBusinessPartnerRequestCapture } from "./business-partner-request-capture.js";
+import { presentationUuid } from "./presentation-graph-helpers";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 import type {
   IntakeDataField,
@@ -9,10 +9,7 @@ import type {
 import { compileEntityIntakeSurfaces } from "../../../../packages/contracts/platform/entity-runtime/src/intake-surface-authoring";
 
 const uid = (key: string) => {
-  const h = createHash("sha256")
-    .update(`bp.full-profile.v1.${key}`)
-    .digest("hex");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+  return presentationUuid(`bp.full-profile.v1.${key}`);
 };
 const snake = (s: string) => s.replace(/[A-Z]/g, (c) => "_" + c.toLowerCase());
 const field = (
@@ -324,17 +321,20 @@ export function fullProfileItemSurfaces(): readonly EntityIntakeSurfaceV1[] {
 }
 
 /** Explicit development authoring operation: preserve existing authored surfaces and identities. */
-export function withBusinessPartnerFullProfile(
-  source: MetaEntityGraph,
-): MetaEntityGraph {
+export function withBusinessPartnerFullProfile(source: MetaEntityGraph): MetaEntityGraph {
+  return applyBusinessPartnerFullProfile(structuredClone(source));
+}
+
+/** Internal pipeline step: mutates the caller-owned working graph. */
+export function applyBusinessPartnerFullProfile(source: MetaEntityGraph): MetaEntityGraph {
   if (source.entity.entityCode !== "business_partner")
     throw Error("Business Partner graph required");
-  const graph = structuredClone(source) as any;
+  const graph = source as any;
   const details = graph.surfaces.find(
     (s: any) => s.surfaceKey === "intake_details",
   );
   if (!details) throw Error("Published intake details required");
-  if (details.layoutConfig?.fullProfilePrototypeVersion === 1) return withBusinessPartnerAddressRequiredness(withBusinessPartnerRequestCapture(graph));
+  if (details.layoutConfig?.fullProfilePrototypeVersion === 1) return applyBusinessPartnerAddressRequiredness(applyBusinessPartnerRequestCapture(graph));
   const rootSection = graph.surfaceSections
     .filter((s: any) => s.entitySurfaceId === details.id)
     .sort((a: any, b: any) => a.position - b.position)[0];
@@ -577,13 +577,18 @@ export function withBusinessPartnerFullProfile(
     formLabels: { ...details.layoutConfig.formLabels, saveDraft: "Save draft" },
   };
   compileEntityIntakeSurfaces(graph);
-  return withBusinessPartnerAddressRequiredness(withBusinessPartnerRequestCapture(graph));
+  return applyBusinessPartnerAddressRequiredness(applyBusinessPartnerRequestCapture(graph));
 }
 
 /** Repair old full-profile graphs too; item rules apply only to the full-profile collection. */
 export function withBusinessPartnerAddressRequiredness(source: MetaEntityGraph): MetaEntityGraph {
+  return applyBusinessPartnerAddressRequiredness(structuredClone(source));
+}
+
+/** Internal pipeline step: mutates the caller-owned working graph. */
+export function applyBusinessPartnerAddressRequiredness(source: MetaEntityGraph): MetaEntityGraph {
   if (source.entity.entityCode !== "business_partner") throw Error("Business Partner graph required");
-  const graph = structuredClone(source) as any;
+  const graph = source as any;
   const address = graph.surfaces.find((s: any) => s.surfaceKey === "partner_address_intake");
   if (!address) return graph;
   for (const binding of graph.surfaceFieldBindings) {

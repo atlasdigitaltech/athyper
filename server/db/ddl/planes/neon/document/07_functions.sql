@@ -5479,7 +5479,7 @@ END $grants$;
 CREATE OR REPLACE FUNCTION document.trg_guard_entity_case_mutation() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,event AS $$
 DECLARE execution uuid:=NULLIF(current_setting('app.entity_case_command_execution_id',true),'')::uuid;tenant uuid:=COALESCE(NEW.tenant_id,OLD.tenant_id);
 BEGIN
- IF execution IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution e WHERE e.id=execution AND e.tenant_id=tenant AND e.command_code IN('entity.case.draft.write','entity.case.validation','entity.case.lifecycle','entity.case.materialize.internal_business_partner','entity.case.materialize.business_partner_role','entity.case.materialize.business_partner_company','entity.case.materialize.business_partner_change','entity.case.materialize.mesh_profile_change') AND e.status='processing' AND e.actor_principal_id=master.current_principal_id_soft()) THEN RAISE EXCEPTION 'Entity case mutations require the governed command' USING ERRCODE='insufficient_privilege';END IF;RETURN COALESCE(NEW,OLD);
+ IF execution IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution e WHERE e.id=execution AND e.tenant_id=tenant AND e.command_code IN('entity.case.draft.write','entity.case.validation','entity.case.lifecycle','entity.case.materialize.internal_business_partner','entity.case.materialize.business_partner_role','entity.case.materialize.business_partner_company','entity.case.materialize.business_partner_change','entity.case.materialize.mesh_profile_change','entity.case.materialize.supplier_activation') AND e.status='processing' AND e.actor_principal_id=master.current_principal_id_soft()) THEN RAISE EXCEPTION 'Entity case mutations require the governed command' USING ERRCODE='insufficient_privilege';END IF;RETURN COALESCE(NEW,OLD);
 END $$;
 
 CREATE OR REPLACE FUNCTION document.command_entity_case_validation(
@@ -5524,8 +5524,8 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,document,snapshot,r
 DECLARE fingerprint text;prior event.command_execution%ROWTYPE;execution uuid;current document.entity_case%ROWTYPE;task governance.cycle_task%ROWTYPE;payload jsonb;next_snapshot uuid;next_version bigint;next_status text;outbox uuid;result jsonb;command_code text;lineage_hash text;
 BEGIN
  IF current_database()<>'athyper_'||current_setting('app.database_plane',true) OR shared.current_tenant_id()<>p_tenant_id OR master.current_principal_id_soft() IS DISTINCT FROM p_actor_id THEN RAISE EXCEPTION 'Entity case lifecycle context mismatch' USING ERRCODE='insufficient_privilege';END IF;
- IF p_action NOT IN('submit','approve','reject','return') OR p_expected_version<1 OR (p_cycle_run_id IS NULL)<>(p_cycle_task_id IS NULL) OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 200 OR (p_action IN('reject','return') AND NULLIF(btrim(p_reason),'') IS NULL) OR length(COALESCE(p_reason,''))>2000 THEN RAISE EXCEPTION 'Entity case lifecycle arguments are invalid' USING ERRCODE='check_violation';END IF;
- command_code:=CASE WHEN p_action='submit' THEN 'entity.case.submit' ELSE 'entity.case.decision' END;
+ IF p_action NOT IN('submit','approve','reject','return','cancel') OR p_expected_version<1 OR (p_action<>'cancel' AND (p_cycle_run_id IS NULL)<>(p_cycle_task_id IS NULL)) OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 200 OR (p_action IN('reject','return','cancel') AND NULLIF(btrim(p_reason),'') IS NULL) OR length(COALESCE(p_reason,''))>2000 THEN RAISE EXCEPTION 'Entity case lifecycle arguments are invalid' USING ERRCODE='check_violation';END IF;
+ command_code:=CASE WHEN p_action='submit' THEN 'entity.case.submit' WHEN p_action='cancel' THEN 'entity.case.cancel' ELSE 'entity.case.decision' END;
  fingerprint:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,'action',p_action,'expectedVersion',p_expected_version,'cycleRunId',p_cycle_run_id,'cycleTaskId',p_cycle_task_id,'reason',p_reason,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
  PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case-lifecycle:'||p_idempotency_key,0));
  SELECT e.* INTO prior FROM event.command_execution e WHERE e.tenant_id=p_tenant_id AND e.command_code='entity.case.lifecycle' AND e.idempotency_key=p_idempotency_key;
@@ -5542,8 +5542,45 @@ BEGIN
   IF NOT EXISTS(SELECT 1 FROM document.entity_case_validation v WHERE v.tenant_id=p_tenant_id AND v.entity_case_id=p_case_id AND v.evaluated_snapshot_id=current.current_snapshot_id AND v.details->'validationSummary'->>'outcome'='passed') THEN RAISE EXCEPTION 'Entity case requires successful validation of the current snapshot' USING ERRCODE='object_not_in_prerequisite_state';END IF;
   IF cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c WHERE c.tenant_id=p_tenant_id AND c.id=current.entity_contract_id AND c.entity_contract_hash=current.entity_contract_hash AND c.status IN('published','superseded')),payload))>0 THEN RAISE EXCEPTION 'Entity case submission failed pinned contract validation' USING ERRCODE='check_violation';END IF;
   next_status:='submitted';
+ ELSIF p_action='cancel' THEN
+  IF current.status NOT IN('draft','submitted','in_review','approved') OR current.result_snapshot_id IS NOT NULL OR current.target_entity_id IS NOT NULL OR NOT EXISTS(SELECT 1 FROM governance.process_attempt a JOIN governance.cycle_run r ON r.tenant_id=a.tenant_id AND r.id=a.cycle_run_id WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id AND a.cycle_run_id=p_cycle_run_id AND r.status='running' AND (current.created_by=p_actor_id OR r.owner_principal_id=p_actor_id)) THEN RAISE EXCEPTION 'PROCESS_CANCEL_FORBIDDEN' USING ERRCODE='insufficient_privilege'; END IF;
+  next_status:='cancelled';
  ELSE
-  IF current.status NOT IN('submitted','in_review') OR p_actor_id=current.created_by OR (p_cycle_task_id IS NOT NULL AND (task.status NOT IN('in_progress','ready') OR (task.owner_principal_id IS NOT NULL AND task.owner_principal_id<>p_actor_id) OR NOT EXISTS(SELECT 1 FROM governance.cycle_subject s WHERE s.tenant_id=p_tenant_id AND s.cycle_run_id=p_cycle_run_id AND s.cycle_task_id=p_cycle_task_id AND s.entity_case_id=p_case_id AND s.is_primary))) THEN RAISE EXCEPTION 'Entity case decision violates maker-checker authority' USING ERRCODE='insufficient_privilege';END IF;
+  IF current.status NOT IN('submitted','in_review') OR p_actor_id=current.created_by OR (p_cycle_task_id IS NOT NULL AND (task.status NOT IN('in_progress','ready') OR (task.owner_principal_id IS NOT NULL AND task.owner_principal_id<>p_actor_id) OR NOT EXISTS(SELECT 1 FROM governance.cycle_subject s WHERE s.tenant_id=p_tenant_id AND s.cycle_run_id=p_cycle_run_id AND s.cycle_task_id=p_cycle_task_id AND s.entity_case_id=p_case_id AND (s.is_primary OR EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id AND a.cycle_run_id=p_cycle_run_id))))) THEN RAISE EXCEPTION 'Entity case decision violates maker-checker authority' USING ERRCODE='insufficient_privilege';END IF;
+  IF EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id)
+   AND NOT EXISTS(SELECT 1 FROM governance.process_attempt a JOIN governance.process_document_job j ON j.tenant_id=a.tenant_id AND j.attempt_id=a.id
+     JOIN governance.process_selection_evidence e ON e.tenant_id=a.tenant_id AND e.id=a.selection_id
+     JOIN governance.cycle_task t ON t.tenant_id=a.tenant_id AND t.cycle_run_id=a.cycle_run_id AND t.id=p_cycle_task_id
+     WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id AND a.cycle_run_id=p_cycle_run_id
+       AND t.process_attempt_id=a.id AND a.submission_snapshot_id=current.submitted_snapshot_id AND j.purpose='submitted_review_pack' AND j.status='ready'
+       AND EXISTS(SELECT 1 FROM jsonb_array_elements(e.evidence->'executionManifest'->'tasks') binding WHERE binding->>'taskTemplateId'=t.task_template_id::text AND (p_action<>'approve' OR binding->>'outcomeScope'='case_final_decision')))
+  THEN RAISE EXCEPTION 'PROCESS_DECISION_DOCUMENT_GATE_REQUIRED' USING ERRCODE='insufficient_privilege'; END IF;
+  IF p_action='approve' AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id) AND (
+   NOT EXISTS(SELECT 1 FROM document.workflow_request w
+    JOIN governance.process_attempt a ON a.tenant_id=w.tenant_id AND a.id=(w.metadata->'process'->>'attemptId')::uuid
+    WHERE w.tenant_id=p_tenant_id AND w.entity_type='cycle_task' AND w.entity_id=p_cycle_task_id::text AND a.case_id=p_case_id AND a.cycle_run_id=p_cycle_run_id
+     AND w.status='approved' AND w.metadata->'process'->>'outcomeScope'='case_final_decision'
+     AND EXISTS(SELECT 1 FROM document.workflow_stage stage WHERE stage.tenant_id=w.tenant_id AND stage.workflow_request_id=w.id)
+     AND NOT EXISTS(SELECT 1 FROM document.workflow_stage stage WHERE stage.tenant_id=w.tenant_id AND stage.workflow_request_id=w.id AND (stage.status<>'completed' OR stage.outcome<>'approved'
+       OR (SELECT count(DISTINCT i.assignee_principal_id) FROM document.work_item i WHERE i.tenant_id=w.tenant_id AND i.cycle_task_id=p_cycle_task_id AND i.payload->>'workflowStageId'=stage.id::text AND i.status='completed' AND i.outcome->>'decision'='approve' AND i.outcome->>'decidedBy'=i.assignee_principal_id::text AND i.assignee_principal_id<>w.requested_by AND i.assignee_principal_id<>current.created_by)
+         < CASE stage.quorum->>'kind' WHEN 'all' THEN jsonb_array_length(stage.quorum->'eligibilityEvidence'->'candidates') WHEN 'any' THEN 1 WHEN 'count' THEN (stage.quorum->>'value')::integer WHEN 'percentage' THEN ceil(jsonb_array_length(stage.quorum->'eligibilityEvidence'->'candidates')*(stage.quorum->>'value')::numeric/100)::integer ELSE 2147483647 END))))
+  THEN RAISE EXCEPTION 'PROCESS_FINAL_TASK_QUORUM_REQUIRED' USING ERRCODE='insufficient_privilege'; END IF;
+  IF p_action IN('return','reject') AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id) AND NOT EXISTS(
+   SELECT 1 FROM governance.process_attempt a
+   JOIN governance.process_selection_evidence e ON e.tenant_id=a.tenant_id AND e.id=a.selection_id
+   JOIN governance.cycle_task t ON t.tenant_id=a.tenant_id AND t.process_attempt_id=a.id AND t.id=p_cycle_task_id
+   CROSS JOIN LATERAL jsonb_array_elements(e.evidence->'executionManifest'->'tasks') binding
+   WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id AND a.cycle_run_id=p_cycle_run_id
+     AND a.submission_snapshot_id=current.submitted_snapshot_id AND binding->>'taskTemplateId'=t.task_template_id::text
+     AND binding->>'executionKind' IN('review','approval')
+     AND (NOT (binding ? 'caseAuthority') OR (
+       binding->'caseAuthority'->>'schema'='athyper.task-case-authority/1'
+       AND binding->'caseAuthority'->CASE WHEN p_action='return' THEN 'returnForChanges' ELSE 'rejectProposal' END='true'::jsonb)))
+   THEN RAISE EXCEPTION 'PROCESS_TASK_ACTION_FORBIDDEN' USING ERRCODE='insufficient_privilege'; END IF;
+  IF p_action IN('return','reject') AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id) AND NOT EXISTS(
+   SELECT 1 FROM document.work_item i JOIN document.workflow_stage stage ON stage.tenant_id=i.tenant_id AND stage.id=(i.payload->>'workflowStageId')::uuid JOIN governance.process_attempt a ON a.tenant_id=i.tenant_id AND a.id=(i.payload->>'attemptId')::uuid
+   WHERE i.tenant_id=p_tenant_id AND i.cycle_task_id=p_cycle_task_id AND i.source_entity_id=p_case_id AND i.assignee_principal_id=p_actor_id AND i.status='completed' AND i.outcome->>'decision'=p_action AND i.outcome->>'decidedBy'=p_actor_id::text AND i.outcome->>'idempotencyKey'=p_idempotency_key AND stage.status='active' AND a.submission_snapshot_id=current.submitted_snapshot_id
+   AND EXISTS(SELECT 1 FROM document.process_case_reviewers(p_tenant_id,p_case_id,NULL) r WHERE r.principal_id=p_actor_id)) THEN RAISE EXCEPTION 'PROCESS_CURRENT_REVIEWER_REQUIRED' USING ERRCODE='insufficient_privilege'; END IF;
   IF p_action='approve' AND current.operation_code='amend_partner' THEN
    PERFORM 1 FROM document.mesh_profile_change_resolution resolution
     JOIN document.mesh_profile_change_case link ON link.tenant_id=resolution.tenant_id AND link.resolution_id=resolution.id
@@ -5559,13 +5596,21 @@ BEGIN
  next_snapshot:=snapshot.fn_capture_entity('document.entity_case',p_case_id,current.case_code,1,current.entity_contract_hash,next_version,'entity.case.'||p_action,'version',payload,p_correlation_id,NULL,NULL,NULL,'legal','governed-entity-case');
  lineage_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,'sourceSnapshotId',current.current_snapshot_id,'targetSnapshotId',next_snapshot,'action',p_action,'version',next_version)::text,'UTF8'),'sha256'),'hex');
  INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,transformation_code,transformation_version,evidence_hash,created_by) VALUES(p_tenant_id,p_case_id,current.current_snapshot_id,next_snapshot,CASE WHEN p_action='submit' THEN 'submitted_from' ELSE 'decided_from' END,'entity.case.'||p_action,'1',lineage_hash,p_actor_id);
- IF p_cycle_task_id IS NOT NULL THEN
+ IF p_cycle_task_id IS NOT NULL AND NOT(p_action IN('return','reject') AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id)) THEN
   IF p_action='submit' THEN INSERT INTO governance.cycle_subject(tenant_id,cycle_run_id,cycle_task_id,subject_role,entity_case_id,is_primary,created_by) VALUES(p_tenant_id,p_cycle_run_id,p_cycle_task_id,'governed_case',p_case_id,true,p_actor_id) ON CONFLICT DO NOTHING;UPDATE governance.cycle_task SET status='in_progress',started_at=COALESCE(started_at,clock_timestamp()),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_task_id;UPDATE governance.cycle_run run SET status='running',started_at=COALESCE(run.started_at,clock_timestamp()),updated_by=p_actor_id,version=run.version+1 WHERE run.tenant_id=p_tenant_id AND run.id=p_cycle_run_id AND run.status IN('draft','scheduled');
   ELSIF p_action='return' THEN UPDATE governance.cycle_task SET status='ready',started_at=NULL,completed_at=NULL,completion_evidence=jsonb_build_object('caseId',p_case_id,'decision','return','snapshotId',next_snapshot,'reason',p_reason),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_task_id;
-  ELSE UPDATE governance.cycle_task SET status='completed',completed_at=clock_timestamp(),completion_evidence=jsonb_build_object('caseId',p_case_id,'decision',p_action,'snapshotId',next_snapshot,'reason',p_reason),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_task_id;UPDATE governance.cycle_run SET status='completed',completed_at=clock_timestamp(),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_run_id;END IF;
+  ELSE UPDATE governance.cycle_task SET status='completed',completed_at=clock_timestamp(),completion_evidence=jsonb_build_object('caseId',p_case_id,'decision',p_action,'snapshotId',next_snapshot,'reason',p_reason),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_task_id;UPDATE governance.cycle_run SET status='completed',completed_at=clock_timestamp(),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_run_id AND NOT EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.cycle_run_id=p_cycle_run_id);END IF;
+ END IF;
+ IF p_action IN('return','reject','cancel') AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id) THEN
+  UPDATE document.work_item i SET status='cancelled',completed_at=clock_timestamp(),row_version=i.row_version+1,updated_by=p_actor_id WHERE i.tenant_id=p_tenant_id AND i.source_entity_id=p_case_id AND i.payload->>'attemptId' IS NOT NULL AND i.status IN('open','claimed');
+  UPDATE document.workflow_stage stage SET status='cancelled',started_at=COALESCE(stage.started_at,clock_timestamp()),completed_at=clock_timestamp(),outcome='cancelled',updated_by=p_actor_id WHERE stage.tenant_id=p_tenant_id AND stage.status IN('pending','active') AND EXISTS(SELECT 1 FROM document.workflow_request w WHERE w.tenant_id=stage.tenant_id AND w.id=stage.workflow_request_id AND w.metadata->'process'->>'caseId'=p_case_id::text);
+  UPDATE document.workflow_request w SET status='cancelled',decision='cancel',decided_by=p_actor_id,decided_at=clock_timestamp(),updated_by=p_actor_id WHERE w.tenant_id=p_tenant_id AND w.metadata->'process'->>'caseId'=p_case_id::text AND w.status NOT IN('approved','rejected','cancelled');
+  UPDATE governance.cycle_task t SET status='cancelled',completed_at=clock_timestamp(),completion_evidence=completion_evidence||jsonb_build_object('closure',jsonb_build_object('action',p_action,'reason',p_reason,'snapshotId',next_snapshot,'actorId',p_actor_id)),version=version+1,updated_by=p_actor_id WHERE t.tenant_id=p_tenant_id AND t.cycle_run_id=p_cycle_run_id AND t.status NOT IN('completed','cancelled');
+  UPDATE governance.process_document_job j SET status='cancelled',claim_token=NULL,lease_expires_at=NULL,updated_at=clock_timestamp() WHERE j.tenant_id=p_tenant_id AND j.case_id=p_case_id AND j.status IN('pending','processing','failed');
+  IF p_action IN('reject','cancel') THEN UPDATE governance.cycle_run SET status='cancelled',completed_at=clock_timestamp(),version=version+1,updated_by=p_actor_id WHERE tenant_id=p_tenant_id AND id=p_cycle_run_id; END IF;
  END IF;
  UPDATE document.entity_case SET current_snapshot_id=next_snapshot,submitted_snapshot_id=CASE WHEN p_action='submit' THEN next_snapshot ELSE submitted_snapshot_id END,decision_snapshot_id=CASE WHEN p_action IN('approve','reject') THEN next_snapshot WHEN p_action='return' THEN NULL ELSE decision_snapshot_id END,status=next_status,row_version=next_version,updated_by=p_actor_id WHERE tenant_id=p_tenant_id AND id=p_case_id;
- INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,result_code,result_snapshot_id,result_evidence,recorded_by) VALUES(p_tenant_id,p_case_id,command_code,p_idempotency_key,fingerprint,p_expected_version,current.row_version,next_version,current.status,next_status,'accepted',CASE p_action WHEN 'submit' THEN 'ENTITY_CASE_SUBMITTED' WHEN 'approve' THEN 'ENTITY_CASE_APPROVED' WHEN 'reject' THEN 'ENTITY_CASE_REJECTED' ELSE 'ENTITY_CASE_RETURNED' END,next_snapshot,jsonb_build_object('cycleRunId',p_cycle_run_id,'cycleTaskId',p_cycle_task_id,'reason',p_reason),p_actor_id);
+ INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,result_code,result_snapshot_id,result_evidence,recorded_by) VALUES(p_tenant_id,p_case_id,command_code,p_idempotency_key,fingerprint,p_expected_version,current.row_version,next_version,current.status,next_status,'accepted',CASE p_action WHEN 'submit' THEN 'ENTITY_CASE_SUBMITTED' WHEN 'approve' THEN 'ENTITY_CASE_APPROVED' WHEN 'reject' THEN 'ENTITY_CASE_REJECTED' WHEN 'cancel' THEN 'ENTITY_CASE_CANCELLED' ELSE 'ENTITY_CASE_RETURNED' END,next_snapshot,jsonb_build_object('cycleRunId',p_cycle_run_id,'cycleTaskId',p_cycle_task_id,'reason',p_reason),p_actor_id);
  INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(p_tenant_id,'governed-entity-case','entity.case.'||CASE WHEN p_action='submit' THEN 'submitted' ELSE p_action END,'entity-case:'||p_case_id::text||':v'||next_version::text||':'||p_idempotency_key,'document.entity_case',p_case_id,'entity_case',p_case_id,LEAST(next_version,2147483647)::integer,p_actor_id,'governed-entity-case',p_correlation_id,p_tenant_id::text,jsonb_build_object('caseId',p_case_id,'snapshotId',next_snapshot,'rowVersion',next_version,'status',next_status,'action',p_action,'cycleRunId',p_cycle_run_id,'cycleTaskId',p_cycle_task_id),p_actor_id) RETURNING id INTO outbox;
  result:=jsonb_build_object('caseId',p_case_id,'snapshotId',next_snapshot,'rowVersion',next_version,'status',CASE WHEN p_action='return' THEN 'returned' ELSE next_status END,'outboxId',outbox);UPDATE event.command_execution SET status='succeeded',result_payload=result,completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=execution;
  RETURN QUERY SELECT p_case_id,next_snapshot,next_version,CASE WHEN p_action='return' THEN 'returned' ELSE next_status END,false,outbox;
@@ -5666,3 +5711,258 @@ BEGIN
         USING ERRCODE = 'integrity_constraint_violation';
 END
 $$;
+
+-- P3: task executions bind to accepted immutable attempt/manifest coordinates.
+CREATE OR REPLACE FUNCTION document.trg_supplier_task_execution_binding()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+DECLARE binding jsonb; attempt governance.process_attempt%ROWTYPE; task governance.cycle_task%ROWTYPE; evidence jsonb;
+BEGIN
+ IF TG_OP='DELETE' THEN
+  IF OLD.entity_type='cycle_task' AND OLD.metadata->'process' IS NOT NULL THEN RAISE EXCEPTION 'PROCESS_WORKFLOW_EVIDENCE_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+  RETURN OLD;
+ END IF;
+ IF TG_OP='UPDATE' AND OLD.entity_type='cycle_task' AND OLD.metadata->'process' IS NOT NULL AND (NEW.entity_type IS DISTINCT FROM OLD.entity_type OR NEW.metadata->'process' IS DISTINCT FROM OLD.metadata->'process') THEN RAISE EXCEPTION 'PROCESS_WORKFLOW_BINDING_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+ IF NEW.entity_type<>'cycle_task' OR NEW.metadata->'process' IS NULL THEN RETURN NEW; END IF;
+ binding:=NEW.metadata->'process';
+ SELECT a.* INTO attempt FROM governance.process_attempt a WHERE a.tenant_id=NEW.tenant_id AND a.id=(binding->>'attemptId')::uuid;
+ SELECT t.* INTO task FROM governance.cycle_task t WHERE t.tenant_id=NEW.tenant_id AND t.id=NEW.entity_id::uuid;
+ SELECT e.evidence INTO evidence FROM governance.process_selection_evidence e WHERE e.tenant_id=NEW.tenant_id AND e.id=attempt.selection_id;
+ IF attempt.id IS NULL OR task.id IS NULL OR task.cycle_run_id<>attempt.cycle_run_id OR task.process_attempt_id IS DISTINCT FROM attempt.id
+   OR binding->>'caseId' IS DISTINCT FROM attempt.case_id::text OR binding->>'cycleTaskId' IS DISTINCT FROM task.id::text
+   OR (binding-'cycleTaskId'-'taskTemplateId'-'outcomeScope'-'executionKind'-'reviewerPolicy') IS DISTINCT FROM evidence->'coordinate'
+   OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(evidence->'executionManifest'->'tasks') t WHERE t->>'taskTemplateId'=task.task_template_id::text AND t->>'taskTemplateId'=binding->>'taskTemplateId' AND t->>'outcomeScope'=binding->>'outcomeScope' AND t->>'executionKind'=binding->>'executionKind' AND t->'reviewerPolicy'=binding->'reviewerPolicy' AND t->'workflow'->>'code'=NEW.definition_code AND (t->'workflow'->>'version')::integer=NEW.definition_version AND t->'workflow'->>'hash'=NEW.compiled_artifact_hash)
+ THEN RAISE EXCEPTION 'PROCESS_WORKFLOW_BINDING_INVALID' USING ERRCODE='check_violation'; END IF;
+ IF TG_OP='UPDATE' THEN
+   IF OLD.status IN('approved','rejected','cancelled') AND (NEW.status IS DISTINCT FROM OLD.status OR NEW.metadata->'approval' IS DISTINCT FROM OLD.metadata->'approval') THEN RAISE EXCEPTION 'PROCESS_WORKFLOW_HISTORY_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+   IF NEW.entity_id IS DISTINCT FROM OLD.entity_id OR NEW.metadata->'process' IS DISTINCT FROM OLD.metadata->'process' OR NEW.template_snapshot IS DISTINCT FROM OLD.template_snapshot OR NEW.requested_by IS DISTINCT FROM OLD.requested_by THEN RAISE EXCEPTION 'PROCESS_WORKFLOW_BINDING_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+ ELSE
+   IF NOT EXISTS(SELECT 1 FROM document.entity_case c WHERE c.tenant_id=NEW.tenant_id AND c.id=attempt.case_id AND c.status IN('submitted','in_review') AND c.submitted_snapshot_id=attempt.submission_snapshot_id AND attempt.attempt_number=(SELECT max(a.attempt_number) FROM governance.process_attempt a WHERE a.tenant_id=NEW.tenant_id AND a.case_id=attempt.case_id)) OR task.status IN('completed','cancelled') OR NOT EXISTS(SELECT 1 FROM governance.process_document_job j WHERE j.tenant_id=NEW.tenant_id AND j.id=attempt.review_pack_job_id AND j.status='ready') OR EXISTS(SELECT 1 FROM governance.cycle_task_dependency d JOIN governance.cycle_task t ON t.tenant_id=d.tenant_id AND t.id=d.predecessor_task_id WHERE d.tenant_id=NEW.tenant_id AND d.successor_task_id=task.id AND t.status<>'completed') THEN RAISE EXCEPTION 'PROCESS_TASK_PREREQUISITE_NOT_READY' USING ERRCODE='check_violation'; END IF;
+ END IF;
+ RETURN NEW;
+END; $$;
+
+CREATE OR REPLACE FUNCTION document.trg_supplier_task_work_item_binding()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+DECLARE workflow document.workflow_request%ROWTYPE;
+BEGIN
+ IF TG_OP='DELETE' THEN
+  IF OLD.payload->>'attemptId' IS NOT NULL THEN RAISE EXCEPTION 'PROCESS_WORK_ITEM_EVIDENCE_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+  RETURN OLD;
+ END IF;
+ IF TG_OP='UPDATE' AND OLD.payload->>'attemptId' IS NOT NULL AND (NEW.payload-'sla_reminders_sent'-'sla_breach') IS DISTINCT FROM (OLD.payload-'sla_reminders_sent'-'sla_breach') THEN RAISE EXCEPTION 'PROCESS_WORK_ITEM_BINDING_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+ IF NEW.payload->>'attemptId' IS NULL THEN RETURN NEW; END IF;
+ IF TG_OP='UPDATE' AND OLD.status IN('completed','cancelled') AND (NEW.status IS DISTINCT FROM OLD.status OR (OLD.outcome->>'fingerprint' IS NOT NULL AND NEW.outcome IS DISTINCT FROM OLD.outcome)) THEN RAISE EXCEPTION 'PROCESS_WORK_ITEM_HISTORY_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+ SELECT w.* INTO workflow FROM document.workflow_request w WHERE w.tenant_id=NEW.tenant_id AND w.id=(NEW.payload->>'workflowRequestId')::uuid AND w.entity_type='cycle_task' AND w.entity_id=NEW.cycle_task_id::text;
+ IF TG_OP='INSERT' AND (workflow.status IN('approved','rejected','cancelled') OR NOT EXISTS(SELECT 1 FROM document.entity_case c JOIN governance.process_attempt a ON a.tenant_id=c.tenant_id AND a.case_id=c.id WHERE c.tenant_id=NEW.tenant_id AND c.id=NEW.source_entity_id AND c.status IN('submitted','in_review') AND a.id=(NEW.payload->>'attemptId')::uuid AND c.submitted_snapshot_id=a.submission_snapshot_id AND a.attempt_number=(SELECT max(a2.attempt_number) FROM governance.process_attempt a2 WHERE a2.tenant_id=a.tenant_id AND a2.case_id=a.case_id))) THEN RAISE EXCEPTION 'PROCESS_WORK_ITEM_ATTEMPT_STALE' USING ERRCODE='check_violation'; END IF;
+ IF workflow.id IS NULL OR NEW.source_entity_id::text IS DISTINCT FROM workflow.metadata->'process'->>'caseId'
+  OR EXISTS(SELECT 1 FROM jsonb_each((workflow.metadata->'process')-'executionKind') v WHERE NEW.payload->v.key IS DISTINCT FROM v.value)
+  OR NEW.assignee_principal_id=workflow.requested_by
+  OR jsonb_array_length(NEW.payload->'eligibility_evidence'->'candidates') IS DISTINCT FROM 1
+  OR NEW.payload->'eligibility_evidence'->'candidates'->0->>'principalId' IS DISTINCT FROM NEW.assignee_principal_id::text
+  OR NEW.payload->>'action' IS DISTINCT FROM (CASE workflow.metadata->'process'->>'executionKind' WHEN 'review' THEN 'accept_review' ELSE 'approve' END)
+  OR NOT EXISTS(SELECT 1 FROM document.workflow_stage s WHERE s.tenant_id=NEW.tenant_id AND s.id=(NEW.payload->>'workflowStageId')::uuid AND s.workflow_request_id=workflow.id AND EXISTS(SELECT 1 FROM jsonb_array_elements(s.quorum->'eligibilityEvidence'->'candidates') c WHERE c->>'principalId'=NEW.assignee_principal_id::text))
+ THEN RAISE EXCEPTION 'PROCESS_WORK_ITEM_BINDING_INVALID' USING ERRCODE='check_violation'; END IF;
+ IF TG_OP='UPDATE' AND ((NEW.payload-'sla_reminders_sent'-'sla_breach') IS DISTINCT FROM (OLD.payload-'sla_reminders_sent'-'sla_breach') OR NEW.cycle_task_id IS DISTINCT FROM OLD.cycle_task_id OR NEW.assignee_principal_id IS DISTINCT FROM OLD.assignee_principal_id OR NEW.source_entity_id IS DISTINCT FROM OLD.source_entity_id) THEN RAISE EXCEPTION 'PROCESS_WORK_ITEM_BINDING_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+ RETURN NEW;
+END; $$;
+
+CREATE OR REPLACE FUNCTION document.trg_supplier_task_completion_quorum()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+DECLARE attempt_id uuid; maker_id uuid;
+BEGIN
+ IF NEW.status<>'completed' THEN RETURN NEW; END IF;
+ SELECT a.id,c.created_by INTO attempt_id,maker_id FROM governance.process_attempt a
+ JOIN document.entity_case c ON c.tenant_id=a.tenant_id AND c.id=a.case_id
+ JOIN governance.process_selection_evidence e ON e.tenant_id=a.tenant_id AND e.id=a.selection_id
+ WHERE a.tenant_id=NEW.tenant_id AND a.cycle_run_id=NEW.cycle_run_id AND a.id=NEW.process_attempt_id
+ AND EXISTS(SELECT 1 FROM jsonb_array_elements(e.evidence->'executionManifest'->'tasks') t WHERE t->>'taskTemplateId'=NEW.task_template_id::text AND t->>'executionKind' IN('review','approval'));
+ IF attempt_id IS NULL THEN RETURN NEW; END IF;
+ IF NOT EXISTS(SELECT 1 FROM document.workflow_request w WHERE w.tenant_id=NEW.tenant_id AND w.entity_type='cycle_task' AND w.entity_id=NEW.id::text AND w.metadata->'process'->>'attemptId'=attempt_id::text AND w.status='approved'
+  AND EXISTS(SELECT 1 FROM document.workflow_stage s WHERE s.tenant_id=w.tenant_id AND s.workflow_request_id=w.id)
+  AND NOT EXISTS(SELECT 1 FROM document.workflow_stage s WHERE s.tenant_id=w.tenant_id AND s.workflow_request_id=w.id AND (s.status<>'completed' OR s.outcome<>'approved' OR COALESCE((s.quorum->>'required')::integer,0)<1
+   OR (SELECT count(DISTINCT i.assignee_principal_id) FROM document.work_item i WHERE i.tenant_id=w.tenant_id AND i.cycle_task_id=NEW.id AND i.payload->>'workflowStageId'=s.id::text AND i.status='completed'
+    AND i.outcome->>'decision'=CASE w.metadata->'process'->>'executionKind' WHEN 'review' THEN 'accept_review' ELSE 'approve' END
+    AND i.outcome->>'decidedBy'=i.assignee_principal_id::text AND i.assignee_principal_id<>w.requested_by AND i.assignee_principal_id<>maker_id)<(s.quorum->>'required')::integer)))
+ THEN RAISE EXCEPTION 'PROCESS_TASK_QUORUM_REQUIRED' USING ERRCODE='insufficient_privilege'; END IF;
+ RETURN NEW;
+END; $$;
+
+-- P4: only the owning command can mutate a process document job. Provider I/O occurs outside this transaction.
+CREATE OR REPLACE FUNCTION document.command_process_document_job(p_tenant uuid,p_job uuid,p_action text,p_token uuid,p_result jsonb,p_actor uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE j governance.process_document_job%ROWTYPE; artifact document.attachment%ROWTYPE;
+BEGIN
+ IF p_actor IS NULL OR p_tenant IS NULL OR shared.current_tenant_id() IS DISTINCT FROM p_tenant OR master.current_principal_id_soft() IS DISTINCT FROM p_actor OR current_database()<>'athyper_neon' THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_CONTEXT_INVALID' USING ERRCODE='insufficient_privilege'; END IF;
+ SELECT * INTO j FROM governance.process_document_job WHERE tenant_id=p_tenant AND id=p_job FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_NOT_FOUND'; END IF;
+ IF p_action IN('claim','retry','ready','gate_succeeded') AND NOT EXISTS(SELECT 1 FROM document.entity_case c JOIN governance.process_attempt a ON a.tenant_id=c.tenant_id AND a.case_id=c.id WHERE c.tenant_id=p_tenant AND c.id=j.case_id AND c.status<>'cancelled' AND a.id=j.attempt_id AND a.attempt_number=(SELECT max(a2.attempt_number) FROM governance.process_attempt a2 WHERE a2.tenant_id=a.tenant_id AND a2.case_id=a.case_id) AND (j.purpose<>'submitted_review_pack' OR c.status NOT IN('draft','cancelled')) AND j.intent->'sourceSnapshot'->>'id'=CASE j.purpose WHEN 'submitted_review_pack' THEN c.submitted_snapshot_id::text WHEN 'decision_document' THEN c.decision_snapshot_id::text ELSE c.result_snapshot_id::text END) THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_ATTEMPT_STALE' USING ERRCODE='check_violation'; END IF;
+ IF p_action='claim' THEN
+  IF p_token IS NULL THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_CLAIM_TOKEN_REQUIRED'; END IF;
+  IF j.status='ready' THEN RETURN to_jsonb(j); END IF;
+  IF j.attempt_count>=5 OR (j.status='processing' AND j.lease_expires_at>now()) OR j.status='cancelled' OR (j.status='failed' AND COALESCE((j.result->>'retryable')::boolean,false)=false) THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_NOT_CLAIMABLE'; END IF;
+  UPDATE governance.process_document_job SET status='processing',claim_token=p_token,lease_expires_at=now()+interval '10 minutes',attempt_count=attempt_count+1,last_error=NULL,updated_at=now() WHERE id=p_job RETURNING * INTO j;
+ ELSIF p_action='retry' THEN
+  IF j.status<>'failed' AND NOT(j.status='processing' AND j.lease_expires_at<now()) THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_NOT_RETRYABLE'; END IF;
+  UPDATE governance.process_document_job SET status='pending',attempt_count=0,claim_token=NULL,lease_expires_at=NULL,last_error=NULL,updated_at=now() WHERE id=p_job RETURNING * INTO j;
+ ELSIF p_action IN('ready','failed') THEN
+  IF j.status='ready' AND j.result=p_result THEN RETURN to_jsonb(j); END IF;
+  IF j.status<>'processing' OR j.claim_token IS DISTINCT FROM p_token OR j.lease_expires_at<=now() THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_STALE_LEASE'; END IF;
+  IF p_result->'coordinate' IS DISTINCT FROM j.intent->'coordinate' OR p_result->'sourceSnapshot' IS DISTINCT FROM j.intent->'sourceSnapshot' OR p_result->'template' IS DISTINCT FROM j.intent->'binding'->'template' OR p_result->>'jobId' IS DISTINCT FROM j.id::text OR p_result->>'purpose' IS DISTINCT FROM j.purpose OR p_result->>'status' IS DISTINCT FROM p_action THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_RESULT_BINDING_INVALID'; END IF;
+  IF p_action='ready' THEN
+   SELECT a.* INTO artifact FROM document.attachment a WHERE a.tenant_id=p_tenant AND a.id=(p_result->>'attachmentVersionId')::uuid AND a.id=(p_result->>'attachmentId')::uuid;
+   IF artifact.id IS NULL OR artifact.status<>'active' OR NOT artifact.is_active OR NOT artifact.is_virus_scanned OR artifact.sha256 IS DISTINCT FROM p_result->>'sha256'
+    OR artifact.metadata->'malware_scan'->>'status' IS DISTINCT FROM 'clean'
+    OR p_result->>'scanStatus' IS DISTINCT FROM 'clean' OR p_result->>'scannedAt' IS DISTINCT FROM artifact.metadata->'malware_scan'->>'scanned_at'
+    OR artifact.metadata->'process_document'->>'jobId' IS DISTINCT FROM j.id::text
+    OR artifact.metadata->'process_document'->>'intentHash' IS DISTINCT FROM j.intent_hash
+    OR artifact.metadata->'process_document'->'coordinate' IS DISTINCT FROM j.intent->'coordinate'
+    OR artifact.metadata->'process_document'->'sourceSnapshot' IS DISTINCT FROM j.intent->'sourceSnapshot'
+    OR artifact.metadata->>'template_version_id' IS DISTINCT FROM j.intent->'binding'->'template'->>'id'
+    OR artifact.metadata->>'template_checksum' IS DISTINCT FROM j.intent->'binding'->'template'->>'hash'
+    OR NOT EXISTS(SELECT 1 FROM document.attachment_link l WHERE l.tenant_id=p_tenant AND l.attachment_series_id=artifact.series_id AND l.pinned_attachment_id=artifact.id AND l.entity_type='entity_case' AND l.entity_id=j.case_id::text)
+   THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_ARTIFACT_PROOF_REQUIRED' USING ERRCODE='check_violation'; END IF;
+  END IF;
+  UPDATE governance.process_document_job SET status=p_action,result=p_result,last_error=CASE WHEN p_action='failed' THEN p_result->>'code' ELSE NULL END,claim_token=NULL,lease_expires_at=NULL,updated_at=now() WHERE id=p_job RETURNING * INTO j;
+  INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,actor_id,source,payload,created_by)
+   VALUES(p_tenant,'process-documents','process.document.'||p_action,'process-document-result:'||p_job::text||':'||p_token::text,'process_document_job',p_job,p_actor,'process-documents',jsonb_build_object('jobId',p_job,'coordinate',j.intent->'coordinate','purpose',j.purpose,'status',p_action,'attachmentId',p_result->>'attachmentId','attachmentVersionId',p_result->>'attachmentVersionId'),p_actor);
+ ELSIF p_action IN('gate_succeeded','gate_failed') THEN
+  IF j.status<>'ready' THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_GATE_NOT_READY'; END IF;
+  UPDATE governance.process_document_job SET gate_status=CASE WHEN p_action='gate_succeeded' THEN 'succeeded' ELSE 'failed' END,last_error=p_result->>'code',updated_at=now() WHERE id=p_job RETURNING * INTO j;
+  IF p_action='gate_failed' THEN
+   INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,actor_id,source,payload,created_by)
+   SELECT p_tenant,'process-documents','process.document.gate_failed','process-document-gate-failure:'||p_job::text||':'||(count(*)+1)::text,'process_document_job',p_job,p_actor,'process-documents',jsonb_build_object('jobId',p_job,'coordinate',j.intent->'coordinate','purpose',j.purpose,'failureCount',count(*)+1),p_actor
+   FROM event.outbox WHERE tenant_id=p_tenant AND event_type='process.document.gate_failed' AND entity_id=p_job;
+  END IF;
+ ELSE RAISE EXCEPTION 'PROCESS_DOCUMENT_ACTION_INVALID'; END IF;
+ RETURN to_jsonb(j);
+END; $$;
+REVOKE ALL ON FUNCTION document.command_process_document_job(uuid,uuid,text,uuid,jsonb,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION document.command_process_document_job(uuid,uuid,text,uuid,jsonb,uuid) TO athyperapp,athyperadmin;
+
+CREATE OR REPLACE FUNCTION document.trg_process_document_domain_gates()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+BEGIN
+ IF TG_TABLE_NAME='entity_case' THEN
+  IF NEW.status IN('materializing','materialized') AND OLD.status IS DISTINCT FROM NEW.status AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=NEW.tenant_id AND a.case_id=NEW.id)
+   AND NOT EXISTS(SELECT 1 FROM governance.process_document_job j WHERE j.tenant_id=NEW.tenant_id AND j.case_id=NEW.id AND j.purpose='decision_document' AND j.status='ready' AND j.intent->'sourceSnapshot'->>'id'=NEW.decision_snapshot_id::text)
+  THEN RAISE EXCEPTION 'PROCESS_DECISION_DOCUMENT_NOT_READY' USING ERRCODE='check_violation'; END IF;
+ ELSE
+  IF NEW.status='completed' AND OLD.status IS DISTINCT FROM NEW.status AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=NEW.tenant_id AND a.cycle_run_id=NEW.id)
+   AND NOT EXISTS(SELECT 1 FROM governance.process_document_job j JOIN document.entity_case c ON c.tenant_id=j.tenant_id AND c.id=j.case_id WHERE j.tenant_id=NEW.tenant_id AND j.cycle_run_id=NEW.id AND j.purpose='activation_confirmation' AND j.status='ready' AND j.intent->'sourceSnapshot'->>'id'=c.result_snapshot_id::text)
+  THEN RAISE EXCEPTION 'PROCESS_ACTIVATION_DOCUMENT_NOT_READY' USING ERRCODE='check_violation'; END IF;
+ END IF;
+ RETURN NEW;
+END; $$;
+
+-- Content-free work discovery for the plane-scoped durable document worker. Each case is reauthorized under its stored requester.
+CREATE OR REPLACE FUNCTION document.process_document_candidates()
+RETURNS TABLE(tenant_id uuid,case_id uuid,principal_id uuid,auth_epoch integer) LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog AS $$
+ SELECT DISTINCT c.tenant_id,c.id,c.created_by,p.auth_epoch FROM document.entity_case c
+ JOIN governance.process_attempt a ON a.tenant_id=c.tenant_id AND a.case_id=c.id
+ JOIN master.principal p ON p.tenant_id=c.tenant_id AND p.id=c.created_by AND p.status='active'
+ WHERE current_database()='athyper_neon' AND c.status IN('submitted','in_review','approved','rejected','materializing','materialized') AND a.attempt_number=(SELECT max(a2.attempt_number) FROM governance.process_attempt a2 WHERE a2.tenant_id=a.tenant_id AND a2.case_id=a.case_id) AND (
+  EXISTS(SELECT 1 FROM governance.process_document_job j WHERE j.tenant_id=c.tenant_id AND j.attempt_id=a.id AND (
+   j.status='pending' OR (j.status='processing' AND j.lease_expires_at<now()) OR (j.status='failed' AND j.attempt_count<5 AND (j.result->>'retryable')::boolean=true) OR (j.status='ready' AND j.gate_status<>'succeeded')))
+  OR (c.decision_snapshot_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM governance.process_document_job j WHERE j.tenant_id=c.tenant_id AND j.attempt_id=a.id AND j.purpose='decision_document'))
+  OR (c.result_snapshot_id IS NOT NULL AND EXISTS(SELECT 1 FROM document.supplier_activation_evidence e WHERE e.tenant_id=c.tenant_id AND e.business_partner_id=c.target_entity_id) AND NOT EXISTS(SELECT 1 FROM governance.process_document_job j WHERE j.tenant_id=c.tenant_id AND j.attempt_id=a.id AND j.purpose='activation_confirmation')))
+ ORDER BY c.tenant_id,c.id LIMIT 20;
+$$;
+REVOKE ALL ON FUNCTION document.process_document_candidates() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION document.process_document_candidates() TO athyperapp,athyperadmin;
+
+CREATE OR REPLACE FUNCTION document.trg_process_document_source_binding()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+DECLARE c document.entity_case%ROWTYPE; source_id uuid;
+BEGIN
+ SELECT * INTO c FROM document.entity_case WHERE tenant_id=NEW.tenant_id AND id=NEW.case_id;
+ source_id:=CASE NEW.purpose WHEN 'submitted_review_pack' THEN c.submitted_snapshot_id WHEN 'decision_document' THEN c.decision_snapshot_id ELSE c.result_snapshot_id END;
+ IF source_id IS NULL OR NEW.intent->'sourceSnapshot'->>'id' IS DISTINCT FROM source_id::text
+  OR NOT EXISTS(SELECT 1 FROM snapshot.entity_snapshot_identity s WHERE s.tenant_id=NEW.tenant_id AND s.id=source_id AND s.payload_hash=NEW.intent->'sourceSnapshot'->>'hash' AND s.version_number=(NEW.intent->'sourceSnapshot'->>'version')::integer)
+ THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_SOURCE_BINDING_INVALID' USING ERRCODE='check_violation'; END IF;
+ IF NEW.purpose='activation_confirmation' AND NOT EXISTS(SELECT 1 FROM document.supplier_activation_evidence a WHERE a.tenant_id=NEW.tenant_id AND a.id=(NEW.intent->'activationEvidence'->>'id')::uuid AND a.business_partner_id=c.target_entity_id AND a.readiness_fingerprint=NEW.intent->'activationEvidence'->>'hash' AND a.operating_organization_id=(NEW.intent->'coordinate'->'scope'->>'operatingOrganizationId')::uuid AND a.company_code_id IS NOT DISTINCT FROM (NEW.intent->'coordinate'->'scope'->>'companyCodeId')::uuid)
+ THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_ACTIVATION_BINDING_INVALID' USING ERRCODE='check_violation'; END IF;
+ RETURN NEW;
+END; $$;
+
+-- Tenant/case-scoped directory. RLS hides other principals from ordinary requests;
+-- expose only eligible reviewer identifiers, never IAM rows or grants.
+CREATE OR REPLACE FUNCTION document.process_case_has_contributor(p_tenant uuid,p_case uuid,p_actor uuid)
+RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
+BEGIN
+ IF p_tenant IS DISTINCT FROM shared.current_tenant_id() THEN RAISE EXCEPTION 'PROCESS_CONTRIBUTOR_CONTEXT_INVALID' USING ERRCODE='42501'; END IF;
+ RETURN EXISTS(SELECT 1 FROM document.process_case_contributor WHERE tenant_id=p_tenant AND case_id=p_case AND principal_id=p_actor);
+END $$;
+REVOKE ALL ON FUNCTION document.process_case_has_contributor(uuid,uuid,uuid) FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION document.process_case_reviewers(p_tenant uuid,p_case uuid,p_role text)
+RETURNS TABLE(principal_id uuid) LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
+ WITH accepted AS (
+ SELECT c.created_by,e.evidence,e.evidence->'coordinate'->'scope' scope
+ FROM document.entity_case c JOIN governance.process_attempt a ON a.tenant_id=c.tenant_id AND a.case_id=c.id
+ JOIN governance.process_selection_evidence e ON e.tenant_id=a.tenant_id AND e.id=a.selection_id
+ WHERE c.tenant_id=p_tenant AND c.id=p_case AND p_tenant=shared.current_tenant_id()
+ ORDER BY a.attempt_number DESC LIMIT 1
+ )
+ SELECT DISTINCT m.principal_id FROM accepted a
+ JOIN authz.group_member m ON m.tenant_id=p_tenant AND m.status='active' AND m.effective_from<=now() AND (m.effective_until IS NULL OR m.effective_until>now())
+ JOIN authz.principal_group g ON g.tenant_id=m.tenant_id AND g.id=m.group_id AND g.status='active'
+ JOIN authz.group_role gr ON gr.tenant_id=m.tenant_id AND gr.group_id=m.group_id AND gr.status='active' AND gr.effective_from<=now() AND (gr.effective_until IS NULL OR gr.effective_until>now())
+ JOIN authz.role r ON r.tenant_id=gr.tenant_id AND r.id=gr.role_id AND r.status='active' AND (p_role IS NULL OR r.code=p_role)
+ JOIN authz.scope_target s ON s.tenant_id=gr.tenant_id AND s.id=gr.scope_target_id AND s.status='active'
+ JOIN master.principal p ON p.tenant_id=m.tenant_id AND p.id=m.principal_id AND p.status='active'
+ WHERE m.principal_id<>a.created_by AND m.principal_id<>(a.evidence->>'actorPrincipalId')::uuid
+ AND NOT document.process_case_has_contributor(p_tenant,p_case,m.principal_id)
+ AND ((s.scope_kind='tenant' AND s.target_id=p_tenant) OR (s.scope_kind='operating_organization' AND s.target_id=(a.scope->>'operatingOrganizationId')::uuid) OR (s.scope_kind='company_code' AND s.target_id=(a.scope->>'companyCodeId')::uuid))
+ AND m.principal_id IN(SELECT principal_id FROM document.fn_entity_case_approvers(p_tenant,(a.scope->>'operatingOrganizationId')::uuid,(a.scope->>'companyCodeId')::uuid,(a.evidence->>'actorPrincipalId')::uuid))
+ AND (master.current_principal_id_soft()=a.created_by OR master.current_principal_id_soft() IN(SELECT principal_id FROM document.fn_entity_case_approvers(p_tenant,(a.scope->>'operatingOrganizationId')::uuid,(a.scope->>'companyCodeId')::uuid,(a.evidence->>'actorPrincipalId')::uuid)))
+ AND NOT EXISTS(SELECT 1 FROM authz.deny_rule d JOIN authz.permission permission ON permission.id=d.permission_id AND permission.canonical_code='neon.relationship.entity_case.decide' WHERE d.tenant_id=p_tenant AND d.status='active' AND d.effective_from<=now() AND (d.effective_until IS NULL OR d.effective_until>now()) AND (d.subject_kind='tenant' OR (d.subject_kind='principal' AND d.principal_id=m.principal_id) OR (d.subject_kind='group' AND EXISTS(SELECT 1 FROM authz.group_member denied WHERE denied.tenant_id=p_tenant AND denied.group_id=d.group_id AND denied.principal_id=m.principal_id AND denied.status='active' AND denied.effective_from<=now() AND (denied.effective_until IS NULL OR denied.effective_until>now())))))
+ ORDER BY m.principal_id LIMIT 200;
+$$;
+REVOKE ALL ON FUNCTION document.process_case_reviewers(uuid,uuid,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION document.process_case_reviewers(uuid,uuid,text) TO athyperapp,athyperadmin;
+
+CREATE OR REPLACE FUNCTION document.trg_process_task_subject()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE a governance.process_attempt%ROWTYPE; t governance.cycle_task%ROWTYPE;
+BEGIN
+ IF NEW.entity_type<>'cycle_task' OR NOT(NEW.metadata?'process') THEN RETURN NEW; END IF;
+ IF NEW.tenant_id IS DISTINCT FROM shared.current_tenant_id() OR NEW.created_by IS DISTINCT FROM master.current_principal_id_soft() THEN RAISE EXCEPTION 'Task subject context mismatch' USING ERRCODE='insufficient_privilege'; END IF;
+ SELECT * INTO a FROM governance.process_attempt WHERE tenant_id=NEW.tenant_id AND id=(NEW.metadata->'process'->>'attemptId')::uuid;
+ SELECT * INTO t FROM governance.cycle_task WHERE tenant_id=NEW.tenant_id AND id=NEW.entity_id::uuid AND cycle_run_id=a.cycle_run_id;
+ IF t.id IS NULL THEN RAISE EXCEPTION 'Task subject attempt mismatch' USING ERRCODE='check_violation'; END IF;
+ INSERT INTO governance.cycle_subject(tenant_id,cycle_run_id,cycle_task_id,subject_role,entity_case_id,is_primary,created_by)
+ VALUES(NEW.tenant_id,a.cycle_run_id,t.id,'task_'||t.id::text,a.case_id,false,NEW.created_by);
+ RETURN NEW;
+END;
+$$;
+
+-- Complete the governed activation case after the readiness/lifecycle owner succeeds
+-- in the same transaction. The result must reference that actor's exact activation.
+CREATE OR REPLACE FUNCTION document.command_materialize_supplier_activation_case(
+ p_tenant uuid,p_case uuid,p_expected bigint,p_activation uuid,p_result uuid,p_fingerprint text,p_key text,p_actor uuid,p_correlation uuid DEFAULT NULL)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE c document.entity_case%ROWTYPE; a document.supplier_activation_evidence%ROWTYPE; execution uuid; prior event.command_execution%ROWTYPE; next_version bigint; payload jsonb;
+BEGIN
+ IF current_database()<>'athyper_neon' OR current_setting('app.database_plane',true)<>'neon' OR shared.current_tenant_id() IS DISTINCT FROM p_tenant OR master.current_principal_id_soft() IS DISTINCT FROM p_actor THEN RAISE EXCEPTION 'SUPPLIER_ACTIVATION_CONTEXT_INVALID' USING ERRCODE='42501'; END IF;
+ IF p_fingerprint !~ '^[a-f0-9]{64}$' OR nullif(btrim(p_key),'') IS NULL THEN RAISE EXCEPTION 'SUPPLIER_ACTIVATION_ARGUMENT_INVALID' USING ERRCODE='23514'; END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant::text||':supplier-activation-case:'||p_key,0));
+ SELECT * INTO prior FROM event.command_execution WHERE tenant_id=p_tenant AND command_code='entity.case.materialize.supplier_activation' AND idempotency_key=p_key;
+ IF FOUND THEN IF prior.request_fingerprint<>p_fingerprint OR prior.result_payload->>'caseId'<>p_case::text THEN RAISE EXCEPTION 'SUPPLIER_ACTIVATION_REPLAY_CONFLICT' USING ERRCODE='23505'; END IF; RETURN; END IF;
+ SELECT * INTO c FROM document.entity_case WHERE tenant_id=p_tenant AND id=p_case FOR UPDATE;
+ IF NOT FOUND OR c.operation_code<>'activate_supplier' OR c.status<>'approved' OR c.row_version<>p_expected OR c.decision_snapshot_id IS NULL THEN RAISE EXCEPTION 'SUPPLIER_ACTIVATION_CASE_NOT_APPROVED' USING ERRCODE='23514'; END IF;
+ SELECT payload_json INTO payload FROM snapshot.entity_snapshot WHERE tenant_id=p_tenant AND snapshot_id=c.decision_snapshot_id;
+ SELECT * INTO a FROM document.supplier_activation_evidence WHERE tenant_id=p_tenant AND id=p_activation;
+ IF NOT FOUND OR a.business_partner_id<>c.target_entity_id OR a.operating_organization_id::text IS DISTINCT FROM payload->>'operatingOrganizationId' OR a.company_code_id::text IS DISTINCT FROM payload->>'companyCodeId' OR a.activated_by<>p_actor OR a.idempotency_key<>'activation-case:'||p_case::text THEN RAISE EXCEPTION 'SUPPLIER_ACTIVATION_EVIDENCE_INVALID' USING ERRCODE='23514'; END IF;
+ SELECT payload_json INTO payload FROM snapshot.entity_snapshot WHERE tenant_id=p_tenant AND snapshot_id=p_result;
+ IF payload->'activation'->>'activationEvidenceId' IS DISTINCT FROM p_activation::text OR payload->'activation'->>'readinessFingerprint' IS DISTINCT FROM a.readiness_fingerprint THEN RAISE EXCEPTION 'SUPPLIER_ACTIVATION_RESULT_INVALID' USING ERRCODE='23514'; END IF;
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by) VALUES(p_tenant,'entity.case.materialize.supplier_activation',p_key,p_fingerprint,'processing',p_actor,'neon-business-partner',p_correlation,clock_timestamp(),clock_timestamp(),p_actor,p_actor) RETURNING id INTO execution;
+ PERFORM set_config('app.entity_case_command_execution_id',execution::text,true);
+ next_version:=c.row_version+1;
+ INSERT INTO document.entity_case_materialization(tenant_id,entity_case_id,attempt_no,source_snapshot_id,result_snapshot_id,materializer_code,materializer_version,request_fingerprint,status,result_code,started_at,completed_at,requested_by,completed_by) VALUES(p_tenant,p_case,1,c.decision_snapshot_id,p_result,'neon.supplier_activation','1',p_fingerprint,'succeeded','SUPPLIER_ACTIVATED',now(),now(),p_actor,p_actor);
+ INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by) VALUES(p_tenant,p_case,c.decision_snapshot_id,p_result,'materialized_from','master.business_partner',c.target_entity_id,'neon.supplier_activation','1',p_fingerprint,p_actor);
+ UPDATE document.entity_case SET result_snapshot_id=p_result,status='materialized',row_version=next_version,updated_at=now(),updated_by=p_actor WHERE tenant_id=p_tenant AND id=p_case;
+ INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,result_code,result_snapshot_id,result_evidence,recorded_by) VALUES(p_tenant,p_case,'entity.case.materialize',p_key,p_fingerprint,p_expected,c.row_version,next_version,'approved','materialized','accepted','SUPPLIER_ACTIVATED',p_result,jsonb_build_object('activationEvidenceId',a.id,'readinessFingerprint',a.readiness_fingerprint,'businessPartnerId',a.business_partner_id,'supplierId',a.supplier_id),p_actor);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(p_tenant,'governed-entity-case','entity.case.materialized','entity-case:'||p_case::text||':v'||next_version::text||':supplier-activation','document.entity_case',p_case,'entity_case',p_case,next_version,p_actor,'neon-business-partner',p_correlation,p_tenant::text,jsonb_build_object('caseId',p_case,'businessPartnerId',a.business_partner_id,'supplierId',a.supplier_id,'activationEvidenceId',a.id,'resultSnapshotId',p_result,'status','materialized','resultKind','supplier_activated'),p_actor);
+ UPDATE event.command_execution SET status='succeeded',result_payload=jsonb_build_object('caseId',p_case,'resultSnapshotId',p_result),completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor,updated_by=p_actor WHERE id=execution;
+ PERFORM set_config('app.entity_case_command_execution_id','',true);
+END $$;

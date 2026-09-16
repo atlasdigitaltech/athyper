@@ -40,13 +40,20 @@ interface TemplateDependency {
 
 /** Event adapter between governed Business Partner cases and the generic cycle runtime. */
 export class KyselyBusinessPartnerOnboardingCycleCoordinator implements BusinessPartnerOnboardingCycleCoordinator<Tx> {
+  constructor(private readonly completion?: (tenantId:string, runId:string, tx:Tx) => Promise<{ready:boolean}>) {}
+  private async ready(tenantId:string,runId:string,tx:Tx){return (this.completion ? await this.completion(tenantId,runId,tx) : (await sql<{result:{ready:boolean}}>`SELECT governance.evaluate_cycle_completion(${tenantId}::uuid,${runId}::uuid) result`.execute(tx)).rows[0]!.result).ready;}
   async advance(input: BusinessPartnerOnboardingCycleEvent, transaction: Tx): Promise<void> {
+    if (["configure_company", "change_bank", "activate_supplier"].includes(input.request.kind) && input.request.targetBusinessPartnerId) {
+      const runs=(await sql<{id:string}>`SELECT DISTINCT r.id FROM governance.cycle_run r JOIN governance.process_attempt a ON a.tenant_id=r.tenant_id AND a.cycle_run_id=r.id JOIN document.entity_case c ON c.tenant_id=a.tenant_id AND c.id=a.case_id JOIN governance.process_selection_evidence e ON e.tenant_id=a.tenant_id AND e.id=a.selection_id WHERE r.tenant_id=${input.tenantId}::uuid AND r.status IN('running','blocked') AND c.status='materialized' AND c.target_entity_id=${input.request.targetBusinessPartnerId}::uuid AND e.evidence->'coordinate'->'scope'->>'operatingOrganizationId'=${input.request.operatingOrganizationId ?? null} AND e.evidence->'coordinate'->'scope'->>'companyCodeId' IS NOT DISTINCT FROM ${input.request.companyCodeId ?? null}`.execute(transaction)).rows;
+      for (const run of runs) await sql`SELECT governance.command_link_supplier_onboarding_work(${input.tenantId}::uuid,${run.id}::uuid,${input.request.id}::uuid,${input.principalId}::uuid)`.execute(transaction);
+    }
     if(input.eventCode==="business_partner.supplier.activated"&&input.request.targetBusinessPartnerId){await this.advanceForBusinessPartner({tenantId:input.tenantId,principalId:input.principalId,businessPartnerId:input.request.targetBusinessPartnerId,eventCode:input.eventCode,metadata:input.metadata},transaction);return;}
     if (input.request.kind !== "new_partner" || input.request.requestedRole !== "supplier") return;
     // Internal draft persistence and preflight validation do not start onboarding.
     // Submission runs in its own transaction and still requires a published template.
     const internal = input.request.source.kind === "manual";
     if (internal && ["business_partner.case.created", "business_partner.case.updated", "business_partner.case.validated"].includes(input.eventCode)) return;
+    if (internal && (await sql`SELECT id FROM governance.process_attempt WHERE tenant_id=${input.tenantId}::uuid AND case_id=${input.request.id}::uuid LIMIT 1`.execute(transaction)).rows.length) return;
     const template = (await sql<Row>`SELECT revision.*,type.code type_code,type.name type_name
       FROM control.cycle_type type
       JOIN control.cycle_template_revision revision ON revision.tenant_id=type.tenant_id AND revision.cycle_type_id=type.id
@@ -83,9 +90,8 @@ export class KyselyBusinessPartnerOnboardingCycleCoordinator implements Business
     if (input.invitationId) await sql`SELECT governance.command_link_business_partner_onboarding_subject(${input.tenantId}::uuid,${runId}::uuid,'supplier_invitation',NULL::uuid,${`business_partner_invitation:${input.invitationId}`},false,${input.principalId}::uuid)`.execute(transaction);
 
     await this.completeEligibleTasks(input, runId, tasks, transaction);
-    await sql`UPDATE governance.cycle_run run SET status='completed',completed_at=now(),status_changed_at=now(),status_changed_by=${input.principalId}::uuid,updated_at=now(),updated_by=${input.principalId}::uuid,version=version+1
-      WHERE run.tenant_id=${input.tenantId}::uuid AND run.id=${runId}::uuid AND run.status IN ('running','blocked')
-        AND NOT EXISTS(SELECT 1 FROM governance.cycle_task task WHERE task.tenant_id=run.tenant_id AND task.cycle_run_id=run.id AND task.is_mandatory AND task.status NOT IN ('completed','waived'))`.execute(transaction);
+    if (await this.ready(input.tenantId,runId,transaction)) await sql`UPDATE governance.cycle_run run SET status='completed',completed_at=now(),status_changed_at=now(),status_changed_by=${input.principalId}::uuid,updated_at=now(),updated_by=${input.principalId}::uuid,version=version+1
+      WHERE run.tenant_id=${input.tenantId}::uuid AND run.id=${runId}::uuid AND run.status IN ('running','blocked')`.execute(transaction);
   }
 
   async advanceForBusinessPartner(input:{readonly tenantId:string;readonly principalId:string;readonly businessPartnerId:string;readonly eventCode:string;readonly metadata?:Readonly<Record<string,unknown>>},transaction:Tx):Promise<void>{
@@ -93,6 +99,7 @@ export class KyselyBusinessPartnerOnboardingCycleCoordinator implements Business
       JOIN governance.cycle_subject subject ON subject.tenant_id=run.tenant_id AND subject.cycle_run_id=run.id AND subject.is_primary
       JOIN document.entity_case governed_case ON governed_case.tenant_id=subject.tenant_id AND governed_case.id=subject.entity_case_id
       WHERE run.tenant_id=${input.tenantId}::uuid AND type.code='BP_SUPPLIER_ONBOARDING' AND run.status IN('running','blocked') AND governed_case.target_entity_id=${input.businessPartnerId}::uuid
+      AND (${String(input.metadata?.["operatingOrganizationId"] ?? "")}='' OR EXISTS(SELECT 1 FROM snapshot.entity_snapshot snapshot WHERE snapshot.tenant_id=governed_case.tenant_id AND snapshot.snapshot_id=governed_case.current_snapshot_id AND snapshot.payload_json->>'operatingOrganizationId'=${String(input.metadata?.["operatingOrganizationId"] ?? "")} AND snapshot.payload_json->>'companyCodeId' IS NOT DISTINCT FROM ${typeof input.metadata?.["companyCodeId"] === "string" ? input.metadata["companyCodeId"] : null}))
       ORDER BY run.started_at DESC LIMIT 1 FOR UPDATE OF run`.execute(transaction)).rows[0];
     if(!run)return;
     const runId=String(run["id"]),codes=externalTaskCodes(input.eventCode);
@@ -102,7 +109,7 @@ export class KyselyBusinessPartnerOnboardingCycleCoordinator implements Business
       await sql`UPDATE governance.cycle_task SET status='completed',started_at=COALESCE(started_at,now()),completed_at=now(),completion_evidence=${JSON.stringify({eventCode:input.eventCode,eventAt:new Date().toISOString(),businessPartnerId:input.businessPartnerId,...(input.metadata??{})})}::jsonb,status_changed_at=now(),status_changed_by=${input.principalId}::uuid,updated_at=now(),updated_by=${input.principalId}::uuid,version=version+1 WHERE tenant_id=${input.tenantId}::uuid AND id=${String(task["id"])}::uuid`.execute(transaction);
       await unlock({tenantId:input.tenantId,principalId:input.principalId} as BusinessPartnerOnboardingCycleEvent,runId,String(task["id"]),transaction);
     }
-    await sql`UPDATE governance.cycle_run run SET status='completed',completed_at=now(),status_changed_at=now(),status_changed_by=${input.principalId}::uuid,updated_at=now(),updated_by=${input.principalId}::uuid,version=version+1 WHERE run.tenant_id=${input.tenantId}::uuid AND run.id=${runId}::uuid AND run.status IN('running','blocked') AND NOT EXISTS(SELECT 1 FROM governance.cycle_task task WHERE task.tenant_id=run.tenant_id AND task.cycle_run_id=run.id AND task.is_mandatory AND task.status NOT IN('completed','waived'))`.execute(transaction);
+    if (await this.ready(input.tenantId,runId,transaction)) await sql`UPDATE governance.cycle_run run SET status='completed',completed_at=now(),status_changed_at=now(),status_changed_by=${input.principalId}::uuid,updated_at=now(),updated_by=${input.principalId}::uuid,version=version+1 WHERE run.tenant_id=${input.tenantId}::uuid AND run.id=${runId}::uuid AND run.status IN('running','blocked')`.execute(transaction);
   }
 
   private async completeEligibleTasks(input: BusinessPartnerOnboardingCycleEvent, runId: string, templates: readonly TemplateTask[], transaction: Tx): Promise<void> {
@@ -129,10 +136,10 @@ export class KyselyBusinessPartnerOnboardingCycleCoordinator implements Business
 function matches(taskCode: string, input: BusinessPartnerOnboardingCycleEvent): boolean {
   if (taskCode === "INVITATION") return input.eventCode === "business_partner_invitation.supplier.accepted" || ((input.eventCode === "business_partner.case.created" || (input.request.source.kind === "manual" && input.eventCode === "business_partner.case.submitted")) && input.request.registrationMode !== "self_service");
   if (taskCode === "REGISTRATION" || taskCode === "DUPLICATE_REVIEW") return input.eventCode === "business_partner.case.submitted";
-  return taskCode === "QUALIFICATION" && input.eventCode === "business_partner.case.approved";
+  return false; // Case approval cannot certify supplier qualification.
 }
 
-function externalTaskCodes(eventCode:string):readonly string[]{switch(eventCode){case"business_partner.bank_registration.protected":return["BANK_REGISTRATION"];case"business_partner.bank_verification.verified":case"business_partner.bank_verification.applied":return["BANK_VERIFICATION"];case"business_partner.supplier.readiness.completed":return["SUPPLIER_READINESS"];case"business_partner.supplier.activated":return["SUPPLIER_READINESS","ACTIVATION"];default:return[];}}
+function externalTaskCodes(eventCode:string):readonly string[]{switch(eventCode){case"business_partner.qualification.approved":return["QUALIFICATION"];case"business_partner.bank_registration.protected":return["BANK_REGISTRATION"];case"business_partner.bank_verification.verified":case"business_partner.bank_verification.applied":return["BANK_VERIFICATION"];case"business_partner.supplier.readiness.completed":return["SUPPLIER_READINESS"];case"business_partner.supplier.activated":return["SUPPLIER_READINESS","ACTIVATION"];default:return[];}}
 
 async function unlock(input: BusinessPartnerOnboardingCycleEvent, runId: string, predecessorId: string, transaction: Tx): Promise<void> {
   await sql`UPDATE governance.cycle_task successor SET status='ready',status_changed_at=now(),status_changed_by=${input.principalId}::uuid,updated_at=now(),updated_by=${input.principalId}::uuid,version=successor.version+1

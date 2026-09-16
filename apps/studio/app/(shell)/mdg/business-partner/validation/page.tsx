@@ -1,5 +1,17 @@
 import type { Metadata } from "next";
-import { ClipboardCheckIcon } from "@athyper/platform-icons";
 import { PageFrame, PageHeader } from "@athyper/platform-shell";
-export const metadata:Metadata={title:"Business Partner Validation"};
-export default function BusinessPartnerValidationPage(){return <PageFrame width="wide" className="athyper-landing"><PageHeader level="collection" context="Business Partner · Configuration" title="Validation" description="Quality controls applied before a proposed partner change can enter approval." icon={<ClipboardCheckIcon/>}/><ul className="athyper-governance-list"><li><strong>Required identity</strong><span>Legal name, partner form, registration evidence, and governed scope must be complete.</span></li><li><strong>Role readiness</strong><span>Supplier and customer extensions are validated independently.</span></li><li><strong>Sensitive details</strong><span>Tax and bank changes require evidence and stronger approval controls.</span></li><li><strong>Published ruleset</strong><span>Neon executes the pinned definition version recorded on each request.</span></li></ul></PageFrame>;}
+import { BusinessPartnerInspection } from "@athyper/product-studio-business-partner";
+export const metadata: Metadata = { title: "Business Partner Validation" };
+export default function Page() {
+  return (
+    <PageFrame width="full">
+      <PageHeader
+        level="collection"
+        context="Business Partner · Configuration"
+        title="Validation"
+        description="Inspect declared constraints and policy references for the selected version."
+      />
+      <BusinessPartnerInspection tab="validation" />
+    </PageFrame>
+  );
+}

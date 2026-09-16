@@ -152,3 +152,64 @@
 @media(max-width:700px){.bp-request-lifecycle summary span{float:none;display:block}.bp-request-command-bar{position:static}}
 
 .bp-validation>details{margin-top:.75rem}.bp-validation summary{cursor:pointer;font-weight:600}.bp-validation .bp-findings .a-badge{color:var(--a-success-foreground,#fff)}.bp-validation .bp-findings .a-badge--neutral{color:var(--a-muted-foreground)}.bp-validation .bp-findings .a-badge--warning{color:var(--a-warning-subtle-foreground)}
+
+/* Shared Business Partner rhythm, with a focused workflow presentation. */
+.bp-section { min-width:0; }
+.bp-section h2,.bp-section h3 { line-height:1.35; }
+.bp-section p { line-height:1.6; }
+.bp-section pre { max-width:100%; overflow:auto; padding:1rem; border:1px solid var(--a-border); border-radius:var(--a-radius-md,.5rem); background:var(--a-muted); font-size:.8125rem; line-height:1.6; }
+.bp-section details>summary { cursor:pointer; padding:.65rem 0; color:var(--a-muted-foreground); font-size:.875rem; }
+.bp-section details>summary:focus-visible,.bp-journey-nav a:focus-visible { outline:2px solid var(--a-primary); outline-offset:3px; border-radius:.25rem; }
+.bp-field input,.bp-field select,.bp-field textarea { max-width:100%; }
+.bp-table tbody tr:hover { background:color-mix(in srgb,var(--a-primary) 3%,var(--a-surface)); }
+.bp-table td { vertical-align:top; line-height:1.5; }
+.bp-journey { display:grid; gap:1.25rem; padding:1.5rem; }
+.bp-journey>p { margin:0; }
+.bp-journey-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1.25rem; }
+.bp-journey-header h2 { margin:0; font-size:1.25rem; }
+.bp-journey-header p { margin:.4rem 0 0; color:var(--a-muted-foreground); font-size:.875rem; }
+.bp-journey-header .bp-eyebrow { margin:0 0 .35rem; color:var(--a-primary); font-size:.75rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; }
+.bp-journey-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin:0; padding:1rem 1.25rem; gap:1rem; background:color-mix(in srgb,var(--a-primary) 4%,var(--a-surface)); border:1px solid var(--a-border); border-radius:var(--a-radius-md,.5rem); }
+.bp-journey-summary dt { font-size:.8125rem; color:var(--a-muted-foreground); margin-bottom:.5rem; }
+.bp-journey-summary dd { margin:0; font-weight:600; }
+.bp-status { display:inline-flex; align-items:center; padding:.2rem .6rem; border:1px solid var(--a-border); border-radius:999px; font-size:.75rem; line-height:1.5; font-weight:600; background:var(--a-surface); white-space:nowrap; }
+.bp-status:is([data-status="completed"],[data-status="approved"],[data-status="active"]) { color:var(--a-success,#166534); background:color-mix(in srgb,var(--a-success,#166534) 8%,var(--a-surface)); border-color:color-mix(in srgb,var(--a-success,#166534) 24%,var(--a-border)); }
+.bp-status:is([data-status="in_progress"],[data-status="in_review"],[data-status="submitted"]) { color:var(--a-primary); background:color-mix(in srgb,var(--a-primary) 8%,var(--a-surface)); }
+.bp-status:is([data-status="failed"],[data-status="rejected"]) { color:var(--a-danger); background:color-mix(in srgb,var(--a-danger) 7%,var(--a-surface)); }
+.bp-journey-nav { display:flex; flex-wrap:wrap; gap:.5rem; padding-bottom:1rem; border-bottom:1px solid var(--a-border); }
+.bp-journey-nav a { display:block; padding:.5rem .75rem; border:1px solid var(--a-border); border-radius:.4rem; color:var(--a-primary); font-size:.875rem; text-decoration:none; }
+.bp-journey-nav a:hover { background:color-mix(in srgb,var(--a-primary) 6%,var(--a-surface)); }
+.bp-task-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.875rem; list-style:none; padding:0; margin:0; }
+.bp-task-cards>li { min-width:0; padding:1rem 1.125rem; border:1px solid var(--a-border); border-inline-start:3px solid var(--a-border); border-radius:var(--a-radius-md,.5rem); }
+.bp-task-cards>li[data-status="in_progress"] { border-inline-start-color:var(--a-primary); }
+.bp-task-cards>li[data-status="completed"] { border-inline-start-color:var(--a-success,#166534); }
+.bp-task-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:.75rem; }
+.bp-task-heading h3 { margin:0; font-size:.9375rem; }
+.bp-task-cards p,.bp-task-cards ul { font-size:.8125rem; color:var(--a-muted-foreground); margin:.6rem 0; }
+.bp-task-cards ul { padding-inline-start:1.1rem; line-height:1.7; }
+.bp-task-cards .bp-task-responsibility { color:var(--a-foreground); }
+.bp-journey-panel,.bp-decision-panel,.bp-submission-history { min-width:0; padding:1.125rem 1.25rem; border:1px solid var(--a-border); border-radius:var(--a-radius-md,.5rem); }
+.bp-journey-panel h3,.bp-decision-panel h3 { margin:0 0 .5rem; font-size:1rem; }
+.bp-journey-panel p,.bp-decision-panel p { color:var(--a-muted-foreground); font-size:.875rem; }
+.bp-decision-panel { border-inline-start:3px solid var(--a-primary); }
+.bp-decision-panel>label,.bp-information-panel label { display:grid; gap:.5rem; margin:1rem 0; font-size:.875rem; }
+.bp-decision-panel .bp-actions { margin-top:1rem; }
+.bp-document-purpose+ .bp-document-purpose { padding-top:1rem; margin-top:1rem; border-top:1px solid var(--a-border); }
+.bp-document-purpose h4 { margin:.75rem 0; font-size:.875rem; }
+.bp-document-purpose [data-document-job]+[data-document-job] { margin-top:1rem; }
+.bp-information-panel article { padding:.75rem 0; border-top:1px solid var(--a-border); }
+.bp-submission-history>summary { color:var(--a-foreground)!important; font-size:1rem!important; font-weight:600; }
+.bp-submission-history>ol { padding:0; list-style:none; display:grid; gap:.75rem; }
+.bp-attempt-card { padding:1rem; border:1px solid var(--a-border); border-radius:.5rem; font-size:.875rem; }
+.bp-attempt-card>ul { padding-inline-start:1.25rem; margin:.75rem 0 0; }
+.bp-attempt-card>ul>li+li { padding-top:.75rem; border-top:1px solid var(--a-border); }
+.bp-journey :is(section,ol,details)[id] { scroll-margin-top:6rem; }
+@media(max-width:64rem) { .bp-journey-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:42rem) {
+ .bp-journey { padding:1rem; gap:1rem; }
+ .bp-journey-header { flex-direction:column; }
+ .bp-task-cards { grid-template-columns:minmax(0,1fr); }
+ .bp-task-heading { flex-wrap:wrap; }
+ .bp-journey-panel,.bp-decision-panel,.bp-submission-history { padding:1rem; }
+ .bp-journey .bp-actions>* { width:100%; }
+}

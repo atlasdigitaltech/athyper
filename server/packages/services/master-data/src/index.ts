@@ -67,4 +67,7 @@ export * from "./master-data-authority.js";
 export { createBusinessPartnerAtlasInsightOwner } from "./business-partner-atlas-insights.js";
 export * from "./business-partner-company-pilot.js";
 
-export { validateProfileIntake } from "./business-partner-intake-profile.js";
+export { validateProfileIntake, supplierRequirementSurface } from "./business-partner-intake-profile.js";
+export * from "./supplier-onboarding-completion.js";
+
+export { prepareSupplierActivation, authorizeSupplierActivationReadiness } from "./supplier-activation-readiness.js";

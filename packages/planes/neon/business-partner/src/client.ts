@@ -443,11 +443,12 @@ const submitRequest = createOperation<
   Readonly<{
     case: GovernedCaseViewV1;
     request: PartnerRequest;
-    workflow: Readonly<{
+    workflow?: Readonly<{
       requestId: string;
       stageId: string;
       workItemId: string;
     }>;
+    process?: Readonly<{ cycleRunId: string; attemptId: string; attemptNumber: number; selectionId: string; profile: "simple" | "standard" | "enhanced"; reviewPackJobId: string; documentStatus: "pending" }>;
     replayed: boolean;
   }>,
   Readonly<{ expectedVersion: number; idempotencyKey: string }>

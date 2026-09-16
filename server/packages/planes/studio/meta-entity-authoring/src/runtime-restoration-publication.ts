@@ -47,8 +47,15 @@ export async function prepareRuntimeRestorationRelease(
       "RESTORATION_EMPTY_TARGET_REQUIRED",
       "The target must be empty and support restoration preconditions",
     );
-  await sql`SELECT publication.fn_prepare_runtime_restoration(${input.releaseId}::uuid)`.execute(
-    database,
-  );
+  try {
+    await sql`SELECT publication.fn_prepare_runtime_restoration(${input.releaseId}::uuid)`.execute(database);
+  } catch (error) {
+    if (error instanceof Error && error.message === "RESTORATION_PUBLICATION_ALREADY_EXISTS")
+      throw new AuthoringPolicyError(
+        "RESTORATION_PUBLICATION_ALREADY_EXISTS",
+        "This restoration publication key already exists. A restoration initializes an empty publication history once; use a reviewed successor change set for subsequent changes.",
+      );
+    throw error;
+  }
   return true;
 }

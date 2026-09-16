@@ -30,11 +30,14 @@ const simulation = {
 beforeEach(async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   transport.mockReset();
+  transport.mockResolvedValueOnce(new Response(JSON.stringify({error:"No local preview"}), {status:404,headers:{"content-type":"application/json"}}));
   state.http = createHttpClient({ fetch: transport, csrfToken: () => "csrf" });
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
   await act(async () => root.render(<BusinessPartnerAuthoringWorkspace />));
+  // Local preview discovery is a separate read, not part of a tested authoring command.
+  transport.mockClear();
 });
 afterEach(async () => {
   await act(async () => root.unmount());

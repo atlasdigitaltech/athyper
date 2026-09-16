@@ -101,7 +101,6 @@ export function buildDevelopmentBusinessPartnerProfile(fixture: {
   code: string;
   countryCode: string;
   name: string;
-  legalName: string;
 }) {
   if (!(fixture.countryCode in DEVELOPMENT_BUSINESS_PARTNER_COUNTRIES)) {
     throw new Error(

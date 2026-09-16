@@ -550,3 +550,8 @@ BEGIN
         USING ERRCODE = 'integrity_constraint_violation';
 END
 $$;
+
+-- Saved draft comparison history
+CREATE FUNCTION snapshot.guard_entity_draft_save() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION 'Draft save history is immutable'; END;
+$$;

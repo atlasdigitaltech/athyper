@@ -1,4 +1,9 @@
 "use client";
+import { businessLabel } from "./360/display-values";
+import { businessPartnerErrorMessage, useCommandRunner } from "./command-feedback";
+import { useOrganizationSelection } from "./use-organization-selection";
+import { SupplierProcessPreview } from "./supplier-process-preview";
+import { SupplierProcessCorrection } from "./supplier-process-correction";
 import { PageHeader, useRecordBreadcrumb, useRegisterEntityTaskHeader } from "@athyper/platform-shell";
 import { RequestLifecycle, RequestWorkspaceOverview, RequestWorkspaceDetails, RequestActivity, requestKind, requestTab } from "./request-workspace";
 import { restoreProfileAnswers } from "./request-relationships";
@@ -464,35 +469,6 @@ export function BusinessPartnerHome({
     </PageSurface>
   );
 }
-function useOrganizationSelection() {
-  const operating = useNeonOperatingOrganization(),
-    work = useNeonWorkContext(),
-    company = work.selection.mode === "company" ? work.selection : undefined;
-  const compatible = useMemo(
-    () =>
-      operating.organizations.filter(
-        (item) =>
-          !company ||
-          item.companyAssignments.some(
-            (assignment) => assignment.companyCodeId === company.companyCodeId,
-          ),
-      ),
-    [operating.organizations, company?.companyCodeId],
-  );
-  const [selected, setSelected] = useState("");
-  useEffect(
-    () =>
-      setSelected((current) =>
-        compatible.some((item) => item.id === current)
-          ? current
-          : compatible.length === 1
-            ? compatible[0]!.id
-            : "",
-      ),
-    [compatible],
-  );
-  return { operating, company, compatible, selected, setSelected };
-}
 function OrganizationField({
   value,
   onChange,
@@ -678,11 +654,16 @@ function RequestDetailSurface({request,caseView,children,actions}:{request:Partn
   return <PageSurface contentOnly title={title}>{!shared ? <PageHeader level="collection" {...header}/> : null}{children}</PageSurface>;
 }
 
+const previewTaskEdits = createOperation<{ status: string; message?: string; editableNow?: boolean; result?: { permitted: boolean; effect: string; changedPaths: string[] } }, { expectedVersion: number; proposedPayload: Record<string, unknown>; extensions?: unknown; operatingOrganizationId?: string; companyCodeId?: string }>({
+  method: "POST", path: ({ caseId }) => `/api/governance/process-tasks/cases/${encodeURIComponent(caseId)}/edit-preview`,
+});
+
 export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {readonly onDirty?:()=>void;readonly onSaved?:()=>void;readonly initialRequest?:RequestView} = {}) {
   const intake = useEntityIntake();
   const [savedRequest, setSavedRequest] = useState(initialRequest?.request);
   const [attachmentProblems, setAttachmentProblems] = useState<readonly string[]>([]);
   const [savedNotice, setSavedNotice] = useState<string>();
+  const [editNotice, setEditNotice] = useState<string>();
   const [retryRequired, setRetryRequired] = useState(false);
   const inFlight = useRef(false);
   const errorSummary = useRef<HTMLDivElement>(null);
@@ -747,9 +728,9 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
       saveStatus: busy ? headerLabels.savingDraft : retryRequired ? headerLabels.changesNotSaved : dirty ? headerLabels.unsavedChanges : savedRequest ? <time dateTime={savedRequest.updatedAt ?? savedRequest.createdAt} title={new Date(savedRequest.updatedAt ?? savedRequest.createdAt).toLocaleString(undefined,{timeZoneName:"short"})}>{headerLabels.savedAt} {new Date(savedRequest.updatedAt ?? savedRequest.createdAt).toLocaleDateString()===new Date().toLocaleDateString() ? new Date(savedRequest.updatedAt ?? savedRequest.createdAt).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : formatDate(savedRequest.updatedAt ?? savedRequest.createdAt)}</time> : headerLabels.notSaved,
     });
   }, [setPresentation, headerLabels, savedRequest, savedNotice, dirty, busy, retryRequired]);
-  async function submit(event?: FormEvent<HTMLFormElement>, submitRequest = true) {
+  async function submit(event?: FormEvent<HTMLFormElement>, submitRequest = true, previewOnly = false) {
     event?.preventDefault();
-    if (!publishedForm || inFlight.current) return;
+    if (!publishedForm || inFlight.current || (previewOnly && pendingSave.current)) return;
     if (attachmentProblems.length) { setError(attachmentProblems.join(" ")); errorSummary.current?.focus(); return; }
     // An uncertain retry keeps both the original command and its completion intent.
     submitRequest = pendingSave.current?.submitRequest ?? submitRequest;
@@ -766,7 +747,7 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
         if(typeof value==='string'||typeof value==='number')data.set(key,String(value));
         else if(value===true)data.set(key,'on');
       }
-      const serialized = serializeRequestForm(publishedForm.descriptor, data, { includeEmpty: Boolean(savedRequest) });
+      const serialized = serializeRequestForm(publishedForm.descriptor, data, { includeEmpty: Boolean(savedRequest), existingPayload: savedRequest?.proposedPayload });
       const extensions = { ...await buildRelationshipExtensions(
         (values.addresses??[]) as readonly AddressDraft[],
         (values.contacts??[]) as readonly ContactDraft[],
@@ -775,6 +756,21 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
         const previous=protectedProfileValues.current.get(cacheKey);if(previous)return previous;
         const result=await http.request(protectProfileValue,{body:{operatingOrganizationId:organizationId,kind,value,...bank}});protectedProfileValues.current.set(cacheKey,result);return result;
       },surfaces,(savedRequest?.proposedPayload.relationshipProposals??{}) as Record<string,readonly Record<string,unknown>[]>) };
+      if (previewOnly && savedRequest) {
+        const preview = await http.request(previewTaskEdits, { params: { caseId: savedRequest.id },
+          headers: { "Idempotency-Key": crypto.randomUUID() }, body: {
+            expectedVersion: savedRequest.rowVersion, operatingOrganizationId: organizationId,
+            ...(companyCodeId ? { companyCodeId } : {}),
+            proposedPayload: { ...Object.fromEntries(Object.entries(savedRequest.proposedPayload).filter(([key]) => key !== "relationshipProposals")), ...serialized.proposedPayload }, extensions,
+          } });
+        setEditNotice(preview.status === "legacy" ? preview.message : !preview.editableNow
+          ? "This request is locked. Return it for changes before editing."
+          : !preview.result?.permitted ? "The published edit rules do not permit these changes."
+          : preview.result.changedPaths.length ? "These changes are permitted. Save, then resubmit for full re-review."
+          : "No changes detected.");
+        return;
+      }
+      setEditNotice(undefined);
       pendingSave.current = {submitRequest, execute: savedRequest ? () => api.patch(savedRequest.id, {
         draftCapture:!submitRequest,
         expectedVersion:savedRequest.rowVersion,
@@ -867,14 +863,17 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
               referenceChoiceScope={identity.scope ? { plane: identity.scope.plane, tenantId: identity.scope.tenantId, principalId: identity.scope.principalId, contextKey: JSON.stringify(work.selection) } : undefined}
               onChange={(next)=>{const details=surfaces.find(s=>s.key==="intake_details")!; const hiddenMessage=hiddenProfileChangeMessage(details,answers,next,surfaces);if(hiddenMessage){setError(hiddenMessage);return;}setAnswers(next);setSavedNotice(undefined);setDirty(true);onDirty?.();setIntakeCommandKey(crypto.randomUUID());intake?.markDirty();if(intake?.state.completed.includes("details"))intake.invalidate("details");setError(undefined)}}
               handlers={{"business_partner.account_holder":({field,value,onChange,id,name,disabled})=><Field label={field.label} htmlFor={id}><Input id={id} name={name} value={String(value??"")} required={field.required} maxLength={field.maxLength} disabled={disabled} onChange={event=>onChange(event.currentTarget.value)}/><Button type="button" className="a-bank-holder-copy" variant="secondary" disabled={disabled||!answers.name} onClick={()=>onChange(String(answers.name??""))}>{field.placeholder}</Button></Field>,"business_partner.attachment":props=><RequestAttachmentField {...props}/>,"business_partner.reference":props=><PartnerReferenceField {...props}/>,"business_partner.organization":({field,value,onChange,id,name,disabled})=><OrganizationField id={id} name={name} label={field.label} placeholder={field.placeholder} disabled={disabled} required={field.required} value={String(value??"")} onDefault={value=>{setOrganizationId(value);setAnswers(current=>({...current,[field.valueKey]:value}))}} onChange={value=>{setOrganizationId(value);onChange(value)}}/>}}/>
+            <SupplierProcessPreview caseId={savedRequest?.id} rowVersion={savedRequest?.rowVersion} unsaved={dirty} />
             <div ref={errorSummary} tabIndex={-1}>
               {error ? <ErrorNotice detail={error} /> : null}
               {retryRequired ? <p role="alert">{surfaces.find(s=>s.key==="intake_details")?.formLabels?.draftRetry}</p> : null}
             </div>
             {savedNotice ? <p role="status">{savedNotice}</p> : null}
+            {editNotice ? <p role="status">{editNotice} Preview applies to the values checked; saving checks them again.</p> : null}
             {attachmentProblems.length ? <p role="status">{attachmentProblems.join(" ")}</p> : null}
             <div className="bp-form-actions bp-form-actions--details">
               <EntityIntakeBackButton detailsStep="details" className="bp-form-actions__back" />
+              {savedRequest?.requestedRole === "supplier" && savedRequest.status === "returned" ? <Button type="button" variant="secondary" disabled={busy || retryRequired || !organizationId || attachmentProblems.length > 0} onClick={() => void submit(undefined, false, true)}>Preview edit rules</Button> : null}
               {savedRequest ? <Button type="button" variant="secondary" disabled={busy} onClick={()=>navigation.navigate(`/mdg/business-partner/requests/${encodeURIComponent(savedRequest.id)}`)}>{savedRequest.requestNo}</Button> : null}
               {surfaces.find(s=>s.key==="intake_details")?.formLabels?.saveDraft ? <EntityDraftSaveButton disabled={busy||!organizationId||attachmentProblems.length>0} onSave={()=>void submit(undefined,false)}>{busy ? surfaces.find(s=>s.key==="intake_details")!.formLabels!.savingDraft : retryRequired ? "Retry previous action" : surfaces.find(s=>s.key==="intake_details")!.formLabels!.saveDraft}</EntityDraftSaveButton>:null}
               <Button type="submit" loading={busy} disabled={!organizationId||retryRequired||attachmentProblems.length>0}>
@@ -897,11 +896,12 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
 }
 export function BusinessPartnerRequestDetail({
   requestId,
+  notificationPins,
 }: {
   readonly requestId: string;
+  readonly notificationPins?: {attemptId?:string;workItemId?:string;documentJobId?:string};
 }) {
   const api = usePartnerApi(),
-    toast = useToasts(),
     [view, setView] = useState<RequestView>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<string>(),
@@ -944,23 +944,13 @@ export function BusinessPartnerRequestDetail({
     window.history.replaceState(window.history.state, "", `#${next}`);
   }
   const actions = view ? governedCaseActions(view.case) : [];
-  async function run(name: string, work: () => Promise<unknown>) {
-    setBusy(name);
-    setLastSuccess(false);
-    setError(undefined);
-    setErrorState(undefined);
-    try {
-      await work();
-      setLastSuccess(true);
-      toast.push({ tone: "success", title: `${label(name)} completed` });
-      await reload();
-    } catch (cause) {
-      setError(message(cause));
-      setErrorState(failureUiState(cause, true));
-    } finally {
-      setBusy(undefined);
-    }
-  }
+  const run = useCommandRunner({
+    setBusy, setError, reload, errorMessage: message, blocked: Boolean(busy || loading),
+    onStart: () => { setLastSuccess(false); setErrorState(undefined); },
+    onSuccess: () => setLastSuccess(true),
+    onError: cause => setErrorState(failureUiState(cause, true)),
+  });
+
   if (loading && !view) return <RequestDetailSkeleton />;
   if (error && !view)
     return (
@@ -1047,8 +1037,10 @@ export function BusinessPartnerRequestDetail({
             <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
           <RequestLifecycle view={view} />
+          {request.kind === "new_partner" && request.source.kind === "manual" && request.requestedRole === "supplier" ? <SupplierProcessCorrection request={request} onChanged={reload} notificationPins={notificationPins} /> : null}
           <TabsContent value="overview">
             <RequestWorkspaceOverview view={view} onSelect={selectTab} />
+            {request.kind === "new_partner" && request.requestedRole === "supplier" && ["draft", "returned"].includes(request.status) ? <SupplierProcessPreview caseId={request.id} rowVersion={request.rowVersion} /> : null}
           </TabsContent>
           <TabsContent value="details">
             <RequestWorkspaceDetails view={view} />
@@ -1063,7 +1055,7 @@ export function BusinessPartnerRequestDetail({
             </div>
           </TabsContent>
           <TabsContent value="activity">
-            <RequestActivity view={view} />
+            {request.kind === "new_partner" && request.source.kind === "manual" && request.requestedRole === "supplier" ? <p>Read the <a href="#supplier-case-activity">recorded case activity</a> and submission history in the supplier journey.</p> : <RequestActivity view={view} />}
           </TabsContent>
         </Tabs>
         <Card className="bp-command-bar bp-request-command-bar">
@@ -1082,6 +1074,7 @@ export function BusinessPartnerRequestDetail({
               <Button
                 variant="secondary"
                 loading={busy === "validate"}
+                disabled={Boolean(busy) || loading}
                 onClick={() =>
                   void run("validate", () =>
                     api.validate(caseView.id, caseView.rowVersion),
@@ -1094,6 +1087,7 @@ export function BusinessPartnerRequestDetail({
             {actions.includes("submit") ? (
               <Button
                 loading={busy === "submit"}
+                disabled={Boolean(busy) || loading}
                 onClick={() =>
                   void run("submit", () =>
                     api.submit(caseView.id, caseView.rowVersion),
@@ -1136,6 +1130,7 @@ export function BusinessPartnerRequestDetail({
             {actions.includes("apply") ? (
               <Button
                 loading={busy === "apply"}
+                disabled={Boolean(busy) || loading}
                 onClick={() =>
                   void run("apply", () =>
                     api.apply(caseView.id, caseView.rowVersion),
@@ -1199,8 +1194,8 @@ export function BusinessPartnerAggregateDetail({
   return (
     <PageSurface
       title={
-        aggregate?.businessPartner.name ??
-        aggregate?.businessPartner.name ??
+        aggregate?.businessPartner.name?.trim() ||
+        aggregate?.businessPartner.code ||
         "Business Partner"
       }
       description={
@@ -1741,9 +1736,9 @@ function RequestTable({ items }: { items: readonly PartnerRequest[] }) {
               </td>
               <td>
                 {String(
-                  item.proposedPayload["name"] ??
-                    item.proposedPayload["name"] ??
-                    "—",
+                  (typeof item.proposedPayload["name"] === "string"
+                    ? item.proposedPayload["name"].trim()
+                    : undefined) || item.targetBusinessPartnerId || "—",
                 )}
               </td>
               <td>{label(item.requestedRole ?? "—")}</td>
@@ -1920,11 +1915,7 @@ function optionalValue(data: FormData, name: string): string | undefined {
     ? result.trim()
     : undefined;
 }
-function label(value: string): string {
-  return value
-    .replaceAll(/[._-]+/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
+function label(value: string): string { return businessLabel(value, "title"); }
 function formatDate(value: unknown): string {
   return typeof value === "string" && Number.isFinite(parseInstant(value))
     ? new Intl.DateTimeFormat(undefined, {
@@ -1939,10 +1930,8 @@ function display(value: unknown): string {
   return String(value);
 }
 function message(cause: unknown): string {
-  if (cause instanceof ApiTransportError)
-    return cause.problem?.detail ?? cause.message;
-  if (cause instanceof Error) return cause.message;
-  return "Unexpected Business Partner error";
+  if ((cause instanceof ApiTransportError ? JSON.stringify(cause.problem ?? cause.message) : String(cause instanceof Error ? cause.message : cause)).includes("PROCESS_CORRECTION_PROFILE_CHANGE_UNSUPPORTED")) return "This correction changes the onboarding profile. No new review work was created. Restore the previous requirement, or close this proposal and create a new request.";
+  return businessPartnerErrorMessage(cause, "Unexpected Business Partner error");
 }
 
 export function BusinessPartnerRequestEdit({

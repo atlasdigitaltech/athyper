@@ -6,3 +6,5 @@ export * from "./cached-policy-repository.js";
 export * from "./policy-routes.js";
 export * from "./errors.js";
 export * from "./policy-authoring-service.js";
+
+export * from "./kysely-policy-authoring-repository.js";

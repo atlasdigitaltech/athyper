@@ -84,7 +84,7 @@ DECLARE
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
         'connector_instance', 'integration_endpoint', 'webhook_subscription',
-        'cycle_type', 'cycle_phase', 'cycle_task_category', 'cycle_task_template',
+        'process_selection_catalog_revision', 'process_selection_publication', 'cycle_type', 'cycle_phase', 'cycle_task_category', 'cycle_task_template',
         'cycle_task_dependency', 'cycle_cross_dependency', 'cycle_carryforward_rule',
         'cycle_template_revision'
     ]
@@ -336,3 +336,5 @@ CREATE POLICY feature_flag_override_insert ON control.feature_flag_override FOR 
 WITH CHECK(tenant_id=shared.current_tenant_id_soft());
 CREATE POLICY feature_flag_override_update ON control.feature_flag_override FOR UPDATE TO athyperapp
 USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id_soft());
+ALTER TABLE control.supplier_activation_policy ENABLE ROW LEVEL SECURITY;
+CREATE POLICY supplier_activation_policy_tenant ON control.supplier_activation_policy USING(tenant_id=shared.current_tenant_id());

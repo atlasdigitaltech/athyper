@@ -936,3 +936,6 @@ CREATE INDEX service_sheet_source_allocation_time_idx ON document.service_sheet_
 CREATE INDEX service_sheet_source_allocation_expense_idx ON document.service_sheet_source_allocation (tenant_id, external_expense_sheet_id, allocation_kind) WHERE external_expense_sheet_id IS NOT NULL;
 CREATE INDEX service_sheet_source_allocation_sow_idx ON document.service_sheet_source_allocation (tenant_id, statement_of_work_item_id, allocation_kind) WHERE statement_of_work_item_id IS NOT NULL;
 CREATE UNIQUE INDEX service_sheet_source_allocation_reversal_once_uq ON document.service_sheet_source_allocation (tenant_id, reverses_allocation_id) WHERE reverses_allocation_id IS NOT NULL;
+
+CREATE UNIQUE INDEX supplier_task_attempt_execution_uq ON document.workflow_request(tenant_id,entity_id,(metadata->'process'->>'attemptId')) WHERE entity_type='cycle_task' AND metadata->'process' IS NOT NULL;
+CREATE UNIQUE INDEX supplier_task_vote_key_uq ON document.work_item(tenant_id,(outcome->>'idempotencyKey')) WHERE payload->>'attemptId' IS NOT NULL AND outcome->>'idempotencyKey' IS NOT NULL;

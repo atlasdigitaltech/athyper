@@ -125,6 +125,14 @@ describe("durable notification jobs", () => {
     );
   });
 
+  it("suppresses a stale recipient before attachment resolution, transport or inbox publication", async () => {
+    const complete=vi.fn(), send=vi.fn(), publish=vi.fn(), attachments=vi.fn();
+    const handler=createDeliverySweepHandler({repository:{claim:vi.fn().mockResolvedValue([delivery("email","stale"),delivery("in_app","stale-inbox")]),attachments,complete},handlers:new Map([["email",{channel:"email",send,health:vi.fn()}]]),events:{publish},authorizeDelivery:async()=>({allowed:false,reason:"ATTEMPT_SUPERSEDED"})} as never);
+    await expect(handler.handle(job(DELIVERY_SWEEP_JOB,request()),context())).resolves.toMatchObject({output:{delivered:0,failed:0,suppressed:2}});
+    expect(complete).toHaveBeenCalledWith(expect.anything(),expect.objectContaining({suppressed:true,retryable:false,error:"ATTEMPT_SUPERSEDED"}),PRINCIPAL_ID);
+    expect(send).not.toHaveBeenCalled();expect(publish).not.toHaveBeenCalled();expect(attachments).not.toHaveBeenCalled();
+  });
+
   it("preserves asynchronous provider acceptance for authoritative delivery events", async () => {
     const complete = vi.fn();
     const repository = {
@@ -162,6 +170,13 @@ describe("durable notification jobs", () => {
     );
   });
 
+  it("does not send when a required attachment loses recipient access", async () => {
+    const send=vi.fn(),complete=vi.fn();
+    const handler=createDeliverySweepHandler({repository:{claim:async()=>[delivery("email","required-denied")],attachments:async()=>[{attachmentId:"44444444-4444-4444-8444-444444444444",attachmentVersionId:"44444444-4444-4444-8444-444444444444",versionPolicy:"pinned",requestedDisposition:"embed",required:true,sortOrder:0}],complete},handlers:new Map([["email",{channel:"email",send}]]),events:{publish:vi.fn()},attachments:{resolveForDelivery:async()=>{throw Object.assign(new Error("ARTIFACT_ACCESS_REVOKED"),{retryable:false});}}} as never);
+    await handler.handle(job(DELIVERY_SWEEP_JOB,request()),context());
+    expect(send).not.toHaveBeenCalled();
+    expect(complete).toHaveBeenCalledWith(expect.anything(),expect.objectContaining({delivered:false,retryable:false,error:"ARTIFACT_ACCESS_REVOKED"}),expect.anything());
+  });
   it("resolves a durable attachment immediately before the external send", async () => {
     const send = vi.fn().mockResolvedValue({ externalId: "mail-attachment" });
     const resolveForDelivery = vi.fn().mockResolvedValue({

@@ -130,6 +130,8 @@ export interface CycleReadinessSource {
 }
 
 export interface CycleExecutionStore {
+  /** Runs inside the same locked transaction as completion. Domain owners may add current gates. */
+  evaluateCompletion?(runId: string): Promise<CycleReadinessResult>;
   getPublishedTemplate(
     cycleTypeId: string,
     version?: number,
@@ -193,6 +195,7 @@ export interface CycleRunService {
     context: VerifiedRequestContext,
     runId: string,
     status: CycleRunStatus,
+    command?: {readonly expectedVersion:number; readonly idempotencyKey:string},
   ): Promise<CycleRun>;
   readiness(
     context: VerifiedRequestContext,

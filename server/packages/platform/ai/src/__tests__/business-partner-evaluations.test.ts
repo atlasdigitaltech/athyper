@@ -215,3 +215,13 @@ it("BP-AI-07: rejects submission aimed at a different case than the current page
   expect(h.store.rows.size).toBe(0);
   expect(h.submit).not.toHaveBeenCalled();
 });
+
+
+it("returns the accepted process attempt when submission is waiting for documents", async () => {
+  const bus = createBusinessPartnerAtlasCommandBus({
+    fallback: { execute: vi.fn() },
+    submit: async () => ({ request: { id, rowVersion: 4, status: "pending_approval" }, process: { attemptId: other } }),
+  });
+  const result = await bus.execute({ context, commandBinding: BP_ATLAS_SUBMIT, arguments: args, expectedRowVersion: 3, idempotencyKey: "p2-atlas-submit-001" } as Parameters<AtlasDomainCommandBus["execute"]>[0]);
+  expect(result).toEqual({ commandId: other, revision: "4", data: { caseId: id, status: "pending_approval", rowVersion: 4 } });
+});

@@ -1069,3 +1069,11 @@ CREATE TRIGGER mesh_profile_change_case_immutable
 CREATE TRIGGER trg_entity_case_materialize_business_partner_relationships
 AFTER UPDATE OF status,target_entity_id,result_snapshot_id ON document.entity_case
 FOR EACH ROW EXECUTE FUNCTION master.fn_materialize_business_partner_case_relationships();
+
+CREATE TRIGGER supplier_task_execution_binding BEFORE INSERT OR UPDATE OR DELETE ON document.workflow_request FOR EACH ROW EXECUTE FUNCTION document.trg_supplier_task_execution_binding();
+CREATE TRIGGER supplier_task_work_item_binding BEFORE INSERT OR UPDATE OR DELETE ON document.work_item FOR EACH ROW EXECUTE FUNCTION document.trg_supplier_task_work_item_binding();
+CREATE TRIGGER supplier_task_completion_quorum BEFORE INSERT OR UPDATE ON governance.cycle_task FOR EACH ROW EXECUTE FUNCTION document.trg_supplier_task_completion_quorum();
+CREATE TRIGGER process_document_materialization_gate BEFORE UPDATE ON document.entity_case FOR EACH ROW EXECUTE FUNCTION document.trg_process_document_domain_gates();
+CREATE TRIGGER process_document_closure_gate BEFORE UPDATE ON governance.cycle_run FOR EACH ROW EXECUTE FUNCTION document.trg_process_document_domain_gates();
+CREATE TRIGGER process_document_source_binding BEFORE INSERT ON governance.process_document_job FOR EACH ROW EXECUTE FUNCTION document.trg_process_document_source_binding();
+CREATE TRIGGER process_document_task_subject AFTER INSERT ON document.workflow_request FOR EACH ROW EXECUTE FUNCTION document.trg_process_task_subject();

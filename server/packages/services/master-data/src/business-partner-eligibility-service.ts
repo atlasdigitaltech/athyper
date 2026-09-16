@@ -237,7 +237,7 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
         {
           ...scope(command.operatingOrganizationId, command.companyCodeId),
           businessPartnerId: command.businessPartnerId,
-          operationKey: command.companyCodeId ? "qualification_company" : "qualification",
+          actionCode: command.companyCodeId ? "qualification_company" : "qualification",
           qualificationControl: true,
           makerCheckerEnforced: true,
         },
@@ -338,7 +338,7 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
               qualificationId: current.id,
               // Existing child decisions cannot use proposed-resource creation
               // authority. Until explicitly bound, target enforcement denies.
-              operationKey: "qualification_decide",
+              actionCode: "qualification_decide",
               qualificationControl: true,
               makerCheckerEnforced: true,
               createdBy: current.createdBy,
@@ -379,6 +379,7 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
               `business_partner.qualification.${command.decision}`,
               result.qualification,
             );
+          if (!result.replayed) await options.onboardingCycles?.advanceForBusinessPartner({tenantId:command.context.tenantId,principalId:command.context.principalId,businessPartnerId:result.qualification.businessPartnerId,eventCode:`business_partner.qualification.${command.decision}`,metadata:{qualificationId:result.qualification.id,operatingOrganizationId:result.qualification.operatingOrganizationId,companyCodeId:result.qualification.companyCodeId}},transaction);
           return result;
         },
       );

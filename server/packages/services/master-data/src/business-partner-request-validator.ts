@@ -27,6 +27,7 @@ export interface BusinessPartnerRequestValidatorOptions<Transaction> {
 }
 
 const ruleDefinitions = Object.freeze([
+  { code: "activation.current_coordinates.required", severity: "error", fieldPath: "$.activation" },
   { code: "role.ownership_subtype.compatible", severity: "error", fieldPath: "$.ownershipClass" },
   { code: "identity.name.required", severity: "error", fieldPath: "$.name" },
   { code: "role.requested.required", severity: "error", fieldPath: "$.requestedRole" },
@@ -47,7 +48,7 @@ const ruleDefinitions = Object.freeze([
 
 export const businessPartnerRequestRuleset = Object.freeze({
   code: "neon.business_partner.entity_case.phase1",
-  version: 3,
+  version: 4,
   hash: createHash("sha256").update(JSON.stringify(ruleDefinitions)).digest("hex"),
 });
 
@@ -99,7 +100,14 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
             limit: 10,
           }, transaction)
         : [];
+      const activation=recordValue(request.proposedPayload["activation"]);
+      const activationValid = activation["businessDate"]===now().toISOString().slice(0,10)
+        && Number.isSafeInteger(activation["expectedSupplierVersion"]) && Number(activation["expectedSupplierVersion"])>0
+        && Number.isSafeInteger(activation["policyVersion"]) && Number(activation["policyVersion"])>0
+        && /^[0-9a-f-]{36}$/i.test(String(activation["policyId"]??""))
+        && /^[0-9a-f]{64}$/.test(String(activation["readinessFingerprint"]??""));
       const findings: BusinessPartnerRequestValidationFinding[] = [
+        ...(request.kind==="activate_supplier"?[finding("activation.current_coordinates.required","error","$.activation",activationValid,"SUPPLIER_ACTIVATION_COORDINATES_REQUIRED",{})]:[]),
         createsCommercialRole ? finding("role.ownership_subtype.compatible","error","$."+subtypeField,ownershipSubtypeCompatible,"BUSINESS_PARTNER_OWNERSHIP_ROLE_MISMATCH",{ownershipClass:ownershipClass??null,subtype}) : skipped("role.ownership_subtype.compatible","error","$."+subtypeField,"ROLE_NOT_CREATED"),
         isNew ? finding("identity.name.required", "error", "$.name", Boolean(name), "NAME_REQUIRED", { valuePresent: Boolean(name) }) : skipped("identity.name.required", "error", "$.name", "EXISTING_IDENTITY_REUSED"),
         roleless ? skipped("role.requested.required", "error", "$.requestedRole", "ROLE_NOT_APPLICABLE") : finding("role.requested.required", "error", "$.requestedRole", Boolean(request.requestedRole), "REQUESTED_ROLE_REQUIRED", { requestedRole: request.requestedRole ?? null }),

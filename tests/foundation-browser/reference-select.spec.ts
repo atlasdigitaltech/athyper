@@ -10,6 +10,7 @@ const styles = [
   .map((path) => readFileSync(path, "utf8").replace(/@import[^;]+;/g, ""))
   .join("\n");
 const script = buildSync({
+  outdir: "/tmp/reference-select-browser",
   stdin: {
     resolveDir: process.cwd(),
     loader: "tsx",

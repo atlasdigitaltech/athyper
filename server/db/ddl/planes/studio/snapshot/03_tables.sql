@@ -472,3 +472,17 @@ CREATE TABLE snapshot.business_partner_case_contract_revision (
     UNIQUE (tenant_id, id),
     UNIQUE (tenant_id, idempotency_key)
 );
+
+-- Saved draft comparison history
+CREATE TABLE snapshot.entity_draft_save (
+ change_set_id uuid NOT NULL REFERENCES metadata.entity_change_set(id),
+ lock_version bigint NOT NULL CHECK (lock_version >= 0),
+ tenant_id uuid,
+ graph jsonb NOT NULL CHECK (jsonb_typeof(graph) = 'object'),
+ graph_hash text NOT NULL,
+ captured_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ captured_by uuid NOT NULL,
+ capture_kind text NOT NULL CHECK (capture_kind IN ('saved', 'previous')),
+ PRIMARY KEY (change_set_id, lock_version),
+ FOREIGN KEY (tenant_id, change_set_id) REFERENCES metadata.entity_change_set(tenant_id, id)
+);

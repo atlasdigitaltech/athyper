@@ -260,3 +260,8 @@ REVOKE ALL ON FUNCTION control.parameter_value_matches_definition(jsonb,text,jso
 REVOKE ALL ON FUNCTION control.parameter_json_is_api_compatible(jsonb,integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION control.parameter_value_matches_definition(jsonb,text,jsonb,jsonb,jsonb) TO athyperapp,athyperadmin;
 GRANT EXECUTE ON FUNCTION control.parameter_json_is_api_compatible(jsonb,integer) TO athyperapp,athyperadmin;
+
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+  REVOKE INSERT,UPDATE,DELETE ON control.process_selection_publication,control.process_selection_catalog_revision FROM athyperapp;
+END IF; END $$;
+GRANT SELECT ON control.supplier_activation_policy TO athyperapp,athyperadmin;

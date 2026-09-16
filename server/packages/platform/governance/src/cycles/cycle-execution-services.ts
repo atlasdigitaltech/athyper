@@ -6,6 +6,7 @@ import type { ExactPlaneRepositoryProvider } from "@athyper/server-foundation/tr
 
 export interface CycleExecutionServiceOptions {
   readonly authorizer: Authorizer; readonly repositories: ExactPlaneRepositoryProvider<CycleExecutionRepository>; readonly readinessSource?: CycleReadinessSource;
+  readonly authorizeRun?: (context:VerifiedRequestContext,run:CycleRun,operation:"readiness"|"transition")=>Promise<void>;
   readonly now?: () => Date; readonly id?: () => string;
 }
 
@@ -43,21 +44,31 @@ export function createCycleRunService(options: CycleExecutionServiceOptions): Cy
         return { kind: "created" as const, run, tasks, dependencies };
       });
     },
-    async transition(context, runId, status) {
-      await permitted(options.authorizer, context, governancePermissions.cycleExecute);
+    async transition(context, runId, status, command) {
+      if (!options.authorizeRun) await permitted(options.authorizer, context, governancePermissions.cycleExecute);
       return exactRepository(options, context).transaction(context, async (store) => {
-        const run = await requireRun(store, runId); const allowed = runTransitions[run.status];
+        const run = await requireRun(store, runId); await options.authorizeRun?.(context,run,"transition"); const allowed = runTransitions[run.status];
+        const processOwned = run.data["schema"] === "athyper.process-run/1";
+        if (processOwned && status === "cancelled") fail("GOVERNANCE_PROCESS_CASE_COMMAND_REQUIRED");
+        if (processOwned && status === "completed" && (!command || !Number.isSafeInteger(command.expectedVersion) || !command.idempotencyKey.trim())) fail("GOVERNANCE_COMPLETION_COMMAND_REQUIRED");
+        const receipt = run.data["completion"] as {idempotencyKey?:string;expectedVersion?:number;principalId?:string} | undefined;
+        if (status === "completed" && run.status === "completed" && command && receipt?.idempotencyKey === command.idempotencyKey && receipt.expectedVersion === command.expectedVersion && receipt.principalId === context.principalId) return run;
+        if (command && command.expectedVersion !== run.version) fail("GOVERNANCE_EXPECTED_VERSION_CONFLICT");
+        let completion: CycleReadinessResult | undefined;
         if (!allowed.includes(status)) fail("GOVERNANCE_INVALID_TRANSITION", { from: run.status, to: status });
         if (status === "running" && run.parentCycleRunId) { const parent = await requireRun(store, run.parentCycleRunId); if (!['running','blocked'].includes(parent.status)) fail("GOVERNANCE_PARENT_CYCLE_INVALID"); }
-        if (status === "completed") { await assertRunReady(options, context, store, run); if ((await store.listChildRuns(run.id)).some((child) => !["completed", "cancelled"].includes(child.status))) fail("GOVERNANCE_CHILD_CYCLE_ACTIVE"); }
+        if (status === "completed") { completion = await runReadiness(options, context, store, run); if (!completion.ready) fail("GOVERNANCE_CYCLE_NOT_READY",completion); if ((await store.listChildRuns(run.id)).some((child) => !["completed", "cancelled"].includes(child.status))) fail("GOVERNANCE_CHILD_CYCLE_ACTIVE"); }
         if (status === "cancelled" && (await store.listChildRuns(run.id)).some((child) => !["completed", "cancelled"].includes(child.status))) fail("GOVERNANCE_CHILD_CYCLE_ACTIVE");
-        const at = now().toISOString(); const updated: CycleRun = { ...run, status, ...(status === "running" && !run.startedAt ? { startedAt: at } : {}), ...(status === "completed" ? { completedAt: at } : {}), updatedAt: at, updatedBy: context.principalId, version: run.version + 1 };
-        await store.putRun(updated); return updated;
+        const at = now().toISOString(); const updated: CycleRun = { ...run, ...(completion ? {data:{...run.data,completion:{...command,principalId:context.principalId,...completion}}} : {}), status, ...(status === "running" && !run.startedAt ? { startedAt: at } : {}), ...(status === "completed" ? { completedAt: at } : {}), updatedAt: at, updatedBy: context.principalId, version: run.version + 1 };
+        await store.putRun(updated); return requireRun(store,updated.id);
       });
     },
     async readiness(context, runId) {
-      await permitted(options.authorizer, context, governancePermissions.cycleExecute);
-      return exactRepository(options, context).transaction(context, async (store) => runReadiness(options, context, store, await requireRun(store, runId)));
+      if (!options.authorizeRun) await permitted(options.authorizer, context, governancePermissions.cycleExecute);
+      return exactRepository(options, context).transaction(context, async (store) => {const run=await requireRun(store,runId);await options.authorizeRun?.(context,run,"readiness");const result=await runReadiness(options, context, store, run);
+        let canComplete=result.ready && runTransitions[run.status].includes("completed");
+        if(canComplete && options.authorizeRun) {try {await options.authorizeRun(context,run,"transition");} catch(error) {if(typeof error === "object" && error !== null && "statusCode" in error && error.statusCode === 403) canComplete=false; else throw error;}}
+        return {...result,evidence:{...result.evidence,runStatus:run.status,canComplete}};});
     },
   };
 }
@@ -121,7 +132,7 @@ export function createCycleCertificationService(options: CycleExecutionServiceOp
 }
 
 const runTransitions: Record<CycleRunStatus, readonly CycleRunStatus[]> = { draft: ["scheduled", "running", "cancelled"], scheduled: ["running", "cancelled"], running: ["blocked", "completed", "cancelled"], blocked: ["running", "cancelled"], completed: [], cancelled: [] };
-async function runReadiness(options: CycleExecutionServiceOptions, context: VerifiedRequestContext, store: CycleExecutionStore, run: CycleRun): Promise<CycleReadinessResult> { const tasks = await store.listTasks(run.id); const deviations = await store.listDeviations(run.id); const reasons: string[] = []; if ((await store.listChildRuns(run.id)).some(child => !["completed", "cancelled"].includes(child.status))) reasons.push("child_cycles_active"); if (tasks.some((task) => task.isMandatory && !["completed", "waived"].includes(task.status))) reasons.push("mandatory_tasks_incomplete"); if (deviations.some((item) => item.status === "open" && item.severity === "critical")) reasons.push("critical_deviations_open"); let finance: CycleReadinessResult | undefined; if (run.data["closeCoordinate"] !== undefined) { if (!options.readinessSource) reasons.push("finance_readiness_source_unavailable"); else { finance = await options.readinessSource.evaluate(context, run); if (!finance.ready) reasons.push(...(finance.reasons?.length ? finance.reasons : ["finance_not_ready"])); } } return { ready: reasons.length === 0, evaluatedAt: finance?.evaluatedAt ?? (options.now?.() ?? new Date()).toISOString(), evidence: { taskCount: tasks.length, completedTaskCount: tasks.filter((task) => ["completed", "waived"].includes(task.status)).length, openCriticalDeviationCount: deviations.filter((item) => item.status === "open" && item.severity === "critical").length, ...(finance ? { finance: finance.evidence } : {}) }, ...(reasons.length ? { reasons } : {}) }; }
+async function runReadiness(options: CycleExecutionServiceOptions, context: VerifiedRequestContext, store: CycleExecutionStore, run: CycleRun): Promise<CycleReadinessResult> { const owned = await store.evaluateCompletion?.(run.id); const tasks = await store.listTasks(run.id); const deviations = await store.listDeviations(run.id); const reasons: string[] = [...(owned?.reasons ?? [])]; if (!owned && (await store.listChildRuns(run.id)).some(child => !["completed", "cancelled"].includes(child.status))) reasons.push("child_cycles_active"); if (!owned && tasks.some((task) => task.isMandatory && !["completed", "waived"].includes(task.status))) reasons.push("mandatory_tasks_incomplete"); if (!owned && deviations.some((item) => item.status === "open" && item.severity === "critical")) reasons.push("critical_deviations_open"); let finance: CycleReadinessResult | undefined; if (run.data["closeCoordinate"] !== undefined) { if (!options.readinessSource) reasons.push("finance_readiness_source_unavailable"); else { finance = await options.readinessSource.evaluate(context, run); if (!finance.ready) reasons.push(...(finance.reasons?.length ? finance.reasons : ["finance_not_ready"])); } } return { ready: reasons.length === 0 && (owned?.ready ?? true), evaluatedAt: finance?.evaluatedAt ?? (options.now?.() ?? new Date()).toISOString(), evidence: {runVersion:run.version, ...(owned ? {completion: owned.evidence} : {}), taskCount: tasks.length, completedTaskCount: tasks.filter((task) => ["completed", "waived"].includes(task.status)).length, openCriticalDeviationCount: deviations.filter((item) => item.status === "open" && item.severity === "critical").length, ...(finance ? { finance: finance.evidence } : {}) }, ...(reasons.length ? { reasons } : {}) }; }
 async function assertRunReady(options: CycleExecutionServiceOptions, context: VerifiedRequestContext, store: CycleExecutionStore, run: CycleRun): Promise<void> { const readiness = await runReadiness(options, context, store, run); if (!readiness.ready) fail("GOVERNANCE_CYCLE_NOT_READY", readiness); }
 function assertRunOpen(run: CycleRun): void { if (["completed", "cancelled"].includes(run.status)) fail("GOVERNANCE_CYCLE_IMMUTABLE"); }
 async function assertRunMutable(store: CycleExecutionStore, run: CycleRun): Promise<void> { if (["completed", "cancelled"].includes(run.status) || (await store.listCertifications(run.id)).some((item) => item.status === "approved")) fail("GOVERNANCE_CYCLE_IMMUTABLE"); }

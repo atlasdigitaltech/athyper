@@ -1,5 +1,5 @@
 import { withBusinessPartnerOrganizationIdentity } from "./business-partner-organization-identity.js";
-import { createHash } from "node:crypto";
+import { presentationUuid } from "./presentation-graph-helpers";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 import {
   parseEntityIntakeSurfaces,
@@ -9,8 +9,7 @@ import {
 } from "../../../../packages/contracts/platform/entity-runtime/src/intake-surface";
 import type { RequestFormDescriptor } from "../../../../packages/planes/neon/business-partner/src/request-form-descriptor";
 const id = (key: string) => {
-  const h = createHash("sha256").update(key).digest("hex");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+  return presentationUuid(key);
 };
 const snake = (key: string) =>
   key.replace(/[A-Z]/g, (c) => "_" + c.toLowerCase());

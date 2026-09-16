@@ -11,3 +11,7 @@ export * from "./workflow-designer";
 
 export { BusinessPartnerCaseContractAuthoring } from "./case-contract-authoring";
 export { BankDirectoryWorkspace } from "./bank-directory";
+
+export { TaskEditPolicyAuthoring } from "./task-edit-policy-authoring";
+
+export { BusinessPartnerWorkbench, BusinessPartnerInspection } from "./workbench";

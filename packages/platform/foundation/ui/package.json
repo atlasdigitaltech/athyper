@@ -11,6 +11,7 @@
   "exports": {
     ".": "./src/index.tsx",
     "./presentation": "./src/presentation.tsx",
+    "./applied-filters": "./src/applied-filters.tsx",
     "./styles.css": "./src/styles.css"
   },
   "scripts": {

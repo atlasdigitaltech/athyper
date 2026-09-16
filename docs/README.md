@@ -8,6 +8,8 @@
 - [Deployment](../deploy/README.md) and [container wiring](../deploy/docs/operations/container-wiring.md).
 - [Architecture index](architecture/README.md) and
   [Business Partner architecture](architecture/business-partner/README.md).
+- [Business capabilities and workflow design](business-workflows/README.md): seven
+  NEON workspace documents covering 32 modules, with an internal evidence matrix.
 
 ## Find the right kind of document
 

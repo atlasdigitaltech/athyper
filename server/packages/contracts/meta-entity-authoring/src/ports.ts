@@ -5,6 +5,7 @@ import type {
   ContractTestReport,
   MetaEntityChangeSet,
   MetaEntityGraph,
+  MetaEntityInspectionRelease,
   SignedMetaEntityArtifact,
   ValidationReport,
 } from "./model.js";
@@ -22,6 +23,11 @@ export class AuthoringPolicyError extends Error {
 }
 
 export interface MetaEntityAuthoringRepository {
+  listDraftSaves?(changeSetId: string): Promise<readonly {revision: number; capturedAt: string; kind: string}[]>;
+  readDraftSave?(changeSetId: string, revision: number): Promise<MetaEntityGraph | null>;
+  listInspectionReleases?(tenantId: string): Promise<readonly MetaEntityInspectionRelease[]>;
+  readInspectionRelease?(tenantId: string, releaseId: string): Promise<{release: MetaEntityInspectionRelease; graph: MetaEntityGraph} | null>;
+
   list?(tenantId: string): Promise<readonly MetaEntityChangeSet[]>;
   forkDraft?(input: {
     sourceChangeSetId: string;

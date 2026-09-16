@@ -2638,3 +2638,16 @@ COMMENT ON TABLE control.external_workforce_rate_card IS
   'Buyer-company rate policy for external labor. It is not a purchase commitment and cannot authorize spend.';
 COMMENT ON TABLE control.external_workforce_rate IS
   'Effective rate-card row optionally narrowed by staffing supplier, job, site and worker classification.';
+
+-- P7 pilot selection is explicit; disabled/unconfigured tenants retain existing routing.
+CREATE TABLE control.supplier_communication_policy (
+ tenant_id uuid PRIMARY KEY REFERENCES master.tenant(id),
+ public_origin text NOT NULL CHECK(public_origin ~ '^https://[^/@?#]+$'),
+ enabled_from timestamptz NOT NULL DEFAULT now(),
+ enabled boolean NOT NULL DEFAULT false,
+ operational_owner_principal_id uuid NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ created_by uuid NOT NULL,
+ FOREIGN KEY(tenant_id,operational_owner_principal_id) REFERENCES master.principal(tenant_id,id),
+ FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id)
+);

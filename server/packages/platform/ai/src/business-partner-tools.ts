@@ -68,7 +68,7 @@ export function createBusinessPartnerAtlasCommandBus(options: {
   readonly submit: (input: {
     readonly context: Parameters<AtlasDomainCommandBus["execute"]>[0]["context"];
     readonly requestId: string; readonly expectedVersion: number; readonly idempotencyKey: string;
-  }) => Promise<{ readonly request: { readonly id: string; readonly rowVersion: number; readonly status: string }; readonly workflow: { readonly requestId: string } }>;
+  }) => Promise<{ readonly request: { readonly id: string; readonly rowVersion: number; readonly status: string }; readonly workflow?: { readonly requestId: string }; readonly process?: { readonly attemptId: string } }>;
 }): AtlasDomainCommandBus {
   return { async execute(input) {
     if (input.commandBinding !== BP_ATLAS_SUBMIT) {
@@ -78,9 +78,10 @@ export function createBusinessPartnerAtlasCommandBus(options: {
     const governance = parseSubmission(input.arguments);
     if (input.context.planeKey !== "neon" || input.expectedRowVersion !== governance.expectedRowVersion) invalid();
     const result = await options.submit({ context: input.context, requestId: governance.affectedEntityId, expectedVersion: input.expectedRowVersion, idempotencyKey: input.idempotencyKey });
-    requireUuid(result.workflow.requestId);
+    const commandId = result.process?.attemptId ?? result.workflow?.requestId;
+    requireUuid(commandId);
     if(result.request.id!==governance.affectedEntityId || result.request.status!=="pending_approval" || !Number.isSafeInteger(result.request.rowVersion) || result.request.rowVersion<=input.expectedRowVersion) invalid();
-    return { commandId: result.workflow.requestId, revision: String(result.request.rowVersion), data: { caseId: result.request.id, status: result.request.status, rowVersion: result.request.rowVersion } };
+    return { commandId: commandId!, revision: String(result.request.rowVersion), data: { caseId: result.request.id, status: result.request.status, rowVersion: result.request.rowVersion } };
   } };
 }
 

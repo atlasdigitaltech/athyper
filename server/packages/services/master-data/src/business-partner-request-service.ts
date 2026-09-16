@@ -1,3 +1,4 @@
+import { validateSupplierOnboardingRequirement } from "./supplier-onboarding-requirement.js";
 import { validateRequestCapture } from "./business-partner-request-capture.js";
 import { validateBusinessPartnerProfile } from "./business-partner-profile-validation.js";
 import { projectBusinessPartnerCaseExplanation } from "./business-partner-case-explanation.js";
@@ -27,12 +28,22 @@ import {
   type CreateBusinessPartnerRequestCommand,
   type DecideBusinessPartnerRequestCommand,
   type SubmitBusinessPartnerRequestCommand,
+  type SubmitBusinessPartnerRequestResponse,
+  type PatchBusinessPartnerRequestCommand,
 } from "@athyper/server-contract-master-data";
 import { MasterDataError } from "./errors.js";
 import { projectBusinessPartnerNotification } from "./business-partner-notifications.js";
 import type { BusinessPartnerOnboardingCycleCoordinator } from "./business-partner-onboarding-cycle.js";
 
+export interface SupplierProcessSubmission<Transaction> {
+  lock(command: SubmitBusinessPartnerRequestCommand, tx: Transaction): Promise<void>;
+  replay(command: SubmitBusinessPartnerRequestCommand, request: BusinessPartnerRequest, tx: Transaction): Promise<SubmitBusinessPartnerRequestResponse | undefined>;
+  submit(command: SubmitBusinessPartnerRequestCommand, request: BusinessPartnerRequest, tx: Transaction): Promise<SubmitBusinessPartnerRequestResponse>;
+}
 export interface BusinessPartnerRequestServiceOptions<Transaction> {
+  readonly guardAmendment?: (command: PatchBusinessPartnerRequestCommand, current: BusinessPartnerRequest, transaction: Transaction) => Promise<Readonly<Record<string, unknown>> | undefined>;
+  readonly activationReadiness?: (request: BusinessPartnerRequest, transaction: Transaction) => Promise<{readiness: {eligible:boolean;decisionFingerprint:string}}> ;
+  readonly supplierSubmission?: SupplierProcessSubmission<Transaction>;
   readonly authorizer: Authorizer;
   readonly repository: BusinessPartnerRequestRepository<Transaction>;
   readonly transactions: BusinessPartnerRequestTransactionCoordinator<Transaction>;
@@ -222,7 +233,7 @@ export function createBusinessPartnerRequestService<Transaction>(
             transaction,
             "business_partner.case.created",
             created,
-            { sourceKind: created.source.kind, caseOperation: created.kind },
+            { sourceKind: created.source.kind, caseOperation: created.kind, ...requirementEvidence(created.proposedPayload) },
           );
           return { request: created, case: created, replayed: false };
         },
@@ -525,10 +536,12 @@ export function createBusinessPartnerRequestService<Transaction>(
               authorizationTarget: "proposed",
             },
           );
+          validateSupplierOnboardingRequirement({ ...current, requestedRole: command.requestedRole ?? current.requestedRole, proposedPayload: { ...current.proposedPayload, ...command.proposedPayload } }, { draft: true, previous: current.proposedPayload, changes: command.proposedPayload });
           await options.validateIntake?.(intakeValidationCommand(command.context, {
             ...current,proposedPayload:{...current.proposedPayload,...command.proposedPayload,...(command.extensions!==undefined?{relationshipProposals:command.extensions}:{})},
             operatingOrganizationId:command.operatingOrganizationId??current.operatingOrganizationId,
           },command.draftCapture));
+          const editPolicyEvidence = await options.guardAmendment?.(command, current, transaction);
           const updated = await options.repository.patch(
             {
               tenantId: command.context.tenantId,
@@ -564,7 +577,8 @@ export function createBusinessPartnerRequestService<Transaction>(
             transaction,
             "business_partner.case.updated",
             updated,
-            { priorVersion: command.expectedVersion },
+            { priorVersion: command.expectedVersion, ...requirementEvidence(updated.proposedPayload), priorRequestedComplianceLevel: current.proposedPayload.requestedComplianceLevel ?? null,
+              ...(editPolicyEvidence ? { editPolicyEvidence } : {}) },
           );
           return updated;
         },
@@ -612,6 +626,7 @@ export function createBusinessPartnerRequestService<Transaction>(
             current,
             "validate",
           );
+          validateSupplierOnboardingRequirement(current);
           await options.validateIntake?.(intakeValidationCommand(command.context,current));
           const validation = await options.validator.validate(
             { context: command.context, request: current },
@@ -657,6 +672,7 @@ export function createBusinessPartnerRequestService<Transaction>(
         "neon",
         actor(command.context),
         async (transaction) => {
+          await options.supplierSubmission?.lock(command, transaction);
           const current = await options.repository.get(
             command.context.tenantId,
             command.requestId,
@@ -674,6 +690,11 @@ export function createBusinessPartnerRequestService<Transaction>(
             current,
             "submit",
           );
+          const internalSupplier = current.kind === "new_partner" && current.source.kind === "manual" && current.requestedRole === "supplier";
+          if (internalSupplier && options.supplierSubmission) {
+            const replay = await options.supplierSubmission.replay(command, current, transaction);
+            if (replay) return replay;
+          }
           if (
             current.status === "pending_approval" &&
             current.workflowRequestId
@@ -702,7 +723,7 @@ export function createBusinessPartnerRequestService<Transaction>(
           }
           const intakeCommand=intakeValidationCommand(command.context,current);
           await options.validateIntake?.(intakeCommand);
-          if (current.status !== "draft")
+          if (current.status !== "draft" && !(internalSupplier && options.supplierSubmission && current.status === "returned"))
             throw new MasterDataError(
               409,
               "BUSINESS_PARTNER_REQUEST_NOT_SUBMITTABLE",
@@ -734,6 +755,13 @@ export function createBusinessPartnerRequestService<Transaction>(
               "BUSINESS_PARTNER_REQUEST_REPRESENTATION_EVIDENCE_REQUIRED",
               "On-behalf registration requires representation evidence before submission",
             );
+          validateSupplierOnboardingRequirement(current);
+          if (internalSupplier && options.supplierSubmission) {
+            const result = await options.supplierSubmission.submit(command, current, transaction);
+            if (!result.process || result.workflow) throw new Error("PROCESS_SUBMISSION_RESULT_INVALID");
+            await effects(options, command.context, transaction, "business_partner.case.submitted", result.request, { process: result.process });
+            return result;
+          }
           const definition = await options.workflows.resolve(
             { context: command.context, request: current },
             transaction,
@@ -761,6 +789,7 @@ export function createBusinessPartnerRequestService<Transaction>(
               "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT",
               "Request version, validation evidence, or submission state changed",
             );
+          if (!result.workflow) throw new Error("BUSINESS_PARTNER_WORKFLOW_MISSING");
           await effects(
             options,
             command.context,
@@ -913,15 +942,21 @@ export function createBusinessPartnerRequestService<Transaction>(
               ),
             },
           );
-          if (current.kind === "activate_supplier")
+          if (current.kind === "activate_supplier") {
+            if (!options.activationReadiness) throw new MasterDataError(503,"SUPPLIER_ACTIVATION_READINESS_UNAVAILABLE","Activation readiness owner is unavailable");
+            const activation = await options.activationReadiness(current, transaction);
             await authorize(
               options.authorizer,
               command.context,
               businessPartnerQualificationPermissions.activateSupplier,
               {
-                ...caseScope(current),
+                ...scope(current.operatingOrganizationId, current.companyCodeId),
                 businessPartnerId: current.targetBusinessPartnerId,
                 activationCaseId: current.id,
+                readinessEvidencePinned: activation.readiness.eligible === true,
+                eligible: activation.readiness.eligible === true,
+                readinessFingerprint: activation.readiness.decisionFingerprint,
+                externalApplicant: false,
                 approvedEvidencePinned: Boolean(
                   current.approvedAt &&
                   current.approvedBy &&
@@ -930,6 +965,7 @@ export function createBusinessPartnerRequestService<Transaction>(
                 requiresElevatedAssurance: true,
               },
             );
+          }
           assertRoleMaterializable(current);
           if (current.status !== "applied") {
             const volatileValidation = await options.validator.validate(
@@ -1200,6 +1236,7 @@ function validateCreate(command: CreateBusinessPartnerRequestCommand): void {
   if ((command.draftCapture || command.extensions?.bankAccounts?.length || command.extensions?.supportingDocuments?.length) && (command.kind!=="new_partner" || command.source.kind!=="manual"))throw invalid("Additional request capture is only available for internal new-partner requests");
   validatePayload(command.proposedPayload);
   validatePayloadBoundary(command);
+  validateSupplierOnboardingRequirement(command, { draft: true });
   validateExtensions(command.extensions ?? {},command.draftCapture);
   validateExtensionApplicability(
     command.kind,
@@ -1268,6 +1305,7 @@ function validatePayloadBoundary(
   command: CreateBusinessPartnerRequestCommand,
 ): void {
   const denied = new Set([
+    "selectedprofile", "effectiveprofile", "candidateprofile", "minimumprofile", "minimumcontrols", "processselection", "executionmanifest", "selectionid", "attemptid", "policyrevision",
     "employeenumber",
     "personnumber",
     "hiredate",
@@ -1314,7 +1352,7 @@ function validatePayloadBoundary(
   const field = keys(command.proposedPayload).find((key) => denied.has(key));
   if (field)
     throw invalid(
-      "Generic Business Partner and commercial payloads cannot contain workforce or restricted person fields",
+      "Generic Business Partner payloads cannot contain workforce, protected collection or server-owned process fields",
     );
 }
 function validateExtensions(value: BusinessPartnerRequestExtensions, draft = false): void {
@@ -1596,7 +1634,7 @@ function assertRoleMaterializable(request: BusinessPartnerRequest): void {
     );
   const supported =
     (request.kind === "new_partner" &&
-      !request.targetBusinessPartnerId &&
+      (!request.targetBusinessPartnerId || request.status === "applied") &&
       (request.requestedRole === "supplier" ||
         request.requestedRole === "customer")) ||
     (request.kind === "add_supplier" &&
@@ -1986,7 +2024,7 @@ async function effects<Transaction>(
     extensionCounts: request.extensionSummary.counts,
     ...metadata,
   };
-  await options.onboardingCycles?.advance(
+  if (!metadata.process) await options.onboardingCycles?.advance(
     {
       tenantId: context.tenantId,
       principalId: context.principalId,
@@ -1997,7 +2035,7 @@ async function effects<Transaction>(
     },
     transaction,
   );
-  const notification = projectBusinessPartnerNotification(
+  const notification = metadata.process ? undefined : projectBusinessPartnerNotification(
     eventCode,
     request,
     context.principalId,
@@ -2073,7 +2111,12 @@ function caseScope(
 }
 
 function intakeValidationCommand(context:VerifiedRequestContext,request:BusinessPartnerRequest,draftCapture=false):CreateBusinessPartnerRequestCommand {
+ validateSupplierOnboardingRequirement(request, { draft: draftCapture });
  const {relationshipProposals,...proposedPayload}=request.proposedPayload;
  if(request.kind==="new_partner" && request.source.kind==="manual")validateExtensions((relationshipProposals??{}) as BusinessPartnerRequestExtensions,draftCapture);
  return {draftCapture,context,kind:request.kind,source:request.source,requestedRole:request.requestedRole,operatingOrganizationId:request.operatingOrganizationId,companyCodeId:request.companyCodeId,proposedPayload,extensions:(relationshipProposals??{}) as BusinessPartnerRequestExtensions,idempotencyKey:`capture-validation:${request.id}`};
+}
+
+function requirementEvidence(payload: Readonly<Record<string, unknown>>) {
+ return payload.requestedComplianceLevel === undefined ? {} : { requestedComplianceLevel: payload.requestedComplianceLevel, complianceRequirementReason: payload.complianceRequirementReason ?? null, assertionKind: "requester_assertion" };
 }

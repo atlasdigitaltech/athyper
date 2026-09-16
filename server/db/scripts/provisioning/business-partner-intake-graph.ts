@@ -1,12 +1,12 @@
+import { withBusinessPartnerComplianceRequirement } from "./business-partner-compliance-requirement.js";
 import { withBusinessPartnerDataSurfaces } from "./business-partner-data-surfaces";
 import { withBusinessPartnerFullProfile } from "./business-partner-full-profile";
 import { withBusinessPartnerLabels } from "./business-partner-labels";
 import { withIntakeChoiceSurface, businessPartnerRoleSurface, withBusinessPartnerLookup } from "./intake-choice-surfaces";
-import { createHash } from "node:crypto";
+import { presentationUuid } from "./presentation-graph-helpers";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 function id(key: string) {
-  const s = createHash("sha256").update(key).digest("hex");
-  return `${s.slice(0, 8)}-${s.slice(8, 12)}-5${s.slice(13, 16)}-8${s.slice(17, 20)}-${s.slice(20, 32)}`;
+  return presentationUuid(key);
 }
 /** Pilot configuration in the existing native flow tables; preserves unrelated authoring rows. */
 export function withBusinessPartnerIntake(
@@ -100,5 +100,5 @@ export function provisionBusinessPartnerIntakeGraph(
 ): MetaEntityGraph {
   if (source.entity.entityCode !== "business_partner") throw Error("Business Partner graph required");
   const graph = form ? withBusinessPartnerDataSurfaces(withBusinessPartnerIntake(source), form) : source;
-  return withBusinessPartnerFullProfile(graph);
+  return withBusinessPartnerComplianceRequirement(withBusinessPartnerFullProfile(graph));
 }

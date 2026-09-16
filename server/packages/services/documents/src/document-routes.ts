@@ -19,6 +19,7 @@ export function registerDocumentRoutes(
     async (request, response, next) => {
       try {
         const value = body(request.body);
+        if (["trustedJobId","exactTemplate","provenance"].some(k=>Object.hasOwn(value,k))) throw new DocumentError(400,"TRUSTED_SOURCE_NOT_CALLER_INPUT","Trusted document sources are selected by their owning service");
         const variant = optional(value, "variant");
         const locale = optional(value, "locale");
         const fileName = optional(value, "fileName");

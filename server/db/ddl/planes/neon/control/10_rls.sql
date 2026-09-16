@@ -475,3 +475,6 @@ BEGIN
     END LOOP;
 END;
 $$;
+
+ALTER TABLE control.supplier_communication_policy ENABLE ROW LEVEL SECURITY;
+CREATE POLICY supplier_communication_policy_tenant ON control.supplier_communication_policy USING(tenant_id=shared.current_tenant_id());

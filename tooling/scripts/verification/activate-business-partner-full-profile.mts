@@ -1,3 +1,4 @@
+import { withBusinessPartnerComplianceRequirement } from "../../../server/db/scripts/provisioning/business-partner-compliance-requirement.js";
 import { readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { request } from "@playwright/test";
 import { withBusinessPartnerAddressRequiredness } from "../../../server/db/scripts/provisioning/business-partner-full-profile.js";
@@ -7,8 +8,9 @@ import {
   validateGraph,
   runContractTests,
 } from "../../../server/packages/planes/studio/meta-entity-authoring/src/deterministic.js";
+const complianceRequirement = process.argv.includes("--compliance-requirement");
 const addressRepair = process.argv.includes("--address-repair");
-const reportPath = `governance/policy/reports/business-partner-${addressRepair ? "address-repair" : "full-profile"}-activation.dev.json`;
+const reportPath = `governance/policy/reports/business-partner-${complianceRequirement ? "compliance-requirement" : addressRepair ? "address-repair" : "full-profile"}-activation.dev.json`;
 const origin = "https://studio.dev.athyper.test",
   authPath = process.env.STUDIO_AUTH_STATE ?? "tests/e2e/.auth/dev/studio/catl.admin.json",
   id = "be767e01-f36d-434f-91f3-67bff689a367";
@@ -29,7 +31,7 @@ try {
     r = await c.get(path);
   if (!r.ok()) throw Error(`Studio read ${r.status()}: ${await r.text()}`);
   const current = await r.json(),
-    graph = addressRepair ? withBusinessPartnerAddressRequiredness(current.graph) : provisionBusinessPartnerIntakeGraph(current.graph);
+    graph = complianceRequirement ? withBusinessPartnerComplianceRequirement(current.graph) : addressRepair ? withBusinessPartnerAddressRequiredness(current.graph) : provisionBusinessPartnerIntakeGraph(current.graph);
   const issues = validateGraph(graph).issues;
   if (!graph.surfaces.some((surface) => surface.surfaceKey === "profile_alias"))
     throw Error("Full profile surface missing");

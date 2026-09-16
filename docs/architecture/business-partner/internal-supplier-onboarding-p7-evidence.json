@@ -1,0 +1,132 @@
+{
+  "at": "2026-09-14T15:43:08.827Z",
+  "package": "P7",
+  "status": "accepted_local_dev",
+  "acceptanceOpen": [],
+  "tests": {
+    "notifications": 88,
+    "sla": 2,
+    "attachmentResolver": 2,
+    "total": 92
+  },
+  "liveProfiles": [
+    {
+      "profile": "basic",
+      "caseId": "a87e6353-40bf-4184-9768-bbd4a0e9a166",
+      "attemptId": "7c583a64-47dc-43c7-8c05-b75d0bffb944",
+      "votes": 1,
+      "decisionJobId": "60bd7eb4-8b1f-4910-8cd9-c7540ebb9981"
+    },
+    {
+      "profile": "standard",
+      "caseId": "4d575964-d3ae-4b03-8014-59e3923c667c",
+      "attemptId": "0a2f4904-8131-4f63-bdbe-25e65f8141b3",
+      "votes": 2,
+      "decisionJobId": "73cbcc38-ed37-4f99-b8e4-0d89872e2b12"
+    },
+    {
+      "profile": "enhanced",
+      "caseId": "cb43c12e-d6a7-4cdb-8c12-5c5f541109e8",
+      "attemptId": "478b46e2-5136-4281-9c87-b286c5d391e6",
+      "votes": 10,
+      "decisionJobId": "ad81fdcf-a3be-4ace-b107-564eecda9e95"
+    }
+  ],
+  "capturedEmails": 23,
+  "checks": {
+    "duplicateDeliveries": 0,
+    "activeP7Grants": 0,
+    "canonicalTemplates": 16,
+    "canonicalRules": 13
+  },
+  "services": [
+    {
+      "service": "api",
+      "image": "sha256:0285ef98b5c3e0e741c32eb774d6f24850efae3f74beb6350f3e7f922a03f7f7",
+      "healthy": true
+    },
+    {
+      "service": "worker",
+      "image": "sha256:6044680b5a77ceffa80b1f60d748258a3c0ce3a3e11c26be08c6aa8461f0e159",
+      "healthy": true
+    },
+    {
+      "service": "scheduler",
+      "image": "sha256:5ef5a9d7d80e6308a11322a8b0179cdf2a935e6986817d4bc7006c8a4241b506",
+      "healthy": true
+    },
+    {
+      "service": "neon-web",
+      "image": "sha256:7791cdb6853c5ed6cb05df1f7a465e76f62098e97b5d75b46fb146bf5390d66a",
+      "healthy": true
+    }
+  ],
+  "evidence": [
+    "governance/policy/reports/supplier-onboarding-communications-live.dev.json",
+    "governance/policy/reports/supplier-onboarding-communications-return.dev.json",
+    "governance/policy/reports/supplier-onboarding-communications-db.dev.json",
+    "governance/policy/reports/supplier-onboarding-communications-browser.dev.json",
+    "governance/policy/reports/supplier-onboarding-communications-capture.dev.json",
+    "governance/policy/reports/supplier-communications-dev-consent.json",
+    "governance/policy/reports/supplier-communications-activation-notices.dev.json",
+    "governance/policy/reports/supplier-communications-activation-live.dev.json",
+    "governance/policy/reports/supplier-communications-closure-live.dev.json",
+    "governance/policy/reports/supplier-communications-dev-access.dev.json",
+    "governance/policy/reports/supplier-communications-risk-fixture.dev.json"
+  ],
+  "activationNotices": [
+    {
+      "profile": "basic",
+      "caseId": "a87e6353-40bf-4184-9768-bbd4a0e9a166",
+      "messageId": "01a0a095-6708-7f63-830d-f2ea9d0dbf14",
+      "documentJobId": "bd64f781-e233-4d20-896a-2f8546dc0fe0",
+      "attachmentVersionId": "a63a3e8e-5d8f-4345-b7b0-0b7f9850ce02",
+      "oneNoticePerChannel": true,
+      "authorizedRecipient": true,
+      "exactPins": true,
+      "inboxApi": 200,
+      "browserLink": true,
+      "deliveryIds": [
+        "01a0a095-6709-74c8-8a4e-d4a93e71bc76",
+        "01a0a095-6708-737a-bd84-73ecc79b3498"
+      ]
+    },
+    {
+      "profile": "standard",
+      "caseId": "4d575964-d3ae-4b03-8014-59e3923c667c",
+      "messageId": "01a0a095-6782-7aa6-8eea-616f7a8c7af0",
+      "documentJobId": "f20b3c32-e28a-40b2-8166-f856068572dd",
+      "attachmentVersionId": "947b9a1e-1391-4c3e-b3ac-0d3445881ff0",
+      "oneNoticePerChannel": true,
+      "authorizedRecipient": true,
+      "exactPins": true,
+      "inboxApi": 200,
+      "browserLink": true,
+      "deliveryIds": [
+        "01a0a095-6783-77a3-97ed-6903233c2555",
+        "01a0a095-6783-73a7-80d7-17b274f5a759"
+      ]
+    },
+    {
+      "profile": "enhanced",
+      "caseId": "cb43c12e-d6a7-4cdb-8c12-5c5f541109e8",
+      "messageId": "01a0a095-67fe-7c42-9190-c281596bc391",
+      "documentJobId": "eefb2a3e-2794-47a5-b4cc-2ec467c5f6b1",
+      "attachmentVersionId": "13394d51-92c0-4095-a3b2-0b1b693cc8f8",
+      "oneNoticePerChannel": true,
+      "authorizedRecipient": true,
+      "exactPins": true,
+      "inboxApi": 200,
+      "browserLink": true,
+      "deliveryIds": [
+        "01a0a095-67ff-732f-a382-f619e9a6b40f",
+        "01a0a095-67ff-7614-9e13-e38d81b3eda8"
+      ]
+    }
+  ],
+  "boundaries": [
+    "Reminder/escalation, persistent gate failure, delivery failure, stale access and retained activation document cases use real PostgreSQL with controlled ports/clock and rollback.",
+    "Fresh submission, task, return, decision and activation notices use owning APIs, actual rendering/storage, inbox and Mailpit. Activation qualification uses explicitly recorded upstream risk fixtures; business activation outcomes are created only through the owning APIs.",
+    "P8/P9 and follow-ups B/C remain separate."
+  ]
+}

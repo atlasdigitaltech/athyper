@@ -1,5 +1,17 @@
 import type { Metadata } from "next";
-import { FileTextIcon } from "@athyper/platform-icons";
 import { PageFrame, PageHeader } from "@athyper/platform-shell";
-export const metadata:Metadata={title:"Business Partner Workflows"};
-export default function BusinessPartnerWorkflowsPage(){return <PageFrame width="wide" className="athyper-landing"><PageHeader level="collection" context="Business Partner · Configuration" title="Workflows" description="Governed requests separate proposal, validation, approval, application, and publication." icon={<FileTextIcon/>}/><ul className="athyper-governance-list"><li><strong>Draft and validation</strong><span>The requester completes data and resolves blocking findings.</span></li><li><strong>Review and approval</strong><span>Maker-checker controls prevent a requester from approving sensitive changes.</span></li><li><strong>Application</strong><span>An approved request updates the canonical Neon aggregate exactly once.</span></li><li><strong>Publication</strong><span>The resulting governed profile is projected and shared through authorized Mesh relationships.</span></li></ul></PageFrame>;}
+import { BusinessPartnerInspection } from "@athyper/product-studio-business-partner";
+export const metadata: Metadata = { title: "Business Partner Workflows" };
+export default function Page() {
+  return (
+    <PageFrame width="full">
+      <PageHeader
+        level="collection"
+        context="Business Partner · Configuration"
+        title="Workflows"
+        description="Inspect flows, lifecycle bindings, and separately versioned workflow declarations."
+      />
+      <BusinessPartnerInspection tab="workflows" />
+    </PageFrame>
+  );
+}

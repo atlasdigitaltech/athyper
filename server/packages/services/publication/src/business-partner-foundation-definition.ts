@@ -41,7 +41,7 @@ const channelOptions = [
   { value: "whatsapp", label: "WhatsApp" },
   { value: "website", label: "Website" },
 ];
-const supplierRequestForm = {
+export const supplierRequestForm = {
   schema: "athyper.business-partner-request-form/1",
   version: "2.2.0",
   title: "New supplier onboarding request",

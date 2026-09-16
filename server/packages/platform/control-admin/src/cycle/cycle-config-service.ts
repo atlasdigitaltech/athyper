@@ -41,22 +41,7 @@ export function createCycleConfigService(options: {
       controlAdminPermissions.cycleTemplateManage,
     );
     const repository = repositoryFor(context);
-    const template = normalize(draft);
-    const issues = validateLocal(template);
-    await validateExternal(context.tenantId, template, repository, issues);
-    const topologicalTaskIds = issues.some(
-      (item) => ["CYCLIC_DEPENDENCY", "SELF_DEPENDENCY", "DUPLICATE_CODE", "MISSING_REFERENCE"].includes(item.code),
-    )
-      ? []
-      : topological(template);
-    return {
-      schema: "athyper.cycle-template/1.0",
-      template,
-      templateHash: cycleTemplateHash(template),
-      valid: issues.length === 0,
-      issues,
-      topologicalTaskIds,
-    };
+    return inspectCycleTemplate(context.tenantId, draft, repository);
   };
   return {
     preview: inspect,
@@ -461,4 +446,33 @@ async function requirePermission(
 ): Promise<void> {
   if (!(await authorizer.authorize({ context, permissionCode })).allowed)
     throw coded("CONTROL_ADMIN_PERMISSION_DENIED");
+}
+
+/** Shared owner validation for authorized service calls and canonical local provisioning. */
+export async function inspectCycleTemplate(
+  tenantId: string,
+  draft: CycleTemplateDraft,
+  repository: CycleTemplateRepository,
+): Promise<CycleTemplatePreview> {
+  const template = normalize(draft);
+  const issues = validateLocal(template);
+  await validateExternal(tenantId, template, repository, issues);
+  const topologicalTaskIds = issues.some((item) =>
+    [
+      "CYCLIC_DEPENDENCY",
+      "SELF_DEPENDENCY",
+      "DUPLICATE_CODE",
+      "MISSING_REFERENCE",
+    ].includes(item.code),
+  )
+    ? []
+    : topological(template);
+  return {
+    schema: "athyper.cycle-template/1.0",
+    template,
+    templateHash: cycleTemplateHash(template),
+    valid: issues.length === 0,
+    issues,
+    topologicalTaskIds,
+  };
 }

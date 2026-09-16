@@ -225,7 +225,7 @@ function allowedActions(
   if (editable && permissions.has(operationPermissions.validate!))
     actions.push(action("validate", "Validate"));
   if (
-    request.status === "draft" &&
+    (request.status === "draft" || (request.status === "returned" && request.caseStatus === "draft" && request.kind === "new_partner" && request.source.kind === "manual" && request.requestedRole === "supplier")) &&
     (request.validationSummary["valid"] === true ||
       request.validationSummary["outcome"] === "passed") &&
     permissions.has(operationPermissions.submit!)

@@ -569,3 +569,5 @@ BEGIN
     END IF;
 END;
 $$;
+
+GRANT SELECT ON control.supplier_communication_policy TO athyperapp,athyperadmin;

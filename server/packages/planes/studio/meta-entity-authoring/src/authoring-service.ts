@@ -53,6 +53,22 @@ export class MetaEntityAuthoringService {
   ) {
     return this.options.repository.createDraft(input);
   }
+  async listDraftSaves(id: string) {
+    if (!this.options.repository.listDraftSaves) throw new AuthoringPolicyError("HISTORY_UNAVAILABLE", "Saved history is unavailable");
+    return this.options.repository.listDraftSaves(id);
+  }
+  async readDraftSave(id: string, revision: number) {
+    if (!this.options.repository.readDraftSave) throw new AuthoringPolicyError("HISTORY_UNAVAILABLE", "Saved history is unavailable");
+    return this.options.repository.readDraftSave(id, revision);
+  }
+  async listInspectionReleases(tenantId: string) {
+    if (!this.options.repository.listInspectionReleases) throw new Error("RELEASE_INSPECTION_UNAVAILABLE");
+    return this.options.repository.listInspectionReleases(tenantId);
+  }
+  async readInspectionRelease(tenantId: string, releaseId: string) {
+    if (!this.options.repository.readInspectionRelease) throw new Error("RELEASE_INSPECTION_UNAVAILABLE");
+    return this.options.repository.readInspectionRelease(tenantId, releaseId);
+  }
   async list(tenantId: string) {
     if (!this.options.repository.list)
       throw new Error("AUTHORING_LIST_UNAVAILABLE");
@@ -130,7 +146,7 @@ export class MetaEntityAuthoringService {
       report,
       actorId,
     );
-    return report;
+    return { ...report, changeSetId, checkedRevision: current.revision };
   }
   async test(changeSetId: string, actorId: string) {
     const current = await this.required(changeSetId);
@@ -148,7 +164,7 @@ export class MetaEntityAuthoringService {
       report,
       actorId,
     );
-    return report;
+    return { ...report, changeSetId, checkedRevision: current.revision };
   }
   async submit(input: {
     changeSetId: string;

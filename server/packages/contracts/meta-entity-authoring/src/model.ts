@@ -103,3 +103,14 @@ export interface BreakGlassEvidence {
   readonly authorizedBy: string;
   readonly occurredAt: string;
 }
+
+/** Immutable source release coordinates; publication is not consumer activation. */
+export interface MetaEntityInspectionRelease {
+  readonly id: string;
+  readonly entityCode: string;
+  readonly changeSetId: string;
+  readonly releaseNo: number;
+  readonly contractHash: string;
+  readonly targetPlanes: readonly string[];
+  readonly publishedAt: string;
+}

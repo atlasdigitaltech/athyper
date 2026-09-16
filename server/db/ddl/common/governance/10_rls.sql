@@ -3,7 +3,7 @@ DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
-        'comment_moderation','channel_consent','cycle_run','cycle_task','cycle_task_dependency',
+        'process_attempt','process_document_job','process_selection_evidence','comment_moderation','channel_consent','cycle_run','cycle_task','cycle_task_dependency',
         'cycle_deviation','cycle_certification','cycle_subject','legal_hold','legal_hold_manifest','report_pack'
     ]
     LOOP

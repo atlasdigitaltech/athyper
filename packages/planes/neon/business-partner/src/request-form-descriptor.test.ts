@@ -109,3 +109,13 @@ it("explicitly clears previously saved visible fields when serializing a draft u
   expect(saved.proposedPayload).toMatchObject({legalName:null,qualificationTypeCode:null,tenantFields:{}});
   expect(serializeRequestForm(descriptor,data).proposedPayload).not.toHaveProperty("legalName");
 });
+
+
+it("preserves absent draft fields while retaining explicit clears of saved values", () => {
+  const { descriptor } = parsePublishedRequestForm(envelope);
+  const data = new FormData();
+  data.set("ownershipClass", "external");
+  const saved = serializeRequestForm(descriptor, data, { includeEmpty: true, existingPayload: { legalName: "Saved name" } });
+  expect(saved.proposedPayload.legalName).toBeNull();
+  expect(saved.proposedPayload).not.toHaveProperty("qualificationTypeCode");
+});

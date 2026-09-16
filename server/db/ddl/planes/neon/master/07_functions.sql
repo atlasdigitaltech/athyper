@@ -5031,7 +5031,10 @@ BEGIN
       'registrationChannel','operatingOrganizationId','meshRegistrationExchangeId',
       'meshRegistrationEvidenceHash','bankDisclosureReceiptId','bankDisclosurePurposeCode',
       'qualificationTypeCode','preferenceRationale','companyCodeId','commodityCategoryId','preflight',
-      'tenantFields','relationshipProposals')) THEN
+      'tenantFields','relationshipProposals','requestedComplianceLevel','complianceRequirementReason'))
+    OR (payload?'requestedComplianceLevel' AND (payload->>'requestedComplianceLevel' NOT IN('basic','standard','enhanced') OR jsonb_typeof(payload->'requestedComplianceLevel') IS DISTINCT FROM 'string'))
+    OR (payload?'complianceRequirementReason' AND (jsonb_typeof(payload->'complianceRequirementReason') IS DISTINCT FROM 'string' OR length(payload->>'complianceRequirementReason')>2000))
+    OR (payload->>'requestedComplianceLevel'='basic' AND length(btrim(COALESCE(payload->>'complianceRequirementReason','')))=0) THEN
   RAISE EXCEPTION 'Business Partner role payload is outside the materializer contract' USING ERRCODE='check_violation';
  END IF;
  IF requested_role='supplier' AND channel='mesh_proposal' AND (
@@ -5172,7 +5175,7 @@ DECLARE
  requested_role text; currency text; payment_term uuid; accounting_profile uuid;
  dimension_set uuid; remittance_link uuid; statement_cycle text; profile_payload jsonb;
  result_snapshot uuid; next_version bigint; attempt_no integer; materialization_id uuid;
- outbox uuid; result jsonb; lineage_hash text; target_type text;
+ outbox uuid; result jsonb; lineage_hash text; target_type text; purchasing_setup boolean:=false;
 BEGIN
  IF current_database()<>'athyper_neon' OR current_setting('app.database_plane',true)<>'neon'
     OR shared.current_tenant_id()<>p_tenant_id
@@ -5240,9 +5243,10 @@ BEGIN
  dimension_set:=NULLIF(payload->>'defaultDimensionSetId','')::uuid;
  remittance_link:=NULLIF(payload->>'preferredRemittanceBankLinkId','')::uuid;
  statement_cycle:=NULLIF(btrim(payload->>'statementCycleCode'),'');
+ SELECT requested_role='supplier' AND count(*)=1 AND bool_and(p.operation_code='purchasing') AND EXISTS(SELECT 1 FROM governance.cycle_subject subject JOIN governance.cycle_run run ON run.tenant_id=subject.tenant_id AND run.id=subject.cycle_run_id WHERE subject.tenant_id=p_tenant_id AND subject.entity_case_id=p_case_id AND subject.subject_role='company_setup' AND run.status IN('running','blocked') AND run.data->>'schema'='athyper.process-run/1') INTO purchasing_setup FROM control.supplier_activation_policy p WHERE p.tenant_id=p_tenant_id AND p.operating_organization_id=org_id AND p.company_code_id=company_id AND p.effective_from<=now() AND (p.effective_until IS NULL OR p.effective_until>now());
  IF requested_role NOT IN('supplier','customer') OR org_id IS NULL OR company_id IS NULL
-    OR currency !~ '^[A-Z]{3}$' OR payment_term IS NULL OR accounting_profile IS NULL
-    OR (requested_role='supplier' AND remittance_link IS NULL)
+    OR currency IS NULL OR currency !~ '^[A-Z]{3}$' OR (NOT purchasing_setup AND (payment_term IS NULL OR accounting_profile IS NULL))
+    OR (requested_role='supplier' AND remittance_link IS NULL AND NOT purchasing_setup)
     OR (requested_role='customer' AND remittance_link IS NOT NULL) THEN
   RAISE EXCEPTION 'Company configuration coordinates or finance fields are incomplete' USING ERRCODE='check_violation';
  END IF;
@@ -5590,7 +5594,7 @@ BEGIN
 
  FOR item IN SELECT value FROM jsonb_array_elements(proposals->'addresses') LOOP
   address_id:=shared.uuidv7();
-  INSERT INTO master.address(id,tenant_id,address_type,address_kind,building_name,floor,unit,house_number,street_name,po_box,po_box_city,po_box_postal_code,line1,line2,city,region,state_region_code,postal_code,country_code,normalized_hash,
+  INSERT INTO master.address AS created_address(id,tenant_id,address_type,address_kind,building_name,floor,unit,house_number,street_name,po_box,po_box_city,po_box_postal_code,line1,line2,city,region,state_region_code,postal_code,country_code,normalized_hash,
    formatted_address,validation_status,metadata,status,status_changed_at,status_changed_by,created_by)
   VALUES(address_id,NEW.tenant_id,item->>'purpose',COALESCE(NULLIF(item->>'addressKind',''),'street'),NULLIF(item->>'buildingName',''),NULLIF(item->>'floor',''),NULLIF(item->>'unit',''),NULLIF(item->>'houseNumber',''),NULLIF(item->>'streetName',''),NULLIF(item->>'poBox',''),CASE WHEN item->>'addressKind'='po_box' THEN NULLIF(item->>'city','') END,CASE WHEN item->>'addressKind'='po_box' THEN NULLIF(item->>'postalCode','') END,NULLIF(item->>'line1',''),NULLIF(item->>'line2',''),
    NULLIF(item->>'city',''),NULLIF(item->>'region',''),NULLIF(item->>'stateRegionCode',''),NULLIF(item->>'postalCode',''),(item->>'countryCode')::character(2),item->>'normalizedHash',
@@ -5599,7 +5603,13 @@ BEGIN
       WHEN NULLIF(item->>'line1','') IS NOT NULL OR NULLIF(item->>'line2','') IS NOT NULL THEN concat_ws(', ',NULLIF(item->>'line1',''),NULLIF(item->>'line2',''))
       ELSE NULLIF(concat_ws(', ',NULLIF(item->>'buildingName',''),CASE WHEN NULLIF(item->>'floor','') IS NOT NULL THEN 'Floor '||(item->>'floor') END,CASE WHEN NULLIF(item->>'unit','') IS NOT NULL THEN 'Unit '||(item->>'unit') END,NULLIF(concat_ws(' ',NULLIF(item->>'houseNumber',''),NULLIF(item->>'streetName','')),'')),'') END,
     NULLIF(item->>'city',''),NULLIF(item->>'region',''),NULLIF(item->>'postalCode',''),item->>'countryCode'),''),
-   'unverified',jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'clientItemKey',item->>'clientItemKey'),'active',clock_timestamp(),NEW.updated_by,NEW.updated_by);
+   'unverified',jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'clientItemKey',item->>'clientItemKey'),'active',clock_timestamp(),NEW.updated_by,NEW.updated_by)
+  ON CONFLICT(tenant_id,normalized_hash) WHERE status='active' DO NOTHING
+  RETURNING created_address.id INTO address_id;
+  IF address_id IS NULL THEN
+   SELECT a.id INTO address_id FROM master.address a WHERE a.tenant_id=NEW.tenant_id AND a.normalized_hash=item->>'normalizedHash' AND a.status='active';
+   IF address_id IS NULL THEN RAISE EXCEPTION 'Canonical address reuse changed concurrently' USING ERRCODE='serialization_failure'; END IF;
+  END IF;
   INSERT INTO master.address_link(tenant_id,owner_type_id,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
   VALUES(NEW.tenant_id,owner_type_id,NEW.target_entity_id,address_id,item->>'purpose',COALESCE((item->>'isPrimary')::boolean,false),CURRENT_DATE,
    jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'definitionFieldCode',item->>'definitionFieldCode'),NEW.updated_by);

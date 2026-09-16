@@ -1530,3 +1530,54 @@ COMMENT ON COLUMN control.subscription_plan_usage_limit.limit_value IS
     'Nonnegative count/bytes quota. Zero permits no capacity; NULL means unlimited.';
 COMMENT ON COLUMN control.tenant_usage_limit_override.limit_value IS
     'Nonnegative count/bytes exception. Zero permits no capacity; unlimited is available only through a plan NULL limit.';
+
+-- Immutable scoped binding, compiled against existing policy and profile publication owners.
+CREATE TABLE control.process_selection_publication (
+    id uuid PRIMARY KEY, tenant_id uuid NOT NULL,
+    plane_key text NOT NULL CHECK (plane_key IN ('neon','studio','mesh')),
+    process_family text NOT NULL, operating_organization_id uuid NOT NULL, company_code_id uuid,
+    policy_definition_id uuid NOT NULL REFERENCES control.policy_definition(id),
+    policy_version integer NOT NULL CHECK (policy_version>0),
+    policy_hash text NOT NULL CHECK (policy_hash ~ '^[a-f0-9]{64}$'),
+    publication jsonb NOT NULL CHECK (jsonb_typeof(publication)='object'),
+    effective_from timestamptz NOT NULL, effective_until timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CHECK (effective_until IS NULL OR effective_until>effective_from),
+    CHECK ((publication->>'schema'='athyper.process-selection-publication/1'
+      AND publication->'scope'->>'tenantId'=tenant_id::text
+      AND publication->'scope'->>'planeKey'=plane_key
+      AND publication->'scope'->>'processFamily'=process_family
+      AND publication->'scope'->>'operatingOrganizationId'=operating_organization_id::text
+      AND (publication->'scope'->>'companyCodeId') IS NOT DISTINCT FROM company_code_id::text
+      AND publication->'policy'->>'id'=policy_definition_id::text
+      AND publication->'policy'->>'definitionId'=policy_definition_id::text
+      AND (publication->'policy'->>'version')::integer=policy_version
+      AND publication->'policy'->>'hash'=policy_hash) IS TRUE)
+);
+
+-- Immutable publication records for process-only artifacts, authored by their domain owners.
+-- Policies, cycles, workflow releases and rendered templates retain their existing owners.
+CREATE TABLE control.process_selection_catalog_revision (
+    id uuid PRIMARY KEY, tenant_id uuid NOT NULL,
+    plane_key text NOT NULL CHECK (plane_key IN ('neon','studio','mesh')),
+    process_family text NOT NULL, operating_organization_id uuid NOT NULL, company_code_id uuid,
+    kind text NOT NULL CHECK (kind IN ('profile','manifest','projection','recipient_policy','reviewer_policy','fact_schema','minimum_control')),
+    version integer NOT NULL CHECK (version>0),
+    content_hash text NOT NULL CHECK (content_hash ~ '^[a-f0-9]{64}$'),
+    definition jsonb NOT NULL CHECK (jsonb_typeof(definition)='object'),
+    effective_from timestamptz NOT NULL, effective_until timestamptz,
+    published_at timestamptz NOT NULL DEFAULT now(), published_by uuid NOT NULL,
+    CHECK (effective_until IS NULL OR effective_until>effective_from)
+);
+
+-- Current activation policy is independent of the submitted routing requirement.
+CREATE TABLE control.supplier_activation_policy (
+ id uuid PRIMARY KEY DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+ operating_organization_id uuid NOT NULL, company_code_id uuid,
+ version integer NOT NULL CHECK(version>0), operation_code text NOT NULL CHECK(operation_code IN('purchasing','payment')),
+ rationale text NOT NULL CHECK(length(btrim(rationale))>0),
+ effective_from timestamptz NOT NULL, effective_until timestamptz,
+ published_by uuid NOT NULL, published_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE(tenant_id,id), UNIQUE NULLS NOT DISTINCT(tenant_id,operating_organization_id,company_code_id,version),
+ CHECK(effective_until IS NULL OR effective_until>effective_from)
+);

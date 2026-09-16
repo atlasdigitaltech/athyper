@@ -1,4 +1,4 @@
-import type { CycleCertification, CycleDeviation, CycleExecutionRepository, CycleExecutionStore, CycleRun, CycleTask, CycleTaskDependency, PublishedCycleTemplate } from "@athyper/server-contract-governance";
+import type { CycleReadinessResult, CycleCertification, CycleDeviation, CycleExecutionRepository, CycleExecutionStore, CycleRun, CycleTask, CycleTaskDependency, PublishedCycleTemplate } from "@athyper/server-contract-governance";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
 import { sql, type Transaction } from "kysely";
@@ -9,18 +9,19 @@ type Row = Record<string, unknown>;
 
 /** PostgreSQL execution store. Every callback receives a tenant-scoped transaction and run mutations serialize on cycle_run. */
 export class KyselyCycleExecutionRepository implements CycleExecutionRepository {
-  constructor(private readonly planeKey: PlaneKey, private readonly transactions: PlaneTransactionCoordinator<Executor>) {}
+  constructor(private readonly planeKey: PlaneKey, private readonly transactions: PlaneTransactionCoordinator<Executor>, private readonly completion?: (tenantId: string, runId: string, tx: Executor) => Promise<CycleReadinessResult>) {}
 
   async transaction<T>(actor: { readonly tenantId: string; readonly principalId: string }, operation: (store: CycleExecutionStore) => Promise<T>): Promise<T> {
     return this.transactions.run(this.planeKey,actor,async (transaction) => {
       await sql`SELECT set_config('app.current_tenant_id', ${actor.tenantId}, true), set_config('app.current_principal_id', ${actor.principalId}, true)`.execute(transaction);
-      return operation(createStore(transaction, actor.tenantId, actor.principalId));
+      return operation(createStore(transaction, actor.tenantId, actor.principalId, this.completion));
     });
   }
 }
 
-function createStore(tx: Executor, tenantId: string, principalId: string): CycleExecutionStore {
+function createStore(tx: Executor, tenantId: string, principalId: string, completion?: (tenantId: string, runId: string, tx: Executor) => Promise<CycleReadinessResult>): CycleExecutionStore {
   return {
+    async evaluateCompletion(runId) { return completion ? completion(tenantId, runId, tx) : (await sql<{result: CycleReadinessResult}>`SELECT governance.evaluate_cycle_completion(${tenantId}::uuid,${runId}::uuid) result`.execute(tx)).rows[0]!.result; },
     async getPublishedTemplate(cycleTypeId, version) {
       const row = version === undefined
         ? (await sql<Row>`SELECT * FROM control.cycle_template_revision WHERE tenant_id=${tenantId}::uuid AND cycle_type_id=${cycleTypeId}::uuid ORDER BY revision_number DESC LIMIT 1`.execute(tx)).rows[0]

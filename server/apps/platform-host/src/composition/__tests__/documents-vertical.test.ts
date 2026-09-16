@@ -1,3 +1,4 @@
+import { Kysely, DummyDriver, PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler } from "kysely";
 import { createServer } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
 import type { VerifiedToken } from "@athyper/server-contract-auth";
@@ -61,6 +62,9 @@ describe("Documents host vertical", () => {
     };
     const stored = new Map<string, Uint8Array>();
     let artifact: (GeneratedDocument & { storageKey: string }) | undefined;
+    // This generic invoice has no supplier process binding. The host now checks
+    // that through its transaction port before falling back to document authority.
+    const transaction = new Kysely({dialect:{createDriver:()=>new DummyDriver(),createAdapter:()=>new PostgresAdapter(),createIntrospector:db=>new PostgresIntrospector(db),createQueryCompiler:()=>new PostgresQueryCompiler()}});
     const container = createContainer();
     const audit = createInMemoryAuditSink();
     const config = loadConfig();
@@ -163,7 +167,7 @@ describe("Documents host vertical", () => {
         createDownloadUrl: async (key) => `https://objects.example/${key}`,
       },
       objectStorageDocumentsBucket: "athyper-local",
-      transactions: { run: async (_plane, _actor, work) => work({}) } as never,
+      transactions: { run: async (_plane: unknown, _actor: unknown, work: (tx: typeof transaction) => unknown) => work(transaction) } as never,
       outbox: { append: async () => undefined },
     });
     const app = createHttpApplication({

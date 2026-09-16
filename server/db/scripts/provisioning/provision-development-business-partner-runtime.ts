@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
+import { supplierRequirementFieldContract } from "@athyper/server-contract-master-data";
 
 const CONFIRMATION = "LOCAL-NEON-BUSINESS-PARTNER-RUNTIME";
 const PUBLICATION_KEY = "metadata.entity.business_partner";
@@ -33,7 +34,7 @@ const BUSINESS_PARTNER_360_PERMISSION_CODES = [
 const PRIMARY_TENANT_ADMINS = ["athyper.admin", "tksa.admin", "catl.admin"] as const;
 const PUBLISHED_AT = "2026-08-26T00:00:00.000Z";
 const SOURCE_VERSION = "development-v11";
-const CASE_CONTRACT_SOURCE_VERSION = "development-v4";
+const CASE_CONTRACT_SOURCE_VERSION = "development-v5";
 const UUID_NAMESPACE = Buffer.from("7bbaa1b7700b5b54a7eecf62699013ca", "hex");
 
 type QueryClient = Pick<Client, "query">;
@@ -175,9 +176,9 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
   } as const;
 }
 
-export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string,releaseNo=2,caseContractBase?:Readonly<{id:string;hash:string;releaseNo:number}>) {
+export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string,releaseNo=2,caseContractBase?:Readonly<{id:string;hash:string;releaseNo:number}>, publishedEntityId?: string) {
   const publicationKey = `${CASE_CONTRACT_PUBLICATION_KEY}.${tenantId.replaceAll("-", "")}`;
-  const entityId = deterministicUuid(`${tenantId}:entity:master.business_partner`);
+  const entityId = publishedEntityId ?? deterministicUuid(`${tenantId}:entity:master.business_partner`);
   const coordinate=`${publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:r${releaseNo}`;
   const releaseId = deterministicUuid(`${coordinate}:release`);
   const revisionId = deterministicUuid(`${coordinate}:revision`);
@@ -213,6 +214,8 @@ export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string,r
       companyCodeId: { type: "string" },
       commodityCategoryId: { type: "string" },
       preflight: { type: "object" },
+      requestedComplianceLevel: { type: "string", enum: supplierRequirementFieldContract.allowedLevels },
+      complianceRequirementReason: { type: "string", maxLength: supplierRequirementFieldContract.reasonMaxLength },
       supplierType: { type: "string" },
       customerType: { type: "string" },
       meshChangeResolutionId: { type: "string" },
@@ -317,7 +320,8 @@ export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string,r
   } as const;
 }
 
-export async function provisionDevelopmentBusinessPartnerRuntime(options: { databaseUrl: string; studioDatabaseUrl?: string; confirmation?: string; dryRun?: boolean; caseContractOnly?: boolean }) {
+export async function provisionDevelopmentBusinessPartnerRuntime(options: { databaseUrl: string; studioDatabaseUrl?: string; confirmation?: string; dryRun?: boolean; caseContractOnly?: boolean; tenantId?: string }) {
+  if (options.tenantId && (!options.caseContractOnly || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(options.tenantId))) throw new Error("tenantId requires a UUID and --case-contract-only");
   const url = new URL(options.databaseUrl);
   if (!localDatabase(url) || url.pathname !== "/athyper_neon") throw new Error("development business-partner publication requires local athyper_neon");
   if (!options.dryRun && options.confirmation !== CONFIRMATION) throw new Error(`apply requires --confirm=${CONFIRMATION}`);
@@ -325,13 +329,13 @@ export async function provisionDevelopmentBusinessPartnerRuntime(options: { data
   await client.connect();
   try {
     if (options.caseContractOnly) {
-      if (options.dryRun) return { mode: "planned", publicationKey: CASE_CONTRACT_PUBLICATION_KEY };
+      if (options.dryRun) return { mode: "planned", publicationKey: CASE_CONTRACT_PUBLICATION_KEY, tenantId: options.tenantId ?? null };
       await client.query("BEGIN");
       await client.query("SELECT set_config('app.database_plane','neon',true),set_config('app.current_principal_id','00000000-0000-0000-0000-000000000000',true)");
-      const caseContractCount = await publishDevelopmentBusinessPartnerCaseContracts(client);
+      const caseContractCount = await publishDevelopmentBusinessPartnerCaseContracts(client, options.tenantId);
       await client.query("COMMIT");
       const studioDatabaseUrl = options.studioDatabaseUrl ?? siblingDatabaseUrl(options.databaseUrl, "athyper_studio");
-      const studioLedgerCount = await recordDevelopmentBusinessPartnerCaseStudioPublication(client, studioDatabaseUrl);
+      const studioLedgerCount = await recordDevelopmentBusinessPartnerCaseStudioPublication(client, studioDatabaseUrl, options.tenantId);
       return { mode: "applied", publicationKey: CASE_CONTRACT_PUBLICATION_KEY, caseContractCount, studioLedgerCount };
     }
     const permission = await one<{ id: string }>(client, "SELECT id::text AS id FROM authz.permission WHERE canonical_code=$1 AND permission_kind='entity_operation' AND status='published'", [PERMISSION_CODE]);
@@ -364,11 +368,15 @@ export async function provisionDevelopmentBusinessPartnerRuntime(options: { data
   }
 }
 
-async function publishDevelopmentBusinessPartnerCaseContracts(client: QueryClient): Promise<number> {
-  const tenants = await client.query<{ id: string }>("SELECT id::text AS id FROM master.tenant WHERE status='active' ORDER BY id");
+async function publishDevelopmentBusinessPartnerCaseContracts(client: QueryClient, tenantId?: string): Promise<number> {
+  const tenants = await client.query<{ id: string }>("SELECT id::text AS id FROM master.tenant WHERE status='active' AND ($1::uuid IS NULL OR id=$1::uuid) ORDER BY id", [tenantId ?? null]);
+  if (tenantId && tenants.rows.length !== 1) throw new Error("Active publication tenant not found");
   for (const tenant of tenants.rows) {
-    const entityId=deterministicUuid(`${tenant.id}:entity:master.business_partner`),prior=await one<{id:string;entity_contract_hash:string;release_no:number}>(client,"SELECT id::text,entity_contract_hash,release_no::int FROM runtime_meta.entity_contract WHERE tenant_id=$1::uuid AND entity_id=$2::uuid AND status='published'",[tenant.id,entityId]);
-    const artifact = buildDevelopmentBusinessPartnerCaseProjection(tenant.id,prior.release_no+1,{id:prior.id,hash:prior.entity_contract_hash,releaseNo:prior.release_no});
+    const priorRows=await client.query<{id:string;entity_id:string;entity_contract_hash:string;release_no:number}>("SELECT id::text,entity_id::text,entity_contract_hash,release_no::int FROM runtime_meta.entity_contract WHERE tenant_id=$1::uuid AND entity_code='master.business_partner' AND status='published'",[tenant.id]);
+    if (priorRows.rows.length > 1) throw new Error("Ambiguous published Business Partner case contract");
+    const prior=priorRows.rows[0];
+    const artifact = buildDevelopmentBusinessPartnerCaseProjection(tenant.id,prior ? prior.release_no+1 : 1,prior ? {id:prior.id,hash:prior.entity_contract_hash,releaseNo:prior.release_no} : undefined,prior?.entity_id);
+    if (artifact.projection.contract.contract_hash === prior?.entity_contract_hash) continue;
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [artifact.publicationKey]);
     await client.query("SELECT set_config('app.current_tenant_id',$1,true)", [tenant.id]);
     const staged = await one<{ id: string; status: string }>(client, "SELECT id::text,status FROM runtime_meta.fn_stage_release_projection($1,$2::uuid,$3,$4::uuid,$5,$6::jsonb,$7::jsonb)", [artifact.publicationKey, artifact.releaseId, artifact.releaseNo, artifact.deploymentId, artifact.artifactHash, JSON.stringify(artifact.manifest), JSON.stringify(artifact.projection)]);
@@ -380,16 +388,16 @@ async function publishDevelopmentBusinessPartnerCaseContracts(client: QueryClien
   return tenants.rows.length;
 }
 
-async function recordDevelopmentBusinessPartnerCaseStudioPublication(neon: QueryClient, databaseUrl: string): Promise<number> {
+async function recordDevelopmentBusinessPartnerCaseStudioPublication(neon: QueryClient, databaseUrl: string, tenantId?: string): Promise<number> {
   const url = new URL(databaseUrl);
   if (!localDatabase(url) || url.pathname !== "/athyper_studio") throw new Error("development Business Partner case publication ledger requires local athyper_studio");
   const studio = new Client({ connectionString: databaseUrl });
   await studio.connect();
   try {
-    const tenants = await studio.query<{ tenant_id: string; actor_id: string }>(`SELECT tenant.id::text tenant_id,principal.id::text actor_id FROM master.tenant tenant JOIN LATERAL (SELECT id FROM master.principal WHERE tenant_id=tenant.id AND status='active' ORDER BY created_at,id LIMIT 1) principal ON true WHERE tenant.status='active' ORDER BY tenant.id`);
+    const tenants = await studio.query<{ tenant_id: string; actor_id: string }>(`SELECT tenant.id::text tenant_id,principal.id::text actor_id FROM master.tenant tenant JOIN LATERAL (SELECT id FROM master.principal WHERE tenant_id=tenant.id AND status='active' ORDER BY created_at,id LIMIT 1) principal ON true WHERE tenant.status='active' AND ($1::uuid IS NULL OR tenant.id=$1::uuid) ORDER BY tenant.id`, [tenantId ?? null]);
     for (const tenant of tenants.rows) {
-      const entityId=deterministicUuid(`${tenant.tenant_id}:entity:master.business_partner`),current=await one<{id:string;entity_contract_hash:string;release_no:number}>(neon,"SELECT id::text,entity_contract_hash,release_no::int FROM runtime_meta.entity_contract WHERE tenant_id=$1::uuid AND entity_id=$2::uuid AND status='published'",[tenant.tenant_id,entityId]),priorResult=await neon.query<{id:string;entity_contract_hash:string;release_no:number}>("SELECT id::text,entity_contract_hash,release_no::int FROM runtime_meta.entity_contract WHERE tenant_id=$1::uuid AND entity_id=$2::uuid AND release_no=$3",[tenant.tenant_id,entityId,current.release_no-1]),prior=priorResult.rows[0];
-      const artifact = buildDevelopmentBusinessPartnerCaseProjection(tenant.tenant_id,current.release_no,prior?{id:prior.id,hash:prior.entity_contract_hash,releaseNo:prior.release_no}:undefined);
+      const current=await one<{id:string;entity_id:string;entity_contract_hash:string;release_no:number}>(neon,"SELECT id::text,entity_id::text,entity_contract_hash,release_no::int FROM runtime_meta.entity_contract WHERE tenant_id=$1::uuid AND entity_code='master.business_partner' AND status='published'",[tenant.tenant_id]),priorResult=await neon.query<{id:string;entity_contract_hash:string;release_no:number}>("SELECT id::text,entity_contract_hash,release_no::int FROM runtime_meta.entity_contract WHERE tenant_id=$1::uuid AND entity_id=$2::uuid AND release_no=$3",[tenant.tenant_id,current.entity_id,current.release_no-1]),prior=priorResult.rows[0];
+      const artifact = buildDevelopmentBusinessPartnerCaseProjection(tenant.tenant_id,current.release_no,prior?{id:prior.id,hash:prior.entity_contract_hash,releaseNo:prior.release_no}:undefined,current.entity_id);
       const artifactId = deterministicUuid(`${artifact.publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:artifact:neon`);
       const compilationId = deterministicUuid(`${artifact.publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:compilation:neon`);
       const commandId = deterministicUuid(`${artifact.publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:deployment-command:neon`);
@@ -478,5 +486,5 @@ function localDatabase(url: URL): boolean {
 function siblingDatabaseUrl(databaseUrl: string, databaseName: string): string { const url=new URL(databaseUrl);url.pathname=`/${databaseName}`;return url.toString(); }
 async function one<T extends object>(client: QueryClient, statement: string, values: unknown[] = []): Promise<T> { const result=await client.query<T>(statement,values);if(result.rows.length!==1)throw new Error(`expected one row, received ${result.rows.length}`);return result.rows[0]!; }
 function option(args: string[], name: string): string | undefined { const equal=args.find(item=>item.startsWith(`${name}=`));if(equal)return equal.slice(name.length+1);const index=args.indexOf(name);return index<0?undefined:args[index+1]; }
-async function main(): Promise<void> { const args=process.argv.slice(2);const databaseUrl=option(args,"--database-url")??process.env["ATHYPER_NEON_DATABASE_ADMIN_URL"];if(!databaseUrl)throw new Error("set ATHYPER_NEON_DATABASE_ADMIN_URL or --database-url");const result=await provisionDevelopmentBusinessPartnerRuntime({databaseUrl,studioDatabaseUrl:option(args,"--studio-database-url")??process.env["ATHYPER_STUDIO_DATABASE_ADMIN_URL"],confirmation:option(args,"--confirm"),dryRun:args.includes("--plan")||args.includes("--dry-run"),caseContractOnly:args.includes("--case-contract-only")});process.stdout.write(`${JSON.stringify(result,null,2)}\n`); }
+async function main(): Promise<void> { const args=process.argv.slice(2);const databaseUrl=option(args,"--database-url")??process.env["ATHYPER_NEON_DATABASE_ADMIN_URL"];if(!databaseUrl)throw new Error("set ATHYPER_NEON_DATABASE_ADMIN_URL or --database-url");const result=await provisionDevelopmentBusinessPartnerRuntime({databaseUrl,studioDatabaseUrl:option(args,"--studio-database-url")??process.env["ATHYPER_STUDIO_DATABASE_ADMIN_URL"],confirmation:option(args,"--confirm"),dryRun:args.includes("--plan")||args.includes("--dry-run"),caseContractOnly:args.includes("--case-contract-only"),tenantId:option(args,"--tenant-id")});process.stdout.write(`${JSON.stringify(result,null,2)}\n`); }
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) await main();

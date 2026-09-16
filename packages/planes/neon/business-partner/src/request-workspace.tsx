@@ -1,4 +1,5 @@
 "use client";
+import { businessLabel } from "./360/display-values";
 import { useEffect, useState } from "react";
 import { Badge, Card, Button, Input } from "@athyper/platform-ui";
 import { useApiClient } from "@athyper/platform-shell-app-foundation";
@@ -10,7 +11,7 @@ import { RequestAttachmentField } from "./request-attachment-field";
 import { PartnerReferenceField } from "./partner-reference-field";
 import type { PartnerRequest, RequestView } from "./client";
 
-const display = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
+const display = (value: string) => businessLabel(value, "title");
 const date = (value?: string) => value ? new Date(value).toLocaleString() : "Not yet";
 export function requestKind(request: PartnerRequest) {
   return request.kind === "amend_partner" ? "Partner amendment" : request.kind === "configure_company" ? "Company setup request" : request.targetBusinessPartnerId ? `${display(request.requestedRole ?? "partner")} role extension` : `New ${request.requestedRole ?? "partner"} request`;

@@ -140,3 +140,33 @@ describe("document API regressions", () => {
     expect(() => renderStrictHandlebars("{{value}}", Object.create({ value: "inherited" }) as Record<string, unknown>)).toThrow("Missing template variable");
   });
 });
+
+describe('pinned process document source',()=>{
+ const exact={bindingId:ids.binding,templateId:ids.template,id:ids.version,version:3,hash:template.checksum,locale:'en',variant:'default'};
+ const projection={data:{document:{number:'snapshot-42'},supplier:{name:'Authorized'}},exactTemplate:exact,provenance:{jobId:ids.binding,sourceSnapshot:{id:ids.entity,hash:'b'.repeat(64)}}};
+ it('uses authorized facts and the exact revision, and replays across authorized operators',async()=>{
+  const resolveExact=vi.fn(async()=>template),resolvePublished=vi.fn(async()=>null),save=vi.fn(),append=vi.fn();
+  const h=harness({resolveTrustedSource:async()=>projection,templates:{resolveExact,resolvePublished},outbox:{append},metadata:{getEntityDescriptor:async()=>{throw Error('Mutable descriptor must not retarget a pinned job');}}});
+  const original=h.artifacts.save;h.artifacts.save=async(input,tx)=>{save(input);return original(input,tx);};
+  const command={...h.command,trustedJobId:ids.binding,data:{secret:'caller-injected'}};
+  const first=await h.service.render(command);
+  await expect(h.service.render({...command,context:{...command.context,principalId:ids.template}})).resolves.toEqual(first);
+  expect(resolvePublished).not.toHaveBeenCalled();expect(resolveExact).toHaveBeenCalledWith(expect.objectContaining({exact}),expect.anything());
+  expect(h.renderer.renderPdf).toHaveBeenCalledTimes(1);expect(h.renderer.renderPdf).toHaveBeenCalledWith(expect.objectContaining({html:expect.stringContaining('snapshot-42')}));
+  expect(JSON.stringify(h.renderer.renderPdf.mock.calls)).not.toContain('caller-injected');
+  expect(save).toHaveBeenCalledWith(expect.objectContaining({provenance:projection.provenance}));
+  expect(append).toHaveBeenCalledWith(expect.objectContaining({eventKey:'documents-generated:request-42'}),expect.anything());
+ });
+ it('fails before rendering when the owning source rejects access',async()=>{
+  const h=harness({resolveTrustedSource:async()=>{throw Error('source forbidden');}});
+  await expect(h.service.render({...h.command,trustedJobId:ids.binding})).rejects.toThrow('source forbidden');expect(h.renderer.renderPdf).not.toHaveBeenCalled();
+ });
+ it('never falls back when the pinned template is absent',async()=>{
+  const published=vi.fn(async()=>template),h=harness({resolveTrustedSource:async()=>projection,templates:{resolveExact:async()=>null,resolvePublished:published}});
+  await expect(h.service.render({...h.command,trustedJobId:ids.binding})).rejects.toMatchObject({statusCode:404});expect(published).not.toHaveBeenCalled();expect(h.storage.put).not.toHaveBeenCalled();
+ });
+ it('checks the owning recipient policy before signing even with a generic document grant',async()=>{
+  const h=harness({authorizeArtifact:async()=>{throw Error('recipient forbidden');}});await h.service.render(h.command);
+  await expect(h.service.createDownload({context:h.command.context,documentId:ids.document})).rejects.toThrow('recipient forbidden');expect(h.storage.createDownloadUrl).not.toHaveBeenCalled();
+ });
+});

@@ -1,6 +1,6 @@
-import { withBusinessPartnerBankEditor } from "./business-partner-bank-editor.js";
-import { withBusinessPartnerCollectionPresentations } from "./business-partner-collection-presentations.js";
-import { createHash } from "node:crypto";
+import { applyBusinessPartnerBankEditor } from "./business-partner-bank-editor.js";
+import { applyBusinessPartnerCollectionPresentations } from "./business-partner-collection-presentations.js";
+import { presentationUuid } from "./presentation-graph-helpers";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 import type {
   IntakeDataField,
@@ -8,10 +8,7 @@ import type {
 } from "../../../../packages/contracts/platform/entity-runtime/src/intake-surface";
 import { compileEntityIntakeSurfaces } from "../../../../packages/contracts/platform/entity-runtime/src/intake-surface-authoring";
 const uid = (key: string) => {
-  const h = createHash("sha256")
-    .update(`bp.request-capture.v1.${key}`)
-    .digest("hex");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+  return presentationUuid(`bp.request-capture.v1.${key}`);
 };
 const input = (
   key: string,
@@ -57,11 +54,14 @@ export const BUSINESS_PARTNER_REQUEST_HEADER_LABELS = {
       customerRole: "Customer",
 } as const;
 
-export function withBusinessPartnerRequestCapture(
-  source: MetaEntityGraph,
-): MetaEntityGraph {
+export function withBusinessPartnerRequestCapture(source: MetaEntityGraph): MetaEntityGraph {
+  return applyBusinessPartnerRequestCapture(structuredClone(source));
+}
+
+/** Internal pipeline step: mutates the caller-owned working graph. */
+export function applyBusinessPartnerRequestCapture(source: MetaEntityGraph): MetaEntityGraph {
   if (source.entity.entityCode !== "business_partner") throw Error("Business Partner graph required");
-  const graph = structuredClone(source) as any;
+  const graph = source as any;
   const details = graph.surfaces.find(
     (s: any) => s.surfaceKey === "intake_details",
   );
@@ -81,8 +81,8 @@ export function withBusinessPartnerRequestCapture(
     },
   };
   if (details.layoutConfig?.requestCaptureVersion === 1)
-    return withBusinessPartnerBankEditor(
-      withBusinessPartnerCollectionPresentations(graph),
+    return applyBusinessPartnerBankEditor(
+      applyBusinessPartnerCollectionPresentations(graph),
     );
   const add = (
     surface: any,
@@ -325,7 +325,7 @@ export function withBusinessPartnerRequestCapture(
   );
   details.layoutConfig = { ...details.layoutConfig, requestCaptureVersion: 1 };
   compileEntityIntakeSurfaces(graph);
-  return withBusinessPartnerBankEditor(
-    withBusinessPartnerCollectionPresentations(graph),
+  return applyBusinessPartnerBankEditor(
+    applyBusinessPartnerCollectionPresentations(graph),
   );
 }

@@ -1,4 +1,6 @@
 "use client";
+import { businessLabel } from "./360/display-values";
+import { useOrganizationSelection } from "./use-organization-selection";
 import {
   EntityIntakeForm,
   readIntakeFormReview,
@@ -22,10 +24,6 @@ import {
   Select,
   Skeleton,
 } from "@athyper/platform-ui";
-import {
-  useNeonOperatingOrganization,
-  useNeonWorkContext,
-} from "@athyper/product-neon-shell";
 import {
   useEffect,
   useMemo,
@@ -135,41 +133,14 @@ function RoleExtensionForm({
   );
   const http = useApiClient();
   const api = useMemo(() => createBusinessPartnerClient(http), [http]);
-  const operating = useNeonOperatingOrganization();
-  const work = useNeonWorkContext();
   const toast = useToasts();
   const navigation = useApplicationNavigation();
-  const companyCodeId =
-    work.selection.mode === "company"
-      ? work.selection.companyCodeId
-      : undefined;
-  const compatible = useMemo(
-    () =>
-      operating.organizations.filter(
-        (item) =>
-          !companyCodeId ||
-          item.companyAssignments.some(
-            (assignment) => assignment.companyCodeId === companyCodeId,
-          ),
-      ),
-    [operating.organizations, companyCodeId],
-  );
-  const [organizationId, setOrganizationId] = useState("");
+  const { companyCodeId, compatible, selected: organizationId, setSelected: setOrganizationId } = useOrganizationSelection();
   const [aggregate, setAggregate] = useState<PartnerAggregate>();
   const [role, setRole] = useState<CommercialRole>(requestedRole ?? "supplier");
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    setOrganizationId((current) =>
-      compatible.some((item) => item.id === current)
-        ? current
-        : compatible.length === 1
-          ? compatible[0]!.id
-          : "",
-    );
-  }, [compatible]);
 
   useEffect(() => {
     setAggregate(undefined);
@@ -476,8 +447,4 @@ function requiredValue(data: FormData, name: string): string {
   return value.trim();
 }
 
-function title(value: string): string {
-  return value
-    .replaceAll(/[._-]+/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
+function title(value: string): string { return businessLabel(value, "title"); }

@@ -1,4 +1,5 @@
 "use client";
+import { businessPartnerErrorMessage } from "./command-feedback";
 
 import { createHttpClient } from "@athyper/platform-api-client";
 import {
@@ -342,7 +343,5 @@ function payload(name: string, registrationNumber: string) {
 }
 
 function errorMessage(cause: unknown) {
-  return cause instanceof Error
-    ? cause.message
-    : "The application could not be updated.";
+  return businessPartnerErrorMessage(cause, "The application could not be updated.");
 }

@@ -13,6 +13,20 @@ export function createScopedMetaEntityAuthoringRepository(
   ) => MetaEntityAuthoringRepository,
 ): MetaEntityAuthoringRepository {
   return {
+    listInspectionReleases: (tenantId) =>
+      run((db) => {
+        const repo = factory(db);
+        if (!repo.listInspectionReleases)
+          throw Error("RELEASE_INSPECTION_UNAVAILABLE");
+        return repo.listInspectionReleases(tenantId);
+      }),
+    readInspectionRelease: (tenantId, releaseId) =>
+      run((db) => {
+        const repo = factory(db);
+        if (!repo.readInspectionRelease)
+          throw Error("RELEASE_INSPECTION_UNAVAILABLE");
+        return repo.readInspectionRelease(tenantId, releaseId);
+      }),
     list: (tenantId) =>
       run((db) => {
         const repo = factory(db);

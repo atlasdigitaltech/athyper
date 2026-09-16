@@ -1,4 +1,4 @@
-import { AuthoringConflictError } from "@athyper/server-contract-meta-entity-authoring";
+import { AuthoringConflictError, AuthoringPolicyError } from "@athyper/server-contract-meta-entity-authoring";
 import type {
   Authorizer,
   VerifiedRequestContext,
@@ -11,26 +11,73 @@ export interface MetaEntityAuthoringRouteOptions {
   authenticate: RequestHandler;
   readContext(response: Response): VerifiedRequestContext;
   authorizer: Authorizer;
+  /** Read-only policy gate; never used by mutation routes. */
+  inspectionAuthorizer?: Authorizer;
   service: MetaEntityAuthoringService;
+  addressPreviewChoices?: (context: VerifiedRequestContext) => Promise<unknown>;
+  inspectActivation?: (context: VerifiedRequestContext, release: import("@athyper/server-contract-meta-entity-authoring").MetaEntityInspectionRelease) => Promise<unknown>;
 }
 export function registerMetaEntityAuthoringRoutes(
   app: Application,
   o: MetaEntityAuthoringRouteOptions,
 ) {
+  app.get("/api/meta-entity-authoring/change-sets/:id/history", o.authenticate, handler(async (q,s) => {
+    const c = await allowed(o,s,["metadata.entity.author","metadata.entity.review"]); if(!c)return;
+    const id=uuid(q.params.id); await scoped(o,c,id); s.setHeader("Cache-Control","private, no-store");
+    s.json(await o.service.listDraftSaves(id));
+  }));
+  app.get("/api/meta-entity-authoring/change-sets/:id/history/:revision", o.authenticate, handler(async (q,s) => {
+    const c = await allowed(o,s,["metadata.entity.author","metadata.entity.review"]); if(!c)return;
+    const id=uuid(q.params.id); await scoped(o,c,id);
+    const revision=Number(q.params.revision); if(!Number.isSafeInteger(revision)||revision<0){s.status(400).json({error:"INVALID_REVISION"});return;}
+    s.setHeader("Cache-Control","private, no-store");
+    const graph=await o.service.readDraftSave(id,revision);
+    if(!graph){s.status(404).json({error:"SAVED_REVISION_NOT_AVAILABLE"});return;}
+    s.json({revision,graph});
+  }));
+  app.get("/api/meta-entity-authoring/inspection/address-preview-choices", o.authenticate, handler(async (_q, s) => {
+    const c = await allowed(o, s, ["metadata.entity.author", "metadata.entity.review"]);
+    if (!c) return;
+    s.setHeader("Cache-Control", "private, no-store");
+    if (!o.addressPreviewChoices) { s.status(503).json({error:"ADDRESS_PREVIEW_CHOICES_UNAVAILABLE"}); return; }
+    s.json(await o.addressPreviewChoices(c));
+  }));
+  app.get("/api/meta-entity-authoring/inspection/releases/:id/activation", o.authenticate, handler(async (q,s)=>{
+    const c=await allowed(o,s,"publication.deployment.view",{releaseId:uuid(q.params.id)});
+    if(!c)return;
+    s.setHeader("Cache-Control","private, no-store");
+    const source=await o.service.readInspectionRelease(c.tenantId,uuid(q.params.id));
+    if(!source){s.status(404).json({error:"RELEASE_NOT_FOUND"});return;}
+    if(!o.inspectActivation){s.status(503).json({error:"ACTIVATION_INSPECTION_UNAVAILABLE"});return;}
+    s.json(await o.inspectActivation(c,source.release));
+  }));
+  app.get("/api/meta-entity-authoring/inspection/releases", o.authenticate, handler(async (_q, s) => {
+    const c = await allowed(o, s, ["metadata.entity.author", "metadata.entity.review"]);
+    if (c) { s.setHeader("Cache-Control", "private, no-store"); s.json(await o.service.listInspectionReleases(c.tenantId)); }
+  }));
+  app.get("/api/meta-entity-authoring/inspection/releases/:id", o.authenticate, handler(async (q, s) => {
+    const c = await allowed(o, s, ["metadata.entity.author", "metadata.entity.review"]);
+    if (!c) return;
+    s.setHeader("Cache-Control", "private, no-store");
+    const result = await o.service.readInspectionRelease(c.tenantId, uuid(q.params.id));
+    if (!result) { s.status(404).json({error:"RELEASE_NOT_FOUND"}); return; }
+    s.json(result);
+  }));
   app.get(
     "/api/meta-entity-authoring/change-sets",
     o.authenticate,
     handler(async (_q, s) => {
-      const c = await allowed(o, s, "metadata.entity.author");
-      if (c) s.json(await o.service.list(c.tenantId));
+      const c = await allowed(o, s, ["metadata.entity.author", "metadata.entity.review"]);
+      if (c) { s.setHeader("Cache-Control", "private, no-store"); s.json(await o.service.list(c.tenantId)); }
     }),
   );
   app.get(
     "/api/meta-entity-authoring/change-sets/:id/graph",
     o.authenticate,
     handler(async (q, s) => {
-      const c = await allowed(o, s, "metadata.entity.author");
+      const c = await allowed(o, s, ["metadata.entity.author", "metadata.entity.review"]);
       if (c) {
+        s.setHeader("Cache-Control", "private, no-store");
         await scoped(o, c, uuid(q.params.id));
         s.json(await o.service.readGraph(uuid(q.params.id)));
       }
@@ -189,7 +236,7 @@ function action(
 async function allowed(
   o: MetaEntityAuthoringRouteOptions,
   s: Response,
-  p: string,
+  p: string | readonly string[],
   resource?: Readonly<Record<string, unknown>>,
 ) {
   const c = o.readContext(s);
@@ -197,20 +244,28 @@ async function allowed(
     s.status(403).json({ error: "FORBIDDEN", reason: "plane_excluded" });
     return;
   }
-  const decision = await o.authorizer.authorize({
-    context: c,
-    permissionCode: p,
-    ...(resource ? { resource: { ...resource, tenantId: c.tenantId } } : {}),
-  });
-  if (!decision.allowed) {
-    s.status(403).json({ error: "FORBIDDEN", reason: decision.reason });
-    return;
+  // Alternative read authority still passes through the full authorizer,
+  // including grant validity, tenant scope, deny rules and MFA.
+  let reason: string | undefined;
+  for (const permissionCode of typeof p === "string" ? [p] : p) {
+    const decision = await (Array.isArray(p) ? o.inspectionAuthorizer ?? o.authorizer : o.authorizer).authorize({
+      context: c,
+      permissionCode,
+      resource: { ...resource, tenantId: c.tenantId },
+    });
+    if (decision.allowed) return c;
+    if (!reason || decision.reason === "mfa_required") reason = decision.reason;
   }
-  return c;
+  s.status(403).json({ error: "FORBIDDEN", reason });
+  return;
 }
 function handler(fn: (q: any, s: any) => Promise<void>): RequestHandler {
   return (q, s, n) => {
     void fn(q, s).catch((error) => {
+      if (error instanceof AuthoringPolicyError && error.code === "RESTORATION_PUBLICATION_ALREADY_EXISTS") {
+        s.status(409).json({ error: error.code, detail: error.message });
+        return;
+      }
       if (error instanceof AuthoringConflictError) {
         s.status(409).json({ error: error.code, detail: error.message });
         return;

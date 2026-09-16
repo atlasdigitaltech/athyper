@@ -1,3 +1,5 @@
+import express from "express";
+import { registerBusinessPartnerRequestRoutes } from "../business-partner-request-routes.js";
 import { createBusinessPartnerCompanyPilotService } from "../business-partner-company-pilot.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type {
@@ -445,6 +447,7 @@ function command(
     operatingOrganizationId: "55555555-5555-4555-8555-555555555555",
     ...overrides,
     proposedPayload: {
+      ...((overrides.kind ?? "new_partner") === "new_partner" && (overrides.source?.kind ?? "manual") === "manual" && (overrides.requestedRole ?? "supplier") === "supplier" ? { requestedComplianceLevel: "standard" } : {}),
       ...(overrides.proposedPayload === undefined ? { name: "Acme" } : {}),
       ownershipClass: "internal",
       [overrides.requestedRole === "customer"
@@ -470,6 +473,7 @@ function fixture(
   denialReason = "test",
   companyPilot = false,
   validateIntake?: (command:CreateBusinessPartnerRequestCommand)=>Promise<void>,
+  supplierSubmission?: import("../business-partner-request-service.js").SupplierProcessSubmission<object>,
 ) {
   const repository = new MemoryRepository(),
     permissions: string[] = [],
@@ -479,6 +483,7 @@ function fixture(
     ? createBusinessPartnerCompanyPilotService
     : createBusinessPartnerRequestService;
   const service = createService({
+    supplierSubmission,
     validateIntake,
     refreshContext: async (context: VerifiedRequestContext) => context,
     requirePublishedOperation: async () => {},
@@ -573,6 +578,14 @@ function fixture(
 }
 
 describe("Business Partner request service", () => {
+  it("refuses activation approval preparation without current policy, readiness and version coordinates", async () => {
+    const value=fixture();
+    const created=await value.service.create(command({kind:"activate_supplier",targetBusinessPartnerId:"10101010-1010-4010-8010-101010101010",proposedPayload:{activation:{businessDate:"2026-08-28"}}}));
+    const result=await value.service.validate({context,requestId:created.request.id,expectedVersion:created.request.rowVersion,idempotencyKey:"activation-validate-001"});
+    expect(result.validation.valid).toBe(false);
+    expect(result.validation.findings).toContainEqual(expect.objectContaining({messageCode:"SUPPLIER_ACTIVATION_COORDINATES_REQUIRED",outcome:"failed"}));
+  });
+
   it("rejects invalid metadata input before creating a case or side effects",async()=>{
     const errors=[{fieldPath:"name",code:"maxLength",messageKey:"validation.maxLength",params:{field:"Registered name",max:100}}];
     const validate=vi.fn(async()=>{throw new MasterDataError(422,"INTAKE_VALIDATION_FAILED","Invalid fields",errors);});
@@ -882,7 +895,7 @@ describe("Business Partner request service", () => {
     expect(result.validation).toMatchObject({
       evaluationId: "66666666-6666-4666-8666-666666666666",
       valid: true,
-      ruleset: { code: "neon.business_partner.entity_case.phase1", version: 3 },
+      ruleset: { code: "neon.business_partner.entity_case.phase1", version: 4 },
     });
     expect(result.validation.findings).toHaveLength(18);
     expect(value.repository.validations).toHaveLength(1);
@@ -2136,4 +2149,105 @@ it("identifies the update operation without treating unchanged ownership as reas
  checked.length=0;
  await value.service.patch({context,requestId:created.id,expectedVersion:2,draftCapture:true,operatingOrganizationId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",proposedPayload:{name:"Reassigned draft"}});
  expect(checked.map(scope=>scope.authorizationTarget)).toEqual(["existing","proposed"]);
+});
+
+
+describe("supplier requirement API authority", () => {
+  it.each(["basic", "standard", "enhanced"])("saves a %s assertion in the governed snapshot", async level => {
+    const f = fixture();
+    const result = await f.service.create(command({proposedPayload:{requestedComplianceLevel:level, complianceRequirementReason:"Business requirement"}}));
+    expect(result.request.proposedPayload.requestedComplianceLevel).toBe(level);
+  });
+  it("keeps incomplete drafts but rejects submission without a requirement", async () => {
+    const f=fixture();
+    const result=await f.service.create(command({draftCapture:true,proposedPayload:{requestedComplianceLevel:undefined}}));
+    await expect(f.service.validate({context,requestId:result.request.id,expectedVersion:result.request.rowVersion})).rejects.toMatchObject({code:"SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"});
+    await expect(f.service.submit({context,requestId:result.request.id,expectedVersion:result.request.rowVersion,idempotencyKey:"submit-no-requirement"})).rejects.toMatchObject({code:"SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"});
+    expect(f.repository.submissionCount).toBe(0);
+  });
+  it.each(["invalid", "Basic", null, 1, {}, []])("rejects invalid draft enum %j", async level => {
+    const f=fixture();
+    await expect(f.service.create(command({draftCapture:true,proposedPayload:{requestedComplianceLevel:level}}))).rejects.toMatchObject({code:"SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"});
+  });
+  it("requires Basic reason even on draft capture", async () => {
+    const f=fixture();
+    await expect(f.service.create(command({draftCapture:true,proposedPayload:{requestedComplianceLevel:"basic", complianceRequirementReason:"  "}}))).rejects.toMatchObject({code:"SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"});
+  });
+  it("requires a reason in the edit when changing a saved assertion", async () => {
+    const f=fixture(), created=(await f.service.create(command({proposedPayload:{requestedComplianceLevel:"enhanced",complianceRequirementReason:"Original"}}))).request;
+    const patch={context,requestId:created.id,expectedVersion:created.rowVersion,draftCapture:true,proposedPayload:{requestedComplianceLevel:"standard"}};
+    await expect(f.service.patch(patch)).rejects.toMatchObject({code:"SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"});
+    const changed=await f.service.patch({...patch,proposedPayload:{...patch.proposedPayload,complianceRequirementReason:"Corrected requirement"}});
+    expect(changed.proposedPayload.requestedComplianceLevel).toBe("standard");
+    expect(changed.proposedPayload.complianceRequirementReason).toBe("Corrected requirement");
+    expect(f.repository.submissionCount).toBe(0);
+  });
+  it("denies requirement writes without the published case operation permission", async () => {
+    const f=fixture(false);
+    await expect(f.service.create(command())).rejects.toMatchObject({status:403});
+  });
+  it.each(["selectedProfile","minimumProfile","executionManifest","minimum_controls"])("rejects caller-owned routing field %s", async field => {
+    const f=fixture();
+    await expect(f.service.create(command({proposedPayload:{[field]:"simple"}}))).rejects.toMatchObject({status:400});
+  });
+});
+
+
+it("owning HTTP API validates requirement drafts, edits and submission through the real service", async () => {
+  const f=fixture(), app=express(); app.use(express.json());
+  registerBusinessPartnerRequestRoutes(app,{authenticate:(_q,_r,next)=>next(),readContext:()=>context,service:f.service});
+  const server=app.listen(0,"127.0.0.1"); await new Promise<void>(resolve=>server.once("listening",resolve));
+  const address=server.address(); if(!address||typeof address==="string")throw Error("Test listener required");
+  const send=(method:string,path:string,body:unknown)=>fetch(`http://127.0.0.1:${address.port}/api/neon/business-partner-cases${path}`,{method,headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+  try {
+    const {context:_context,...draft}=command({draftCapture:true,proposedPayload:{name:"HTTP supplier",requestedComplianceLevel:undefined}});
+    expect((await send("POST","",{...draft,proposedPayload:{requestedComplianceLevel:"invalid"}})).status).toBe(422);
+    expect((await send("POST","",draft)).status).toBe(201);
+    const saved=[...f.repository.rows.values()][0]!;
+    expect((await send("POST",`/${saved.id}/submit`,{expectedVersion:1,idempotencyKey:"http-missing-level"})).status).toBe(422);
+    expect((await send("PATCH",`/${saved.id}`,{expectedVersion:1,draftCapture:true,proposedPayload:{requestedComplianceLevel:"basic"}})).status).toBe(422);
+    expect((await send("PATCH",`/${saved.id}`,{expectedVersion:1,draftCapture:true,proposedPayload:{requestedComplianceLevel:"basic",complianceRequirementReason:"Low governance need"}})).status).toBe(200);
+    expect(f.repository.rows.get(saved.id)?.proposedPayload.requestedComplianceLevel).toBe("basic");
+    expect(f.repository.submissionCount).toBe(0);
+  } finally {server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+
+
+describe("P2 supplier submission ownership", () => {
+  it("routes an internal submission through the process owner and replays before mutable validation", async () => {
+    let accepted: import("@athyper/server-contract-master-data").SubmitBusinessPartnerRequestResponse | undefined;
+    let rejectValidation = false;
+    const intake = vi.fn(async () => { if (rejectValidation) throw Error("validation changed after acceptance"); });
+    const owner = {
+      lock: vi.fn(async () => {}),
+      replay: vi.fn(async () => accepted ? { ...accepted, replayed: true } : undefined),
+      submit: vi.fn(async (_command: unknown, request: BusinessPartnerRequest) => {
+        accepted = { request: { ...request, rowVersion: request.rowVersion + 1, status: "pending_approval" }, process: { cycleRunId: context.requestId, attemptId: context.requestId, attemptNumber: 1, selectionId: context.requestId, profile: "standard", reviewPackJobId: context.requestId, documentStatus: "pending" }, replayed: false };
+        value.repository.rows.set(request.id, accepted.request);
+        return accepted;
+      }),
+    };
+    const value = fixture(true, "test", false, intake, owner);
+    const created = await value.service.create(command());
+    const validated = await value.service.validate({ context, requestId: created.request.id, expectedVersion: created.request.rowVersion });
+    const input = { context, requestId: created.request.id, expectedVersion: validated.request.rowVersion, idempotencyKey: "p2-submit-001" };
+    const first = await value.service.submit(input);
+    rejectValidation = true;
+    const replay = await value.service.submit(input);
+    expect(first.workflow).toBeUndefined();
+    expect(replay.process).toEqual(first.process); expect(replay.replayed).toBe(true);
+    expect(owner.submit).toHaveBeenCalledOnce(); expect(owner.lock).toHaveBeenCalledTimes(2);
+    expect(value.repository.submissionCount).toBe(0);
+    expect(value.effects.filter(e => e === "business_partner.case.submitted")).toHaveLength(2); // one outbox + one audit
+    expect(value.outboxEvents.at(-1)).toMatchObject({ payload: { process: first.process } });
+  });
+  it("does not fall back to the legacy workflow when selection fails", async () => {
+    const owner = { lock: vi.fn(async () => {}), replay: vi.fn(async () => undefined), submit: vi.fn(async () => { throw new MasterDataError(503, "PROCESS_SELECTION_BINDING_UNAVAILABLE", "No process policy"); }) };
+    const value = fixture(true, "test", false, undefined, owner);
+    const created = await value.service.create(command());
+    const validated = await value.service.validate({ context, requestId: created.request.id, expectedVersion: created.request.rowVersion });
+    const before = [...value.effects];
+    await expect(value.service.submit({ context, requestId: created.request.id, expectedVersion: validated.request.rowVersion, idempotencyKey: "p2-missing-001" })).rejects.toMatchObject({ code: "PROCESS_SELECTION_BINDING_UNAVAILABLE" });
+    expect(value.repository.submissionCount).toBe(0); expect(value.effects).toEqual(before);
+  });
 });

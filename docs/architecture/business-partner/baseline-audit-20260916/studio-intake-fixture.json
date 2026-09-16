@@ -1,0 +1,46 @@
+{
+  "status": 200,
+  "changeSet": {
+    "id": "be767e01-f36d-434f-91f3-67bff689a367",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "entityId": "289732bb-45c2-49e6-abb3-70ff4b85336b",
+    "entityCode": "business_partner",
+    "branchCode": "local-preview",
+    "status": "draft",
+    "revision": 59,
+    "createdBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13"
+  },
+  "surface": {
+    "id": "d076991c-791e-5849-81fe-5f72e50336ea",
+    "surfaceKey": "intake_partner",
+    "surfaceKind": "form",
+    "title": "Partner",
+    "layoutKind": "flow",
+    "layoutConfig": {
+      "columns": 1,
+      "renderer": "intake"
+    },
+    "isDefault": false,
+    "status": "active"
+  },
+  "bindings": [
+    {
+      "id": "564d5cab-8ce3-5945-8b58-87051f1812c9",
+      "entitySurfaceId": "d076991c-791e-5849-81fe-5f72e50336ea",
+      "entitySurfaceSectionId": "da8486ef-b89c-5bb9-8911-36c8fe8ba4e9",
+      "fieldKey": "partner_lookup",
+      "labelOverride": "Partner name or code",
+      "widgetKey": "entity_lookup",
+      "columnSpan": 12
+    },
+    {
+      "id": "dd030024-3640-5185-874f-445546fc0027",
+      "entitySurfaceId": "d076991c-791e-5849-81fe-5f72e50336ea",
+      "entitySurfaceSectionId": "3476f9e7-afe9-54ae-8ced-3ecfdc457389",
+      "fieldKey": "requested_role",
+      "labelOverride": "Requested role",
+      "widgetKey": "choice_cards",
+      "columnSpan": 12
+    }
+  ]
+}

@@ -168,11 +168,11 @@ it("maps dedicated provider transitions without changing scopes or accepting arb
     ),
   ).toBeNull();
 });
-it("never redirects an existing qualification decision to proposed-resource creation", () => {
+it.each(["operationKey", "actionCode"])("never redirects an existing qualification decision (%s) to proposed-resource creation", (coordinate) => {
   const input = request("neon.supplier.qualification.admin", {
     businessPartnerId: "bp",
     qualificationId: "child",
-    operationKey: "qualification_decide",
+    [coordinate]: "qualification_decide",
     operatingOrganizationId: "org",
   });
   expect(mapping.owns(input)).toBe(true);
@@ -181,7 +181,7 @@ it("never redirects an existing qualification decision to proposed-resource crea
     mapping.target(
       request(input.permissionCode, {
         ...input.resource,
-        operationKey: "qualification",
+        [coordinate]: "qualification",
       }),
     ),
   ).toMatchObject({ operationKey: "qualification" });

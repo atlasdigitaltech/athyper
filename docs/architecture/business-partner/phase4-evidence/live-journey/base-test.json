@@ -1,0 +1,21 @@
+{
+  "status": 200,
+  "body": {
+    "contractHash": "2f0558362fece2887203672f578553409629b7beb188cbef3d5477273ac59989",
+    "passed": true,
+    "results": [
+      {
+        "key": "atlas_preserved",
+        "passed": true
+      },
+      {
+        "key": "reset_runtime_payload_exact",
+        "passed": true
+      },
+      {
+        "key": "v2_runtime_exact",
+        "passed": true
+      }
+    ]
+  }
+}

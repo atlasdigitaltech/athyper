@@ -1,17 +1,20 @@
-import { withCompactBankCopy } from "./business-partner-bank-editor";
-import { withBusinessPartnerAddressRegion } from "./business-partner-address-editor";
-import { withBusinessPartnerAdvancedAddress } from "./business-partner-address-editor";
-import { createHash } from "node:crypto";
+import { applyCompactBankCopy } from "./business-partner-bank-editor";
+import { applyBusinessPartnerAddressRegion } from "./business-partner-address-editor";
+import { applyBusinessPartnerAdvancedAddress } from "./business-partner-address-editor";
+import { presentationUuid } from "./presentation-graph-helpers";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 import type { CollectionPresentation } from "../../../../packages/contracts/platform/entity-runtime/src/intake-data";
 import { compileEntityIntakeSurfaces } from "../../../../packages/contracts/platform/entity-runtime/src/intake-surface-authoring";
 
 /** Author presentation on Meta Entity bindings; the runtime contains no partner field mappings. */
-export function withBusinessPartnerCollectionPresentations(
-  source: MetaEntityGraph,
-): MetaEntityGraph {
+export function withBusinessPartnerCollectionPresentations(source: MetaEntityGraph): MetaEntityGraph {
+  return applyBusinessPartnerCollectionPresentations(structuredClone(source));
+}
+
+/** Internal pipeline step: mutates the caller-owned working graph. */
+export function applyBusinessPartnerCollectionPresentations(source: MetaEntityGraph): MetaEntityGraph {
   if (source.entity.entityCode !== "business_partner") throw Error("Business Partner graph required");
-  const graph = withCompactBankCopy(source) as any;
+  const graph = applyCompactBankCopy(source) as any;
   const details = graph.surfaces.find(
     (s: any) => s.surfaceKey === "intake_details",
   );
@@ -374,10 +377,7 @@ export function withBusinessPartnerCollectionPresentations(
     const surface = graph.surfaces.find((s: any) => s.surfaceKey === key);
     if (!surface) continue;
     sections.forEach(([title, fields], index) => {
-      const hash = createHash("sha256")
-        .update(`collection-presentation.v1.${key}.${index}`)
-        .digest("hex");
-      const id = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-5${hash.slice(13, 16)}-8${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+      const id = presentationUuid(`collection-presentation.v1.${key}.${index}`);
       graph.surfaceSections.push({
         id,
         entitySurfaceId: surface.id,
@@ -424,11 +424,14 @@ export function withBusinessPartnerCollectionPresentations(
 
 
 /** Presentation-only enhancement: preserve capture fields, rules and persistence bindings. */
-export function withBusinessPartnerProfilePresentations(
-  source: MetaEntityGraph,
-): MetaEntityGraph {
+export function withBusinessPartnerProfilePresentations(source: MetaEntityGraph): MetaEntityGraph {
+  return applyBusinessPartnerProfilePresentations(structuredClone(source));
+}
+
+/** Internal pipeline step: mutates the caller-owned working graph. */
+export function applyBusinessPartnerProfilePresentations(source: MetaEntityGraph): MetaEntityGraph {
   if (source.entity.entityCode !== "business_partner") throw Error("Business Partner graph required");
-  const graph = structuredClone(source) as any;
+  const graph = source as any;
   const specs: Record<
     string,
     {
@@ -537,8 +540,8 @@ export function withBusinessPartnerProfilePresentations(
 
 function finishBusinessPartnerCollections(source: MetaEntityGraph): MetaEntityGraph {
   return [
-    withBusinessPartnerProfilePresentations,
-    withBusinessPartnerAdvancedAddress,
-    withBusinessPartnerAddressRegion,
+    applyBusinessPartnerProfilePresentations,
+    applyBusinessPartnerAdvancedAddress,
+    applyBusinessPartnerAddressRegion,
   ].reduce((graph, transform) => transform(graph), source);
 }

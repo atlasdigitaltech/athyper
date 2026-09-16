@@ -126,7 +126,7 @@ export function requestFormDefaults(descriptor: RequestFormDescriptor): Readonly
   return Object.freeze(Object.fromEntries(descriptor.sections.flatMap(section => section.fields.filter(field => field.defaultValue !== undefined).map(field => [field.key, field.defaultValue!]))));
 }
 
-export function serializeRequestForm(descriptor: RequestFormDescriptor, data: FormData, options: { includeEmpty?: boolean } = {}): Readonly<{
+export function serializeRequestForm(descriptor: RequestFormDescriptor, data: FormData, options: { includeEmpty?: boolean; existingPayload?: Readonly<Record<string, unknown>> } = {}): Readonly<{
   operatingOrganizationId: string;
   proposedPayload: Readonly<Record<string, unknown>>;
 }> {
@@ -136,7 +136,7 @@ export function serializeRequestForm(descriptor: RequestFormDescriptor, data: Fo
     if (!isRequestFieldVisible(field, current)) continue;
     const raw = field.widget === "checkbox" ? data.has(field.key) : data.get(field.key);
     if (raw === null || raw === "") {
-      if (options.includeEmpty && field.target === "canonical") proposed[field.path] = null;
+      if (options.includeEmpty && field.target === "canonical" && (!options.existingPayload || Object.hasOwn(options.existingPayload, field.path))) proposed[field.path] = null;
       continue;
     }
     let value: unknown = field.widget === "checkbox" ? data.has(field.key) : String(raw);

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { DocumentArtifactRepository, DocumentTemplateRepository, GeneratedDocument, NotificationAttachmentCandidate, PublishedDocumentTemplate } from "@athyper/server-contract-documents";
 import type { PdfPageFormat, PdfRenderOptions } from "@athyper/server-contract-rendering";
 import { sql, type Transaction } from "kysely";
@@ -12,7 +13,17 @@ interface TemplateRow {
 }
 
 export function createKyselyDocumentTemplateRepository(): DocumentTemplateRepository<DocumentTransaction> {
-  return { async resolvePublished(query, transaction) {
+  return { async resolveExact(query, transaction) {
+    const e=query.exact;
+    const row=(await sql<TemplateRow & {assets_manifest:unknown}>`SELECT b.id binding_id,t.id template_id,v.id template_version_id,v.version,v.checksum,t.name template_name,t.engine,b.locale_code,b.variant_code,v.content_html,v.styles_css,v.variables_schema,v.assets_manifest,NULL::text paper_size,NULL::text orientation,NULL::text margins,false header_footer,true background_graphics,NULL::text header_html,NULL::text footer_html
+      FROM master.template_binding b JOIN master.template t ON t.tenant_id=b.tenant_id AND t.id=b.template_id JOIN snapshot.template_version v ON v.tenant_id=t.tenant_id AND v.template_id=t.id
+      WHERE b.tenant_id=${query.tenantId}::uuid AND b.id=${e.bindingId}::uuid AND t.id=${e.templateId}::uuid AND v.id=${e.id}::uuid AND v.version=${e.version} AND v.checksum=${e.hash} AND b.entity_code=${query.entityType} AND b.operation_code=${query.operationCode} AND b.locale_code=${e.locale} AND b.variant_code=${e.variant} AND v.locale_code=${e.locale} AND b.letterhead_id IS NULL AND b.print_profile_id IS NULL AND b.is_active AND b.status='active' AND t.status='published' AND t.engine='handlebars'`.execute(transaction)).rows[0];
+    if(!row)return null;
+    const canonical=(v:unknown):string=>Array.isArray(v)?`[${v.map(canonical).join(',')}]`:v!==null&&typeof v==='object'?`{${Object.entries(v).sort(([a],[b])=>a.localeCompare(b)).map(([k,x])=>`${JSON.stringify(k)}:${canonical(x)}`).join(',')}}`:JSON.stringify(v);
+    const content={content_html:row.content_html,styles_css:row.styles_css,variables_schema:row.variables_schema,assets_manifest:row.assets_manifest};
+    if(createHash('sha256').update(canonical(content)).digest('hex')!==e.hash)return null;
+    return mapTemplate(row);
+  }, async resolvePublished(query, transaction) {
     const result = await sql<TemplateRow>`
       SELECT binding.id AS binding_id, template.id AS template_id, version.id AS template_version_id,
              version.version, version.checksum, template.name AS template_name, template.engine,
@@ -56,7 +67,7 @@ export function createKyselyDocumentArtifactRepository(): DocumentArtifactReposi
         VALUES (${input.id}::uuid,${input.tenantId}::uuid,${input.fileName},${input.fileName},
           'application/pdf',${input.sizeBytes},${input.sha256},'generated_document',
           ${input.storageBucket},${input.storageKey},1,1,${input.id}::uuid,true,true,'pending',
-          ${JSON.stringify({ template_id: input.template.templateId, template_version_id: input.template.templateVersionId, template_version: input.template.version, template_checksum: input.template.checksum, binding_id: input.template.bindingId, render_provider: input.renderProvider, render_duration_ms: input.renderDurationMs, malware_scan: { status: input.malwareScan.status, scanner: input.malwareScan.scanner, scanned_at: input.malwareScan.scannedAt, duration_ms: input.malwareScan.durationMs, ...(input.malwareScan.signatureVersion ? { signature_version: input.malwareScan.signatureVersion } : {}) }, ...(input.idempotencyKey ? { idempotency_key: input.idempotencyKey, request_hash: input.requestHash } : {}) })}::jsonb,
+          ${JSON.stringify({ template_id: input.template.templateId, template_version_id: input.template.templateVersionId, template_version: input.template.version, template_checksum: input.template.checksum, binding_id: input.template.bindingId, render_provider: input.renderProvider, render_duration_ms: input.renderDurationMs, ...(input.provenance ? {process_document:input.provenance} : {}), malware_scan: { status: input.malwareScan.status, scanner: input.malwareScan.scanner, scanned_at: input.malwareScan.scannedAt, duration_ms: input.malwareScan.durationMs, ...(input.malwareScan.signatureVersion ? { signature_version: input.malwareScan.signatureVersion } : {}) }, ...(input.idempotencyKey ? { idempotency_key: input.idempotencyKey, request_hash: input.requestHash } : {}) })}::jsonb,
           'active',${input.principalId}::uuid,${input.principalId}::uuid)
         RETURNING created_at
       `.execute(transaction);
@@ -64,8 +75,8 @@ export function createKyselyDocumentArtifactRepository(): DocumentArtifactReposi
         updated_at=clock_timestamp(),updated_by=${input.principalId}::uuid
         WHERE tenant_id=${input.tenantId}::uuid AND id=${input.id}::uuid`.execute(transaction);
       await sql`INSERT INTO document.attachment_link
-          (tenant_id,entity_type,entity_id,attachment_series_id,link_kind,display_order,metadata,created_by)
-        VALUES (${input.tenantId}::uuid,${input.entityType},${input.entityId},${input.id}::uuid,
+          (tenant_id,entity_type,entity_id,attachment_series_id,pinned_attachment_id,link_kind,display_order,metadata,created_by)
+        VALUES (${input.tenantId}::uuid,${input.entityType},${input.entityId},${input.id}::uuid,${input.provenance ? input.id : null}::uuid,
           'rendered',0,${JSON.stringify({ operation_code: input.operationCode, binding_id: input.template.bindingId })}::jsonb,${input.principalId}::uuid)`.execute(transaction);
       return generated(input, dateTime(created.rows[0]?.created_at));
     },

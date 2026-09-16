@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
 import type {VerifiedRequestContext} from '@athyper/server-contract-auth';
-import {createMetaEntityAuthoringAuthorizer,type AuthoringReviewEvidence} from '../meta-entity-authoring-authorizer.js';
+import {createMetaEntityInspectionAuthorizer,createMetaEntityAuthoringAuthorizer,type AuthoringReviewEvidence} from '../meta-entity-authoring-authorizer.js';
 const id='10000000-0000-4000-8000-000000000001';
 function context(permission:string):VerifiedRequestContext{return {planeKey:'studio',realmKey:'athyper',tenantId:'tenant',principalId:'reviewer',authEpoch:1,profileHash:'p',requestId:'r',assurance:'elevated',permissions:{planeKey:'studio',tenantId:'tenant',principalId:'reviewer',principalFingerprint:'f',profileHash:'p',schemaHash:'s',resolvedAt:1,allowed:[permission],denied:[],planLocked:[],planeExcluded:[],entries:[],authorizationScopes:[],requirements:[{permissionCode:permission,moduleId:'m',riskTier:'high',requiresMfa:true,requiresSod:true,entitled:true}]}};}
 const base:AuthoringReviewEvidence={tenantId:'tenant',status:'in_review',createdBy:'author',submittedBy:'author',approvedBy:null};
@@ -25,4 +25,13 @@ for(const permission of ['metadata.entity.publish','metadata.entity.activate'])i
 });
 it('does not accept caller supplied separation claims without coordinates',async()=>{
  const a=createMetaEntityAuthoringAuthorizer(fallback,async()=>base);expect(await a.authorize({context:context('metadata.entity.review'),permissionCode:'metadata.entity.review',resource:{sodSatisfied:true}})).toMatchObject({allowed:false});
+});
+
+it('inspection accepts a qualified reviewer without approval coordinates but retains assurance and grant checks', async()=>{
+ const a=createMetaEntityInspectionAuthorizer(fallback),c=context('metadata.entity.review');
+ expect(await a.authorize({context:c,permissionCode:'metadata.entity.review',resource:{tenantId:'tenant'}})).toMatchObject({allowed:true});
+ for(const x of [{...c,assurance:undefined},{...c,planeKey:'neon'},{...c,permissions:{...c.permissions,allowed:[]}},{...c,permissions:{...c.permissions,denied:['metadata.entity.review']}}])
+ expect(await a.authorize({context:x as VerifiedRequestContext,permissionCode:'metadata.entity.review'})).toMatchObject({allowed:false});
+ // The approval gate still refuses this coordinate-free request.
+ expect(await createMetaEntityAuthoringAuthorizer(fallback,async()=>base).authorize({context:c,permissionCode:'metadata.entity.review'})).toMatchObject({allowed:false});
 });

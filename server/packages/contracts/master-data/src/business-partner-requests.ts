@@ -376,6 +376,18 @@ export interface BusinessPartnerRequestValidationResult {
   readonly changeImpact: Readonly<Record<string, unknown>>;
 }
 
+export interface BusinessPartnerTaskExecutionView {
+  readonly attemptId: string;
+  readonly cycleRunId: string;
+  readonly cycleTaskId: string;
+  readonly taskTemplateId: string;
+  readonly workflowRequestId: string;
+  readonly executionKind: "review" | "approval";
+  readonly outcomeScope: "task" | "case_final_decision";
+  readonly status: string;
+  readonly stages: readonly BusinessPartnerWorkflowStageView[];
+}
+
 export interface BusinessPartnerRequestView {
   readonly request: BusinessPartnerRequest;
   readonly validationFindings: readonly BusinessPartnerRequestValidationFinding[];
@@ -391,6 +403,7 @@ export interface BusinessPartnerRequestView {
   };
   readonly materializationProof?: BusinessPartnerRequestMaterializationProof;
   readonly onboardingCycle?: BusinessPartnerOnboardingCycleView;
+  readonly taskExecutions?: readonly BusinessPartnerTaskExecutionView[];
   readonly workflow?: Readonly<{
     requestId: string;
     stageId: string;
@@ -581,8 +594,9 @@ export interface SubmitBusinessPartnerRequestCommand {
 export interface SubmitBusinessPartnerRequestResponse {
   readonly request: BusinessPartnerRequest;
   readonly case?: BusinessPartnerCase;
-  readonly workflow: BusinessPartnerRequestWorkflow;
+  readonly workflow?: BusinessPartnerRequestWorkflow;
   readonly replayed: boolean;
+  readonly process?: { readonly cycleRunId: string; readonly attemptId: string; readonly attemptNumber: number; readonly selectionId: string; readonly profile: "simple" | "standard" | "enhanced"; readonly reviewPackJobId: string; readonly documentStatus: "pending" };
 }
 
 export type BusinessPartnerRequestDecision = "return" | "reject" | "approve";

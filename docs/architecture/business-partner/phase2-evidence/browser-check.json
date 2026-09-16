@@ -1,0 +1,8 @@
+{
+  "browser": "DEV Studio UI",
+  "save": "PUT and subsequent GET intercepted in browser; no backend mutation",
+  "undo": true,
+  "reload": true,
+  "expectedRevision": 59,
+  "errors": []
+}

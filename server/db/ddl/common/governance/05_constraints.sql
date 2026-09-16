@@ -123,3 +123,22 @@ ALTER TABLE governance.report_pack
         FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id),
     ADD CONSTRAINT report_pack_updated_by_fk
         FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id);
+
+-- Deferred so the owning P2 command may insert evidence before its run in the same transaction.
+ALTER TABLE governance.process_selection_evidence
+    ADD CONSTRAINT process_selection_case_fk FOREIGN KEY (tenant_id,case_id)
+        REFERENCES document.entity_case(tenant_id,id) DEFERRABLE INITIALLY DEFERRED,
+    ADD CONSTRAINT process_selection_run_fk FOREIGN KEY (tenant_id,cycle_run_id)
+        REFERENCES governance.cycle_run(tenant_id,id) DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE governance.process_attempt
+ ADD CONSTRAINT process_attempt_case_fk FOREIGN KEY(tenant_id,case_id) REFERENCES document.entity_case(tenant_id,id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED,
+ ADD CONSTRAINT process_attempt_snapshot_fk FOREIGN KEY(tenant_id,submission_snapshot_id) REFERENCES snapshot.entity_snapshot_identity(tenant_id,id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE governance.process_attempt
+ ADD CONSTRAINT process_attempt_review_pack_fk FOREIGN KEY(tenant_id,review_pack_job_id,id,case_id,cycle_run_id,selection_id)
+ REFERENCES governance.process_document_job(tenant_id,id,attempt_id,case_id,cycle_run_id,selection_id) DEFERRABLE INITIALLY DEFERRED;
+
+-- Every supplier task execution belongs to one immutable submission attempt; generic cycles retain NULL.
+ALTER TABLE governance.cycle_task ADD CONSTRAINT cycle_task_process_attempt_fk
+ FOREIGN KEY(tenant_id,process_attempt_id) REFERENCES governance.process_attempt(tenant_id,id) DEFERRABLE INITIALLY DEFERRED;

@@ -21,7 +21,7 @@ import {
   type RoleLens,
   type Summary,
 } from "./business-partner-360-client";
-import { BusinessPartner360Provider } from "./business-partner-360-context";
+import { type BusinessPartner360State, BusinessPartner360Provider } from "./business-partner-360-context";
 import {
   AccessScopeCard,
   RecordTechnicalDetails,
@@ -104,9 +104,9 @@ export function BusinessPartner360Shell({
       authEpoch,
     ],
   );
-  const panel = realignPartnerPanel(
+  const panel = useMemo(() => realignPartnerPanel(
     summary?.recordHeader?.panel ?? BUSINESS_PARTNER_360_PANEL,
-  );
+  ), [summary?.recordHeader?.panel]);
   const overviewTab = panel.tabs.find((tab) => tab.provider === "360")!;
   const legacyTab = panel.tabs.find((tab) => tab.sectionKey === url.section);
   const tab =
@@ -216,6 +216,48 @@ export function BusinessPartner360Shell({
     [],
   );
 
+  const selectSection = useCallback((code: string) =>
+    navigate({
+      section: code,
+      tab:
+        (["supplier-company", "customer-company"].includes(code)
+          ? "roles"
+          : undefined) ??
+        panel.tabs.find((tab) => tab.sectionKey === code)?.key ??
+        overviewTab.key,
+    }), [navigate, panel, overviewTab.key]);
+  const contextValue = useMemo<BusinessPartner360State | undefined>(() => summary ? {
+        summary,
+        section,
+        roleLens: url.roleLens,
+        selectSection,
+        openTransactionContext: (decision) => {
+          setRequiredCoordinates(decision?.missingCoordinates);
+          setShowTransactionContext(true);
+        },
+        retryDecisions: () => {
+          setSummary(undefined);
+          setRetry((value) => value + 1);
+        },
+        selectRole: (roleLens) => navigate({ roleLens }),
+        selectScope: (operatingOrganizationId, companyCodeId) => {
+          setShowTransactionContext(false);
+          setSummary(undefined);
+          setRetry((value) => value + 1);
+          const next = new URL(window.location.href);
+          next.searchParams.set(
+            "operatingOrganizationId",
+            operatingOrganizationId,
+          );
+          if (companyCodeId)
+            next.searchParams.set("companyCodeId", companyCodeId);
+          else next.searchParams.delete("companyCodeId");
+          next.searchParams.delete("legalEntityId");
+          window.history.pushState({}, "", next);
+          setRevision((value) => value + 1);
+        },
+      } : undefined,
+    [summary, section, url.roleLens, selectSection, navigate]);
   if (error)
     return (
       <div className="bp360">
@@ -302,16 +344,6 @@ export function BusinessPartner360Shell({
       </SectionStatePanel>
     );
   };
-  const selectSection = (code: string) =>
-    navigate({
-      section: code,
-      tab:
-        (["supplier-company", "customer-company"].includes(code)
-          ? "roles"
-          : undefined) ??
-        panel.tabs.find((tab) => tab.sectionKey === code)?.key ??
-        overviewTab.key,
-    });
   const observeSection = (code: string) => {
     const next = new URL(window.location.href);
     if (next.searchParams.get("section") === code) return;
@@ -322,37 +354,7 @@ export function BusinessPartner360Shell({
   };
   return (
     <BusinessPartner360Provider
-      value={{
-        summary,
-        section,
-        roleLens: url.roleLens,
-        selectSection,
-        openTransactionContext: (decision) => {
-          setRequiredCoordinates(decision?.missingCoordinates);
-          setShowTransactionContext(true);
-        },
-        retryDecisions: () => {
-          setSummary(undefined);
-          setRetry((value) => value + 1);
-        },
-        selectRole: (roleLens) => navigate({ roleLens }),
-        selectScope: (operatingOrganizationId, companyCodeId) => {
-          setShowTransactionContext(false);
-          setSummary(undefined);
-          setRetry((value) => value + 1);
-          const next = new URL(window.location.href);
-          next.searchParams.set(
-            "operatingOrganizationId",
-            operatingOrganizationId,
-          );
-          if (companyCodeId)
-            next.searchParams.set("companyCodeId", companyCodeId);
-          else next.searchParams.delete("companyCodeId");
-          next.searchParams.delete("legalEntityId");
-          window.history.pushState({}, "", next);
-          setRevision((value) => value + 1);
-        },
-      }}
+      value={contextValue!}
     >
       <div
         className="bp360"

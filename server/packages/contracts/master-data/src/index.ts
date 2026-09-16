@@ -20,3 +20,5 @@ export * from "./supplier-workforce.js";
 export * from "./bank-directory.js";
 
 export * from "./bank-account-identifiers.js";
+
+export * from "./supplier-onboarding-requirement.js";

@@ -238,9 +238,9 @@ CREATE TRIGGER policy_test_case_status_changed
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 CREATE TRIGGER policy_definition_published_immutable BEFORE UPDATE OR DELETE ON control.policy_definition
     FOR EACH ROW EXECUTE FUNCTION control.trg_fn_protect_published_policy_revision();
-CREATE TRIGGER policy_rule_published_immutable BEFORE UPDATE OR DELETE ON control.policy_rule
+CREATE TRIGGER policy_rule_published_immutable BEFORE INSERT OR UPDATE OR DELETE ON control.policy_rule
     FOR EACH ROW EXECUTE FUNCTION control.trg_fn_protect_published_policy_revision();
-CREATE TRIGGER policy_test_case_published_immutable BEFORE UPDATE OR DELETE ON control.policy_test_case
+CREATE TRIGGER policy_test_case_published_immutable BEFORE INSERT OR UPDATE OR DELETE ON control.policy_test_case
     FOR EACH ROW EXECUTE FUNCTION control.trg_fn_protect_published_policy_revision();
 
 CREATE TRIGGER trg_rounding_rule_00_created_by
@@ -287,3 +287,12 @@ CREATE TRIGGER parameter_definition_revision BEFORE INSERT OR UPDATE ON control.
 FOR EACH ROW EXECUTE FUNCTION control.trg_advance_parameter_version();
 CREATE TRIGGER tenant_parameter_value_version BEFORE INSERT OR UPDATE ON control.tenant_parameter_value
 FOR EACH ROW EXECUTE FUNCTION control.trg_advance_parameter_version();
+
+CREATE TRIGGER process_selection_publication_immutable
+BEFORE UPDATE OR DELETE ON control.process_selection_publication
+FOR EACH ROW EXECUTE FUNCTION control.trg_reject_process_publication_mutation();
+
+CREATE TRIGGER process_selection_catalog_immutable
+BEFORE UPDATE OR DELETE ON control.process_selection_catalog_revision
+FOR EACH ROW EXECUTE FUNCTION control.trg_reject_process_publication_mutation();
+CREATE TRIGGER supplier_activation_policy_immutable BEFORE UPDATE OR DELETE ON control.supplier_activation_policy FOR EACH ROW EXECUTE FUNCTION control.trg_reject_process_publication_mutation();

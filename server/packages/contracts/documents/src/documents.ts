@@ -17,6 +17,14 @@ export interface PublishedDocumentTemplate {
   readonly renderOptions: PdfRenderOptions;
 }
 
+export interface ExactDocumentTemplate {
+  readonly bindingId: string; readonly templateId: string; readonly id: string; readonly version: number; readonly hash: string; readonly locale: string; readonly variant: string;
+}
+export interface TrustedDocumentProjection {
+  readonly data: Readonly<Record<string, unknown>>;
+  readonly exactTemplate: ExactDocumentTemplate;
+  readonly provenance: Readonly<Record<string, unknown>>;
+}
 export interface RenderDocumentCommand {
   readonly context: VerifiedRequestContext;
   readonly entityType: string;
@@ -24,6 +32,8 @@ export interface RenderDocumentCommand {
   readonly operationCode: string;
   readonly variant?: string;
   readonly locale?: string;
+  /** Internal owner reference; HTTP callers cannot supply trusted facts or provenance. */
+  readonly trustedJobId?: string;
   readonly data: Readonly<Record<string, unknown>>;
   readonly fileName?: string;
   readonly idempotencyKey?: string;

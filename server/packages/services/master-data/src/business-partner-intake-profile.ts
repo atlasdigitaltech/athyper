@@ -1,3 +1,4 @@
+import { supplierRequirementFieldContract } from "@athyper/server-contract-master-data";
 import {
   dataSurfaceValues,
   type EntityIntakeSurfaceV1,
@@ -9,6 +10,8 @@ export function validateProfileIntake(
   surfaces: readonly EntityIntakeSurfaceV1[],
   command: CreateBusinessPartnerRequestCommand,
 ): void {
+  surface = supplierRequirementSurface(surface, command.requestedRole);
+  surfaces = surfaces.map(s => s.key === surface.key ? surface : s);
   const extensions = command.extensions ?? {},
     payload = command.proposedPayload,
     answers: Record<string, unknown> = {};
@@ -87,4 +90,10 @@ export function validateProfileIntake(
       variants:f.variants?.map(v => ({...v,format:"none" as const}))};
   })}))}));
   dataSurfaceValues(protectedSurfaces.find(s => s.key === surface.key)!, protectedSurfaces, answers,command.draftCapture?"draft":"submit");
+}
+
+/** The native Details surface is the supplier form; customer APIs keep their existing contract. */
+export function supplierRequirementSurface(surface: EntityIntakeSurfaceV1, requestedRole?: string): EntityIntakeSurfaceV1 {
+  if (requestedRole === "supplier") return surface;
+  return {...surface, sections: surface.sections.map(s=>({...s,fields:s.fields.filter(f=>f.control!=="input" || !supplierRequirementFieldContract.fields.includes(f.valueKey as never))}))};
 }

@@ -210,3 +210,20 @@ function valueForWrongOwner() {
     },
   } as const;
 }
+
+it("offers resubmission for a validated canonical draft displayed as returned", () => {
+  const value = toGovernedBusinessPartnerCaseView(
+    request({ status: "returned", caseStatus: "draft" }),
+    { permissionCodes: allPermissions },
+  );
+  expect(value.allowedActions.map((a) => a.id)).toContain("submit");
+  const invalid = toGovernedBusinessPartnerCaseView(
+    request({
+      status: "returned",
+      caseStatus: "draft",
+      validationSummary: { outcome: "failed" },
+    }),
+    { permissionCodes: allPermissions },
+  );
+  expect(invalid.allowedActions.map((a) => a.id)).not.toContain("submit");
+});

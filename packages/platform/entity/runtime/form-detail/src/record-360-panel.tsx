@@ -153,7 +153,7 @@ export function EntityRecord360Panel({
             </div>
             <aside
               className="a-record-360__sidebar"
-              aria-label="Primary partner details"
+              aria-label="Primary record details"
             >
               {panel.sidebar.map((item) => (
                 <div key={item.key}>{renderSidebar(item)}</div>

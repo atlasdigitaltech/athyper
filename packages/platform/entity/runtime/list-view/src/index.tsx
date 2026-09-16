@@ -8,7 +8,8 @@ import {
   useDirectoryFilters,
   DirectoryFilterEditor,
   ScopeQuickFilters,
-  scopeFilterReady,
+  reconcileDirectorySelection,
+  directorySelectionKey,
   type DirectorySelection,
 } from "./directory-filters";
 export {
@@ -101,6 +102,7 @@ import {
 } from "@athyper/platform-shell";
 import {
   Badge,
+  ObjectSearch,
   Button,
   Card,
   Checkbox,
@@ -124,6 +126,7 @@ import React, {
   useCallback,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
   type DragEvent as ReactDragEvent,
@@ -375,6 +378,9 @@ function EntityApplicationContent({
       });
     return () => controller.abort();
   }, [client, authorityKey, scopePending, attempt]);
+  const applicationContext = useMemo(() => descriptor ? {
+    client, descriptor, scopeCoordinate, scopeControl, renderScopeControl,
+  } : undefined, [client, descriptor, scopeCoordinate, scopeControl, renderScopeControl]);
   if (scopePending || !descriptor || loadedKey !== authorityKey)
     return (
       <>
@@ -408,13 +414,7 @@ function EntityApplicationContent({
   );
   return (
     <EntityApplicationContext.Provider
-      value={{
-        client,
-        descriptor,
-        scopeCoordinate,
-        scopeControl,
-        renderScopeControl,
-      }}
+      value={applicationContext!}
     >
       <ManagementWorkspace
         className="a-entity-application"
@@ -784,20 +784,6 @@ function EntityCollectionRuntime({
       .then((ids) => {
         if (!controller.signal.aborted) {
           setBookmarkedIds(ids);
-          setPage((current) =>
-            current
-              ? {
-                  ...current,
-                  rows: current.rows.map((row) => ({
-                    ...row,
-                    decoration: {
-                      ...row.decoration,
-                      bookmarked: ids.has(row.id),
-                    },
-                  })),
-                }
-              : current,
-          );
         }
       })
       .catch(() => {
@@ -1057,24 +1043,6 @@ function EntityCollectionRuntime({
         operation === "add" ? next.add(id) : next.delete(id);
       return next;
     });
-    setPage((current) =>
-      current
-        ? {
-            ...current,
-            rows: current.rows.map((row) =>
-              ids.includes(row.id)
-                ? {
-                    ...row,
-                    decoration: {
-                      ...row.decoration,
-                      bookmarked: operation === "add",
-                    },
-                  }
-                : row,
-            ),
-          }
-        : current,
-    );
     const scope = entityListScopeQuery(scopeCoordinate);
     const body: RecordBookmarkMutationV1 = {
       records: rows.map((row) => ({
@@ -1109,24 +1077,6 @@ function EntityCollectionRuntime({
       );
     } catch (cause) {
       setBookmarkedIds(previous);
-      setPage((current) =>
-        current
-          ? {
-              ...current,
-              rows: current.rows.map((row) =>
-                ids.includes(row.id)
-                  ? {
-                      ...row,
-                      decoration: {
-                        ...row.decoration,
-                        bookmarked: previous.has(row.id),
-                      },
-                    }
-                  : row,
-              ),
-            }
-          : current,
-      );
       setActionStatus(
         cause instanceof Error
           ? cause.message
@@ -1450,9 +1400,10 @@ function ListChrome({
           view.state.standardViewKey === state.standardViewKey &&
           state.standardViewKey,
       ),
-    dirty =
+    dirty = useMemo(() =>
       JSON.stringify({...saveableViewState(state), ...(embedding ? {density:undefined,mode:undefined} : {})}) !==
       JSON.stringify({...activeView?.state ?? saveableViewState(descriptor.surface.defaultState), ...(embedding ? {density:undefined,mode:undefined} : {})}),
+      [state, activeView?.state, descriptor.surface.defaultState, Boolean(embedding)]),
     searchBehavior =
       (embedding && !embedding.options.display.userOverrides.includes("searchBehavior") ? embedding.options.display.defaults.searchBehavior : readDisplayPreferences(descriptor.plane, preferenceNamespace)?.searchBehavior) ?? embedding?.options.display.defaults.searchBehavior ?? "instant";
   useEffect(() => setQuery(state.query ?? ""), [state.query]);
@@ -1576,6 +1527,11 @@ function ListChrome({
       onActionStatus(copied ? "Link copied" : "Unable to copy link"),
     );
   };
+  const applyDirectorySelection = (next: DirectorySelection) => {
+    if (directory) directory.apply(reconcileDirectorySelection(
+      descriptor.scope.quickFilters ?? [], directory.value, next, directory,
+    ));
+  };
   const appliedChips: AppliedFilterChip[] = [
     ...(directory
       ? (descriptor.scope.quickFilters ?? [])
@@ -1585,12 +1541,9 @@ function ListChrome({
             label: `${filter.label}: ${filter.options.find((option) => option.value === directory.value[filter.key])?.label ?? directory.value[filter.key]}`,
             removeLabel: `Remove ${filter.label} filter`,
             onRemove: () =>
-              directory.apply({
+              applyDirectorySelection({
                 ...directory.value,
                 [filter.key]: undefined,
-                ...(filter.key === "partnerRole"
-                  ? { eligibleOperation: undefined }
-                  : {}),
               }),
           }))
       : []),
@@ -1609,9 +1562,8 @@ function ListChrome({
           label: `Organization: ${directory.organizations.find((org) => org.id === id)?.displayName ?? "Selected organization"}`,
           removeLabel: `Remove organization filter ${id}`,
           onRemove: () =>
-            directory.apply({
+            applyDirectorySelection({
               ...directory.value,
-              eligibleOperation: undefined,
               operatingOrganizationIds:
                 directory.value.operatingOrganizationIds?.filter(
                   (key) => key !== id,
@@ -1632,9 +1584,8 @@ function ListChrome({
               : "Selected company",
             removeLabel: `Remove company filter ${id}`,
             onRemove: () =>
-              directory.apply({
+              applyDirectorySelection({
                 ...directory.value,
-                eligibleOperation: undefined,
                 companyCodeIds: directory.value.companyCodeIds?.filter(
                   (key) => key !== id,
                 ),
@@ -1661,23 +1612,7 @@ function ListChrome({
       </span>
       <ManagementToolbar className="a-entity-list__query-row">
         <form className="a-entity-list__search" role="search" onSubmit={submit}>
-          <Label htmlFor={searchId} className="a-visually-hidden">
-            Search {descriptor.entity.pluralLabel}
-          </Label>
-          <span className="a-entity-list__search-icon" aria-hidden="true">
-            <SearchIcon size={16} />
-          </span>
-          <Input
-            ref={search}
-            id={searchId}
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.currentTarget.value)}
-            placeholder={`Search by ${searchHint(descriptor)}…`}
-            autoComplete="off"
-            enterKeyHint="search"
-          />
-          <kbd title="Focus search">/</kbd>
+          <ObjectSearch ref={search} id={searchId} label={`Search ${descriptor.entity.pluralLabel}`} value={query} onValueChange={setQuery} placeholder={`Search by ${searchHint(descriptor)}…`} />
         </form>
         <Menu>
           <MenuTrigger
@@ -1790,6 +1725,7 @@ function ListChrome({
           <Menu>
             <MenuTrigger
               className="a-entity-list__more-trigger"
+              variant="secondary"
               aria-label="Controls"
               title="Controls"
             >
@@ -2066,14 +2002,6 @@ function ResetConfigurationDialog({
   );
 }
 
-function directorySelectionKey(value: DirectorySelection) {
-  return JSON.stringify([
-    [...(value.operatingOrganizationIds ?? [])].sort(),
-    [...(value.companyCodeIds ?? [])].sort(),
-    value.partnerRole,
-    value.eligibleOperation,
-  ]);
-}
 interface DraftFilter {
   readonly id: string;
   readonly field: string;
@@ -2105,29 +2033,9 @@ function FilterDialog({
     directory?.value ?? {},
   );
   const setDirectoryDraft = (next: DirectorySelection) => {
-    const eligibility = descriptor.scope.quickFilters?.find(
-      (filter) => filter.key === "eligibleOperation",
-    );
-    const contextChanged =
-      JSON.stringify([
-        next.partnerRole,
-        next.operatingOrganizationIds,
-        next.companyCodeIds,
-      ]) !==
-      JSON.stringify([
-        directoryDraft.partnerRole,
-        directoryDraft.operatingOrganizationIds,
-        directoryDraft.companyCodeIds,
-      ]);
-    commitDirectoryDraft({
-      ...next,
-      ...(contextChanged ||
-      !eligibility ||
-      !directory ||
-      !scopeFilterReady(eligibility, next, directory)
-        ? { eligibleOperation: undefined }
-        : {}),
-    });
+    commitDirectoryDraft(directory ? reconcileDirectorySelection(
+      descriptor.scope.quickFilters ?? [], directoryDraft, next, directory,
+    ) : next);
   };
   useEffect(() => {
     if (open) commitDirectoryDraft(directory?.value ?? {});
@@ -2587,10 +2495,7 @@ function FilterDialog({
               size="small"
               disabled={
                 !draft.length &&
-                !directoryDraft.partnerRole &&
-                !directoryDraft.eligibleOperation &&
-                !directoryDraft.companyCodeIds?.length &&
-                !directoryDraft.operatingOrganizationIds?.length
+                directorySelectionKey(directoryDraft) === directorySelectionKey({})
               }
               onClick={() => {
                 setDraft([]);

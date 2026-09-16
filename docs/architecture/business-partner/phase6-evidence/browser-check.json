@@ -1,0 +1,13 @@
+{
+  "fixtureBacked": true,
+  "requiredRuleSave": true,
+  "workflowSaveReload": true,
+  "undo": true,
+  "unrelatedDataPreserved": true,
+  "permissionPlaneSwitch": true,
+  "observedDenialGuidance": true,
+  "staleReasonCleared": true,
+  "mobileOverflow": false,
+  "pageErrors": [],
+  "liveWrites": 0
+}

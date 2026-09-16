@@ -134,3 +134,24 @@ it("company case relays retain CSRF, idempotency, and upstream authority checks"
     assert.deepEqual(await response.json(), { code: "FORBIDDEN" });
   }
 });
+
+
+it("forwards explicit preview and history reads without exposing writes or arbitrary inspection routes", async () => {
+  const forwarded: string[] = [];
+  const relay = createRelayHandler({
+    plane: "studio", runtimeApiUrl: "http://runtime", appOrigin: "https://studio.test",
+    operations: STUDIO_META_ENTITY_AUTHORING_RELAY_OPERATIONS,
+    session: { resolve: async () => current, refresh: async () => current, invalidate: async () => undefined },
+    fetch: async (input) => { forwarded.push(String(input)); return Response.json({ ok: true }); },
+  });
+  for (const suffix of ["inspection/address-preview-choices", "change-sets/draft/history", "change-sets/draft/history/3"]) {
+    const path = ["meta-entity-authoring", ...suffix.split("/")];
+    const url = `https://studio.test/api/relay/${path.join("/")}`;
+    assert.equal((await relay(new Request(url), { params: Promise.resolve({ path }) })).status, 200);
+    assert.equal((await relay(new Request(url, { method: "POST" }), { params: Promise.resolve({ path }) })).status, 404);
+  }
+  assert.equal(forwarded.length, 3);
+  const path = ["meta-entity-authoring", "inspection", "arbitrary"];
+  assert.equal((await relay(new Request(`https://studio.test/api/relay/${path.join("/")}`), { params: Promise.resolve({ path }) })).status, 404);
+  assert.equal(forwarded.length, 3);
+});

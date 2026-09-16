@@ -1,0 +1,23 @@
+{
+  "actualCompilerAndRenderer": true,
+  "viewportWidths": [
+    1024,
+    390
+  ],
+  "inputPreservedAcrossModes": true,
+  "resetVerified": true,
+  "addressControlsRendered": true,
+  "countryAndRegionChoices": true,
+  "manualRegionAndPoBoxConditions": true,
+  "narrowSideSwitch": true,
+  "pageOverflow": false,
+  "pageErrors": [],
+  "networkRequests": [
+    "https://preview.test/",
+    "https://preview.test/api/relay/meta-entity-authoring/inspection/address-preview-choices",
+    "https://preview.test/api/relay/meta-entity-authoring/inspection/address-preview-choices",
+    "https://preview.test/api/relay/meta-entity-authoring/inspection/address-preview-choices",
+    "https://preview.test/api/relay/meta-entity-authoring/inspection/address-preview-choices"
+  ],
+  "fixtureOnly": true
+}

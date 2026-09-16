@@ -1,0 +1,10 @@
+BEGIN
+SET
+SET
+44444444-4444-4444-8444-444444444444
+DO
+SET CONSTRAINTS
+{"scope": "tenant", "account": "catl.admin", "permission": "metadata.entity.publish", "effectiveFrom": "2026-09-15T22:59:00.926756+00:00", "effectiveUntil": "2026-09-22T22:59:00.926756+00:00"}
+{"scope": "tenant", "account": "catl.admin", "permission": "metadata.entity.submit", "effectiveFrom": "2026-09-15T22:59:00.926756+00:00", "effectiveUntil": "2026-09-22T22:59:00.926756+00:00"}
+{"scope": "tenant", "account": "catl.owner", "permission": "metadata.entity.review", "effectiveFrom": "2026-09-15T22:59:00.926756+00:00", "effectiveUntil": "2026-09-22T22:59:00.926756+00:00"}
+COMMIT

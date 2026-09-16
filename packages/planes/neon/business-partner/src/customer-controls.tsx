@@ -1,10 +1,10 @@
 "use client";
+import { useOrganizationSelection } from "./use-organization-selection";
 
-import { ApiTransportError } from "@athyper/platform-api-client";
+import { businessPartnerErrorMessage, useCommandRunner } from "./command-feedback";
 import {
   useApiClient,
   usePermissions,
-  useToasts,
 } from "@athyper/platform-shell-app-foundation";
 import { PageSurface } from "@athyper/platform-surface-kit";
 import {
@@ -15,10 +15,6 @@ import {
   Label,
   Select,
 } from "@athyper/platform-ui";
-import {
-  useNeonOperatingOrganization,
-  useNeonWorkContext,
-} from "@athyper/product-neon-shell";
 import {
   useCallback,
   useEffect,
@@ -128,26 +124,8 @@ export function CustomerControls({
 }) {
   const http = useApiClient();
   const api = useMemo(() => createBusinessPartnerClient(http), [http]);
-  const work = useNeonWorkContext();
-  const operating = useNeonOperatingOrganization();
   const grants = usePermissions();
-  const toasts = useToasts();
-  const companyCodeId =
-    work.selection.mode === "company"
-      ? work.selection.companyCodeId
-      : undefined;
-  const organizations = useMemo(
-    () =>
-      operating.organizations.filter(
-        (item) =>
-          !companyCodeId ||
-          item.companyAssignments.some(
-            (assignment) => assignment.companyCodeId === companyCodeId,
-          ),
-      ),
-    [operating.organizations, companyCodeId],
-  );
-  const [organizationId, setOrganizationId] = useState("");
+  const { companyCodeId, compatible: organizations, selected: organizationId, setSelected: setOrganizationId } = useOrganizationSelection();
   const [aggregate, setAggregate] = useState<PartnerAggregate>();
   const [readiness, setReadiness] = useState<PartnerEligibility>();
   const [reviews, setReviews] = useState<readonly CustomerCreditReview[]>([]);
@@ -166,17 +144,6 @@ export function CustomerControls({
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<string>();
 
-  useEffect(
-    () =>
-      setOrganizationId((current) =>
-        organizations.some((item) => item.id === current)
-          ? current
-          : organizations.length === 1
-            ? organizations[0]!.id
-            : "",
-      ),
-    [organizations],
-  );
   const customer = aggregate?.customers[0];
   const reload = useCallback(async () => {
     if (!organizationId || !companyCodeId) return;
@@ -362,23 +329,7 @@ export function CustomerControls({
       `Customer ${action} completed`,
     );
   }
-  async function run(
-    name: string,
-    command: () => Promise<unknown>,
-    success: string,
-  ) {
-    setBusy(name);
-    setError(undefined);
-    try {
-      await command();
-      toasts.push({ tone: "success", title: success });
-      await reload();
-    } catch (cause) {
-      setError(errorMessage(cause));
-    } finally {
-      setBusy(undefined);
-    }
-  }
+  const run = useCommandRunner({ setBusy, setError, reload, errorMessage });
 
   return (
     <PageSurface
@@ -469,56 +420,17 @@ export function CustomerControls({
               </p>
             )}
             <div className="bp-actions">
-              {lifecycleActions.includes("activate") &&
-              grants.has(customerControlPermissions.activate) ? (
+              {lifecycleActions.filter(action => grants.has(customerControlPermissions[action])).map(action => (
                 <Button
-                  loading={busy === "activate"}
-                  disabled={!readiness?.eligible}
-                  onClick={() => void transition("activate")}
+                  key={action}
+                  variant={action === "suspend" ? "secondary" : action === "deactivate" || action === "archive" ? "danger" : undefined}
+                  loading={busy === action}
+                  disabled={(action === "activate" || action === "reactivate") && !readiness?.eligible}
+                  onClick={() => void transition(action)}
                 >
-                  Activate
+                  {action.charAt(0).toUpperCase() + action.slice(1)}
                 </Button>
-              ) : null}
-              {lifecycleActions.includes("suspend") &&
-              grants.has(customerControlPermissions.suspend) ? (
-                <Button
-                  variant="secondary"
-                  loading={busy === "suspend"}
-                  onClick={() => void transition("suspend")}
-                >
-                  Suspend
-                </Button>
-              ) : null}
-              {lifecycleActions.includes("reactivate") &&
-              grants.has(customerControlPermissions.reactivate) ? (
-                <Button
-                  loading={busy === "reactivate"}
-                  disabled={!readiness?.eligible}
-                  onClick={() => void transition("reactivate")}
-                >
-                  Reactivate
-                </Button>
-              ) : null}
-              {lifecycleActions.includes("deactivate") &&
-              grants.has(customerControlPermissions.deactivate) ? (
-                <Button
-                  variant="danger"
-                  loading={busy === "deactivate"}
-                  onClick={() => void transition("deactivate")}
-                >
-                  Deactivate
-                </Button>
-              ) : null}
-              {lifecycleActions.includes("archive") &&
-              grants.has(customerControlPermissions.archive) ? (
-                <Button
-                  variant="danger"
-                  loading={busy === "archive"}
-                  onClick={() => void transition("archive")}
-                >
-                  Archive
-                </Button>
-              ) : null}
+              ))}
             </div>
           </Card>
           <Card className="bp-section">
@@ -883,8 +795,5 @@ export function CustomerControls({
 }
 
 function errorMessage(cause: unknown): string {
-  if (cause instanceof ApiTransportError)
-    return cause.problem?.detail ?? cause.message;
-  if (cause instanceof Error) return cause.message;
-  return "Unexpected customer onboarding error";
+  return businessPartnerErrorMessage(cause, "Unexpected customer onboarding error");
 }

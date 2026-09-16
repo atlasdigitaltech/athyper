@@ -1,3 +1,18 @@
+import { createMetaEntityActivationInspector } from "./meta-entity-activation-inspection.js";
+import { sweepSupplierInformation } from "./supplier-information-sla.js";
+import { createTaskEditPolicyAuthoring, mountTaskEditPolicyAuthoring } from "./task-edit-policy-authoring.js";
+import { createSupplierProcessCommunications } from "./supplier-process-communications.js";
+import { HttpError } from "@athyper/server-runtime-http";
+import type { Authorizer } from "@athyper/server-contract-auth";
+import { createSupplierProcessDocuments } from "./supplier-process-documents.js";
+import { mountSupplierProcessDocuments, createSupplierProcessDocumentPoll } from "./supplier-process-document-runtime.js";
+import { createSupplierProcessTasks } from "./supplier-process-tasks.js";
+import { createSupplierProcessEditPolicy } from "./supplier-process-edit-policy.js";
+import { mountSupplierProcessTasks } from "./supplier-process-task-routes.js";
+import { createSupplierProcessSubmission } from "./supplier-process-submission.js";
+import { createKyselyProcessDocumentIntentPort } from "@athyper/server-platform-governance";
+import { createSupplierProcessSelectionService, mountSupplierProcessSelectionPreview } from "./supplier-process-selection.js";
+import { supplierRequirementSurface } from "@athyper/server-service-master-data";
 import { addressFormChoices, bankFormChoices, bankFormSources } from "@athyper/server-service-records";
 import { validateProfileIntake } from "@athyper/server-service-master-data";
 import {validateDataInput,dataFieldVisible} from "@athyper/server-contract-metadata";
@@ -19,7 +34,7 @@ import { createAtlasDocumentGrounding } from "./atlas-document-grounding.js";
 import { registerAtlasAttachmentKnowledge } from "./atlas-attachment-knowledge.js";
 import { createAuthenticatedEntityReleaseReview } from "@athyper/server-service-publication";
 import { getRequestContext as authoringRequestContext } from "@athyper/server-foundation/context";
-import { createMetaEntityAuthoringAuthorizer } from "./meta-entity-authoring-authorizer.js";
+import { createMetaEntityAuthoringAuthorizer, createMetaEntityInspectionAuthorizer } from "./meta-entity-authoring-authorizer.js";
 import {
   createBusinessPartnerQualificationRuntimeRegistrations,
   qualificationPreflight,
@@ -266,6 +281,7 @@ import {
   KyselyReportPackRepository,
   registerGovernanceComplianceRoutes,
   registerGovernanceRoutes,
+  registerCycleCompletionRoutes,
 } from "@athyper/server-platform-governance";
 import {
   assertControlServiceRoutePlaneSafety,
@@ -553,6 +569,8 @@ import {
   EXPIRE_BUSINESS_PARTNER_INVITATIONS_JOB,
   EXPIRE_SUPPLIER_QUALIFICATIONS_JOB,
   KyselyBusinessPartnerEligibilityRepository,
+  evaluateSupplierOnboardingCompletion,
+  authorizeSupplierActivationReadiness,
   KyselyBusinessPartnerInvitationRepository,
   KyselyBusinessPartnerOnboardingCycleCoordinator,
   KyselyBusinessPartnerCaseRepository,
@@ -856,6 +874,8 @@ export function registerServices(
     container.platform.httpRegistrars.push((application) =>
       bpShadow.register(application),
     );
+  let processDocumentAuthority: Authorizer | undefined;
+  let processReviewGate: ((context: VerifiedRequestContext, caseId: string, tx: RecordTransaction) => Promise<unknown>) | undefined;
   const refreshEntityContext = createKyselyContextRefresh({
     run: (identity, work) => {
       const adapter =
@@ -1506,7 +1526,7 @@ export function registerServices(
         ? { studio: new KyselyCycleExecutionRepository("studio", transactions) }
         : {}),
       ...(metadataDatabases.neon
-        ? { neon: new KyselyCycleExecutionRepository("neon", transactions) }
+        ? { neon: new KyselyCycleExecutionRepository("neon", transactions, evaluateSupplierOnboardingCompletion) }
         : {}),
       ...(metadataDatabases.mesh
         ? { mesh: new KyselyCycleExecutionRepository("mesh", transactions) }
@@ -2463,7 +2483,7 @@ export function registerServices(
         ? { secrets: container.adapters.secretStore }
         : {}),
       onboardingCycles:
-        new KyselyBusinessPartnerOnboardingCycleCoordinator() as never,
+        new KyselyBusinessPartnerOnboardingCycleCoordinator(evaluateSupplierOnboardingCompletion) as never,
     });
     container.services.businessPartnerAccountBankLinkage = accountBankLinkage;
     const accountBankCount = container.adapters.openTelemetry?.metrics.counter(
@@ -2948,7 +2968,7 @@ export function registerServices(
         }),
       );
   }
-  const notificationAttachmentResolver =
+  let notificationAttachmentResolver =
     dependencies.notificationAttachmentResolver ??
     (dependencies.notificationAttachmentAccessPolicy && objectStorage
       ? createNotificationAttachmentResolver({
@@ -3479,8 +3499,34 @@ export function registerServices(
       }),
     );
     container.services.businessPartner360 = businessPartner360;
+    const supplierSelectionOptions = {
+      authorizer: businessPartnerAuthorizer, repository, transactions, audit,
+      authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext,
+    };
+    const supplierCompletionRuns=createCycleRunService({authorizer:businessPartnerAuthorizer,repositories:executionRepositories,authorizeRun:async(context,run,operation)=>{
+      if (context.planeKey!=="neon" || run.data["schema"]!=="athyper.process-run/1" || typeof run.data["caseId"]!=="string") throw new HttpError(404,"SUPPLIER_ONBOARDING_NOT_FOUND","Supplier onboarding was not found");
+      const current=await transactions.run("neon",{tenantId:context.tenantId,principalId:context.principalId},tx=>repository.get(context.tenantId,String(run.data["caseId"]),tx as never));
+      if(!current)throw new HttpError(404,"SUPPLIER_ONBOARDING_NOT_FOUND","Supplier onboarding was not found");
+      const access=await businessPartnerAuthorizer.authorize({context,permissionCode:operation==="readiness"?"neon.relationship.entity_case.read":"neon.relationship.entity_case.materialize",resource:{tenantId:context.tenantId,entityCode:"entity_case",resourceCode:"entity_case",recordId:current.id,requestId:current.id,authorizationTarget:"existing",operatingOrganizationId:current.operatingOrganizationId,...(current.companyCodeId?{companyCodeId:current.companyCodeId}:{}),approvedBy:current.approvedBy,approvedEvidencePinned:Boolean(current.approvedAt&&current.approvedBy&&current.decisionFingerprint)}});
+      if(!access.allowed)throw new HttpError(403,"SUPPLIER_ONBOARDING_FORBIDDEN",access.reason??"Supplier onboarding access is denied");
+    }});
+    container.platform.httpRegistrars.push(application=>registerCycleCompletionRoutes(application,{authenticate:supplierSelectionOptions.authenticate,readContext:supplierSelectionOptions.readContext,cycleRuns:supplierCompletionRuns,supplierOnly:true}));
+    const supplierSelection = createSupplierProcessSelectionService(supplierSelectionOptions);
+    processDocumentAuthority=businessPartnerAuthorizer;
+    const supplierEdits = createSupplierProcessEditPolicy(supplierSelectionOptions);
+    const supplierTasks = createSupplierProcessTasks({ authorizer: businessPartnerAuthorizer, editPolicy: supplierEdits });
+    processReviewGate = (context,caseId,tx) => supplierTasks.start(context,caseId,tx);
+    container.platform.httpRegistrars.push(application => mountSupplierProcessTasks(application, { ...supplierSelectionOptions, service: supplierTasks }));
+    const supplierSubmission = createSupplierProcessSubmission({
+      selection: supplierSelection,
+      documents: createKyselyProcessDocumentIntentPort(),
+      submitCase: (command, tx) => repository.submitForProcess({ tenantId: command.context.tenantId, requestId: command.requestId, expectedVersion: command.expectedVersion, submittedBy: command.context.principalId, idempotencyKey: command.idempotencyKey, correlationId: command.context.correlationId }, tx),
+    });
+    container.platform.httpRegistrars.push(application => mountSupplierProcessSelectionPreview(application, supplierSelectionOptions, supplierSelection));
     const businessPartnerRequestOptions: BusinessPartnerRequestServiceOptions<RecordTransaction> =
       {
+        supplierSubmission,
+        guardAmendment: supplierEdits.guard,
         authorizer: businessPartnerAuthorizer,
         repository,
         transactions,
@@ -3559,14 +3605,15 @@ export function registerServices(
         audit,
         outbox: createDatabaseOutboxWriter("business-partner"),
         onboardingCycles:
-          new KyselyBusinessPartnerOnboardingCycleCoordinator() as never,
+          new KyselyBusinessPartnerOnboardingCycleCoordinator(evaluateSupplierOnboardingCompletion) as never,
       };
     const businessPartnerRequests = createBusinessPartnerRequestService(
-      {...businessPartnerRequestOptions, validateIntake: async command => {
+      {...businessPartnerRequestOptions, activationReadiness: authorizeSupplierActivationReadiness, validateIntake: async command => {
         if(command.kind!=="new_partner" || command.source.kind!=="manual")return;
         if(!intakeApplicationDescriptor)throw new MasterDataError(503,"INTAKE_VALIDATION_UNAVAILABLE","Intake validation is unavailable.");
         const descriptor=await intakeApplicationDescriptor(command.context,"business_partner",{operatingOrganizationId:command.operatingOrganizationId,...(command.companyCodeId?{companyCodeId:command.companyCodeId}:{})});
-        const surface=descriptor.intakeSurfaces?.find(s=>s.key==="intake_details");
+        const publishedSurface=descriptor.intakeSurfaces?.find(s=>s.key==="intake_details");
+        const surface=publishedSurface ? supplierRequirementSurface(publishedSurface,command.requestedRole) : undefined;
         if(!surface)throw new MasterDataError(503,"INTAKE_VALIDATION_UNAVAILABLE","The published intake form is unavailable.");
         if(surface.sections.some(s=>s.fields.some(f=>f.control==="repeatableGroup"&&f.extensionGroup))){
           try { validateProfileIntake(surface,descriptor.intakeSurfaces!,command); } catch(error) { throw new MasterDataError(422,"INTAKE_VALIDATION_FAILED",error instanceof Error?error.message:"Please correct the profile fields."); }
@@ -3869,7 +3916,7 @@ export function registerServices(
         audit,
         outbox: createDatabaseOutboxWriter("business-partner"),
         onboardingCycles:
-          new KyselyBusinessPartnerOnboardingCycleCoordinator() as never,
+          new KyselyBusinessPartnerOnboardingCycleCoordinator(evaluateSupplierOnboardingCompletion) as never,
         requests: businessPartnerRequests,
         evidence: {
           async stage(input) {
@@ -3912,7 +3959,7 @@ export function registerServices(
         audit,
         outbox: createDatabaseOutboxWriter("business-partner"),
         onboardingCycles:
-          new KyselyBusinessPartnerOnboardingCycleCoordinator() as never,
+          new KyselyBusinessPartnerOnboardingCycleCoordinator(evaluateSupplierOnboardingCompletion) as never,
       });
     container.services.businessPartnerEligibility = businessPartnerEligibility;
     container.services.businessPartnerAtlasInsights =
@@ -4663,7 +4710,11 @@ export function registerServices(
     handlers: notificationHandlers,
   });
   container.services.notifications = notifications;
+  let communicationArtifactAuthority: ((context:VerifiedRequestContext,id:string,tx:RecordTransaction)=>Promise<void>) | undefined;
+  const supplierCommunications=createSupplierProcessCommunications({transactions:exactTransactions,consent:consent??denyAllConsent,authorizer:processDocumentAuthority??authorizer,authorizeArtifact:async(context,id,tx)=>{if(!communicationArtifactAuthority)throw Error("SUPPLIER_DOCUMENT_AUTHORITY_UNAVAILABLE");await communicationArtifactAuthority(context,id,tx);}});
+  if(!notificationAttachmentResolver&&objectStorage)notificationAttachmentResolver=createNotificationAttachmentResolver({transactions,artifacts:dependencies.documentArtifactRepository??createKyselyDocumentArtifactRepository(),storage:objectStorage,access:supplierCommunications.attachmentAccess});
   const notificationPlanner = createNotificationPlanner({
+    policy:supplierCommunications.policy,
     transactions: exactTransactions,
     consent: consent ?? denyAllConsent,
   });
@@ -4678,6 +4729,7 @@ export function registerServices(
       "Business Partner notification planning duration",
     );
   const durableDelivery = createDurableNotificationDeliveryRepository({
+    onTerminalFailure:supplierCommunications.onTerminalFailure,
     transactions,
   });
   const outboxPlanning = createKyselyNotificationOutboxRepository({
@@ -4782,6 +4834,7 @@ export function registerServices(
       NOTIFICATION_MAINTENANCE_QUEUE,
       DELIVERY_SWEEP_JOB,
       createDeliverySweepHandler({
+        authorizeDelivery:supplierCommunications.authorizeDelivery,
         repository: durableDelivery,
         handlers: notificationHandlers,
         events: notificationEvents,
@@ -4899,6 +4952,11 @@ export function registerServices(
       ),
       events: notificationEvents,
       preferences: notificationPreferences,
+      ...(consent ? { recordEmailConsent: async (context: VerifiedRequestContext, consented: boolean) => {
+        const destination = await transactions.run(context.planeKey, context, async tx => (await sql<{value:string}>`SELECT link.value FROM master.contact_link link JOIN control.owner_type owner ON owner.id=link.owner_type_id WHERE link.tenant_id=${context.tenantId}::uuid AND link.owner_id=${context.principalId}::uuid AND owner.code='principal' AND link.status='active' AND link.effective_from<=now() AND (link.effective_until IS NULL OR link.effective_until>now()) AND link.channel_type='email' ORDER BY link.is_verified DESC,link.is_primary DESC,link.created_at LIMIT 1`.execute(tx)).rows[0]?.value);
+        if (!destination) throw new HttpError(409,"NOTIFICATION_EMAIL_UNAVAILABLE","No current email contact is available");
+        return consent.record({context,subjectType:"principal",subjectId:context.principalId,channel:"email",destination,consented,sourceCode:"notification_preferences",evidence:{selfService:true}});
+      }} : {}),
       operations: notificationOperations,
     }),
   );
@@ -5264,6 +5322,15 @@ export function registerServices(
       transactions,
       ...(policy ? { policy } : {}),
     });
+    const informationTransactions: PlaneTransactionCoordinator<RecordTransaction> = {run: (_plane,actor,work) => {
+      const db=container.adapters.jobNeonDatabase;
+      if(!db)throw Error("INFORMATION_SLA_WORKER_DATABASE_UNAVAILABLE");
+      return db.withSystemTransaction(async tx=>{
+        await stampTransactionActor(tx as unknown as RecordTransaction,actor);
+        await sql`SELECT set_config('app.database_plane','neon',true)`.execute(tx);
+        return work(tx as unknown as RecordTransaction);
+      });
+    }};
     const workflowSla = createWorkflowSlaAutomation({
       repository: createKyselySlaAutomationRepository(),
       transactions,
@@ -5281,7 +5348,15 @@ export function registerServices(
       container.runtimes.jobs.register(
         WORKFLOW_MAINTENANCE_QUEUE,
         SWEEP_WORKFLOW_SLA_JOB,
-        createWorkflowSlaSweepHandler(workflowSla),
+        createWorkflowSlaSweepHandler({async sweep(scope) {
+          if(scope.principalId!==SYSTEM_PRINCIPAL_ID){await sweepSupplierInformation(informationTransactions,scope);return workflowSla.sweep(scope);}
+          // Discovery uses the global scheduler identity; tenant writes require
+          // the same tenant-local maintenance identity used by notifications.
+          const principalId=await transactions.run(scope.planeKey,scope,async tx=>(await sql<{id:string}>`SELECT event.fn_notification_worker_principal(${scope.tenantId}::uuid) id`.execute(tx)).rows[0]?.id);
+          if(!principalId)throw Error("WORKFLOW_MAINTENANCE_PRINCIPAL_UNAVAILABLE");
+          await sweepSupplierInformation(informationTransactions,{...scope,principalId});
+          return workflowSla.sweep({...scope,principalId});
+        }}),
       );
     }
     container.services.workflow = workflow;
@@ -5514,10 +5589,13 @@ export function registerServices(
     objectStorage &&
     objectStorageBucket
   ) {
-    const documents = createDocumentService({
+    let processDocuments: ReturnType<typeof createSupplierProcessDocuments>;
+    const documents = createDocumentService<RecordTransaction>({
       metadata,
       authorizer,
       audit,
+      resolveTrustedSource: (command,tx) => processDocuments.project(command,tx),
+      authorizeArtifact: (context,id,tx)=>processDocuments.authorizeArtifact(context,id,tx),
       outbox: dependencies.outbox ?? createDatabaseOutboxWriter("documents"),
       templates:
         dependencies.documentTemplateRepository ??
@@ -5533,6 +5611,18 @@ export function registerServices(
       ...(extractionScheduler ? { extractionScheduler } : {}),
     });
     container.services.documents = documents;
+    processDocuments=createSupplierProcessDocuments({authorizer:processDocumentAuthority??authorizer,transactions,documents,reviewReady:(context,caseId,tx)=>{if(!processReviewGate)throw Error('PROCESS_TASK_GATE_UNAVAILABLE');return processReviewGate(context,caseId,tx);}});
+    communicationArtifactAuthority=async(context,id,tx)=>{await processDocuments.authorizeArtifact(context,id,tx);};
+    container.platform.httpRegistrars.push(application=>mountSupplierProcessDocuments(application,{authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,service:processDocuments}));
+    const processDb=metadataDatabases.neon;
+    if(processDb && (container.runtimes.jobs || container.runtimes.scheduler)){
+      const queue='process-documents',name='supplier.process-documents.poll';
+      const poll=createSupplierProcessDocumentPoll(processDb,processDocuments);
+      container.runtimes.jobs?.register(queue,name,{async handle(){return {status:'completed',output:await poll()};}});
+      container.runtimes.jobDefinitions.push({code:name,owner:'@athyper/server-service-documents',queue,name,scope:'plane',payloadSchema:{name,version:1},timeoutMs:600000,maxAttempts:3,executionRetentionDays:30});
+      if(container.runtimes.scheduler)container.runtimes.scheduledJobs.push({scheduleId:'supplier-process-documents-neon',queue,name,data:{planeKey:'neon'},pattern:{kind:'interval',everyMs:30000},options:{jobId:'supplier-process-documents-neon',maxAttempts:3,payloadSchema:{name,version:1},execution:{planeKey:'neon',scope:'plane',principalId:'00000000-0000-0000-0000-000000000000'}}});
+    }
+
     container.platform.httpRegistrars.push((application) =>
       registerDocumentRoutes(application, {
         authenticate: createIamAuthenticationMiddleware(iam),
@@ -6582,9 +6672,16 @@ function registerStudioAuthoring(
   );
   container.platform.httpRegistrars.push((application) =>
     registerMetaEntityAuthoringRoutes(application, {
+      addressPreviewChoices: context => transactions.run("studio", {tenantId: context.tenantId, principalId: context.principalId}, async tx => ({
+        "iso.country": await addressFormChoices(tx, "iso.country"),
+        "shared.state_region": await addressFormChoices(tx, "shared.state_region"),
+      })),
+      inspectActivation: createMetaEntityActivationInspector((plane, context, work) =>
+        transactions.run(plane, {tenantId:context.tenantId,principalId:context.principalId}, tx=>work(tx as unknown as Kysely<Record<string,never>>))),
       authenticate: createIamAuthenticationMiddleware(iam),
       readContext: readVerifiedRequestContext,
       authorizer: authoringAuthorizer,
+      inspectionAuthorizer: createMetaEntityInspectionAuthorizer(authorizer),
       service,
     }),
   );
@@ -6709,6 +6806,33 @@ function registerPublication(
   const authorityDatabase = databases.studio;
   if (!authorityDatabase)
     throw new Error("Publication requires the Studio authority database");
+  if (config.publication.apiEnabled && container.adapters.taskPolicyWriterDatabase) {
+    const taskPolicyDatabase = container.adapters.taskPolicyWriterDatabase.database as unknown as Kysely<Record<string, never>>;
+    const taskPolicyAuthorizer = createBusinessPartnerDefinitionAuthorizer({ get: (tenantId, revisionId) => taskPolicyDatabase.transaction().execute(async tx => {
+      await sql`SELECT set_config('app.current_tenant_id',${tenantId},true)`.execute(tx);
+      const row = (await sql<{created_by:string}>`SELECT created_by FROM control.policy_definition WHERE tenant_id=${tenantId}::uuid AND id=${revisionId}::uuid AND entity_type='workflow.task_edit'`.execute(tx)).rows[0];
+      return row ? {createdBy:row.created_by} : null;
+    }) });
+    const taskEditAuthoring = createTaskEditPolicyAuthoring({ database: taskPolicyDatabase, authorizer: taskPolicyAuthorizer,
+      resolvePrincipal: async (context, tx) => {
+        const identities = await authorityDatabase.transaction().execute(async source => {
+          await sql`SELECT set_config('app.current_tenant_id',${context.tenantId},true),set_config('app.current_principal_id',${context.principalId},true)`.execute(source);
+          return (await sql<{provider_code:string;realm_key:string;subject_id:string;issuer:string|null}>`SELECT provider_code,realm_key,subject_id,issuer FROM master.principal_identity_binding WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid AND realm_key=${context.realmKey} AND status='active' AND is_active AND is_primary`.execute(source)).rows;
+        });
+        if(identities.length!==1) throw new HttpError(409,"TASK_POLICY_IDENTITY_UNRESOLVED","Studio author identity is not uniquely bound");
+        const identity=identities[0]!;
+        const targets=(await sql<{principal_id:string}>`SELECT b.principal_id FROM master.principal_identity_binding b WHERE b.tenant_id=${context.tenantId}::uuid AND b.provider_code=${identity.provider_code} AND b.realm_key=${identity.realm_key} AND b.subject_id=${identity.subject_id} AND b.issuer IS NOT DISTINCT FROM ${identity.issuer} AND b.status='active' AND b.is_active`.execute(tx)).rows;
+        if(targets.length!==1) throw new HttpError(409,"TASK_POLICY_IDENTITY_UNRESOLVED","The author has no unique active identity in the target plane");
+        const targetId=targets[0]!.principal_id;
+        await sql`SELECT set_config('app.current_principal_id',${targetId},true)`.execute(tx);
+        if(!(await sql`SELECT id FROM master.principal WHERE tenant_id=${context.tenantId}::uuid AND id=${targetId}::uuid AND status='active' AND is_active`.execute(tx)).rows.length) throw new HttpError(409,"TASK_POLICY_IDENTITY_UNRESOLVED","Target author identity is inactive");
+        return targetId;
+      },
+    });
+    container.platform.httpRegistrars.push(app => mountTaskEditPolicyAuthoring(app, {
+      authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, service: taskEditAuthoring,
+    }));
+  }
   const artifactRuntimeEnabled =
     config.publication.applyEnabled ||
     config.publication.compileEnabled ||

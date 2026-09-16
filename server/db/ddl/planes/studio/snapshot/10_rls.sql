@@ -135,3 +135,11 @@ ALTER TABLE snapshot.business_partner_case_contract_revision FORCE ROW LEVEL SEC
 CREATE POLICY tenant_access ON snapshot.business_partner_case_contract_revision
     USING (tenant_id = shared.current_tenant_id_soft())
     WITH CHECK (tenant_id = shared.current_tenant_id());
+
+-- Saved draft comparison history
+ALTER TABLE snapshot.entity_draft_save ENABLE ROW LEVEL SECURITY;
+ALTER TABLE snapshot.entity_draft_save FORCE ROW LEVEL SECURITY;
+CREATE POLICY entity_draft_save_read ON snapshot.entity_draft_save FOR SELECT TO athyperapp
+USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY entity_draft_save_insert ON snapshot.entity_draft_save FOR INSERT TO athyperapp
+WITH CHECK (tenant_id = shared.current_tenant_id() AND captured_by = master.current_principal_id_soft());

@@ -13,6 +13,14 @@ const ids = {
 const permissionCodes = ["create", "read", "claim", "complete", "cancel"].map((action) => `workflow.work_item.${action}`);
 
 describe("descriptor-governed workflow work items", () => {
+  it("requires the task owner for terminal process work-item commands",async()=>{
+    const persistence=createInMemoryWorkflowPersistence({createId:()=>ids.item});
+    const service=createWorkflowService({metadata:metadata('neon'),authorizer:{authorize:async()=>({allowed:true})},repository:persistence.repository,transactions:persistence.transactions,outbox:{append:async()=>undefined},audit:{record:async input=>auditEvent(input,0)}});
+    await service.create({context:context('neon'),workTypeCode:'approval',title:'Task',sourceEntityCode:'business_partner',sourceEntityId:ids.source,assigneePrincipalId:ids.principal,payload:{attemptId:ids.source,cycleTaskId:ids.item}});
+    await expect(service.complete({context:context('neon'),workItemId:ids.item})).rejects.toMatchObject({code:'TASK_OWNER_COMMAND_REQUIRED'});
+    await expect(service.cancel({context:context('neon'),workItemId:ids.item})).rejects.toMatchObject({code:'TASK_OWNER_COMMAND_REQUIRED'});
+  });
+
   for (const planeKey of ["studio", "neon", "mesh"] as const) {
     it(`runs the universal create, inbox, claim, and complete flow on ${planeKey}`, async () => {
       const events: OutboxEventInput[] = [];

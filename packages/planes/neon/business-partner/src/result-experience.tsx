@@ -1,4 +1,5 @@
 "use client";
+import { businessLabel } from "./360/display-values";
 
 import { Card } from "@athyper/platform-ui";
 import type { MaterializationProof } from "./client";
@@ -13,4 +14,4 @@ export function MaterializationResultProof({ proof }: { readonly proof?: Materia
 }
 
 function Definition({values}:{readonly values:readonly (readonly [string,unknown])[]}){return <dl className="bp-definition">{values.map(([term,value])=><div key={term}><dt>{term}</dt><dd>{value===undefined||value===""?"—":String(value)}</dd></div>)}</dl>;}
-function label(value:string){return value.replaceAll("_"," ").replace(/\b\w/g,letter=>letter.toUpperCase());}
+function label(value: string): string { return businessLabel(value, "title"); }

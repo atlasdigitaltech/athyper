@@ -25,6 +25,35 @@ import {
 } from "@athyper/server-runtime-http";
 import type { Application, RequestHandler, Response } from "express";
 
+export function registerCycleCompletionRoutes(application: Application, options: {authenticate:RequestHandler;readContext:(response:Response)=>VerifiedRequestContext;cycleRuns:CycleRunService;supplierOnly?:boolean}) {
+  const service=options.cycleRuns;
+  const path=options.supplierOnly?"/api/governance/supplier-onboarding/runs":"/api/governance/cycle-runs";
+    registerContractRoute(application, contract("post", `${path}/:runId/completion`, "governance.cycleRun.complete", "Complete a ready cycle"), options.authenticate, async (request,response,next) => {
+      try {
+        const body=object(request.body);
+        if (!Number.isSafeInteger(body["expectedVersion"]) || Number(body["expectedVersion"])<1 || typeof body["idempotencyKey"]!=="string" || !body["idempotencyKey"].trim()) {response.status(400).json({code:"GOVERNANCE_COMPLETION_COMMAND_INVALID"});return;}
+        response.json(await service.transition(options.readContext(response),uuid(request.params["runId"]),"completed",{expectedVersion:Number(body["expectedVersion"]),idempotencyKey:body["idempotencyKey"]}));
+      }catch(error){next(governanceHttpError(error));}
+    });
+    registerContractRoute(
+      application,
+      contract("get",`${path}/:runId/readiness`,"governance.cycleRun.readiness","Read current completion gates"),
+      options.authenticate,
+      async (request, response, next) => {
+        try {
+          response.json(
+            await service.readiness(
+              options.readContext(response),
+              uuid(request.params["runId"]),
+            ),
+          );
+        } catch (error) {
+          next(governanceHttpError(error));
+        }
+      },
+    );
+}
+
 export function registerGovernanceRoutes(
   application: Application,
   options: {
@@ -168,23 +197,7 @@ export function registerGovernanceRoutes(
         }
       },
     );
-    registerContractRoute(
-      application,
-      cycleContracts.runReadiness,
-      options.authenticate,
-      async (request, response, next) => {
-        try {
-          response.json(
-            await service.readiness(
-              options.readContext(response),
-              uuid(request.params["runId"]),
-            ),
-          );
-        } catch (error) {
-          next(governanceHttpError(error));
-        }
-      },
-    );
+    registerCycleCompletionRoutes(application, {...options, cycleRuns:service});
   }
   if (options.cycleTasks) {
     const service = options.cycleTasks;

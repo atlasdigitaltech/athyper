@@ -1,0 +1,973 @@
+{
+  "entity": {
+    "entityCode": "business_partner",
+    "entityClass": "configuration",
+    "ownershipModel": "overlay"
+  },
+  "surfaces": [
+    {
+      "id": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "surfaceKey": "partner_address_intake",
+      "surfaceKind": "form",
+      "title": "Address",
+      "layoutKind": "flow",
+      "layoutConfig": {
+        "columns": 1,
+        "renderer": "intake",
+        "addressRegionVersion": 1,
+        "advancedAddressVersion": 1
+      },
+      "isDefault": false,
+      "status": "active"
+    }
+  ],
+  "surfaceSections": [
+    {
+      "id": "12ca8c69-99eb-42fe-8f10-b67294aa28b0",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "sectionKey": "editor_1",
+      "sectionKind": "section",
+      "title": "Address details",
+      "position": 10,
+      "columnCount": 12,
+      "collapsible": false,
+      "collapsedByDefault": false,
+      "layoutConfig": {
+        "header": {
+          "icon": "building",
+          "style": "accent"
+        }
+      }
+    },
+    {
+      "id": "142f1175-648a-4c1a-8064-c87c97183096",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "sectionKey": "additional_address_details",
+      "sectionKind": "section",
+      "title": "Additional address details",
+      "description": "Choose an address type and add building, floor, unit or PO box details. Address lines are used for display when provided; structured street details are used when address lines are empty.",
+      "position": 90,
+      "columnCount": 12,
+      "collapsible": true,
+      "collapsedByDefault": true,
+      "layoutConfig": {
+        "header": {
+          "icon": "building",
+          "style": "accent"
+        },
+        "populatedSummaryFields": [
+          "addressKind",
+          "buildingName",
+          "floor",
+          "unit",
+          "houseNumber",
+          "streetName",
+          "poBox"
+        ]
+      }
+    },
+    {
+      "id": "3ec2aa33-6e64-43f1-90e1-05d5142a140a",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "sectionKey": "editor_0",
+      "sectionKind": "section",
+      "title": "Purpose and country",
+      "position": 0,
+      "columnCount": 12,
+      "collapsible": false,
+      "collapsedByDefault": false,
+      "layoutConfig": {
+        "header": {
+          "icon": "map-pin",
+          "style": "accent"
+        }
+      }
+    }
+  ],
+  "surfaceFieldBindings": [
+    {
+      "id": "0c1b0f13-82a7-4a8e-853e-531ce9270941",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "12ca8c69-99eb-42fe-8f10-b67294aa28b0",
+      "entityFieldId": "dd99efe5-853a-4864-8281-be700a002c1a",
+      "bindingKey": "address_city",
+      "position": 20,
+      "labelOverride": "City",
+      "helpText": "City",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "widget": "text",
+        "required": true,
+        "valueKey": "city",
+        "maxLength": 128
+      },
+      "status": "active"
+    },
+    {
+      "id": "0c247b72-f911-4b06-8fdf-563be963b528",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "3ec2aa33-6e64-43f1-90e1-05d5142a140a",
+      "entityFieldId": "583cb4a4-121d-4958-877d-caa2ae2edd66",
+      "bindingKey": "address_country_code",
+      "position": 0,
+      "labelOverride": "Country",
+      "placeholder": "Select Country",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "lookup": {
+          "recent": {
+            "limit": 5,
+            "scope": "referenceSource",
+            "enabled": true,
+            "persistence": "server",
+            "retentionDays": 90
+          },
+          "sourceKey": "iso.country"
+        },
+        "widget": "select",
+        "required": true,
+        "valueKey": "countryCode",
+        "normalize": "uppercase",
+        "placeholder": "Select country",
+        "clearOnChange": {
+          "mode": "dialog",
+          "title": "Change country to {next}?",
+          "fields": [
+            "stateRegionCode",
+            "region"
+          ],
+          "message": "The current state or region will be cleared. Your street address, city, and postal code will remain; review them for the new country.",
+          "cancelLabel": "Keep {previous}",
+          "confirmLabel": "Change country"
+        }
+      },
+      "status": "active"
+    },
+    {
+      "id": "0e21a801-917b-4764-b317-13046c8b51ff",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "142f1175-648a-4c1a-8064-c87c97183096",
+      "entityFieldId": "193c6e56-2cba-4738-8300-f5ac4a1a2ba0",
+      "bindingKey": "advanced_address_kind",
+      "position": 0,
+      "labelOverride": "Address kind",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "lookup": {
+          "options": [
+            {
+              "label": "Street address",
+              "value": "street"
+            },
+            {
+              "label": "PO box",
+              "value": "po_box"
+            },
+            {
+              "label": "Rural address",
+              "value": "rural"
+            },
+            {
+              "label": "Military address",
+              "value": "military"
+            },
+            {
+              "label": "Other address",
+              "value": "other"
+            }
+          ]
+        },
+        "widget": "select",
+        "required": false,
+        "valueKey": "addressKind",
+        "maxLength": 160,
+        "defaultValue": "street",
+        "clearOnChange": {
+          "fields": [
+            "buildingName",
+            "floor",
+            "unit",
+            "houseNumber",
+            "streetName",
+            "poBox"
+          ],
+          "message": "Changing address kind clears the building, floor, unit, structured street and PO box details. Address lines, city, region, postal code and country remain unchanged.",
+          "cancelLabel": "Keep current",
+          "confirmLabel": "Change address kind"
+        }
+      },
+      "status": "active"
+    },
+    {
+      "id": "14a82ad9-30e8-4e4e-965e-8b901a11b2d9",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "12ca8c69-99eb-42fe-8f10-b67294aa28b0",
+      "entityFieldId": "1b2fa6ab-f341-4ef2-9a31-8c51c2e01425",
+      "bindingKey": "address_region",
+      "position": 31,
+      "labelOverride": "State / Province / Region",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "widget": "hidden",
+        "helpText": "Enter the state or region when it is not listed. Leave blank if not applicable.",
+        "required": false,
+        "valueKey": "region",
+        "variants": [
+          {
+            "when": {
+              "field": "address_region_mode",
+              "value": "manual",
+              "operator": "equals"
+            },
+            "widget": "text"
+          }
+        ],
+        "maxLength": 128,
+        "referenceRules": {
+          "field": "countryCode",
+          "label": "regionLabel"
+        }
+      },
+      "status": "active"
+    },
+    {
+      "id": "1924b531-e97c-4bf7-9d53-1a199ed68098",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "142f1175-648a-4c1a-8064-c87c97183096",
+      "entityFieldId": "c19074dd-d65f-4296-8d51-f47cfc969135",
+      "bindingKey": "advanced_address_floor",
+      "position": 30,
+      "labelOverride": "Floor",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "widget": "text",
+        "required": false,
+        "valueKey": "floor",
+        "variants": [
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "po_box",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "rural",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "military",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "other",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          }
+        ],
+        "maxLength": 160
+      },
+      "status": "active"
+    },
+    {
+      "id": "27281beb-02b9-4d3f-b2c1-64d25bb5da5a",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "142f1175-648a-4c1a-8064-c87c97183096",
+      "entityFieldId": "126556c0-4c8a-4f18-9b2d-e75111aaefbe",
+      "bindingKey": "advanced_address_po_box",
+      "position": 60,
+      "labelOverride": "PO box number",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "widget": "hidden",
+        "helpText": "Enter the box number. Use City and Postal code above for the PO box destination.",
+        "required": false,
+        "valueKey": "poBox",
+        "variants": [
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "po_box",
+              "operator": "equals"
+            },
+            "widget": "text",
+            "required": true
+          }
+        ],
+        "maxLength": 160
+      },
+      "status": "active"
+    },
+    {
+      "id": "2c2ee98a-eea5-410b-8760-2b3632506811",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "12ca8c69-99eb-42fe-8f10-b67294aa28b0",
+      "entityFieldId": "ff4957f3-046b-4d31-bc1e-ac98a46e19e6",
+      "bindingKey": "address_postal_code",
+      "position": 50,
+      "labelOverride": "Postal code",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "widget": "text",
+        "required": false,
+        "valueKey": "postalCode",
+        "maxLength": 32,
+        "normalize": "uppercase",
+        "referenceRules": {
+          "field": "countryCode",
+          "label": "postalLabel",
+          "pattern": "postalPattern",
+          "helpText": "postalHelp",
+          "placeholder": "postalExample"
+        }
+      },
+      "status": "active"
+    },
+    {
+      "id": "3e7d83cb-f3b4-4079-b15e-4fe3a4decbce",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "142f1175-648a-4c1a-8064-c87c97183096",
+      "entityFieldId": "5a765d08-9a38-4c5b-a9b4-8845bf32f9b0",
+      "bindingKey": "advanced_address_house_number",
+      "position": 40,
+      "labelOverride": "House number",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "widget": "text",
+        "required": false,
+        "valueKey": "houseNumber",
+        "variants": [
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "po_box",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "rural",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "military",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "other",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          }
+        ],
+        "maxLength": 160
+      },
+      "status": "active"
+    },
+    {
+      "id": "428b80bf-a046-4e3f-9d5c-a21a9a11cc53",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "12ca8c69-99eb-42fe-8f10-b67294aa28b0",
+      "entityFieldId": "f92e5d2f-d963-410c-8765-21f52ed89659",
+      "bindingKey": "address_line2",
+      "position": 10,
+      "labelOverride": "Address line 2",
+      "widgetKey": "input",
+      "columnSpan": 12,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "widget": "text",
+        "required": false,
+        "valueKey": "line2",
+        "maxLength": 255
+      },
+      "status": "active"
+    },
+    {
+      "id": "52b580c1-5d27-4f32-9aa5-7a80952842bc",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "142f1175-648a-4c1a-8064-c87c97183096",
+      "entityFieldId": "4ee7817e-90e1-4926-8842-d971f6a142e8",
+      "bindingKey": "advanced_address_building_name",
+      "position": 10,
+      "labelOverride": "Building name",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "widget": "text",
+        "required": false,
+        "valueKey": "buildingName",
+        "variants": [
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "po_box",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "rural",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "military",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "other",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          }
+        ],
+        "maxLength": 160
+      },
+      "status": "active"
+    },
+    {
+      "id": "71d421ad-70c4-4385-8543-ce2b7cdde651",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "12ca8c69-99eb-42fe-8f10-b67294aa28b0",
+      "entityFieldId": "99f54f90-cbd9-43e0-a2d5-409be0f1fd3f",
+      "bindingKey": "address_state_region",
+      "position": 30,
+      "labelOverride": "State / Province / Region",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "lookup": {
+          "filterBy": [
+            {
+              "field": "countryCode",
+              "property": "countryCode"
+            }
+          ],
+          "emptyText": "No listed subdivisions are available for this country. Use manual entry if a state or region is needed.",
+          "sourceKey": "shared.state_region",
+          "copyFields": [
+            {
+              "to": "region",
+              "from": "name"
+            }
+          ]
+        },
+        "widget": "select",
+        "required": false,
+        "valueKey": "stateRegionCode",
+        "variants": [
+          {
+            "when": {
+              "field": "address_region_mode",
+              "value": "manual",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          }
+        ],
+        "maxLength": 128,
+        "referenceRules": {
+          "field": "countryCode",
+          "label": "regionLabel"
+        }
+      },
+      "status": "active"
+    },
+    {
+      "id": "95588e7a-7ac0-4a51-b7fa-6fbbf580ff09",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "3ec2aa33-6e64-43f1-90e1-05d5142a140a",
+      "entityFieldId": "5b8ace52-ca29-4780-860b-6c305e48f4b1",
+      "bindingKey": "address_purpose",
+      "position": 10,
+      "labelOverride": "Purpose",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "lookup": {
+          "options": [
+            {
+              "label": "Default",
+              "value": "default"
+            },
+            {
+              "label": "Correspondence",
+              "value": "correspondence"
+            },
+            {
+              "label": "Remit to",
+              "value": "remit_to"
+            },
+            {
+              "label": "Ship from",
+              "value": "ship_from"
+            }
+          ]
+        },
+        "widget": "select",
+        "required": true,
+        "valueKey": "purpose",
+        "defaultValue": "default"
+      },
+      "status": "active"
+    },
+    {
+      "id": "98b5392b-fb0c-4ef9-908b-2c272a1945ca",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "142f1175-648a-4c1a-8064-c87c97183096",
+      "entityFieldId": "4c3c69ac-7fa1-48ef-bb43-847a81d9248e",
+      "bindingKey": "advanced_address_street_name",
+      "position": 50,
+      "labelOverride": "Street name",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "widget": "text",
+        "required": false,
+        "valueKey": "streetName",
+        "variants": [
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "po_box",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "rural",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "military",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "other",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          }
+        ],
+        "maxLength": 160
+      },
+      "status": "active"
+    },
+    {
+      "id": "9de0df96-a9c0-42b7-995e-b8d602d12023",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "3ec2aa33-6e64-43f1-90e1-05d5142a140a",
+      "entityFieldId": "f864be39-450b-446d-8d5a-7bde6bb5233f",
+      "bindingKey": "address_is_primary",
+      "position": 20,
+      "labelOverride": "Primary address",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "widget": "checkbox",
+        "required": false,
+        "valueKey": "isPrimary"
+      },
+      "status": "active"
+    },
+    {
+      "id": "a6684291-891b-4076-a224-be60483d61c0",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "12ca8c69-99eb-42fe-8f10-b67294aa28b0",
+      "entityFieldId": "bdc5365f-c19b-4aa0-8fd6-06ccc0349019",
+      "bindingKey": "address_region_mode",
+      "position": 40,
+      "labelOverride": "State / Region entry",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "lookup": {
+          "options": [
+            {
+              "label": "Select from reference list",
+              "value": "directory"
+            },
+            {
+              "label": "Enter manually / not listed",
+              "value": "manual"
+            }
+          ]
+        },
+        "widget": "select",
+        "required": false,
+        "valueKey": "regionEntryMode",
+        "maxLength": 128,
+        "defaultValue": "directory",
+        "clearOnChange": {
+          "fields": [
+            "stateRegionCode",
+            "region"
+          ],
+          "message": "Changing entry mode clears the current state or region. Other address details are preserved.",
+          "cancelLabel": "Keep current",
+          "confirmLabel": "Change entry mode"
+        }
+      },
+      "status": "active"
+    },
+    {
+      "id": "f3c4988a-6d42-4ac1-96f8-0159e138439f",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "12ca8c69-99eb-42fe-8f10-b67294aa28b0",
+      "entityFieldId": "1939108a-dbf7-4a14-9062-1bde2cf707bb",
+      "bindingKey": "address_line1",
+      "position": 0,
+      "labelOverride": "Address line 1",
+      "widgetKey": "input",
+      "columnSpan": 12,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "widget": "text",
+        "required": true,
+        "valueKey": "line1",
+        "maxLength": 255
+      },
+      "status": "active"
+    },
+    {
+      "id": "fe50661e-031c-46c6-8663-6b3774d9b401",
+      "entitySurfaceId": "af6d74f4-0ba6-46e6-8aaf-3cf1d719a54f",
+      "entitySurfaceSectionId": "142f1175-648a-4c1a-8064-c87c97183096",
+      "entityFieldId": "a5c6bed5-dcb9-4fa6-9a78-05381e678742",
+      "bindingKey": "advanced_address_unit",
+      "position": 20,
+      "labelOverride": "Unit / Suite",
+      "widgetKey": "input",
+      "columnSpan": 6,
+      "showRequiredIndicator": true,
+      "displayConfig": {
+        "widget": "text",
+        "required": false,
+        "valueKey": "unit",
+        "variants": [
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "po_box",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "rural",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "military",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          },
+          {
+            "when": {
+              "field": "advanced_address_kind",
+              "value": "other",
+              "operator": "equals"
+            },
+            "widget": "hidden"
+          }
+        ],
+        "maxLength": 160
+      },
+      "status": "active"
+    }
+  ],
+  "fields": [
+    {
+      "id": "126556c0-4c8a-4f18-9b2d-e75111aaefbe",
+      "fieldKey": "advanced_address_po_box",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "1939108a-dbf7-4a14-9062-1bde2cf707bb",
+      "fieldKey": "address_line1",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "193c6e56-2cba-4738-8300-f5ac4a1a2ba0",
+      "fieldKey": "advanced_address_kind",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "1b2fa6ab-f341-4ef2-9a31-8c51c2e01425",
+      "fieldKey": "address_region",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "4c3c69ac-7fa1-48ef-bb43-847a81d9248e",
+      "fieldKey": "advanced_address_street_name",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "4ee7817e-90e1-4926-8842-d971f6a142e8",
+      "fieldKey": "advanced_address_building_name",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "583cb4a4-121d-4958-877d-caa2ae2edd66",
+      "fieldKey": "address_country_code",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "5a765d08-9a38-4c5b-a9b4-8845bf32f9b0",
+      "fieldKey": "advanced_address_house_number",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "5b8ace52-ca29-4780-860b-6c305e48f4b1",
+      "fieldKey": "address_purpose",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "99f54f90-cbd9-43e0-a2d5-409be0f1fd3f",
+      "fieldKey": "address_state_region",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "a5c6bed5-dcb9-4fa6-9a78-05381e678742",
+      "fieldKey": "advanced_address_unit",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "bdc5365f-c19b-4aa0-8fd6-06ccc0349019",
+      "fieldKey": "address_region_mode",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "c19074dd-d65f-4296-8d51-f47cfc969135",
+      "fieldKey": "advanced_address_floor",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "dd99efe5-853a-4864-8281-be700a002c1a",
+      "fieldKey": "address_city",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "f864be39-450b-446d-8d5a-7bde6bb5233f",
+      "fieldKey": "address_is_primary",
+      "dataType": "boolean",
+      "typeConfig": {
+        "kind": "boolean"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "f92e5d2f-d963-410c-8765-21f52ed89659",
+      "fieldKey": "address_line2",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    },
+    {
+      "id": "ff4957f3-046b-4d31-bc1e-ac98a46e19e6",
+      "fieldKey": "address_postal_code",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "cardinality": "one",
+      "valueOrigin": "runtime",
+      "writeMode": "mutable",
+      "dataClassification": "internal",
+      "status": "active"
+    }
+  ]
+}

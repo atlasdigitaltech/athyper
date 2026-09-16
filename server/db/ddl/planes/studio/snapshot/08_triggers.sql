@@ -56,3 +56,7 @@ CREATE TRIGGER case_contract_revision_immutable
     BEFORE UPDATE OR DELETE ON snapshot.business_partner_case_contract_revision
     FOR EACH ROW
     EXECUTE FUNCTION snapshot.trg_reject_case_contract_mutation();
+
+-- Saved draft comparison history
+CREATE TRIGGER entity_draft_save_immutable BEFORE UPDATE OR DELETE ON snapshot.entity_draft_save
+FOR EACH ROW EXECUTE FUNCTION snapshot.guard_entity_draft_save();

@@ -48,3 +48,18 @@ BEFORE UPDATE OR DELETE ON governance.cycle_task_dependency
 FOR EACH ROW EXECUTE FUNCTION governance.trg_reject_cycle_dependency_mutation();
 
 SELECT audit.install_schema_row_triggers('governance');
+
+CREATE TRIGGER process_selection_evidence_immutable
+BEFORE UPDATE OR DELETE ON governance.process_selection_evidence
+FOR EACH ROW EXECUTE FUNCTION governance.trg_reject_process_selection_mutation();
+
+CREATE TRIGGER process_attempt_immutable BEFORE UPDATE OR DELETE ON governance.process_attempt
+ FOR EACH ROW EXECUTE FUNCTION governance.trg_reject_process_selection_mutation();
+CREATE TRIGGER process_task_document_gate BEFORE INSERT OR UPDATE ON governance.cycle_task
+ FOR EACH ROW EXECUTE FUNCTION governance.trg_process_task_document_gate();
+CREATE TRIGGER process_attempt_coordinate BEFORE INSERT ON governance.process_attempt
+ FOR EACH ROW EXECUTE FUNCTION governance.trg_validate_process_attempt();
+
+CREATE TRIGGER process_document_intent_binding BEFORE INSERT ON governance.process_document_job
+ FOR EACH ROW EXECUTE FUNCTION governance.trg_validate_process_document_intent();
+CREATE TRIGGER cycle_completion_structure BEFORE UPDATE OF status ON governance.cycle_run FOR EACH ROW EXECUTE FUNCTION governance.trg_cycle_completion_structure();

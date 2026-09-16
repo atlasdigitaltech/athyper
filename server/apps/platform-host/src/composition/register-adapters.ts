@@ -1,3 +1,4 @@
+import { sql } from "kysely";
 import { createAuthorizationWriterDatabases } from "./authorization-writer-databases.js";
 import {
   createKeycloakAuthAdapter,
@@ -757,6 +758,19 @@ export function registerAdapters(
     });
   }
 
+  // Explicit Studio publication writer; never used for normal case/API transactions.
+  if (config.mode === "api" && config.publication?.apiEnabled && config.jobs?.workerDatabaseUrls?.neon) {
+    const database = dependencies.createNeonDatabase({
+      connectionString: config.jobs.workerDatabaseUrls.neon, max: 2,
+      observer: poolObserver("neon", container),
+    });
+    container.adapters.taskPolicyWriterDatabase = database;
+    lifecycle.onReady(async () => {
+      const result = await sql<{ database: string; writer: boolean }>`SELECT current_database() database, has_table_privilege(current_user,'control.policy_definition','INSERT') writer`.execute(database.database);
+      if (result.rows[0]?.database !== "athyper_neon" || result.rows[0]?.writer !== true) throw new Error("TASK_POLICY_PUBLICATION_WRITER_UNAVAILABLE");
+    });
+    lifecycle.onShutdown(() => database.close());
+  }
   if (config.mode === "worker" && config.jobs.workerDatabaseUrls.neon) {
     const database = dependencies.createNeonDatabase({
       connectionString: config.jobs.workerDatabaseUrls.neon,

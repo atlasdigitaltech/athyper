@@ -41,3 +41,11 @@ describe("document repository access and replay guards", () => {
     } finally { await test.db.destroy(); }
   });
 });
+
+it('rejects a pinned template whose stored content no longer matches its checksum',async()=>{
+ const {createHash}=await import('node:crypto');const {createKyselyDocumentTemplateRepository}=await import('../kysely-document-repositories.js');
+ const content={assets_manifest:{},content_html:'<p>{{name}}</p>',styles_css:'',variables_schema:{}};const hash=createHash('sha256').update(JSON.stringify(content)).digest('hex');
+ const row={...content,binding_id:'binding',template_id:'template',template_version_id:'version',version:1,checksum:hash,template_name:'Pinned',engine:'handlebars',locale_code:'en',variant_code:'default'};
+ const valid=database([row]),tampered=database([{...row,content_html:'<p>Changed</p>'}]);const query={tenantId:context.tenantId,entityType:'entity_case',operationCode:'submitted_review_pack',variant:'default',locale:'en',effectiveOn:'2026-09-14',exact:{bindingId:'binding',templateId:'template',id:'version',version:1,hash,locale:'en',variant:'default'}};
+ try{const repository=createKyselyDocumentTemplateRepository();await expect(repository.resolveExact!(query,valid.transaction)).resolves.toMatchObject({checksum:hash,html:content.content_html});await expect(repository.resolveExact!(query,tampered.transaction)).resolves.toBeNull();}finally{await valid.db.destroy();await tampered.db.destroy();}
+});

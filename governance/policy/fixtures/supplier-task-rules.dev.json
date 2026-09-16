@@ -1,0 +1,327 @@
+{
+  "definition": {
+    "name": "DEV supplier same-profile correction and task controls",
+    "priority": 10,
+    "evaluationMode": "all",
+    "effectiveFrom": "2026-09-15",
+    "versionNo": 1,
+    "rules": [
+      {
+        "priority": 10,
+        "condition": {
+          "and": [
+            {
+              "in": [
+                {
+                  "var": "request.state"
+                },
+                [
+                  "draft",
+                  "returned",
+                  "validation_failed"
+                ]
+              ]
+            },
+            {
+              "===": [
+                {
+                  "var": "actor.isRequester"
+                },
+                true
+              ]
+            }
+          ]
+        },
+        "action": "require_workflow",
+        "actionConfig": {
+          "schema": "athyper.task-edit-result/1",
+          "paths": [
+            "/proposedPayload/name",
+            "/proposedPayload/legalName",
+            "/proposedPayload/displayName",
+            "/proposedPayload/registrationCountryCode",
+            "/proposedPayload/ownershipClass",
+            "/proposedPayload/legalClassification",
+            "/proposedPayload/supplierType",
+            "/proposedPayload/qualificationTypeCode",
+            "/proposedPayload/legalForm",
+            "/proposedPayload/incorporationDate",
+            "/proposedPayload/websiteUrl",
+            "/proposedPayload/description",
+            "/proposedPayload/aliases",
+            "/proposedPayload/partnerCategory",
+            "/proposedPayload/complianceRequirementReason",
+            "/proposedPayload/relationshipProposals/bankAccounts",
+            "/proposedPayload/relationshipProposals/supportingDocuments",
+            "/proposedPayload/relationshipProposals/aliases",
+            "/proposedPayload/relationshipProposals/governanceRelations",
+            "/proposedPayload/relationshipProposals/relationships",
+            "/proposedPayload/relationshipProposals/addresses",
+            "/proposedPayload/relationshipProposals/contactPersons",
+            "/proposedPayload/relationshipProposals/contactChannels",
+            "/proposedPayload/relationshipProposals/identifiers",
+            "/proposedPayload/relationshipProposals/taxRegistrations",
+            "/proposedPayload/relationshipProposals/classifications",
+            "/proposedPayload/relationshipProposals/certifications"
+          ],
+          "effect": "full_reapproval"
+        },
+        "metadata": {}
+      },
+      {
+        "priority": 20,
+        "condition": {
+          "or": [
+            {
+              "in": [
+                "/operatingOrganizationId",
+                {
+                  "var": [
+                    "request.changedPaths",
+                    []
+                  ]
+                }
+              ]
+            },
+            {
+              "in": [
+                "/companyCodeId",
+                {
+                  "var": [
+                    "request.changedPaths",
+                    []
+                  ]
+                }
+              ]
+            },
+            {
+              "in": [
+                "/requestedRole",
+                {
+                  "var": [
+                    "request.changedPaths",
+                    []
+                  ]
+                }
+              ]
+            },
+            {
+              "in": [
+                "/proposedPayload/requestedComplianceLevel",
+                {
+                  "var": [
+                    "request.changedPaths",
+                    []
+                  ]
+                }
+              ]
+            },
+            {
+              "in": [
+                "/proposedPayload/tenantFields",
+                {
+                  "var": [
+                    "request.changedPaths",
+                    []
+                  ]
+                }
+              ]
+            },
+            {
+              "in": [
+                "/proposedPayload/tenantFields/profileMode",
+                {
+                  "var": [
+                    "request.changedPaths",
+                    []
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "action": "deny",
+        "actionConfig": {
+          "schema": "athyper.task-edit-result/1",
+          "paths": [
+            "/proposedPayload/name",
+            "/proposedPayload/legalName",
+            "/proposedPayload/displayName",
+            "/proposedPayload/registrationCountryCode",
+            "/proposedPayload/ownershipClass",
+            "/proposedPayload/legalClassification",
+            "/proposedPayload/supplierType",
+            "/proposedPayload/qualificationTypeCode",
+            "/proposedPayload/legalForm",
+            "/proposedPayload/incorporationDate",
+            "/proposedPayload/websiteUrl",
+            "/proposedPayload/description",
+            "/proposedPayload/aliases",
+            "/proposedPayload/partnerCategory",
+            "/proposedPayload/complianceRequirementReason",
+            "/proposedPayload/relationshipProposals/bankAccounts",
+            "/proposedPayload/relationshipProposals/supportingDocuments",
+            "/proposedPayload/relationshipProposals/aliases",
+            "/proposedPayload/relationshipProposals/governanceRelations",
+            "/proposedPayload/relationshipProposals/relationships",
+            "/proposedPayload/relationshipProposals/addresses",
+            "/proposedPayload/relationshipProposals/contactPersons",
+            "/proposedPayload/relationshipProposals/contactChannels",
+            "/proposedPayload/relationshipProposals/identifiers",
+            "/proposedPayload/relationshipProposals/taxRegistrations",
+            "/proposedPayload/relationshipProposals/classifications",
+            "/proposedPayload/relationshipProposals/certifications",
+            "/operatingOrganizationId",
+            "/companyCodeId",
+            "/requestedRole",
+            "/proposedPayload/requestedComplianceLevel",
+            "/proposedPayload/tenantFields",
+            "/proposedPayload/tenantFields/profileMode"
+          ],
+          "effect": "deny"
+        },
+        "metadata": {}
+      }
+    ]
+  },
+  "tests": [
+    {
+      "code": "positive",
+      "name": "Returned requester content correction requires full reapproval",
+      "input": {
+        "request": {
+          "state": "returned",
+          "changedPaths": [
+            "/proposedPayload/websiteUrl"
+          ]
+        },
+        "actor": {
+          "isRequester": true
+        }
+      },
+      "expected": {
+        "action": "require_workflow"
+      }
+    },
+    {
+      "code": "negative",
+      "name": "Scope and requirement cannot be retargeted",
+      "input": {
+        "request": {
+          "state": "submitted",
+          "changedPaths": [
+            "/operatingOrganizationId",
+            "/companyCodeId",
+            "/requestedRole",
+            "/proposedPayload/requestedComplianceLevel",
+            "/proposedPayload/tenantFields",
+            "/proposedPayload/tenantFields/profileMode"
+          ]
+        },
+        "actor": {
+          "isRequester": true
+        }
+      },
+      "expected": {
+        "action": "deny"
+      }
+    },
+    {
+      "code": "overlap",
+      "name": "Scope change overrides permitted content correction",
+      "input": {
+        "request": {
+          "state": "returned",
+          "changedPaths": [
+            "/proposedPayload/name",
+            "/operatingOrganizationId"
+          ]
+        },
+        "actor": {
+          "isRequester": true
+        }
+      },
+      "expected": {
+        "action": "deny"
+      }
+    },
+    {
+      "code": "missing",
+      "name": "Missing facts never authorize editing",
+      "input": {},
+      "expected": {
+        "action": "none",
+        "outcomes": []
+      }
+    },
+    {
+      "code": "positive.basic",
+      "name": "basic retains the same correction rules",
+      "input": {
+        "request": {
+          "state": "returned",
+          "changedPaths": [
+            "/proposedPayload/websiteUrl"
+          ],
+          "before": {
+            "proposedPayload": {
+              "requestedComplianceLevel": "basic"
+            }
+          }
+        },
+        "actor": {
+          "isRequester": true
+        }
+      },
+      "expected": {
+        "action": "require_workflow"
+      }
+    },
+    {
+      "code": "positive.standard",
+      "name": "standard retains the same correction rules",
+      "input": {
+        "request": {
+          "state": "returned",
+          "changedPaths": [
+            "/proposedPayload/websiteUrl"
+          ],
+          "before": {
+            "proposedPayload": {
+              "requestedComplianceLevel": "standard"
+            }
+          }
+        },
+        "actor": {
+          "isRequester": true
+        }
+      },
+      "expected": {
+        "action": "require_workflow"
+      }
+    },
+    {
+      "code": "positive.enhanced",
+      "name": "enhanced retains the same correction rules",
+      "input": {
+        "request": {
+          "state": "returned",
+          "changedPaths": [
+            "/proposedPayload/websiteUrl"
+          ],
+          "before": {
+            "proposedPayload": {
+              "requestedComplianceLevel": "enhanced"
+            }
+          }
+        },
+        "actor": {
+          "isRequester": true
+        }
+      },
+      "expected": {
+        "action": "require_workflow"
+      }
+    }
+  ]
+}

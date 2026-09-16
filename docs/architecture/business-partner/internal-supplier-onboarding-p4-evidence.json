@@ -1,0 +1,2523 @@
+{
+  "at": "2026-09-14T10:23:53.915441+00:00",
+  "scope": "Increment A P4 documents and gates",
+  "implementation": "deployed",
+  "acceptance": "accepted_local_dev",
+  "qualifiedPurposes": [
+    "submitted_review_pack",
+    "decision_document",
+    "activation_confirmation"
+  ],
+  "unqualifiedLivePurposes": [],
+  "tests": {
+    "documentServiceAndRepositories": 69,
+    "purposeProjection": 3,
+    "httpRoutes": 1,
+    "postgresFaultAndGateChecks": 12,
+    "typechecks": [
+      "document contracts",
+      "document service including tests",
+      "platform host"
+    ],
+    "passed": true,
+    "materializerContractPostgresChecks": 7
+  },
+  "database": {
+    "at": "2026-09-14T10:19:49.618Z",
+    "mode": "Real PostgreSQL with rollback-only fault injection; commands execute as athyperapp.",
+    "checks": [
+      "Direct application job updates are denied",
+      "Decision document blocks materialization, not approval (isolated transition fixture)",
+      "Activation document blocks closure, not running cycle (isolated transition fixture)",
+      "Concurrent claim is rejected",
+      "Stale callback token is rejected",
+      "Wrong snapshot cannot release gate",
+      "Forged artifact cannot release gate",
+      "Failed render cannot release gate",
+      "Repeated failure after explicit retry has a distinct durable event",
+      "Gate failure preserves artifact and retries without a render",
+      "All provider and callback failures preserve case business state",
+      "Cross-tenant command is denied"
+    ],
+    "passed": true
+  },
+  "canonicalInstallation": {
+    "at": "2026-09-14T10:21:55.436Z",
+    "functions": [
+      "trg_process_task_subject",
+      "process_case_reviewers",
+      "command_process_document_job",
+      "trg_process_document_domain_gates",
+      "process_document_candidates",
+      "trg_process_document_source_binding"
+    ],
+    "materializers": [
+      "master.command_materialize_business_partner_role_case",
+      "master.fn_materialize_business_partner_case_relationships"
+    ],
+    "triggers": 4,
+    "passed": true
+  },
+  "liveReviewPacks": {
+    "at": "2026-09-14T10:19:51.372Z",
+    "mode": "Live Gotenberg/ClamAV/S3 storage and scheduler; admin browser verifies owning API views. All three purpose views verified; authenticated reviewer decisions/downloads and controlled upstream activation fixtures have separate receipts.",
+    "jobs": [
+      {
+        "id": "5b1cecaf-c5ef-4512-8fde-97f7e849287e",
+        "case_id": "6d8de443-c238-453b-880b-696d9e2d87a7",
+        "purpose": "submitted_review_pack",
+        "status": "ready",
+        "gate_status": "succeeded",
+        "attempt_count": 1,
+        "result": {
+          "jobId": "5b1cecaf-c5ef-4512-8fde-97f7e849287e",
+          "sha256": "cd3336bc01f682bf5705687c14bebf5db0898631072daf27710feb9ed3e65acc",
+          "status": "ready",
+          "purpose": "submitted_review_pack",
+          "template": {
+            "id": "1fe0c225-d530-5100-8291-dda6342bc9d9",
+            "hash": "8a94f082f7986b5089f0a520c9921cf83958d55e089c0b93acc2fe921e0db1b1",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "1a0ad14f-6746-5eec-8f55-5e42c81a7a9b",
+            "templateId": "b3f415c5-1368-5678-8b16-e52af2d69b9a"
+          },
+          "scannedAt": "2026-09-14T09:51:04.795Z",
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "6d8de443-c238-453b-880b-696d9e2d87a7",
+            "manifest": {
+              "id": "eceb732c-a0a1-533e-864a-a83f1e89d4d9",
+              "hash": "9f600223844f7ce0cbb8b8560ac1b0c8953be3918a7cfecbb8a07973b29d8b0a",
+              "version": 1
+            },
+            "attemptId": "bfa9b507-0137-492b-84bf-fe44e27e0950",
+            "cycleRunId": "7efb8ada-1e2b-4f50-8530-1b4c57a3ebd9",
+            "selectionId": "c56ed73d-b510-4954-8c03-d85369e058e7",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-8444-7c45-b284-91e7dd75c3b8",
+              "hash": "33d2678d1f3490fd4b22033908b025eb8cdcc65f6e3624fc40ef083fe4140448",
+              "version": 3
+            }
+          },
+          "scanStatus": "clean",
+          "attachmentId": "122d1030-1ccb-4d50-8f07-1b25729cf912",
+          "idempotencyKey": "process-document-result:5b1cecaf-c5ef-4512-8fde-97f7e849287e",
+          "sourceSnapshot": {
+            "id": "01a09f01-8444-7c45-b284-91e7dd75c3b8",
+            "hash": "33d2678d1f3490fd4b22033908b025eb8cdcc65f6e3624fc40ef083fe4140448",
+            "version": 3
+          },
+          "attachmentVersionId": "122d1030-1ccb-4d50-8f07-1b25729cf912"
+        },
+        "size_bytes": 21822,
+        "provenance": {
+          "jobId": "5b1cecaf-c5ef-4512-8fde-97f7e849287e",
+          "policy": {
+            "id": "3da19ca2-7809-5355-8505-788526996cf2",
+            "hash": "e81fe0c463c99346c7f836137a828e0d1861ea2a26b82f50540f8f8fe4d0b3ef",
+            "version": 1,
+            "definitionId": "3da19ca2-7809-5355-8505-788526996cf2"
+          },
+          "schema": "athyper.process-document-provenance/1",
+          "profile": {
+            "id": "d39ac33f-eb65-5ec1-89b7-73913b9047f7",
+            "code": "simple",
+            "hash": "cc7a0c2df841a7d6479a6fb91c620a6b3e26b7c8daa5aabde822e259d498511c",
+            "version": 1
+          },
+          "purpose": "submitted_review_pack",
+          "template": {
+            "id": "1fe0c225-d530-5100-8291-dda6342bc9d9",
+            "hash": "8a94f082f7986b5089f0a520c9921cf83958d55e089c0b93acc2fe921e0db1b1",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "1a0ad14f-6746-5eec-8f55-5e42c81a7a9b",
+            "templateId": "b3f415c5-1368-5678-8b16-e52af2d69b9a"
+          },
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "6d8de443-c238-453b-880b-696d9e2d87a7",
+            "manifest": {
+              "id": "eceb732c-a0a1-533e-864a-a83f1e89d4d9",
+              "hash": "9f600223844f7ce0cbb8b8560ac1b0c8953be3918a7cfecbb8a07973b29d8b0a",
+              "version": 1
+            },
+            "attemptId": "bfa9b507-0137-492b-84bf-fe44e27e0950",
+            "cycleRunId": "7efb8ada-1e2b-4f50-8530-1b4c57a3ebd9",
+            "selectionId": "c56ed73d-b510-4954-8c03-d85369e058e7",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-8444-7c45-b284-91e7dd75c3b8",
+              "hash": "33d2678d1f3490fd4b22033908b025eb8cdcc65f6e3624fc40ef083fe4140448",
+              "version": 3
+            }
+          },
+          "intentHash": "9bc53c66bb22cbd781e3776a7d1732d1f616445bfbcbd7c6194b8413bdf8173c",
+          "projection": {
+            "id": "de5b3da5-2b74-5817-84de-a8fda35e7dc1",
+            "code": "supplier.submitted_review_pack.snapshot",
+            "hash": "ca4883d0d383080e095f466b8c839a004d812de2641a48d901785c2fa4be159a",
+            "version": 1
+          },
+          "sourceSnapshot": {
+            "id": "01a09f01-8444-7c45-b284-91e7dd75c3b8",
+            "hash": "33d2678d1f3490fd4b22033908b025eb8cdcc65f6e3624fc40ef083fe4140448",
+            "version": 3
+          }
+        },
+        "scan": {
+          "status": "clean",
+          "scanner": "clamav",
+          "scanned_at": "2026-09-14T09:51:04.795Z",
+          "duration_ms": 107,
+          "signature_version": "28123"
+        }
+      },
+      {
+        "id": "6bbdb380-9b27-4d14-93f3-5b0546a0d330",
+        "case_id": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+        "purpose": "submitted_review_pack",
+        "status": "ready",
+        "gate_status": "succeeded",
+        "attempt_count": 3,
+        "result": {
+          "jobId": "6bbdb380-9b27-4d14-93f3-5b0546a0d330",
+          "sha256": "39e29f2e4669aeb94858b81efdc0ede8c740b177c9b77fce4c7c2d0e8e35a316",
+          "status": "ready",
+          "purpose": "submitted_review_pack",
+          "template": {
+            "id": "1fe0c225-d530-5100-8291-dda6342bc9d9",
+            "hash": "8a94f082f7986b5089f0a520c9921cf83958d55e089c0b93acc2fe921e0db1b1",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "1a0ad14f-6746-5eec-8f55-5e42c81a7a9b",
+            "templateId": "b3f415c5-1368-5678-8b16-e52af2d69b9a"
+          },
+          "scannedAt": "2026-09-14T09:38:04.925Z",
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+            "manifest": {
+              "id": "eceb732c-a0a1-533e-864a-a83f1e89d4d9",
+              "hash": "9f600223844f7ce0cbb8b8560ac1b0c8953be3918a7cfecbb8a07973b29d8b0a",
+              "version": 1
+            },
+            "attemptId": "e5e82457-44d6-47d8-81d8-1c62f582f412",
+            "cycleRunId": "576a0e3b-b9e4-4d56-a13b-f0c7e09e5b06",
+            "selectionId": "b2de842e-81ad-48de-ab7a-128f51ee1e62",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d3b1-72b6-97d1-62e9cccdcdd0",
+              "hash": "3e83d81666da85eb7cdbe2ec25ce9ca1b7dd90d049a401061d76051131554fcc",
+              "version": 3
+            }
+          },
+          "scanStatus": "clean",
+          "attachmentId": "9601185c-7d40-476c-9c7e-3dbdb9ddaae7",
+          "idempotencyKey": "process-document-result:6bbdb380-9b27-4d14-93f3-5b0546a0d330",
+          "sourceSnapshot": {
+            "id": "01a09f01-d3b1-72b6-97d1-62e9cccdcdd0",
+            "hash": "3e83d81666da85eb7cdbe2ec25ce9ca1b7dd90d049a401061d76051131554fcc",
+            "version": 3
+          },
+          "attachmentVersionId": "9601185c-7d40-476c-9c7e-3dbdb9ddaae7"
+        },
+        "size_bytes": 21817,
+        "provenance": {
+          "jobId": "6bbdb380-9b27-4d14-93f3-5b0546a0d330",
+          "policy": {
+            "id": "3da19ca2-7809-5355-8505-788526996cf2",
+            "hash": "e81fe0c463c99346c7f836137a828e0d1861ea2a26b82f50540f8f8fe4d0b3ef",
+            "version": 1,
+            "definitionId": "3da19ca2-7809-5355-8505-788526996cf2"
+          },
+          "schema": "athyper.process-document-provenance/1",
+          "profile": {
+            "id": "d39ac33f-eb65-5ec1-89b7-73913b9047f7",
+            "code": "simple",
+            "hash": "cc7a0c2df841a7d6479a6fb91c620a6b3e26b7c8daa5aabde822e259d498511c",
+            "version": 1
+          },
+          "purpose": "submitted_review_pack",
+          "template": {
+            "id": "1fe0c225-d530-5100-8291-dda6342bc9d9",
+            "hash": "8a94f082f7986b5089f0a520c9921cf83958d55e089c0b93acc2fe921e0db1b1",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "1a0ad14f-6746-5eec-8f55-5e42c81a7a9b",
+            "templateId": "b3f415c5-1368-5678-8b16-e52af2d69b9a"
+          },
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+            "manifest": {
+              "id": "eceb732c-a0a1-533e-864a-a83f1e89d4d9",
+              "hash": "9f600223844f7ce0cbb8b8560ac1b0c8953be3918a7cfecbb8a07973b29d8b0a",
+              "version": 1
+            },
+            "attemptId": "e5e82457-44d6-47d8-81d8-1c62f582f412",
+            "cycleRunId": "576a0e3b-b9e4-4d56-a13b-f0c7e09e5b06",
+            "selectionId": "b2de842e-81ad-48de-ab7a-128f51ee1e62",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d3b1-72b6-97d1-62e9cccdcdd0",
+              "hash": "3e83d81666da85eb7cdbe2ec25ce9ca1b7dd90d049a401061d76051131554fcc",
+              "version": 3
+            }
+          },
+          "intentHash": "47b03833e43f591c5aaa23ff6e1a94bd4f00c73b0c351351634b801deb39036c",
+          "projection": {
+            "id": "de5b3da5-2b74-5817-84de-a8fda35e7dc1",
+            "code": "supplier.submitted_review_pack.snapshot",
+            "hash": "ca4883d0d383080e095f466b8c839a004d812de2641a48d901785c2fa4be159a",
+            "version": 1
+          },
+          "sourceSnapshot": {
+            "id": "01a09f01-d3b1-72b6-97d1-62e9cccdcdd0",
+            "hash": "3e83d81666da85eb7cdbe2ec25ce9ca1b7dd90d049a401061d76051131554fcc",
+            "version": 3
+          }
+        },
+        "scan": {
+          "status": "clean",
+          "scanner": "clamav",
+          "scanned_at": "2026-09-14T09:38:04.925Z",
+          "duration_ms": 107,
+          "signature_version": "28123"
+        }
+      },
+      {
+        "id": "63cffbe1-d1f3-4f4b-8637-56d54a3d0027",
+        "case_id": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+        "purpose": "submitted_review_pack",
+        "status": "ready",
+        "gate_status": "succeeded",
+        "attempt_count": 1,
+        "result": {
+          "jobId": "63cffbe1-d1f3-4f4b-8637-56d54a3d0027",
+          "sha256": "cb99a8a783ef79b4f222a4641bbb5b3ad03aa29996a8a01562df65baea0847c2",
+          "status": "ready",
+          "purpose": "submitted_review_pack",
+          "template": {
+            "id": "1fe0c225-d530-5100-8291-dda6342bc9d9",
+            "hash": "8a94f082f7986b5089f0a520c9921cf83958d55e089c0b93acc2fe921e0db1b1",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "1a0ad14f-6746-5eec-8f55-5e42c81a7a9b",
+            "templateId": "b3f415c5-1368-5678-8b16-e52af2d69b9a"
+          },
+          "scannedAt": "2026-09-14T09:51:03.858Z",
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+            "manifest": {
+              "id": "30b9bbc7-7f2c-5ca8-8e15-0a4c81395307",
+              "hash": "ae7111a252153d3d842d56773b7b032bc0192bf0b3523d2f554ad10db0576937",
+              "version": 1
+            },
+            "attemptId": "04050fdb-8b34-4b23-ba23-c7d706a5207a",
+            "cycleRunId": "77677bf0-17df-460f-b463-e899d71246d5",
+            "selectionId": "98408f29-132a-49d8-8672-9947fc765b1f",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d5b8-75f7-8511-6120f528588a",
+              "hash": "298e3ae4b537162fff4db798eb0466526f3e7cd11b3ce566686633356ae9f93a",
+              "version": 3
+            }
+          },
+          "scanStatus": "clean",
+          "attachmentId": "1864af6e-b134-4871-abba-b7890b96185e",
+          "idempotencyKey": "process-document-result:63cffbe1-d1f3-4f4b-8637-56d54a3d0027",
+          "sourceSnapshot": {
+            "id": "01a09f01-d5b8-75f7-8511-6120f528588a",
+            "hash": "298e3ae4b537162fff4db798eb0466526f3e7cd11b3ce566686633356ae9f93a",
+            "version": 3
+          },
+          "attachmentVersionId": "1864af6e-b134-4871-abba-b7890b96185e"
+        },
+        "size_bytes": 21842,
+        "provenance": {
+          "jobId": "63cffbe1-d1f3-4f4b-8637-56d54a3d0027",
+          "policy": {
+            "id": "3da19ca2-7809-5355-8505-788526996cf2",
+            "hash": "e81fe0c463c99346c7f836137a828e0d1861ea2a26b82f50540f8f8fe4d0b3ef",
+            "version": 1,
+            "definitionId": "3da19ca2-7809-5355-8505-788526996cf2"
+          },
+          "schema": "athyper.process-document-provenance/1",
+          "profile": {
+            "id": "4a66fcb3-ae0b-592a-8d84-79a71349b8fd",
+            "code": "standard",
+            "hash": "7d8e752949aa8a348386688d25a96b0d85846866899126082cafd87118acb766",
+            "version": 1
+          },
+          "purpose": "submitted_review_pack",
+          "template": {
+            "id": "1fe0c225-d530-5100-8291-dda6342bc9d9",
+            "hash": "8a94f082f7986b5089f0a520c9921cf83958d55e089c0b93acc2fe921e0db1b1",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "1a0ad14f-6746-5eec-8f55-5e42c81a7a9b",
+            "templateId": "b3f415c5-1368-5678-8b16-e52af2d69b9a"
+          },
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+            "manifest": {
+              "id": "30b9bbc7-7f2c-5ca8-8e15-0a4c81395307",
+              "hash": "ae7111a252153d3d842d56773b7b032bc0192bf0b3523d2f554ad10db0576937",
+              "version": 1
+            },
+            "attemptId": "04050fdb-8b34-4b23-ba23-c7d706a5207a",
+            "cycleRunId": "77677bf0-17df-460f-b463-e899d71246d5",
+            "selectionId": "98408f29-132a-49d8-8672-9947fc765b1f",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d5b8-75f7-8511-6120f528588a",
+              "hash": "298e3ae4b537162fff4db798eb0466526f3e7cd11b3ce566686633356ae9f93a",
+              "version": 3
+            }
+          },
+          "intentHash": "2c36469acc8f4f882f3408189c9e841607e6077334f6b81c2b9d5882270e452f",
+          "projection": {
+            "id": "de5b3da5-2b74-5817-84de-a8fda35e7dc1",
+            "code": "supplier.submitted_review_pack.snapshot",
+            "hash": "ca4883d0d383080e095f466b8c839a004d812de2641a48d901785c2fa4be159a",
+            "version": 1
+          },
+          "sourceSnapshot": {
+            "id": "01a09f01-d5b8-75f7-8511-6120f528588a",
+            "hash": "298e3ae4b537162fff4db798eb0466526f3e7cd11b3ce566686633356ae9f93a",
+            "version": 3
+          }
+        },
+        "scan": {
+          "status": "clean",
+          "scanner": "clamav",
+          "scanned_at": "2026-09-14T09:51:03.858Z",
+          "duration_ms": 127,
+          "signature_version": "28123"
+        }
+      },
+      {
+        "id": "84714eb2-e942-4e13-8598-f61f1f6759c8",
+        "case_id": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+        "purpose": "submitted_review_pack",
+        "status": "ready",
+        "gate_status": "succeeded",
+        "attempt_count": 1,
+        "result": {
+          "jobId": "84714eb2-e942-4e13-8598-f61f1f6759c8",
+          "sha256": "2d8160647909b1df7b98459c4b0ef7c504349566f5faa1238053b28543f01368",
+          "status": "ready",
+          "purpose": "submitted_review_pack",
+          "template": {
+            "id": "1fe0c225-d530-5100-8291-dda6342bc9d9",
+            "hash": "8a94f082f7986b5089f0a520c9921cf83958d55e089c0b93acc2fe921e0db1b1",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "1a0ad14f-6746-5eec-8f55-5e42c81a7a9b",
+            "templateId": "b3f415c5-1368-5678-8b16-e52af2d69b9a"
+          },
+          "scannedAt": "2026-09-14T09:51:04.314Z",
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+            "manifest": {
+              "id": "4760bf40-09fa-567d-86c2-4444dcb7deb4",
+              "hash": "85d7efc1fe035231cec461ebea9b669bf8683ff53a5bf2900a73bb7a4167873c",
+              "version": 1
+            },
+            "attemptId": "33ba85df-96ae-421d-8f02-fe65108eb92f",
+            "cycleRunId": "6e63aa27-3354-4411-9331-e1ebc0ef0684",
+            "selectionId": "138edadf-b495-413a-a5d8-ed4b56a62e26",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d7af-7549-9b25-251151821925",
+              "hash": "44f71e9b3976e70b133dedc1c795f89eabfcfc7333f68cb0ebe5cb743bd6f835",
+              "version": 3
+            }
+          },
+          "scanStatus": "clean",
+          "attachmentId": "2235bc5f-4d49-42d9-938d-2555d49cebd5",
+          "idempotencyKey": "process-document-result:84714eb2-e942-4e13-8598-f61f1f6759c8",
+          "sourceSnapshot": {
+            "id": "01a09f01-d7af-7549-9b25-251151821925",
+            "hash": "44f71e9b3976e70b133dedc1c795f89eabfcfc7333f68cb0ebe5cb743bd6f835",
+            "version": 3
+          },
+          "attachmentVersionId": "2235bc5f-4d49-42d9-938d-2555d49cebd5"
+        },
+        "size_bytes": 21825,
+        "provenance": {
+          "jobId": "84714eb2-e942-4e13-8598-f61f1f6759c8",
+          "policy": {
+            "id": "3da19ca2-7809-5355-8505-788526996cf2",
+            "hash": "e81fe0c463c99346c7f836137a828e0d1861ea2a26b82f50540f8f8fe4d0b3ef",
+            "version": 1,
+            "definitionId": "3da19ca2-7809-5355-8505-788526996cf2"
+          },
+          "schema": "athyper.process-document-provenance/1",
+          "profile": {
+            "id": "c43f23eb-08d1-5311-8097-e30f09f84142",
+            "code": "enhanced",
+            "hash": "06643aa1a85419b5fff8cbe5896b6b855df37116a6c6bc28434315305e93ba00",
+            "version": 1
+          },
+          "purpose": "submitted_review_pack",
+          "template": {
+            "id": "1fe0c225-d530-5100-8291-dda6342bc9d9",
+            "hash": "8a94f082f7986b5089f0a520c9921cf83958d55e089c0b93acc2fe921e0db1b1",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "1a0ad14f-6746-5eec-8f55-5e42c81a7a9b",
+            "templateId": "b3f415c5-1368-5678-8b16-e52af2d69b9a"
+          },
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+            "manifest": {
+              "id": "4760bf40-09fa-567d-86c2-4444dcb7deb4",
+              "hash": "85d7efc1fe035231cec461ebea9b669bf8683ff53a5bf2900a73bb7a4167873c",
+              "version": 1
+            },
+            "attemptId": "33ba85df-96ae-421d-8f02-fe65108eb92f",
+            "cycleRunId": "6e63aa27-3354-4411-9331-e1ebc0ef0684",
+            "selectionId": "138edadf-b495-413a-a5d8-ed4b56a62e26",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d7af-7549-9b25-251151821925",
+              "hash": "44f71e9b3976e70b133dedc1c795f89eabfcfc7333f68cb0ebe5cb743bd6f835",
+              "version": 3
+            }
+          },
+          "intentHash": "9113ea7db0b222bdd9b3c4f57a0da21ba7a3e80f523ac7fd865ed954587ba2b0",
+          "projection": {
+            "id": "de5b3da5-2b74-5817-84de-a8fda35e7dc1",
+            "code": "supplier.submitted_review_pack.snapshot",
+            "hash": "ca4883d0d383080e095f466b8c839a004d812de2641a48d901785c2fa4be159a",
+            "version": 1
+          },
+          "sourceSnapshot": {
+            "id": "01a09f01-d7af-7549-9b25-251151821925",
+            "hash": "44f71e9b3976e70b133dedc1c795f89eabfcfc7333f68cb0ebe5cb743bd6f835",
+            "version": 3
+          }
+        },
+        "scan": {
+          "status": "clean",
+          "scanner": "clamav",
+          "scanned_at": "2026-09-14T09:51:04.314Z",
+          "duration_ms": 106,
+          "signature_version": "28123"
+        }
+      },
+      {
+        "id": "a189724e-f285-4eae-bf8a-3f997ba46ead",
+        "case_id": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+        "purpose": "decision_document",
+        "status": "ready",
+        "gate_status": "succeeded",
+        "attempt_count": 1,
+        "result": {
+          "jobId": "a189724e-f285-4eae-bf8a-3f997ba46ead",
+          "sha256": "a0a3d6fdd6e7a3dc16abef4509e6092de4a500cc0aee1936511602b23141863f",
+          "status": "ready",
+          "purpose": "decision_document",
+          "template": {
+            "id": "1b2aaeae-65fa-56d4-81ac-bdb0173ce990",
+            "hash": "6cef1e02740dfa48e081dc30d401d5edab1248892ce0fd9c054254c3776b4fe0",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "9dac243b-1df3-5775-884e-76988da172b3",
+            "templateId": "f22edea1-eeef-56fb-8d45-58346a3a0b90"
+          },
+          "scannedAt": "2026-09-14T10:15:10.360Z",
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+            "manifest": {
+              "id": "eceb732c-a0a1-533e-864a-a83f1e89d4d9",
+              "hash": "9f600223844f7ce0cbb8b8560ac1b0c8953be3918a7cfecbb8a07973b29d8b0a",
+              "version": 1
+            },
+            "attemptId": "e5e82457-44d6-47d8-81d8-1c62f582f412",
+            "cycleRunId": "576a0e3b-b9e4-4d56-a13b-f0c7e09e5b06",
+            "selectionId": "b2de842e-81ad-48de-ab7a-128f51ee1e62",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d3b1-72b6-97d1-62e9cccdcdd0",
+              "hash": "3e83d81666da85eb7cdbe2ec25ce9ca1b7dd90d049a401061d76051131554fcc",
+              "version": 3
+            }
+          },
+          "scanStatus": "clean",
+          "attachmentId": "e54e9a1e-62fb-4c93-b333-2a7feb7790ea",
+          "idempotencyKey": "process-document-result:a189724e-f285-4eae-bf8a-3f997ba46ead",
+          "sourceSnapshot": {
+            "id": "01a09f69-dae4-7c97-8cc8-1f44eb6f33e3",
+            "hash": "da2a337ad2b5fce00829f59ef2cdb015b57a6a7907ccfb70c9b5c8482254f304",
+            "version": 4
+          },
+          "attachmentVersionId": "e54e9a1e-62fb-4c93-b333-2a7feb7790ea"
+        },
+        "size_bytes": 19175,
+        "provenance": {
+          "jobId": "a189724e-f285-4eae-bf8a-3f997ba46ead",
+          "policy": {
+            "id": "3da19ca2-7809-5355-8505-788526996cf2",
+            "hash": "e81fe0c463c99346c7f836137a828e0d1861ea2a26b82f50540f8f8fe4d0b3ef",
+            "version": 1,
+            "definitionId": "3da19ca2-7809-5355-8505-788526996cf2"
+          },
+          "schema": "athyper.process-document-provenance/1",
+          "profile": {
+            "id": "d39ac33f-eb65-5ec1-89b7-73913b9047f7",
+            "code": "simple",
+            "hash": "cc7a0c2df841a7d6479a6fb91c620a6b3e26b7c8daa5aabde822e259d498511c",
+            "version": 1
+          },
+          "purpose": "decision_document",
+          "template": {
+            "id": "1b2aaeae-65fa-56d4-81ac-bdb0173ce990",
+            "hash": "6cef1e02740dfa48e081dc30d401d5edab1248892ce0fd9c054254c3776b4fe0",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "9dac243b-1df3-5775-884e-76988da172b3",
+            "templateId": "f22edea1-eeef-56fb-8d45-58346a3a0b90"
+          },
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+            "manifest": {
+              "id": "eceb732c-a0a1-533e-864a-a83f1e89d4d9",
+              "hash": "9f600223844f7ce0cbb8b8560ac1b0c8953be3918a7cfecbb8a07973b29d8b0a",
+              "version": 1
+            },
+            "attemptId": "e5e82457-44d6-47d8-81d8-1c62f582f412",
+            "cycleRunId": "576a0e3b-b9e4-4d56-a13b-f0c7e09e5b06",
+            "selectionId": "b2de842e-81ad-48de-ab7a-128f51ee1e62",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d3b1-72b6-97d1-62e9cccdcdd0",
+              "hash": "3e83d81666da85eb7cdbe2ec25ce9ca1b7dd90d049a401061d76051131554fcc",
+              "version": 3
+            }
+          },
+          "intentHash": "c3913b70642642fe848dd257780d25c7ddc0895610c64adb7663da2de4e9c48b",
+          "projection": {
+            "id": "09aedc22-634c-58bd-8ef1-ee48993b1094",
+            "code": "supplier.decision_document.snapshot",
+            "hash": "0ed340c847c4b1895bd554991a3ea1ba401d8ad002ba62ddeb8341521c310c97",
+            "version": 1
+          },
+          "sourceSnapshot": {
+            "id": "01a09f69-dae4-7c97-8cc8-1f44eb6f33e3",
+            "hash": "da2a337ad2b5fce00829f59ef2cdb015b57a6a7907ccfb70c9b5c8482254f304",
+            "version": 4
+          }
+        },
+        "scan": {
+          "status": "clean",
+          "scanner": "clamav",
+          "scanned_at": "2026-09-14T10:15:10.360Z",
+          "duration_ms": 146,
+          "signature_version": "28123"
+        }
+      },
+      {
+        "id": "2a9476e9-9693-4aa4-860f-1c643bf23a51",
+        "case_id": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+        "purpose": "decision_document",
+        "status": "ready",
+        "gate_status": "succeeded",
+        "attempt_count": 1,
+        "result": {
+          "jobId": "2a9476e9-9693-4aa4-860f-1c643bf23a51",
+          "sha256": "42aeb1f10611dedc130fba03c5978df4dd71434a5229787523efcb53b53ae056",
+          "status": "ready",
+          "purpose": "decision_document",
+          "template": {
+            "id": "1b2aaeae-65fa-56d4-81ac-bdb0173ce990",
+            "hash": "6cef1e02740dfa48e081dc30d401d5edab1248892ce0fd9c054254c3776b4fe0",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "9dac243b-1df3-5775-884e-76988da172b3",
+            "templateId": "f22edea1-eeef-56fb-8d45-58346a3a0b90"
+          },
+          "scannedAt": "2026-09-14T10:17:19.447Z",
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+            "manifest": {
+              "id": "30b9bbc7-7f2c-5ca8-8e15-0a4c81395307",
+              "hash": "ae7111a252153d3d842d56773b7b032bc0192bf0b3523d2f554ad10db0576937",
+              "version": 1
+            },
+            "attemptId": "04050fdb-8b34-4b23-ba23-c7d706a5207a",
+            "cycleRunId": "77677bf0-17df-460f-b463-e899d71246d5",
+            "selectionId": "98408f29-132a-49d8-8672-9947fc765b1f",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d5b8-75f7-8511-6120f528588a",
+              "hash": "298e3ae4b537162fff4db798eb0466526f3e7cd11b3ce566686633356ae9f93a",
+              "version": 3
+            }
+          },
+          "scanStatus": "clean",
+          "attachmentId": "8984e17f-ec01-4d45-8282-c3f413697812",
+          "idempotencyKey": "process-document-result:2a9476e9-9693-4aa4-860f-1c643bf23a51",
+          "sourceSnapshot": {
+            "id": "01a09f6b-d33e-7bf7-834f-fc5363671df6",
+            "hash": "d67b7c7d1cee46cd272127f94588e30c03511a086be93b0c9c8d6070b68714ae",
+            "version": 4
+          },
+          "attachmentVersionId": "8984e17f-ec01-4d45-8282-c3f413697812"
+        },
+        "size_bytes": 19306,
+        "provenance": {
+          "jobId": "2a9476e9-9693-4aa4-860f-1c643bf23a51",
+          "policy": {
+            "id": "3da19ca2-7809-5355-8505-788526996cf2",
+            "hash": "e81fe0c463c99346c7f836137a828e0d1861ea2a26b82f50540f8f8fe4d0b3ef",
+            "version": 1,
+            "definitionId": "3da19ca2-7809-5355-8505-788526996cf2"
+          },
+          "schema": "athyper.process-document-provenance/1",
+          "profile": {
+            "id": "4a66fcb3-ae0b-592a-8d84-79a71349b8fd",
+            "code": "standard",
+            "hash": "7d8e752949aa8a348386688d25a96b0d85846866899126082cafd87118acb766",
+            "version": 1
+          },
+          "purpose": "decision_document",
+          "template": {
+            "id": "1b2aaeae-65fa-56d4-81ac-bdb0173ce990",
+            "hash": "6cef1e02740dfa48e081dc30d401d5edab1248892ce0fd9c054254c3776b4fe0",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "9dac243b-1df3-5775-884e-76988da172b3",
+            "templateId": "f22edea1-eeef-56fb-8d45-58346a3a0b90"
+          },
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+            "manifest": {
+              "id": "30b9bbc7-7f2c-5ca8-8e15-0a4c81395307",
+              "hash": "ae7111a252153d3d842d56773b7b032bc0192bf0b3523d2f554ad10db0576937",
+              "version": 1
+            },
+            "attemptId": "04050fdb-8b34-4b23-ba23-c7d706a5207a",
+            "cycleRunId": "77677bf0-17df-460f-b463-e899d71246d5",
+            "selectionId": "98408f29-132a-49d8-8672-9947fc765b1f",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d5b8-75f7-8511-6120f528588a",
+              "hash": "298e3ae4b537162fff4db798eb0466526f3e7cd11b3ce566686633356ae9f93a",
+              "version": 3
+            }
+          },
+          "intentHash": "a74bac266e06cf6330035f2c91544af3e5f423a18d2f788a9c23ee74d502d07d",
+          "projection": {
+            "id": "09aedc22-634c-58bd-8ef1-ee48993b1094",
+            "code": "supplier.decision_document.snapshot",
+            "hash": "0ed340c847c4b1895bd554991a3ea1ba401d8ad002ba62ddeb8341521c310c97",
+            "version": 1
+          },
+          "sourceSnapshot": {
+            "id": "01a09f6b-d33e-7bf7-834f-fc5363671df6",
+            "hash": "d67b7c7d1cee46cd272127f94588e30c03511a086be93b0c9c8d6070b68714ae",
+            "version": 4
+          }
+        },
+        "scan": {
+          "status": "clean",
+          "scanner": "clamav",
+          "scanned_at": "2026-09-14T10:17:19.447Z",
+          "duration_ms": 125,
+          "signature_version": "28123"
+        }
+      },
+      {
+        "id": "dac48ff2-71c9-4f11-94ba-44b2d787443f",
+        "case_id": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+        "purpose": "decision_document",
+        "status": "ready",
+        "gate_status": "succeeded",
+        "attempt_count": 1,
+        "result": {
+          "jobId": "dac48ff2-71c9-4f11-94ba-44b2d787443f",
+          "sha256": "abf4abaff8a379fe8dd885447e692eae3ceb9e99b249f82f44ec002b9c8e13e0",
+          "status": "ready",
+          "purpose": "decision_document",
+          "template": {
+            "id": "1b2aaeae-65fa-56d4-81ac-bdb0173ce990",
+            "hash": "6cef1e02740dfa48e081dc30d401d5edab1248892ce0fd9c054254c3776b4fe0",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "9dac243b-1df3-5775-884e-76988da172b3",
+            "templateId": "f22edea1-eeef-56fb-8d45-58346a3a0b90"
+          },
+          "scannedAt": "2026-09-14T10:18:34.026Z",
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+            "manifest": {
+              "id": "4760bf40-09fa-567d-86c2-4444dcb7deb4",
+              "hash": "85d7efc1fe035231cec461ebea9b669bf8683ff53a5bf2900a73bb7a4167873c",
+              "version": 1
+            },
+            "attemptId": "33ba85df-96ae-421d-8f02-fe65108eb92f",
+            "cycleRunId": "6e63aa27-3354-4411-9331-e1ebc0ef0684",
+            "selectionId": "138edadf-b495-413a-a5d8-ed4b56a62e26",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d7af-7549-9b25-251151821925",
+              "hash": "44f71e9b3976e70b133dedc1c795f89eabfcfc7333f68cb0ebe5cb743bd6f835",
+              "version": 3
+            }
+          },
+          "scanStatus": "clean",
+          "attachmentId": "be13a735-8201-4855-bf5e-e058fed548c7",
+          "idempotencyKey": "process-document-result:dac48ff2-71c9-4f11-94ba-44b2d787443f",
+          "sourceSnapshot": {
+            "id": "01a09f6c-f6a5-73e8-bda2-08c9f5682f0e",
+            "hash": "90ad90592a322b4ec50b4933781f524c956ad54fd8ba091b1d5ca49d1dc86d3d",
+            "version": 4
+          },
+          "attachmentVersionId": "be13a735-8201-4855-bf5e-e058fed548c7"
+        },
+        "size_bytes": 19440,
+        "provenance": {
+          "jobId": "dac48ff2-71c9-4f11-94ba-44b2d787443f",
+          "policy": {
+            "id": "3da19ca2-7809-5355-8505-788526996cf2",
+            "hash": "e81fe0c463c99346c7f836137a828e0d1861ea2a26b82f50540f8f8fe4d0b3ef",
+            "version": 1,
+            "definitionId": "3da19ca2-7809-5355-8505-788526996cf2"
+          },
+          "schema": "athyper.process-document-provenance/1",
+          "profile": {
+            "id": "c43f23eb-08d1-5311-8097-e30f09f84142",
+            "code": "enhanced",
+            "hash": "06643aa1a85419b5fff8cbe5896b6b855df37116a6c6bc28434315305e93ba00",
+            "version": 1
+          },
+          "purpose": "decision_document",
+          "template": {
+            "id": "1b2aaeae-65fa-56d4-81ac-bdb0173ce990",
+            "hash": "6cef1e02740dfa48e081dc30d401d5edab1248892ce0fd9c054254c3776b4fe0",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "9dac243b-1df3-5775-884e-76988da172b3",
+            "templateId": "f22edea1-eeef-56fb-8d45-58346a3a0b90"
+          },
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+            "manifest": {
+              "id": "4760bf40-09fa-567d-86c2-4444dcb7deb4",
+              "hash": "85d7efc1fe035231cec461ebea9b669bf8683ff53a5bf2900a73bb7a4167873c",
+              "version": 1
+            },
+            "attemptId": "33ba85df-96ae-421d-8f02-fe65108eb92f",
+            "cycleRunId": "6e63aa27-3354-4411-9331-e1ebc0ef0684",
+            "selectionId": "138edadf-b495-413a-a5d8-ed4b56a62e26",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d7af-7549-9b25-251151821925",
+              "hash": "44f71e9b3976e70b133dedc1c795f89eabfcfc7333f68cb0ebe5cb743bd6f835",
+              "version": 3
+            }
+          },
+          "intentHash": "fb6951cbb9c2c3a0f78e6d2651d4c21dedd6e164fa2d61182f8acdf8d2f757c1",
+          "projection": {
+            "id": "09aedc22-634c-58bd-8ef1-ee48993b1094",
+            "code": "supplier.decision_document.snapshot",
+            "hash": "0ed340c847c4b1895bd554991a3ea1ba401d8ad002ba62ddeb8341521c310c97",
+            "version": 1
+          },
+          "sourceSnapshot": {
+            "id": "01a09f6c-f6a5-73e8-bda2-08c9f5682f0e",
+            "hash": "90ad90592a322b4ec50b4933781f524c956ad54fd8ba091b1d5ca49d1dc86d3d",
+            "version": 4
+          }
+        },
+        "scan": {
+          "status": "clean",
+          "scanner": "clamav",
+          "scanned_at": "2026-09-14T10:18:34.026Z",
+          "duration_ms": 109,
+          "signature_version": "28123"
+        }
+      },
+      {
+        "id": "b5339997-f1ec-4bc4-9459-2682774e1fe7",
+        "case_id": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+        "purpose": "activation_confirmation",
+        "status": "ready",
+        "gate_status": "succeeded",
+        "attempt_count": 1,
+        "result": {
+          "jobId": "b5339997-f1ec-4bc4-9459-2682774e1fe7",
+          "sha256": "8b8adefd924279eafa1f1d6d821c2b06225f4001ea870e0da727fe60eb3b04ac",
+          "status": "ready",
+          "purpose": "activation_confirmation",
+          "template": {
+            "id": "2f3ea2bb-c5e6-5f9d-854c-fd1c71bda729",
+            "hash": "3bfce4f51231fd52c89ba44c10c8629beaab5c48494c794bcb4b0061cae901ad",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "db7b3fc7-4838-59a3-841c-3b4a5943c0c6",
+            "templateId": "45aedd60-67f5-5d3d-824d-ef2a7c8a73d8"
+          },
+          "scannedAt": "2026-09-14T10:18:49.248Z",
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+            "manifest": {
+              "id": "eceb732c-a0a1-533e-864a-a83f1e89d4d9",
+              "hash": "9f600223844f7ce0cbb8b8560ac1b0c8953be3918a7cfecbb8a07973b29d8b0a",
+              "version": 1
+            },
+            "attemptId": "e5e82457-44d6-47d8-81d8-1c62f582f412",
+            "cycleRunId": "576a0e3b-b9e4-4d56-a13b-f0c7e09e5b06",
+            "selectionId": "b2de842e-81ad-48de-ab7a-128f51ee1e62",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d3b1-72b6-97d1-62e9cccdcdd0",
+              "hash": "3e83d81666da85eb7cdbe2ec25ce9ca1b7dd90d049a401061d76051131554fcc",
+              "version": 3
+            }
+          },
+          "scanStatus": "clean",
+          "attachmentId": "5580cc7e-e75a-4ae0-b493-f2e532f85971",
+          "idempotencyKey": "process-document-result:b5339997-f1ec-4bc4-9459-2682774e1fe7",
+          "sourceSnapshot": {
+            "id": "01a09f6a-fab6-767c-86e5-0588de88f621",
+            "hash": "cdc94c9725bdfc8868f190bca1d509a9afc4230b2f2714215cdfa81c68abde2a",
+            "version": 1
+          },
+          "attachmentVersionId": "5580cc7e-e75a-4ae0-b493-f2e532f85971"
+        },
+        "size_bytes": 19616,
+        "provenance": {
+          "jobId": "b5339997-f1ec-4bc4-9459-2682774e1fe7",
+          "policy": {
+            "id": "3da19ca2-7809-5355-8505-788526996cf2",
+            "hash": "e81fe0c463c99346c7f836137a828e0d1861ea2a26b82f50540f8f8fe4d0b3ef",
+            "version": 1,
+            "definitionId": "3da19ca2-7809-5355-8505-788526996cf2"
+          },
+          "schema": "athyper.process-document-provenance/1",
+          "profile": {
+            "id": "d39ac33f-eb65-5ec1-89b7-73913b9047f7",
+            "code": "simple",
+            "hash": "cc7a0c2df841a7d6479a6fb91c620a6b3e26b7c8daa5aabde822e259d498511c",
+            "version": 1
+          },
+          "purpose": "activation_confirmation",
+          "template": {
+            "id": "2f3ea2bb-c5e6-5f9d-854c-fd1c71bda729",
+            "hash": "3bfce4f51231fd52c89ba44c10c8629beaab5c48494c794bcb4b0061cae901ad",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "db7b3fc7-4838-59a3-841c-3b4a5943c0c6",
+            "templateId": "45aedd60-67f5-5d3d-824d-ef2a7c8a73d8"
+          },
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+            "manifest": {
+              "id": "eceb732c-a0a1-533e-864a-a83f1e89d4d9",
+              "hash": "9f600223844f7ce0cbb8b8560ac1b0c8953be3918a7cfecbb8a07973b29d8b0a",
+              "version": 1
+            },
+            "attemptId": "e5e82457-44d6-47d8-81d8-1c62f582f412",
+            "cycleRunId": "576a0e3b-b9e4-4d56-a13b-f0c7e09e5b06",
+            "selectionId": "b2de842e-81ad-48de-ab7a-128f51ee1e62",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d3b1-72b6-97d1-62e9cccdcdd0",
+              "hash": "3e83d81666da85eb7cdbe2ec25ce9ca1b7dd90d049a401061d76051131554fcc",
+              "version": 3
+            }
+          },
+          "intentHash": "5d6d61ab3a2ab9110f312b36edab43d6811db250e95dd2ffdf6c80dfe8d0ceaa",
+          "projection": {
+            "id": "1c2a80bc-32af-5f23-8980-c3608aa45d73",
+            "code": "supplier.activation_confirmation.snapshot",
+            "hash": "ff28d68fbe4b8ffd6ac27f5f51104349bb445354e1cd342389fb330a77b652f2",
+            "version": 1
+          },
+          "sourceSnapshot": {
+            "id": "01a09f6a-fab6-767c-86e5-0588de88f621",
+            "hash": "cdc94c9725bdfc8868f190bca1d509a9afc4230b2f2714215cdfa81c68abde2a",
+            "version": 1
+          },
+          "activationEvidence": {
+            "id": "01a09f6d-1dee-7550-96ec-a2b04c21f133",
+            "hash": "cec4a4b418f9d99e49135bbe2a9e3a1e9f72e037f23fabfba7311b867f2cd9f6",
+            "version": 1
+          }
+        },
+        "scan": {
+          "status": "clean",
+          "scanner": "clamav",
+          "scanned_at": "2026-09-14T10:18:49.248Z",
+          "duration_ms": 118,
+          "signature_version": "28123"
+        }
+      },
+      {
+        "id": "c766e85f-93a0-4276-88c5-4dbce232200c",
+        "case_id": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+        "purpose": "activation_confirmation",
+        "status": "ready",
+        "gate_status": "succeeded",
+        "attempt_count": 1,
+        "result": {
+          "jobId": "c766e85f-93a0-4276-88c5-4dbce232200c",
+          "sha256": "fa18d778c935322b4aa3208550f155789c0e6053d6235f28c95be98038af6b4e",
+          "status": "ready",
+          "purpose": "activation_confirmation",
+          "template": {
+            "id": "2f3ea2bb-c5e6-5f9d-854c-fd1c71bda729",
+            "hash": "3bfce4f51231fd52c89ba44c10c8629beaab5c48494c794bcb4b0061cae901ad",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "db7b3fc7-4838-59a3-841c-3b4a5943c0c6",
+            "templateId": "45aedd60-67f5-5d3d-824d-ef2a7c8a73d8"
+          },
+          "scannedAt": "2026-09-14T10:18:49.923Z",
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+            "manifest": {
+              "id": "30b9bbc7-7f2c-5ca8-8e15-0a4c81395307",
+              "hash": "ae7111a252153d3d842d56773b7b032bc0192bf0b3523d2f554ad10db0576937",
+              "version": 1
+            },
+            "attemptId": "04050fdb-8b34-4b23-ba23-c7d706a5207a",
+            "cycleRunId": "77677bf0-17df-460f-b463-e899d71246d5",
+            "selectionId": "98408f29-132a-49d8-8672-9947fc765b1f",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d5b8-75f7-8511-6120f528588a",
+              "hash": "298e3ae4b537162fff4db798eb0466526f3e7cd11b3ce566686633356ae9f93a",
+              "version": 3
+            }
+          },
+          "scanStatus": "clean",
+          "attachmentId": "07988dc1-680b-4c35-b00f-8bcca6022ee0",
+          "idempotencyKey": "process-document-result:c766e85f-93a0-4276-88c5-4dbce232200c",
+          "sourceSnapshot": {
+            "id": "01a09f6c-ed3f-7a14-8a7d-431b56a5b477",
+            "hash": "67550a5be7c518693510b171ad9fca0e0ee3a2f6ebec378cb23d1c29e9d25969",
+            "version": 1
+          },
+          "attachmentVersionId": "07988dc1-680b-4c35-b00f-8bcca6022ee0"
+        },
+        "size_bytes": 19616,
+        "provenance": {
+          "jobId": "c766e85f-93a0-4276-88c5-4dbce232200c",
+          "policy": {
+            "id": "3da19ca2-7809-5355-8505-788526996cf2",
+            "hash": "e81fe0c463c99346c7f836137a828e0d1861ea2a26b82f50540f8f8fe4d0b3ef",
+            "version": 1,
+            "definitionId": "3da19ca2-7809-5355-8505-788526996cf2"
+          },
+          "schema": "athyper.process-document-provenance/1",
+          "profile": {
+            "id": "4a66fcb3-ae0b-592a-8d84-79a71349b8fd",
+            "code": "standard",
+            "hash": "7d8e752949aa8a348386688d25a96b0d85846866899126082cafd87118acb766",
+            "version": 1
+          },
+          "purpose": "activation_confirmation",
+          "template": {
+            "id": "2f3ea2bb-c5e6-5f9d-854c-fd1c71bda729",
+            "hash": "3bfce4f51231fd52c89ba44c10c8629beaab5c48494c794bcb4b0061cae901ad",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "db7b3fc7-4838-59a3-841c-3b4a5943c0c6",
+            "templateId": "45aedd60-67f5-5d3d-824d-ef2a7c8a73d8"
+          },
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+            "manifest": {
+              "id": "30b9bbc7-7f2c-5ca8-8e15-0a4c81395307",
+              "hash": "ae7111a252153d3d842d56773b7b032bc0192bf0b3523d2f554ad10db0576937",
+              "version": 1
+            },
+            "attemptId": "04050fdb-8b34-4b23-ba23-c7d706a5207a",
+            "cycleRunId": "77677bf0-17df-460f-b463-e899d71246d5",
+            "selectionId": "98408f29-132a-49d8-8672-9947fc765b1f",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d5b8-75f7-8511-6120f528588a",
+              "hash": "298e3ae4b537162fff4db798eb0466526f3e7cd11b3ce566686633356ae9f93a",
+              "version": 3
+            }
+          },
+          "intentHash": "b57260cd84aebf00df85de9f288a4b4134a4c8a016ed240ee97b721e61cd0cd2",
+          "projection": {
+            "id": "1c2a80bc-32af-5f23-8980-c3608aa45d73",
+            "code": "supplier.activation_confirmation.snapshot",
+            "hash": "ff28d68fbe4b8ffd6ac27f5f51104349bb445354e1cd342389fb330a77b652f2",
+            "version": 1
+          },
+          "sourceSnapshot": {
+            "id": "01a09f6c-ed3f-7a14-8a7d-431b56a5b477",
+            "hash": "67550a5be7c518693510b171ad9fca0e0ee3a2f6ebec378cb23d1c29e9d25969",
+            "version": 1
+          },
+          "activationEvidence": {
+            "id": "01a09f6d-1e03-7a92-afb3-74f7615068e0",
+            "hash": "31369319bf1ffcac912b675a41a73c02e4c9a1d806db14f4631573db4d9aead1",
+            "version": 1
+          }
+        },
+        "scan": {
+          "status": "clean",
+          "scanner": "clamav",
+          "scanned_at": "2026-09-14T10:18:49.923Z",
+          "duration_ms": 104,
+          "signature_version": "28123"
+        }
+      },
+      {
+        "id": "ae57ab31-3fd7-4b32-93a2-a1481081f614",
+        "case_id": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+        "purpose": "activation_confirmation",
+        "status": "ready",
+        "gate_status": "succeeded",
+        "attempt_count": 1,
+        "result": {
+          "jobId": "ae57ab31-3fd7-4b32-93a2-a1481081f614",
+          "sha256": "47a0b3c8c1edf7b57ec00f9eb993424dd6fd63b787cd2ea7d268144733cf7f0c",
+          "status": "ready",
+          "purpose": "activation_confirmation",
+          "template": {
+            "id": "2f3ea2bb-c5e6-5f9d-854c-fd1c71bda729",
+            "hash": "3bfce4f51231fd52c89ba44c10c8629beaab5c48494c794bcb4b0061cae901ad",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "db7b3fc7-4838-59a3-841c-3b4a5943c0c6",
+            "templateId": "45aedd60-67f5-5d3d-824d-ef2a7c8a73d8"
+          },
+          "scannedAt": "2026-09-14T10:18:50.521Z",
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+            "manifest": {
+              "id": "4760bf40-09fa-567d-86c2-4444dcb7deb4",
+              "hash": "85d7efc1fe035231cec461ebea9b669bf8683ff53a5bf2900a73bb7a4167873c",
+              "version": 1
+            },
+            "attemptId": "33ba85df-96ae-421d-8f02-fe65108eb92f",
+            "cycleRunId": "6e63aa27-3354-4411-9331-e1ebc0ef0684",
+            "selectionId": "138edadf-b495-413a-a5d8-ed4b56a62e26",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d7af-7549-9b25-251151821925",
+              "hash": "44f71e9b3976e70b133dedc1c795f89eabfcfc7333f68cb0ebe5cb743bd6f835",
+              "version": 3
+            }
+          },
+          "scanStatus": "clean",
+          "attachmentId": "580cdeee-dc69-45be-a84a-ada784c5da70",
+          "idempotencyKey": "process-document-result:ae57ab31-3fd7-4b32-93a2-a1481081f614",
+          "sourceSnapshot": {
+            "id": "01a09f6c-f9a1-7eb1-873f-cc8d222a6c4d",
+            "hash": "fafa2439753e524bbd052214525ef735c32438bed523d0854fe37bc2ebc3ce7e",
+            "version": 1
+          },
+          "attachmentVersionId": "580cdeee-dc69-45be-a84a-ada784c5da70"
+        },
+        "size_bytes": 19624,
+        "provenance": {
+          "jobId": "ae57ab31-3fd7-4b32-93a2-a1481081f614",
+          "policy": {
+            "id": "3da19ca2-7809-5355-8505-788526996cf2",
+            "hash": "e81fe0c463c99346c7f836137a828e0d1861ea2a26b82f50540f8f8fe4d0b3ef",
+            "version": 1,
+            "definitionId": "3da19ca2-7809-5355-8505-788526996cf2"
+          },
+          "schema": "athyper.process-document-provenance/1",
+          "profile": {
+            "id": "c43f23eb-08d1-5311-8097-e30f09f84142",
+            "code": "enhanced",
+            "hash": "06643aa1a85419b5fff8cbe5896b6b855df37116a6c6bc28434315305e93ba00",
+            "version": 1
+          },
+          "purpose": "activation_confirmation",
+          "template": {
+            "id": "2f3ea2bb-c5e6-5f9d-854c-fd1c71bda729",
+            "hash": "3bfce4f51231fd52c89ba44c10c8629beaab5c48494c794bcb4b0061cae901ad",
+            "locale": "en",
+            "variant": "default",
+            "version": 1,
+            "bindingId": "db7b3fc7-4838-59a3-841c-3b4a5943c0c6",
+            "templateId": "45aedd60-67f5-5d3d-824d-ef2a7c8a73d8"
+          },
+          "coordinate": {
+            "scope": {
+              "planeKey": "neon",
+              "tenantId": "44444444-4444-4444-8444-444444444444",
+              "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+              "processFamily": "supplier_onboarding",
+              "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+            },
+            "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+            "manifest": {
+              "id": "4760bf40-09fa-567d-86c2-4444dcb7deb4",
+              "hash": "85d7efc1fe035231cec461ebea9b669bf8683ff53a5bf2900a73bb7a4167873c",
+              "version": 1
+            },
+            "attemptId": "33ba85df-96ae-421d-8f02-fe65108eb92f",
+            "cycleRunId": "6e63aa27-3354-4411-9331-e1ebc0ef0684",
+            "selectionId": "138edadf-b495-413a-a5d8-ed4b56a62e26",
+            "attemptNumber": 1,
+            "submissionSnapshot": {
+              "id": "01a09f01-d7af-7549-9b25-251151821925",
+              "hash": "44f71e9b3976e70b133dedc1c795f89eabfcfc7333f68cb0ebe5cb743bd6f835",
+              "version": 3
+            }
+          },
+          "intentHash": "8be89949bbead7dca491a25b83d6020ef44e6a013bb45a799d0ccf49b8cc14eb",
+          "projection": {
+            "id": "1c2a80bc-32af-5f23-8980-c3608aa45d73",
+            "code": "supplier.activation_confirmation.snapshot",
+            "hash": "ff28d68fbe4b8ffd6ac27f5f51104349bb445354e1cd342389fb330a77b652f2",
+            "version": 1
+          },
+          "sourceSnapshot": {
+            "id": "01a09f6c-f9a1-7eb1-873f-cc8d222a6c4d",
+            "hash": "fafa2439753e524bbd052214525ef735c32438bed523d0854fe37bc2ebc3ce7e",
+            "version": 1
+          },
+          "activationEvidence": {
+            "id": "01a09f6d-1e19-71c1-946e-9f01f833b1f5",
+            "hash": "cff5f4c74417dab4aa2907407ac7ceeb4668bffd00b559e8293fc3d43ebb3925",
+            "version": 1
+          }
+        },
+        "scan": {
+          "status": "clean",
+          "scanner": "clamav",
+          "scanned_at": "2026-09-14T10:18:50.521Z",
+          "duration_ms": 98,
+          "signature_version": "28123"
+        }
+      }
+    ],
+    "objects": [
+      {
+        "jobId": "5b1cecaf-c5ef-4512-8fde-97f7e849287e",
+        "sha256": "cd3336bc01f682bf5705687c14bebf5db0898631072daf27710feb9ed3e65acc",
+        "sizeBytes": 21822,
+        "pdf": true
+      },
+      {
+        "jobId": "6bbdb380-9b27-4d14-93f3-5b0546a0d330",
+        "sha256": "39e29f2e4669aeb94858b81efdc0ede8c740b177c9b77fce4c7c2d0e8e35a316",
+        "sizeBytes": 21817,
+        "pdf": true
+      },
+      {
+        "jobId": "63cffbe1-d1f3-4f4b-8637-56d54a3d0027",
+        "sha256": "cb99a8a783ef79b4f222a4641bbb5b3ad03aa29996a8a01562df65baea0847c2",
+        "sizeBytes": 21842,
+        "pdf": true
+      },
+      {
+        "jobId": "84714eb2-e942-4e13-8598-f61f1f6759c8",
+        "sha256": "2d8160647909b1df7b98459c4b0ef7c504349566f5faa1238053b28543f01368",
+        "sizeBytes": 21825,
+        "pdf": true
+      },
+      {
+        "jobId": "a189724e-f285-4eae-bf8a-3f997ba46ead",
+        "sha256": "a0a3d6fdd6e7a3dc16abef4509e6092de4a500cc0aee1936511602b23141863f",
+        "sizeBytes": 19175,
+        "pdf": true
+      },
+      {
+        "jobId": "2a9476e9-9693-4aa4-860f-1c643bf23a51",
+        "sha256": "42aeb1f10611dedc130fba03c5978df4dd71434a5229787523efcb53b53ae056",
+        "sizeBytes": 19306,
+        "pdf": true
+      },
+      {
+        "jobId": "dac48ff2-71c9-4f11-94ba-44b2d787443f",
+        "sha256": "abf4abaff8a379fe8dd885447e692eae3ceb9e99b249f82f44ec002b9c8e13e0",
+        "sizeBytes": 19440,
+        "pdf": true
+      },
+      {
+        "jobId": "b5339997-f1ec-4bc4-9459-2682774e1fe7",
+        "sha256": "8b8adefd924279eafa1f1d6d821c2b06225f4001ea870e0da727fe60eb3b04ac",
+        "sizeBytes": 19616,
+        "pdf": true
+      },
+      {
+        "jobId": "c766e85f-93a0-4276-88c5-4dbce232200c",
+        "sha256": "fa18d778c935322b4aa3208550f155789c0e6053d6235f28c95be98038af6b4e",
+        "sizeBytes": 19616,
+        "pdf": true
+      },
+      {
+        "jobId": "ae57ab31-3fd7-4b32-93a2-a1481081f614",
+        "sha256": "47a0b3c8c1edf7b57ec00f9eb993424dd6fd63b787cd2ea7d268144733cf7f0c",
+        "sizeBytes": 19624,
+        "pdf": true
+      }
+    ],
+    "executions": [
+      {
+        "job_code": "supplier.process-documents.poll",
+        "status": "succeeded",
+        "result_payload": {
+          "failed": 0,
+          "processed": 3
+        },
+        "started_at": "2026-09-14T09:51:03.421189+00:00",
+        "completed_at": "2026-09-14T09:51:04.882436+00:00"
+      },
+      {
+        "job_code": "supplier.process-documents.poll",
+        "status": "succeeded",
+        "result_payload": {
+          "failed": 0,
+          "processed": 0
+        },
+        "started_at": "2026-09-14T10:19:33.431901+00:00",
+        "completed_at": "2026-09-14T10:19:33.4364+00:00"
+      },
+      {
+        "job_code": "supplier.process-documents.poll",
+        "status": "succeeded",
+        "result_payload": {
+          "failed": 0,
+          "processed": 0
+        },
+        "started_at": "2026-09-14T10:19:03.442513+00:00",
+        "completed_at": "2026-09-14T10:19:03.446692+00:00"
+      },
+      {
+        "job_code": "supplier.process-documents.poll",
+        "status": "succeeded",
+        "result_payload": {
+          "failed": 0,
+          "processed": 0
+        },
+        "started_at": "2026-09-14T10:18:33.424574+00:00",
+        "completed_at": "2026-09-14T10:18:33.42889+00:00"
+      },
+      {
+        "job_code": "supplier.process-documents.poll",
+        "status": "succeeded",
+        "result_payload": {
+          "failed": 0,
+          "processed": 0
+        },
+        "started_at": "2026-09-14T10:18:03.491296+00:00",
+        "completed_at": "2026-09-14T10:18:03.495236+00:00"
+      },
+      {
+        "job_code": "supplier.process-documents.poll",
+        "status": "succeeded",
+        "result_payload": {
+          "failed": 0,
+          "processed": 0
+        },
+        "started_at": "2026-09-14T10:17:33.478221+00:00",
+        "completed_at": "2026-09-14T10:17:33.482286+00:00"
+      },
+      {
+        "job_code": "supplier.process-documents.poll",
+        "status": "succeeded",
+        "result_payload": {
+          "failed": 0,
+          "processed": 0
+        },
+        "started_at": "2026-09-14T10:17:03.466409+00:00",
+        "completed_at": "2026-09-14T10:17:03.469872+00:00"
+      },
+      {
+        "job_code": "supplier.process-documents.poll",
+        "status": "succeeded",
+        "result_payload": {
+          "failed": 0,
+          "processed": 0
+        },
+        "started_at": "2026-09-14T10:16:33.470194+00:00",
+        "completed_at": "2026-09-14T10:16:33.473616+00:00"
+      }
+    ],
+    "views": [
+      {
+        "profile": "basic",
+        "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+        "status": 200,
+        "ready": true,
+        "purposes": [
+          "activation_confirmation",
+          "decision_document",
+          "submitted_review_pack"
+        ]
+      },
+      {
+        "profile": "standard",
+        "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+        "status": 200,
+        "ready": true,
+        "purposes": [
+          "activation_confirmation",
+          "decision_document",
+          "submitted_review_pack"
+        ]
+      },
+      {
+        "profile": "enhanced",
+        "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+        "status": 200,
+        "ready": true,
+        "purposes": [
+          "activation_confirmation",
+          "decision_document",
+          "submitted_review_pack"
+        ]
+      }
+    ],
+    "passed": true
+  },
+  "remaining": [],
+  "containers": [
+    {
+      "service": "api",
+      "image": "sha256:8f40842ca90a1679fce8d0479a2aa8dc4c2e88fc708d8ab81d9546adeaec8765",
+      "status": "running",
+      "health": "healthy",
+      "startedAt": "2026-09-14T09:57:01.214413447Z",
+      "compositionHash": "75f4284cac8f4a62cb1f327c557e68d6b5d68c5f5c355ae676b4f59c22a8e71a"
+    },
+    {
+      "service": "neon-web",
+      "image": "sha256:d747882534609b004d5139742f7d81529909b74678e64a3752cf4e6a88a1caf4",
+      "status": "running",
+      "health": "healthy",
+      "startedAt": "2026-09-14T09:26:28.15160148Z"
+    },
+    {
+      "service": "worker",
+      "image": "sha256:537b91fd98855cf94381d039333efa74df79e1e5ab549e8a7eea73cbcd31ae07",
+      "status": "running",
+      "health": "healthy",
+      "startedAt": "2026-09-14T09:57:20.246546523Z",
+      "compositionHash": "75f4284cac8f4a62cb1f327c557e68d6b5d68c5f5c355ae676b4f59c22a8e71a"
+    },
+    {
+      "service": "scheduler",
+      "image": "sha256:417f0979a771bf9286730a9966584a77c2a09413875ba7a9ff63f2496fc1c742",
+      "status": "running",
+      "health": "healthy",
+      "startedAt": "2026-09-14T09:51:01.763750699Z",
+      "compositionHash": "75f4284cac8f4a62cb1f327c557e68d6b5d68c5f5c355ae676b4f59c22a8e71a"
+    }
+  ],
+  "activationPreconditions": {
+    "at": "2026-09-14T10:12:23.859Z",
+    "mode": "Authenticated missing-activation precondition",
+    "checks": [
+      {
+        "profile": "basic",
+        "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+        "blocked": 409,
+        "businessStateUnchanged": true
+      },
+      {
+        "profile": "standard",
+        "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+        "blocked": 409,
+        "businessStateUnchanged": true
+      },
+      {
+        "profile": "enhanced",
+        "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+        "blocked": 409,
+        "businessStateUnchanged": true
+      }
+    ],
+    "passed": true
+  },
+  "lastResume": {
+    "completedAt": "2026-09-14T10:23:53.915441+00:00",
+    "reviewerSession": "authenticated catl.owner; reviewer downloads and 13 committed votes verified",
+    "result": "All three purpose journeys qualified for three profiles; controlled upstream activation fixture declared",
+    "fixes": [
+      "Materializer accepts validated requirement/reason fields",
+      "Shared canonical address reuse preserves links/lineage",
+      "Qualification uses canonical materialize relay and matching vote idempotency keys"
+    ]
+  },
+  "qualificationBoundary": "P4 activation consumption uses controlled upstream risk/company fixtures, real qualification/readiness/lifecycle repositories and committed activation evidence; authenticated document APIs, real rendering/scanning/storage. P6, payment readiness and full upstream approval workflows are not claimed.",
+  "liveReviewerAndDecisionDocuments": {
+    "at": "2026-09-14T10:18:29.886Z",
+    "checks": [
+      {
+        "profile": "basic",
+        "httpStatus": 200,
+        "body": {
+          "jobId": "6bbdb380-9b27-4d14-93f3-5b0546a0d330",
+          "status": "ready",
+          "gateStatus": "succeeded",
+          "errorCode": null,
+          "result": {
+            "jobId": "6bbdb380-9b27-4d14-93f3-5b0546a0d330",
+            "sha256": "39e29f2e4669aeb94858b81efdc0ede8c740b177c9b77fce4c7c2d0e8e35a316",
+            "status": "ready",
+            "purpose": "submitted_review_pack",
+            "template": {
+              "id": "1fe0c225-d530-5100-8291-dda6342bc9d9",
+              "hash": "8a94f082f7986b5089f0a520c9921cf83958d55e089c0b93acc2fe921e0db1b1",
+              "locale": "en",
+              "variant": "default",
+              "version": 1,
+              "bindingId": "1a0ad14f-6746-5eec-8f55-5e42c81a7a9b",
+              "templateId": "b3f415c5-1368-5678-8b16-e52af2d69b9a"
+            },
+            "scannedAt": "2026-09-14T09:38:04.925Z",
+            "coordinate": {
+              "scope": {
+                "planeKey": "neon",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "processFamily": "supplier_onboarding",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+              "manifest": {
+                "id": "eceb732c-a0a1-533e-864a-a83f1e89d4d9",
+                "hash": "9f600223844f7ce0cbb8b8560ac1b0c8953be3918a7cfecbb8a07973b29d8b0a",
+                "version": 1
+              },
+              "attemptId": "e5e82457-44d6-47d8-81d8-1c62f582f412",
+              "cycleRunId": "576a0e3b-b9e4-4d56-a13b-f0c7e09e5b06",
+              "selectionId": "b2de842e-81ad-48de-ab7a-128f51ee1e62",
+              "attemptNumber": 1,
+              "submissionSnapshot": {
+                "id": "01a09f01-d3b1-72b6-97d1-62e9cccdcdd0",
+                "hash": "3e83d81666da85eb7cdbe2ec25ce9ca1b7dd90d049a401061d76051131554fcc",
+                "version": 3
+              }
+            },
+            "scanStatus": "clean",
+            "attachmentId": "9601185c-7d40-476c-9c7e-3dbdb9ddaae7",
+            "idempotencyKey": "process-document-result:6bbdb380-9b27-4d14-93f3-5b0546a0d330",
+            "sourceSnapshot": {
+              "id": "01a09f01-d3b1-72b6-97d1-62e9cccdcdd0",
+              "hash": "3e83d81666da85eb7cdbe2ec25ce9ca1b7dd90d049a401061d76051131554fcc",
+              "version": 3
+            },
+            "attachmentVersionId": "9601185c-7d40-476c-9c7e-3dbdb9ddaae7"
+          }
+        },
+        "downloadAuthorized": true,
+        "requesterDownloadDenied": true,
+        "storedPdfVerified": true,
+        "realTaskVotes": 0,
+        "decisionDocument": {
+          "jobId": "a189724e-f285-4eae-bf8a-3f997ba46ead",
+          "status": "ready",
+          "gateStatus": "succeeded",
+          "errorCode": null,
+          "result": {
+            "jobId": "a189724e-f285-4eae-bf8a-3f997ba46ead",
+            "sha256": "a0a3d6fdd6e7a3dc16abef4509e6092de4a500cc0aee1936511602b23141863f",
+            "status": "ready",
+            "purpose": "decision_document",
+            "template": {
+              "id": "1b2aaeae-65fa-56d4-81ac-bdb0173ce990",
+              "hash": "6cef1e02740dfa48e081dc30d401d5edab1248892ce0fd9c054254c3776b4fe0",
+              "locale": "en",
+              "variant": "default",
+              "version": 1,
+              "bindingId": "9dac243b-1df3-5775-884e-76988da172b3",
+              "templateId": "f22edea1-eeef-56fb-8d45-58346a3a0b90"
+            },
+            "scannedAt": "2026-09-14T10:15:10.360Z",
+            "coordinate": {
+              "scope": {
+                "planeKey": "neon",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "processFamily": "supplier_onboarding",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+              "manifest": {
+                "id": "eceb732c-a0a1-533e-864a-a83f1e89d4d9",
+                "hash": "9f600223844f7ce0cbb8b8560ac1b0c8953be3918a7cfecbb8a07973b29d8b0a",
+                "version": 1
+              },
+              "attemptId": "e5e82457-44d6-47d8-81d8-1c62f582f412",
+              "cycleRunId": "576a0e3b-b9e4-4d56-a13b-f0c7e09e5b06",
+              "selectionId": "b2de842e-81ad-48de-ab7a-128f51ee1e62",
+              "attemptNumber": 1,
+              "submissionSnapshot": {
+                "id": "01a09f01-d3b1-72b6-97d1-62e9cccdcdd0",
+                "hash": "3e83d81666da85eb7cdbe2ec25ce9ca1b7dd90d049a401061d76051131554fcc",
+                "version": 3
+              }
+            },
+            "scanStatus": "clean",
+            "attachmentId": "e54e9a1e-62fb-4c93-b333-2a7feb7790ea",
+            "idempotencyKey": "process-document-result:a189724e-f285-4eae-bf8a-3f997ba46ead",
+            "sourceSnapshot": {
+              "id": "01a09f69-dae4-7c97-8cc8-1f44eb6f33e3",
+              "hash": "da2a337ad2b5fce00829f59ef2cdb015b57a6a7907ccfb70c9b5c8482254f304",
+              "version": 4
+            },
+            "attachmentVersionId": "e54e9a1e-62fb-4c93-b333-2a7feb7790ea"
+          }
+        },
+        "decisionDownloadVerified": true,
+        "materialization": {
+          "alreadyMaterialized": true
+        }
+      },
+      {
+        "profile": "standard",
+        "httpStatus": 200,
+        "body": {
+          "jobId": "63cffbe1-d1f3-4f4b-8637-56d54a3d0027",
+          "status": "ready",
+          "gateStatus": "succeeded",
+          "errorCode": null,
+          "result": {
+            "jobId": "63cffbe1-d1f3-4f4b-8637-56d54a3d0027",
+            "sha256": "cb99a8a783ef79b4f222a4641bbb5b3ad03aa29996a8a01562df65baea0847c2",
+            "status": "ready",
+            "purpose": "submitted_review_pack",
+            "template": {
+              "id": "1fe0c225-d530-5100-8291-dda6342bc9d9",
+              "hash": "8a94f082f7986b5089f0a520c9921cf83958d55e089c0b93acc2fe921e0db1b1",
+              "locale": "en",
+              "variant": "default",
+              "version": 1,
+              "bindingId": "1a0ad14f-6746-5eec-8f55-5e42c81a7a9b",
+              "templateId": "b3f415c5-1368-5678-8b16-e52af2d69b9a"
+            },
+            "scannedAt": "2026-09-14T09:51:03.858Z",
+            "coordinate": {
+              "scope": {
+                "planeKey": "neon",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "processFamily": "supplier_onboarding",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+              "manifest": {
+                "id": "30b9bbc7-7f2c-5ca8-8e15-0a4c81395307",
+                "hash": "ae7111a252153d3d842d56773b7b032bc0192bf0b3523d2f554ad10db0576937",
+                "version": 1
+              },
+              "attemptId": "04050fdb-8b34-4b23-ba23-c7d706a5207a",
+              "cycleRunId": "77677bf0-17df-460f-b463-e899d71246d5",
+              "selectionId": "98408f29-132a-49d8-8672-9947fc765b1f",
+              "attemptNumber": 1,
+              "submissionSnapshot": {
+                "id": "01a09f01-d5b8-75f7-8511-6120f528588a",
+                "hash": "298e3ae4b537162fff4db798eb0466526f3e7cd11b3ce566686633356ae9f93a",
+                "version": 3
+              }
+            },
+            "scanStatus": "clean",
+            "attachmentId": "1864af6e-b134-4871-abba-b7890b96185e",
+            "idempotencyKey": "process-document-result:63cffbe1-d1f3-4f4b-8637-56d54a3d0027",
+            "sourceSnapshot": {
+              "id": "01a09f01-d5b8-75f7-8511-6120f528588a",
+              "hash": "298e3ae4b537162fff4db798eb0466526f3e7cd11b3ce566686633356ae9f93a",
+              "version": 3
+            },
+            "attachmentVersionId": "1864af6e-b134-4871-abba-b7890b96185e"
+          }
+        },
+        "downloadAuthorized": true,
+        "requesterDownloadDenied": true,
+        "storedPdfVerified": true,
+        "realTaskVotes": 0,
+        "decisionDocument": {
+          "jobId": "2a9476e9-9693-4aa4-860f-1c643bf23a51",
+          "status": "ready",
+          "gateStatus": "succeeded",
+          "errorCode": null,
+          "result": {
+            "jobId": "2a9476e9-9693-4aa4-860f-1c643bf23a51",
+            "sha256": "42aeb1f10611dedc130fba03c5978df4dd71434a5229787523efcb53b53ae056",
+            "status": "ready",
+            "purpose": "decision_document",
+            "template": {
+              "id": "1b2aaeae-65fa-56d4-81ac-bdb0173ce990",
+              "hash": "6cef1e02740dfa48e081dc30d401d5edab1248892ce0fd9c054254c3776b4fe0",
+              "locale": "en",
+              "variant": "default",
+              "version": 1,
+              "bindingId": "9dac243b-1df3-5775-884e-76988da172b3",
+              "templateId": "f22edea1-eeef-56fb-8d45-58346a3a0b90"
+            },
+            "scannedAt": "2026-09-14T10:17:19.447Z",
+            "coordinate": {
+              "scope": {
+                "planeKey": "neon",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "processFamily": "supplier_onboarding",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+              "manifest": {
+                "id": "30b9bbc7-7f2c-5ca8-8e15-0a4c81395307",
+                "hash": "ae7111a252153d3d842d56773b7b032bc0192bf0b3523d2f554ad10db0576937",
+                "version": 1
+              },
+              "attemptId": "04050fdb-8b34-4b23-ba23-c7d706a5207a",
+              "cycleRunId": "77677bf0-17df-460f-b463-e899d71246d5",
+              "selectionId": "98408f29-132a-49d8-8672-9947fc765b1f",
+              "attemptNumber": 1,
+              "submissionSnapshot": {
+                "id": "01a09f01-d5b8-75f7-8511-6120f528588a",
+                "hash": "298e3ae4b537162fff4db798eb0466526f3e7cd11b3ce566686633356ae9f93a",
+                "version": 3
+              }
+            },
+            "scanStatus": "clean",
+            "attachmentId": "8984e17f-ec01-4d45-8282-c3f413697812",
+            "idempotencyKey": "process-document-result:2a9476e9-9693-4aa4-860f-1c643bf23a51",
+            "sourceSnapshot": {
+              "id": "01a09f6b-d33e-7bf7-834f-fc5363671df6",
+              "hash": "d67b7c7d1cee46cd272127f94588e30c03511a086be93b0c9c8d6070b68714ae",
+              "version": 4
+            },
+            "attachmentVersionId": "8984e17f-ec01-4d45-8282-c3f413697812"
+          }
+        },
+        "decisionDownloadVerified": true,
+        "materialization": {
+          "businessPartnerId": "01a09f6c-ed2c-76b0-8aa9-e333eb385c0e",
+          "resultKind": "partner_role_created",
+          "partnerRole": "supplier",
+          "roleId": "01a09f6c-ed2c-7a29-ab12-bda9153f6553",
+          "supplierId": "01a09f6c-ed2c-7a29-ab12-bda9153f6553",
+          "snapshotId": "01a09f6c-ed3f-7a14-8a7d-431b56a5b477",
+          "applicationFingerprint": "60ef577bfd760608223c9dcb2885d6b1a4775fb300ec5ef7e95b304053acfc43",
+          "extensionMaterializationCounts": {
+            "addresses": 1,
+            "contactPersons": 1,
+            "contactChannels": 1,
+            "identifiers": 0,
+            "taxRegistrations": 0,
+            "classifications": 0,
+            "certifications": 0
+          }
+        }
+      },
+      {
+        "profile": "enhanced",
+        "httpStatus": 200,
+        "body": {
+          "jobId": "84714eb2-e942-4e13-8598-f61f1f6759c8",
+          "status": "ready",
+          "gateStatus": "succeeded",
+          "errorCode": null,
+          "result": {
+            "jobId": "84714eb2-e942-4e13-8598-f61f1f6759c8",
+            "sha256": "2d8160647909b1df7b98459c4b0ef7c504349566f5faa1238053b28543f01368",
+            "status": "ready",
+            "purpose": "submitted_review_pack",
+            "template": {
+              "id": "1fe0c225-d530-5100-8291-dda6342bc9d9",
+              "hash": "8a94f082f7986b5089f0a520c9921cf83958d55e089c0b93acc2fe921e0db1b1",
+              "locale": "en",
+              "variant": "default",
+              "version": 1,
+              "bindingId": "1a0ad14f-6746-5eec-8f55-5e42c81a7a9b",
+              "templateId": "b3f415c5-1368-5678-8b16-e52af2d69b9a"
+            },
+            "scannedAt": "2026-09-14T09:51:04.314Z",
+            "coordinate": {
+              "scope": {
+                "planeKey": "neon",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "processFamily": "supplier_onboarding",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+              "manifest": {
+                "id": "4760bf40-09fa-567d-86c2-4444dcb7deb4",
+                "hash": "85d7efc1fe035231cec461ebea9b669bf8683ff53a5bf2900a73bb7a4167873c",
+                "version": 1
+              },
+              "attemptId": "33ba85df-96ae-421d-8f02-fe65108eb92f",
+              "cycleRunId": "6e63aa27-3354-4411-9331-e1ebc0ef0684",
+              "selectionId": "138edadf-b495-413a-a5d8-ed4b56a62e26",
+              "attemptNumber": 1,
+              "submissionSnapshot": {
+                "id": "01a09f01-d7af-7549-9b25-251151821925",
+                "hash": "44f71e9b3976e70b133dedc1c795f89eabfcfc7333f68cb0ebe5cb743bd6f835",
+                "version": 3
+              }
+            },
+            "scanStatus": "clean",
+            "attachmentId": "2235bc5f-4d49-42d9-938d-2555d49cebd5",
+            "idempotencyKey": "process-document-result:84714eb2-e942-4e13-8598-f61f1f6759c8",
+            "sourceSnapshot": {
+              "id": "01a09f01-d7af-7549-9b25-251151821925",
+              "hash": "44f71e9b3976e70b133dedc1c795f89eabfcfc7333f68cb0ebe5cb743bd6f835",
+              "version": 3
+            },
+            "attachmentVersionId": "2235bc5f-4d49-42d9-938d-2555d49cebd5"
+          }
+        },
+        "downloadAuthorized": true,
+        "requesterDownloadDenied": true,
+        "storedPdfVerified": true,
+        "realTaskVotes": 10,
+        "decisionDocument": {
+          "jobId": "dac48ff2-71c9-4f11-94ba-44b2d787443f",
+          "status": "ready",
+          "gateStatus": "succeeded",
+          "errorCode": null,
+          "result": {
+            "jobId": "dac48ff2-71c9-4f11-94ba-44b2d787443f",
+            "sha256": "abf4abaff8a379fe8dd885447e692eae3ceb9e99b249f82f44ec002b9c8e13e0",
+            "status": "ready",
+            "purpose": "decision_document",
+            "template": {
+              "id": "1b2aaeae-65fa-56d4-81ac-bdb0173ce990",
+              "hash": "6cef1e02740dfa48e081dc30d401d5edab1248892ce0fd9c054254c3776b4fe0",
+              "locale": "en",
+              "variant": "default",
+              "version": 1,
+              "bindingId": "9dac243b-1df3-5775-884e-76988da172b3",
+              "templateId": "f22edea1-eeef-56fb-8d45-58346a3a0b90"
+            },
+            "scannedAt": "2026-09-14T10:18:34.026Z",
+            "coordinate": {
+              "scope": {
+                "planeKey": "neon",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "processFamily": "supplier_onboarding",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+              "manifest": {
+                "id": "4760bf40-09fa-567d-86c2-4444dcb7deb4",
+                "hash": "85d7efc1fe035231cec461ebea9b669bf8683ff53a5bf2900a73bb7a4167873c",
+                "version": 1
+              },
+              "attemptId": "33ba85df-96ae-421d-8f02-fe65108eb92f",
+              "cycleRunId": "6e63aa27-3354-4411-9331-e1ebc0ef0684",
+              "selectionId": "138edadf-b495-413a-a5d8-ed4b56a62e26",
+              "attemptNumber": 1,
+              "submissionSnapshot": {
+                "id": "01a09f01-d7af-7549-9b25-251151821925",
+                "hash": "44f71e9b3976e70b133dedc1c795f89eabfcfc7333f68cb0ebe5cb743bd6f835",
+                "version": 3
+              }
+            },
+            "scanStatus": "clean",
+            "attachmentId": "be13a735-8201-4855-bf5e-e058fed548c7",
+            "idempotencyKey": "process-document-result:dac48ff2-71c9-4f11-94ba-44b2d787443f",
+            "sourceSnapshot": {
+              "id": "01a09f6c-f6a5-73e8-bda2-08c9f5682f0e",
+              "hash": "90ad90592a322b4ec50b4933781f524c956ad54fd8ba091b1d5ca49d1dc86d3d",
+              "version": 4
+            },
+            "attachmentVersionId": "be13a735-8201-4855-bf5e-e058fed548c7"
+          }
+        },
+        "decisionDownloadVerified": true,
+        "materialization": {
+          "businessPartnerId": "01a09f6c-f98c-7e0d-b9f4-4dce6aaffab8",
+          "resultKind": "partner_role_created",
+          "partnerRole": "supplier",
+          "roleId": "01a09f6c-f98c-7b10-8ef2-c469cf1a826c",
+          "supplierId": "01a09f6c-f98c-7b10-8ef2-c469cf1a826c",
+          "snapshotId": "01a09f6c-f9a1-7eb1-873f-cc8d222a6c4d",
+          "applicationFingerprint": "d827919f36396433ec70310014a363145c142f83ce7648ff06b8e06f6f0bce68",
+          "extensionMaterializationCounts": {
+            "addresses": 1,
+            "contactPersons": 1,
+            "contactChannels": 1,
+            "identifiers": 0,
+            "taxRegistrations": 0,
+            "classifications": 0,
+            "certifications": 0
+          }
+        }
+      }
+    ],
+    "passed": true
+  },
+  "activationFixtures": {
+    "at": "2026-09-14T10:18:43.490Z",
+    "mode": "Controlled upstream risk/company/qualification fixture for synthetic DEV P2 suppliers; real readiness resolver and existing supplier activation repository. No claim of authenticated P6 risk/company approval.",
+    "fixtures": [
+      {
+        "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+        "activation": {
+          "id": "01a09f6d-1dee-7550-96ec-a2b04c21f133",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "businessPartnerId": "01a09f6a-fa77-71bc-9847-4a933ae23559",
+          "supplierId": "01a09f6a-fa77-7783-85ed-3fb4be745a34",
+          "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+          "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+          "businessDate": "2026-09-13",
+          "priorStatus": "onboarding",
+          "resultingStatus": "active",
+          "readinessFingerprint": "cec4a4b418f9d99e49135bbe2a9e3a1e9f72e037f23fabfba7311b867f2cd9f6",
+          "readiness": {
+            "role": "supplier",
+            "reasons": [],
+            "eligible": true,
+            "businessDate": "2026-09-14",
+            "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+            "operationCode": "purchasing",
+            "activeBlockIds": [],
+            "qualifications": [
+              {
+                "id": "01a09f6d-1dcc-7393-a117-b167061bb9a1",
+                "roleId": "01a09f6a-fa77-7783-85ed-3fb4be745a34",
+                "decision": "approved",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "createdAt": "2026-09-14T10:18:43.500Z",
+                "createdBy": "cca94907-7519-5871-8e3c-6b11aa545c93",
+                "updatedAt": "2026-09-14T10:18:43.500Z",
+                "updatedBy": "645b6a55-3355-526a-9643-3900425bde47",
+                "approvedAt": "2026-09-14T10:18:43.546Z",
+                "approvedBy": "645b6a55-3355-526a-9643-3900425bde47",
+                "reviewedAt": "2026-09-14T10:18:43.546Z",
+                "reviewedBy": "645b6a55-3355-526a-9643-3900425bde47",
+                "rowVersion": 2,
+                "partnerRole": "supplier",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "effectiveFrom": "2026-09-13",
+                "decisionReason": "P4 controlled upstream qualification fixture",
+                "riskAssessmentId": "27e5a414-1e75-49c8-a40f-5e4023df9676",
+                "businessPartnerId": "01a09f6a-fa77-71bc-9847-4a933ae23559",
+                "qualificationTypeCode": "compliance",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              {
+                "id": "01a09f6a-fa8d-7f63-a8cb-3007a01511d3",
+                "roleId": "01a09f6a-fa77-7783-85ed-3fb4be745a34",
+                "decision": "pending",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "createdAt": "2026-09-14T10:16:23.406Z",
+                "createdBy": "cca94907-7519-5871-8e3c-6b11aa545c93",
+                "rowVersion": 1,
+                "partnerRole": "supplier",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "businessPartnerId": "01a09f6a-fa77-71bc-9847-4a933ae23559",
+                "qualificationTypeCode": "compliance",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              }
+            ],
+            "riskAssessment": {
+              "id": "27e5a414-1e75-49c8-a40f-5e4023df9676",
+              "status": "approved",
+              "version": 1,
+              "riskBand": "low",
+              "nextReviewAt": "2026-10-14"
+            },
+            "businessPartnerId": "01a09f6a-fa77-71bc-9847-4a933ae23559",
+            "preferredSupplier": false,
+            "decisionFingerprint": "cec4a4b418f9d99e49135bbe2a9e3a1e9f72e037f23fabfba7311b867f2cd9f6",
+            "effectivePreferenceIds": [],
+            "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+          },
+          "idempotencyKey": "p4-activation-fixture:22962679-e8bf-4c1a-8c1e-431c32191c09",
+          "commandFingerprint": "1ff71d491f7a98e38469378e212580204e60a9854382a3abbc4a4994d2f2dcb0",
+          "activatedAt": "2026-09-14T10:18:43.500Z",
+          "activatedBy": "645b6a55-3355-526a-9643-3900425bde47"
+        },
+        "replayed": false
+      },
+      {
+        "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+        "activation": {
+          "id": "01a09f6d-1e03-7a92-afb3-74f7615068e0",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "businessPartnerId": "01a09f6c-ed2c-76b0-8aa9-e333eb385c0e",
+          "supplierId": "01a09f6c-ed2c-7a29-ab12-bda9153f6553",
+          "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+          "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+          "businessDate": "2026-09-13",
+          "priorStatus": "onboarding",
+          "resultingStatus": "active",
+          "readinessFingerprint": "31369319bf1ffcac912b675a41a73c02e4c9a1d806db14f4631573db4d9aead1",
+          "readiness": {
+            "role": "supplier",
+            "reasons": [],
+            "eligible": true,
+            "businessDate": "2026-09-14",
+            "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+            "operationCode": "purchasing",
+            "activeBlockIds": [],
+            "qualifications": [
+              {
+                "id": "01a09f6d-1df8-781e-8c2b-f70c01db5b5d",
+                "roleId": "01a09f6c-ed2c-7a29-ab12-bda9153f6553",
+                "decision": "approved",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "createdAt": "2026-09-14T10:18:43.570Z",
+                "createdBy": "cca94907-7519-5871-8e3c-6b11aa545c93",
+                "updatedAt": "2026-09-14T10:18:43.570Z",
+                "updatedBy": "645b6a55-3355-526a-9643-3900425bde47",
+                "approvedAt": "2026-09-14T10:18:43.580Z",
+                "approvedBy": "645b6a55-3355-526a-9643-3900425bde47",
+                "reviewedAt": "2026-09-14T10:18:43.580Z",
+                "reviewedBy": "645b6a55-3355-526a-9643-3900425bde47",
+                "rowVersion": 2,
+                "partnerRole": "supplier",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "effectiveFrom": "2026-09-13",
+                "decisionReason": "P4 controlled upstream qualification fixture",
+                "riskAssessmentId": "fab03ead-59c5-437d-a0bc-db27ebaa6976",
+                "businessPartnerId": "01a09f6c-ed2c-76b0-8aa9-e333eb385c0e",
+                "qualificationTypeCode": "compliance",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              {
+                "id": "01a09f6c-ed35-7cd5-8a57-aaf3683d89fa",
+                "roleId": "01a09f6c-ed2c-7a29-ab12-bda9153f6553",
+                "decision": "pending",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "createdAt": "2026-09-14T10:18:31.076Z",
+                "createdBy": "cca94907-7519-5871-8e3c-6b11aa545c93",
+                "rowVersion": 1,
+                "partnerRole": "supplier",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "businessPartnerId": "01a09f6c-ed2c-76b0-8aa9-e333eb385c0e",
+                "qualificationTypeCode": "compliance",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              }
+            ],
+            "riskAssessment": {
+              "id": "fab03ead-59c5-437d-a0bc-db27ebaa6976",
+              "status": "approved",
+              "version": 1,
+              "riskBand": "low",
+              "nextReviewAt": "2026-10-14"
+            },
+            "businessPartnerId": "01a09f6c-ed2c-76b0-8aa9-e333eb385c0e",
+            "preferredSupplier": false,
+            "decisionFingerprint": "31369319bf1ffcac912b675a41a73c02e4c9a1d806db14f4631573db4d9aead1",
+            "effectivePreferenceIds": [],
+            "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+          },
+          "idempotencyKey": "p4-activation-fixture:0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+          "commandFingerprint": "db5a418112698d34ed6d3663b226a1df44a344c092f07c7cbb09dc4b6fa4aac8",
+          "activatedAt": "2026-09-14T10:18:43.570Z",
+          "activatedBy": "645b6a55-3355-526a-9643-3900425bde47"
+        },
+        "replayed": false
+      },
+      {
+        "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+        "activation": {
+          "id": "01a09f6d-1e19-71c1-946e-9f01f833b1f5",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "businessPartnerId": "01a09f6c-f98c-7e0d-b9f4-4dce6aaffab8",
+          "supplierId": "01a09f6c-f98c-7b10-8ef2-c469cf1a826c",
+          "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+          "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+          "businessDate": "2026-09-13",
+          "priorStatus": "onboarding",
+          "resultingStatus": "active",
+          "readinessFingerprint": "cff5f4c74417dab4aa2907407ac7ceeb4668bffd00b559e8293fc3d43ebb3925",
+          "readiness": {
+            "role": "supplier",
+            "reasons": [],
+            "eligible": true,
+            "businessDate": "2026-09-14",
+            "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+            "operationCode": "purchasing",
+            "activeBlockIds": [],
+            "qualifications": [
+              {
+                "id": "01a09f6d-1e0b-71b5-98fe-e204d76bdae7",
+                "roleId": "01a09f6c-f98c-7b10-8ef2-c469cf1a826c",
+                "decision": "approved",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "createdAt": "2026-09-14T10:18:43.590Z",
+                "createdBy": "cca94907-7519-5871-8e3c-6b11aa545c93",
+                "updatedAt": "2026-09-14T10:18:43.590Z",
+                "updatedBy": "645b6a55-3355-526a-9643-3900425bde47",
+                "approvedAt": "2026-09-14T10:18:43.601Z",
+                "approvedBy": "645b6a55-3355-526a-9643-3900425bde47",
+                "reviewedAt": "2026-09-14T10:18:43.601Z",
+                "reviewedBy": "645b6a55-3355-526a-9643-3900425bde47",
+                "rowVersion": 2,
+                "partnerRole": "supplier",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "effectiveFrom": "2026-09-13",
+                "decisionReason": "P4 controlled upstream qualification fixture",
+                "riskAssessmentId": "4c023141-d7df-465e-a517-7b8c0d27bcf6",
+                "businessPartnerId": "01a09f6c-f98c-7e0d-b9f4-4dce6aaffab8",
+                "qualificationTypeCode": "compliance",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              {
+                "id": "01a09f6c-f995-70fd-8227-80d335627640",
+                "roleId": "01a09f6c-f98c-7b10-8ef2-c469cf1a826c",
+                "decision": "pending",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "createdAt": "2026-09-14T10:18:34.243Z",
+                "createdBy": "cca94907-7519-5871-8e3c-6b11aa545c93",
+                "rowVersion": 1,
+                "partnerRole": "supplier",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "businessPartnerId": "01a09f6c-f98c-7e0d-b9f4-4dce6aaffab8",
+                "qualificationTypeCode": "compliance",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              }
+            ],
+            "riskAssessment": {
+              "id": "4c023141-d7df-465e-a517-7b8c0d27bcf6",
+              "status": "approved",
+              "version": 1,
+              "riskBand": "low",
+              "nextReviewAt": "2026-10-14"
+            },
+            "businessPartnerId": "01a09f6c-f98c-7e0d-b9f4-4dce6aaffab8",
+            "preferredSupplier": false,
+            "decisionFingerprint": "cff5f4c74417dab4aa2907407ac7ceeb4668bffd00b559e8293fc3d43ebb3925",
+            "effectivePreferenceIds": [],
+            "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+          },
+          "idempotencyKey": "p4-activation-fixture:370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+          "commandFingerprint": "d00a72f45dd23b982b7c59599963a894faaab9dd6a1ea661afea0cc7945573bf",
+          "activatedAt": "2026-09-14T10:18:43.590Z",
+          "activatedBy": "645b6a55-3355-526a-9643-3900425bde47"
+        },
+        "replayed": false
+      }
+    ],
+    "passed": true
+  },
+  "liveActivationDocuments": {
+    "at": "2026-09-14T10:18:48.771Z",
+    "mode": "Authenticated P4 activation document API with controlled upstream fixture and real owner activation evidence",
+    "checks": [
+      {
+        "profile": "basic",
+        "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+        "body": {
+          "jobId": "b5339997-f1ec-4bc4-9459-2682774e1fe7",
+          "status": "ready",
+          "gateStatus": "succeeded",
+          "errorCode": null,
+          "result": {
+            "jobId": "b5339997-f1ec-4bc4-9459-2682774e1fe7",
+            "sha256": "8b8adefd924279eafa1f1d6d821c2b06225f4001ea870e0da727fe60eb3b04ac",
+            "status": "ready",
+            "purpose": "activation_confirmation",
+            "template": {
+              "id": "2f3ea2bb-c5e6-5f9d-854c-fd1c71bda729",
+              "hash": "3bfce4f51231fd52c89ba44c10c8629beaab5c48494c794bcb4b0061cae901ad",
+              "locale": "en",
+              "variant": "default",
+              "version": 1,
+              "bindingId": "db7b3fc7-4838-59a3-841c-3b4a5943c0c6",
+              "templateId": "45aedd60-67f5-5d3d-824d-ef2a7c8a73d8"
+            },
+            "scannedAt": "2026-09-14T10:18:49.248Z",
+            "coordinate": {
+              "scope": {
+                "planeKey": "neon",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "processFamily": "supplier_onboarding",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              "caseId": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+              "manifest": {
+                "id": "eceb732c-a0a1-533e-864a-a83f1e89d4d9",
+                "hash": "9f600223844f7ce0cbb8b8560ac1b0c8953be3918a7cfecbb8a07973b29d8b0a",
+                "version": 1
+              },
+              "attemptId": "e5e82457-44d6-47d8-81d8-1c62f582f412",
+              "cycleRunId": "576a0e3b-b9e4-4d56-a13b-f0c7e09e5b06",
+              "selectionId": "b2de842e-81ad-48de-ab7a-128f51ee1e62",
+              "attemptNumber": 1,
+              "submissionSnapshot": {
+                "id": "01a09f01-d3b1-72b6-97d1-62e9cccdcdd0",
+                "hash": "3e83d81666da85eb7cdbe2ec25ce9ca1b7dd90d049a401061d76051131554fcc",
+                "version": 3
+              }
+            },
+            "scanStatus": "clean",
+            "attachmentId": "5580cc7e-e75a-4ae0-b493-f2e532f85971",
+            "idempotencyKey": "process-document-result:b5339997-f1ec-4bc4-9459-2682774e1fe7",
+            "sourceSnapshot": {
+              "id": "01a09f6a-fab6-767c-86e5-0588de88f621",
+              "hash": "cdc94c9725bdfc8868f190bca1d509a9afc4230b2f2714215cdfa81c68abde2a",
+              "version": 1
+            },
+            "attachmentVersionId": "5580cc7e-e75a-4ae0-b493-f2e532f85971"
+          }
+        },
+        "downloadVerified": true,
+        "replayVerified": true,
+        "businessStateUnchanged": true
+      },
+      {
+        "profile": "standard",
+        "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+        "body": {
+          "jobId": "c766e85f-93a0-4276-88c5-4dbce232200c",
+          "status": "ready",
+          "gateStatus": "succeeded",
+          "errorCode": null,
+          "result": {
+            "jobId": "c766e85f-93a0-4276-88c5-4dbce232200c",
+            "sha256": "fa18d778c935322b4aa3208550f155789c0e6053d6235f28c95be98038af6b4e",
+            "status": "ready",
+            "purpose": "activation_confirmation",
+            "template": {
+              "id": "2f3ea2bb-c5e6-5f9d-854c-fd1c71bda729",
+              "hash": "3bfce4f51231fd52c89ba44c10c8629beaab5c48494c794bcb4b0061cae901ad",
+              "locale": "en",
+              "variant": "default",
+              "version": 1,
+              "bindingId": "db7b3fc7-4838-59a3-841c-3b4a5943c0c6",
+              "templateId": "45aedd60-67f5-5d3d-824d-ef2a7c8a73d8"
+            },
+            "scannedAt": "2026-09-14T10:18:49.923Z",
+            "coordinate": {
+              "scope": {
+                "planeKey": "neon",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "processFamily": "supplier_onboarding",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              "caseId": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+              "manifest": {
+                "id": "30b9bbc7-7f2c-5ca8-8e15-0a4c81395307",
+                "hash": "ae7111a252153d3d842d56773b7b032bc0192bf0b3523d2f554ad10db0576937",
+                "version": 1
+              },
+              "attemptId": "04050fdb-8b34-4b23-ba23-c7d706a5207a",
+              "cycleRunId": "77677bf0-17df-460f-b463-e899d71246d5",
+              "selectionId": "98408f29-132a-49d8-8672-9947fc765b1f",
+              "attemptNumber": 1,
+              "submissionSnapshot": {
+                "id": "01a09f01-d5b8-75f7-8511-6120f528588a",
+                "hash": "298e3ae4b537162fff4db798eb0466526f3e7cd11b3ce566686633356ae9f93a",
+                "version": 3
+              }
+            },
+            "scanStatus": "clean",
+            "attachmentId": "07988dc1-680b-4c35-b00f-8bcca6022ee0",
+            "idempotencyKey": "process-document-result:c766e85f-93a0-4276-88c5-4dbce232200c",
+            "sourceSnapshot": {
+              "id": "01a09f6c-ed3f-7a14-8a7d-431b56a5b477",
+              "hash": "67550a5be7c518693510b171ad9fca0e0ee3a2f6ebec378cb23d1c29e9d25969",
+              "version": 1
+            },
+            "attachmentVersionId": "07988dc1-680b-4c35-b00f-8bcca6022ee0"
+          }
+        },
+        "downloadVerified": true,
+        "replayVerified": true,
+        "businessStateUnchanged": true
+      },
+      {
+        "profile": "enhanced",
+        "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+        "body": {
+          "jobId": "ae57ab31-3fd7-4b32-93a2-a1481081f614",
+          "status": "ready",
+          "gateStatus": "succeeded",
+          "errorCode": null,
+          "result": {
+            "jobId": "ae57ab31-3fd7-4b32-93a2-a1481081f614",
+            "sha256": "47a0b3c8c1edf7b57ec00f9eb993424dd6fd63b787cd2ea7d268144733cf7f0c",
+            "status": "ready",
+            "purpose": "activation_confirmation",
+            "template": {
+              "id": "2f3ea2bb-c5e6-5f9d-854c-fd1c71bda729",
+              "hash": "3bfce4f51231fd52c89ba44c10c8629beaab5c48494c794bcb4b0061cae901ad",
+              "locale": "en",
+              "variant": "default",
+              "version": 1,
+              "bindingId": "db7b3fc7-4838-59a3-841c-3b4a5943c0c6",
+              "templateId": "45aedd60-67f5-5d3d-824d-ef2a7c8a73d8"
+            },
+            "scannedAt": "2026-09-14T10:18:50.521Z",
+            "coordinate": {
+              "scope": {
+                "planeKey": "neon",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "processFamily": "supplier_onboarding",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              "caseId": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+              "manifest": {
+                "id": "4760bf40-09fa-567d-86c2-4444dcb7deb4",
+                "hash": "85d7efc1fe035231cec461ebea9b669bf8683ff53a5bf2900a73bb7a4167873c",
+                "version": 1
+              },
+              "attemptId": "33ba85df-96ae-421d-8f02-fe65108eb92f",
+              "cycleRunId": "6e63aa27-3354-4411-9331-e1ebc0ef0684",
+              "selectionId": "138edadf-b495-413a-a5d8-ed4b56a62e26",
+              "attemptNumber": 1,
+              "submissionSnapshot": {
+                "id": "01a09f01-d7af-7549-9b25-251151821925",
+                "hash": "44f71e9b3976e70b133dedc1c795f89eabfcfc7333f68cb0ebe5cb743bd6f835",
+                "version": 3
+              }
+            },
+            "scanStatus": "clean",
+            "attachmentId": "580cdeee-dc69-45be-a84a-ada784c5da70",
+            "idempotencyKey": "process-document-result:ae57ab31-3fd7-4b32-93a2-a1481081f614",
+            "sourceSnapshot": {
+              "id": "01a09f6c-f9a1-7eb1-873f-cc8d222a6c4d",
+              "hash": "fafa2439753e524bbd052214525ef735c32438bed523d0854fe37bc2ebc3ce7e",
+              "version": 1
+            },
+            "attachmentVersionId": "580cdeee-dc69-45be-a84a-ada784c5da70"
+          }
+        },
+        "downloadVerified": true,
+        "replayVerified": true,
+        "businessStateUnchanged": true
+      }
+    ],
+    "passed": true
+  },
+  "committedOutcomes": {
+    "at": "2026-09-14T10:21:03.541Z",
+    "mode": "Read-only verification of committed authenticated reviews/materialization and controlled upstream P4 activation fixtures",
+    "cases": [
+      {
+        "case_id": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+        "profile": "enhanced",
+        "case_status": "materialized",
+        "supplier_status": "active",
+        "cycle_status": "running",
+        "votes": 10,
+        "maker_votes": 0,
+        "ready_documents": 3,
+        "exact_activation_bindings": 1
+      },
+      {
+        "case_id": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+        "profile": "simple",
+        "case_status": "materialized",
+        "supplier_status": "active",
+        "cycle_status": "running",
+        "votes": 1,
+        "maker_votes": 0,
+        "ready_documents": 3,
+        "exact_activation_bindings": 1
+      },
+      {
+        "case_id": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+        "profile": "standard",
+        "case_status": "materialized",
+        "supplier_status": "active",
+        "cycle_status": "running",
+        "votes": 2,
+        "maker_votes": 0,
+        "ready_documents": 3,
+        "exact_activation_bindings": 1
+      }
+    ],
+    "addressReuse": {
+      "addresses": 1,
+      "owners": 3
+    },
+    "passed": true
+  },
+  "materializerContract": {
+    "at": "2026-09-14T10:23:53.901Z",
+    "mode": "Canonical materializer guard evaluated in PostgreSQL against cloned in-memory decision payload; no persisted snapshot changes",
+    "checks": [
+      {
+        "name": "Standard empty optional reason",
+        "rejected": false
+      },
+      {
+        "name": "Basic nonempty reason",
+        "rejected": false
+      },
+      {
+        "name": "Enhanced absent reason",
+        "rejected": false
+      },
+      {
+        "name": "Basic blank reason",
+        "rejected": true
+      },
+      {
+        "name": "Invalid enum",
+        "rejected": true
+      },
+      {
+        "name": "Non-text reason",
+        "rejected": true
+      },
+      {
+        "name": "Oversized reason",
+        "rejected": true
+      }
+    ],
+    "passed": true
+  }
+}

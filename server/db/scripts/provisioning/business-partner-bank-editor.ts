@@ -1,22 +1,24 @@
-import { createHash } from "node:crypto";
+import { presentationUuid, surfaceBindingLookup } from "./presentation-graph-helpers";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 import { compileEntityIntakeSurfaces } from "../../../../packages/contracts/platform/entity-runtime/src/intake-surface-authoring";
 const uid = (key: string) => {
-  const h = createHash("sha256").update(`bank-editor.v1.${key}`).digest("hex");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+  return presentationUuid(`bank-editor.v1.${key}`);
 };
 /** Bank semantics are authored here on Meta Entity, never inferred by the section component. */
-export function withBusinessPartnerBankEditor(
-  source: MetaEntityGraph,
-): MetaEntityGraph {
+export function withBusinessPartnerBankEditor(source: MetaEntityGraph): MetaEntityGraph {
+  return applyBusinessPartnerBankEditor(structuredClone(source));
+}
+
+/** Internal pipeline step: mutates the caller-owned working graph. */
+export function applyBusinessPartnerBankEditor(source: MetaEntityGraph): MetaEntityGraph {
   if (source.entity.entityCode !== "business_partner") throw Error("Business Partner graph required");
-  const graph = structuredClone(source) as any;
+  const graph = source as any;
   const root = graph.surfaces.find(
       (s: any) => s.surfaceKey === "intake_details",
     ),
     surface = graph.surfaces.find((s: any) => s.surfaceKey === "profile_bank");
   if (!root || !surface || root.layoutConfig?.bankEditorVersion === 2)
-    return withCompactBankCopy(graph);
+    return applyCompactBankCopy(graph);
   if (root.layoutConfig?.bankEditorVersion === 1) {
     const fields = graph.surfaceFieldBindings.filter(
       (b: any) => b.entitySurfaceId === surface.id,
@@ -32,7 +34,7 @@ export function withBusinessPartnerBankEditor(
     );
     root.layoutConfig = { ...root.layoutConfig, bankEditorVersion: 2 };
     compileEntityIntakeSurfaces(graph);
-    return withCompactBankCopy(graph);
+    return applyCompactBankCopy(graph);
   }
   const bankSection = graph.surfaceSections.find(
     (s: any) => s.entitySurfaceId === surface.id && s.title === "Bank details",
@@ -43,12 +45,7 @@ export function withBusinessPartnerBankEditor(
   );
   if (!bankSection || !accountSection)
     throw Error("Bank editor sections required");
-  const find = (valueKey: string) =>
-    graph.surfaceFieldBindings.find(
-      (b: any) =>
-        b.entitySurfaceId === surface.id &&
-        b.displayConfig?.valueKey === valueKey,
-    );
+  const find = surfaceBindingLookup<any>(graph.surfaceFieldBindings, surface.id);
   const directory = {
       field: "bank_source",
       operator: "equals",
@@ -237,13 +234,18 @@ export function withBusinessPartnerBankEditor(
   }
   root.layoutConfig = { ...root.layoutConfig, bankEditorVersion: 2 };
   compileEntityIntakeSurfaces(graph);
-  return withCompactBankCopy(graph);
+  return applyCompactBankCopy(graph);
 }
 
 /** Keep account capture compact; validation and directory provenance remain unchanged. */
 export function withCompactBankCopy(source: MetaEntityGraph): MetaEntityGraph {
+  return applyCompactBankCopy(structuredClone(source));
+}
+
+/** Internal pipeline step: mutates the caller-owned working graph. */
+export function applyCompactBankCopy(source: MetaEntityGraph): MetaEntityGraph {
   if (source.entity.entityCode !== "business_partner") throw Error("Business Partner graph required");
-  const graph = structuredClone(source) as any;
+  const graph = source as any;
   const surface = graph.surfaces.find(
     (s: any) => s.surfaceKey === "profile_bank",
   );
@@ -270,11 +272,7 @@ export function withCompactBankCopy(source: MetaEntityGraph): MetaEntityGraph {
         ({ helpText, ...variant }: Record<string, unknown>) => variant,
       );
   }
-  const find = (key: string) =>
-    graph.surfaceFieldBindings.find(
-      (b: any) =>
-        b.entitySurfaceId === surface.id && b.displayConfig?.valueKey === key,
-    );
+  const find = surfaceBindingLookup<any>(graph.surfaceFieldBindings, surface.id);
   const country = find("bankCountryCode"),
     type = find("accountIdType"),
     identifier = find("accountIdentifier"),

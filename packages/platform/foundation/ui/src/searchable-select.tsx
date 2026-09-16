@@ -235,6 +235,8 @@ export function SearchableSelect({
   }, [disabled]);
   useLayoutEffect(() => {
     if (!open) return;
+    const document = root.current?.ownerDocument ?? globalThis.document;
+    const window = document.defaultView ?? globalThis.window;
     // The top layer escapes clipping and transformed drawer containing blocks,
     // while the portal stays inside the modal for focus and accessibility.
     popup.current?.showPopover?.();
@@ -286,7 +288,7 @@ export function SearchableSelect({
   }, [open, rows.length]);
   useLayoutEffect(() => {
     if (!open || !activeOption || !list.current) return;
-    const option = document.getElementById(`${id}-option-${active}`);
+    const option = root.current?.ownerDocument.getElementById(`${id}-option-${active}`);
     if (!option) return;
     // Scroll only the popup: scrollIntoView can move the surrounding form.
     const row = option.getBoundingClientRect(),
@@ -567,7 +569,7 @@ export function SearchableSelect({
               ) : null}
             </div>,
             root.current?.closest('[aria-modal="true"], dialog') ??
-              document.body,
+              root.current?.ownerDocument.body ?? document.body,
           )
         : null}
       <span

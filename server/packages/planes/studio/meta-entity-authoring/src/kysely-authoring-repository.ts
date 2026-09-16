@@ -90,12 +90,54 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       },
     ) => Promise<void>,
   ) {}
+  async listInspectionReleases(tenantId: string) {
+    const result = await sql<import("@athyper/server-contract-meta-entity-authoring").MetaEntityInspectionRelease>`
+      SELECT r.id::text, e.entity_code AS "entityCode", r.change_set_id::text AS "changeSetId",
+        r.release_no::integer AS "releaseNo", r.contract_hash AS "contractHash",
+        r.target_planes AS "targetPlanes", r.published_at::text AS "publishedAt"
+      FROM metadata.entity_release r JOIN metadata.entity e ON e.id=r.entity_id
+      WHERE r.tenant_id=${tenantId}::uuid AND e.entity_code='business_partner'
+      ORDER BY r.release_no DESC LIMIT 100`.execute(this.database);
+    return result.rows;
+  }
+  async readInspectionRelease(tenantId: string, releaseId: string) {
+    const result = await sql<{release: import("@athyper/server-contract-meta-entity-authoring").MetaEntityInspectionRelease; graph: MetaEntityGraph; legacyHashMatches: boolean}>`
+      SELECT jsonb_build_object('id',r.id,'entityCode',e.entity_code,'changeSetId',r.change_set_id,
+        'releaseNo',r.release_no,'contractHash',r.contract_hash,'targetPlanes',r.target_planes,
+        'publishedAt',r.published_at) AS release, snapshot.contract_json AS graph,
+        (snapshot.contract_hash=r.contract_hash AND
+          encode(sha256(convert_to(snapshot.contract_json::text,'UTF8')),'hex')=r.contract_hash)
+          AS "legacyHashMatches"
+      FROM metadata.entity_release r JOIN metadata.entity e ON e.id=r.entity_id
+      JOIN snapshot.entity_contract_revision snapshot ON snapshot.id=r.revision_id
+        AND snapshot.tenant_id=r.tenant_id AND snapshot.entity_id=r.entity_id
+      WHERE r.tenant_id=${tenantId}::uuid AND r.id=${releaseId}::uuid
+        AND e.entity_code='business_partner'`.execute(this.database);
+    const row = result.rows[0];
+    if (!row) return null;
+    // Early SQL-authored releases hashed PostgreSQL jsonb text. Verify that
+    // representation against both stored hashes; never trust a stored hash alone.
+    if (sha256(row.graph) !== row.release.contractHash && row.legacyHashMatches !== true)
+      throw new AuthoringConflictError("Stored release graph does not match its contract hash");
+    return { release: row.release, graph: row.graph };
+  }
   async list(tenantId: string) {
     const rows =
-      await sql<ChangeSetRow>`SELECT cs.*,e.entity_code FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id WHERE cs.tenant_id=${tenantId}::uuid AND cs.status IN ('draft','published') ORDER BY cs.created_at DESC LIMIT 100`.execute(
+      await sql<ChangeSetRow>`SELECT cs.*,e.entity_code FROM metadata.entity_change_set cs JOIN metadata.entity e ON e.id=cs.entity_id WHERE cs.tenant_id=${tenantId}::uuid AND cs.status IN ('draft','in_review','approved','published') ORDER BY cs.created_at DESC LIMIT 100`.execute(
         this.database,
       );
     return rows.rows.map((row) => this.map(row));
+  }
+  async listDraftSaves(id: string) {
+    const result = await sql<{revision: number; capturedAt: string; kind: string}>`SELECT lock_version AS revision, captured_at::text AS "capturedAt", capture_kind AS kind FROM snapshot.entity_draft_save WHERE change_set_id=${id}::uuid ORDER BY lock_version DESC`.execute(this.database);
+    return result.rows.map(row => ({...row, revision: Number(row.revision)}));
+  }
+  async readDraftSave(id: string, revision: number) {
+    const result = await sql<{graph: MetaEntityGraph; graph_hash: string}>`SELECT graph, graph_hash FROM snapshot.entity_draft_save WHERE change_set_id=${id}::uuid AND lock_version=${revision}`.execute(this.database);
+    const row = result.rows[0];
+    if (!row) return null;
+    if (sha256(row.graph) !== row.graph_hash) throw new AuthoringConflictError("Saved history integrity check failed");
+    return row.graph;
   }
   async forkDraft(input: { sourceChangeSetId: string; actorId: string }) {
     return atomic(this.database, async (tx) => {
@@ -545,6 +587,8 @@ async function replaceGraphInTransaction(
       });
   if (Number(advanced.rows[0]?.["revision"]) !== input.expectedRevision + 1)
     throw new AuthoringConflictError("Stale authoring revision");
+  // The successful revision advance holds the row lock. Capture before replacing rows.
+  await captureDraftSave(db, input.changeSetId, input.expectedRevision, input.actorId, "previous");
   for (const table of [
     "entity_contract_test_case",
     "entity_operation_scope_binding",
@@ -643,6 +687,16 @@ async function replaceGraphInTransaction(
   await sql`SELECT metadata.fn_validate_entity_graph(${input.changeSetId}::uuid)`.execute(
     db,
   );
+  await captureDraftSave(db, input.changeSetId, input.expectedRevision + 1, input.actorId, "saved");
+}
+async function captureDraftSave(db: Kysely<Database>, id: string, revision: number, actor: string, kind: string) {
+  const repository = new KyselyMetaEntityAuthoringRepository(db);
+  const current = required(await repository.get(id));
+  const graph = await repository.loadGraph(id);
+  await sql`INSERT INTO snapshot.entity_draft_save(change_set_id,lock_version,tenant_id,graph,graph_hash,captured_by,capture_kind)
+    VALUES(${id}::uuid,${revision},${current.tenantId}::uuid,${canonicalJson(graph)}::jsonb,${sha256(graph)},${actor}::uuid,${kind}) ON CONFLICT(change_set_id,lock_version) DO NOTHING`.execute(db);
+  const existing = await repository.readDraftSave(id, revision);
+  if (!existing || sha256(existing) !== sha256(graph)) throw new AuthoringConflictError("Saved revision already contains different content");
 }
 async function insertRows(
   db: Kysely<Database>,

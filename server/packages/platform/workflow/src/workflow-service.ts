@@ -86,6 +86,7 @@ async function action<Transaction>(options: WorkflowServiceOptions<Transaction>,
   return inTransaction(options, command.context, (transaction) => withReceipt(options, command, actionName, transaction, async () => {
     const current = await options.repository.get(command.context.tenantId, command.workItemId, transaction);
     if (!current) return { kind: "NotFound", workItemId: command.workItemId };
+    if (current.payload["attemptId"] && current.payload["cycleTaskId"] && actionName !== "claim") throw new WorkflowError(409, "TASK_OWNER_COMMAND_REQUIRED", "Use the task review or approval command for this work item");
     const expected = command.expectedRowVersion ?? current.rowVersion;
     const descriptor = await options.metadata.getEntityDescriptor(command.context, current.sourceEntityCode);
     if (!descriptor) return { kind: "Conflict", reason: "The active workflow revision is unavailable" };

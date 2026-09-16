@@ -1,0 +1,44 @@
+[
+  {
+    "plane": "studio",
+    "account": "catl.admin",
+    "state": "authenticated",
+    "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "assurance": "elevated",
+    "draft": {
+      "status": 200,
+      "changeSet": {
+        "id": "be767e01-f36d-434f-91f3-67bff689a367",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "entityId": "289732bb-45c2-49e6-abb3-70ff4b85336b",
+        "entityCode": "business_partner",
+        "branchCode": "local-preview",
+        "status": "draft",
+        "revision": 59,
+        "createdBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13"
+      }
+    },
+    "activation": {
+      "status": 403,
+      "error": "FORBIDDEN",
+      "reason": "missing_permission"
+    }
+  },
+  {
+    "plane": "studio",
+    "account": "catl.owner",
+    "state": "authenticated",
+    "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "assurance": "elevated"
+  },
+  {
+    "plane": "neon",
+    "account": "catl.admin",
+    "state": "authenticated",
+    "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "assurance": "elevated"
+  }
+]

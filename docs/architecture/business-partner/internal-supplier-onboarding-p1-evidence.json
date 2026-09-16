@@ -1,0 +1,363 @@
+{
+  "schema": "athyper.internal-supplier-onboarding-p1-evidence/1",
+  "recordedAt": "2026-09-14T06:50:00.144Z",
+  "status": "P1 accepted in local DEV",
+  "nativeGraph": {
+    "changeSetId": "be767e01-f36d-434f-91f3-67bff689a367",
+    "sourceRevision": 58,
+    "beforeHash": "890379d02697d6df27213886c87da3f62d6ea18c645bef26bdd6eab8cb7e22b9",
+    "proposedHash": "6f9ef41b774fb2af6fcd7d44a50504c766a20e7e850c65609a47e4719c0a7ae8",
+    "validation": {
+      "deterministic": true,
+      "contractHash": "6f9ef41b774fb2af6fcd7d44a50504c766a20e7e850c65609a47e4719c0a7ae8",
+      "issues": []
+    },
+    "tests": {
+      "contractHash": "6f9ef41b774fb2af6fcd7d44a50504c766a20e7e850c65609a47e4719c0a7ae8",
+      "passed": true,
+      "results": [
+        {
+          "key": "atlas_preserved",
+          "passed": true
+        },
+        {
+          "key": "reset_runtime_payload_exact",
+          "passed": true
+        },
+        {
+          "key": "v2_runtime_exact",
+          "passed": true
+        }
+      ]
+    },
+    "publication": {
+      "environment": "dev",
+      "changeSetId": "be767e01-f36d-434f-91f3-67bff689a367",
+      "beforeRevision": 59,
+      "beforeHash": "2f0558362fece2887203672f578553409629b7beb188cbef3d5477273ac59989",
+      "contractHash": "2f0558362fece2887203672f578553409629b7beb188cbef3d5477273ac59989",
+      "recordedAt": "2026-09-14T06:45:02.628Z",
+      "authoredContractHash": "2f0558362fece2887203672f578553409629b7beb188cbef3d5477273ac59989",
+      "preview": {
+        "developmentEvidence": true,
+        "changeSetId": "be767e01-f36d-434f-91f3-67bff689a367",
+        "savedRevision": 59,
+        "state": "active",
+        "contractHash": "2f0558362fece2887203672f578553409629b7beb188cbef3d5477273ac59989",
+        "activeRevision": 59,
+        "activeChangeSetId": "be767e01-f36d-434f-91f3-67bff689a367"
+      },
+      "active": true
+    }
+  },
+  "databaseSchemaChecks": {
+    "mode": "READ ONLY against document.fn_validate_entity_case_payload using both the authored schema and the published Cirrus Atlantic release 2",
+    "database": "athyper_neon",
+    "results": [
+      {
+        "scenario": "incomplete_draft",
+        "errors": []
+      },
+      {
+        "scenario": "basic",
+        "errors": []
+      },
+      {
+        "scenario": "standard",
+        "errors": []
+      },
+      {
+        "scenario": "enhanced",
+        "errors": []
+      },
+      {
+        "scenario": "unsafe",
+        "errors": [
+          "ENUM_MISMATCH:requestedComplianceLevel"
+        ]
+      },
+      {
+        "scenario": "null",
+        "errors": [
+          "TYPE_MISMATCH:requestedComplianceLevel"
+        ]
+      },
+      {
+        "scenario": "reason_limit",
+        "errors": [
+          "MAX_LENGTH:complianceRequirementReason"
+        ]
+      },
+      {
+        "scenario": "trusted_profile",
+        "errors": [
+          "UNKNOWN_PROPERTY:selectedProfile"
+        ]
+      }
+    ]
+  },
+  "publicationBlocker": {
+    "resolved": true,
+    "studioSession": "authenticated",
+    "neonSession": "authenticated",
+    "graphPublished": true,
+    "caseSchemaPublished": true,
+    "browserAcceptanceRun": true
+  },
+  "caseSchemaPublication": {
+    "replay": {
+      "mode": "applied",
+      "publicationKey": "metadata.entity.master_business_partner",
+      "caseContractCount": 1,
+      "studioLedgerCount": 1
+    },
+    "unchangedOnReplay": true,
+    "contracts": [
+      {
+        "id": "fec7fec0-76e1-4096-8dd2-3511f212d6e4",
+        "hash": "8479bcda43aab1f93588e74145fdf6ca6483e2cee58dd492e56d62953d099b60",
+        "status": "superseded",
+        "entityId": "289732bb-45c2-49e6-abb3-70ff4b85336b",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "releaseNo": 1
+      },
+      {
+        "id": "c88b7626-e990-5cdf-a47a-4840bd386dd3",
+        "hash": "53225592221abb4f1fcfdbabfba8d4d4a79140b9eb14e745dba8b9d5764009af",
+        "status": "published",
+        "entityId": "289732bb-45c2-49e6-abb3-70ff4b85336b",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "releaseNo": 2
+      }
+    ]
+  },
+  "verification": {
+    "compilerTests": 24,
+    "serviceIntakeAndHttpTests": 77,
+    "formViewTests": 7,
+    "typechecksPassed": [
+      "control-admin",
+      "master-data",
+      "governance contracts",
+      "platform-host"
+    ],
+    "databaseTypecheck": "pre-existing cross-root and fixture errors; no errors in changed authoring/provisioner files",
+    "provisionerTests": "two pre-existing stale display_name/person expectations; not passing"
+  },
+  "liveQualification": {
+    "at": "2026-09-14T06:49:22.709Z",
+    "checks": [
+      {
+        "view": "standard",
+        "allLevels": true,
+        "basicReasonRequired": true,
+        "noDefault": true
+      },
+      {
+        "view": "full",
+        "allLevels": true,
+        "basicReasonRequired": true,
+        "noDefault": true
+      },
+      {
+        "label": "create basic",
+        "status": 201,
+        "code": null
+      },
+      {
+        "label": "create standard",
+        "status": 201,
+        "code": null
+      },
+      {
+        "label": "create enhanced",
+        "status": 201,
+        "code": null
+      },
+      {
+        "label": "invalid enum",
+        "status": 422,
+        "code": "SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"
+      },
+      {
+        "label": "null enum",
+        "status": 422,
+        "code": "SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"
+      },
+      {
+        "label": "Basic missing reason",
+        "status": 422,
+        "code": "SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"
+      },
+      {
+        "label": "Basic blank reason",
+        "status": 422,
+        "code": "SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"
+      },
+      {
+        "label": "overlong reason",
+        "status": 422,
+        "code": "SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"
+      },
+      {
+        "label": "profile injection",
+        "status": 400,
+        "code": "BUSINESS_PARTNER_REQUEST_INVALID"
+      },
+      {
+        "label": "incomplete requirement draft",
+        "status": 201,
+        "code": null
+      },
+      {
+        "label": "missing requirement validate",
+        "status": 422,
+        "code": "SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"
+      },
+      {
+        "label": "missing requirement submit",
+        "status": 422,
+        "code": "SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"
+      },
+      {
+        "label": "change without reason",
+        "status": 422,
+        "code": "SUPPLIER_COMPLIANCE_REQUIREMENT_INVALID"
+      },
+      {
+        "label": "change with reason",
+        "status": 200,
+        "code": null
+      },
+      {
+        "label": "unauthenticated update denied",
+        "status": 401
+      },
+      {
+        "label": "browser reopened persisted assertion and reason",
+        "passed": true
+      }
+    ],
+    "cases": [
+      "b2813008-0d89-4d08-a0b2-ed048c0cf692",
+      "52fd5798-94ca-4373-99de-3b181f74e45a",
+      "0e7418ca-e059-4a64-a8ac-38044187e05f",
+      "87b525b7-cab5-47b0-ab5b-8cc548eed450",
+      "5d4e0b72-841d-4039-afb9-39bd8c6ee597"
+    ],
+    "create": {
+      "status": 201,
+      "caseId": "b2813008-0d89-4d08-a0b2-ed048c0cf692"
+    },
+    "passed": true
+  },
+  "liveDatabaseChecks": {
+    "mode": "READ ONLY",
+    "rows": [
+      {
+        "id": "0e7418ca-e059-4a64-a8ac-38044187e05f",
+        "status": "draft",
+        "rowVersion": 1,
+        "contractId": "c88b7626-e990-5cdf-a47a-4840bd386dd3",
+        "contractHash": "53225592221abb4f1fcfdbabfba8d4d4a79140b9eb14e745dba8b9d5764009af",
+        "submittedSnapshot": null,
+        "target": null
+      },
+      {
+        "id": "52fd5798-94ca-4373-99de-3b181f74e45a",
+        "status": "draft",
+        "rowVersion": 1,
+        "contractId": "c88b7626-e990-5cdf-a47a-4840bd386dd3",
+        "contractHash": "53225592221abb4f1fcfdbabfba8d4d4a79140b9eb14e745dba8b9d5764009af",
+        "submittedSnapshot": null,
+        "target": null
+      },
+      {
+        "id": "5d4e0b72-841d-4039-afb9-39bd8c6ee597",
+        "status": "draft",
+        "rowVersion": 1,
+        "contractId": "c88b7626-e990-5cdf-a47a-4840bd386dd3",
+        "contractHash": "53225592221abb4f1fcfdbabfba8d4d4a79140b9eb14e745dba8b9d5764009af",
+        "submittedSnapshot": null,
+        "target": null
+      },
+      {
+        "id": "87b525b7-cab5-47b0-ab5b-8cc548eed450",
+        "status": "draft",
+        "rowVersion": 1,
+        "contractId": "c88b7626-e990-5cdf-a47a-4840bd386dd3",
+        "contractHash": "53225592221abb4f1fcfdbabfba8d4d4a79140b9eb14e745dba8b9d5764009af",
+        "submittedSnapshot": null,
+        "target": null
+      },
+      {
+        "id": "b2813008-0d89-4d08-a0b2-ed048c0cf692",
+        "status": "draft",
+        "rowVersion": 2,
+        "contractId": "c88b7626-e990-5cdf-a47a-4840bd386dd3",
+        "contractHash": "53225592221abb4f1fcfdbabfba8d4d4a79140b9eb14e745dba8b9d5764009af",
+        "submittedSnapshot": null,
+        "target": null
+      }
+    ]
+  },
+  "runtimeDeployment": {
+    "at": "2026-09-14T06:47:39.335Z",
+    "container": "athyper-dev-source-api-1",
+    "beforeImage": "sha256:f69f8e0da2ea0822344c48a8121dcc0150a6df71c57b099f0e0de887805e5eb3",
+    "image": "sha256:75ee2ab235952ba72648ac80b9fff53b0aa6b5eb4d1938d5012f5fbf780125cf",
+    "files": [
+      {
+        "source": "server/packages/contracts/master-data/dist/index.js",
+        "target": "/app/server/node_modules/.pnpm/@athyper+server-contract-master-data@file+server+packages+contracts+master-data/node_modules/@athyper/server-contract-master-data/dist/index.js",
+        "local": "0.js",
+        "hash": "847ff0fb0442cd8e5d565aef10dc4f12a105fd8e5561284fd80eb4a197da1a29"
+      },
+      {
+        "source": "server/packages/contracts/master-data/dist/supplier-onboarding-requirement.js",
+        "target": "/app/server/node_modules/.pnpm/@athyper+server-contract-master-data@file+server+packages+contracts+master-data/node_modules/@athyper/server-contract-master-data/dist/supplier-onboarding-requirement.js",
+        "local": "1.js",
+        "hash": "d0e731665ec0967d03d48d0561705f0e814c2387828a472be961fc28de5f0d4b"
+      },
+      {
+        "source": "server/packages/services/master-data/dist/index.js",
+        "target": "/app/server/node_modules/.pnpm/@athyper+server-service-master-data@file+server+packages+services+master-data/node_modules/@athyper/server-service-master-data/dist/index.js",
+        "local": "2.js",
+        "hash": "1c45cfe4f6cb2da09150d8c67844c70c16921efb9fe2299860570d31132de9ae"
+      },
+      {
+        "source": "server/packages/services/master-data/dist/business-partner-request-service.js",
+        "target": "/app/server/node_modules/.pnpm/@athyper+server-service-master-data@file+server+packages+services+master-data/node_modules/@athyper/server-service-master-data/dist/business-partner-request-service.js",
+        "local": "3.js",
+        "hash": "b150fef50ba5f7de4ee0fd2833728e8cfa1148c47f479e5842d5f367c27ff067"
+      },
+      {
+        "source": "server/packages/services/master-data/dist/business-partner-intake-profile.js",
+        "target": "/app/server/node_modules/.pnpm/@athyper+server-service-master-data@file+server+packages+services+master-data/node_modules/@athyper/server-service-master-data/dist/business-partner-intake-profile.js",
+        "local": "4.js",
+        "hash": "d2c7b8cb4c19555e5e020de9c590e3fd315b86e2a902e970f5e2228f12f6b53a"
+      },
+      {
+        "source": "server/packages/services/master-data/dist/supplier-onboarding-requirement.js",
+        "target": "/app/server/node_modules/.pnpm/@athyper+server-service-master-data@file+server+packages+services+master-data/node_modules/@athyper/server-service-master-data/dist/supplier-onboarding-requirement.js",
+        "local": "5.js",
+        "hash": "46982a28e4b0e168833ffff0da01b898bb4c49a3aaeb911f15a4fefb85e42eb7"
+      },
+      {
+        "source": "server/apps/platform-host/dist/composition/register-services.js",
+        "target": "/app/server/dist/composition/register-services.js",
+        "local": "6.js",
+        "hash": "2c47532cdaded23f8d692961e015f6ae85adbd855894973f26e89020d910d8b1"
+      }
+    ],
+    "override": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/supplier-p1-1789368440226/override.json",
+    "rollback": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/supplier-p1-1789368440226/rollback.json"
+  },
+  "followupObservations": [
+    {
+      "scope": "P2",
+      "observation": "Extra replay probe of the identical Basic draft command returned 409 BUSINESS_PARTNER_REQUEST_IDEMPOTENCY_CONFLICT. No successful replay is claimed; diagnose in submission/replay ownership work.",
+      "note": "Probe used a synthetic draft; no submitted cycle."
+    }
+  ]
+}

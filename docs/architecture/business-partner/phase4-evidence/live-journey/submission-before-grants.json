@@ -1,0 +1,7 @@
+{
+  "status": 403,
+  "body": {
+    "error": "FORBIDDEN",
+    "reason": "missing_permission"
+  }
+}

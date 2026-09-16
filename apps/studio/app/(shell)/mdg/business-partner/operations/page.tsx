@@ -1,3 +1,4 @@
+import { BusinessPartnerInspection } from "@athyper/product-studio-business-partner";
 import type { Metadata } from "next";
 import { ClipboardCheckIcon } from "@athyper/platform-icons";
 import { PageFrame, PageHeader } from "@athyper/platform-shell";
@@ -17,6 +18,11 @@ export default function BusinessPartnerOperationsPage() {
         description="Dry-run immutable definition compatibility and inspect retained qualification coordinates without granting publication or recovery authority."
         icon={<ClipboardCheckIcon />}
       />
+      <BusinessPartnerInspection tab="operations" />
+      <p>
+        Retained qualification evidence below is independent of the selected
+        stored version. It is not a live test result for that version.
+      </p>
       <BusinessPartnerOperationsWorkspace
         qualification={qualification}
         releaseQualification={releaseQualification}

@@ -22,6 +22,17 @@ const json = (value: unknown, status = 200) =>
   });
 
 describe("Meilisearch index", () => {
+  it("uses a stable legal storage ID for writes and deletes without collapsing scoped identities", async () => {
+    const fetch = vi.fn(async (url: string, _init?: RequestInit) => url.endsWith("/tasks/7") ? json({uid:7,status:"succeeded"}) : json({taskUid:7},202));
+    const index=createMeilisearchIndex({baseUrl:"http://searchcore:7700",apiKey:"test",taskPollIntervalMs:0,fetch:fetch as never});
+    const id="neon:tenant:attachment";
+    await index.upsert({...document,id});await index.upsert({...document,id});await index.upsert({...document,id:"mesh:tenant:attachment"});await index.remove(id);
+    const first=JSON.parse(String(fetch.mock.calls[0]![1]!.body))[0].id;
+    expect(first).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.parse(String(fetch.mock.calls[2]![1]!.body))[0].id).toBe(first);
+    expect(JSON.parse(String(fetch.mock.calls[4]![1]!.body))[0].id).not.toBe(first);
+    expect(fetch.mock.calls[6]![0]).toBe(`http://searchcore:7700/indexes/documents/documents/${first}`);
+  });
   it("forces plane and tenant filters server-side", async () => {
     const fetch = vi.fn(async (_url: string, _init?: RequestInit) =>
       json({ hits: [], estimatedTotalHits: 0, processingTimeMs: 2 }),

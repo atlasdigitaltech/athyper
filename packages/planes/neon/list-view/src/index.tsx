@@ -145,7 +145,7 @@ function ScopedNeonEntityList({
         apply: (value) => {
           setOrganizationIds(value.operatingOrganizationIds ?? []);
           setCompanyIds(value.companyCodeIds ?? []);
-          setPartnerRole(value.partnerRole);
+          setPartnerRole(value.partnerRole === "supplier" || value.partnerRole === "customer" ? value.partnerRole : undefined);
           const compatible =
             value.operatingOrganizationIds?.length === 1 &&
             value.companyCodeIds?.length === 1 &&
@@ -155,9 +155,9 @@ function ScopedNeonEntityList({
                 (item) => item.companyCodeId === value.companyCodeIds?.[0],
               );
           setEligibleOperation(
-            value.partnerRole && compatible
-              ? value.eligibleOperation
-              : undefined,
+            (value.partnerRole === "supplier" || value.partnerRole === "customer") && compatible &&
+            (value.eligibleOperation === "order" || value.eligibleOperation === "invoice" || value.eligibleOperation === "payment")
+              ? value.eligibleOperation : undefined,
           );
         },
       }}
@@ -187,13 +187,15 @@ export function NeonEntityApplication({
   entityCode,
   children,
   activePath,
-  initialPartnerRole,
+  initialDirectoryQuery,
 }: {
   readonly entityCode: string;
   readonly children: ReactNode;
-  readonly initialPartnerRole?: "supplier" | "customer";
+  readonly initialDirectoryQuery?: string;
   readonly activePath?: string;
 }) {
+  const role = new URLSearchParams(initialDirectoryQuery).get("role");
+  const initialPartnerRole = entityCode === "business_partner" && (role === "supplier" || role === "customer") ? role : undefined;
   const client = useApiClient(),
     navigation = useApplicationNavigation();
   return (

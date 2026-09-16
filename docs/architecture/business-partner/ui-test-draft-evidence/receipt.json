@@ -1,0 +1,92 @@
+{
+  "sourceId": "be767e01-f36d-434f-91f3-67bff689a367",
+  "sourceRevision": 63,
+  "sourceState": "approved",
+  "branchCode": "bp-ui-label-test",
+  "published": false,
+  "approved": false,
+  "steps": [
+    {
+      "step": "create",
+      "status": 201,
+      "at": "2026-09-16T07:01:22.344Z"
+    },
+    {
+      "step": "save",
+      "status": 200,
+      "at": "2026-09-16T07:01:23.930Z"
+    },
+    {
+      "step": "validate",
+      "status": 200,
+      "at": "2026-09-16T07:02:44.254Z"
+    },
+    {
+      "step": "test",
+      "status": 200,
+      "at": "2026-09-16T07:02:44.430Z"
+    }
+  ],
+  "sourceGraphHash": "a24c56228c102a8af0c65d513f4c714452181a038a1faee439c775d06903dc6f",
+  "sourcePreview": {
+    "developmentEvidence": true,
+    "changeSetId": "be767e01-f36d-434f-91f3-67bff689a367",
+    "savedRevision": 61,
+    "state": "active",
+    "contractHash": "b313d03e93e6064e4bf0dcdfcc076edc336c5da7c5be275d578457f287cf22e9",
+    "activeRevision": 61,
+    "activeChangeSetId": "be767e01-f36d-434f-91f3-67bff689a367"
+  },
+  "releaseListHashBefore": "10cfa0d2f63163c0266ab826b5e652b802f86d6ec19c4c8c3c3ec966bb7814ee",
+  "draftId": "782c6aba-e584-4519-b5f3-ca98f9caa380",
+  "revision": 1,
+  "staged": true,
+  "preview": {
+    "developmentEvidence": true,
+    "changeSetId": "782c6aba-e584-4519-b5f3-ca98f9caa380",
+    "savedRevision": 1,
+    "state": "active",
+    "contractHash": "f98fbbd2c201ea4382af0560fd1a1fc965896933d955231f89bc5da21f6973e9",
+    "activeRevision": 1,
+    "activeChangeSetId": "782c6aba-e584-4519-b5f3-ca98f9caa380"
+  },
+  "rereadVerified": true,
+  "draftGraphHash": "849f219d33bf1c807f93233d6792eee58f817826c1d36fea24b5b47e819776b4",
+  "validation": {
+    "deterministic": true,
+    "contractHash": "f98fbbd2c201ea4382af0560fd1a1fc965896933d955231f89bc5da21f6973e9",
+    "issues": []
+  },
+  "tests": {
+    "contractHash": "f98fbbd2c201ea4382af0560fd1a1fc965896933d955231f89bc5da21f6973e9",
+    "passed": true,
+    "results": [
+      {
+        "key": "atlas_preserved",
+        "passed": true
+      },
+      {
+        "key": "reset_runtime_payload_exact",
+        "passed": true
+      },
+      {
+        "key": "v2_runtime_exact",
+        "passed": true
+      }
+    ]
+  },
+  "sourceUnchanged": true,
+  "releasesUnchanged": true,
+  "finalState": {
+    "id": "782c6aba-e584-4519-b5f3-ca98f9caa380",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "entityId": "289732bb-45c2-49e6-abb3-70ff4b85336b",
+    "entityCode": "business_partner",
+    "branchCode": "bp-ui-label-test",
+    "status": "draft",
+    "revision": 1,
+    "createdBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13"
+  },
+  "testSurface": "5b7173a8-5afb-49d2-a3c4-915aed970e7f",
+  "url": "https://studio.dev.athyper.test/mdg/business-partner/model?inspect=draft%3A782c6aba-e584-4519-b5f3-ca98f9caa380&object=surfaces%3A5b7173a8-5afb-49d2-a3c4-915aed970e7f"
+}

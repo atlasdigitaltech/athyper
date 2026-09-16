@@ -435,3 +435,16 @@ ALTER TABLE control.tenant_module_entitlement_override
         tenant_id WITH =, module_id WITH =,
         tstzrange(effective_from, effective_until, '[)') WITH &&
     ) WHERE (status = 'active');
+
+-- Exclusions protect publication even when callers use repeatable-read snapshots.
+ALTER TABLE control.process_selection_publication
+    ADD CONSTRAINT process_selection_company_period_excl EXCLUDE USING gist (
+      tenant_id WITH =, plane_key WITH =, process_family WITH =,
+      operating_organization_id WITH =, company_code_id WITH =,
+      tstzrange(effective_from,effective_until,'[)') WITH &&
+    ) WHERE (company_code_id IS NOT NULL),
+    ADD CONSTRAINT process_selection_org_period_excl EXCLUDE USING gist (
+      tenant_id WITH =, plane_key WITH =, process_family WITH =,
+      operating_organization_id WITH =,
+      tstzrange(effective_from,effective_until,'[)') WITH &&
+    ) WHERE (company_code_id IS NULL);

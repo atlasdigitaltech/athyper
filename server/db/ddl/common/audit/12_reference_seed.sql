@@ -1,6 +1,6 @@
 -- seed-contract-version: 1
 -- seed-pack: common.audit.event-contracts
--- seed-pack-version: 1.11.0
+-- seed-pack-version: 1.13.0
 -- seed-dataset: master.audit-event-contract
 -- seed-data-class: production_reference
 -- seed-provenance: {"source":"internal-audit-contract","publisher":"Athyper","source_version":"1","retrieved_at":"2026-08-13","license":"internal"}
@@ -9,7 +9,7 @@
 -- seed-natural-key: master.audit_event_contract(code)
 -- seed-cross-file-ids: false
 -- seed-id-strategy: natural-key-only
--- seed-expected-row-count: exact:32
+-- seed-expected-row-count: exact:33
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
 
@@ -153,12 +153,12 @@ VALUES
     ),
     (
         'business_partner_request_event',
-        '(^business_partner\.(request\.(created|updated|validated|submitted|returned|rejected|approved|applying|applied|failed|cancelled|superseded)|workflow\.(stage\.activated|vote\.recorded)|qualification\.(created|approved|conditional|rejected|suspended)|preference\.(created|approved|rejected|revoked)|customer\.(credit\.(created|approved|conditional|rejected)|designation\.(created|approved|rejected|revoked)|activated|suspended|reactivated|deactivated|archived)|profile_publication\.(published|withdrawn)|bank_disclosure\.(approved|rejected|revoked)|bank_verification\.(requested|verified|rejected|applied))$)|(^business_partner_invitation\.(supplier|customer)\.(created|resent|accepted|cancelled)$)',
+        '(^business_partner\.(request\.(created|updated|validated|submitted|returned|rejected|approved|applying|applied|failed|cancelled|superseded)|workflow\.(stage\.activated|vote\.recorded)|qualification\.(created|approved|conditional|rejected|suspended)|preference\.(created|approved|rejected|revoked)|supplier\.activated|customer\.(credit\.(created|approved|conditional|rejected)|designation\.(created|approved|rejected|revoked)|activated|suspended|reactivated|deactivated|archived)|profile_publication\.(published|withdrawn)|bank_disclosure\.(approved|rejected|revoked)|bank_verification\.(requested|verified|rejected|applied))$)|(^business_partner_invitation\.(supplier|customer)\.(created|resent|accepted|cancelled)$)',
         21,
         ARRAY['create','update','execute','approve','reject','revoke']::audit.operation_d[],
         'warning',
         ARRAY['user','service_account','bot','integration','support','system']::audit.actor_type_d[],
-        'tenant', false, 'safe_values', 65536, 9,
+        'tenant', false, 'safe_values', 65536, 10,
         '{"event_category":"business_critical","owner":"master-data","purpose":"business_partner_onboarding_workflow_qualification_profile_and_bank_disclosure_evidence"}'::jsonb,
         'active'
     ),
@@ -450,3 +450,21 @@ DO $seed_runtime_contracts$ BEGIN
   RAISE EXCEPTION 'Expected four active control runtime audit contracts';
  END IF;
 END $seed_runtime_contracts$;
+
+-- P4 shared document service audit contracts. Payloads contain identifiers, never document content.
+INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,
+ allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
+VALUES('document_artifact_lifecycle','^documents\.(artifact\.rendered|render\.replayed|download_url\.created|malware\.detected|malware\.scan_failed)$',10,
+ ARRAY['execute']::audit.operation_d[],'info',ARRAY['user','service_account','system']::audit.actor_type_d[],
+ 'tenant',false,'metadata',65536,1,'{"owner":"documents","document_content":"omitted"}'::jsonb,'active')
+ON CONFLICT(code) DO NOTHING;
+-- End P4 document audit contracts.
+
+-- P7 self-service channel consent. Destination is represented only by its hash.
+INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,
+ allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
+VALUES('notification_channel_consent','^governance\.channel_consent\.(opted_in|opted_out)$',10,
+ ARRAY['execute']::audit.operation_d[],'info',ARRAY['user','service_account','system']::audit.actor_type_d[],
+ 'tenant',false,'metadata',16384,1,'{"owner":"notifications","destination":"hash_only"}'::jsonb,'active')
+ON CONFLICT(code) DO NOTHING;
+-- End P7 consent audit contract.

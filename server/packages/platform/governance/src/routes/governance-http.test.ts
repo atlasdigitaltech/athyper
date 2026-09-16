@@ -39,6 +39,7 @@ const routes: [string, string, unknown, number][] = [
   ["post", "cycle-runs", run, 201],
   ["post", `cycle-runs/${id}/transitions`, { status: "running" }, 200],
   ["get", `cycle-runs/${id}/readiness`, undefined, 200],
+  ["post", `cycle-runs/${id}/completion`, { expectedVersion: 1, idempotencyKey: "completion-test" }, 200],
   ...["claim", "start"].map(
     (action) =>
       ["post", `cycle-tasks/${id}/${action}`, undefined, 200] as [
@@ -161,7 +162,7 @@ async function setup() {
     });
   return { request, call, authorize, app };
 }
-describe("all 27 governance HTTP endpoints", () => {
+describe("all governance HTTP endpoints", () => {
   it.each(routes)(
     "%s %s handles valid and unauthenticated requests",
     async (method, path, body, status) => {
@@ -170,7 +171,7 @@ describe("all 27 governance HTTP endpoints", () => {
         routeContracts(env.app).filter((route) =>
           route.path.startsWith("/api/governance/"),
         ),
-      ).toHaveLength(27);
+      ).toHaveLength(routes.length);
       expect((await env.request(method, path, body)).status).toBe(status);
       expect(env.call).toHaveBeenCalledOnce();
       const first = env.call.mock.calls[0]![0];
@@ -194,6 +195,8 @@ describe("all 27 governance HTTP endpoints", () => {
     ["cycle-runs", { ...run, dueAt: "2026-02-30T12:00:00Z" }],
     ["cycle-runs", { ...run, dueAt: "2026-09-01T12:00:00" }],
     ["cycle-tasks/invalid/start", undefined],
+    [`cycle-runs/${id}/completion`, { expectedVersion: 0, idempotencyKey: "test" }],
+    [`cycle-runs/${id}/completion`, { expectedVersion: 1, idempotencyKey: "" }],
     [`cycle-tasks/${id}/claim`, { ownerPrincipalId: 42 }],
     [`legal-holds/${id}/activate`, { effectiveAt: false }],
     [`legal-holds/${id}/release`, { releasedAt: "yesterday" }],

@@ -618,3 +618,5 @@ DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request_evidence();
 REVOKE ALL ON document.mesh_profile_change_resolution, document.mesh_profile_change_case FROM PUBLIC;
 REVOKE ALL ON FUNCTION document.trg_mesh_profile_resolution_immutable() FROM PUBLIC;
 GRANT SELECT, INSERT ON document.mesh_profile_change_resolution, document.mesh_profile_change_case TO athyperapp;
+REVOKE ALL ON FUNCTION document.command_materialize_supplier_activation_case(uuid,uuid,bigint,uuid,uuid,text,text,uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION document.command_materialize_supplier_activation_case(uuid,uuid,bigint,uuid,uuid,text,text,uuid,uuid) TO athyperapp,athyperadmin;

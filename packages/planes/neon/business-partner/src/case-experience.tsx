@@ -1,4 +1,5 @@
 "use client";
+import { businessLabel } from "./360/display-values";
 
 import type {
   GovernedCaseStatusV1,
@@ -430,8 +431,4 @@ function caseTone(
   return "neutral";
 }
 
-function title(value: string): string {
-  return value
-    .replaceAll(/[._-]+/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
+function title(value: string): string { return businessLabel(value, "title"); }

@@ -28,10 +28,18 @@ function Section({ code }: { code: ExplainabilitySectionCode }) {
       () => createBusinessPartner360ExplainabilityClient(http),
       [http],
     ),
-    [value, setValue] = useState<ExplainabilitySection>(),
-    [cursor, setCursor] = useState<string>(),
-    [failed, setFailed] = useState(false),
-    query = {
+    [state, setState] = useState<{
+      baseKey: string;
+      value?: ExplainabilitySection;
+      failed?: boolean;
+      loading: boolean;
+    }>(),
+    [pageSelection, setPageSelection] = useState<{
+      baseKey: string;
+      cursor: string;
+    }>(),
+    [retry, setRetry] = useState(0),
+    coordinates = {
       tenantId: identity.scope?.tenantId ?? "unbound",
       principalId: identity.scope?.principalId ?? "unbound",
       businessPartnerId: summary.identity.id,
@@ -48,29 +56,57 @@ function Section({ code }: { code: ExplainabilitySectionCode }) {
         ? { legalEntityId: summary.scope.legalEntityId }
         : {}),
       asOf: summary.asOf,
-      ...(cursor ? { cursor } : {}),
     },
-    key = explainabilityQueryKey(query).join(":");
+    baseKey = JSON.stringify(explainabilityQueryKey(coordinates)),
+    cursor =
+      pageSelection?.baseKey === baseKey ? pageSelection.cursor : undefined,
+    query = { ...coordinates, ...(cursor ? { cursor } : {}) },
+    key = JSON.stringify(explainabilityQueryKey(query));
   useEffect(() => {
     const controller = new AbortController();
-    setFailed(false);
+    if (pageSelection?.baseKey !== baseKey) setPageSelection(undefined);
+    setState((current) => ({
+      baseKey,
+      loading: true,
+      ...(cursor && current?.baseKey === baseKey
+        ? { value: current.value }
+        : {}),
+    }));
     client
       .read(query, controller.signal)
-      .then((next) =>
-        setValue((current) =>
-          cursor && current ? merge(current, next) : next,
-        ),
-      )
+      .then((next) => {
+        if (controller.signal.aborted) return;
+        setState((current) => ({
+          baseKey,
+          loading: false,
+          value:
+            cursor && current?.baseKey === baseKey && current.value
+              ? merge(current.value, next)
+              : next,
+        }));
+      })
       .catch(() => {
-        if (!controller.signal.aborted) setFailed(true);
+        if (!controller.signal.aborted)
+          setState((current) => ({
+            baseKey,
+            loading: false,
+            failed: true,
+            ...(current?.baseKey === baseKey ? { value: current.value } : {}),
+          }));
       });
     return () => controller.abort();
-  }, [client, key]);
+  }, [client, key, retry]);
+  const current = state?.baseKey === baseKey ? state : undefined;
+  const value = current?.value,
+    failed = current?.failed;
   if (failed && !value)
     return (
       <Card className="bp360-section-card">
         <h2>Section unavailable</h2>
         <p>Other Business Partner sections remain available.</p>
+        <button onClick={() => setRetry((value) => value + 1)}>
+          Try again
+        </button>
       </Card>
     );
   if (!value) return <Skeleton className="bp360-shell-skeleton" />;
@@ -87,7 +123,22 @@ function Section({ code }: { code: ExplainabilitySectionCode }) {
       ) : (
         <Business data={value.data} />
       )}{" "}
-      {next ? <button onClick={() => setCursor(next)}>Load more</button> : null}
+      {failed ? (
+        <p role="alert">
+          Unable to load more results.{" "}
+          <button onClick={() => setRetry((value) => value + 1)}>
+            Try again
+          </button>
+        </p>
+      ) : null}
+      {next ? (
+        <button
+          disabled={current?.loading}
+          onClick={() => setPageSelection({ baseKey, cursor: next })}
+        >
+          Load more
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -130,7 +181,13 @@ function Requests({ data }: { data: Readonly<Record<string, unknown>> }) {
   );
 }
 function Activity({ data }: { data: Readonly<Record<string, unknown>> }) {
-  if (!rows(data["items"]).length) return <Card><h2>Activity</h2><p>No activity available for this partner and date.</p></Card>;
+  if (!rows(data["items"]).length)
+    return (
+      <Card>
+        <h2>Activity</h2>
+        <p>No activity available for this partner and date.</p>
+      </Card>
+    );
   return (
     <>
       {rows(data["items"]).map((item) => (
@@ -161,7 +218,13 @@ function Activity({ data }: { data: Readonly<Record<string, unknown>> }) {
   );
 }
 function Business({ data }: { data: Readonly<Record<string, unknown>> }) {
-  if (!rows(data["providers"]).length) return <Card><h2>Business Transactions</h2><p>No transaction providers are available in this context.</p></Card>;
+  if (!rows(data["providers"]).length)
+    return (
+      <Card>
+        <h2>Business Transactions</h2>
+        <p>No transaction providers are available in this context.</p>
+      </Card>
+    );
   return (
     <>
       {rows(data["providers"]).map((item) => (

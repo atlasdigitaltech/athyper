@@ -269,7 +269,8 @@ SELECT ot.id, 'bank_account', purpose.purpose_code,
 ON CONFLICT(owner_type_id,capability,purpose_code) DO NOTHING;
 
 DO $publish$
-DECLARE
+DECLARE seed_actor text := current_setting('app.current_principal_id',true);
+        seed_tenant text := current_setting('app.current_tenant_id',true);
   tenant record;
   v_cycle_type_id uuid;
   v_phase_id uuid;
@@ -293,6 +294,7 @@ BEGIN
       ) p ON true
      WHERE t.status='active'
   LOOP
+    PERFORM set_config('app.current_tenant_id',tenant.tenant_id::text,true),set_config('app.current_principal_id',tenant.principal_id::text,true);
     INSERT INTO control.lookup_value(tenant_id,code,name,domain_code,description,sort_order,is_system,metadata,status,created_by)
     VALUES(tenant.tenant_id,'business_partner_onboarding','Business Partner Onboarding','governance.cycle_domain','Supplier invitation, registration, duplicate review, and qualification.',60,false,'{"owner":"master.business_partner"}'::jsonb,'active',tenant.principal_id)
     ON CONFLICT(tenant_id,domain_code,code) WHERE tenant_id IS NOT NULL DO UPDATE SET name=EXCLUDED.name,description=EXCLUDED.description,metadata=EXCLUDED.metadata,status='active',updated_at=now(),updated_by=EXCLUDED.created_by WHERE (control.lookup_value.name, control.lookup_value.description, control.lookup_value.metadata, control.lookup_value.status) IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.description, EXCLUDED.metadata, 'active') ;
@@ -362,6 +364,7 @@ BEGIN
       VALUES(tenant.tenant_id,v_cycle_type_id,v_revision_no,preview,v_template_hash,ARRAY[v_invitation_id,v_registration_id,v_duplicate_id,v_qualification_id],'business-partner-onboarding-v1',tenant.principal_id,tenant.principal_id) ON CONFLICT(tenant_id,cycle_type_id,idempotency_key) DO UPDATE SET template_hash=EXCLUDED.template_hash WHERE control.cycle_template_revision.template_hash IS DISTINCT FROM EXCLUDED.template_hash;
     END IF;
   END LOOP;
+ PERFORM set_config('app.current_tenant_id',coalesce(seed_tenant,''),true),set_config('app.current_principal_id',coalesce(seed_actor,''),true);
 END $publish$;
 
 DO $assert$ BEGIN
@@ -371,10 +374,12 @@ DO $assert$ BEGIN
 END $assert$;
 
 DO $publish$
-DECLARE tenant record; cycle_id uuid; phase_id uuid; category_id uuid; prior jsonb; body jsonb; preview jsonb; template_hash text; revision_no int;
+DECLARE seed_actor text := current_setting('app.current_principal_id',true);
+        seed_tenant text := current_setting('app.current_tenant_id',true); tenant record; cycle_id uuid; phase_id uuid; category_id uuid; prior jsonb; body jsonb; preview jsonb; template_hash text; revision_no int;
   qualification_id uuid; registration_id uuid; verification_id uuid; readiness_id uuid; activation_id uuid;
 BEGIN
  FOR tenant IN SELECT t.id tenant_id,p.id principal_id FROM master.tenant t JOIN LATERAL(SELECT id FROM master.principal p WHERE p.tenant_id=t.id AND p.status='active' ORDER BY p.created_at,p.id LIMIT 1)p ON true WHERE t.status='active' LOOP
+  PERFORM set_config('app.current_tenant_id',tenant.tenant_id::text,true),set_config('app.current_principal_id',tenant.principal_id::text,true);
   SELECT id INTO cycle_id FROM control.cycle_type WHERE tenant_id=tenant.tenant_id AND code='BP_SUPPLIER_ONBOARDING';
   IF cycle_id IS NULL THEN RAISE EXCEPTION 'Release 4 supplier onboarding cycle is required for tenant %',tenant.tenant_id; END IF;
   SELECT id INTO phase_id FROM control.cycle_phase WHERE tenant_id=tenant.tenant_id AND cycle_type_id=cycle_id AND code='ONBOARDING';
@@ -410,6 +415,7 @@ BEGIN
    INSERT INTO control.cycle_template_revision(tenant_id,cycle_type_id,revision_number,template_json,template_hash,topological_task_ids,idempotency_key,published_by,created_by) SELECT tenant.tenant_id,cycle_id,revision_no,preview,template_hash,array_agg((value->>'id')::uuid),'business-partner-onboarding-v2',tenant.principal_id,tenant.principal_id FROM pg_catalog.jsonb_array_elements(body->'tasks')value ON CONFLICT(tenant_id,cycle_type_id,idempotency_key) DO UPDATE SET template_hash=EXCLUDED.template_hash WHERE control.cycle_template_revision.template_hash IS DISTINCT FROM EXCLUDED.template_hash;
   END IF;
  END LOOP;
+ PERFORM set_config('app.current_tenant_id',coalesce(seed_tenant,''),true),set_config('app.current_principal_id',coalesce(seed_actor,''),true);
 END $publish$;
 
 DO $assert$ BEGIN IF EXISTS(SELECT 1 FROM master.tenant t WHERE t.status='active' AND NOT EXISTS(SELECT 1 FROM control.cycle_type c JOIN control.cycle_template_revision r ON r.tenant_id=c.tenant_id AND r.cycle_type_id=c.id WHERE c.tenant_id=t.id AND c.code='BP_SUPPLIER_ONBOARDING' AND r.idempotency_key='business-partner-onboarding-v2')) THEN RAISE EXCEPTION 'Release 5 onboarding revision was not published for every tenant'; END IF; END $assert$;
@@ -424,3 +430,7 @@ DO $seed_assertions$ BEGIN
  -- seed-assertion: semantic
  IF EXISTS(SELECT 1 FROM control.owner_type WHERE tenant_id IS NULL AND code IN ('tenant','principal') AND (status<>'active' OR target_schema<>'master' OR target_table<>code)) THEN RAISE EXCEPTION 'Identity owner contract drift'; END IF;
 END $seed_assertions$;
+
+-- Local Increment A purchasing activation policy; payment readiness remains independently enforceable.
+INSERT INTO control.supplier_activation_policy(id,tenant_id,operating_organization_id,company_code_id,version,operation_code,rationale,effective_from,published_by)
+VALUES('e008eb56-7d4a-47f6-a122-b66149330d71','44444444-4444-4444-8444-444444444444','a478f9c0-8226-5d22-9599-b8fb27a45180','793b6cb3-3c61-57c0-9562-2cbc288bd4cf',1,'purchasing','Local supplier pilot activates purchasing eligibility. Payment use independently requires approved commercial setup and a verified remittance bank.','2026-09-14','cca94907-7519-5871-8e3c-6b11aa545c93') ON CONFLICT DO NOTHING;

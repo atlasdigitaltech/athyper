@@ -9,6 +9,45 @@ const allow: Authorizer = { authorize: async () => ({ allowed: true }) };
 const author = context("author"); const certifier = context("certifier");
 
 describe("G2 cycle execution", () => {
+  it("requires an exact process completion command and replays only its accepted receipt", async () => {
+    const env=setup();const created=await start(env,{schema:"athyper.process-run/1"});await completeAll(env,created.tasks);
+    await expect(env.runs.transition(author,created.run.id,"cancelled")).rejects.toMatchObject({code:"GOVERNANCE_PROCESS_CASE_COMMAND_REQUIRED"});
+    await expect(env.runs.transition(author,created.run.id,"completed")).rejects.toMatchObject({code:"GOVERNANCE_COMPLETION_COMMAND_REQUIRED"});
+    await expect(env.runs.transition(author,created.run.id,"completed",{expectedVersion:1,idempotencyKey:"stale"})).rejects.toMatchObject({code:"GOVERNANCE_EXPECTED_VERSION_CONFLICT"});
+    const command={expectedVersion:2,idempotencyKey:"completion-1"};
+    const result=await env.runs.transition(author,created.run.id,"completed",command);
+    expect(result.data["completion"]).toMatchObject({...command,ready:true,principalId:author.principalId});
+    await expect(env.runs.transition(author,created.run.id,"completed",command)).resolves.toEqual(result);
+    await expect(env.runs.transition(author,created.run.id,"completed",{...command,idempotencyKey:"different"})).rejects.toMatchObject({code:"GOVERNANCE_EXPECTED_VERSION_CONFLICT"});
+  });
+  it("checks the scoped run owner on reads, closure and replay", async () => {
+    const env=setup();const created=await start(env);await completeAll(env,created.tasks);
+    let allowed=false;const calls:string[]=[];
+    const runs=createCycleRunService({authorizer:{authorize:async()=>{throw Error("wrong authority");}},repositories:createExactPlaneRepositoryProvider({neon:env.repository}),authorizeRun:async(_context,run,operation)=>{calls.push(operation);expect(run.id).toBe(created.run.id);if(!allowed)throw Object.assign(Error("denied"),{code:"GOVERNANCE_PERMISSION_DENIED"});}});
+    await expect(runs.readiness(author,created.run.id)).rejects.toMatchObject({code:"GOVERNANCE_PERMISSION_DENIED"});
+    await expect(runs.transition(author,created.run.id,"completed")).rejects.toMatchObject({code:"GOVERNANCE_PERMISSION_DENIED"});
+    allowed=true;await expect(runs.readiness(author,created.run.id)).resolves.toMatchObject({ready:true});
+    expect(calls).toEqual(["readiness","transition","readiness","transition"]);
+  });
+
+  it("keeps readiness readable when scoped closure authority is denied", async () => {
+    const env=setup();const created=await start(env);await completeAll(env,created.tasks);
+    const runs=createCycleRunService({authorizer:{authorize:async()=>({allowed:true})},repositories:createExactPlaneRepositoryProvider({neon:env.repository}),authorizeRun:async(_context,_run,operation)=>{if(operation==="transition")throw Object.assign(Error("denied"),{statusCode:403});}});
+    await expect(runs.readiness(author,created.run.id)).resolves.toMatchObject({ready:true,evidence:{canComplete:false,runStatus:"running"}});
+    await expect(runs.transition(author,created.run.id,"completed")).rejects.toMatchObject({statusCode:403});
+  });
+
+  it("uses domain completion gates after all tasks complete and rechecks on closure", async () => {
+    const env = setup(); const created = await start(env); await completeAll(env, created.tasks);
+    let ready = false;
+    const transaction = env.repository.transaction.bind(env.repository);
+    env.repository.transaction = (context, work) => transaction(context, store => work({...store, evaluateCompletion: async () => ({ready, evaluatedAt:"2026-09-14T00:00:00Z", reasons:ready?[]:["activation_confirmation"],evidence:{owner:"supplier"}})}));
+    await expect(env.runs.readiness(author, created.run.id)).resolves.toMatchObject({ready:false,reasons:["activation_confirmation"]});
+    await expect(env.runs.transition(author, created.run.id, "completed")).rejects.toMatchObject({code:"GOVERNANCE_CYCLE_NOT_READY"});
+    ready = true;
+    await expect(env.runs.transition(author, created.run.id, "completed")).resolves.toMatchObject({status:"completed"});
+  });
+
   it("atomically instantiates a pinned fan-in/fan-out DAG and replays creation", async () => {
     const env = setup(); const created = await env.runs.create(command());
     expect(created.run.templateRevisionNumber).toBe(3);

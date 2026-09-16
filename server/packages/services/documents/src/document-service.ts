@@ -16,6 +16,8 @@ export interface DocumentServiceOptions<Transaction> {
   readonly metadata: MetadataReader; readonly authorizer: Authorizer; readonly audit: AuditRecorder<Transaction>; readonly outbox: OutboxWriter<Transaction>;
   readonly templates: DocumentTemplateRepository<Transaction>; readonly artifacts: DocumentArtifactRepository<Transaction>; readonly transactions: PlaneTransactionCoordinator<Transaction>;
   readonly renderer: Pick<PdfRenderer, "renderPdf">; readonly malwareScanner: MalwareScanner; readonly storage: Pick<ObjectStorage,"put"|"get"|"delete"|"exists"|"createDownloadUrl">; readonly storageBucket: string; readonly downloadTtlSeconds?: number;
+  readonly authorizeArtifact?: (context:VerifiedRequestContext,attachmentId:string,transaction:Transaction)=>Promise<boolean|void>;
+  readonly resolveTrustedSource?: (command: RenderDocumentCommand, transaction: Transaction) => Promise<import("@athyper/server-contract-documents").TrustedDocumentProjection>;
   readonly extractionScheduler?: DocumentExtractionScheduler;
   readonly createId?: () => string; readonly now?: () => Date;
 }
@@ -25,14 +27,21 @@ export function createDocumentService<Transaction>(options: DocumentServiceOptio
   return {
     async render(command) {
       validateRender(command);
-      const requestHash = fingerprint(command);
+      const trusted = command.trustedJobId ? await options.transactions.run(command.context.planeKey,actor(command.context),tx => {
+        if (!options.resolveTrustedSource) throw new DocumentError(503,"TRUSTED_SOURCE_UNAVAILABLE","Trusted source owner is unavailable");
+        return options.resolveTrustedSource(command,tx);
+      }) : undefined;
+      if(trusted) command={...command,data:trusted.data};
+      const requestHash = trusted ? createHash("sha256").update(fingerprint(command)).update(JSON.stringify(trusted)).digest("hex") : fingerprint(command);
       const resource = { tenantId: command.context.tenantId, resourceCode: command.entityType, recordId: command.entityId };
-      await requirePermission(options.authorizer, command.context, "documents.render", resource);
+      if(!trusted) await requirePermission(options.authorizer, command.context, "documents.render", resource);
+      if (!trusted) {
       const descriptor = await options.metadata.getEntityDescriptor(command.context, command.entityType);
       if (!descriptor) throw new DocumentError(404, "ENTITY_DESCRIPTOR_NOT_FOUND", `No active descriptor for ${command.entityType}`);
       const operation = Object.hasOwn(descriptor.operations, command.operationCode) ? descriptor.operations[command.operationCode] : undefined;
       if (!operation) throw new DocumentError(422, "DOCUMENT_OPERATION_NOT_PUBLISHED", `Document operation is not published: ${command.operationCode}`);
       if (operation.permissionCode !== "documents.render") await requirePermission(options.authorizer, command.context, operation.permissionCode, resource);
+      }
       if (command.idempotencyKey) {
         const replay = await options.transactions.run(command.context.planeKey, actor(command.context), async (transaction) => {
           const existing = await options.artifacts.findIdempotent(command.context, command.idempotencyKey!, transaction);
@@ -44,7 +53,10 @@ export function createDocumentService<Transaction>(options: DocumentServiceOptio
         if (replay) return replay;
       }
       const variant = command.variant ?? "default"; const locale = command.locale ?? "en";
-      const template = await options.transactions.run(command.context.planeKey, actor(command.context), (transaction) => options.templates.resolvePublished({ tenantId: command.context.tenantId, entityType: command.entityType, operationCode: command.operationCode, variant, locale, effectiveOn: now().toISOString().slice(0, 10) }, transaction));
+      const template = await options.transactions.run(command.context.planeKey, actor(command.context), (transaction) => {
+        const query={tenantId:command.context.tenantId,entityType:command.entityType,operationCode:command.operationCode,variant,locale,effectiveOn:now().toISOString().slice(0,10)};
+        return trusted ? (options.templates.resolveExact?.({...query,exact:trusted.exactTemplate},transaction) ?? Promise.resolve(null)) : options.templates.resolvePublished(query,transaction);
+      });
       if (!template) throw new DocumentError(404, "DOCUMENT_TEMPLATE_NOT_FOUND", `No published template binding for ${command.entityType}.${command.operationCode}/${variant}/${locale}`);
       const body = renderStrictHandlebars(template.html, command.data, template.variablesSchema);
       const html = `<!doctype html><html><head><meta charset="utf-8">${template.stylesCss ? `<style>${template.stylesCss}</style>` : ""}</head><body>${body}</body></html>`;
@@ -58,8 +70,8 @@ export function createDocumentService<Transaction>(options: DocumentServiceOptio
       await options.storage.put(storageKey, rendered.bytes, { contentType: "application/pdf", metadata: { tenant_id: command.context.tenantId, document_id: documentId, sha256, status: "active", malware_scan_status: malwareScan.status, malware_scanner: malwareScan.scanner, malware_scanned_at: malwareScan.scannedAt } });
       try {
         const document = await options.transactions.run(command.context.planeKey, actor(command.context), async (transaction) => {
-          const document = await options.artifacts.save({ id: documentId, tenantId: command.context.tenantId, principalId: command.context.principalId, entityType: command.entityType, entityId: command.entityId, operationCode: command.operationCode, fileName, storageBucket: options.storageBucket, storageKey, sizeBytes: rendered.bytes.byteLength, sha256, template, renderProvider: rendered.provider, renderDurationMs: rendered.durationMs, malwareScan, ...(command.idempotencyKey ? { idempotencyKey: command.idempotencyKey, requestHash } : {}) }, transaction);
-          await options.outbox.append({ tenantId: command.context.tenantId, topic: "documents", eventType: "documents.generated", ...(command.idempotencyKey ? { eventKey: command.idempotencyKey } : {}), entityType: command.entityType, entityId: command.entityId, aggregateType: "document.attachment", aggregateId: document.id, actorId: command.context.principalId, payload: { documentId: document.id, templateVersionId: template.templateVersionId, sha256, notification_attachments: [{ attachmentId: document.id, versionPolicy: "current", requestedDisposition: "auto", required: true }] } }, transaction);
+          const document = await options.artifacts.save({ id: documentId, tenantId: command.context.tenantId, principalId: command.context.principalId, entityType: command.entityType, entityId: command.entityId, operationCode: command.operationCode, fileName, storageBucket: options.storageBucket, storageKey, sizeBytes: rendered.bytes.byteLength, sha256, template, renderProvider: rendered.provider, renderDurationMs: rendered.durationMs, malwareScan, ...(trusted ? {provenance:trusted.provenance} : {}), ...(command.idempotencyKey ? { idempotencyKey: command.idempotencyKey, requestHash } : {}) }, transaction);
+          await options.outbox.append({ tenantId: command.context.tenantId, topic: "documents", eventType: "documents.generated", ...(command.idempotencyKey ? { eventKey: trusted ? `documents-generated:${command.idempotencyKey}` : command.idempotencyKey } : {}), entityType: command.entityType, entityId: command.entityId, aggregateType: "document.attachment", aggregateId: document.id, actorId: command.context.principalId, payload: { documentId: document.id, templateVersionId: template.templateVersionId, sha256, notification_attachments: [{ attachmentId: document.id, versionPolicy: "pinned", attachmentVersionId: document.id, requestedDisposition: "auto", required: true }] } }, transaction);
           await recordAudit(options.audit, command.context, document, "documents.artifact.rendered", "render", transaction);
           return document;
         });
@@ -87,7 +99,8 @@ export function createDocumentService<Transaction>(options: DocumentServiceOptio
       if (!uuid(command.documentId)) throw new DocumentError(400, "INVALID_DOCUMENT_ID", "documentId must be a UUID");
       const found = await options.transactions.run(command.context.planeKey, actor(command.context), (transaction) => options.artifacts.findAccessible(command.context, command.documentId, transaction));
       if (!found) throw new DocumentError(404, "DOCUMENT_NOT_FOUND", "Generated document was not found");
-      await requirePermission(options.authorizer, command.context, "documents.download", {
+      const trustedAccess=options.authorizeArtifact ? await options.transactions.run(command.context.planeKey,actor(command.context),tx=>options.authorizeArtifact!(command.context,found.id,tx)) : false;
+      if(!trustedAccess) await requirePermission(options.authorizer, command.context, "documents.download", {
         tenantId: command.context.tenantId,
         resourceCode: found.entityType,
         recordId: found.entityId,
@@ -140,7 +153,7 @@ function fingerprint(command: RenderDocumentCommand): string {
     return value;
   };
   return createHash("sha256").update(JSON.stringify(canonical({
-    principalId: command.context.principalId,
+    principalId: command.trustedJobId ? null : command.context.principalId,
     entityType: command.entityType, entityId: command.entityId.toLowerCase(),
     operationCode: command.operationCode, variant: command.variant ?? "default",
     locale: command.locale ?? "en", fileName: command.fileName ?? null, data: command.data,

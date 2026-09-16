@@ -128,6 +128,7 @@ afterEach(async () => {
 async function fixture(
   configuration: {
     operations?: ReturnType<typeof createNotificationOperations>;
+    recordEmailConsent?: (context: VerifiedRequestContext, consented: boolean) => Promise<unknown>;
     webPushPublicKey?: string;
     webPushAvailable?: boolean;
   } = {},
@@ -202,6 +203,18 @@ async function fixture(
 }
 
 describe("notification HTTP behavior", () => {
+  it("records email consent only for the authenticated principal and rejects subject overrides", async () => {
+    const recordEmailConsent=vi.fn().mockResolvedValue({consented:true});
+    const f=await fixture({recordEmailConsent});
+    const endpoint=`${f.url}/api/notifications/preferences/email-consent`;
+    const send=(body:unknown,authenticated=true)=>fetch(endpoint,{method:"POST",headers:{"content-type":"application/json",...(authenticated?{authorization:"Bearer test"}:{})},body:JSON.stringify(body)});
+    expect((await send({consented:true},false)).status).toBe(401);
+    expect((await send({consented:true,subjectId:notificationId})).status).toBe(400);
+    expect((await send({consented:"true"})).status).toBe(400);
+    expect(recordEmailConsent).not.toHaveBeenCalled();
+    expect((await send({consented:true})).status).toBe(200);
+    expect(recordEmailConsent).toHaveBeenCalledWith(scope,true);
+  });
   it.each(endpoints)(
     "requires authentication for %s %s",
     async (method, path) => {

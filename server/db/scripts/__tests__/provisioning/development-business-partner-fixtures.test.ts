@@ -104,3 +104,13 @@ test("country profiles cover both Saudi fixtures and generate isolated synthetic
     /Unsupported/,
   );
 });
+
+test("fixture names keep legal names separate from trading and search aliases", () => {
+  const { partners } = buildDevelopmentBusinessPartnerFixtures();
+  const northwind = partners.find(item => item.code === "CATL-BP-001")!;
+  assert.equal(northwind.name, "Northwind Industrial Supplies Ltd");
+  assert.deepEqual(northwind.aliases, ["Northwind Industrial Supplies", "Northwind Supplies"]);
+  const generated = partners.find(item => item.code === "CATL-BP-003")!;
+  assert.equal(generated.name, "Alder Engineering Limited");
+  assert.deepEqual(generated.aliases, ["Alder Engineering", "Alder Engineering"]);
+});

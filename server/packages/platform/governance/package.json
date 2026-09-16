@@ -23,7 +23,10 @@
     "@athyper/server-foundation": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
     "express": "^5.2.1",
-    "kysely": "^0.28.17"
+    "kysely": "^0.28.17",
+    "@athyper/server-contract-control-admin": "workspace:*",
+    "@athyper/server-platform-control-admin": "workspace:*",
+    "@athyper/server-platform-policy": "workspace:*"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

@@ -1,5 +1,17 @@
 import type { Metadata } from "next";
-import { LayoutIcon } from "@athyper/platform-icons";
 import { PageFrame, PageHeader } from "@athyper/platform-shell";
-export const metadata:Metadata={title:"Business Partner Data Model"};
-export default function BusinessPartnerModelPage(){return <PageFrame width="wide" className="athyper-landing"><PageHeader level="collection" context="Business Partner · Configuration" title="Data Model" description="Business Partner is a governed aggregate composed from reusable entity definitions." icon={<LayoutIcon/>}/><ul className="athyper-governance-list"><li><strong>Party</strong><span>Shared legal identity, status, identifiers, and lifecycle.</span></li><li><strong>Organization or Person</strong><span>The party form and its legal or personal attributes.</span></li><li><strong>Supplier and Customer Roles</strong><span>Role-specific commercial and operational extensions without duplicating the party.</span></li><li><strong>Addresses, Contacts, Tax and Bank Details</strong><span>Governed child entities with their own verification and disclosure controls.</span></li><li><strong>Scope and Relationships</strong><span>Operating-organization assignments and Mesh network relationships.</span></li></ul></PageFrame>;}
+import { BusinessPartnerInspection } from "@athyper/product-studio-business-partner";
+export const metadata: Metadata = { title: "Business Partner Data Model" };
+export default function Page() {
+  return (
+    <PageFrame width="full">
+      <PageHeader
+        level="collection"
+        context="Business Partner · Configuration"
+        title="Data Model"
+        description="Fields, relationships, and surfaces from the selected stored definition."
+      />
+      <BusinessPartnerInspection tab="model" />
+    </PageFrame>
+  );
+}

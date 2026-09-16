@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readBoundedResponse } from "./bounded-response.js";
 import type {
   SearchDocument,
@@ -235,7 +236,7 @@ export function createMeilisearchIndex(
     },
     async remove(documentId: string) {
       await acceptedTask(
-        `/indexes/${index}/documents/${encodeURIComponent(documentId)}`,
+        `/indexes/${index}/documents/${encodeURIComponent(storageDocumentId(documentId))}`,
         { method: "DELETE" },
       );
     },
@@ -314,7 +315,7 @@ export function createMeilisearchIndex(
 
 function toStored(document: SearchDocument) {
   return {
-    id: document.id,
+    id: storageDocumentId(document.id),
     plane_key: document.planeKey,
     tenant_id: document.tenantId,
     attachment_id: document.attachmentId,
@@ -359,3 +360,6 @@ function object(value: unknown): Record<string, unknown> {
 function literal(value: string) {
   return JSON.stringify(value);
 }
+
+/** Storage IDs are opaque: hash the full logical identity, including plane and tenant. */
+function storageDocumentId(id: string): string { return createHash("sha256").update(id, "utf8").digest("hex"); }

@@ -1,18 +1,18 @@
-import { createHash } from "node:crypto";
+import { presentationUuid, surfaceBindingLookup } from "./presentation-graph-helpers";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 import { compileEntityIntakeSurfaces } from "../../../../packages/contracts/platform/entity-runtime/src/intake-surface-authoring";
 const regionUid = (key: string) => {
-  const h = createHash("sha256")
-    .update(`address-region.v1.${key}`)
-    .digest("hex");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+  return presentationUuid(`address-region.v1.${key}`);
 };
-export function withBusinessPartnerAddressRegion(
-  source: MetaEntityGraph,
-): MetaEntityGraph {
+export function withBusinessPartnerAddressRegion(source: MetaEntityGraph): MetaEntityGraph {
+  return applyBusinessPartnerAddressRegion(structuredClone(source));
+}
+
+/** Internal pipeline step: mutates the caller-owned working graph. */
+export function applyBusinessPartnerAddressRegion(source: MetaEntityGraph): MetaEntityGraph {
   if (source.entity.entityCode !== "business_partner")
     throw Error("Business Partner graph required");
-  const graph = structuredClone(source) as any;
+  const graph = source as any;
   const surface = graph.surfaces.find(
     (s: any) => s.surfaceKey === "partner_address_intake",
   );
@@ -38,8 +38,7 @@ export function withBusinessPartnerAddressRegion(
   const bindings = graph.surfaceFieldBindings.filter(
     (b: any) => b.entitySurfaceId === surface.id,
   );
-  const find = (key: string) =>
-    bindings.find((b: any) => b.displayConfig?.valueKey === key);
+  const find = surfaceBindingLookup<any>(bindings, surface.id);
   const country = find("countryCode"),
     region = find("region"),
     postal = find("postalCode");
@@ -200,17 +199,17 @@ export function withBusinessPartnerAddressRegion(
 }
 
 const advancedUid = (key: string) => {
-  const h = createHash("sha256")
-    .update(`advanced-address.v1.${key}`)
-    .digest("hex");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+  return presentationUuid(`advanced-address.v1.${key}`);
 };
-export function withBusinessPartnerAdvancedAddress(
-  source: MetaEntityGraph,
-): MetaEntityGraph {
+export function withBusinessPartnerAdvancedAddress(source: MetaEntityGraph): MetaEntityGraph {
+  return applyBusinessPartnerAdvancedAddress(structuredClone(source));
+}
+
+/** Internal pipeline step: mutates the caller-owned working graph. */
+export function applyBusinessPartnerAdvancedAddress(source: MetaEntityGraph): MetaEntityGraph {
   if (source.entity.entityCode !== "business_partner")
     throw Error("Business Partner graph required");
-  const graph = structuredClone(source) as any;
+  const graph = source as any;
   const surface = graph.surfaces.find(
     (s: any) => s.surfaceKey === "partner_address_intake",
   );

@@ -16,3 +16,13 @@ export function createMetaEntityAuthoringAuthorizer(fallback:Authorizer,load:(co
  }}});
  return {authorize:input=>gated.has(input.permissionCode)?authorizer.authorize(input):fallback.authorize(input)};
 }
+
+/** Reading declarations has no maker/checker state transition. Only wire to GET inspection routes. */
+export function createMetaEntityInspectionAuthorizer(fallback: Authorizer): Authorizer {
+ const reviewer = createPermissionAuthorizer({policyGate:{async evaluate({context,permissionCode}) {
+   if(context.planeKey !== 'studio' || permissionCode !== 'metadata.entity.review') return {allowed:false,reason:'authoring_policy_unavailable'};
+   // No approval action is performed; all grant, scope, MFA and deny checks remain in the permission authorizer.
+   return {allowed:true,sodSatisfied:true};
+ }}});
+ return {authorize: input => input.permissionCode === 'metadata.entity.review' ? reviewer.authorize(input) : fallback.authorize(input)};
+}

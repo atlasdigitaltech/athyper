@@ -1,0 +1,1 @@
+CREATE TRIGGER supplier_onboarding_completion BEFORE UPDATE ON governance.cycle_run FOR EACH ROW WHEN (OLD.data->>'schema'='athyper.process-run/1') EXECUTE FUNCTION governance.trg_supplier_onboarding_completion();

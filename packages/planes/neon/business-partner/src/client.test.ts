@@ -100,3 +100,10 @@ describe("Business Partner case client", () => {
     await expect(clientFor({ case: governedCase, request: { id: governedCase.id }, validationFindings: [], materializationProof: { ...proof, lineage: Array.from({ length: 26 }, () => ({})) } }).view(governedCase.id)).rejects.toThrow(/contract is invalid/);
   });
 });
+
+
+it("accepts a submission receipt while document-gated approval work is absent", async () => {
+  const process = { cycleRunId: governedCase.id, attemptId: governedCase.id, attemptNumber: 1, selectionId: governedCase.id, profile: "simple", reviewPackJobId: governedCase.id, documentStatus: "pending" };
+  const result = await clientFor({ case: { ...governedCase, allowedActions: [] }, request: { id: governedCase.id }, process, replayed: false }).submit(governedCase.id, 3, "p2-client-submit-001");
+  expect(result.workflow).toBeUndefined(); expect(result.process).toEqual(process); expect(result.case.allowedActions).toEqual([]);
+});

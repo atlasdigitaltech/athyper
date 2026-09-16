@@ -142,3 +142,6 @@ END $$;
 REVOKE ALL ON snapshot.business_partner_case_contract_revision FROM PUBLIC;
 REVOKE ALL ON FUNCTION snapshot.trg_reject_case_contract_mutation() FROM PUBLIC;
 GRANT SELECT, INSERT ON snapshot.business_partner_case_contract_revision TO athyper_publication_service;
+
+-- Saved draft comparison history
+GRANT SELECT, INSERT ON snapshot.entity_draft_save TO athyperapp;

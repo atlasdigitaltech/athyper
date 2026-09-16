@@ -1,0 +1,90 @@
+{
+  "at": "2026-09-14T16:27:45.361Z",
+  "mode": "real PostgreSQL; all qualification writes rolled back",
+  "checks": [
+    "compiled publication and overlapping-scope rejection",
+    "exact tenant, plane, organization and company scope isolation",
+    "database exclusion rejects overlapping direct inserts",
+    {
+      "level": "basic",
+      "profile": "simple",
+      "trace": [
+        {
+          "ruleId": "00000000-0000-4000-8000-000000000112",
+          "priority": 10,
+          "result": "false"
+        },
+        {
+          "ruleId": "00000000-0000-4000-8000-000000000111",
+          "priority": 20,
+          "result": "false"
+        },
+        {
+          "ruleId": "00000000-0000-4000-8000-000000000110",
+          "priority": 30,
+          "result": "matched"
+        }
+      ],
+      "factHash": "baf406198f87b337a3a97db456c81959ef059407be28d3a9afd0236406a4a1ec",
+      "evidenceRoundtrip": true,
+      "replayStable": true,
+      "conflictRejected": true
+    },
+    {
+      "level": "standard",
+      "profile": "standard",
+      "trace": [
+        {
+          "ruleId": "00000000-0000-4000-8000-000000000112",
+          "priority": 10,
+          "result": "false"
+        },
+        {
+          "ruleId": "00000000-0000-4000-8000-000000000111",
+          "priority": 20,
+          "result": "matched"
+        },
+        {
+          "ruleId": "00000000-0000-4000-8000-000000000110",
+          "priority": 30,
+          "result": "not_evaluated"
+        }
+      ],
+      "factHash": "9e8a344c76032a08438c425f7085fe3cc2b025421bcad6d0a6b1ffe85197a9be",
+      "evidenceRoundtrip": true,
+      "replayStable": true,
+      "conflictRejected": true
+    },
+    {
+      "level": "enhanced",
+      "profile": "enhanced",
+      "trace": [
+        {
+          "ruleId": "00000000-0000-4000-8000-000000000112",
+          "priority": 10,
+          "result": "matched"
+        },
+        {
+          "ruleId": "00000000-0000-4000-8000-000000000111",
+          "priority": 20,
+          "result": "not_evaluated"
+        },
+        {
+          "ruleId": "00000000-0000-4000-8000-000000000110",
+          "priority": 30,
+          "result": "not_evaluated"
+        }
+      ],
+      "factHash": "7f81c8f5e142fc6dfd39389ac586936f68c3c6417f4ee7b39346080a5c48feee",
+      "evidenceRoundtrip": true,
+      "replayStable": true,
+      "conflictRejected": true
+    },
+    "new active successor does not retarget exact revision",
+    "existing policy owner prevents published rule mutation",
+    "wrong exact hash never falls back to active policy",
+    "database rejects mutation of publication and selection evidence",
+    "live catalog repository verifies minimum authority, scope, content hash, owner and cycle type/revision identity"
+  ],
+  "passed": true
+}

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { DatePicker } from "./date-picker";
 export { DatePicker, type DatePickerProps } from "./date-picker";
-import { CloseIcon } from "@athyper/platform-icons";
+import { CloseIcon, SearchIcon } from "@athyper/platform-icons";
 import { createPortal } from "react-dom";
 import {
   Children, cloneElement, createContext, forwardRef, isValidElement, useCallback, useContext, useEffect, useId, useRef, useState,
@@ -111,7 +111,7 @@ export function Menu({ open, defaultOpen = false, onOpenChange, children }: { re
     items[next]?.focus();
   }}>{children}</div></MenuContext.Provider>;
 }
-export function MenuTrigger({ className, onClick, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) { const c = useContext(MenuContext); if (!c) throw new Error("MenuTrigger must be inside Menu"); return <button type="button" aria-haspopup="menu" aria-expanded={c.open} className={cx("a-button", "a-button--ghost", className)} {...props} onClick={(event) => { onClick?.(event); if (!event.defaultPrevented) c.setOpen(!c.open); }} />; }
+export function MenuTrigger({ className, onClick, variant = "ghost", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "ghost" | "secondary" }) { const c = useContext(MenuContext); if (!c) throw new Error("MenuTrigger must be inside Menu"); return <button type="button" aria-haspopup="menu" aria-expanded={c.open} className={cx("a-button", `a-button--${variant}`, className)} {...props} onClick={(event) => { onClick?.(event); if (!event.defaultPrevented) c.setOpen(!c.open); }} />; }
 export function MenuContent({ className, portal = false, style, ...props }: HTMLAttributes<HTMLDivElement> & { readonly portal?: boolean }) {
   const c = useContext(MenuContext);
   const [position, setPosition] = useState<{ readonly left: number; readonly top: number }>();
@@ -240,3 +240,11 @@ export * from "./presentation";
 export { ScopePickerToolbar, CompanyGroups, type CompanyChoice } from "./company-groups";
 
 export { SearchableSelect, searchReferenceOptions, type ReferenceOption, type SearchableSelectMessages } from "./searchable-select";
+
+/** Controlled object search; filtering and keyboard shortcut ownership stay with the host workspace. */
+export const ObjectSearch = forwardRef<HTMLInputElement, { id: string; value: string; onValueChange: (value: string) => void; placeholder?: string; label: string }>(function ObjectSearch({id,value,onValueChange,placeholder,label},ref) {
+ return <div className="a-object-search"><SearchIcon size={18} aria-hidden="true" /><Input ref={ref} id={id} type="search" autoComplete="off" enterKeyHint="search" aria-label={label} value={value} placeholder={placeholder} onChange={e=>onValueChange(e.target.value)} />{value ? <Button variant="ghost" size="small" aria-label="Clear search" onClick={()=>onValueChange("")}>Clear</Button> : <kbd aria-hidden="true">/</kbd>}</div>;
+});
+
+export { AppliedFilters, type AppliedFilterChip } from "./applied-filters";
+export { PreviewFrame } from "./preview-frame";

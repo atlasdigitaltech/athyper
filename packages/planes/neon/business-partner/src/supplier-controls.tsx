@@ -1,12 +1,12 @@
 "use client";
+import { useOrganizationSelection } from "./use-organization-selection";
 import { BankVerificationControls } from "./bank-verification-controls";
 
-import { ApiTransportError } from "@athyper/platform-api-client";
+import { businessPartnerErrorMessage, useCommandRunner } from "./command-feedback";
 import {
   useApiClient,
   useApplicationNavigation,
   usePermissions,
-  useToasts,
 } from "@athyper/platform-shell-app-foundation";
 import { PageSurface } from "@athyper/platform-surface-kit";
 import {
@@ -17,10 +17,6 @@ import {
   Label,
   Select,
 } from "@athyper/platform-ui";
-import {
-  useNeonOperatingOrganization,
-  useNeonWorkContext,
-} from "@athyper/product-neon-shell";
 import {
   useCallback,
   useEffect,
@@ -46,49 +42,22 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 export function SupplierControls({
   businessPartnerId,
+  requestScope,
 }: {
   readonly businessPartnerId: string;
+  readonly requestScope?: {operatingOrganizationId:string;companyCodeId?:string};
 }) {
   const navigation = useApplicationNavigation();
   const http = useApiClient(),
     api = useMemo(() => createBusinessPartnerClient(http), [http]);
-  const work = useNeonWorkContext(),
-    operating = useNeonOperatingOrganization(),
-    grants = usePermissions(),
-    toasts = useToasts();
-  const companyCodeId =
-    work.selection.mode === "company"
-      ? work.selection.companyCodeId
-      : undefined;
-  const organizations = useMemo(
-    () =>
-      operating.organizations.filter(
-        (item) =>
-          !companyCodeId ||
-          item.companyAssignments.some(
-            (assignment) => assignment.companyCodeId === companyCodeId,
-          ),
-      ),
-    [operating.organizations, companyCodeId],
-  );
-  const [organizationId, setOrganizationId] = useState(""),
-    [aggregate, setAggregate] = useState<PartnerAggregate>(),
+  const grants = usePermissions();
+  const { companyCodeId, compatible: organizations, selected: organizationId, setSelected: setOrganizationId } = useOrganizationSelection(requestScope);
+  const [aggregate, setAggregate] = useState<PartnerAggregate>(),
     [readiness, setReadiness] = useState<PartnerEligibility>(),
     [preferences, setPreferences] = useState<readonly SupplierPreference[]>([]);
   const [loading, setLoading] = useState(false),
     [busy, setBusy] = useState<string>(),
     [error, setError] = useState<string>();
-  useEffect(
-    () =>
-      setOrganizationId((current) =>
-        organizations.some((item) => item.id === current)
-          ? current
-          : organizations.length === 1
-            ? organizations[0]!.id
-            : "",
-      ),
-    [organizations],
-  );
   const reload = useCallback(async () => {
     if (!organizationId) return;
     setLoading(true);
@@ -128,23 +97,7 @@ export function SupplierControls({
     void reload();
   }, [reload]);
   const supplier = aggregate?.suppliers[0];
-  async function run(
-    name: string,
-    command: () => Promise<unknown>,
-    success: string,
-  ) {
-    setBusy(name);
-    setError(undefined);
-    try {
-      await command();
-      toasts.push({ tone: "success", title: success });
-      await reload();
-    } catch (cause) {
-      setError(errorMessage(cause));
-    } finally {
-      setBusy(undefined);
-    }
-  }
+  const run = useCommandRunner({ setBusy, setError, reload, errorMessage });
   async function createQualification(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -299,6 +252,7 @@ export function SupplierControls({
         </a>
       }
     >
+      {requestScope ? <p>Readiness is opened in the request's organization and company scope.</p> : null}
       <Card className="bp-filter-bar">
         <div>
           <Label htmlFor="supplier-controls-organization">
@@ -445,45 +399,13 @@ export function SupplierControls({
                 item.decision === "pending" &&
                 grants.has(supplierControlPermissions.qualification) ? (
                   <div className="bp-actions">
-                    <Button
-                      variant="secondary"
-                      loading={busy === `qualification-${item.id}`}
-                      onClick={() =>
-                        void decideQualification(
-                          item.id,
-                          item.rowVersion,
-                          "approved",
-                        )
-                      }
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      loading={busy === `qualification-${item.id}`}
-                      onClick={() =>
-                        void decideQualification(
-                          item.id,
-                          item.rowVersion,
-                          "conditional",
-                        )
-                      }
-                    >
-                      Conditional
-                    </Button>
-                    <Button
-                      variant="danger"
-                      loading={busy === `qualification-${item.id}`}
-                      onClick={() =>
-                        void decideQualification(
-                          item.id,
-                          item.rowVersion,
-                          "rejected",
-                        )
-                      }
-                    >
-                      Reject
-                    </Button>
+                    {(["approved", "conditional", "rejected"] as const).map(decision => (
+                      <Button key={decision} variant={decision === "rejected" ? "danger" : "secondary"}
+                        loading={busy === `qualification-${item.id}`}
+                        onClick={() => void decideQualification(item.id, item.rowVersion, decision)}>
+                        {decision === "approved" ? "Approve" : decision === "conditional" ? "Conditional" : "Reject"}
+                      </Button>
+                    ))}
                   </div>
                 ) : ["approved", "conditional"].includes(item.decision) &&
                   grants.has(supplierControlPermissions.qualification) ? (
@@ -557,20 +479,13 @@ export function SupplierControls({
                 item.status === "pending" &&
                 grants.has(supplierControlPermissions.preference) ? (
                   <div className="bp-actions">
-                    <Button
-                      variant="secondary"
-                      loading={busy === `preference-${item.id}`}
-                      onClick={() => void decidePreference(item, "approved")}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      variant="danger"
-                      loading={busy === `preference-${item.id}`}
-                      onClick={() => void decidePreference(item, "rejected")}
-                    >
-                      Reject
-                    </Button>
+                    {(["approved", "rejected"] as const).map(decision => (
+                      <Button key={decision} variant={decision === "rejected" ? "danger" : "secondary"}
+                        loading={busy === `preference-${item.id}`}
+                        onClick={() => void decidePreference(item, decision)}>
+                        {decision === "approved" ? "Approve" : "Reject"}
+                      </Button>
+                    ))}
                   </div>
                 ) : item.status === "approved" &&
                   grants.has(supplierControlPermissions.preference) ? (
@@ -764,8 +679,5 @@ export function supplierLifecycleEvidence(
   ]);
 }
 function errorMessage(cause: unknown): string {
-  if (cause instanceof ApiTransportError)
-    return cause.problem?.detail ?? cause.message;
-  if (cause instanceof Error) return cause.message;
-  return "Unexpected supplier controls error";
+  return businessPartnerErrorMessage(cause, "Unexpected supplier controls error");
 }

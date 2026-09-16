@@ -217,6 +217,7 @@ export interface PartnerEligibilityReason {
 }
 
 export interface PartnerEligibilityDecision {
+  readonly operationalEvidence?: Readonly<Record<string, unknown>>;
   readonly businessPartnerId: string;
   readonly role: PartnerEligibilityRole;
   readonly operatingOrganizationId: string;
@@ -259,6 +260,7 @@ export interface SupplierActivationEvidence {
 }
 
 export interface ActivateSupplierCommand {
+  readonly expectedSupplierVersion?: number;
   readonly context: VerifiedRequestContext;
   readonly businessPartnerId: string;
   readonly operatingOrganizationId: string;

@@ -1,4 +1,5 @@
 "use client";
+import { businessLabel } from "./360/display-values";
 
 import { validationMessage, validationNotApplicable } from "./validation-messages";
 import { Badge, Card } from "@athyper/platform-ui";
@@ -94,11 +95,7 @@ export function DuplicateEvidence({
   );
 }
 
-function display(value: string) {
-  return value
-    .replaceAll(/[._-]+/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
+function display(value: string): string { return businessLabel(value, "title"); }
 
 function number(value: unknown): number {
   return Number.isSafeInteger(value) && Number(value) >= 0 ? Number(value) : 0;

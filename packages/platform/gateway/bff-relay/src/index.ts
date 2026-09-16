@@ -128,6 +128,18 @@ const DEFAULT_TIMEOUTS: Readonly<Record<RelayRequestClass, number>> = {
 /** Explicit Studio authoring surfaces; upstream owns tenant scope, permissions and independent review. */
 export const STUDIO_META_ENTITY_AUTHORING_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
+    ...(["/api/meta-entity-authoring/inspection/releases", "/api/meta-entity-authoring/inspection/releases/:id", "/api/meta-entity-authoring/inspection/releases/:id/activation"] as const).map((path, index) => ({
+      id: `studio.metaEntity.inspection.${index}`, method: "GET" as const, path,
+      requestClass: "json" as const, requiresTenant: true, idempotency: "none" as const, maxBodyBytes: 0,
+    })),
+    ...([
+      ["addressPreviewChoices", "/api/meta-entity-authoring/inspection/address-preview-choices"],
+      ["draftHistory", "/api/meta-entity-authoring/change-sets/:id/history"],
+      ["draftHistoryRevision", "/api/meta-entity-authoring/change-sets/:id/history/:revision"],
+    ] as const).map(([name, path]) => ({
+      id: `studio.metaEntity.${name}`, method: "GET" as const, path,
+      requestClass: "json" as const, requiresTenant: true, idempotency: "none" as const, maxBodyBytes: 0,
+    })),
     {
       id: "studio.metaEntity.list",
       method: "GET",
@@ -864,6 +876,12 @@ export const STUDIO_BP_LOCAL_PREVIEW_OPERATION: RelayOperation = Object.freeze({
 });
 export const STUDIO_BP_DEFINITION_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
+    Object.freeze({ id: "studio.task-rules.baselines", method: "GET" as const, path: "/api/studio/supplier-task-rule-baselines", requestClass: "json" as const, requiresTenant: true }),
+    ...(["author", "read", "publish"] as const).map(action => Object.freeze({
+      id: `studio.task-edit-policy.${action}`, method: action === "read" ? "GET" as const : "POST" as const,
+      path: `/api/studio/task-edit-policies${action === "author" ? "" : "/:id"}${action === "publish" ? "/publish" : ""}`,
+      requestClass: "json" as const, requiresTenant: true, idempotency: action === "read" ? "none" as const : "required" as const, maxBodyBytes: 256 * 1024,
+    })),
     STUDIO_BP_DEFINITION_AUTHOR_OPERATION,
     STUDIO_BP_DEFINITION_SIMULATE_OPERATION,
     STUDIO_BP_DEFINITION_READ_OPERATION,
@@ -1608,8 +1626,18 @@ export const SUPPLIER_WORKFORCE_REQUISITION_OPERATIONS: readonly RelayOperation[
       maxBodyBytes: 16 * 1024,
     },
   ]);
+export const SUPPLIER_PROCESS_SELECTION_PREVIEW_OPERATION: RelayOperation = Object.freeze({
+  id: "supplier.process-selection.preview", method: "GET", path: "/api/governance/process-selection/cases/:caseId/preview",
+  requestClass: "json", requiresTenant: true, allowedQuery: [],
+});
 export const BUSINESS_PARTNER_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
+    SUPPLIER_PROCESS_SELECTION_PREVIEW_OPERATION,
+    { id: "notifications.email-consent.record", method: "POST", path: "/api/notifications/preferences/email-consent", requestClass: "json", requiresTenant: true, allowedQuery: [], idempotency: "required", maxBodyBytes: 16384 },
+    ...(["view","request","process","retry","download"] as const).map(action=>({id:`supplier.process-documents.${action}`,method:action==='view'?'GET' as const:'POST' as const,path:`/api/governance/process-documents/${action==='view'||action==='request'?'cases':'jobs'}/:id/${action}` as const,requestClass:'json' as const,requiresTenant:true,allowedQuery:[],...(action!=='view'?{idempotency:'required' as const,maxBodyBytes:16384}:{})})),
+    { id: "supplier.cycle.readiness", method: "GET", path: "/api/governance/supplier-onboarding/runs/:runId/readiness", requestClass: "json", requiresTenant: true, allowedQuery: [] },
+    { id: "supplier.cycle.complete", method: "POST", path: "/api/governance/supplier-onboarding/runs/:runId/completion", requestClass: "json", requiresTenant: true, allowedQuery: [], idempotency: "required", maxBodyBytes: 16384 },
+    ...(["view", "start", "decide", "cancel", "information", "escalate", "edit-preview"] as const).map(action => ({ id: `supplier.process-tasks.${action}`, method: action === "view" ? "GET" as const : "POST" as const, path: `/api/governance/process-tasks/cases/:caseId/${action}` as const, requestClass: "json" as const, requiresTenant: true, allowedQuery: [], ...(action !== "view" ? { idempotency: "required" as const, maxBodyBytes: action === "edit-preview" ? 65536 : 16384 } : {}) })),
     BUSINESS_PARTNER_GOVERNED_IMPORT_OPERATION,
     BUSINESS_PARTNER_360_COMMENT_CREATE_OPERATION,
     BUSINESS_PARTNER_REQUEST_FORM_OPERATION,

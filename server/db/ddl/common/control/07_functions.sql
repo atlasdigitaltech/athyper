@@ -668,12 +668,18 @@ RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE definition_status text;
 BEGIN
   IF TG_TABLE_NAME = 'policy_definition' THEN definition_status := OLD.status;
-  ELSE SELECT status INTO definition_status FROM control.policy_definition WHERE id = OLD.policy_definition_id;
+  ELSE
+    SELECT status INTO definition_status FROM control.policy_definition
+      WHERE id = CASE WHEN TG_OP = 'INSERT' THEN NEW.policy_definition_id ELSE OLD.policy_definition_id END FOR SHARE;
+    IF TG_OP = 'UPDATE' AND NEW.policy_definition_id IS DISTINCT FROM OLD.policy_definition_id THEN
+      RAISE EXCEPTION 'Policy children cannot move between revisions' USING ERRCODE = '55000';
+    END IF;
   END IF;
   IF definition_status IN ('published', 'active') THEN
     RAISE EXCEPTION 'Published policy definition revisions and their children are immutable' USING ERRCODE = '55000';
   END IF;
-  RETURN OLD;
+  IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+  RETURN NEW;
 END;
 $$;
 
@@ -890,4 +896,11 @@ CREATE OR REPLACE FUNCTION control.lock_parameter_definition(p_id uuid)
 RETURNS SETOF control.parameter_definition LANGUAGE sql SECURITY DEFINER
 SET search_path=pg_catalog,control AS $$
  SELECT * FROM control.parameter_definition WHERE id=p_id AND NOT is_sensitive FOR SHARE;
+$$;
+
+CREATE OR REPLACE FUNCTION control.trg_reject_process_publication_mutation()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'PROCESS_SELECTION_PUBLICATION_IMMUTABLE' USING ERRCODE='55000';
+END;
 $$;

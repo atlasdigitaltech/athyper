@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "body": {
+    "deterministic": true,
+    "contractHash": "2f0558362fece2887203672f578553409629b7beb188cbef3d5477273ac59989",
+    "issues": []
+  }
+}

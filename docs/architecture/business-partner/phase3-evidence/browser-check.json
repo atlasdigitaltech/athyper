@@ -1,0 +1,13 @@
+{
+  "liveBrowser": true,
+  "dataSource": "Browser-intercepted minimal fixture; captured surface/binding, synthetic field/section. Live APIs deny this session",
+  "unsavedLabelRendered": true,
+  "baseUnaffected": true,
+  "savedViewUnaffected": true,
+  "requiredFieldFeedbackVerified": true,
+  "propertiesFocused": true,
+  "unsupportedReleaseExplicit": true,
+  "mobileOverflow": false,
+  "authoringWrites": [],
+  "errors": []
+}

@@ -1,3 +1,5 @@
+import { withBusinessPartnerComplianceRequirement } from "../../server/db/scripts/provisioning/business-partner-compliance-requirement.js";
+import { validateProfileIntake } from "../../server/packages/services/master-data/src/business-partner-intake-profile.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { withBusinessPartnerFullProfile } from "../../server/db/scripts/provisioning/business-partner-full-profile.js";
@@ -286,4 +288,47 @@ test("collection authoring publishes reusable bank, certificate and document pre
       ["certifiedLocation", 6],
     ],
   );
+});
+
+
+test("P1 requirement is shared across both views and validated by the owning API", () => {
+  const graph=withBusinessPartnerComplianceRequirement(withBusinessPartnerFullProfile(fixture()));
+  assert.deepEqual(withBusinessPartnerComplianceRequirement(graph),graph);
+  const surfaces=compileEntityIntakeSurfaces(graph), details=surfaces.find(s=>s.key==="intake_details")!;
+  const fields=details.sections.flatMap(s=>s.fields);
+  const requirement=fields.find(f=>f.key==="details_requested_compliance_level")!;
+  assert.equal(requirement.control,"input");
+  assert.equal(requirement.visibleWhen,undefined);
+  assert.equal((requirement as any).defaultValue,undefined);
+  for(const profileMode of ["standard","full"]) {
+    const base={...dataSurfaceDefaults(details,surfaces),profileMode};
+    assert.throws(()=>dataSurfaceValues(details,surfaces,base),/Compliance requirement/);
+    assert.doesNotThrow(()=>dataSurfaceValues(details,surfaces,base,"draft"));
+    for(const level of ["basic","standard","enhanced"]) {
+      const answers={...base,requestedComplianceLevel:level,complianceRequirementReason:"Business need"};
+      const values=dataSurfaceValues(details,surfaces,answers);
+      assert.equal(values.requestedComplianceLevel,level);
+      const command={kind:"new_partner",source:{kind:"manual"},requestedRole:"supplier",proposedPayload:{requestedComplianceLevel:level,complianceRequirementReason:"Business need",tenantFields:{profileMode}},extensions:{}} as any;
+      assert.doesNotThrow(()=>validateProfileIntake(details,surfaces,command));
+      assert.throws(()=>validateProfileIntake(details,surfaces,{...command,proposedPayload:{...command.proposedPayload,requestedComplianceLevel:"unsafe"}}),/Compliance requirement/);
+    }
+    assert.throws(()=>dataSurfaceValues(details,surfaces,{...base,requestedComplianceLevel:"basic"}),/Requirement reason/);
+  }
+  assert.doesNotThrow(()=>validateProfileIntake(details,surfaces,{requestedRole:"customer",proposedPayload:{},extensions:{}} as any));
+});
+
+test("public presentation transforms preserve their input graph and return independent copies", async () => {
+  const { withBusinessPartnerRequestCapture } = await import("../../server/db/scripts/provisioning/business-partner-request-capture");
+  const { withBusinessPartnerCollectionPresentations, withBusinessPartnerProfilePresentations } = await import("../../server/db/scripts/provisioning/business-partner-collection-presentations");
+  const { withBusinessPartnerBankEditor, withCompactBankCopy } = await import("../../server/db/scripts/provisioning/business-partner-bank-editor");
+  const { withBusinessPartnerAddressRegion, withBusinessPartnerAdvancedAddress } = await import("../../server/db/scripts/provisioning/business-partner-address-editor");
+  const graph = withBusinessPartnerFullProfile(fixture());
+  const before = structuredClone(graph);
+  for (const transform of [withBusinessPartnerFullProfile, withBusinessPartnerRequestCapture, withBusinessPartnerCollectionPresentations, withBusinessPartnerProfilePresentations, withBusinessPartnerBankEditor, withCompactBankCopy, withBusinessPartnerAddressRegion, withBusinessPartnerAdvancedAddress]) {
+    const result = transform(graph);
+    assert.deepEqual(graph, before, transform.name);
+    assert.deepEqual(result, graph, transform.name);
+    assert.notEqual(result, graph, transform.name);
+    assert.notEqual(result.surfaceFieldBindings[0], graph.surfaceFieldBindings[0], transform.name);
+  }
 });

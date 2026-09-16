@@ -1,0 +1,874 @@
+{
+  "package": "P9",
+  "status": "accepted_local_dev",
+  "recordedAt": "2026-09-14T17:16:01.473Z",
+  "acceptanceOpen": [],
+  "boundaries": [
+    "Local Increment A purchasing pilot; follow-ups B and C excluded.",
+    "Clean Studio/NEON PostgreSQL foundations, canonical tenant authorization, saved/validated/compiled native forms, runtime publication/replay and profile/policy/document catalogs are reproduced in an isolated socket-only container. No second application deployment or Keycloak realm is created.",
+    "Fresh DEV drafts and real browser/owning API checks are combined with retained P7 approved/materialized/activated/completed cases; no fresh privileged activation or new live grants are claimed.",
+    "Task and minimum-control fault/correction fixtures use controlled authorization/document-ready ports with real PostgreSQL owners and rollback. Final browser evidence uses real rendered/scanned/stored PDFs for all three purposes.",
+    "Payment/bank readiness retains P6's governed, rolled-back fixture boundary; external Mesh bank intake and external email-provider delivery are not claimed.",
+    "Mailpit and owning inbox rechecks inspect existing committed activation notices without sweeping or sending new notices."
+  ],
+  "validation": {
+    "testsPassed": 2024,
+    "testsSkipped": 206,
+    "databaseSuites": 13,
+    "browserJourneys": 6,
+    "pdfDownloads": 9,
+    "activationNoticeChecks": 3
+  },
+  "stages": {
+    "build": {
+      "path": "governance/policy/reports/p9/2026-09-14T16-52-16.561Z-build/report.json",
+      "sha256": "4b46d24e9a021f490712e23d48b16a453a6549467aded2305bb7498bb8e81b15",
+      "package": "P9",
+      "stage": "build",
+      "at": "2026-09-14T16:52:16.561Z",
+      "passed": true,
+      "steps": [
+        {
+          "command": [
+            "pnpm",
+            "--filter",
+            "@athyper/server-platform-host...",
+            "build"
+          ],
+          "startedAt": "2026-09-14T16:52:16.562Z",
+          "finishedAt": "2026-09-14T16:52:40.611Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "1.log",
+          "evidence": []
+        },
+        {
+          "command": [
+            "pnpm",
+            "--filter",
+            "@athyper/product-neon-business-partner",
+            "typecheck"
+          ],
+          "startedAt": "2026-09-14T16:52:40.611Z",
+          "finishedAt": "2026-09-14T16:52:46.347Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "2.log",
+          "evidence": []
+        },
+        {
+          "command": [
+            "pnpm",
+            "--filter",
+            "@athyper/neon",
+            "build"
+          ],
+          "startedAt": "2026-09-14T16:52:46.347Z",
+          "finishedAt": "2026-09-14T16:52:50.051Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "3.log",
+          "evidence": []
+        }
+      ],
+      "acceptance": "Stage evidence only; full Increment A acceptance requires the P9 acceptance matrix.",
+      "finishedAt": "2026-09-14T16:52:50.052Z"
+    },
+    "tests": {
+      "path": "governance/policy/reports/p9/2026-09-14T16-49-58.874Z-tests/report.json",
+      "sha256": "98991f583cb628db23a1cded98e0d6061933f7e5d56db68426bdb3fe9485ff3e",
+      "package": "P9",
+      "stage": "tests",
+      "at": "2026-09-14T16:49:58.874Z",
+      "passed": true,
+      "steps": [
+        {
+          "command": [
+            "pnpm",
+            "--filter",
+            "@athyper/product-neon-business-partner",
+            "test"
+          ],
+          "startedAt": "2026-09-14T16:49:58.875Z",
+          "finishedAt": "2026-09-14T16:50:03.074Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "1.log",
+          "evidence": []
+        },
+        {
+          "command": [
+            "pnpm",
+            "--filter",
+            "@athyper/server-platform-host",
+            "test"
+          ],
+          "startedAt": "2026-09-14T16:50:03.074Z",
+          "finishedAt": "2026-09-14T16:50:11.516Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "2.log",
+          "evidence": []
+        },
+        {
+          "command": [
+            "pnpm",
+            "--filter",
+            "@athyper/server-platform-governance",
+            "test"
+          ],
+          "startedAt": "2026-09-14T16:50:11.516Z",
+          "finishedAt": "2026-09-14T16:50:12.781Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "3.log",
+          "evidence": []
+        },
+        {
+          "command": [
+            "pnpm",
+            "--filter",
+            "@athyper/server-platform-control-admin",
+            "test"
+          ],
+          "startedAt": "2026-09-14T16:50:12.781Z",
+          "finishedAt": "2026-09-14T16:50:15.143Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "4.log",
+          "evidence": []
+        },
+        {
+          "command": [
+            "pnpm",
+            "--filter",
+            "@athyper/server-service-master-data",
+            "test"
+          ],
+          "startedAt": "2026-09-14T16:50:15.144Z",
+          "finishedAt": "2026-09-14T16:50:18.285Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "5.log",
+          "evidence": []
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "--tsconfig",
+            "tooling/config/tsconfig-react.json",
+            "--test",
+            "tests/foundation/business-partner-full-profile.test.ts",
+            "tests/foundation/business-partner-audit.test.ts"
+          ],
+          "startedAt": "2026-09-14T16:50:18.285Z",
+          "finishedAt": "2026-09-14T16:50:19.059Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "6.log",
+          "evidence": []
+        }
+      ],
+      "acceptance": "Stage evidence only; full Increment A acceptance requires the P9 acceptance matrix.",
+      "finishedAt": "2026-09-14T16:50:19.059Z"
+    },
+    "clean": {
+      "path": "governance/policy/reports/p9/2026-09-14T16-58-25.599Z-clean/report.json",
+      "sha256": "6f60024741512e72a8e32a53fcc090bc4070ff4d5961732dbf757107335a1d0d",
+      "package": "P9",
+      "stage": "clean",
+      "at": "2026-09-14T16:58:25.599Z",
+      "passed": true,
+      "steps": [
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-onboarding-p9-clean.mts"
+          ],
+          "startedAt": "2026-09-14T16:58:25.600Z",
+          "finishedAt": "2026-09-14T16:59:33.318Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "1.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-onboarding-p9-clean-catalog.dev.json",
+              "artifact": "1-supplier-onboarding-p9-clean-catalog.dev.json",
+              "sha256": "8ce9d63a1f49d61a1cb9d7c47c7e466cfe8dad1a233e508e71422ea7d2f09830"
+            },
+            {
+              "source": "governance/policy/reports/supplier-onboarding-p9-clean.dev.json",
+              "artifact": "1-supplier-onboarding-p9-clean.dev.json",
+              "sha256": "e0d6c29ec12abe60700177f6694cb3badb859943aeff213bd114583c222e02b1"
+            },
+            {
+              "source": "governance/policy/reports/supplier-onboarding-p9-native-form.dev.json",
+              "artifact": "1-supplier-onboarding-p9-native-form.dev.json",
+              "sha256": "d732490a5d1e87e3c3f547da6b7759ea1e73f3f3be92d282e5ecf6a5e18f9c67"
+            }
+          ]
+        }
+      ],
+      "acceptance": "Stage evidence only; full Increment A acceptance requires the P9 acceptance matrix.",
+      "finishedAt": "2026-09-14T16:59:33.318Z"
+    },
+    "database": {
+      "path": "governance/policy/reports/p9/2026-09-14T16-57-16.082Z-database/report.json",
+      "sha256": "1645db68716af45bc9730f69591708abe5a7d31ecaf6fbc9b0bc96a2a4b6c4b0",
+      "package": "P9",
+      "stage": "database",
+      "at": "2026-09-14T16:57:16.082Z",
+      "passed": true,
+      "steps": [
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-onboarding-p1a.mts"
+          ],
+          "startedAt": "2026-09-14T16:57:16.083Z",
+          "finishedAt": "2026-09-14T16:57:16.989Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "1.log",
+          "evidence": [
+            {
+              "source": "docs/architecture/business-partner/internal-supplier-onboarding-p1a-evidence.json",
+              "artifact": "1-internal-supplier-onboarding-p1a-evidence.json",
+              "sha256": "d7fd9dbef184ba49bf9ace753430a5df881531969cb009b099cd411e0058c219"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-onboarding-p9-minimum.mts"
+          ],
+          "startedAt": "2026-09-14T16:57:16.989Z",
+          "finishedAt": "2026-09-14T16:57:18.552Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "2.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-onboarding-p9-minimum.dev.json",
+              "artifact": "2-supplier-onboarding-p9-minimum.dev.json",
+              "sha256": "7abffca0ba7e6bd908221e9530d55e61d0315d6c638f2a0c0c548ee103ace6a0"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-process-tasks-db.mts",
+            "--p9-fixtures"
+          ],
+          "startedAt": "2026-09-14T16:57:18.552Z",
+          "finishedAt": "2026-09-14T16:57:20.744Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "3.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-process-tasks-db.dev.json",
+              "artifact": "3-supplier-process-tasks-db.dev.json",
+              "sha256": "a2a9d603281e38ed09cac3f9eace10fb8cbb668e9f29cec40a61d1f3355fddef"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-process-document-jobs-db.mts"
+          ],
+          "startedAt": "2026-09-14T16:57:20.744Z",
+          "finishedAt": "2026-09-14T16:57:21.228Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "4.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-process-document-jobs-db.dev.json",
+              "artifact": "4-supplier-process-document-jobs-db.dev.json",
+              "sha256": "f7afbceef67ed6c44ba8591cb9ed7e4482f60d442210a4ba8165df698e7a6772"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-process-document-outcomes-db.mts"
+          ],
+          "startedAt": "2026-09-14T16:57:21.228Z",
+          "finishedAt": "2026-09-14T16:57:21.743Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "5.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-process-document-outcomes-db.dev.json",
+              "artifact": "5-supplier-process-document-outcomes-db.dev.json",
+              "sha256": "a5bf16b1c5e115edc3f78087ff16ea835f28a26e1017d198538f7a39b15a080a"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-process-correction-db.mts"
+          ],
+          "startedAt": "2026-09-14T16:57:21.743Z",
+          "finishedAt": "2026-09-14T16:57:22.239Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "6.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-process-correction-db.dev.json",
+              "artifact": "6-supplier-process-correction-db.dev.json",
+              "sha256": "39616f5f60906a25ef4fd31bcb502f1874bda3345958a836542aa07fc255aaae"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-onboarding-completion-db.mts"
+          ],
+          "startedAt": "2026-09-14T16:57:22.239Z",
+          "finishedAt": "2026-09-14T16:57:23.041Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "7.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-onboarding-completion-db.dev.json",
+              "artifact": "7-supplier-onboarding-completion-db.dev.json",
+              "sha256": "8abbaa939197bf943ebae33a35738349e02f750c8aabfd8b86bef37541a2ad6c"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-onboarding-payment-db.mts"
+          ],
+          "startedAt": "2026-09-14T16:57:23.042Z",
+          "finishedAt": "2026-09-14T16:57:23.906Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "8.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-onboarding-payment-db.dev.json",
+              "artifact": "8-supplier-onboarding-payment-db.dev.json",
+              "sha256": "ed0afd465c6bc27142724ed0f234ab2b636513da0fcc250676bb63f02e0e30ec"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-onboarding-bank-link-db.mts"
+          ],
+          "startedAt": "2026-09-14T16:57:23.906Z",
+          "finishedAt": "2026-09-14T16:57:24.755Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "9.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-onboarding-bank-link-db.dev.json",
+              "artifact": "9-supplier-onboarding-bank-link-db.dev.json",
+              "sha256": "a2670ec3a9ceefc891fbba29bf745a948bbc05757e0e2250cfee8ead29b90fad"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-onboarding-receipts-db.mts"
+          ],
+          "startedAt": "2026-09-14T16:57:24.755Z",
+          "finishedAt": "2026-09-14T16:57:25.268Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "10.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-onboarding-receipts-db.dev.json",
+              "artifact": "10-supplier-onboarding-receipts-db.dev.json",
+              "sha256": "551fb60c41d33832afdceedd051f96ca5aea13ac69940c3e035c5f339a71d014"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-process-materializer-contract-db.mjs"
+          ],
+          "startedAt": "2026-09-14T16:57:25.268Z",
+          "finishedAt": "2026-09-14T16:57:25.751Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "11.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-process-materializer-contract-db.dev.json",
+              "artifact": "11-supplier-process-materializer-contract-db.dev.json",
+              "sha256": "a281d71e63f2692f9f11c89d03672d4e3dcddeecaadb6b92d060a47a906ef465"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-onboarding-communications-db.mts"
+          ],
+          "startedAt": "2026-09-14T16:57:25.751Z",
+          "finishedAt": "2026-09-14T16:57:27.381Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "12.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-onboarding-communications-db.dev.json",
+              "artifact": "12-supplier-onboarding-communications-db.dev.json",
+              "sha256": "61c197ea5515cd0c09955374324cae3d320c16e9ecac3ef1794cd8d6f473895c"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-onboarding-neon-db.mjs"
+          ],
+          "startedAt": "2026-09-14T16:57:27.381Z",
+          "finishedAt": "2026-09-14T16:57:27.873Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "13.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-onboarding-neon-db.dev.json",
+              "artifact": "13-supplier-onboarding-neon-db.dev.json",
+              "sha256": "3b118df6a521dbd692272531e65ca5ecc5b86b0d741970c109548f95c01bc021"
+            }
+          ]
+        }
+      ],
+      "acceptance": "Stage evidence only; full Increment A acceptance requires the P9 acceptance matrix.",
+      "finishedAt": "2026-09-14T16:57:27.873Z"
+    },
+    "browser": {
+      "path": "governance/policy/reports/p9/2026-09-14T16-44-26.884Z-browser/report.json",
+      "sha256": "9529c83816c9ba48d6fb29a0ef655cbbdd635c6e846f4b180a47f0e9e6c75c07",
+      "package": "P9",
+      "stage": "browser",
+      "at": "2026-09-14T16:44:26.884Z",
+      "passed": true,
+      "steps": [
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-onboarding-neon-live.mts",
+            "--p9"
+          ],
+          "startedAt": "2026-09-14T16:44:26.885Z",
+          "finishedAt": "2026-09-14T16:50:08.695Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "1.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-onboarding-p9-browser.dev.json",
+              "artifact": "1-supplier-onboarding-p9-browser.dev.json",
+              "sha256": "224166ee97089b7fc8dc56c9270405de480b325e85fcab85289230d3d86914ee"
+            }
+          ]
+        },
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-onboarding-neon-history.mts"
+          ],
+          "startedAt": "2026-09-14T16:50:08.695Z",
+          "finishedAt": "2026-09-14T16:50:11.636Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "2.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-onboarding-neon-history.dev.json",
+              "artifact": "2-supplier-onboarding-neon-history.dev.json",
+              "sha256": "38c830f3366173de1767dfda3067eb37f666e61f2f921317327d4b0a772b5d1d"
+            }
+          ]
+        }
+      ],
+      "acceptance": "Stage evidence only; full Increment A acceptance requires the P9 acceptance matrix.",
+      "finishedAt": "2026-09-14T16:50:11.636Z"
+    },
+    "communications": {
+      "path": "governance/policy/reports/p9/2026-09-14T16-59-20.799Z-communications/report.json",
+      "sha256": "4cbfe08ccb42ca06868d1b2360c3b73ec501ab6baf49dd54eed722f492d89950",
+      "package": "P9",
+      "stage": "communications",
+      "at": "2026-09-14T16:59:20.799Z",
+      "passed": true,
+      "steps": [
+        {
+          "command": [
+            "pnpm",
+            "exec",
+            "tsx",
+            "tooling/scripts/verification/qualify-supplier-communications-activation-notices.mts",
+            "--read-only"
+          ],
+          "startedAt": "2026-09-14T16:59:20.800Z",
+          "finishedAt": "2026-09-14T16:59:25.044Z",
+          "exitCode": 0,
+          "signal": null,
+          "passed": true,
+          "log": "1.log",
+          "evidence": [
+            {
+              "source": "governance/policy/reports/supplier-onboarding-communications-capture.dev.json",
+              "artifact": "1-supplier-onboarding-communications-capture.dev.json",
+              "sha256": "efa28d75798d87a7a6b7ddbe46aef4b472693eeca47ec8678a9dd3fd064dd67a"
+            },
+            {
+              "source": "governance/policy/reports/supplier-communications-activation-notices.dev.json",
+              "artifact": "1-supplier-communications-activation-notices.dev.json",
+              "sha256": "85173b6116e7a81bd0909081f7b1117b53877f35849d1b734fe79ec3134f3dab"
+            }
+          ]
+        }
+      ],
+      "acceptance": "Stage evidence only; full Increment A acceptance requires the P9 acceptance matrix.",
+      "finishedAt": "2026-09-14T16:59:25.044Z"
+    }
+  },
+  "fixtures": {
+    "report": "governance/policy/reports/supplier-onboarding-p9-fixtures.dev.json",
+    "sha256": "7e5505906d899c3ebebf371912e26ad520b32fc65d3b3c50b0a7a95b630c5755",
+    "cases": [
+      {
+        "id": "73eb9972-434f-4f14-a366-ad32ad55e154",
+        "level": "basic",
+        "validatedVersion": 2
+      },
+      {
+        "id": "1b72ea53-1783-4e89-8ac8-de551fee0b0f",
+        "level": "standard",
+        "validatedVersion": 2
+      },
+      {
+        "id": "d2eb7bc9-f7f4-449d-a4fd-986b8351d71d",
+        "level": "enhanced",
+        "validatedVersion": 2
+      }
+    ],
+    "checks": [
+      {
+        "incompleteDraft": "bef3bb77-3992-4523-98f4-e5030e01ba5b",
+        "savedAndReopenedInBrowser": true
+      },
+      {
+        "draftChange": "bef3bb77-3992-4523-98f4-e5030e01ba5b",
+        "enhancedToBasic": true
+      },
+      {
+        "intercompany": "3755d7c8-52ca-4a36-8d61-6011fe492ade",
+        "enhancedIndependentOfSupplierType": true
+      },
+      {
+        "incompleteDraft": "103e5275-3c58-4376-8ace-a4fd7f41db20",
+        "savedAndReopenedInBrowser": true
+      },
+      {
+        "draftChange": "103e5275-3c58-4376-8ace-a4fd7f41db20",
+        "enhancedToBasic": true
+      },
+      {
+        "intercompany": "6fd2fee2-2357-4d4f-b107-fb25df703022",
+        "enhancedIndependentOfSupplierType": true
+      },
+      {
+        "id": "34e868ef-9069-4bf2-8b3a-79945a266f76",
+        "ownershipClass": "internal",
+        "supplierType": "general",
+        "invalidCombinationRejected": true
+      },
+      {
+        "id": "bc85afcf-3762-41c8-8ace-375b048f9a53",
+        "ownershipClass": "external",
+        "supplierType": "intercompany",
+        "invalidCombinationRejected": true
+      },
+      {
+        "invalidRequirementRejected": true,
+        "trustedProfileInjectionRejected": true
+      }
+    ],
+    "database": {
+      "cases": 9,
+      "attempts": 0,
+      "documentJobs": 0
+    }
+  },
+  "recordEntry360": {
+    "path": "governance/policy/reports/business-partner-360-restoration.dev.json",
+    "sha256": "095fd5d0ecf5c397ab0834338ca0f6a5fcd88b8f983efd33e015f081091e9ac7",
+    "at": "2026-09-14T17:15:28.862Z",
+    "responses": [
+      {
+        "path": "/api/relay/atlas/experience",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/neon/business-partners/01a09f6a-fa77-71bc-9847-4a933ae23559/360/summary",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/neon/business-partners/01a09f6a-fa77-71bc-9847-4a933ae23559/360/banking",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/neon/business-partners/01a09f6a-fa77-71bc-9847-4a933ae23559/360/contacts",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/neon/business-partners/01a09f6a-fa77-71bc-9847-4a933ae23559/360/roles",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/neon/business-partners/01a09f6a-fa77-71bc-9847-4a933ae23559/360/addresses",
+        "status": 200
+      }
+    ],
+    "passed": true,
+    "headings": [
+      "DEV P2 basic 93f9fe01-4845-4f30-bc04-016cc3d50ca0",
+      "Overview",
+      "Relationship summary",
+      "Performance & financials",
+      "Risk assessment",
+      "Identity summary",
+      "Identity",
+      "Contacts",
+      "Addresses",
+      "Identifiers & tax",
+      "Governance & ownership",
+      "Banking",
+      "Qualifications & certificates",
+      "Primary Contact",
+      "Qualification contact",
+      "Primary Address",
+      "Default"
+    ],
+    "alerts": [
+      ""
+    ],
+    "text": "DEV P2 basic 93f9fe01-4845-4f30-bc04-016cc3d50ca0\nSupplier\nactive\n\nBPR-64E4013F14A64C8CAB2C15CE523F9416 · Business Partner\n\n360 View\nRoles & scope\nRequests\nBusiness Transactions\nActivity\nComments\nAttachments\nOverview\n1\nIdentity\n1\nContacts\n1\nAddresses\n1\nIdentifiers & tax\n0\nGovernance & ownership\n0\nBanking\n0\nQualifications & certificates\nOverview\nRelationship summary\nCompany\nSummary only\nAll authorized companies\nCirrusAtlantic UK\nBuying relationships\n1 company\nSelling relationships\n0 companies\nSetup gaps\n0\n\nSetup as of 14 Sept 2026\n\nManage roles & scope\nPerformance & financials\n\nNo performance or financial data is available yet.\n\nView business transactions\nRisk assessment\n\nReview the underlying evidence; missing evidence does not mean low risk.\n\nQualifications & compliance\nGovernance evidence\n\nBank review: 0 company assignments require acceptance review\n\nReview company bank accounts\nData completeness\nUnavailable\nOpen requests\n0\nView requests →\nIdentity summary\nRegistered name\nDEV P2 basic 93f9fe01-4845-4f30-bc04-016cc3d50ca0\nRegistration & tax identifiers\nNo visible identifiers\n\nCompleteness guidance is currently unavailable.\n\nTechnical details\nIdentity\nContacts\nAddresses\nIdentifiers & tax\nGovernance & ownership\nBanking\nQualifications & certificates\nPrimary Contact\nQualification contact\nPrimary Address\nDefault\nNot verified\n10 Qualification Street\nKuala Lumpur\n50000\nMalaysia\nCopy address"
+  },
+  "committed": [
+    {
+      "id": "a87e6353-40bf-4184-9768-bbd4a0e9a166",
+      "case_status": "materialized",
+      "run_status": "completed",
+      "supplier_status": "active",
+      "ready_documents": 3
+    },
+    {
+      "id": "4d575964-d3ae-4b03-8014-59e3923c667c",
+      "case_status": "materialized",
+      "run_status": "completed",
+      "supplier_status": "active",
+      "ready_documents": 3
+    },
+    {
+      "id": "cb43c12e-d6a7-4cdb-8c12-5c5f541109e8",
+      "case_status": "materialized",
+      "run_status": "completed",
+      "supplier_status": "active",
+      "ready_documents": 3
+    }
+  ],
+  "access": {
+    "newLiveGrants": 0,
+    "temporaryGrants": 0
+  },
+  "containers": [
+    {
+      "name": "/athyper-dev-source-api-1",
+      "image": "sha256:15820eb3861963e35847377115def22d3d0bef1b4d6596350fb219104d4e84d2",
+      "status": "running",
+      "health": "healthy"
+    },
+    {
+      "name": "/athyper-dev-source-neon-web-1",
+      "image": "sha256:d9dc772f56469b1cb0099988351ba45f00caec736943f202ca6985e3bb93cceb",
+      "status": "running",
+      "health": "healthy"
+    },
+    {
+      "name": "/athyper-dev-source-worker-1",
+      "image": "sha256:6044680b5a77ceffa80b1f60d748258a3c0ce3a3e11c26be08c6aa8461f0e159",
+      "status": "running",
+      "health": "healthy"
+    },
+    {
+      "name": "/athyper-dev-source-scheduler-1",
+      "image": "sha256:5ef5a9d7d80e6308a11322a8b0179cdf2a935e6986817d4bc7006c8a4241b506",
+      "status": "running",
+      "health": "healthy"
+    }
+  ],
+  "sourceHashes": [
+    {
+      "path": "server/db/ddl/planes/neon/_manifest.txt",
+      "sha256": "d10d344f1e5cfa40fa45b2bd4e99e5bb19e7165ca08b7362bda93e5af21a088f"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/control/12_reference_seed.sql",
+      "sha256": "a86368d0f34b6ad51e049cfcf096bd922b0434eaf2e4d08aef23b1151851830f"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/control/16_supplier_communications_reference_seed.sql",
+      "sha256": "0fc1f7ec092693eea62d864ff173f430377afb46772b797ab14e5947496c79c1"
+    },
+    {
+      "path": "server/db/scripts/provisioning/provision-development-business-partner-runtime.ts",
+      "sha256": "7bec178c32ca961b5cc98f5f5446ce6f2c52b254ba5f445612b2f8b333b17b00"
+    },
+    {
+      "path": "server/db/scripts/provisioning/business-partner-compliance-requirement.ts",
+      "sha256": "bda1040715318830114fc22239d141a868b54d1b48ba0601b1b78330c50b5be9"
+    },
+    {
+      "path": "server/apps/platform-host/src/provisioning/supplier-process-catalog.ts",
+      "sha256": "8b3953d18c825cc1aed506b1e1f63c60e6d807236a335c0b1d89ff08a75dafda"
+    },
+    {
+      "path": "server/packages/services/publication/src/business-partner-foundation-definition.ts",
+      "sha256": "bfe6cbe147e7c526eb343bf2ac58bfc517a11aa48319ce51ee43fc92b6728de6"
+    },
+    {
+      "path": "packages/planes/neon/business-partner/src/request-form-descriptor.ts",
+      "sha256": "760e389937e9e9a783a9242a82fa63e94ffce2bbfd8a0f83fa35719819663acd"
+    },
+    {
+      "path": "packages/planes/neon/business-partner/src/index.tsx",
+      "sha256": "7fea7ef44a16eeba23b7cad8a125e7079a8f3c53051d3d25dfab79c2e0e118cd"
+    },
+    {
+      "path": "tooling/scripts/verification/qualify-supplier-onboarding-p9-clean.mts",
+      "sha256": "a40d36a4a8b3535abf77fd34050cc9c30ecb5785799cce5cddd5dcbadb7f81fb"
+    },
+    {
+      "path": "tooling/scripts/verification/qualify-supplier-onboarding-p9-fixtures.mts",
+      "sha256": "15a52e57e1fa132d031623ad3771375edd6ae0369a32240865dea6c45bcbd9cf"
+    },
+    {
+      "path": "tooling/scripts/verification/qualify-supplier-onboarding-p9-minimum.mts",
+      "sha256": "0dc44461c5a5158ed121e15b3b931a8e1f661afb6dcdac0f6474f350113e50a2"
+    },
+    {
+      "path": "tooling/scripts/verification/qualify-supplier-onboarding-p9.mts",
+      "sha256": "25dbab1295fe22d00c28ebd15d95760d80c1c970771a89e56fc7643959e41544"
+    },
+    {
+      "path": "tooling/scripts/verification/record-supplier-onboarding-p9-evidence.mjs",
+      "sha256": "26fd619d202c69339ac8cdd43157411afb42ef635d7ff4db7cc2531b004c02a6"
+    },
+    {
+      "path": "tooling/scripts/verification/supplier-onboarding-p9-native-form.mts",
+      "sha256": "4a97b2038ae9836ce9e559a8c191f82d4c9b4800d9c68d1b1bbab8baa26c20da"
+    }
+  ],
+  "inheritedEvidence": [
+    {
+      "path": "docs/architecture/business-partner/internal-supplier-onboarding-p1-evidence.json",
+      "sha256": "c637177c2318082f915602adf8a5c8b5cd32deb2f139fc51286f7ba35c6bf5fd"
+    },
+    {
+      "path": "docs/architecture/business-partner/internal-supplier-onboarding-p1a-evidence.json",
+      "sha256": "8becf10ce7b869e6cafab036fd22354bf3e18b11572ce0175106fd448026bcc9"
+    },
+    {
+      "path": "docs/architecture/business-partner/internal-supplier-onboarding-p5-evidence.json",
+      "sha256": "aa8780389d96e2e1f6b1a65e5a37982b42d9d97c4284e53fb9c2943f4afbe405"
+    },
+    {
+      "path": "docs/architecture/business-partner/internal-supplier-onboarding-p6-evidence.json",
+      "sha256": "1d4030784847fda103f81a278be891b1aea1aaa70ca4d2f5fd2a83e6742452cf"
+    },
+    {
+      "path": "docs/architecture/business-partner/internal-supplier-onboarding-p7-evidence.json",
+      "sha256": "7e3d69d59260b29d3d3e5ff04486f9775a0fd015f1b414b57020aac56151b442"
+    },
+    {
+      "path": "docs/architecture/business-partner/internal-supplier-onboarding-p8-evidence.json",
+      "sha256": "37201f3764692019ca86115a895d5e2873fc1038d45c926ce385ea984727562a"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # Internal supplier onboarding: implementation plan for review
 
 Date: 2026-09-14  
-Status: Revised for audit review — compliance-led initial prototype; implementation not started under this plan  
+Status: Increment A started — P0 complete; P1 accepted in local DEV; P1a shared integration and ready live previews qualified; three profile/document catalogs authored; P2 submission/cycle ownership qualified in local DEV; P3 task execution qualified with controlled document readiness; P4 documents and gates accepted in local DEV with controlled upstream activation fixtures; P5 correction and closure accepted in local DEV; P6 accepted for the local DEV purchasing pilot with documented bank fixtures; P7 communications accepted in local DEV, including three fresh activation notices and temporary grant cleanup; P8 NEON integration accepted in local DEV; P9 local build and qualification accepted for the local DEV purchasing pilot
 Application: Existing NEON Business Partner screens and services  
 Environment: Local development build
 
@@ -15,7 +15,7 @@ The existing [Standard request and Full profile intake](full-profile-prototype.m
 
 **Local-build decision:** update canonical source, DDL, functions and active seed/authoring definitions directly. Replace the local supplier journey where applicable. Do not build upgrade migrations, dual-write paths, historical data conversion, legacy API compatibility shims or production rollout machinery for this prototype. Rebuild the affected local environment and recreate synthetic fixtures when schema changes require it. Published executions must nevertheless pin their revisions: that is a runtime correctness rule, not a migration requirement.
 
-This document is planning only. It does not publish definitions, rebuild databases, generate documents or send communications. The interrupted implementation edits were reverted before this plan.
+This document defines delivery scope. The [P0 baseline and audit](internal-supplier-onboarding-p0-baseline.md) is complete. [P1 fields and shared contracts](internal-supplier-onboarding-p1-implementation.md) are accepted in local DEV: case schema release 2, active Studio field graph revision 59, and authenticated NEON/owning-API qualification are evidenced. P1a shared policy integration and P2 submission/cycle ownership are implemented and qualified in local DEV. P3 task-owned workflows are deployed and qualified with the permitted controlled document-ready fixture; P4 documents and gates are accepted in local DEV: all three purposes are rendered, scanned, stored and downloaded for each profile, with a declared controlled upstream activation-fixture boundary. [P5 correction and closure](internal-supplier-onboarding-p5-implementation.md) are accepted in local DEV with same-profile resubmission, full re-review, explicit cancellation, terminal rejection and authenticated browser qualification. [P6 materialization and activation](internal-supplier-onboarding-p6-implementation.md) is accepted for the local DEV purchasing pilot: authenticated qualification, activation, documents and closure pass for all profiles; bank gates use the explicitly documented PostgreSQL fixture boundary. P7 communications and P8 NEON integration are accepted in local DEV. [P9 local build and qualification](internal-supplier-onboarding-p9-implementation.md) is accepted within the documented purchasing-pilot and fixture boundaries. Follow-ups B/C remain separate scopes.
 
 ### Audit disposition and delivery boundary
 
@@ -187,7 +187,7 @@ Diagram arrows describe Increment A, not current implementation completeness. Co
 
 ## 4. Enhanced task catalog and shared ownership
 
-Codes below are proposed configuration identifiers, not claims about currently seeded tasks.
+These codes are authored in the local DEV Enhanced catalog. P3 executes their pinned task workflows; qualification uses controlled document readiness until P4 connects real case artifacts.
 
 | Task | Code | Owner | Completion evidence / dependency |
 | --- | --- | --- | --- |
@@ -272,6 +272,8 @@ Pin the attachment version when notifying reviewers or communicating a decision.
 Activation confirmation is generated after activation and blocks journey closure, not activation itself. This avoids a circular requirement for proof of an action that has not yet occurred. Similarly, decision-document failure does not undo an accepted approval; it blocks the next configured step.
 
 ## 7. Communication design
+
+P7 implementation and qualification boundaries: [Communications implementation](internal-supplier-onboarding-p7-implementation.md).
 
 Use the existing outbox → routing/planning → message/delivery ledger → channel-handler pipeline. Configure one canonical notification source for each pilot milestone, so generic work-item creation and Business Partner events do not both produce duplicate assignment alerts.
 
@@ -399,6 +401,27 @@ No historical backfill, dual operation or production cutover is required. No ope
 
 Each package has an observable exit condition. B and C are separate follow-up scopes, not hidden acceptance gates for A.
 
+**P0 completed 2026-09-14:** [reuse inventory and P1 handoff](internal-supplier-onboarding-p0-baseline.md), [captured local configuration](internal-supplier-onboarding-p0-evidence.json). Active intake preview revision 58, published case contract, existing eight-task cycle revision 2, absent selection policies and absent supplier document templates are recorded with exact coordinates. This is baseline evidence, not Increment A qualification.
+
+**P1 accepted in local DEV 2026-09-14:** [implementation and qualification](internal-supplier-onboarding-p1-implementation.md), [publication, live API/browser and database evidence](internal-supplier-onboarding-p1-evidence.json). Both fields, server validation, shared selection/task/document coordinates and publication compiler are implemented. Cirrus Atlantic case schema release 2 and Studio field graph revision 59 are active. Both rendered form views and owning APIs pass P1 qualification. A separate draft replay conflict is recorded for P2; no replay success or P1a runtime selection is claimed.
+
+**P1a shared integration implemented and qualified 2026-09-14:** [owner contracts, implementation and handoff](internal-supplier-onboarding-p1a-implementation.md), [real PostgreSQL evidence](internal-supplier-onboarding-p1a-evidence.json). Exact-revision policy evaluation, scoped first-match publication, minimum controls, preview registrar and immutable evidence are implemented. Controlled catalog references remain explicit test doubles. DEV source API mounting, NEON relay and exact catalog resolvers are deployed and qualified. The live scoped policy and all three A profile/document catalogs are authored. Authenticated Basic/Standard/Enhanced previews return ready with 2/3/10 tasks and exact document pins; real Gotenberg rendering and ClamAV scanning qualify the three authored templates. P2 owns atomic submission and durable document-job dispatch; P3/P4 retain task execution, document processing/storage and gate callbacks; P8 consumes the mounted API in its views.
+
+
+**P2 implemented and qualified 2026-09-14:** [submission/cycle ownership](internal-supplier-onboarding-p2-implementation.md), [live and database evidence](internal-supplier-onboarding-p2-evidence.json). Authenticated Basic/Standard/Enhanced submissions atomically pin the selected policy/manifest and submitted snapshot, create one run/attempt, project preparation tasks and commit one review-pack job/dispatch. Concurrent replay returns the accepted IDs without reevaluation. Human tasks and case decisions remain document-gated. P3/P4 own workflow execution and durable document processing/results.
+
+**P3 implemented and qualified 2026-09-14:** [task-owned reviews and approvals](internal-supplier-onboarding-p3-implementation.md), [qualification evidence](internal-supplier-onboarding-p3-evidence.json). The shared workflow runner executes 1/2/5 human tasks for Simple/Standard/Enhanced, resolves each level by scoped role, enforces maker-checker/quorum and commits case approval only from the final task. Authenticated task APIs and NEON relay are deployed. Real PostgreSQL command qualification uses the controlled document-ready fixture explicitly permitted for P3; live pending document jobs stay blocked. P4 and final A qualification must connect and verify real case rendering/storage/scanning.
+
+
+**P4 accepted in local DEV 2026-09-14:** [documents and gates](internal-supplier-onboarding-p4-implementation.md), [qualification evidence](internal-supplier-onboarding-p4-evidence.json). All three profiles have real review packs, decision documents and activation confirmations, with exact provenance, Gotenberg rendering, ClamAV scanning, S3 storage, authenticated downloads and successful gate callbacks. Thirteen authenticated task votes produced final decisions; owning APIs materialized the suppliers. Activation uses explicitly controlled upstream readiness fixtures and the existing readiness/lifecycle repositories. Replay, failure isolation, current recipient checks and separate materialization/closure gates are qualified. P6's complete readiness/activation workflow and payment readiness are not claimed by this P4 fixture.
+
+**P5 accepted in local DEV 2026-09-14:** [same-profile correction and closure](internal-supplier-onboarding-p5-implementation.md), [qualification evidence](internal-supplier-onboarding-p5-evidence.json). All three profiles retain their exact run/policy/manifest while creating new attempts, packs and complete re-review. Concurrent replay, historical evidence, stronger/weaker profile-change rejection without new work, explicit cancellation/new-request navigation, terminal rejection documents and stale-execution isolation are qualified through owning APIs, PostgreSQL and Chromium. P6–P9 and follow-ups B/C remain separate scopes.
+
+**P6 accepted for the local DEV purchasing pilot 2026-09-14:** [implementation and qualification boundaries](internal-supplier-onboarding-p6-implementation.md), [evidence](internal-supplier-onboarding-p6-evidence.json). All three profiles complete authenticated supplier/company materialization, independent qualification and activation, real activation confirmations, closure/replay and browser readiness checks. Payment and linked-bank gates are qualified with real PostgreSQL owners and governed commands using rolled-back fixtures; external Mesh bank intake/verification is not claimed. Temporary authorized DEV grants were revoked. P7–P9 and follow-ups B/C remain separate scopes.
+
+
+**P8 accepted in local DEV 2026-09-15:** [NEON integration and qualification boundaries](internal-supplier-onboarding-p8-implementation.md), [acceptance evidence](internal-supplier-onboarding-p8-evidence.json). Existing screens expose saved-fact previews, dynamic task/level/quorum evidence, same-profile correction and explicit profile-change refusal, authorized document actions, recipient-only communications, historical attempts and scoped readiness controls. Real NEON buttons qualify all three profiles, full re-review, rejection and cancellation. Six user/profile checks verify nine stored PDF hashes and exact readiness links; an old document notice retains its historical job without current actions. P8 also resolves the P5/P6 closure-pin conflict without relaxing the immutable run guard. No new temporary grants or migrations were introduced. P9 and follow-ups B/C remain separate scopes.
+
 | Package | Work | Exit condition |
 | --- | --- | --- |
 | P0 — Baseline and audit confirmation | Inventory published intake fields, supplierType/ownership constraints, existing policy semantics/authoring, runtime contracts, templates and local dependencies | Concrete reuse inventory; no assumption of independent Strategic/Intercompany fields or an existing routing-compliance field |
@@ -414,6 +437,10 @@ Each package has an observable exit condition. B and C are separate follow-up sc
 | P9 — Local build/qualification | Direct canonical definition updates; three requirement/profile fixtures, scope/minimum-control fixtures, full acceptance | Reproducible local build and real service/database/browser evidence; no migration scripts |
 
 P1a precedes P2. P4's contract is designed in P1; P2's document gate uses that contract. P3 tests may use controlled document-port doubles until P4 is connected, but final qualification must use real rendering/storage. P5/P6 depend on actual task and case outcomes. P7 consumes established committed events. P8 is accepted only against the owning APIs.
+
+
+
+**P9 accepted for the local DEV purchasing pilot 2026-09-15:** [reproducible commands and acceptance coverage](internal-supplier-onboarding-p9-implementation.md), [fresh qualification evidence](internal-supplier-onboarding-p9-evidence.json). Complete Studio/NEON canonical builds, native form reconstruction, runtime/catalog publication replay, three live requirement fixtures, trusted minimum/correction fixtures, 13 database suites, six browser journeys, nine real PDF downloads and three Mailpit/inbox activation-notice checks pass. P9 fixes missing communication manifest wiring, first-contract bootstrap, tenant seed audit context and incomplete-draft serialization. No migrations or new live grants were introduced. The recorded P6/P7 purchasing and bank-fixture boundaries remain explicit; follow-ups B/C are excluded.
 
 **Follow-up B:** define/review post-submission increase/decrease policy, add replacement-run/active-association semantics and any independent exception command/UI, then qualify stale-event isolation and concurrent rerouting. **Follow-up C:** define authoritative commodity/industry facts and taxonomy semantics, publish compound rules, evaluate classification-model changes only if needed and qualify overlap/missing-fact behavior. Neither follow-up needs special migrations in the local-build approach, but neither is implemented as part of A.
 

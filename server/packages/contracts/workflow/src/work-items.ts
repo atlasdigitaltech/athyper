@@ -71,6 +71,7 @@ export interface WorkflowRevisionCoordinate {
 
 export interface ApproverCandidate { readonly principalId: string; readonly source: string; }
 export interface ApproverResolutionEvidence {
+  readonly filterEvidence?: import("./task-governance.js").TaskCandidateFilterEvidence;
   readonly resolverVersion: string;
   readonly resolvedAt: string;
   readonly strategy: "direct" | "role" | "group" | "hierarchy" | "fallback" | "escalation";

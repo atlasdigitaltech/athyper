@@ -7,10 +7,11 @@ export interface TemplateResolutionQuery {
   readonly tenantId: string; readonly entityType: string; readonly operationCode: string;
   readonly variant: string; readonly locale: string; readonly effectiveOn: string;
 }
-export interface DocumentTemplateRepository<Transaction> { resolvePublished(query: TemplateResolutionQuery, transaction: Transaction): Promise<PublishedDocumentTemplate | null>; }
+export interface DocumentTemplateRepository<Transaction> { resolvePublished(query: TemplateResolutionQuery, transaction: Transaction): Promise<PublishedDocumentTemplate | null>; resolveExact?(query: TemplateResolutionQuery & { exact: import("./documents.js").ExactDocumentTemplate }, transaction: Transaction): Promise<PublishedDocumentTemplate | null>; }
 export interface SaveGeneratedDocument {
   readonly id: string; readonly tenantId: string; readonly principalId: string; readonly entityType: string; readonly entityId: string; readonly operationCode: string;
   readonly fileName: string; readonly storageBucket: string; readonly storageKey: string; readonly sizeBytes: number; readonly sha256: string;
+  readonly provenance?: Readonly<Record<string,unknown>>;
   readonly template: PublishedDocumentTemplate; readonly renderProvider: string; readonly renderDurationMs: number; readonly malwareScan: CleanMalwareScanResult; readonly idempotencyKey?: string; readonly requestHash?: string;
 }
 export interface DocumentArtifactRepository<Transaction> {

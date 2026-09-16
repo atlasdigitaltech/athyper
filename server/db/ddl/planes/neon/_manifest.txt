@@ -215,6 +215,7 @@ planes/neon/control/12_subscription_plan_reference_seed.sql
 planes/neon/control/12_subscription_plan_module_reference_seed.sql
 planes/neon/control/12_numbering_policy_reference_seed.sql
 planes/neon/control/12_notification_reference_seed.sql
+planes/neon/control/16_supplier_communications_reference_seed.sql
 common/authz/13_management.sql
 common/control/14_admin_integrations.sql
 common/control/15_lookup_reference_governance.sql
@@ -222,6 +223,8 @@ planes/neon/master/15_bank_account_company_usage.sql
 common/master/19_entity_saved_views.sql
 common/runtime_meta/12_baseline_precondition.sql
 planes/neon/ai/12_attachment_knowledge.sql
+planes/neon/document/07_task_interactions.sql
+common/control/17_process_task_rule_publication.sql
 common/shared/99_security_definer_hardening.sql
 
 common/master/21_reference_choice_recent.sql

@@ -9,15 +9,10 @@ export function EntityApplicationLayout({
   readonly entityCode: string;
   readonly children: ReactNode;
 }) {
-  const role = useSearchParams().get("role");
+  const query = useSearchParams().toString();
   return (
     <NeonEntityApplication
-      initialPartnerRole={
-        entityCode === "business_partner" &&
-        (role === "supplier" || role === "customer")
-          ? role
-          : undefined
-      }
+      initialDirectoryQuery={query}
       entityCode={entityCode}
       activePath={usePathname()}
     >

@@ -1,8 +1,10 @@
+import { BusinessPartnerInspection } from "@athyper/product-studio-business-partner";
 import type { Metadata } from "next";
 import { LinkIcon } from "@athyper/platform-icons";
 import { PageFrame, PageHeader } from "@athyper/platform-shell";
 import {
   BusinessPartnerAuthoringWorkspace,
+  TaskEditPolicyAuthoring,
   BusinessPartnerCaseContractAuthoring,
   businessPartnerDefinition,
 } from "@athyper/product-studio-business-partner";
@@ -19,7 +21,9 @@ export default function BusinessPartnerPublicationPage() {
         icon={<LinkIcon />}
         metadata={<span>{businessPartnerDefinition.publicationKey}</span>}
       />
+<BusinessPartnerInspection tab="publication"/>
       <p><a href="/mdg/bank-directory">Manage shared bank directory publication</a></p>
+      <TaskEditPolicyAuthoring />
       <BusinessPartnerCaseContractAuthoring />
       <BusinessPartnerAuthoringWorkspace />
     </PageFrame>

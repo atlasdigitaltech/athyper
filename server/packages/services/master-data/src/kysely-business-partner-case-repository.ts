@@ -1,3 +1,4 @@
+import { prepareSupplierActivation } from "./supplier-activation-readiness.js";
 import { linkRequestCaptureDocuments } from "./business-partner-request-capture.js";
 import { createHash, randomUUID } from "node:crypto";
 import type {
@@ -379,6 +380,15 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
       tenantId,
       caseId,
     );
+    const taskRows = (await sql<Row>`SELECT w.id,w.status,w.metadata->'process' binding
+      FROM governance.process_attempt a JOIN document.workflow_request w ON w.tenant_id=a.tenant_id AND w.entity_type='cycle_task' AND w.metadata->'process'->>'attemptId'=a.id::text
+      WHERE a.tenant_id=${tenantId}::uuid AND a.case_id=${caseId}::uuid
+        AND a.attempt_number=(SELECT max(current.attempt_number) FROM governance.process_attempt current WHERE current.tenant_id=a.tenant_id AND current.case_id=a.case_id)
+      ORDER BY w.created_at,w.id`.execute(transaction)).rows;
+    const taskExecutions = await Promise.all(taskRows.map(async task => {
+      const binding = object(task['binding']);
+      return { attemptId:text(binding,'attemptId'), cycleRunId:text(binding,'cycleRunId'), cycleTaskId:text(binding,'cycleTaskId'), taskTemplateId:text(binding,'taskTemplateId'), workflowRequestId:text(task,'id'), executionKind:text(binding,'executionKind') as 'review'|'approval', outcomeScope:text(binding,'outcomeScope') as 'task'|'case_final_decision', status:text(task,'status'), stages:await readWorkflowStages(transaction,tenantId,text(task,'id')) };
+    }));
     const materializationProof =
       request.status === "applied"
         ? await readMaterializationProof(transaction, tenantId, caseId, request)
@@ -403,6 +413,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         : {}),
       ...(workflow ? { workflow } : {}),
       ...(onboardingCycle ? { onboardingCycle } : {}),
+      ...(taskExecutions.length ? { taskExecutions } : {}),
       ...(materializationProof ? { materializationProof } : {}),
     };
   }
@@ -691,6 +702,18 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
       input.requestId,
     );
     return row ? mapCase(row) : null;
+  }
+
+  /** P2 owns selection/cycle/document intent in this same transaction; no case-wide approval work. */
+  async submitForProcess(input: { tenantId: string; requestId: string; expectedVersion: number; submittedBy: string; idempotencyKey: string; correlationId?: string }, transaction: Tx) {
+    const current = await this.readOne(transaction, input.tenantId, "c.id", input.requestId);
+    if (!current) throw new Error("BUSINESS_PARTNER_REQUEST_NOT_FOUND");
+    await linkRequestCaptureDocuments({ tenantId: input.tenantId, principalId: input.submittedBy, caseId: input.requestId, extensions: object(object(current["payload_json"])["relationshipProposals"]) }, transaction);
+    const result = await lifecycle(transaction, { tenantId: input.tenantId, caseId: input.requestId, action: "submit", expectedVersion: input.expectedVersion, reason: null, key: input.idempotencyKey, actorId: input.submittedBy, correlationId: input.correlationId });
+    if (result.replayed) throw new Error("PROCESS_ACCEPTANCE_MISSING_ON_LIFECYCLE_REPLAY");
+    const row = await this.readOne(transaction, input.tenantId, "c.id", input.requestId);
+    if (!row) throw new Error("BUSINESS_PARTNER_REQUEST_NOT_FOUND");
+    return mapCase(row);
   }
 
   async submit(
@@ -1094,7 +1117,7 @@ async function applySupplierActivationCase(
     );
   const key = `activation-case:${request.id}`,
     prior = (
-      await sql<Row>`SELECT evidence.*,supplier.id::text role_id,c.result_snapshot_id::text FROM document.supplier_activation_evidence evidence JOIN master.supplier supplier ON supplier.tenant_id=evidence.tenant_id AND supplier.id=evidence.supplier_id JOIN document.entity_case c ON c.tenant_id=evidence.tenant_id AND c.id=${request.id}::uuid WHERE evidence.tenant_id=${input.tenantId}::uuid AND evidence.idempotency_key=${key}`.execute(
+      await sql<Row>`SELECT evidence.*,supplier.id::text role_id,c.result_snapshot_id::text,m.request_fingerprint FROM document.supplier_activation_evidence evidence JOIN master.supplier supplier ON supplier.tenant_id=evidence.tenant_id AND supplier.id=evidence.supplier_id JOIN document.entity_case c ON c.tenant_id=evidence.tenant_id AND c.id=${request.id}::uuid JOIN document.entity_case_materialization m ON m.tenant_id=c.tenant_id AND m.entity_case_id=c.id AND m.result_snapshot_id=c.result_snapshot_id AND m.status='succeeded' WHERE evidence.tenant_id=${input.tenantId}::uuid AND evidence.idempotency_key=${key}`.execute(
         transaction,
       )
     ).rows[0];
@@ -1104,7 +1127,7 @@ async function applySupplierActivationCase(
     return activationResult(
       mapCase(row),
       prior,
-      input.applicationFingerprint,
+      String(prior["request_fingerprint"]),
       true,
     );
   }
@@ -1117,55 +1140,8 @@ async function applySupplierActivationCase(
       "SUPPLIER_ACTIVATION_CASE_NOT_APPROVED",
       "An independently approved activation case at the expected version is required",
     );
-  const repository = new KyselyBusinessPartnerEligibilityRepository(),
-    raw = await repository.resolve(
-      {
-        tenantId: input.tenantId,
-        businessPartnerId,
-        role: "supplier",
-        operatingOrganizationId,
-        ...(companyCodeId ? { companyCodeId } : {}),
-        operationCode: companyCodeId ? "payment" : "purchasing",
-        businessDate,
-      },
-      transaction,
-    );
-  if (!raw)
-    throw new MasterDataError(
-      404,
-      "BUSINESS_PARTNER_NOT_FOUND",
-      "Business Partner was not found",
-    );
-  const reasons = raw.reasons.filter(
-      (reason) => reason.code !== "ROLE_INACTIVE",
-    ),
-    decision = {
-      ...raw,
-      eligible: !reasons.some((reason) => reason.severity === "blocking"),
-      reasons,
-    },
-    readiness = {
-      ...decision,
-      decisionFingerprint: createHash("sha256")
-        .update(JSON.stringify({ tenantId: input.tenantId, ...decision }))
-        .digest("hex"),
-    };
-  if (!readiness.eligible)
-    throw new MasterDataError(
-      409,
-      "SUPPLIER_ACTIVATION_READINESS_FAILED",
-      `Supplier activation is blocked: ${reasons
-        .filter((reason) => reason.severity === "blocking")
-        .map((reason) => reason.code)
-        .join(",")}`,
-    );
-  const expected = String(activation["readinessFingerprint"] ?? "");
-  if (expected && expected !== readiness.decisionFingerprint)
-    throw new MasterDataError(
-      409,
-      "SUPPLIER_ACTIVATION_READINESS_CHANGED",
-      "Supplier readiness changed after the activation case was proposed",
-    );
+  const repository = new KyselyBusinessPartnerEligibilityRepository();
+  const { readiness, expectedSupplierVersion } = await prepareSupplierActivation(request, transaction);
   const commandFingerprint = createHash("sha256")
       .update(
         JSON.stringify({
@@ -1188,6 +1164,7 @@ async function applySupplierActivationCase(
         idempotencyKey: key,
         activatedBy: input.appliedBy,
         readiness,
+        expectedSupplierVersion,
         commandFingerprint,
       },
       transaction,
@@ -1198,27 +1175,16 @@ async function applySupplierActivationCase(
       "SUPPLIER_ACTIVATION_STATE_CONFLICT",
       "Supplier is no longer in an activatable state",
     );
+  const identity=(await sql<{code:string;record_version:string}>`SELECT code,record_version FROM master.business_partner WHERE tenant_id=${input.tenantId}::uuid AND id=${businessPartnerId}::uuid FOR SHARE`.execute(transaction)).rows[0];
+  if (!identity) throw new MasterDataError(404,"BUSINESS_PARTNER_NOT_FOUND","Business Partner was not found");
   const snapshot = (
-    await sql<Row>`SELECT snapshot.fn_capture_entity('master.business_partner',${businessPartnerId}::uuid,${String(payload["businessPartnerCode"] ?? request.requestNo)},1,${String(current["entity_contract_hash"])} ,1,'supplier.activation.materialized','version',${JSON.stringify({ ...payload, activation: { ...activation, readinessFingerprint: readiness.decisionFingerprint, activationEvidenceId: evidence.id } })}::jsonb,${input.correlationId ?? null}::uuid,NULL,NULL,NULL,'legal','neon-business-partner')::text result_snapshot_id`.execute(
+    await sql<Row>`SELECT snapshot.fn_capture_entity('master.business_partner',${businessPartnerId}::uuid,${identity.code},1,${String(current["entity_contract_hash"])} ,${Number(identity.record_version)},'supplier.activation.materialized','version',${JSON.stringify({ ...payload, activation: { ...activation, readinessFingerprint: readiness.decisionFingerprint, activationEvidenceId: evidence.id } })}::jsonb,${input.correlationId ?? null}::uuid,NULL,NULL,NULL,'legal','neon-business-partner')::text result_snapshot_id`.execute(
       transaction,
     )
   ).rows[0];
   if (!snapshot) throw new Error("SUPPLIER_ACTIVATION_SNAPSHOT_FAILED");
-  const snapshotId = text(snapshot, "result_snapshot_id"),
-    materializationId = randomUUID(),
-    nextVersion = request.rowVersion + 1;
-  await sql`INSERT INTO document.entity_case_materialization(id,tenant_id,entity_case_id,attempt_no,source_snapshot_id,result_snapshot_id,materializer_code,materializer_version,request_fingerprint,status,result_code,started_at,completed_at,requested_by,completed_by) VALUES(${materializationId}::uuid,${input.tenantId}::uuid,${request.id}::uuid,1,${String(current["decision_snapshot_id"])}::uuid,${snapshotId}::uuid,'neon.supplier_activation','1',${input.applicationFingerprint},'succeeded','SUPPLIER_ACTIVATED',now(),now(),${input.appliedBy}::uuid,${input.appliedBy}::uuid)`.execute(
-    transaction,
-  );
-  await sql`UPDATE document.entity_case SET target_entity_id=${businessPartnerId}::uuid,result_snapshot_id=${snapshotId}::uuid,status='materialized',row_version=${nextVersion},updated_at=now(),updated_by=${input.appliedBy}::uuid WHERE tenant_id=${input.tenantId}::uuid AND id=${request.id}::uuid AND status='approved' AND row_version=${request.rowVersion}`.execute(
-    transaction,
-  );
-  await sql`INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,result_code,result_snapshot_id,result_evidence,recorded_by) VALUES(${input.tenantId}::uuid,${request.id}::uuid,'entity.case.materialize',${input.command.idempotencyKey},${input.applicationFingerprint},${request.rowVersion},${request.rowVersion},${nextVersion},'approved','materialized','accepted','SUPPLIER_ACTIVATED',${snapshotId}::uuid,${JSON.stringify({ activationEvidenceId: evidence.id, readinessFingerprint: readiness.decisionFingerprint, businessPartnerId, supplierId: evidence.supplierId })}::jsonb,${input.appliedBy}::uuid)`.execute(
-    transaction,
-  );
-  await sql`INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(${input.tenantId}::uuid,'governed-entity-case','entity.case.materialized',${`entity-case:${request.id}:v${nextVersion}:supplier-activation`},'document.entity_case',${request.id}::uuid,'entity_case',${request.id}::uuid,${nextVersion},${input.appliedBy}::uuid,'neon-business-partner',${input.correlationId ?? null}::uuid,${input.tenantId},${JSON.stringify({ caseId: request.id, businessPartnerId, supplierId: evidence.supplierId, activationEvidenceId: evidence.id, readinessFingerprint: readiness.decisionFingerprint, resultSnapshotId: snapshotId, status: "materialized", resultKind: "supplier_activated" })}::jsonb,${input.appliedBy}::uuid)`.execute(
-    transaction,
-  );
+  const snapshotId = text(snapshot, "result_snapshot_id");
+  await executeCaseCommand(() => sql`SELECT document.command_materialize_supplier_activation_case(${input.tenantId}::uuid,${request.id}::uuid,${request.rowVersion}::bigint,${evidence.id}::uuid,${snapshotId}::uuid,${input.applicationFingerprint},${input.command.idempotencyKey},${input.appliedBy}::uuid,${input.correlationId ?? null}::uuid)`.execute(transaction));
   const updated = await readOne(
     transaction,
     input.tenantId,
@@ -1265,8 +1231,9 @@ function activationResult(
 
 async function readOnboardingCycle(tx: Tx, tenantId: string, caseId: string) {
   const run = (
-    await sql<Row>`SELECT run.* FROM governance.cycle_subject subject
+    await sql<Row>`SELECT run.*,revision.template_json->'template'->'cycleType'->>'code' AS pinned_template_code FROM governance.cycle_subject subject
     JOIN governance.cycle_run run ON run.tenant_id=subject.tenant_id AND run.id=subject.cycle_run_id
+    JOIN control.cycle_template_revision revision ON revision.tenant_id=run.tenant_id AND revision.id=run.template_revision_id
    WHERE subject.tenant_id=${tenantId}::uuid AND subject.entity_case_id=${caseId}::uuid AND subject.is_primary
    ORDER BY run.created_at DESC LIMIT 1`.execute(tx)
   ).rows[0];
@@ -1289,7 +1256,7 @@ async function readOnboardingCycle(tx: Tx, tenantId: string, caseId: string) {
     name: text(run, "name"),
     status: text(run, "status"),
     template: {
-      code: "BP_SUPPLIER_ONBOARDING",
+      code: text(run, "pinned_template_code"),
       version: Number(run["template_revision_number"]),
       hash: text(run, "template_hash"),
       releaseId: text(run, "template_revision_id"),

@@ -29,6 +29,7 @@ export function registerNotificationRoutes(
     /** True only when a transport supporting browser push is registered. */
     readonly webPushAvailable?: boolean;
     readonly events: NotificationEventPublisher & NotificationEventSubscriber;
+    readonly recordEmailConsent?: (context: VerifiedRequestContext, consented: boolean) => Promise<unknown>;
     readonly preferences?: ReturnType<
       typeof createNotificationPreferenceService
     >;
@@ -51,6 +52,13 @@ export function registerNotificationRoutes(
       });
     },
   );
+  if (options.recordEmailConsent) application.post("/api/notifications/preferences/email-consent", options.authenticate, async (request,response,next) => {
+    try {
+      const body=request.body;
+      if (!body || typeof body!=="object" || Array.isArray(body) || Object.keys(body).some(key=>key!=="consented") || typeof body.consented!=="boolean") throw invalidInput("Only a boolean consented value is accepted");
+      response.status(200).json(await options.recordEmailConsent!(options.readContext(response),body.consented));
+    } catch(error) { next(error); }
+  });
   if (options.preferences) {
     application.get(
       "/api/notifications/preferences",
