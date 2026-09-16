@@ -9,7 +9,8 @@
     "memorycache",
     "objectstorage",
     "objectstorage-init",
-    "iam"
+    "iam",
+    "jobqueue"
   ],
   "capabilities": {
     "search": {
@@ -31,7 +32,9 @@
         "logging",
         "tracing",
         "alertmanager",
-        "telemetry"
+        "telemetry",
+        "jobqueue-exporter",
+        "secretstore-cache-exporter"
       ],
       "profiles": ["observability"]
     },
@@ -62,12 +65,13 @@
       "serviceMemoryMiB": {
         "db": 2048,
         "iam": 1024,
-        "memorycache": 256,
+        "memorycache": 1024,
         "objectstorage": 512,
         "gateway": 128,
         "dbpool-apps": 128,
         "dbpool-session": 128,
-        "objectstorage-init": 512
+        "objectstorage-init": 512,
+        "jobqueue": 1024
       }
     },
     "devfull": {
@@ -91,7 +95,8 @@
         "gateway": 256,
         "dbpool-apps": 256,
         "dbpool-session": 256,
-        "objectstorage-init": 512
+        "objectstorage-init": 512,
+        "jobqueue": 1024
       }
     }
   }

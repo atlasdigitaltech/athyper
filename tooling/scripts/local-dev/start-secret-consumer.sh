@@ -11,7 +11,7 @@ case "$1" in
     unset GF_SECURITY_ADMIN_PASSWORD__FILE
     exec su -p -s /bin/sh grafana -c 'exec /run.sh'
     ;;
-  memorycache-exporter)
+  memorycache-exporter|jobqueue-exporter|secretstore-cache-exporter)
     REDIS_PASSWORD="$(cat /run/secrets/redis-password)"
     test -n "$REDIS_PASSWORD"
     export REDIS_PASSWORD

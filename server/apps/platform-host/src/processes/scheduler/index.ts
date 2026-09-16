@@ -1,3 +1,7 @@
+import {
+  assertDedicatedJobStore,
+  createQueueMaintenance,
+} from "@athyper/server-runtime-jobs";
 import { loadConfig } from "../../config/index.js";
 import { createLifecycle } from "@athyper/server-foundation/lifecycle";
 import { createContainer } from "../../composition/create-container.js";
@@ -16,6 +20,8 @@ import { startProcessMetricsEndpoint } from "../process-metrics-endpoint.js";
 
 export async function start(): Promise<void> {
   const config = loadConfig();
+  if (config.bullMq.url)
+    assertDedicatedJobStore(config.bullMq.url, config.redis.url);
   const lifecycle = createLifecycle();
   const container = createContainer();
   registerAdapters(container, config, lifecycle);
@@ -23,6 +29,41 @@ export async function start(): Promise<void> {
   registerPlatform(container, config);
   registerServices(container, {}, config, lifecycle);
   await startRuntimes(container, config.mode);
+  const registry = container.adapters.processMetrics;
+  const lastSuccess = registry?.gauge(
+    "athyper_scheduler_last_success_timestamp_seconds",
+    "Last successful job-store maintenance and connectivity check",
+  );
+  const queueSize = registry?.gauge(
+    "athyper_job_queue_size",
+    "Application jobs by state across all queues",
+  );
+  const maintenance = createQueueMaintenance(config.bullMq.url!, (counts) => {
+    for (const [state, count] of Object.entries(counts))
+      queueSize?.set(count, { state });
+  });
+  let sweep: Promise<void> | undefined;
+  const runMaintenance = () => {
+    if (sweep) return;
+    sweep = maintenance
+      .run()
+      .then(() => {
+        lastSuccess?.set(Date.now() / 1000);
+      })
+      .catch(() => console.error("[scheduler] queue_maintenance_failed"))
+      .finally(() => {
+        sweep = undefined;
+      });
+  };
+  lastSuccess?.set(0);
+  runMaintenance();
+  const maintenanceTimer = setInterval(runMaintenance, 60_000);
+  maintenanceTimer.unref();
+  lifecycle.onShutdown(async () => {
+    clearInterval(maintenanceTimer);
+    await sweep;
+    await maintenance.close();
+  });
   const metrics = container.adapters.processMetrics
     ? await startProcessMetricsEndpoint(container.adapters.processMetrics)
     : undefined;

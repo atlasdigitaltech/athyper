@@ -33,6 +33,7 @@ services:
       dbpool-session: { condition: service_healthy }
       iam: { condition: service_healthy }
       memorycache: { condition: service_healthy }
+      jobqueue: { condition: service_healthy }
       virusscan: { condition: service_healthy }
       docrender: { condition: service_healthy }
       docparser: { condition: service_healthy }
@@ -55,6 +56,7 @@ services:
       dbpool-session: { condition: service_healthy }
       iam: { condition: service_healthy }
       memorycache: { condition: service_healthy }
+      jobqueue: { condition: service_healthy }
       virusscan: { condition: service_healthy }
       docrender: { condition: service_healthy }
       docparser: { condition: service_healthy }
@@ -74,6 +76,7 @@ services:
       dbpool-session: { condition: service_healthy }
       iam: { condition: service_healthy }
       memorycache: { condition: service_healthy }
+      jobqueue: { condition: service_healthy }
       virusscan: { condition: service_healthy }
       docrender: { condition: service_healthy }
       docparser: { condition: service_healthy }

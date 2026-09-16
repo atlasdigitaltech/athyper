@@ -80,7 +80,7 @@ export function CompositionDifferences({
       className="studio-differences"
     >
       <header>
-        <h3>Changes ({changes.length})</h3>
+        <h2>Changes ({changes.length})</h2>
         <div className="studio-differences__counts">
           {["added", "changed", "removed"].map((k) => (
             <Badge key={k}>

@@ -16,6 +16,8 @@ sets:
         dbpool-apps,
         dbpool-session,
         memorycache,
+        jobqueue,
+        secretstore-cache,
         objectstorage,
         objectstorage-init,
         iam,
@@ -46,7 +48,7 @@ sets:
     activation: explicit-profile
     implementation: composed
     hostProfiles: [laptop-32, laptop-64, workstation-128]
-    services: [memorycache-exporter]
+    services: [memorycache-exporter, jobqueue-exporter, secretstore-cache-exporter]
     rationale: Redis metrics are exported beside each isolated Redis provider and scraped by the shared operations authority.
 
   - id: shared-observability

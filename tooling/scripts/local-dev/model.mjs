@@ -82,7 +82,7 @@ export function createPlan(
         "schedulerMetrics",
         "queueconsole",
         // Reserved slot keeps existing checkout port assignments stable.
-        null,
+        "jobsRedis",
         "analytics",
         "search",
         "docrender",
@@ -225,7 +225,7 @@ export function projectCompose(resolved, plan) {
     if (plan.resources?.serviceMemoryMiB?.[name])
       service.mem_limit = `${plan.resources.serviceMemoryMiB[name]}m`;
     service.restart = "no"; // No machine-wide restart resurrects dormant checkout infrastructure.
-    if (["telemetry", "memorycache-exporter"].includes(name)) {
+    if (["telemetry", "memorycache-exporter", "jobqueue-exporter", "secretstore-cache-exporter"].includes(name)) {
       service.user = "0:0";
       service.entrypoint = [
         "/bin/sh",
@@ -269,6 +269,7 @@ export function projectCompose(resolved, plan) {
     const bindings = {
       db: ["db", 5432],
       memorycache: ["redis", 6379],
+      jobqueue: ["jobsRedis", 6379],
       objectstorage: ["objectstorage", 9000],
       iam: ["iam", 8080],
       "dbpool-apps": ["pool", 5432],

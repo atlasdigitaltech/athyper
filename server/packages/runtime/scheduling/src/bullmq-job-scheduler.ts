@@ -1,3 +1,4 @@
+import { jobRetention } from "@athyper/server-runtime-jobs";
 import { Queue, type JobsOptions, type RepeatOptions } from "bullmq";
 import type {
   EnqueueOptions,
@@ -273,7 +274,7 @@ function validateTimeZone(value: string): void {
 }
 
 function toJobOptions(options: EnqueueOptions | undefined): JobsOptions {
-  if (!options) return {};
+  options ??= {};
   if (
     options.delayMs !== undefined &&
     (!Number.isFinite(options.delayMs) || options.delayMs < 0)
@@ -307,12 +308,7 @@ function toJobOptions(options: EnqueueOptions | undefined): JobsOptions {
           },
         }
       : {}),
-    ...(options.removeOnComplete !== undefined
-      ? { removeOnComplete: options.removeOnComplete }
-      : {}),
-    ...(options.removeOnFail !== undefined
-      ? { removeOnFail: options.removeOnFail }
-      : {}),
+    ...jobRetention(options),
   };
 }
 

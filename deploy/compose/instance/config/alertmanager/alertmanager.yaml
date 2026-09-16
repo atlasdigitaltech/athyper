@@ -12,7 +12,7 @@ route:
   repeat_interval: 4h
   routes:
     - receiver: redis-mailpit
-      matchers: ['service="memorycache"']
+      matchers: ['service=~"memorycache|jobqueue|secretstore-cache"']
     - receiver: business-partner-mailpit
       matchers: ['service=~"business-partner.*"']
     - receiver: record-transfer-mailpit

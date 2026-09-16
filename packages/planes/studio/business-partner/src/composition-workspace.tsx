@@ -101,13 +101,21 @@ export function CompositionWorkspace({
     setCollapsed(new Set());
     setMobilePane("Properties");
     setPanel("Properties");
+  }, [selection?.reveal, source]);
+  useEffect(() => {
+    if (
+      !selection?.reveal ||
+      selection.source !== source ||
+      mobilePane !== "Properties"
+    )
+      return;
     const frame = requestAnimationFrame(() => {
       const panel = document.getElementById("studio-composition-properties");
       panel?.focus();
       panel?.scrollIntoView?.({ block: "start" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [selection?.reveal, source]);
+  }, [selection?.reveal, source, mobilePane]);
   const choose = (node: CompositionNode) => {
     setMobilePane("Properties");
     setLocalSelection(node.key);
@@ -469,7 +477,7 @@ export function CompositionWorkspace({
           <div
             className="studio-designer__tree"
             ref={tree}
-            role="tree"
+            role="group"
             aria-label="Business Partner composition"
           >
             {model.groups.map((g) => (
@@ -496,9 +504,12 @@ export function CompositionWorkspace({
                   }
                   )
                 </button>
-                {searching || !closedGroups.has(g.collection)
-                  ? g.nodes.map((n) => renderNode(n, 1))
-                  : null}
+                {(searching || !closedGroups.has(g.collection)) &&
+                g.nodes.some((n) => visible.includes(n)) ? (
+                  <div role="tree" aria-label={g.label}>
+                    {g.nodes.map((n) => renderNode(n, 1))}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

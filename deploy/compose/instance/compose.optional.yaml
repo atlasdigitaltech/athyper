@@ -26,6 +26,60 @@ services:
     mem_limit: 64m
     cpus: 0.1
 
+  jobqueue-exporter:
+    profiles: [observability]
+    image: oliver006/redis_exporter:v1.82.0-alpine
+    user: "${ATHYPER_RUNTIME_UID:-1000}:${ATHYPER_RUNTIME_GID:-1000}"
+    restart: unless-stopped
+    entrypoint: [/bin/sh, /athyper/bin/start-redis-exporter.sh]
+    volumes:
+      [
+        ./scripts/start-redis-exporter.sh:/athyper/bin/start-redis-exporter.sh:ro,
+      ]
+    cap_drop: [ALL]
+    depends_on:
+      jobqueue: { condition: service_healthy }
+    environment:
+      REDIS_ADDR: redis://jobqueue:6379
+    secrets: [redis-password]
+    networks:
+      data: {}
+      ops: {}
+      platform-observability:
+        aliases: ["jobqueue-exporter-${ATHYPER_INSTANCE:-dev}"]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: ["/tmp:size=8m,mode=1777"]
+    mem_limit: 64m
+    cpus: 0.1
+
+  secretstore-cache-exporter:
+    profiles: [observability]
+    image: oliver006/redis_exporter:v1.82.0-alpine
+    user: "${ATHYPER_RUNTIME_UID:-1000}:${ATHYPER_RUNTIME_GID:-1000}"
+    restart: unless-stopped
+    entrypoint: [/bin/sh, /athyper/bin/start-redis-exporter.sh]
+    volumes:
+      [
+        ./scripts/start-redis-exporter.sh:/athyper/bin/start-redis-exporter.sh:ro,
+      ]
+    cap_drop: [ALL]
+    depends_on:
+      secretstore-cache: { condition: service_healthy }
+    environment:
+      REDIS_ADDR: redis://secretstore-cache:6379
+    secrets: [redis-password]
+    networks:
+      data: {}
+      ops: {}
+      platform-observability:
+        aliases: ["secretstore-cache-exporter-${ATHYPER_INSTANCE:-dev}"]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: ["/tmp:size=8m,mode=1777"]
+    mem_limit: 64m
+    cpus: 0.1
+
   metrics:
     profiles: [observability]
     image: prom/prometheus:v3.11.2
@@ -178,7 +232,7 @@ services:
     user: "0:0"
     depends_on:
       secretstore-db-init: { condition: service_completed_successfully }
-      memorycache: { condition: service_healthy }
+      secretstore-cache: { condition: service_healthy }
     entrypoint: [/bin/sh, /athyper/bin/start-infisical.sh]
     # Use the image's built-in CA bundle; its entrypoint updates /etc at runtime.
     command: [node, --enable-source-maps, dist/main.mjs]
@@ -352,10 +406,10 @@ services:
     image: venatum/bull-board:3.3.17
     restart: unless-stopped
     depends_on:
-      memorycache: { condition: service_healthy }
+      jobqueue: { condition: service_healthy }
     entrypoint: [/bin/sh, /athyper/bin/start-bull-board.sh]
     environment:
-      REDIS_HOST: memorycache
+      REDIS_HOST: jobqueue
       REDIS_PORT: "6379"
       REDIS_USE_TLS: "false"
       BULL_VERSION: BULLMQ

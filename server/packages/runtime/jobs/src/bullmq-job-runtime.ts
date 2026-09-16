@@ -1,3 +1,4 @@
+import { jobRetention } from "./job-retention.js";
 import { createHash } from "node:crypto";
 import { Queue, UnrecoverableError, Worker, type JobsOptions, type Processor } from "bullmq";
 import type {
@@ -379,8 +380,7 @@ function toBullMqOptions(options: EnqueueOptions, resolvedJobId = options.jobId)
           },
         }
       : {}),
-    ...(options.removeOnComplete !== undefined ? { removeOnComplete: options.removeOnComplete } : {}),
-    ...(options.removeOnFail !== undefined ? { removeOnFail: options.removeOnFail } : {}),
+    ...jobRetention(options),
   };
 }
 
@@ -401,13 +401,12 @@ function validateEnqueueKey(value: string): void {
 }
 
 function replayableOptions(options: JobsOptions | undefined): JobsOptions {
-  if (!options) return {};
+  if (!options) return jobRetention();
   return {
     ...(options.attempts !== undefined ? { attempts: options.attempts } : {}),
     ...(options.priority !== undefined ? { priority: options.priority } : {}),
     ...(options.backoff !== undefined ? { backoff: options.backoff } : {}),
-    ...(options.removeOnComplete !== undefined ? { removeOnComplete: options.removeOnComplete } : {}),
-    ...(options.removeOnFail !== undefined ? { removeOnFail: options.removeOnFail } : {}),
+    ...jobRetention(options),
   };
 }
 

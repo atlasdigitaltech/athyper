@@ -20,6 +20,8 @@ export function PreviewFrame({
       const doc = frame.contentDocument;
       if (!doc) return;
       doc.head.replaceChildren();
+      doc.title = title;
+      doc.documentElement.lang = document.documentElement.lang || "en";
       for (const style of document.querySelectorAll(
         'style, link[rel="stylesheet"]',
       ))
@@ -37,7 +39,7 @@ export function PreviewFrame({
     initialize();
     frame.addEventListener("load", initialize);
     return () => frame.removeEventListener("load", initialize);
-  }, [frame]);
+  }, [frame, title]);
   return (
     <div
       className="a-preview-frame"
@@ -51,7 +53,28 @@ export function PreviewFrame({
         className="a-preview-frame__canvas"
         style={{ width }}
       />
-      {target ? createPortal(children, target) : null}
+      {target
+        ? createPortal(
+            <main aria-label={title}>
+              <h1
+                style={{
+                  position: "absolute",
+                  width: 1,
+                  height: 1,
+                  padding: 0,
+                  margin: -1,
+                  overflow: "hidden",
+                  clipPath: "inset(50%)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {title}
+              </h1>
+              {children}
+            </main>,
+            target,
+          )
+        : null}
     </div>
   );
 }

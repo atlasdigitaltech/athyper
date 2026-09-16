@@ -2,6 +2,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
+import { CompositionEvidenceProvider } from "./composition-evidence";
 import { CompositionEditor } from "./composition-editor";
 import { compositionEdit } from "./composition-edit";
 import type { Inspection } from "./workbench-model";
@@ -48,12 +49,14 @@ async function fixture() {
   const saved = vi.fn();
   await act(async () =>
     root.render(
-      <CompositionEditor
-        inspection={inspection}
-        selection={select}
-        onSaved={saved}
-        onGuardChange={() => {}}
-      />,
+      <CompositionEvidenceProvider>
+        <CompositionEditor
+          inspection={inspection}
+          selection={select}
+          onSaved={saved}
+          onGuardChange={() => {}}
+        />
+      </CompositionEvidenceProvider>,
     ),
   );
   return {
@@ -133,6 +136,9 @@ it("saves complete graph with expected revision, rereads and supports undo", asy
       expect.objectContaining({ version: "5" }),
     );
     expect(f.host.textContent).toContain("Saved and reread");
+    expect(f.host.textContent).toContain("Save and reread verified");
+    await change(f.host, "Later edit");
+    expect(f.host.textContent).toContain("Outdated for this configuration");
   } finally {
     await f.close();
   }
@@ -210,20 +216,41 @@ it("reloads after a conflict only with confirmed discard and retains unrelated c
   const confirm = vi.spyOn(window, "confirm");
   try {
     await change(f.host, "Local edit");
-    mock.request.mockReset().mockRejectedValueOnce(new Error("Revision conflict"));
+    mock.request
+      .mockReset()
+      .mockRejectedValueOnce(new Error("Revision conflict"));
     await click(f.host, "Save draft");
     confirm.mockReturnValue(false);
     await click(f.host, "Reload stored draft");
     expect(mock.request).toHaveBeenCalledTimes(1);
     confirm.mockReturnValue(true);
-    mock.request.mockResolvedValueOnce({...inspection, version:"6"});
+    mock.request.mockResolvedValueOnce({ ...inspection, version: "6" });
     await click(f.host, "Reload stored draft");
-    expect(f.host.querySelector<HTMLInputElement>("#composition-labelOverride")!.value).toBe("Role");
-    expect(f.saved).toHaveBeenLastCalledWith(expect.objectContaining({version:"6",data:graph}));
+    expect(
+      f.host.querySelector<HTMLInputElement>("#composition-labelOverride")!
+        .value,
+    ).toBe("Role");
+    expect(f.saved).toHaveBeenLastCalledWith(
+      expect.objectContaining({ version: "6", data: graph }),
+    );
     await change(f.host, "Next label");
-    const updated = compositionEdit(graph,"surfaceFieldBindings","p","labelOverride","Next label");
-    mock.request.mockResolvedValueOnce({revision:7}).mockResolvedValueOnce({...inspection,version:"7",data:updated});
-    await click(f.host,"Save draft");
-    expect(mock.request.mock.calls.at(-2)![1].body).toEqual({...updated, expectedRevision:6});
-  } finally {confirm.mockRestore(); await f.close();}
+    const updated = compositionEdit(
+      graph,
+      "surfaceFieldBindings",
+      "p",
+      "labelOverride",
+      "Next label",
+    );
+    mock.request
+      .mockResolvedValueOnce({ revision: 7 })
+      .mockResolvedValueOnce({ ...inspection, version: "7", data: updated });
+    await click(f.host, "Save draft");
+    expect(mock.request.mock.calls.at(-2)![1].body).toEqual({
+      ...updated,
+      expectedRevision: 6,
+    });
+  } finally {
+    confirm.mockRestore();
+    await f.close();
+  }
 });

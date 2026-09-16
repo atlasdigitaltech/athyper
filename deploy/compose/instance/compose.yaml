@@ -208,6 +208,8 @@ services:
     restart: unless-stopped
     entrypoint: [/bin/sh, /athyper/bin/start-redis.sh]
     secrets: [redis-password]
+    environment:
+      REDIS_MAXMEMORY_MB: "${REDIS_MAXMEMORY_MB:-512}"
     volumes:
       - valkey-data:/data
       - ./scripts/start-redis.sh:/athyper/bin/start-redis.sh:ro
@@ -219,7 +221,71 @@ services:
       test:
         [
           CMD-SHELL,
-          'REDISCLI_AUTH="$$(cat /run/secrets/redis-password)" redis-cli ping | grep -qx PONG',
+          'REDISCLI_AUTH="$$(cat /run/secrets/redis-password)" redis-cli SET athyper:health:memorycache ok EX 30 | grep -qx OK',
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+    # Read the owner-only secret before the upstream entrypoint chowns /data
+    # and drops to valkey. AOF and snapshots stay on valkey-data.
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_READ_SEARCH, SETUID, SETGID]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 1024m
+    cpus: 0.15
+
+  jobqueue:
+    image: ${ATHYPER_IMAGE_REDIS:-athyper/valkey:8.1.10}
+    build: { context: ../../config/redis }
+    restart: unless-stopped
+    entrypoint: [/bin/sh, /athyper/bin/start-redis.sh]
+    secrets: [redis-password]
+    environment:
+      REDIS_MAXMEMORY_MB: "${ATHYPER_JOBS_REDIS_MAXMEMORY_MB:-512}"
+    volumes:
+      - jobqueue-data:/data
+      - ./scripts/start-redis.sh:/athyper/bin/start-redis.sh:ro
+    # Dedicated persistent store; no session or cache clients.
+    networks: [data]
+    healthcheck:
+      test:
+        [
+          CMD-SHELL,
+          'REDISCLI_AUTH="$$(cat /run/secrets/redis-password)" redis-cli SET athyper:health:jobqueue ok EX 30 | grep -qx OK',
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+    # Read the owner-only secret before the upstream entrypoint chowns /data
+    # and drops to valkey. AOF and snapshots stay on valkey-data.
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_READ_SEARCH, SETUID, SETGID]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 1024m
+    cpus: 0.25
+
+  secretstore-cache:
+    image: ${ATHYPER_IMAGE_REDIS:-athyper/valkey:8.1.10}
+    build: { context: ../../config/redis }
+    restart: unless-stopped
+    entrypoint: [/bin/sh, /athyper/bin/start-redis.sh]
+    secrets: [redis-password]
+    environment:
+      REDIS_MAXMEMORY_MB: "${ATHYPER_SECRETSTORE_REDIS_MAXMEMORY_MB:-256}"
+    volumes:
+      - secretstore-cache-data:/data
+      - ./scripts/start-redis.sh:/athyper/bin/start-redis.sh:ro
+    # Dedicated persistent store; no session or cache clients.
+    networks: [data]
+    healthcheck:
+      test:
+        [
+          CMD-SHELL,
+          'REDISCLI_AUTH="$$(cat /run/secrets/redis-password)" redis-cli SET athyper:health:secretstore-cache ok EX 30 | grep -qx OK',
         ]
       interval: 10s
       timeout: 3s
@@ -232,7 +298,7 @@ services:
     read_only: true
     tmpfs: [/tmp]
     mem_limit: 512m
-    cpus: 0.5
+    cpus: 0.1
 
   # Local DEV/QA only. Cloud environments use provisioned Amazon S3.
   objectstorage:
@@ -356,6 +422,8 @@ networks:
 volumes:
   db-data: {}
   valkey-data: {}
+  jobqueue-data: {}
+  secretstore-cache-data: {}
   # Retain old MinIO volumes externally for rollback; never mount them in SeaweedFS.
   seaweedfs-data: {}
   iam-data: {}

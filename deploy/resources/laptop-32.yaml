@@ -5,7 +5,8 @@ metadata:
 spec:
   hostMemoryMiB: 32768
   wslMemoryMiB: 20480
-  maxContainerMemoryMiB: 14336
+  # Three isolated Redis stores; retain 4 GiB within the WSL budget for overhead.
+  maxContainerMemoryMiB: 16384
   maxContainerCpu: 16
   minimumFreeDiskGiB: 100
   diskWarningPercent: 20

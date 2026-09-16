@@ -28,7 +28,7 @@ test(
     const service = YAML.parse(
       readFileSync(join(root, "deploy/compose/instance", source), "utf8"),
     ).services[serviceName];
-    const ceilingMb = 256;
+    const ceilingMb = 512;
     delete service.profiles;
     delete service.build;
     service.ports = ["127.0.0.1::6379"];
@@ -218,7 +218,7 @@ test(
         }
       }
       // Force pressure without risking the host: existing sessions/jobs survive,
-      // allocating writes fail, and reads and health checks remain available.
+      // allocating writes and write-readiness fail while reads remain available.
       assert.equal(redis("CONFIG", "SET", "maxmemory", "1"), "OK");
       assert.match(redis("SET", "capacity-probe", "rejected"), /OOM/u);
       assert.match(
@@ -234,6 +234,7 @@ test(
       );
       assert.equal(redis("GET", "persistence-probe"), "kept");
       assert.equal(redis("PING"), "PONG");
+      assert.match(redis("SET", "athyper:health:memorycache", "ok", "EX", "30"), /OOM/u);
       assert.match(redis("INFO", "stats"), /evicted_keys:0/u);
       assert.equal(
         redis("CONFIG", "SET", "maxmemory", String(ceilingMb * 1024 * 1024)),

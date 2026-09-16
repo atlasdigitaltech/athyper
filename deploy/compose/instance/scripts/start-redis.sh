@@ -3,7 +3,7 @@ set -eu
 
 # Keep headroom for allocator fragmentation, AOF buffers and fork copy-on-write.
 # Sessions and BullMQ share this server: arbitrary eviction is unsafe.
-maxmemory_mb="${REDIS_MAXMEMORY_MB:-256}"
+maxmemory_mb="${REDIS_MAXMEMORY_MB:-512}"
 case "$maxmemory_mb" in
   ''|*[!0-9]*) echo "REDIS_MAXMEMORY_MB must be a positive integer" >&2; exit 1 ;;
 esac

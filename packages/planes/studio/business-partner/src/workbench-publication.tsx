@@ -139,11 +139,21 @@ export function WorkbenchPublication({
         {},
       );
       if (!mounted.current) return;
-      if ((name === "validate" || name === "test") &&
-          result.changeSetId === inspection.id && String(result.checkedRevision) === inspection.version &&
-          current.version === inspection.version && !differences(current.data, inspection.data).length) {
-        recordCheck({kind: name, source: `draft:${inspection.id}`, revision: inspection.version,
-          graph: current.data, observedAt: new Date().toISOString(), report: result});
+      if (
+        (name === "validate" || name === "test") &&
+        result.changeSetId === inspection.id &&
+        String(result.checkedRevision) === inspection.version &&
+        current.version === inspection.version &&
+        !differences(current.data, inspection.data).length
+      ) {
+        recordCheck({
+          kind: name,
+          source: `draft:${inspection.id}`,
+          revision: inspection.version,
+          graph: current.data,
+          observedAt: new Date().toISOString(),
+          report: result,
+        });
       }
       onSaved(current);
       setReport(result);

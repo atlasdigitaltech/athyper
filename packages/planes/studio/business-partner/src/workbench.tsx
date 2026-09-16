@@ -171,226 +171,234 @@ export function BusinessPartnerWorkbench({
       : state;
   const selected = visible.inspection;
   return (
-    <CompositionEvidenceProvider><Context.Provider
-      value={{
-        ...visible,
-        renderCompositionPreview,
-        onCompositionSaved: onSaved,
-        onCompositionGuard: onGuardChange,
-        compositionLocked: publicationBusy,
-        compositionSelection: selectedObject
-          ? {
-              source: selection,
-              node: selectedObject,
-              reveal: compositionSelection?.source === selection && compositionSelection.node === selectedObject
-                ? compositionSelection.reveal : undefined,
-            }
-          : compositionSelection,
-        onCompositionSelect: (value) => {
-          onCompositionSelect(value);
-          onObjectSelect?.(value.node);
-        },
-      }}
-    >
-      <section
-        className="bp-workbench"
-        aria-label="Stored Business Partner configuration"
+    <CompositionEvidenceProvider>
+      <Context.Provider
+        value={{
+          ...visible,
+          renderCompositionPreview,
+          onCompositionSaved: onSaved,
+          onCompositionGuard: onGuardChange,
+          compositionLocked: publicationBusy,
+          compositionSelection: selectedObject
+            ? {
+                source: selection,
+                node: selectedObject,
+                reveal:
+                  compositionSelection?.source === selection &&
+                  compositionSelection.node === selectedObject
+                    ? compositionSelection.reveal
+                    : undefined,
+              }
+            : compositionSelection,
+          onCompositionSelect: (value) => {
+            onCompositionSelect(value);
+            onObjectSelect?.(value.node);
+          },
+        }}
       >
-        <div className="bp-workbench-heading">
-          <div>
-            <h2>Configuration workbench</h2>
-            <p>
-              Inspect a stored definition across all tabs. Inspection makes no
-              changes.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="a-button a-button--secondary"
-            onClick={() => {
-              if (mayLeave()) setAttempt((n) => n + 1);
-            }}
-          >
-            Refresh stored data
-          </button>
-        </div>
-        <label className="bp-workbench-selector">
-          Stored version
-          <select
-            value={selection.startsWith("bundle:") ? "" : selection}
-            onChange={(event) => select(event.target.value)}
-            disabled={catalogBusy}
-          >
-            <option value="">
-              {catalogBusy
-                ? "Loading stored versions…"
-                : "Select a published release or change set"}
-            </option>
-            {selection &&
-            !selection.startsWith("bundle:") &&
-            !catalog.some((c) => `${c.source}:${c.id}` === selection) ? (
-              <option value={selection}>Selected version · {selection}</option>
-            ) : null}
-            {(["release", "draft"] as const).map((source) => (
-              <optgroup
-                key={source}
-                label={
-                  source === "release"
-                    ? "Published source releases"
-                    : "Change sets (not release snapshots)"
-                }
-              >
-                {catalog
-                  .filter((c) => c.source === source)
-                  .map((c) => (
-                    <option
-                      key={`${source}:${c.id}`}
-                      value={`${source}:${c.id}`}
-                    >
-                      {c.label}
-                    </option>
-                  ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
-        {!catalogBusy && !catalog.length && !catalogErrors.length ? (
-          <p>
-            No Business Partner definitions were returned. The catalog lists up
-            to 100 recent entries; a selected version can also be opened by its
-            saved URL.
-          </p>
-        ) : null}
-        {catalogErrors.map((error) => (
-          <p role="alert" key={error}>
-            {error}
-          </p>
-        ))}
-        <details>
-          <summary>Inspect a Business Partner bundle revision</summary>
-          <p>
-            Bundles contain separate validation, matching, and workflow
-            declarations. Enter a known revision ID; this does not identify an
-            active deployment.
-          </p>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (isId(bundleId.trim())) select(`bundle:${bundleId.trim()}`);
-            }}
-          >
-            <label>
-              Bundle revision ID
-              <input
-                value={bundleId}
-                onChange={(event) => setBundleId(event.target.value)}
-                placeholder="Revision UUID"
-              />
-            </label>
-            <button
-              className="a-button a-button--secondary"
-              disabled={!isId(bundleId.trim())}
-            >
-              Load stored bundle
-            </button>
-          </form>
-        </details>
-        {visible.loading ? (
-          <p role="status">Loading selected configuration…</p>
-        ) : visible.error ? (
-          <p role="alert">{visible.error}</p>
-        ) : selected ? (
-          <>
-            <dl className="bp-workbench-facts">
-              <div>
-                <dt>Source</dt>
-                <dd>
-                  {selected.source === "release"
-                    ? "Native entity release"
-                    : selected.source === "draft"
-                      ? "Native entity change set"
-                      : "Business Partner bundle"}
-                </dd>
-              </div>
-              <div>
-                <dt>Version</dt>
-                <dd>{selected.version}</dd>
-              </div>
-              <div>
-                <dt>State</dt>
-                <dd>{selected.status}</dd>
-              </div>
-              <div>
-                <dt>Target planes declared</dt>
-                <dd>
-                  {selected.targets.join(", ") || "Not supplied by this source"}
-                </dd>
-              </div>
-            </dl>
-            <details>
-              <summary>Source identifiers</summary>
+        <section
+          className="bp-workbench"
+          aria-label="Stored Business Partner configuration"
+        >
+          <div className="bp-workbench-heading">
+            <div>
+              <h2>Configuration workbench</h2>
               <p>
-                Selected ID: <code>{selected.id}</code>
+                Inspect a stored definition across all tabs. Inspection makes no
+                changes.
               </p>
-              {selected.hash ? (
-                <p>
-                  Stored hash: <code>{selected.hash}</code>
-                </p>
+            </div>
+            <button
+              type="button"
+              className="a-button a-button--secondary"
+              onClick={() => {
+                if (mayLeave()) setAttempt((n) => n + 1);
+              }}
+            >
+              Refresh stored data
+            </button>
+          </div>
+          <label className="bp-workbench-selector">
+            Stored version
+            <select
+              value={selection.startsWith("bundle:") ? "" : selection}
+              onChange={(event) => select(event.target.value)}
+              disabled={catalogBusy}
+            >
+              <option value="">
+                {catalogBusy
+                  ? "Loading stored versions…"
+                  : "Select a published release or change set"}
+              </option>
+              {selection &&
+              !selection.startsWith("bundle:") &&
+              !catalog.some((c) => `${c.source}:${c.id}` === selection) ? (
+                <option value={selection}>
+                  Selected version · {selection}
+                </option>
               ) : null}
-              {selected.publishedAt ? (
-                <p>Published: {selected.publishedAt}</p>
-              ) : null}
-            </details>
+              {(["release", "draft"] as const).map((source) => (
+                <optgroup
+                  key={source}
+                  label={
+                    source === "release"
+                      ? "Published source releases"
+                      : "Change sets (not release snapshots)"
+                  }
+                >
+                  {catalog
+                    .filter((c) => c.source === source)
+                    .map((c) => (
+                      <option
+                        key={`${source}:${c.id}`}
+                        value={`${source}:${c.id}`}
+                      >
+                        {c.label}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          {!catalogBusy && !catalog.length && !catalogErrors.length ? (
             <p>
-              <strong>Source publication is not target activation.</strong> Use
-              target activation tracking below for a published release.
+              No Business Partner definitions were returned. The catalog lists
+              up to 100 recent entries; a selected version can also be opened by
+              its saved URL.
             </p>
-          </>
-        ) : (
-          <p>
-            Select a version to inspect its actual configuration. No example
-            definition is substituted.
-          </p>
-        )}
-        {selected &&
-        !(
-          compositionMode &&
-          selected.source === "draft" &&
-          selected.status === "draft"
-        ) ? (
-          <fieldset
-            disabled={publicationBusy}
-            style={{ border: 0, padding: 0, margin: 0 }}
-          >
-            <WorkbenchEditor
+          ) : null}
+          {catalogErrors.map((error) => (
+            <p role="alert" key={error}>
+              {error}
+            </p>
+          ))}
+          <details>
+            <summary>Inspect a Business Partner bundle revision</summary>
+            <p>
+              Bundles contain separate validation, matching, and workflow
+              declarations. Enter a known revision ID; this does not identify an
+              active deployment.
+            </p>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (isId(bundleId.trim())) select(`bundle:${bundleId.trim()}`);
+              }}
+            >
+              <label>
+                Bundle revision ID
+                <input
+                  value={bundleId}
+                  onChange={(event) => setBundleId(event.target.value)}
+                  placeholder="Revision UUID"
+                />
+              </label>
+              <button
+                className="a-button a-button--secondary"
+                disabled={!isId(bundleId.trim())}
+              >
+                Load stored bundle
+              </button>
+            </form>
+          </details>
+          {visible.loading ? (
+            <p role="status">Loading selected configuration…</p>
+          ) : visible.error ? (
+            <p role="alert">{visible.error}</p>
+          ) : selected ? (
+            <>
+              <dl className="bp-workbench-facts">
+                <div>
+                  <dt>Source</dt>
+                  <dd>
+                    {selected.source === "release"
+                      ? "Native entity release"
+                      : selected.source === "draft"
+                        ? "Native entity change set"
+                        : "Business Partner bundle"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Version</dt>
+                  <dd>{selected.version}</dd>
+                </div>
+                <div>
+                  <dt>State</dt>
+                  <dd>{selected.status}</dd>
+                </div>
+                <div>
+                  <dt>Target planes declared</dt>
+                  <dd>
+                    {selected.targets.join(", ") ||
+                      "Not supplied by this source"}
+                  </dd>
+                </div>
+              </dl>
+              <details>
+                <summary>Source identifiers</summary>
+                <p>
+                  Selected ID: <code>{selected.id}</code>
+                </p>
+                {selected.hash ? (
+                  <p>
+                    Stored hash: <code>{selected.hash}</code>
+                  </p>
+                ) : null}
+                {selected.publishedAt ? (
+                  <p>Published: {selected.publishedAt}</p>
+                ) : null}
+              </details>
+              <p>
+                <strong>Source publication is not target activation.</strong>{" "}
+                Use target activation tracking below for a published release.
+              </p>
+            </>
+          ) : (
+            <p>
+              Select a version to inspect its actual configuration. No example
+              definition is substituted.
+            </p>
+          )}
+          {selected &&
+          !(
+            compositionMode &&
+            selected.source === "draft" &&
+            selected.status === "draft"
+          ) ? (
+            <fieldset
+              disabled={publicationBusy}
+              style={{ border: 0, padding: 0, margin: 0 }}
+            >
+              <WorkbenchEditor
+                key={`${selected.source}:${selected.id}:${attempt}`}
+                inspection={selected}
+                onSelect={select}
+                onGuardChange={onGuardChange}
+                onSaved={onSaved}
+                renderPreview={renderPreview}
+              />
+            </fieldset>
+          ) : null}
+          {!selected ? (
+            <PublicationStepUp
+              busy={publicationBusy}
+              canAct={() => !guard.current.dirty && !guard.current.busy}
+            />
+          ) : null}
+          {selected ? (
+            <WorkbenchPublication
               key={`${selected.source}:${selected.id}:${attempt}`}
               inspection={selected}
-              onSelect={select}
-              onGuardChange={onGuardChange}
               onSaved={onSaved}
-              renderPreview={renderPreview}
+              onSelect={select}
+              canAct={() => !guard.current.dirty && !guard.current.busy}
+              onBusyChange={onPublicationBusy}
             />
-          </fieldset>
-        ) : null}
-        {!selected ? (
-          <PublicationStepUp
-            busy={publicationBusy}
-            canAct={() => !guard.current.dirty && !guard.current.busy}
-          />
-        ) : null}
-        {selected ? (
-          <WorkbenchPublication
-            key={`${selected.source}:${selected.id}:${attempt}`}
-            inspection={selected}
-            onSaved={onSaved}
-            onSelect={select}
-            canAct={() => !guard.current.dirty && !guard.current.busy}
-            onBusyChange={onPublicationBusy}
-          />
-        ) : null}
-      </section>
-      {children}
-    </Context.Provider></CompositionEvidenceProvider>
+          ) : null}
+        </section>
+        {children}
+      </Context.Provider>
+    </CompositionEvidenceProvider>
   );
 }
 function isId(value: string) {
@@ -448,7 +456,10 @@ export function BusinessPartnerInspection({ tab }: { tab: WorkbenchTab }) {
       className="bp-inspection"
       aria-label={`${tab} stored configuration`}
     >
-      <p className="bp-inspection-source" hidden={!bundle && ["model", "validation", "workflows"].includes(tab)}>
+      <p
+        className="bp-inspection-source"
+        hidden={!bundle && ["model", "validation", "workflows"].includes(tab)}
+      >
         Source: {inspection.source} · version {inspection.version} ·{" "}
         {inspection.id}
       </p>

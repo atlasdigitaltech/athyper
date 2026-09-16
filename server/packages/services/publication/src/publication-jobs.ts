@@ -281,7 +281,7 @@ function deterministic(deploymentId: string, step: string) {
     enqueueKey: `publication:${deploymentId}:${step}:1`,
     maxAttempts: 5,
     removeOnComplete: 500,
-    removeOnFail: false,
+    removeOnFail: 5000,
   } as const;
 }
 

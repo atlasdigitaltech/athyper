@@ -126,7 +126,7 @@ export function applicationEnvironment(plan, mode) {
     STUDIO_WORKER_DATABASE_URL: database("studio", true),
     MESH_WORKER_DATABASE_URL: database("mesh", true),
     REDIS_URL: `redis://:${encodeURIComponent(secret("redis-password"))}@127.0.0.1:${plan.ports.redis}`,
-    ALLOW_SHARED_BULLMQ_REDIS: "true",
+    ALLOW_SHARED_BULLMQ_REDIS: "false",
     JOB_WORKER_CONCURRENCY: String(plan.resources.buildConcurrency),
     IAM_ISSUER_URL: `${plan.origins.iam}/realms/${plan.realm}`,
     IAM_CLIENT_ID: "athyper-api-runtime",
@@ -175,8 +175,7 @@ export function applicationEnvironment(plan, mode) {
       OTEL_EXPORTER_OTLP_ENDPOINT: `http://127.0.0.1:${plan.ports.otlp}`,
       OTEL_SERVICE_NAME: `athyper-local-${mode}`,
     });
-  // Sessions and BullMQ share the Compose memorycache service.
-  env.REDIS_BULLMQ_URL = env.REDIS_URL;
+  env.REDIS_BULLMQ_URL = `redis://:${encodeURIComponent(secret("redis-password"))}@127.0.0.1:${plan.ports.jobsRedis ?? plan.ports.gateway + 17}`;
   if (plan.apps.includes(mode)) {
     const key = join(plan.root, "secrets/session-token-encryption-key");
     if (!existsSync(key))

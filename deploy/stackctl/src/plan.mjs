@@ -36,6 +36,8 @@ const publishedImageId = (serviceId) =>
         logging: "loki",
         tracing: "tempo",
         memorycache: "redis",
+        jobqueue: "redis",
+        "secretstore-cache": "redis",
         "dbpool-apps": "pgbouncer",
         "dbpool-session": "pgbouncer",
         gateway: "traefik",

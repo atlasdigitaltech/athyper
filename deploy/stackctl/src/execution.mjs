@@ -445,19 +445,12 @@ function executeLocked(
           source_revision: revision,
         },
       },
-      ...(model.selected.some(({ id }) => id === "memorycache-exporter")
-        ? [
-            {
-              targets: [`memorycache-exporter-${instanceId}:9121`],
-              labels: {
-                instance: instanceId,
-                environment: model.instance.spec.mode,
-                service: "memorycache",
-                source_revision: revision,
-              },
-            },
-          ]
-        : []),
+      ...["memorycache", "jobqueue", "secretstore-cache"]
+        .filter(service => model.selected.some(({ id }) => id === `${service}-exporter`))
+        .map(service => ({
+          targets: [`${service}-exporter-${instanceId}:9121`],
+          labels: { instance: instanceId, environment: model.instance.spec.mode, service, source_revision: revision },
+        })),
       {
         targets: [`scheduler-${instanceId}:9464`],
         labels: {

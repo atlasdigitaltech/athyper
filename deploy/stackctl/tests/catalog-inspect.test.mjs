@@ -6,9 +6,9 @@ import { defaultRepoRoot } from "../src/io.mjs";
 test("every Stack v2 native service has exactly one workload disposition", () => {
   const report = inspectCatalog(defaultRepoRoot);
   assert.deepEqual(report.counts, {
-    v2NativeServices: 34,
-    presetSelectedDevServices: 20,
-    optionalV2NativeServices: 14,
+    v2NativeServices: 38,
+    presetSelectedDevServices: 22,
+    optionalV2NativeServices: 16,
   });
   assert.deepEqual(report.inventory, {
     missingDisposition: [],

@@ -80,3 +80,55 @@ tests:
         exp_samples:
           - labels: '{__name__="ALERTS",alertname="RedisHighClientCount",alertstate="firing",service="memorycache",severity="warning"}'
             value: 1
+  - interval: 1m
+    input_series:
+      - series: redis_memory_used_bytes{service="jobqueue",instance="dev"}
+        values: 71+0x10
+      - series: redis_memory_max_bytes{service="jobqueue",instance="dev"}
+        values: 100+0x10
+      - series: redis_memory_used_bytes{service="secretstore-cache",instance="dev"}
+        values: 86+0x10
+      - series: redis_memory_max_bytes{service="secretstore-cache",instance="dev"}
+        values: 100+0x10
+    promql_expr_test:
+      - expr: ALERTS{alertname="RedisMemoryHigh",service="jobqueue",alertstate="firing"}
+        eval_time: 3m
+        exp_samples:
+          - labels: '{__name__="ALERTS",alertname="RedisMemoryHigh",alertstate="firing",service="jobqueue",instance="dev",severity="warning"}'
+            value: 1
+      - expr: ALERTS{alertname="RedisMemoryCritical",service="secretstore-cache",alertstate="firing"}
+        eval_time: 3m
+        exp_samples:
+          - labels: '{__name__="ALERTS",alertname="RedisMemoryCritical",alertstate="firing",service="secretstore-cache",instance="dev",severity="critical"}'
+            value: 1
+  - interval: 1m
+    input_series:
+      - series: athyper_job_dlq_total{queue="publication",instance="dev"}
+        values: 0+5x15
+      - series: athyper_job_queue_size{state="wait",instance="dev",environment="local"}
+        values: 1001+0x15
+      - series: athyper_scheduler_last_success_timestamp_seconds{service="scheduler",instance="dev"}
+        values: 0+0x15
+      - series: up{service="scheduler",instance="dev"}
+        values: 0+0x15
+    promql_expr_test:
+      - expr: ALERTS{alertname="JobFailuresGrowing",alertstate="firing"}
+        eval_time: 8m
+        exp_samples:
+          - labels: '{__name__="ALERTS",alertname="JobFailuresGrowing",alertstate="firing",queue="publication",instance="dev",severity="warning"}'
+            value: 1
+      - expr: ALERTS{alertname="JobQueueBacklog",alertstate="firing"}
+        eval_time: 8m
+        exp_samples:
+          - labels: '{__name__="ALERTS",alertname="JobQueueBacklog",alertstate="firing",instance="dev",environment="local",severity="warning"}'
+            value: 1
+      - expr: ALERTS{alertname="SchedulerProgressStalled",alertstate="firing"}
+        eval_time: 8m
+        exp_samples:
+          - labels: '{__name__="ALERTS",alertname="SchedulerProgressStalled",alertstate="firing",service="scheduler",instance="dev",severity="critical"}'
+            value: 1
+      - expr: ALERTS{alertname="SchedulerUnavailable",alertstate="firing"}
+        eval_time: 8m
+        exp_samples:
+          - labels: '{__name__="ALERTS",alertname="SchedulerUnavailable",alertstate="firing",service="scheduler",instance="dev",severity="critical"}'
+            value: 1

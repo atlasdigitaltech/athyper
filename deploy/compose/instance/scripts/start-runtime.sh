@@ -33,10 +33,16 @@ NEON_WORKER_DATABASE_URL="postgresql://athyper_worker:${worker_password}@dbpool-
 STUDIO_WORKER_DATABASE_URL="postgresql://athyper_worker:${worker_password}@dbpool-session:5432/athyper_studio"
 MESH_WORKER_DATABASE_URL="postgresql://athyper_worker:${worker_password}@dbpool-session:5432/athyper_mesh"
 REDIS_URL="redis://:${redis_password}@memorycache:6379"
-REDIS_BULLMQ_URL="$REDIS_URL"
+# Existing image-based instances keep their original endpoint until redeployed
+# with the dedicated store. Source DEV has been migrated separately.
+if [ -z "${REDIS_BULLMQ_HOST:-}" ]; then
+  if [ "${ATHYPER_LOCAL_SOURCE:-0}" = 1 ]; then REDIS_BULLMQ_HOST=jobqueue; else REDIS_BULLMQ_HOST=memorycache; fi
+fi
+REDIS_BULLMQ_URL="redis://:${redis_password}@${REDIS_BULLMQ_HOST}:6379"
 export DATABASE_URL STUDIO_DATABASE_URL MESH_DATABASE_URL
 export NEON_WORKER_DATABASE_URL STUDIO_WORKER_DATABASE_URL MESH_WORKER_DATABASE_URL
 export REDIS_URL REDIS_BULLMQ_URL
+export PROCESS_METRICS_PORT="${PROCESS_METRICS_PORT:-9464}"
 
 IAM_CLIENT_SECRET="$(cat /run/secrets/runtime-iam-client-secret)"
 SEARCHCORE_API_KEY="$(cat /run/searchcore/search-api-key)"
@@ -107,6 +113,6 @@ if [ "${ATHYPER_LOCAL_SOURCE:-0}" = 1 ]; then
   [ "${ATHYPER_DOMAIN_SUFFIX:-}" = dev.athyper.test ] || { echo "Source mode requires local DEV" >&2; exit 1; }
   export NODE_ENV=development LOCAL_DEVELOPMENT_MANAGED=1
   cd "${ATHYPER_SOURCE_CHECKOUT:?Source checkout is required}"
-  exec node node_modules/tsx/dist/cli.mjs watch --tsconfig server/apps/platform-host/tsconfig.json server/apps/platform-host/src/main.ts
+  exec node tooling/scripts/local-dev/watch-runtime.mjs
 fi
 exec node dist/main.js

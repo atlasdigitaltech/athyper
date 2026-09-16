@@ -62,8 +62,8 @@ export interface EnqueueOptions {
   readonly execution?: JobExecutionCoordinate;
   readonly subject?: JobSubject;
   readonly payloadSchema?: JobPayloadSchema;
-  readonly removeOnComplete?: boolean | number;
-  readonly removeOnFail?: boolean | number;
+  readonly removeOnComplete?: boolean | number | { readonly age: number; readonly count: number };
+  readonly removeOnFail?: boolean | number | { readonly age: number; readonly count: number };
 }
 
 export interface JobExecutionContext {

@@ -394,7 +394,7 @@ function ReviewContent({
               data-side={value}
               aria-label={title}
             >
-              <h3>{title}</h3>
+              <h2>{title}</h2>
               <PreviewFrame
                 title={title}
                 width={viewport === "mobile" ? 390 : 1024}
@@ -431,7 +431,14 @@ function ReviewContent({
         surfaceId={surfaceId}
         navigate={navigate}
       />
-      <CompositionEvidence inspection={{...saved, version: String(candidateVersion)}} graph={graph} localFindings={model.nodes.reduce((total, node) => total + node.issues.length, 0)} />
+      <CompositionEvidence
+        inspection={{ ...saved, version: String(candidateVersion) }}
+        graph={graph}
+        localFindings={model.nodes.reduce(
+          (total, node) => total + node.issues.length,
+          0,
+        )}
+      />
       <h3>Composition findings</h3>
       {model.nodes.some((n) => n.issues.length) ? (
         <ul>

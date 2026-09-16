@@ -163,8 +163,17 @@ export function CompositionEditor({
         setRemote(current);
         throw Error("The stored graph does not match the submitted revision.");
       }
-      recordCheck({kind: "save", source: `draft:${current.id}`, revision: current.version,
-        graph: current.data, observedAt: new Date().toISOString(), report: {matched: true, comparison: "Complete submitted graph equals stored reread"}});
+      recordCheck({
+        kind: "save",
+        source: `draft:${current.id}`,
+        revision: current.version,
+        graph: current.data,
+        observedAt: new Date().toISOString(),
+        report: {
+          matched: true,
+          comparison: "Complete submitted graph equals stored reread",
+        },
+      });
       setBase(current);
       setGraph(current.data);
       setHistory([]);
@@ -219,9 +228,7 @@ export function CompositionEditor({
           <Button
             variant="secondary"
             onClick={() =>
-              document
-                .getElementById("studio-preview-changes")
-                ?.focus()
+              document.getElementById("studio-preview-changes")?.focus()
             }
           >
             Preview & changes

@@ -259,7 +259,7 @@ export interface FinanceJobPublisher {
     options: {
       readonly jobId: string;
       readonly maxAttempts: number;
-      readonly removeOnFail: false;
+      readonly removeOnFail: number;
       readonly execution: {
         readonly planeKey: "neon";
         readonly scope: "tenant";
@@ -504,7 +504,7 @@ export function registerFinance(
       return options.jobs.enqueue("finance", name, data, {
         jobId,
         maxAttempts: 5,
-        removeOnFail: false,
+        removeOnFail: 5000,
         execution: {
           planeKey: "neon",
           scope: "tenant",

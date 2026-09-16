@@ -14,6 +14,7 @@
   "pageErrors": [],
   "networkRequests": [
     "https://preview.test/",
+    "https://preview.test/api/relay/meta-entity-authoring/change-sets/fixture/history",
     "https://preview.test/api/relay/meta-entity-authoring/inspection/address-preview-choices",
     "https://preview.test/api/relay/meta-entity-authoring/inspection/address-preview-choices",
     "https://preview.test/api/relay/meta-entity-authoring/inspection/address-preview-choices",

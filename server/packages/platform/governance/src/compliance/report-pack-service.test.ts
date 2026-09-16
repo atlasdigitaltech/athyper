@@ -69,8 +69,8 @@ describe("ReportPackService", () => {
       { tenantId: "tenant-1", reportPackId: "pack-1" },
       expect.objectContaining({
         jobId: pack.jobId,
-        removeOnComplete: false,
-        removeOnFail: false,
+        removeOnComplete: 1000,
+        removeOnFail: 5000,
       }),
     );
   });

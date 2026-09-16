@@ -27,6 +27,7 @@ x-runtime-common: &runtime-common
     dbpool-session: { condition: service_healthy }
     iam: { condition: service_healthy }
     memorycache: { condition: service_healthy }
+    jobqueue: { condition: service_healthy }
     objectstorage-init: { condition: service_completed_successfully }
     virusscan: { condition: service_healthy }
     docrender: { condition: service_healthy }
@@ -95,6 +96,7 @@ services:
       platform-observability:
         aliases: ["api-${ATHYPER_INSTANCE:-dev}"]
     environment:
+      REDIS_BULLMQ_HOST: jobqueue
       MODE: api
       PROCESS_METRICS_PORT: "9464"
       ATLAS_AGENT_ENABLED: ${ATLAS_AGENT_ENABLED:-false}
@@ -136,6 +138,7 @@ services:
   worker:
     <<: *runtime-common
     environment:
+      REDIS_BULLMQ_HOST: jobqueue
       MODE: worker
       PROCESS_METRICS_PORT: "9464"
       ATHYPER_DOMAIN_SUFFIX: ${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
@@ -182,6 +185,7 @@ services:
   scheduler:
     <<: *runtime-common
     environment:
+      REDIS_BULLMQ_HOST: jobqueue
       MODE: scheduler
       PROCESS_METRICS_PORT: "9464"
       ATHYPER_DOMAIN_SUFFIX: ${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}

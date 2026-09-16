@@ -48,13 +48,62 @@ describe("BullMQ job scheduler", () => {
       {
         name: "digest",
         data: { tenantId: "tenant-1" },
-        opts: { attempts: 3, removeOnComplete: 100 },
+        opts: {
+          attempts: 3,
+          removeOnComplete: { age: 86400, count: 100 },
+          removeOnFail: { age: 604800, count: 5000 },
+        },
       },
     );
     await expect(scheduler.remove("notifications.daily")).resolves.toBe(true);
     await expect(scheduler.remove("missing")).resolves.toBe(false);
     await scheduler.close();
     expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("bounds recurring history including legacy keep-forever options", async () => {
+    const upsertJobScheduler = vi.fn(async () => undefined);
+    const scheduler = createBullMqJobScheduler({
+      redisUrl: "redis://localhost/3",
+      createQueue: () => ({
+        upsertJobScheduler,
+        removeJobScheduler: async () => true,
+        close: async () => undefined,
+      }),
+    });
+    const definition = {
+      scheduleId: "maintenance",
+      queue: "maintenance",
+      name: "cleanup",
+      data: {},
+      pattern: { kind: "interval" as const, everyMs: 60000 },
+    };
+    await scheduler.upsert(definition);
+    expect(upsertJobScheduler).toHaveBeenLastCalledWith(
+      "maintenance",
+      { every: 60000 },
+      expect.objectContaining({
+        opts: {
+          removeOnComplete: { age: 86400, count: 1000 },
+          removeOnFail: { age: 604800, count: 5000 },
+        },
+      }),
+    );
+    await scheduler.upsert({
+      ...definition,
+      options: { removeOnComplete: false, removeOnFail: false },
+    });
+    expect(upsertJobScheduler).toHaveBeenLastCalledWith(
+      "maintenance",
+      { every: 60000 },
+      expect.objectContaining({
+        opts: {
+          removeOnComplete: { age: 86400, count: 1000 },
+          removeOnFail: { age: 604800, count: 5000 },
+        },
+      }),
+    );
+    await scheduler.close();
   });
 
   it("reconciles definitions once and rejects duplicate schedule ids", async () => {
@@ -142,7 +191,13 @@ describe("BullMQ job scheduler", () => {
     expect(upsertJobScheduler).toHaveBeenLastCalledWith(
       "recovery.hourly",
       { every: 3_600_000 },
-      expect.objectContaining({ opts: { delay: 250 } }),
+      expect.objectContaining({
+        opts: {
+          delay: 250,
+          removeOnComplete: { age: 86400, count: 1000 },
+          removeOnFail: { age: 604800, count: 5000 },
+        },
+      }),
     );
   });
 

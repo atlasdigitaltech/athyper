@@ -207,9 +207,10 @@ test("queue console uses the runtime Redis and waits for authenticated readiness
     "utf8",
   );
   assert.match(runtime, /REDIS_URL="redis:\/\/[^\n]+@memorycache:6379"/u);
-  assert.match(runtime, /REDIS_BULLMQ_URL="\$REDIS_URL"/u);
-  assert.equal(console.environment.REDIS_HOST, "memorycache");
-  assert.equal(console.depends_on.memorycache.condition, "service_healthy");
+  assert.match(runtime, /REDIS_BULLMQ_URL="redis:\/\/[^\n]+@\$\{REDIS_BULLMQ_HOST\}:6379"/u);
+  assert.equal(read("deploy/compose/instance/compose.parity.yaml").services.api.environment.REDIS_BULLMQ_HOST, "jobqueue");
+  assert.equal(console.environment.REDIS_HOST, "jobqueue");
+  assert.equal(console.depends_on.jobqueue.condition, "service_healthy");
   assert.deepEqual(console.secrets, base.services.memorycache.secrets);
   assert.ok(base.services.memorycache.healthcheck);
   const catalog = read("deploy/catalog/capabilities.yaml");
@@ -231,7 +232,7 @@ test("queue console uses the runtime Redis and waits for authenticated readiness
     join(repoRoot, "tooling/scripts/local-dev/applications.mjs"),
     "utf8",
   );
-  assert.match(localRuntime, /env.REDIS_BULLMQ_URL = env.REDIS_URL;/u);
+  assert.match(localRuntime, /env.REDIS_BULLMQ_URL = `redis:[^\n]+plan.ports.jobsRedis/u);
 });
 
 test("platform ingress routes DEV, QA, and staging through isolated gateways", () => {

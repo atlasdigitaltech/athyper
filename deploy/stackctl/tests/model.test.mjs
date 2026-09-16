@@ -31,7 +31,7 @@ test("catalog accounts for all Stack v2 services", () => {
   const model = loadModel(defaultRepoRoot, "dev");
   assert.equal(
     model.services.filter((service) => service.ledger === "v2-native").length,
-    34,
+    38,
   );
   assert.equal(
     model.services.filter((service) => service.ledger === "test-fixture")
@@ -195,7 +195,7 @@ test("DEV core Compose is isolated and contains the Phase 6 dependency spine", (
 test("DEV-full parity is bounded and includes every Phase 8 service", () => {
   const plan = createPlan(defaultRepoRoot, "dev");
   assert.equal(plan.preset, "dev-full");
-  assert.equal(plan.resources.memoryMiB, 13_440);
+  assert.equal(plan.resources.memoryMiB, 15_488);
   assert.equal(plan.resources.cpu, 15.95);
   assert.ok(plan.services.some((service) => service.id === "db-migration"));
   assert.equal(
@@ -481,9 +481,9 @@ test("STG routes expose no DEV, QA, or mail-capture identity", () => {
 test("optional capability plans are profile-scoped, bounded, and read-only", () => {
   const expected = {
     observability: {
-      services: 5,
-      memoryMiB: 1_600,
-      cpu: 1.85,
+      services: 7,
+      memoryMiB: 1_728,
+      cpu: 2.05,
       port: "127.0.0.1:53000",
     },
     secretstore: {

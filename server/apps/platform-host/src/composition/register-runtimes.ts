@@ -62,10 +62,10 @@ export function registerRuntimes(
     const executionLifecycle = createJobExecutionLifecycle({
       store: executionStore,
     });
-    const metricLifecycle = container.adapters.openTelemetry
+    const metricLifecycle = container.adapters.processMetrics
       ? createMetricJobExecutionLifecycle(
           executionLifecycle,
-          container.adapters.openTelemetry.metrics,
+          container.adapters.processMetrics,
         )
       : executionLifecycle;
     const monitoredLifecycle = createCronwatchJobLifecycle({

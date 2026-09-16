@@ -47,6 +47,8 @@ describe("BullMQ job runtime", () => {
     })).resolves.toBe("job-42");
     expect(add).toHaveBeenCalledWith("deliver", { notificationId: "n-1" }, {
       jobId: "delivery-1",
+      removeOnComplete: { age: 86400, count: 1000 },
+      removeOnFail: { age: 604800, count: 5000 },
       attempts: 4,
       delay: 250,
     });
@@ -280,7 +282,7 @@ describe("BullMQ job runtime", () => {
       enqueueKey: "invoice:42",
     })).resolves.toBe(expected);
     expect(expected).toMatch(/^athyper-[a-f0-9]{64}$/);
-    expect(add).toHaveBeenCalledWith("settle", { invoiceId: "42" }, { jobId: expected });
+    expect(add).toHaveBeenCalledWith("settle", { invoiceId: "42" }, { jobId: expected, removeOnComplete: { age: 86400, count: 1000 }, removeOnFail: { age: 604800, count: 5000 } });
     await expect(runtime.enqueue("billing", "settle", {}, {
       jobId: "manual",
       enqueueKey: "semantic",
@@ -416,7 +418,8 @@ describe("BullMQ job runtime", () => {
     )).resolves.toBe(expected);
     expect(add).toHaveBeenCalledWith("deliver", failed.data, {
       attempts: 5,
-      removeOnFail: false,
+      removeOnComplete: { age: 86400, count: 1000 },
+      removeOnFail: { age: 604800, count: 5000 },
       jobId: expected,
     });
     await runtime.close();

@@ -36,6 +36,8 @@ const fs = require("fs");
     page.on("pageerror", (e) => errors.push(e.message));
     await page.route("**/*", (route) => {
       requests.push(route.request().url());
+      if (route.request().method() !== "GET") { errors.push("Unexpected mutation request"); return route.abort(); }
+      if (route.request().url().endsWith("/change-sets/fixture/history")) return route.fulfill({json:[]});
       if (route.request().url().includes("/address-preview-choices"))
         return route.fulfill({
           json: {
@@ -142,7 +144,7 @@ const fs = require("fs");
       requests.some(
         (r) =>
           r !== "https://preview.test/" &&
-          !r.endsWith("/address-preview-choices"),
+          !r.endsWith("/address-preview-choices") && !r.endsWith("/change-sets/fixture/history"),
       )
     )
       throw Error(JSON.stringify({ errors, overflow, requests }));

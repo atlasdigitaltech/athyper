@@ -154,7 +154,7 @@ export async function enqueueIntegrationDelivery(
       maxAttempts,
       backoff: { kind: "exponential", delayMs: 1000, jitter: 0.2 },
       removeOnComplete: 500,
-      removeOnFail: false,
+      removeOnFail: 5000,
       execution: {
         planeKey: "studio",
         scope: "tenant",

@@ -139,8 +139,8 @@ export function createReportPackService(options: {
                 : {}),
             },
             payloadSchema: { name: REPORT_PACK_JOB, version: 1 },
-            removeOnComplete: false,
-            removeOnFail: false,
+            removeOnComplete: 1000,
+            removeOnFail: 5000,
           },
         );
       } catch (error) {
@@ -331,8 +331,8 @@ export function createReportPackRecoveryHandler(options: {
                 principalId: pack.createdBy,
               },
               payloadSchema: { name: REPORT_PACK_JOB, version: 1 },
-              removeOnComplete: false,
-              removeOnFail: false,
+              removeOnComplete: 1000,
+              removeOnFail: 5000,
             },
           );
           enqueued++;

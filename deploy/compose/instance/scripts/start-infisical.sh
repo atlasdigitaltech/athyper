@@ -10,7 +10,7 @@ db_password="$(encode_password /run/secrets/infisical-db-password)"
 redis_password="$(encode_password /run/secrets/redis-password)"
 export ENCRYPTION_KEY AUTH_SECRET
 export DB_CONNECTION_URI="postgresql://athyper_infisical:${db_password}@db:5432/athyper_infisical"
-export REDIS_URL="redis://:${redis_password}@memorycache:6379"
+export REDIS_URL="redis://:${redis_password}@secretstore-cache:6379"
 unset db_password redis_password
 
 if [ "$(id -u)" = "0" ]; then
