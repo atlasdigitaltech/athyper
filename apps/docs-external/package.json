@@ -8,6 +8,7 @@
     "prebuild": "node ../../tooling/scripts/docs/stage-content.mjs --target external",
     "build": "astro build",
     "postbuild": "node ../../tooling/scripts/docs/verify-output.mjs --target external",
+    "build:placeholder": "node ../../tooling/scripts/docs/stage-content.mjs --target external --empty && astro build && node ../../tooling/scripts/docs/verify-output.mjs --target external",
     "preview": "astro preview",
     "typecheck": "astro check",
     "lint": "astro check"

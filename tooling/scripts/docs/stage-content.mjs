@@ -4,7 +4,13 @@
 // tooling/scripts/docs/lib/classify.mjs, and copies eligible content into
 // the target app's src/content/docs/ (pages) and public/assets/ (downloads).
 //
-// Usage: node stage-content.mjs --target external|internal
+// Usage: node stage-content.mjs --target external|internal [--empty]
+//
+// --empty skips classification entirely and stages only the placeholder
+// page, regardless of target. Used for the harmless-placeholder Cloudflare
+// Pages + Access verification deploy (see the docs deployment runbook) so
+// that pass can ship a real Starlight build (with a real Pagefind index and
+// sitemap to test Access against) without any real docs/ content in it.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -19,6 +25,7 @@ const REPO_ROOT = path.resolve(__dirname, "../../..");
 const DOCS_ROOT = path.join(REPO_ROOT, "docs");
 
 const target = parseTarget(process.argv);
+const empty = process.argv.includes("--empty");
 const APP_DIR = path.join(REPO_ROOT, "apps", `docs-${target}`);
 const CONTENT_OUT = path.join(APP_DIR, "src", "content", "docs");
 const ASSETS_OUT = path.join(APP_DIR, "public", "assets");
@@ -54,6 +61,13 @@ function main() {
   fs.rmSync(CONTENT_OUT, { recursive: true, force: true });
   fs.rmSync(ASSETS_OUT, { recursive: true, force: true });
   fs.mkdirSync(CONTENT_OUT, { recursive: true });
+
+  if (empty) {
+    writePlaceholder();
+    writeManifest([], []);
+    console.log(`[stage-content:${target}] --empty: staged placeholder only.`);
+    return;
+  }
 
   const allFiles = walk(DOCS_ROOT);
   const markdownFiles = allFiles.filter(isMarkdown);
@@ -168,12 +182,7 @@ function main() {
     // Keeps the site deployable (and testable against gate #3 — Access
     // must deny unauthenticated access before real content ever lands)
     // even before any docs/ file is approved for this target.
-    fs.writeFileSync(
-      path.join(CONTENT_OUT, "index.md"),
-      stringifyFrontmatter({ title: "athyper Docs" }) +
-        "\n" +
-        "No content has been published for this site yet.\n"
-    );
+    writePlaceholder();
   }
 
   // Copy assets referenced by staged pages.
@@ -184,21 +193,7 @@ function main() {
     fs.copyFileSync(srcAbs, destAbs);
   }
 
-  fs.writeFileSync(
-    MANIFEST_OUT,
-    JSON.stringify(
-      {
-        target,
-        generatedAt: new Date().toISOString(),
-        stagedCount: manifestEntries.length,
-        assetCount: referencedAssets.size,
-        warnings,
-        entries: manifestEntries,
-      },
-      null,
-      2
-    )
-  );
+  writeManifest(manifestEntries, warnings, referencedAssets.size);
 
   if (warnings.length) {
     console.warn(`[stage-content:${target}] ${warnings.length} warning(s):`);
@@ -214,6 +209,34 @@ function main() {
     for (const v of violations) console.error(`  - ${v}`);
     process.exit(1);
   }
+}
+
+function writePlaceholder() {
+  fs.writeFileSync(
+    path.join(CONTENT_OUT, "index.md"),
+    stringifyFrontmatter({ title: "athyper Docs" }) +
+      "\n" +
+      "No content has been published for this site yet.\n"
+  );
+}
+
+function writeManifest(entries, warnings, assetCount) {
+  fs.writeFileSync(
+    MANIFEST_OUT,
+    JSON.stringify(
+      {
+        target,
+        empty,
+        generatedAt: new Date().toISOString(),
+        stagedCount: entries.length,
+        assetCount,
+        warnings,
+        entries,
+      },
+      null,
+      2
+    )
+  );
 }
 
 function filenameToTitle(relPath) {
