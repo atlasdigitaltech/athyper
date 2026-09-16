@@ -11,13 +11,26 @@ manually first.
 
 ## 1. Create the two Pages projects
 
-For each app, in the Cloudflare dashboard, use the **legacy Pages flow**
-("Continue to Pages" link on the create screen) rather than the newer
-unified Workers & Pages flow — the newer flow adds a separate Deploy
-command step (defaulting to `npx wrangler deploy`, the Workers deploy
-command) that fights a static Pages site; see the note below if you're
-already on that flow. Workers & Pages → Create → Pages → Connect to Git →
-select this repository.
+**Use the legacy Pages flow** — "Continue to Pages" link on the create
+screen — not the newer unified Workers & Pages flow. Workers & Pages →
+Create → click "Continue to Pages" → Connect to Git → select this
+repository.
+
+The unified flow was tried first and abandoned after three consecutive
+build failures from the same root cause (it wants to run an explicit
+`wrangler` CLI deploy step against a scoped, auto-generated token that
+doesn't have Pages:Edit permission — first missing root directory, then
+`wrangler deploy` erroring on a static site with `[ERROR] Missing
+entry-point to Worker script or to assets directory` even after fixing
+the deploy command to `wrangler pages deploy dist`, then
+`Authentication error [code: 10000]` from the build token itself). The
+legacy flow has no deploy command or token step — Cloudflare uploads the
+build output directory directly. If you only have the unified flow
+available, fixing it requires both changing Deploy command to
+`npx wrangler pages deploy dist` AND adding a custom API token (My
+Profile → API Tokens → Create Token, with Cloudflare Pages: Edit
+permission) as a `CLOUDFLARE_API_TOKEN` environment variable on the
+project, overriding the default build token.
 
 | Setting | `athyper-docs-external` | `athyper-wiki-internal` |
 | --- | --- | --- |
@@ -26,16 +39,6 @@ select this repository.
 | Build command | `pnpm install --frozen-lockfile && pnpm --filter @athyper/docs-external build` | `pnpm install --frozen-lockfile && pnpm --filter @athyper/docs-internal build` |
 | Build output directory | `dist` | `dist` |
 | Environment variable | `NODE_VERSION=24.19.0` | `NODE_VERSION=24.19.0` |
-
-**If created via the newer unified flow instead:** it adds a **Deploy
-command** field, defaulting to `npx wrangler deploy` (the Workers deploy
-command). Running that against a static site fails with `[WARNING] It
-seems that you have run 'wrangler deploy' on a Pages project` followed by
-`[ERROR] Missing entry-point to Worker script or to assets directory` —
-even with `pages_build_output_dir` set in `wrangler.toml`, `wrangler
-deploy` still expects a Worker entry-point. Fix: Settings → Builds →
-change Deploy command to `npx wrangler pages deploy dist` (relative to
-Root directory, which is already the app's folder).
 
 After creating each project: Settings → Builds & deployments → **disable
 "Automatic production branch deployments"** for now (preview deployments
