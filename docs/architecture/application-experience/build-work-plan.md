@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Plan version | 1.0.0 |
+| Plan version | 1.0.1 |
 | Date | 2026-09-17 |
 | Scope | Repository cleanup and incremental implementation for Neon, Mesh and Studio |
 | Status | Planned; documentation prepared, implementation waves not executed |
@@ -38,7 +38,7 @@ Durable execution evidence belongs under the repository's approved governance re
 | Server caching and replicas | Deployment owner + frontend platform | IAM, backend cache owners |
 | Cohort rollout and rollback | Release owner | Plane owners, support/operations |
 
-Assign actual people/teams before scheduling dependent work. Role names are not evidence of acceptance or availability.
+The existing engineering/repository owner acts as interim sponsor and initiates W0, assigning the named frontend platform owner and required reviewers. Baseline inventory may proceed while assignments are pending; W0 cannot exit until ownership is recorded. Assign actual people/teams before scheduling dependent work. Role names are not evidence of acceptance or availability. Ownership assignment does not close D-06; W1 must also verify enforcement coverage.
 
 ## 4. Inventory and disposition model
 
@@ -67,7 +67,7 @@ Generated ownership matrices are updated through their generator and correspondi
 W0 Baseline, ownership and decision register
  ├── W1 Dependency enforcement and public-contract authority
  ├── W2 Application root and startup
- └── W3 Shell extraction and coordination [after W2 interfaces stabilize]
+ └── W3 Shell extraction and coordination [integration after the W2 interface gate below]
        └── W4 Generic PageWorkspace and state contracts
              └── W5 Business Partner pilot cohorts
                    └── W6 Second entity + Mesh reuse proof
@@ -78,6 +78,8 @@ W9 Deployment portability/cache/replica readiness follows W0 and runs alongside
 UI work; its gates must pass before any replica-dependent release.
 W10 Final acceptance follows applicable W1–W9 completion.
 ```
+
+W3 integration proceeds when W2’s root/provider/bootstrap interfaces are reviewed, all three plane adapters typecheck against them, and no unresolved breaking interface change remains. Behavior-preserving shell extraction may begin earlier without committing to unsettled interfaces.
 
 Independent workstreams may run separately, but shared files and public APIs require ownership coordination. Do not broaden tests repeatedly after relevant checks pass without a new failure or concern.
 
@@ -92,10 +94,10 @@ Independent workstreams may run separately, but shared files and public APIs req
 - Capture route/query parameters, section/tab behavior, authorization states, mutation semantics and unsaved-change behavior.
 - Inventory assets, CSS imports, public package exports and deployment dependencies.
 - Identify existing local changes and their owners.
-- Assign accountable owners to D-01 through D-06 in the design.
+- Under the interim sponsor, record named accountable owners and reviewers for D-01 through D-06 in the design; assignment is distinct from decision closure.
 - Select measurable viewport fixtures, failure injections, rollout mechanism and evidence location.
 
-**Exit gate**: agreed disposition inventory; baseline checks and known failures recorded; no unexplained deletion/move candidates; D-06 ownership assigned.
+**Exit gate**: agreed disposition inventory; baseline checks and known failures recorded; no unexplained deletion/move candidates; D-06 ownership recorded; enforcement verification remains a W1 requirement for full D-06 closure.
 
 **Rollback**: none; read-only inventory and documentation.
 
@@ -114,7 +116,7 @@ Independent workstreams may run separately, but shared files and public APIs req
 - Define compatibility window, error/enum/unknown-field behavior and retirement process (D-03).
 - Ensure relevant checks are required for affected PRs and releases; verify triggers, not only script existence.
 
-**Exit gate**: all architectural rules mapped; negative tests fail for intended violations; valid imports pass; supported frontend/backend compatibility matrix documented and exercised before independent release.
+**Exit gate**: all architectural rules mapped; negative tests fail for intended violations; valid imports pass; D-06 enforcement coverage verified alongside its recorded ownership; supported frontend/backend compatibility matrix documented and exercised before independent release.
 
 **Rollback**: retain prior exports/adapters until consumers migrate; never remove a supported public shape as a cleanup convenience.
 
@@ -205,7 +207,7 @@ Use separate route cohorts, not one large feature rewrite:
 
 **Checks**: compare each pilot to baseline; test permitted and denied users; read/edit/submit where authorized in isolated fixtures; loading/error/empty; unsaved departure; overlay integration and footer context.
 
-**Exit gate per cohort**: D-05 rollout/rollback settings resolved, parity evidence accepted, no unresolved access or task-blocking regression.
+**Exit gate per cohort**: D-05 framework closed and this cohort’s readiness gate satisfied, parity evidence accepted, no unresolved access or task-blocking regression.
 
 **Rollback**: route-level old implementation remains available during agreed window; no incompatible data/schema changes coupled to presentation rollout.
 
@@ -287,17 +289,19 @@ Start policy/design work early; execute rollout only after defined gates.
 
 ## 7. Rollout and rollback protocol
 
+D-05 is a one-time decision establishing the rollout framework: selection mechanism, stable assignment, evidence requirements, rollback procedure and approval responsibilities. Closing it does not authorize production activation. Each cohort separately completes a readiness record and receives approval under that framework. Reopen D-05 only when the framework changes, not for routine cohort parameter choices.
+
 | Step | Required evidence/action |
 | --- | --- |
-| Prepare | Named cohort owner, affected route list, compatible artifact/flag fallback, D-05 thresholds/window |
+| Prepare | D-05 framework closed; cohort record contains named owner/operator, affected routes, observation duration, numeric thresholds, compatible artifact/flag fallback and required parity evidence |
 | Verify | Baseline comparison, contract/authorization checks, browser fixtures, mutation safety |
-| Enable | Stable server/config selection for a cohort; never client-controlled authorization |
+| Enable | Cohort readiness approved; stable server/config selection; never client-controlled authorization |
 | Observe | Error rates, task failures, failed submissions, navigation/focus regressions and performance against baseline |
 | Expand | Owner accepts results within agreed measurable thresholds |
 | Roll back | Disable affected cohort or restore compatible prior artifact; keep backend compatibility |
 | Retire | Observation/rollback window complete, references removed, release rollback remains documented |
 
-Immediate stop/rollback triggers include cross-context data disclosure, authorization bypass, duplicate mutation execution, lost form input caused by migration, and inability to complete a critical task. Numeric error/performance thresholds and observation duration are D-05; do not invent acceptance results before measurement.
+Immediate stop/rollback triggers include cross-context data disclosure, authorization bypass, duplicate mutation execution, lost form input caused by migration, and inability to complete a critical task. Numeric error/performance thresholds and observation duration are recorded and approved per cohort under the D-05 framework; they are not recurring pending decisions called D-05. Do not invent acceptance results before measurement.
 
 Feature flags are not mandatory for small behavior-preserving extractions. They are required where the cohort plan chooses parallel legacy/new presentation paths. Old and new packages may temporarily coexist in source, but only one active presentation mounts for a route instance. Old sessions/open browser tabs and rolling deployment behavior must be considered before removing compatibility.
 
@@ -327,16 +331,16 @@ Required assertions include one main/h1, visible focus, no hidden focus targets,
 | Work item | Current status | Blocking decision |
 | --- | --- | --- |
 | Architecture baseline and detailed skeleton | Documented | Full ratification awaits named owners and decision closure |
-| W0 baseline inventory | Not started | D-06 |
-| W1 contracts/enforcement | Not started | D-03 and coverage review |
+| W0 baseline inventory | Not started | Interim sponsor initiates; named ownership required for exit, not inventory entry |
+| W1 contracts/enforcement | Not started | D-03 and D-06 enforcement coverage verification |
 | W2 startup | Not started | D-01 |
-| W3 shell | Not started | Cohort-specific D-05 before release |
+| W3 shell | Not started | W2 interface gate for integration; D-05 closed + cohort readiness before production release |
 | W4 workspace | Not started | D-02 |
-| W5 pilot routes | Not started | W1–W4, D-05 |
+| W5 pilot routes | Not started | W1–W4; D-05 closed + readiness satisfied for each cohort |
 | W6 generic reuse | Not started | W5 foundations |
 | W7 utilities/Knowledge | Not started | Supported services and stable primitives |
 | W8 broad cleanup | Not started | W5/W6 evidence and rollback window |
-| W9 deployment | Not started | D-03/D-04/D-05 |
+| W9 deployment | Not started | D-03/D-04; D-05 closed + applicable cohort readiness before production rollout |
 | W10 acceptance | Not started | Applicable preceding exit gates |
 
 Existing partial implementations are baseline assets, not completion of these work packages. Update statuses only with actual evidence.
@@ -354,3 +358,7 @@ Existing partial implementations are baseline assets, not completion of these wo
 - Duplicate implementations are removed only after verified replacement and rollback readiness.
 - Named owners accept remaining intentional exceptions/deferred features.
 - Design, work plan and canonical operational guidance match the delivered state.
+
+## 11. Revision record
+
+- **1.0.1 (2026-09-17):** Clarified interim sponsor authority, W0 assignment versus W1 enforcement closure, verifiable W2-to-W3 integration criteria, and one-time D-05 versus per-cohort readiness. No implementation wave was executed by this documentation revision.

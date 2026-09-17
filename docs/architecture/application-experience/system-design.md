@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Contract version | 1.0.0 |
+| Contract version | 1.0.1 |
 | Date | 2026-09-17 |
 | Scope | Neon, Mesh, Studio; application startup, shell, pages, shared services, package boundaries, deployment |
 | Status | Agreed architectural baseline; implementation and operational readiness are not certified |
@@ -295,8 +295,12 @@ References for implementation-time verification: [Next.js self-hosting](https://
 | D-02 | Primary scroll root, token values, minimum center width, rail widths, collapse thresholds | Frontend platform + accessibility | Before workspace migration |
 | D-03 | Public schema inventory, supported deployed consumer window and retirement policy | API contract + release + plane owners | Before independent-version release |
 | D-04 | Per-resource server cache policy, adapter/storage, invalidation, outage ownership | Frontend platform + deployment + IAM/backend | Before cache-dependent replica rollout |
-| D-05 | Cohort mechanism, observation window, rollback thresholds and operator | Release + plane owner | Before each production cohort |
-| D-06 | Named accountable owner/reviewers and enforcement coverage | Engineering/repository owner | Before claiming full contract ratification |
+| D-05 | One-time rollout framework: selection mechanism, stable assignment, evidence requirements, rollback procedure and approval responsibilities | Release + plane owner | Framework agreed before the first production cohort; each cohort separately passes its readiness gate |
+| D-06 | Named accountable owner/reviewers and verified enforcement coverage | Engineering/repository owner (interim sponsor) | Ownership recorded before W0 exits; enforcement coverage verified in W1; both required for full closure |
+
+The existing engineering/repository owner acts as interim sponsor and initiates W0, assigning the named frontend platform owner and required reviewers. Baseline inventory may proceed while assignments are pending; W0 cannot exit until ownership is recorded. Assigning D-06 ownership does not close D-06: enforcement coverage must also be verified in W1.
+
+Closing D-05 establishes the rollout framework; it does not authorize any production cohort. Each cohort must separately record its route list, named owner/operator, observation duration, numeric thresholds, compatible fallback and parity evidence, then satisfy the framework’s readiness approval before activation. Later cohorts do not reopen D-05 unless they change the framework.
 
 D-02 must record numeric values with units and test fixtures, not only words such as “narrow.” Derive breakpoint choices from minimum usable content plus rails/gaps and validate at 200% zoom and with Atlas docked. Unknown count is a state, not a numeric threshold: pending/failed is unknown, successful 0 is zero, successful positive value is a count.
 
@@ -304,11 +308,15 @@ Minimum objective assertions: exactly one main and one page h1; no focusable hid
 
 ## 13. Change control
 
-The component and ownership baseline is agreed. D-01 through D-06 are explicitly unresolved; their closure and implementation evidence are separate from architectural acceptance. No named owners, numeric budgets, production status or test results are fabricated by this document.
+The component structure and ownership principles are an accepted baseline subject to controlled amendments, not permanently frozen behavior. Full contract ratification remains pending named accountability and closure of D-01 through D-06. Implementation completeness and production readiness are not certified; decision closure is separate from implementation evidence. No named owners, numeric budgets, production status or test results are fabricated by this document.
 
 Changes use a reviewed PR updating this document, the work plan where affected, and a short decision entry with rationale and compatibility impact. Editorial corrections increment patch; compatible optional extensions increment minor; breaking public behavior/schema/component changes increment major. A breaking change requires affected plane review, migration and rollback guidance; authorization/session changes require IAM/domain authorization review; focus/navigation changes require accessibility review; deployment/cache changes require deployment review.
 
 Do not silently replace this canonical document with a new competing copy. Durable decisions stay under architecture. Execution evidence follows repository conventions in `governance/policy/reports/` when it must remain live, otherwise Git/release artifacts retain the history. Existing architecture guidance remains authoritative outside this document's scope.
+
+### Revision record
+
+- **1.0.1 (2026-09-17):** Clarified interim assignment authority, D-06 ownership versus enforcement closure, one-time D-05 versus recurring cohort readiness, and accepted-baseline status. No runtime architecture change.
 
 ## Appendix A. Detailed component and behavior inventory
 
