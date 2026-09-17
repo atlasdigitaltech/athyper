@@ -13,10 +13,14 @@
  */
 @layer starlight.base {
   :root {
-    /* Atlas Modern — dark (Starlight's un-attributed root is its dark set) */
+    /* Atlas Modern — dark (Starlight's un-attributed root is its dark set).
+       Deliberate hexes, not a heavy color-mix-with-white: mixing brand
+       #234b84 more than ~35% toward white desaturates it into a pale
+       lavender-gray that no longer reads as "blue" against a dark ground —
+       these keep the brand hue (~215°) recognizable at every brightness. */
     --sl-color-accent-low: color-mix(in srgb, #234b84 24%, black);
-    --sl-color-accent: color-mix(in srgb, #234b84 32%, white);
-    --sl-color-accent-high: #b7c9e4;
+    --sl-color-accent: #5b86c9;
+    --sl-color-accent-high: #93b3e6;
 
     --sl-color-white: #e8edf5;
     --sl-color-gray-1: #cbd3e0;
