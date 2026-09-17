@@ -19,10 +19,36 @@ Use [System Design](system-design.md) for component behavior. Existing repositor
 
 ### 1. Inspect what exists
 
-- [ ] Identify the active Business Partner collection, detail/360, intake and Studio composition implementations.
-- [ ] Identify existing shared headers, section navigation, forms, loading/error components and duplicate CSS.
-- [ ] Record only the files being changed and their replacement; use a short working checklist, not a repository-wide governance inventory.
-- [ ] Check current local modifications before editing. Capture enough baseline behavior to recognize a regression.
+- [x] Identify the active Business Partner collection, detail/360, intake and Studio composition implementations.
+- [x] Identify existing shared headers, section navigation, forms, loading/error components and duplicate CSS.
+- [x] Record only the files being changed and their replacement; use a short working checklist, not a repository-wide governance inventory.
+- [x] Check current local modifications before editing. Capture enough baseline behavior to recognize a regression.
+
+**Inspection baseline (2026-09-17):** working tree was clean before this task; no inherited local edits needed preservation. No application code has been changed during inspection. The map below is the intended edit scope, not a deletion list.
+
+| Active entry / implementation | Reuse or planned treatment |
+| --- | --- |
+| `apps/neon/app/(shell)/mdg/business-partner/layout.tsx` → `apps/neon/lib/entity-application-layout.tsx` → `packages/planes/neon/list-view/src/index.tsx` | Retain entityCode-driven application composition; adapt shared workspace chrome |
+| Business Partner `page.tsx` / `manage/page.tsx` → `NeonEntityApplicationSection` | Overview and collection are already shared sections; do not replace with a new entity-local list |
+| `partners/page.tsx` and `business-partners/[recordId]/page.tsx` | Existing redirect aliases; preserve URLs/query behavior, not duplicate pages |
+| `[recordId]/page.tsx` → `BusinessPartnerRecord` in `packages/planes/neon/business-partner/src/index.tsx` | Validate ID; preserve existing `neon.business_partner.view_360` selection and aggregate fallback until both are understood |
+| `packages/planes/neon/business-partner/src/360/business-partner-360.tsx` → shared `EntityRecord360Panel` | Retain authorized providers, URL state, tabs and section behavior; adapt geometry rather than rewrite domain sections |
+| `new/page.tsx` → `AuthorizedNewBusinessPartnerRequest` → request entry / `NewBusinessPartnerRequest` | Preserve permission gating, request flow, draft values and governed submission |
+| `packages/platform/entity/runtime/form-detail/src/{intake,intake-state,form-layout,section-navigation,record-360-panel,section-workspace}` | Reuse intake state and scroll navigation; consolidate layout wrappers around them |
+| `apps/studio/app/(shell)/mdg/business-partner/{layout.tsx,module-navigation.tsx,workbench-context.tsx,model/page.tsx}` | Preserve draft context and module navigation; model route already wraps `BusinessPartnerInspection` in PageFrame |
+| `packages/planes/studio/business-partner/src/{workbench,composition-workspace,composition-navigation,composition-editor,composition-review}.tsx` | Keep specialized editor behavior; extract only shared workspace orchestration |
+| `packages/platform/shell/shell/src/{client,page-foundation,entity-page-layout,management-workspace,record-footer}.tsx` | Existing shared shell/header/record-ownership/footer foundation; first consolidation target |
+| `apps/{neon,mesh,studio}/app` loading/error/provider/layout adapters and `packages/platform/shell/app-foundation/src/boundaries.tsx` | Inspect reuse before introducing another fallback implementation; existing AppErrorBoundary is an explicit error-presentation component, not by its name proof of render catching |
+
+**CSS consolidation targets:** `packages/platform/foundation/ui/src/styles.css` currently owns both record-360 and section-workspace geometry. Record-360 derives sticky offsets from shell/tab variables, whereas section-workspace uses `top:8rem`. Shared navigation typography also lives here. Shell geometry is in `packages/platform/shell/shell/src/styles.css`; domain-specific styling remains in `packages/planes/neon/business-partner/src/styles.css` and `apps/studio/app/(shell)/mdg/business-partner/workbench.css`. These are overlapping responsibilities to consolidate, not evidence that whole files are redundant. Preserve record mobile selectors, overview reflow, Studio tables/editor overflow and shell document scrolling.
+
+**Executed baseline checks:**
+
+- `pnpm --filter @athyper/product-neon-business-partner test -- src/intake-runtime.test.tsx src/360/record-opening.test.tsx` — passed, **46 files / 225 tests**. The script invocation ran the full package suite rather than only the requested files.
+- `pnpm --filter @athyper/product-studio-business-partner test -- src/composition-navigation.test.tsx src/composition-workspace.test.tsx` — passed, **23 files / 78 tests**; likewise ran the full package suite.
+- `pnpm exec playwright test --config tooling/config/playwright.foundation.config.ts tests/foundation-browser/business-partner-section-layout.spec.ts tests/foundation-browser/business-partner-360-panel.spec.ts` — **blocked before browser execution**: esbuild cannot import `react-day-picker/src/style.css` from `packages/platform/foundation/ui/src/date-picker-calendar.tsx` without an output path. No browser or visual pass is claimed.
+
+**Next action:** correct the two browser fixtures' CSS bundling setup while preserving actual styling, rerun this small baseline, then proceed to task 2. Do not hide the import failure by removing date-picker styles from production components. Preserve the source-verified baseline above: record versus collection header ownership, authorized intake entry, scroll selection/explicit focus, route aliases and Studio draft/editor state.
 
 ### 2. Consolidate application startup and shell
 
