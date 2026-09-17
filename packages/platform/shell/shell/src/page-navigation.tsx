@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, type ReactNode } from "react";
+import React, { useEffect, useState, type ReactNode } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@athyper/platform-ui";
 
 export interface PageNavigationTabItem {
