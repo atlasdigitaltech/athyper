@@ -781,3 +781,5 @@
 .a-intake-copy:hover{background:var(--a-brand-soft);color:var(--a-brand)}
 .a-intake-copy:focus-visible{outline:2px solid var(--a-brand);outline-offset:2px}
 .a-intake-save-status[data-state=unsaved]::before{content:"";display:inline-block;width:.4rem;height:.4rem;border-radius:50%;margin-inline-end:.4rem;vertical-align:middle;background:var(--a-warning,#b7791f)}
+
+.a-management-navigation[data-appearance=flat]{border:0;border-bottom:var(--a-border-width) solid var(--a-border);border-radius:0;box-shadow:none;flex-wrap:nowrap;overflow-x:auto;}

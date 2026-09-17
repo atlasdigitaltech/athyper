@@ -209,3 +209,16 @@ it("requires a fresh read after a save succeeds but verification is unavailable"
     )?.disabled,
   ).toBe(true);
 });
+
+it("keeps the compact new-draft entry informational until explicitly opening the working draft", async () => {
+  const select = vi.fn();
+  transport.mockResolvedValue(Response.json({ id, status: "draft" }));
+  await act(async () => root.render(<WorkbenchEditor compact inspection={{ ...initial, source: "release", status: "published" }} onSelect={select} onGuardChange={() => {}} onSaved={saved}/>));
+  expect(node.querySelector("h3")).toBeNull();
+  expect(node.querySelector("summary")?.textContent).toBe("+ New draft");
+  await act(async () => node.querySelector("summary")!.click());
+  expect(transport).not.toHaveBeenCalled();
+  expect(node.textContent).toContain("one working draft");
+  await act(async () => node.querySelector("button")!.click());
+  expect(select).toHaveBeenCalledWith(`draft:${id}`);
+});

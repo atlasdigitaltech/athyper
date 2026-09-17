@@ -409,3 +409,34 @@ describe("deployment session lifetimes", () => {
     assert.throws(() => readSessionTtls("studio", { AUTH_SESSION_IDLE_TTL_SECONDS: "7200", AUTH_SESSION_ABSOLUTE_TTL_SECONDS: "3600" }));
   });
 });
+
+it("reuses recent issuer MFA at login without extending its freshness on refresh", async () => {
+  const authenticatedAt = Date.now() - 60_000;
+  const value = await authenticate(setup({ authenticationMethods: ["pwd", "otp"], authenticatedAt }));
+  assert.equal(value.callback.status, 303);
+  const stored = [...value.store.sessions.values()][0]!;
+  assert.equal(stored.assurance, "elevated");
+  assert.equal(stored.elevationExpiresAt, Math.min(stored.absoluteExpiresAt, authenticatedAt + 24 * 60 * 60_000));
+  await value.handlers.refresh(new Request(`${value.origin}/api/auth/refresh`, { method: "POST", headers: { cookie: value.cookie, origin: value.origin, "x-csrf-token": "csrf-safe" } }));
+  assert.equal([...value.store.sessions.values()][0]!.elevationExpiresAt, stored.elevationExpiresAt);
+});
+for (const [name, evidence] of Object.entries({
+  "password only": { authenticationMethods: ["pwd"], authenticatedAt: Date.now() },
+  "missing authentication time": { authenticationMethods: ["otp"] },
+  "expired authentication": { authenticationMethods: ["otp"], authenticatedAt: Date.now() - 25 * 60 * 60_000 },
+  "future authentication": { authenticationMethods: ["otp"], authenticatedAt: Date.now() + 60_000 },
+  "ACR without second factor evidence": { assurance: "elevated" as const, authenticatedAt: Date.now() },
+})) it(`does not reuse login assurance for ${name}`, async () => {
+  const value = await authenticate(setup(evidence));
+  assert.equal([...value.store.sessions.values()][0]!.assurance, "baseline");
+});
+
+
+it("reuses MFA inside the 24-hour window and caps it at the original authentication deadline", async () => {
+  const authenticatedAt = Date.now() - 23 * 60 * 60_000;
+  const value = await authenticate(setup({ authenticationMethods: ["otp"], authenticatedAt }));
+  const stored = [...value.store.sessions.values()][0]!;
+  assert.equal(stored.assurance, "elevated");
+  assert.equal(stored.elevationExpiresAt, authenticatedAt + 24 * 60 * 60_000);
+  assert.ok(stored.elevationExpiresAt! <= stored.absoluteExpiresAt);
+});

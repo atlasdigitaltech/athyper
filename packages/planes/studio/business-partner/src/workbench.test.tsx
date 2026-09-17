@@ -146,3 +146,77 @@ it("keeps scope requirements plane-specific and retains headless operations", ()
   ]);
   expect(trace[1]?.surfaces).toContain("Headless");
 });
+
+it("verifies drawer selections before replacing the workspace and refreshes only the catalog", async () => {
+  const select = vi.fn();
+  transport.mockImplementation(async (url) => {
+    const path = String(url);
+    if (path.endsWith(`/releases/${a}`)) return Response.json(fixture());
+    if (path.endsWith(`/releases/${b}`))
+      return Response.json({ error: "FORBIDDEN" }, { status: 403 });
+    if (path.endsWith("/inspection/releases"))
+      return Response.json([
+        fixture().release,
+        { ...fixture(b).release, releaseNo: 8 },
+      ]);
+    return Response.json([]);
+  });
+  await act(async () =>
+    root.render(
+      <BusinessPartnerWorkbench
+        compositionMode
+        selection={`release:${a}`}
+        onSelect={select}
+      >
+        <BusinessPartnerInspection tab="model" />
+      </BusinessPartnerWorkbench>,
+    ),
+  );
+  const reads = () =>
+    transport.mock.calls.filter(([url]) =>
+      String(url).endsWith(`/releases/${a}`),
+    ).length;
+  const initialReads = reads();
+  await act(async () =>
+    node
+      .querySelector<HTMLButtonElement>(".a-context-selection__trigger")!
+      .click(),
+  );
+  await act(async () =>
+    Array.from(document.querySelectorAll("button"))
+      .find((b) => b.getAttribute("aria-label") === "Refresh list")!
+      .click(),
+  );
+  expect(reads()).toBe(initialReads);
+  await act(async () =>
+    document
+      .querySelector<HTMLInputElement>(`input[value="release:${b}"]`)!
+      .click(),
+  );
+  expect(select).not.toHaveBeenCalled();
+  await act(async () =>
+    Array.from(document.querySelectorAll("button"))
+      .find((b) => b.textContent === "Open version")!
+      .click(),
+  );
+  expect(select).not.toHaveBeenCalled();
+  expect(node.textContent).toContain("Stored legal name");
+  expect(document.querySelector("[role=dialog]")).not.toBeNull();
+});
+
+it("explains MFA-required reads without claiming the author permission is missing", async () => {
+  transport.mockResolvedValue(
+    Response.json(
+      {
+        type: "urn:athyper:problem:authorization",
+        title: "Access denied",
+        status: 403,
+        code: "MFA_REQUIRED",
+      },
+      { status: 403, headers: { "content-type": "application/problem+json" } },
+    ),
+  );
+  await render();
+  expect(node.textContent).toContain("MFA verification is required");
+  expect(node.textContent).not.toContain("read/author permission");
+});

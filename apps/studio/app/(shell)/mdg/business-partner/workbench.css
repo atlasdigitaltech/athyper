@@ -519,3 +519,62 @@
 .studio-differences > header { margin-bottom: var(--a-space-3); }
 .studio-differences > header h2 { font-size: var(--a-font-size-lg); }
 @media (max-width: 700px) { .studio-differences th:first-child { width: 32%; } .studio-differences table { font-size: var(--a-font-size-sm); } }
+
+.bp-workbench--compact { padding:var(--a-space-3) !important; margin-block:var(--a-space-3) !important; }
+.bp-workbench--compact .bp-workbench-heading { align-items:center; }
+.bp-workbench--compact .bp-workbench-heading h2 { font-size:var(--a-font-size-lg); margin:0; }
+.bp-workbench--compact .bp-workbench-heading p { display:none; }
+.bp-workbench--compact .bp-workbench-selector { margin-block:var(--a-space-2); }
+.studio-publication-link { text-align:end; font-size:var(--a-font-size-sm); }
+.a-section-workspace .studio-composition-review { margin-top:0; padding-top:0; border-top:0; }
+.a-section-workspace .studio-composition-edit__toolbar { position:sticky; top:5rem; background:var(--a-surface); z-index:5; border-bottom:1px solid var(--a-border); padding:var(--a-space-3); }
+.a-section-workspace .studio-designer__heading p { display:none; }
+.a-section-workspace .studio-designer__version { display:none; }
+.a-section-workspace .studio-designer__layout { grid-template-columns:minmax(12rem,16rem) minmax(0,1fr); }
+.a-section-workspace [id^=composition-view-] { scroll-margin-top:12rem; }
+@media(max-width:768px) { .a-section-workspace .studio-designer__layout { grid-template-columns:minmax(0,1fr); } .a-section-workspace .studio-composition-edit__toolbar { position:static; } }
+.studio-version-bar,.studio-version-context { display:flex; align-items:center; gap:var(--a-space-3); flex-wrap:wrap; min-width:0; }
+.studio-version-bar { justify-content:space-between; }
+.bp-workbench--compact { border:0 !important; background:transparent !important; box-shadow:none !important; }
+.bp-workbench--compact > [hidden] { display:none !important; }
+
+/* Compact version and identity context; configuration remains the primary content. */
+.studio-version-actions { display:flex;align-items:center;gap:var(--a-space-3);flex-wrap:wrap;min-width:0; }
+.studio-identity-status { min-width:0;font-size:var(--a-font-size-sm); }
+.bp-workbench .studio-identity-status form { margin:0;gap:var(--a-space-2);align-items:center; }
+.bp-workbench .studio-identity-status p { margin:0; }
+.studio-identity-status [role="status"],.studio-identity-status button { display:flex;align-items:center;gap:var(--a-space-2); }
+.studio-identity-status [role="status"] { max-width:28rem; }
+.bp-inspection--empty { margin-block:var(--a-space-3);padding:var(--a-space-4) var(--a-space-5); }
+.bp-inspection--empty h2 { margin:0;font-size:var(--a-font-size-md); }
+.bp-inspection--empty p { color:var(--a-muted-foreground);margin-block-end:0; }
+@media(max-width:48rem) { .studio-version-actions { width:100%;justify-content:space-between; } }
+
+/* Header action slot shares Neon's page-header and management-navigation primitives. */
+.bp-workbench--header-context { display:contents; }
+.athyper-page-header__actions .studio-version-bar { justify-content:flex-end;gap:var(--a-space-3); }
+.athyper-page-header__actions .studio-version-actions { width:auto; }
+.athyper-page-header__actions .studio-identity-status form { margin:0; }
+.athyper-page-header__actions .studio-identity-status p { margin:0; }
+
+.studio-draft-launcher__guard{border:0;margin:0;padding:0;min-width:0;}
+.studio-draft-launcher{position:relative;}
+.studio-draft-launcher summary{list-style:none;cursor:pointer;white-space:nowrap;}
+.studio-draft-launcher summary::-webkit-details-marker{display:none;}
+.studio-draft-launcher__panel{position:absolute;inset-inline-end:0;top:calc(100% + var(--a-space-2));z-index:var(--a-z-popover,60);width:min(22rem,calc(100vw - 3rem));padding:var(--a-space-4);border:1px solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);box-shadow:var(--a-shadow-raised);font-size:var(--a-font-size-sm);}
+.studio-draft-launcher__panel p{line-height:1.5;margin-block:var(--a-space-3);}
+.studio-draft-launcher > [role=alert]{max-width:24rem;font-size:var(--a-font-size-sm);}
+
+/* The shared page frame owns outer spacing, as in Neon entity detail pages.
+   Native composition views are a workspace, not another padded card. */
+.bp-inspection--workspace {
+  margin:0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  min-width:0;
+}
+.bp-inspection--workspace .a-section-workspace { gap:var(--a-space-5); }
+.bp-inspection--workspace .studio-designer__databar { margin-block:var(--a-space-3); }

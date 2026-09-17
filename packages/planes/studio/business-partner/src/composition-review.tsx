@@ -7,6 +7,7 @@ import {
   PreviewFrame,
   Select,
 } from "@athyper/platform-ui";
+import { useCompositionNavigation } from "./composition-navigation";
 import { CompositionEvidence } from "./composition-evidence";
 import { CompositionDifferences } from "./composition-differences";
 import { composeGraph } from "./composition-model";
@@ -73,6 +74,7 @@ function ReviewContent({
   onSelect?: (value: CompositionSelection) => void;
   renderPreview?: CompositionPreview;
 }) {
+  const navigation = useCompositionNavigation();
   const [mode, setMode] = useState("working"),
     [chosenSurface, setSurface] = useState(""),
     [layout, setLayout] = useState("split"),
@@ -192,8 +194,16 @@ function ReviewContent({
   const workspaceModel = useMemo(() => composeGraph(working), [working]);
   const changes = compositionChanges(base.data, graph);
   const dirty = differences(saved.data, working).length > 0;
+  const issueCount = model.nodes.reduce(
+    (total, node) => total + node.issues.length,
+    0,
+  );
+  useEffect(() => {
+    navigation.counts(changes.length, issueCount);
+  }, [changes.length, issueCount, navigation.counts]);
   const navigate = (key: string) => {
     if (!workspaceModel.map.has(key)) return;
+    navigation.go("compose", false);
     onSelect?.({
       source: `${saved.source}:${saved.id}`,
       node: key,
@@ -205,264 +215,308 @@ function ReviewContent({
       className="studio-composition-review"
       aria-label="Preview and differences"
     >
-      <header className="studio-composition-review__heading">
-        <div>
-          <h2>Preview and differences</h2>
-          <p>Explore the form and review configuration changes.</p>
-        </div>
-        <Badge>Local preview</Badge>
-      </header>
-      <details className="studio-composition-review__source">
-        <summary>
-          Comparison base:{" "}
-          {comparison.startsWith("revision:")
-            ? "historical"
-            : comparison === "saved"
-              ? "saved"
-              : "loaded"}{" "}
-          {base.source} · revision {base.version}
-        </summary>
-        <p>
-          {comparison.startsWith("revision:")
-            ? "Immutable saved snapshot. Selecting it does not restore or modify the draft."
-            : comparison === "loaded"
-              ? "This base stays fixed at the revision loaded when the editor opened. It is not necessarily a published release or a fork parent."
-              : "Compare the current saved graph with the candidate. This base advances after a successful save."}
-        </p>
-        <p>
-          Base: {base.id}. Current change set state: {saved.status}. Candidate:{" "}
-          {saved.id} · {saved.status} · saved revision {saved.version}.
-        </p>
-      </details>
-      {saved.source === "draft" ? (
-        <div>
-          <p role="status">
-            {historyBusy ? "Loading selected revision…" : historyMessage}
+      <div
+        hidden={
+          !!navigation.view &&
+          navigation.view !== "preview" &&
+          navigation.view !== "changes"
+        }
+      >
+        <header className="studio-composition-review__heading">
+          <div>
+            <h2>
+              {navigation.view === "changes"
+                ? "Comparison"
+                : navigation.view === "preview"
+                  ? "Preview"
+                  : "Preview and differences"}
+            </h2>
+            <p>Explore the form and review configuration changes.</p>
+          </div>
+          <Badge>Local preview</Badge>
+        </header>
+        <details className="studio-composition-review__source">
+          <summary>
+            Comparison base:{" "}
+            {comparison.startsWith("revision:")
+              ? "historical"
+              : comparison === "saved"
+                ? "saved"
+                : "loaded"}{" "}
+            {base.source} · revision {base.version}
+          </summary>
+          <p>
+            {comparison.startsWith("revision:")
+              ? "Immutable saved snapshot. Selecting it does not restore or modify the draft."
+              : comparison === "loaded"
+                ? "This base stays fixed at the revision loaded when the editor opened. It is not necessarily a published release or a fork parent."
+                : "Compare the current saved graph with the candidate. This base advances after a successful save."}
           </p>
-          <Button
-            variant="ghost"
-            onClick={() => setRefreshHistory((n) => n + 1)}
-          >
-            Refresh revision history
-          </Button>
-        </div>
-      ) : null}
-      <div className="studio-composition-review__controls">
-        <div>
-          <Label htmlFor="review-comparison">Compare from</Label>
-          <Select
-            id="review-comparison"
-            value={comparison}
-            disabled={historyBusy}
-            onChange={(e) => void chooseHistory(e.target.value, "base")}
-          >
-            <option value="loaded">
-              When editor opened · revision {baseline.version}
-            </option>
-            <option value="saved">
-              Latest saved · revision {saved.version}
-            </option>
-            {history.length ? (
-              <optgroup label="Saved revision history">
-                {history.map((row) => (
-                  <option key={row.revision} value={`revision:${row.revision}`}>
-                    Revision {row.revision} ·{" "}
-                    {new Date(row.capturedAt).toLocaleString()}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="review-mode">Review configuration</Label>
-          <Select
-            id="review-mode"
-            value={mode}
-            disabled={historyBusy}
-            onChange={(e) => void chooseHistory(e.target.value, "candidate")}
-          >
-            <option value="working">
-              Working copy{dirty ? " · includes unsaved edits" : ""}
-            </option>
-            <option value="saved">
-              Latest saved · revision {saved.version}
-            </option>
-            {history.length ? (
-              <optgroup label="Saved revision history">
-                {history.map((row) => (
-                  <option key={row.revision} value={`revision:${row.revision}`}>
-                    Revision {row.revision} ·{" "}
-                    {new Date(row.capturedAt).toLocaleString()}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="review-surface">Preview surface</Label>
-          <Select
-            id="review-surface"
-            value={surfaceId}
-            onChange={(e) => setSurface(e.target.value)}
-          >
-            <option value="">Choose a surface</option>
-            {surfaces.map((n) => (
-              <option key={n.key} value={String(n.value.id)}>
-                {n.label}
-              </option>
-            ))}
-          </Select>
-          {workspaceModel.map.has(`surfaces:${surfaceId}`) ? (
+          <p>
+            Base: {base.id}. Current change set state: {saved.status}.
+            Candidate: {saved.id} · {saved.status} · saved revision{" "}
+            {saved.version}.
+          </p>
+        </details>
+        {saved.source === "draft" ? (
+          <div>
+            <p role="status">
+              {historyBusy ? "Loading selected revision…" : historyMessage}
+            </p>
             <Button
               variant="ghost"
-              onClick={() => navigate(`surfaces:${surfaceId}`)}
+              onClick={() => setRefreshHistory((n) => n + 1)}
             >
-              Inspect selected surface
+              Refresh revision history
             </Button>
-          ) : null}
-        </div>
-      </div>
-      <div className="studio-composition-review__toolbar">
-        <div role="group" aria-label="Comparison layout">
-          {["split", "unified"].map((value) => (
-            <Button
-              key={value}
-              variant={layout === value ? "secondary" : "ghost"}
-              aria-pressed={layout === value}
-              onClick={() => setLayout(value)}
+          </div>
+        ) : null}
+        <div className="studio-composition-review__controls">
+          <div>
+            <Label htmlFor="review-comparison">Compare from</Label>
+            <Select
+              id="review-comparison"
+              value={comparison}
+              disabled={historyBusy}
+              onChange={(e) => void chooseHistory(e.target.value, "base")}
             >
-              {value === "split" ? "Split" : "Unified"}
-            </Button>
-          ))}
-        </div>
-        <div role="group" aria-label="Preview viewport">
-          {["desktop", "mobile"].map((value) => (
-            <Button
-              key={value}
-              variant={viewport === value ? "secondary" : "ghost"}
-              aria-pressed={viewport === value}
-              onClick={() => setViewport(value)}
+              <option value="loaded">
+                When editor opened · revision {baseline.version}
+              </option>
+              <option value="saved">
+                Latest saved · revision {saved.version}
+              </option>
+              {history.length ? (
+                <optgroup label="Saved revision history">
+                  {history.map((row) => (
+                    <option
+                      key={row.revision}
+                      value={`revision:${row.revision}`}
+                    >
+                      Revision {row.revision} ·{" "}
+                      {new Date(row.capturedAt).toLocaleString()}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="review-mode">Review configuration</Label>
+            <Select
+              id="review-mode"
+              value={mode}
+              disabled={historyBusy}
+              onChange={(e) => void chooseHistory(e.target.value, "candidate")}
             >
-              {value === "desktop" ? "Desktop · 1024px" : "Mobile · 390px"}
-            </Button>
-          ))}
-        </div>
-        <Button variant="ghost" onClick={() => setReset((value) => value + 1)}>
-          Reset preview
-        </Button>
-      </div>
-      <p className="studio-composition-review__hint">
-        Local sample answers stay inside each preview. Business actions and
-        external lookups are unavailable. This preview does not confirm
-        deployment.
-      </p>
-      <div
-        className="studio-composition-review__side-switch"
-        role="group"
-        aria-label="Visible preview"
-      >
-        {["base", "candidate"].map((value) => (
-          <Button
-            key={value}
-            variant={side === value ? "secondary" : "ghost"}
-            aria-pressed={side === value}
-            onClick={() => setSide(value)}
-          >
-            {value === "base" ? "Base" : "Candidate"}
-          </Button>
-        ))}
-      </div>
-      <div
-        className="studio-composition-review__canvases"
-        data-layout={layout}
-        data-side={side}
-      >
-        {["base", "candidate"].map((value) => {
-          const isBase = value === "base";
-          const previewGraph = isBase ? base.data : graph;
-          const title = isBase
-            ? `Base · ${base.source} revision ${base.version}`
-            : mode === "saved" || historicalCandidate
-              ? `Candidate · saved revision ${candidateVersion}`
-              : `Candidate · working copy${dirty ? " · unsaved" : ""}`;
-          return (
-            <section
-              key={value}
-              className="studio-composition-review__canvas"
-              data-side={value}
-              aria-label={title}
+              <option value="working">
+                Working copy{dirty ? " · includes unsaved edits" : ""}
+              </option>
+              <option value="saved">
+                Latest saved · revision {saved.version}
+              </option>
+              {history.length ? (
+                <optgroup label="Saved revision history">
+                  {history.map((row) => (
+                    <option
+                      key={row.revision}
+                      value={`revision:${row.revision}`}
+                    >
+                      Revision {row.revision} ·{" "}
+                      {new Date(row.capturedAt).toLocaleString()}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="review-surface">Preview surface</Label>
+            <Select
+              id="review-surface"
+              value={surfaceId}
+              onChange={(e) => setSurface(e.target.value)}
             >
-              <h2>{title}</h2>
-              <PreviewFrame
-                title={title}
-                width={viewport === "mobile" ? 390 : 1024}
-              >
-                <div key={`${reset}-${surfaceId}`}>
-                  {renderPreview ? (
-                    renderPreview(
-                      previewGraph,
-                      `${value}-${isBase ? base.version : mode + candidateVersion}`,
-                      surfaceId,
-                    )
-                  ) : (
-                    <p role="status">
-                      Preview unavailable: no renderer adapter is available.
-                      Stored properties and differences remain available below.
-                    </p>
-                  )}
-                </div>
-              </PreviewFrame>
-            </section>
-          );
-        })}
-      </div>
-      <p className="studio-composition-review__hint">
-        Both canvases use the selected viewport width. Scroll within a frame
-        when it exceeds the available space. Unified shows the candidate; on
-        small screens use Base / Candidate.
-      </p>
-      <CompositionDifferences
-        changes={changes}
-        base={base.data}
-        candidate={graph}
-        working={working}
-        surfaceId={surfaceId}
-        navigate={navigate}
-      />
-      <CompositionEvidence
-        inspection={{ ...saved, version: String(candidateVersion) }}
-        graph={graph}
-        localFindings={model.nodes.reduce(
-          (total, node) => total + node.issues.length,
-          0,
-        )}
-      />
-      <h3>Composition findings</h3>
-      {model.nodes.some((n) => n.issues.length) ? (
-        <ul>
-          {model.nodes
-            .filter((n) => n.issues.length)
-            .map((n) => (
-              <li key={n.key}>
-                <Button
-                  variant="ghost"
-                  disabled={!workspaceModel.map.has(n.key)}
-                  onClick={() => navigate(n.key)}
-                >
+              <option value="">Choose a surface</option>
+              {surfaces.map((n) => (
+                <option key={n.key} value={String(n.value.id)}>
                   {n.label}
-                </Button>{" "}
-                {n.issues.join(" ")}
-              </li>
+                </option>
+              ))}
+            </Select>
+            {workspaceModel.map.has(`surfaces:${surfaceId}`) ? (
+              <Button
+                variant="ghost"
+                onClick={() => navigate(`surfaces:${surfaceId}`)}
+              >
+                Inspect selected surface
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      <div
+        id="composition-view-preview"
+        tabIndex={-1}
+        hidden={!!navigation.view && navigation.view !== "preview"}
+      >
+        <div className="studio-composition-review__toolbar">
+          <div role="group" aria-label="Comparison layout">
+            {["split", "unified"].map((value) => (
+              <Button
+                key={value}
+                variant={layout === value ? "secondary" : "ghost"}
+                aria-pressed={layout === value}
+                onClick={() => setLayout(value)}
+              >
+                {value === "split" ? "Split" : "Unified"}
+              </Button>
             ))}
-        </ul>
-      ) : (
-        <p>
-          No structural reference findings in this inspection. Backend
-          validation is still required.
+          </div>
+          <div role="group" aria-label="Preview viewport">
+            {["desktop", "mobile"].map((value) => (
+              <Button
+                key={value}
+                variant={viewport === value ? "secondary" : "ghost"}
+                aria-pressed={viewport === value}
+                onClick={() => setViewport(value)}
+              >
+                {value === "desktop" ? "Desktop · 1024px" : "Mobile · 390px"}
+              </Button>
+            ))}
+          </div>
+          <Button
+            variant="ghost"
+            onClick={() => setReset((value) => value + 1)}
+          >
+            Reset preview
+          </Button>
+        </div>
+        <p className="studio-composition-review__hint">
+          Local sample answers stay inside each preview. Business actions and
+          external lookups are unavailable. This preview does not confirm
+          deployment.
         </p>
-      )}
+        <div
+          className="studio-composition-review__side-switch"
+          role="group"
+          aria-label="Visible preview"
+        >
+          {["base", "candidate"].map((value) => (
+            <Button
+              key={value}
+              variant={side === value ? "secondary" : "ghost"}
+              aria-pressed={side === value}
+              onClick={() => setSide(value)}
+            >
+              {value === "base" ? "Base" : "Candidate"}
+            </Button>
+          ))}
+        </div>
+        <div
+          className="studio-composition-review__canvases"
+          data-layout={layout}
+          data-side={side}
+        >
+          {["base", "candidate"].map((value) => {
+            const isBase = value === "base";
+            const previewGraph = isBase ? base.data : graph;
+            const title = isBase
+              ? `Base · ${base.source} revision ${base.version}`
+              : mode === "saved" || historicalCandidate
+                ? `Candidate · saved revision ${candidateVersion}`
+                : `Candidate · working copy${dirty ? " · unsaved" : ""}`;
+            return (
+              <section
+                key={value}
+                className="studio-composition-review__canvas"
+                data-side={value}
+                aria-label={title}
+              >
+                <h2>{title}</h2>
+                <PreviewFrame
+                  title={title}
+                  width={viewport === "mobile" ? 390 : 1024}
+                >
+                  <div key={`${reset}-${surfaceId}`}>
+                    {renderPreview ? (
+                      renderPreview(
+                        previewGraph,
+                        `${value}-${isBase ? base.version : mode + candidateVersion}`,
+                        surfaceId,
+                      )
+                    ) : (
+                      <p role="status">
+                        Preview unavailable: no renderer adapter is available.
+                        Stored properties and differences remain available
+                        below.
+                      </p>
+                    )}
+                  </div>
+                </PreviewFrame>
+              </section>
+            );
+          })}
+        </div>
+        <p className="studio-composition-review__hint">
+          Both canvases use the selected viewport width. Scroll within a frame
+          when it exceeds the available space. Unified shows the candidate; on
+          small screens use Base / Candidate.
+        </p>
+      </div>
+      <div
+        id="composition-view-changes"
+        tabIndex={-1}
+        hidden={!!navigation.view && navigation.view !== "changes"}
+      >
+        <CompositionDifferences
+          changes={changes}
+          base={base.data}
+          candidate={graph}
+          working={working}
+          surfaceId={surfaceId}
+          navigate={navigate}
+        />
+      </div>
+      <div
+        id="composition-view-checks"
+        tabIndex={-1}
+        hidden={!!navigation.view && navigation.view !== "checks"}
+      >
+        {navigation.view ? <h2>Checks</h2> : null}
+        <CompositionEvidence
+          inspection={{ ...saved, version: String(candidateVersion) }}
+          graph={graph}
+          localFindings={model.nodes.reduce(
+            (total, node) => total + node.issues.length,
+            0,
+          )}
+        />
+        <h3>Composition findings</h3>
+        {model.nodes.some((n) => n.issues.length) ? (
+          <ul>
+            {model.nodes
+              .filter((n) => n.issues.length)
+              .map((n) => (
+                <li key={n.key}>
+                  <Button
+                    variant="ghost"
+                    disabled={!workspaceModel.map.has(n.key)}
+                    onClick={() => navigate(n.key)}
+                  >
+                    {n.label}
+                  </Button>{" "}
+                  {n.issues.join(" ")}
+                </li>
+              ))}
+          </ul>
+        ) : (
+          <p>
+            No structural reference findings in this inspection. Backend
+            validation is still required.
+          </p>
+        )}
+      </div>
     </section>
   );
 }

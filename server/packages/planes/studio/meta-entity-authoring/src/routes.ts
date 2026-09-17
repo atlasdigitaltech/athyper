@@ -256,7 +256,12 @@ async function allowed(
     if (decision.allowed) return c;
     if (!reason || decision.reason === "mfa_required") reason = decision.reason;
   }
-  s.status(403).json({ error: "FORBIDDEN", reason });
+  s.status(403).type("application/problem+json").json({
+    type: "urn:athyper:problem:authorization", title: "Access denied", status: 403,
+    code: reason === "mfa_required" ? "MFA_REQUIRED" : "FORBIDDEN",
+    detail: reason === "mfa_required" ? "This action requires verified MFA." : "The current account is not authorized for this action.",
+    error: "FORBIDDEN", reason,
+  });
   return;
 }
 function handler(fn: (q: any, s: any) => Promise<void>): RequestHandler {

@@ -1,5 +1,7 @@
 "use client";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { PageFrame, PageHeader } from "@athyper/platform-shell";
+import { LayoutIcon } from "@athyper/platform-icons";
 import { CompositionPreview } from "./composition-preview";
 import { IntakeSurfacePreview } from "../../entity/graphs/intake-surface-preview";
 import { BusinessPartnerWorkbench } from "@athyper/product-studio-business-partner";
@@ -9,6 +11,17 @@ export function WorkbenchContext({ children }: { children: React.ReactNode }) {
     params = useSearchParams();
   return (
     <BusinessPartnerWorkbench
+      renderContextHeader={(controls, status) => (
+        <PageFrame width="full">
+          <PageHeader
+            level="collection"
+            icon={<LayoutIcon />}
+            title="Business Partner configuration"
+            actions={controls}
+            description={status}
+          />
+        </PageFrame>
+      )}
       renderCompositionPreview={(graph, revision, surfaceId) => (
         <CompositionPreview
           graph={graph}

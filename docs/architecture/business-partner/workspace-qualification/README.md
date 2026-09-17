@@ -29,3 +29,15 @@ Reproduce from the repository root:
 
 - `node docs/architecture/business-partner/workspace-qualification/fixture-check.cjs`
 - `node docs/architecture/business-partner/workspace-qualification/browser-check.cjs` (requires refreshed Studio session)
+
+## Focused workspace delivery
+
+Studio now uses the platform `EntitySectionWorkspace`, built on the same `EntitySectionNavigation` used in Neon detail pages. Compose, Preview, Changes and Checks render as focused views. Hidden panels remain mounted to retain preview answers, object selection, comparison filters and undo state. Inspect switches to Compose; Return switches back to Changes with focus after visibility changes.
+
+Version metadata and bundle inspection are collapsed under Version details on composition routes. Publication actions remain on the Publication route, reachable through the explicit link with the selected source retained and existing dirty-navigation protection. Catalog failures remain visible. Save actions stay with the editor and are sticky on desktop.
+
+The shared layout supplies section links, compact responsive navigation, and Expand content. Its CSS is scoped to the new component; existing Neon detail layouts are unchanged. Reuse by additional planes is available but this delivery changes Studio only.
+
+`navigation-check.cjs` verifies all four views with axe, mobile linked focus and desktop/tablet/mobile/200% CSS zoom overflow. `navigation-results.json` and `navigation-*.png` are fixture evidence. Editor tests now also cover unsaved values and undo across view switches, while navigation tests verify preview inputs are not remounted.
+
+Live observation remains pending: the saved Studio session returned anonymous during this delivery. No live draft writes or publications were performed.

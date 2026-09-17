@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { ShieldCheckIcon } from "@athyper/platform-icons";
 import { Button } from "@athyper/platform-ui";
 import { createOperation } from "@athyper/platform-api-client";
 import {
@@ -509,53 +510,117 @@ function errorText(error: unknown) {
 }
 
 export function PublicationStepUp({
+  compact = false,
   busy = false,
   canAct,
 }: {
   busy?: boolean;
+  compact?: boolean;
   canAct: () => boolean;
 }) {
+  const [verifiedUntil, setVerifiedUntil] = useState(0);
+  useEffect(() => {
+    let disposed = false;
+    const controller = new AbortController();
+    let expiry: ReturnType<typeof setTimeout> | undefined;
+    async function check() {
+      try {
+        const response = await fetch("/api/auth/session", {
+          credentials: "same-origin",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const session = response.ok ? await response.json() : undefined;
+        if (disposed) return;
+        const until =
+          session?.state === "authenticated" &&
+          session?.assurance === "elevated"
+            ? Date.parse(session.elevationExpiresAt)
+            : 0;
+        clearTimeout(expiry);
+        setVerifiedUntil(
+          Number.isFinite(until) && until > Date.now() ? until : 0,
+        );
+        if (until > Date.now())
+          expiry = setTimeout(
+            () => setVerifiedUntil(0),
+            Math.min(until - Date.now(), 2147483647),
+          );
+      } catch {
+        if (!disposed) setVerifiedUntil(0);
+      }
+    }
+    void check();
+    window.addEventListener("focus", check);
+    return () => {
+      disposed = true;
+      controller.abort();
+      clearTimeout(expiry);
+      window.removeEventListener("focus", check);
+    };
+  }, []);
   const [message, setMessage] = useState("");
   const [returnTo, setReturnTo] = useState("/mdg/business-partner/publication");
   useEffect(() => {
     setReturnTo(window.location.pathname + window.location.search);
   });
   return (
-    <section aria-label="Publication sign-in">
-      <form
-        method="post"
-        action={`/api/auth/step-up/start?returnTo=${encodeURIComponent(returnTo)}`}
-        onSubmit={(event) => {
-          if (busy || !canAct()) {
-            event.preventDefault();
-            setMessage(
-              "Save or discard local edits before verifying your identity.",
-            );
-            return;
-          }
-          event.currentTarget.action = `/api/auth/step-up/start?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`;
-          const csrf = readBrowserCsrfToken();
-          if (!csrf) {
-            event.preventDefault();
-            setMessage("Refresh Studio before starting MFA verification.");
-            return;
-          }
-          (
-            event.currentTarget.elements.namedItem(
-              "csrfToken",
-            ) as HTMLInputElement
-          ).value = csrf;
-        }}
-      >
-        <input type="hidden" name="csrfToken" defaultValue="" />
-        <p>
-          Submission, review and publication require MFA. Complete sign-in, then
-          reload publication state.
+    <section
+      aria-label="Publication sign-in"
+      className={compact ? "studio-identity-status" : undefined}
+    >
+      {verifiedUntil > Date.now() ? (
+        <p role="status">
+          {compact ? (
+            <>
+              <ShieldCheckIcon aria-hidden="true" size={16} /> Identity verified
+            </>
+          ) : (
+            "Identity verified. Additional verification will be requested when required."
+          )}
         </p>
-        <Button type="submit" variant="secondary" disabled={busy}>
-          Verify with MFA
-        </Button>
-      </form>
+      ) : (
+        <form
+          method="post"
+          action={`/api/auth/step-up/start?returnTo=${encodeURIComponent(returnTo)}`}
+          onSubmit={(event) => {
+            if (busy || !canAct()) {
+              event.preventDefault();
+              setMessage(
+                "Save or discard local edits before verifying your identity.",
+              );
+              return;
+            }
+            event.currentTarget.action = `/api/auth/step-up/start?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+            const csrf = readBrowserCsrfToken();
+            if (!csrf) {
+              event.preventDefault();
+              setMessage("Refresh Studio before starting MFA verification.");
+              return;
+            }
+            (
+              event.currentTarget.elements.namedItem(
+                "csrfToken",
+              ) as HTMLInputElement
+            ).value = csrf;
+          }}
+        >
+          <input type="hidden" name="csrfToken" defaultValue="" />
+          <p className={compact ? "a-visually-hidden" : undefined}>
+            Sensitive actions require verified MFA. If an action requests
+            verification, verify your identity and retry.
+          </p>
+          <Button
+            type="submit"
+            variant={compact ? "ghost" : "secondary"}
+            disabled={busy}
+            title="Verify your identity when an action requires MFA. Your configuration stays unchanged."
+          >
+            {compact ? <ShieldCheckIcon aria-hidden="true" size={16} /> : null}
+            Verify with MFA
+          </Button>
+        </form>
+      )}
       {message ? <p role="status">{message}</p> : null}
     </section>
   );

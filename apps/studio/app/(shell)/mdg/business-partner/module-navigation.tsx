@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  SectionNavigation,
+  ManagementNavigation,
   type SectionNavigationItem,
 } from "@athyper/platform-shell";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -34,9 +34,14 @@ export function BusinessPartnerNavigation() {
           pathname === item.href || pathname.startsWith(`${item.href}/`),
       )?.href ?? (pathname === items[0]?.href ? items[0].href : undefined);
   return (
-    <SectionNavigation
-      items={items.map((item) => ({ ...item, href: item.href + suffix }))}
-      currentHref={currentHref ? currentHref + suffix : undefined}
+    <ManagementNavigation
+      appearance="flat"
+      items={items.map((item) => ({
+        ...item,
+        key: item.href,
+        href: item.href + suffix,
+      }))}
+      currentKey={currentHref}
       label="Business Partner configuration"
     />
   );

@@ -1,0 +1,20 @@
+{
+  "fixtureOnly": true,
+  "violations": [],
+  "overflow": [
+    {
+      "name": "desktop",
+      "overflow": false
+    },
+    {
+      "name": "mobile",
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "keyboardTabs": true,
+  "clearSearch": true,
+  "searchById": true,
+  "errorRetainsContext": true,
+  "escapeRestoresFocus": true
+}

@@ -26,6 +26,7 @@ import {
 import { ManagementToolbar } from "@athyper/platform-shell";
 import { FilterIcon, SlidersHorizontalIcon } from "@athyper/platform-icons";
 import { display, type Inspection } from "./workbench-model";
+import { useCompositionNavigation } from "./composition-navigation";
 export interface CompositionSelection {
   source: string;
   node: string;
@@ -48,6 +49,7 @@ export function CompositionWorkspace({
   selection?: CompositionSelection;
   onSelect?: (value: CompositionSelection) => void;
 }) {
+  const navigation = useCompositionNavigation();
   const source = `${inspection.source}:${inspection.id}`;
   const model = useMemo(() => composeGraph(inspection.data), [inspection.data]);
   const [localSelection, setLocalSelection] = useState("");
@@ -275,7 +277,13 @@ export function CompositionWorkspace({
   }
   const findings = model.nodes.filter((n) => n.issues.length);
   return (
-    <div className="studio-designer" data-pane={mobilePane}>
+    <div
+      className="studio-designer"
+      data-pane={mobilePane}
+      id="composition-view-compose"
+      tabIndex={-1}
+      hidden={!!navigation.view && navigation.view !== "compose"}
+    >
       <div className="studio-designer__heading">
         <div>
           <h2>Composition workspace</h2>
@@ -549,6 +557,7 @@ export function CompositionWorkspace({
                   variant="ghost"
                   size="small"
                   onClick={() => {
+                    navigation.go("changes");
                     const differences = document.getElementById(
                       "studio-composition-differences",
                     );

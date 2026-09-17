@@ -4,6 +4,9 @@ import { hashOpaqueSessionId, SessionStoreUnavailableError, type SessionBinding,
 
 export type AuthContextOption = StoredSessionContext;
 
+/** Application assurance lifetime; session expiry can end it earlier. */
+const DEFAULT_ELEVATION_TTL_MS = 24 * 60 * 60_000;
+
 export interface PkceTransaction {
   readonly state: string; readonly nonce: string; readonly verifier: string; readonly challenge: string;
   readonly browserBindingHash: string; readonly returnTo: string; readonly createdAt: number;
@@ -19,6 +22,8 @@ export interface VerifiedIdentity {
   /** Issuer-derived authentication evidence. Request parameters never set these values. */
   readonly assurance?: "baseline" | "elevated";
   readonly authenticationMethods?: readonly string[];
+  /** Verified issuer auth_time in milliseconds; token issuance is not authentication. */
+  readonly authenticatedAt?: number;
 }
 export interface BackchannelIdentity {
   readonly issuer: string; readonly audience: string | readonly string[]; readonly providerSessionId: string;
@@ -184,7 +189,14 @@ export function createAuthHandlers(config: AuthBffConfig): AuthHandlers {
       const session: StoredSession = { schemaVersion: 1, plane: config.plane, realmKey: config.realmKey, tenantId: availableContexts ? selected?.tenantId : identity.tenantId, availableContexts, principalId: selected?.principalId ?? identity.subject, providerSubject: identity.subject, providerSessionId: identity.providerSessionId, encryptedTokenBundle: await config.sealTokens(tokens), accessTokenExpiresAt: tokens.accessTokenExpiresAt, refreshGeneration: 0, authEpoch: selected?.authEpoch ?? 1, sessionVersion: 1, requiredActions, assurance: "baseline", createdAt: started, lastSeenAt: started, idleExpiresAt: Math.min(started + idleTtl, started + absoluteTtl), absoluteExpiresAt: started + absoluteTtl, configurationRevision: config.configurationRevision, keyVersion: config.sessionKeyVersion ?? 1 };
       // A verified login establishes a fresh session even if its old cookie expired.
       if (current) await config.store.revoke(binding, hashOpaqueSessionId(current));
-      await config.store.create(hashOpaqueSessionId(rawId), session);
+      const authenticationTime = identity.authenticatedAt;
+      const loginElevationUntil = typeof authenticationTime === "number" && Number.isFinite(authenticationTime)
+        ? authenticationTime + (config.elevationTtlMs ?? DEFAULT_ELEVATION_TTL_MS) : 0;
+      const loginMfaIsFresh = authenticationTime !== undefined && authenticationTime <= started
+        && loginElevationUntil > started && !requiredActions.length
+        && identity.authenticationMethods?.some(method => ELEVATED_AUTHENTICATION_METHODS.has(method.trim().toLowerCase()));
+      await config.store.create(hashOpaqueSessionId(rawId), loginMfaIsFresh
+        ? elevateSession(session, started, config.elevationTtlMs, loginElevationUntil) : session);
       return redirect(transaction.returnTo, [cookie(cookieName, rawId, config.production), ...(config.deriveCsrfToken ? [csrfCookie(csrfCookieName, config.deriveCsrfToken(rawId), config.production)] : []), clearCookie(oauthCookieName, config.production)]);
     } catch (cause) {
       const response = problemFrom(cause); if (recoveryReturnTo) response.headers.set("x-athyper-auth-return-to", recoveryReturnTo); response.headers.append("set-cookie", clearCookie(oauthCookieName, config.production)); return response;
@@ -287,7 +299,7 @@ export function createAuthHandlers(config: AuthBffConfig): AuthHandlers {
 }
 
 function elevateSession(session: StoredSession, currentTime: number, configuredTtl?: number, trustedUntil?: number): StoredSession {
-  const until = Math.min(session.absoluteExpiresAt, currentTime + (configuredTtl ?? 15 * 60_000), trustedUntil ?? Number.POSITIVE_INFINITY);
+  const until = Math.min(session.absoluteExpiresAt, currentTime + (configuredTtl ?? DEFAULT_ELEVATION_TTL_MS), trustedUntil ?? Number.POSITIVE_INFINITY);
   if (until <= currentTime) throw new AuthFlowError("auth.step_up_required", 403, "Step-up assurance has expired");
   return { ...session, assurance: "elevated", elevationExpiresAt: until, sessionVersion: session.sessionVersion + 1, lastSeenAt: currentTime };
 }

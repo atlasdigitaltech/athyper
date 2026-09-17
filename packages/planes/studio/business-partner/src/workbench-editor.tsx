@@ -19,12 +19,14 @@ import {
 } from "./workbench-edit-model";
 export function WorkbenchEditor({
   inspection,
+  compact = false,
   onSelect,
   onGuardChange,
   onSaved,
   renderPreview,
 }: {
   inspection: Inspection;
+  compact?: boolean;
   onSelect: (selection: string) => void;
   onGuardChange: (dirty: boolean, busy: boolean) => void;
   onSaved: (inspection: Inspection) => void;
@@ -168,6 +170,32 @@ export function WorkbenchEditor({
     }
   }
   const editable = base.source === "draft" && base.status === "draft";
+  if (!editable && compact)
+    return (
+      <div className="studio-draft-launcher">
+        <details>
+          <summary className="a-button a-button--secondary">
+            + New draft
+          </summary>
+          <div className="studio-draft-launcher__panel">
+            <strong>Open or create a working draft</strong>
+            <p>
+              This entity currently supports one working draft. If one exists,
+              it will open; its baseline may differ from this release.
+            </p>
+            <button
+              type="button"
+              className="a-button a-button--primary"
+              disabled={busy || !inspection.changeSetId}
+              onClick={() => void fork()}
+            >
+              {busy ? "Opening…" : "Open or create working draft"}
+            </button>
+          </div>
+        </details>
+        {message ? <p role="alert">{message}</p> : null}
+      </div>
+    );
   if (!editable)
     return (
       <section className="bp-focused-editor">

@@ -445,6 +445,7 @@ function toIdentity(
     requiredActions: strings(payload.required_actions),
     assurance,
     authenticationMethods,
+    authenticatedAt: typeof payload.auth_time === "number" && Number.isFinite(payload.auth_time) ? payload.auth_time * 1_000 : undefined,
   };
 }
 function elevatedAssurance(

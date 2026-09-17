@@ -2,6 +2,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
+import { CompositionNavigation } from "./composition-navigation";
 import { CompositionEvidenceProvider } from "./composition-evidence";
 import { CompositionEditor } from "./composition-editor";
 import { compositionEdit } from "./composition-edit";
@@ -50,12 +51,14 @@ async function fixture() {
   await act(async () =>
     root.render(
       <CompositionEvidenceProvider>
-        <CompositionEditor
-          inspection={inspection}
-          selection={select}
-          onSaved={saved}
-          onGuardChange={() => {}}
-        />
+        <CompositionNavigation>
+          <CompositionEditor
+            inspection={inspection}
+            selection={select}
+            onSaved={saved}
+            onGuardChange={() => {}}
+          />
+        </CompositionNavigation>
       </CompositionEvidenceProvider>,
     ),
   );
@@ -251,6 +254,29 @@ it("reloads after a conflict only with confirmed discard and retains unrelated c
     });
   } finally {
     confirm.mockRestore();
+    await f.close();
+  }
+});
+
+it("preserves unsaved edits and undo across focused views", async () => {
+  const f = await fixture();
+  try {
+    await change(f.host, "Keep this edit");
+    await click(f.host, "Preview");
+    expect(
+      f.host.querySelector<HTMLElement>("#composition-view-compose")!.hidden,
+    ).toBe(true);
+    await click(f.host, "Compose");
+    expect(
+      f.host.querySelector<HTMLInputElement>("#composition-labelOverride")!
+        .value,
+    ).toBe("Keep this edit");
+    await click(f.host, "Undo");
+    expect(
+      f.host.querySelector<HTMLInputElement>("#composition-labelOverride")!
+        .value,
+    ).toBe("Role");
+  } finally {
     await f.close();
   }
 });

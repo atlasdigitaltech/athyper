@@ -2213,7 +2213,7 @@ function FilterDialog({
           </Drawer.Context>
         </Drawer.Toolbar>
         <Drawer.Navigation aria-label="Filter views">
-          <Drawer.TabList className="a-entity-list__drawer-navigation">
+          <Drawer.TabList>
             <Drawer.Tab value="common">Quick filters</Drawer.Tab>
             <Drawer.Tab value="all">
               All filters{draft.length ? ` · ${draft.length}` : ""}
@@ -3327,10 +3327,7 @@ function SavedViewsDialog({
         </Drawer.Context>
       </Drawer.Toolbar>
       <Drawer.Tabs value={tab} onValueChange={setTab}>
-        <Drawer.TabList
-          className="a-entity-list__drawer-navigation"
-          aria-label="Manage views sections"
-        >
+        <Drawer.TabList aria-label="Manage views sections">
           <Drawer.Tab value="available">Available views</Drawer.Tab>
           {!readOnly ? <Drawer.Tab value="save">Save current configuration</Drawer.Tab> : null}
         </Drawer.TabList>

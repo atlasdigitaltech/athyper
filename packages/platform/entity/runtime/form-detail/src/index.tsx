@@ -74,3 +74,4 @@ export { CollectionSection, AddressesSection, ContactsSection, BankAccountsSecti
 
 export {EntityFormLayout} from "./form-layout";
 export {EntitySectionNavigation, useEntitySectionScroll, type EntitySectionItem} from "./section-navigation";
+export { EntitySectionWorkspace } from "./section-workspace";

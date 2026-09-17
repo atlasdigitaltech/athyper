@@ -16,6 +16,7 @@ import {
   compositionChanges,
   type CompositionPreview,
 } from "./composition-review";
+import { useCompositionNavigation } from "./composition-navigation";
 import { useCompositionEvidence } from "./composition-evidence";
 import { CompositionStructureControls } from "./composition-structure-controls";
 import { structuralEdit } from "./composition-structure";
@@ -51,6 +52,7 @@ export function CompositionEditor({
   onGuardChange: (dirty: boolean, busy: boolean) => void;
   locked?: boolean;
 }) {
+  const navigation = useCompositionNavigation();
   const { recordCheck } = useCompositionEvidence();
   const [reviewBase] = useState(inspection);
   const http = useApiClient();
@@ -227,9 +229,10 @@ export function CompositionEditor({
           </Button>
           <Button
             variant="secondary"
-            onClick={() =>
-              document.getElementById("studio-preview-changes")?.focus()
-            }
+            onClick={() => {
+              navigation.go("preview");
+              document.getElementById("studio-preview-changes")?.focus();
+            }}
           >
             Preview & changes
           </Button>
@@ -473,7 +476,7 @@ export function CompositionEditor({
         />
       </div>
       {dirty ? (
-        <details>
+        <details hidden={!!navigation.view && navigation.view !== "changes"}>
           <summary>Unsaved differences from revision {base.version}</summary>
           <pre>{JSON.stringify(differences(base.data, graph), null, 2)}</pre>
         </details>

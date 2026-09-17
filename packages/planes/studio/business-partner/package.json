@@ -19,7 +19,8 @@
     "@athyper/platform-icons": "workspace:*",
     "@athyper/platform-shell": "workspace:*",
     "@athyper/platform-shell-app-foundation": "workspace:*",
-    "@athyper/platform-ui": "workspace:*"
+    "@athyper/platform-ui": "workspace:*",
+    "@athyper/platform-entity-form-detail": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"

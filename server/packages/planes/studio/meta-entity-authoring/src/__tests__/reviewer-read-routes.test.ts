@@ -95,7 +95,8 @@ it("allows tenant-scoped reviewer reads while preserving author-only writes and 
         path.endsWith("approve") ? { method: "POST" } : {},
       );
       expect(res.status).toBe(403);
-      expect(await res.json()).toMatchObject({ reason: "mfa_required" });
+      expect(res.headers.get("content-type")).toContain("application/problem+json");
+      expect(await res.json()).toMatchObject({ reason: "mfa_required", code: "MFA_REQUIRED", status: 403 });
     }
     elevated = true;
     reviewer = false;
