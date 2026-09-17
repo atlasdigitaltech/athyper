@@ -4,7 +4,7 @@ import { businessPartnerErrorMessage, useCommandRunner } from "./command-feedbac
 import { useOrganizationSelection } from "./use-organization-selection";
 import { SupplierProcessPreview } from "./supplier-process-preview";
 import { SupplierProcessCorrection } from "./supplier-process-correction";
-import { PageHeader, useRecordBreadcrumb, useRegisterEntityTaskHeader } from "@athyper/platform-shell";
+import { PageNavigation, PageResourceBoundary, PageWorkspace, useDeepLinkedTabState, useRecordBreadcrumb, useRegisterEntityTaskHeader, type PageResourceStatus } from "@athyper/platform-shell";
 import { RequestLifecycle, RequestWorkspaceOverview, RequestWorkspaceDetails, RequestActivity, requestKind, requestTab } from "./request-workspace";
 import { restoreProfileAnswers } from "./request-relationships";
 import { RequestAttachmentField, RequestAttachmentScope } from "./request-attachment-field";
@@ -101,6 +101,36 @@ export * from "./360/business-partner-360-role-client";
 export * from "./role-extension-experience";
 export * from "./applicant-experience";
 export * from "./mesh-proposal-experience";
+
+/** Shared page frame for BP surfaces: avoids nesting a second main/h1 inside the shell's own Main. contentOnly defers header ownership to an ancestor (e.g. an intake step chrome); toolbar renders content search/filter controls above the body, per the shared page-toolbar convention. */
+function BusinessPartnerPageFrame({
+  title,
+  description,
+  actions,
+  toolbar,
+  contentOnly = false,
+  className,
+  children,
+}: {
+  readonly title: ReactNode;
+  readonly description?: ReactNode;
+  readonly actions?: ReactNode;
+  readonly toolbar?: ReactNode;
+  readonly contentOnly?: boolean;
+  readonly className?: string;
+  readonly children?: ReactNode;
+}) {
+  return contentOnly ? (
+    <section className={className}>
+      {toolbar}
+      {children}
+    </section>
+  ) : (
+    <PageWorkspace header={{ level: "collection", title, description, actions }} toolbar={toolbar} className={className}>
+      {children}
+    </PageWorkspace>
+  );
+}
 
 export function BusinessPartnerRecord({
   businessPartnerId,
@@ -227,7 +257,7 @@ export function BusinessPartnerScopeConfiguration({
     }
   }
   return (
-    <PageSurface
+    <BusinessPartnerPageFrame
       title="Configure Business Partner scope"
       description="Govern role assignment and company finance activation independently from the partner identity."
       actions={
@@ -420,7 +450,7 @@ export function BusinessPartnerScopeConfiguration({
           </Button>
         </div>
       </form>
-    </PageSurface>
+    </BusinessPartnerPageFrame>
   );
 }
 
@@ -435,7 +465,7 @@ export function BusinessPartnerHome({
 }) {
   const permissions = usePermissions();
   return (
-    <PageSurface
+    <BusinessPartnerPageFrame
       title="Business Partners"
       description="Business partner master data and governed onboarding."
       actions={
@@ -466,7 +496,7 @@ export function BusinessPartnerHome({
       }
     >
       {children}
-    </PageSurface>
+    </BusinessPartnerPageFrame>
   );
 }
 function OrganizationField({
@@ -548,7 +578,7 @@ export function BusinessPartnerRequestList() {
         : "ready";
   return (
     <div data-ui-state={state}>
-      <PageSurface
+      <BusinessPartnerPageFrame
         title="Business Partner onboarding"
         description="Create, validate, approve and materialize governed partner requests."
         actions={
@@ -567,30 +597,32 @@ export function BusinessPartnerRequestList() {
             </a>
           </div>
         }
+        toolbar={
+          <Card className="bp-filter-bar">
+            <OrganizationSelect
+              selection={selection}
+              value={selection.selected}
+              onChange={selection.setSelected}
+            />
+            <Field label="Status" htmlFor="bp-status-filter">
+              <Select
+                id="bp-status-filter"
+                value={status}
+                onChange={(event) =>
+                  setStatus(event.currentTarget.value as RequestStatus | "")
+                }
+              >
+                <option value="">All statuses</option>
+                {statuses.map((item) => (
+                  <option key={item} value={item}>
+                    {label(item)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </Card>
+        }
       >
-        <Card className="bp-filter-bar">
-          <OrganizationSelect
-            selection={selection}
-            value={selection.selected}
-            onChange={selection.setSelected}
-          />
-          <Field label="Status" htmlFor="bp-status-filter">
-            <Select
-              id="bp-status-filter"
-              value={status}
-              onChange={(event) =>
-                setStatus(event.currentTarget.value as RequestStatus | "")
-              }
-            >
-              <option value="">All statuses</option>
-              {statuses.map((item) => (
-                <option key={item} value={item}>
-                  {label(item)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        </Card>
         {error ? <ErrorNotice detail={error} /> : null}
         {loading ? (
           <RequestSkeleton />
@@ -602,7 +634,7 @@ export function BusinessPartnerRequestList() {
             detail="Commercial requests are organization-scoped and contain supplier or customer data only."
           />
         )}
-      </PageSurface>
+      </BusinessPartnerPageFrame>
     </div>
   );
 }
@@ -614,7 +646,7 @@ function RequestHeaderIdentity({labels,request}:{labels:NonNullable<EntityIntake
   return <><span>{request?.requestedRole==="customer" ? labels.customerRole : labels.supplierRole}</span>{request ? <><span className="a-intake-separator" aria-hidden="true">·</span><Badge>{request.status==="draft" ? labels.draftStatus : label(request.status)}</Badge><span className="a-intake-separator" aria-hidden="true">·</span><span className="a-intake-reference" title={request.requestNo}>{request.requestNo.length>20 ? `${request.requestNo.slice(0,8)}…${request.requestNo.slice(-4)}` : request.requestNo}</span><button className="a-intake-copy" type="button" aria-label={copyLabel} title={copyLabel} onClick={()=>{void navigator.clipboard.writeText(request.requestNo).then(()=>setCopyState("copied"),()=>setCopyState("failed"));}}><svg viewBox="0 0 24 24" aria-hidden="true">{copyState==="copied" ? <path d="m5 12 4 4L19 6"/> : <><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></>}</svg></button><span className="a-intake-progress__sr" role="status">{copyState==="copied" ? labels.referenceCopied : ""}</span>{copyState==="failed" ? <span role="alert">{labels.copyFailed}</span> : null}</> : null}</>;
 }
 
-function RequestDetailSurface({request,caseView,children,actions}:{request:PartnerRequest;caseView:RequestView["case"];children:ReactNode;actions:ReactNode}) {
+function RequestDetailSurface({request,caseView,children,actions,commandBar,status}:{request:PartnerRequest;caseView:RequestView["case"];children:ReactNode;actions:ReactNode;commandBar?:ReactNode;status?:ReactNode}) {
   const http = useApiClient();
   const [labels, setLabels] = useState<EntityIntakeSurfaceV1["formLabels"]>();
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
@@ -651,7 +683,22 @@ function RequestDetailSurface({request,caseView,children,actions}:{request:Partn
     </>,
   }), [title, actions, labels, request, caseView, copyState]);
   const shared = useRegisterEntityTaskHeader(header);
-  return <PageSurface contentOnly title={title}>{!shared ? <PageHeader level="collection" {...header}/> : null}{children}</PageSurface>;
+  // Shared: an ancestor task header already owns the header row; stay a bare section so nothing duplicates it.
+  // Not shared: this is the outermost owner, so render the real workspace to get the header row *and* a proper action-bar slot for the command bar.
+  return shared ? (
+    // Note: this moves the status notice one position earlier than before (now leads the body instead of
+    // sitting between the summary and the tabs) since children can no longer be split from outside; still
+    // the first thing shown, so the notice remains immediately visible.
+    <PageSurface contentOnly title={title}>
+      {status}
+      {children}
+      {commandBar}
+    </PageSurface>
+  ) : (
+    <PageWorkspace header={{ level: "collection", ...header }} status={status} actions={commandBar}>
+      {children}
+    </PageWorkspace>
+  );
 }
 
 const previewTaskEdits = createOperation<{ status: string; message?: string; editableNow?: boolean; result?: { permitted: boolean; effect: string; changedPaths: string[] } }, { expectedVersion: number; proposedPayload: Record<string, unknown>; extensions?: unknown; operatingOrganizationId?: string; companyCodeId?: string }>({
@@ -688,7 +735,7 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
       work.selection.mode === "company"
         ? work.selection.companyCodeId
         : undefined);
-  useEffect(() => {
+  const loadPublishedForm = useCallback(() => {
     const controller = new AbortController();
     setLoading(true);
     Promise.all([api.requestForm(controller.signal),http.request(entityApplicationDescriptorOperation,{params:{entityCode:"business_partner"},signal:controller.signal})])
@@ -712,6 +759,7 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
       });
     return () => controller.abort();
   }, [api,http,initialRequest]);
+  useEffect(loadPublishedForm, [loadPublishedForm]);
   const headerLabels = surfaces.find(s=>s.key==="intake_details")?.formLabels;
   const setPresentation = intake?.setPresentation;
   useRecordBreadcrumb(savedRequest?.requestNo ?? "New request", savedRequest ? `/mdg/business-partner/requests/${encodeURIComponent(savedRequest.id)}` : undefined);
@@ -830,7 +878,7 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
         busy ? "mutation-pending" : error ? "mutation-failure" : "ready"
       }
     >
-      <PageSurface contentOnly={Boolean(intake)}
+      <BusinessPartnerPageFrame contentOnly={Boolean(intake)}
         title={
           publishedForm?.descriptor.title ?? "New supplier onboarding request"
         }
@@ -887,10 +935,11 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
               error ??
               "The published Supplier request definition is unavailable."
             }
+            onRetry={loadPublishedForm}
           />
         )}
         <UnsavedChangesDialog navigation={navigation} />
-      </PageSurface>
+      </BusinessPartnerPageFrame>
     </div></RequestAttachmentScope>
   );
 }
@@ -907,8 +956,12 @@ export function BusinessPartnerRequestDetail({
     [error, setError] = useState<string>(),
     [errorState, setErrorState] = useState<ReturnType<typeof failureUiState>>(),
     [busy, setBusy] = useState<string>(),
-    [lastSuccess, setLastSuccess] = useState(false),
-    [activeTab, setActiveTab] = useState("overview");
+    [lastSuccess, setLastSuccess] = useState(false);
+  const { value: activeTab, select: selectTab } = useDeepLinkedTabState({
+    initial: "overview",
+    normalize: requestTab,
+    storageKey: `business-partner-request-tab:${requestId}`,
+  });
   const reload = useCallback(async () => {
     setLoading(true);
     setError(undefined);
@@ -925,24 +978,6 @@ export function BusinessPartnerRequestDetail({
   useEffect(() => {
     void reload();
   }, [reload]);
-  useEffect(() => {
-    const syncTab = () => {
-      const tab =
-        window.sessionStorage.getItem(
-          `business-partner-request-tab:${requestId}`,
-        ) ?? window.location.hash.slice(1);
-      setActiveTab(requestTab(tab));
-    };
-    syncTab();
-    window.addEventListener("hashchange", syncTab);
-    return () => window.removeEventListener("hashchange", syncTab);
-  }, [requestId]);
-  function selectTab(tab: string) {
-    const next = requestTab(tab);
-    setActiveTab(next);
-    window.sessionStorage.setItem(`business-partner-request-tab:${requestId}`, next);
-    window.history.replaceState(window.history.state, "", `#${next}`);
-  }
   const actions = view ? governedCaseActions(view.case) : [];
   const run = useCommandRunner({
     setBusy, setError, reload, errorMessage: message, blocked: Boolean(busy || loading),
@@ -951,25 +986,32 @@ export function BusinessPartnerRequestDetail({
     onError: cause => setErrorState(failureUiState(cause, true)),
   });
 
-  if (loading && !view) return <RequestDetailSkeleton />;
-  if (error && !view)
-    return (
-      <div data-ui-state={errorState ?? "error"}>
-        <PageSurface title="Business Partner request">
-          <ErrorNotice detail={error} />
-        </PageSurface>
-      </div>
-    );
+  const resourceStatus: PageResourceStatus = loading && !view ? "loading" : error && !view ? "error" : !view ? "empty" : "ready";
   if (!view)
     return (
-      <div data-ui-state="empty">
-        <PageSurface title="Business Partner request">
-          <Empty
-            title="Case unavailable"
-            detail="No governed case view was returned."
-          />
-        </PageSurface>
-      </div>
+      <PageResourceBoundary
+        status={resourceStatus}
+        loading={<RequestDetailSkeleton />}
+        error={
+          <div data-ui-state={errorState ?? "error"}>
+            <BusinessPartnerPageFrame title="Business Partner request">
+              <ErrorNotice detail={error ?? ""} onRetry={reload} />
+            </BusinessPartnerPageFrame>
+          </div>
+        }
+        empty={
+          <div data-ui-state="empty">
+            <BusinessPartnerPageFrame title="Business Partner request">
+              <Empty
+                title="Case unavailable"
+                detail="No governed case view was returned."
+              />
+            </BusinessPartnerPageFrame>
+          </div>
+        }
+      >
+        {null}
+      </PageResourceBoundary>
     );
   const request = view.request,
     caseView = view.case,
@@ -993,9 +1035,104 @@ export function BusinessPartnerRequestDetail({
       view.workflow &&
       ["open", "claimed", "in_progress"].includes(view.workflow.workItemStatus),
     );
+  const statusNotice = error ? (
+    <ErrorNotice
+      detail={error}
+      mfa={
+        error.toLowerCase().includes("mfa") ||
+        error.toLowerCase().includes("assurance")
+      }
+    />
+  ) : undefined;
+  const commandBar = (
+    <Card className="bp-command-bar bp-request-command-bar">
+      <div>
+        <strong>{request.status === "pending_approval" ? `Awaiting ${view.workflow?.stages.filter(stage => stage.status === "active").map(stage => stage.name).join(" and ") || "reviewer"} approval` : request.status === "applied" ? "Completed" : "Next action"}</strong>
+        {actions.includes("validate") ? <p>Validate the request to check for missing or inconsistent information.</p> : null}
+        {awaitingMaterializer ? (
+          <p>
+            This request is approved and awaiting completion by an authorized user.
+          </p>
+        ) : null}
+      </div>
+      <div className="bp-actions">
+        {actions.includes("edit") ? <a className="a-button a-button--secondary" href={`/mdg/business-partner/requests/${encodeURIComponent(request.id)}/edit`}>Edit request</a> : null}
+        {actions.includes("validate") ? (
+          <Button
+            variant="secondary"
+            loading={busy === "validate"}
+            disabled={Boolean(busy) || loading}
+            onClick={() =>
+              void run("validate", () =>
+                api.validate(caseView.id, caseView.rowVersion),
+              )
+            }
+          >
+            Validate
+          </Button>
+        ) : null}
+        {actions.includes("submit") ? (
+          <Button
+            loading={busy === "submit"}
+            disabled={Boolean(busy) || loading}
+            onClick={() =>
+              void run("submit", () =>
+                api.submit(caseView.id, caseView.rowVersion),
+              )
+            }
+          >
+            Submit for approval
+          </Button>
+        ) : null}
+        {decisionReady && actions.includes("return") ? (
+          <DecisionButton
+            label="Return"
+            decision="return"
+            view={view}
+            busy={busy}
+            run={run}
+            api={api}
+          />
+        ) : null}
+        {decisionReady && actions.includes("reject") ? (
+          <DecisionButton
+            label="Reject"
+            decision="reject"
+            view={view}
+            busy={busy}
+            run={run}
+            api={api}
+          />
+        ) : null}
+        {decisionReady && actions.includes("approve") ? (
+          <DecisionButton
+            label="Approve"
+            decision="approve"
+            view={view}
+            busy={busy}
+            run={run}
+            api={api}
+          />
+        ) : null}
+        {actions.includes("apply") ? (
+          <Button
+            loading={busy === "apply"}
+            disabled={Boolean(busy) || loading}
+            onClick={() =>
+              void run("apply", () =>
+                api.apply(caseView.id, caseView.rowVersion),
+              )
+            }
+          >
+            {applyLabel}
+          </Button>
+        ) : null}
+      </div>
+    </Card>
+  );
   return (
     <div data-ui-state={uiState}>
-      <RequestDetailSurface request={request} caseView={caseView}
+      <RequestDetailSurface request={request} caseView={caseView} commandBar={commandBar} status={statusNotice}
         actions={
           <div className="bp-actions">
             <a
@@ -1017,131 +1154,47 @@ export function BusinessPartnerRequestDetail({
         }
       >
         <GovernedCaseSummary value={caseView} showSummary={false} />
-        {error ? (
-          <ErrorNotice
-            detail={error}
-            mfa={
-              error.toLowerCase().includes("mfa") ||
-              error.toLowerCase().includes("assurance")
-            }
-          />
-        ) : null}
-        <Tabs
+        <PageNavigation
+          kind="tabs"
+          ariaLabel="Business Partner request"
           value={activeTab}
           onValueChange={selectTab}
-        >
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="details">Request details</TabsTrigger>
-            <TabsTrigger value="review">Review</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-          </TabsList>
-          <RequestLifecycle view={view} />
-          {request.kind === "new_partner" && request.source.kind === "manual" && request.requestedRole === "supplier" ? <SupplierProcessCorrection request={request} onChanged={reload} notificationPins={notificationPins} /> : null}
-          <TabsContent value="overview">
-            <RequestWorkspaceOverview view={view} onSelect={selectTab} />
-            {request.kind === "new_partner" && request.requestedRole === "supplier" && ["draft", "returned"].includes(request.status) ? <SupplierProcessPreview caseId={request.id} rowVersion={request.rowVersion} /> : null}
-          </TabsContent>
-          <TabsContent value="details">
-            <RequestWorkspaceDetails view={view} />
-          </TabsContent>
-          <TabsContent value="review">
-            <div className="bp-request-review">
-              <ValidationPanel view={view} />
-              <EvidencePanel request={request} />
-              <WorkflowPanel view={view} />
-              <Card className="bp-section"><h2>Outcome</h2><p>{request.status === "applied" ? "The approved changes have been applied." : request.status === "failed" ? "The request could not be completed. Review the failure details before retrying." : "No completed changes yet."}</p>{request.appliedAt ? <p>Completed {formatDate(request.appliedAt)}</p> : null}</Card>
-              <details className="bp-request-technical"><summary>Technical details</summary><GovernedCaseContract value={caseView} /><MaterializationResultProof proof={view.materializationProof} /></details>
-            </div>
-          </TabsContent>
-          <TabsContent value="activity">
-            {request.kind === "new_partner" && request.source.kind === "manual" && request.requestedRole === "supplier" ? <p>Read the <a href="#supplier-case-activity">recorded case activity</a> and submission history in the supplier journey.</p> : <RequestActivity view={view} />}
-          </TabsContent>
-        </Tabs>
-        <Card className="bp-command-bar bp-request-command-bar">
-          <div>
-            <strong>{request.status === "pending_approval" ? `Awaiting ${view.workflow?.stages.filter(stage => stage.status === "active").map(stage => stage.name).join(" and ") || "reviewer"} approval` : request.status === "applied" ? "Completed" : "Next action"}</strong>
-            {actions.includes("validate") ? <p>Validate the request to check for missing or inconsistent information.</p> : null}
-            {awaitingMaterializer ? (
-              <p>
-                This request is approved and awaiting completion by an authorized user.
-              </p>
-            ) : null}
-          </div>
-          <div className="bp-actions">
-            {actions.includes("edit") ? <a className="a-button a-button--secondary" href={`/mdg/business-partner/requests/${encodeURIComponent(request.id)}/edit`}>Edit request</a> : null}
-            {actions.includes("validate") ? (
-              <Button
-                variant="secondary"
-                loading={busy === "validate"}
-                disabled={Boolean(busy) || loading}
-                onClick={() =>
-                  void run("validate", () =>
-                    api.validate(caseView.id, caseView.rowVersion),
-                  )
-                }
-              >
-                Validate
-              </Button>
-            ) : null}
-            {actions.includes("submit") ? (
-              <Button
-                loading={busy === "submit"}
-                disabled={Boolean(busy) || loading}
-                onClick={() =>
-                  void run("submit", () =>
-                    api.submit(caseView.id, caseView.rowVersion),
-                  )
-                }
-              >
-                Submit for approval
-              </Button>
-            ) : null}
-            {decisionReady && actions.includes("return") ? (
-              <DecisionButton
-                label="Return"
-                decision="return"
-                view={view}
-                busy={busy}
-                run={run}
-                api={api}
-              />
-            ) : null}
-            {decisionReady && actions.includes("reject") ? (
-              <DecisionButton
-                label="Reject"
-                decision="reject"
-                view={view}
-                busy={busy}
-                run={run}
-                api={api}
-              />
-            ) : null}
-            {decisionReady && actions.includes("approve") ? (
-              <DecisionButton
-                label="Approve"
-                decision="approve"
-                view={view}
-                busy={busy}
-                run={run}
-                api={api}
-              />
-            ) : null}
-            {actions.includes("apply") ? (
-              <Button
-                loading={busy === "apply"}
-                disabled={Boolean(busy) || loading}
-                onClick={() =>
-                  void run("apply", () =>
-                    api.apply(caseView.id, caseView.rowVersion),
-                  )
-                }
-              >
-                {applyLabel}
-              </Button>
-            ) : null}
-          </div>
-        </Card>
+          aside={<>
+            <RequestLifecycle view={view} />
+            {request.kind === "new_partner" && request.source.kind === "manual" && request.requestedRole === "supplier" ? <SupplierProcessCorrection request={request} onChanged={reload} notificationPins={notificationPins} /> : null}
+          </>}
+          items={[
+            {
+              value: "overview",
+              label: "Overview",
+              content: <>
+                <RequestWorkspaceOverview view={view} onSelect={selectTab} />
+                {request.kind === "new_partner" && request.requestedRole === "supplier" && ["draft", "returned"].includes(request.status) ? <SupplierProcessPreview caseId={request.id} rowVersion={request.rowVersion} /> : null}
+              </>,
+            },
+            {
+              value: "details",
+              label: "Request details",
+              content: <RequestWorkspaceDetails view={view} />,
+            },
+            {
+              value: "review",
+              label: "Review",
+              content: <div className="bp-request-review">
+                <ValidationPanel view={view} />
+                <EvidencePanel request={request} />
+                <WorkflowPanel view={view} />
+                <Card className="bp-section"><h2>Outcome</h2><p>{request.status === "applied" ? "The approved changes have been applied." : request.status === "failed" ? "The request could not be completed. Review the failure details before retrying." : "No completed changes yet."}</p>{request.appliedAt ? <p>Completed {formatDate(request.appliedAt)}</p> : null}</Card>
+                <details className="bp-request-technical"><summary>Technical details</summary><GovernedCaseContract value={caseView} /><MaterializationResultProof proof={view.materializationProof} /></details>
+              </div>,
+            },
+            {
+              value: "activity",
+              label: "Activity",
+              content: request.kind === "new_partner" && request.source.kind === "manual" && request.requestedRole === "supplier" ? <p>Read the <a href="#supplier-case-activity">recorded case activity</a> and submission history in the supplier journey.</p> : <RequestActivity view={view} />,
+            },
+          ]}
+        />
       </RequestDetailSurface>
     </div>
   );
@@ -1192,7 +1245,7 @@ export function BusinessPartnerAggregateDetail({
     selection.company?.companyCodeId,
   ]);
   return (
-    <PageSurface
+    <BusinessPartnerPageFrame
       title={
         aggregate?.businessPartner.name?.trim() ||
         aggregate?.businessPartner.code ||
@@ -1231,14 +1284,16 @@ export function BusinessPartnerAggregateDetail({
           </a>
         </div>
       }
+      toolbar={
+        <Card className="bp-filter-bar">
+          <OrganizationSelect
+            selection={selection}
+            value={selection.selected}
+            onChange={selection.setSelected}
+          />
+        </Card>
+      }
     >
-      <Card className="bp-filter-bar">
-        <OrganizationSelect
-          selection={selection}
-          value={selection.selected}
-          onChange={selection.setSelected}
-        />
-      </Card>
       {error ? <ErrorNotice detail={error} /> : null}
       {loading ? (
         <RequestSkeleton />
@@ -1250,7 +1305,7 @@ export function BusinessPartnerAggregateDetail({
           detail="Partner details are authorized and loaded within an organization scope."
         />
       )}
-    </PageSurface>
+    </BusinessPartnerPageFrame>
   );
 }
 
@@ -1849,9 +1904,11 @@ function Empty({ title, detail }: { title: string; detail: string }) {
 function ErrorNotice({
   detail,
   mfa = false,
+  onRetry,
 }: {
   detail: string;
   mfa?: boolean;
+  onRetry?: () => void;
 }) {
   return (
     <div className="bp-error" role="alert">
@@ -1870,6 +1927,11 @@ function ErrorNotice({
           <Button type="submit">Verify with MFA</Button>
         </form>
       ) : null}
+      {onRetry ? (
+        <Button variant="secondary" onClick={onRetry}>
+          Retry
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -1884,9 +1946,9 @@ function RequestSkeleton() {
 function RequestDetailSkeleton() {
   return (
     <div data-ui-state="loading">
-      <PageSurface title="Loading request">
+      <BusinessPartnerPageFrame title="Loading request">
         <RequestSkeleton />
-      </PageSurface>
+      </BusinessPartnerPageFrame>
     </div>
   );
 }
@@ -1947,8 +2009,10 @@ export function BusinessPartnerRequestEdit({
     [error, setError] = useState<string>(),
     [errorState, setErrorState] = useState<ReturnType<typeof failureUiState>>();
   const navigation = useGuardedNavigation(dirty);
-  useEffect(() => {
+  const reload = useCallback(() => {
     const controller = new AbortController();
+    setError(undefined);
+    setErrorState(undefined);
     api
       .view(requestId, controller.signal)
       .then(setView)
@@ -1960,24 +2024,34 @@ export function BusinessPartnerRequestEdit({
       });
     return () => controller.abort();
   }, [api, requestId]);
-  if (error && !view)
+  useEffect(reload, [reload]);
+  const editResourceStatus: PageResourceStatus = error && !view ? "error" : !view ? "loading" : "ready";
+  if (!view)
     return (
-      <div data-ui-state={errorState ?? "error"}>
-        <PageSurface title="Edit Business Partner request">
-          <ErrorNotice detail={error} />
-        </PageSurface>
-      </div>
+      <PageResourceBoundary
+        status={editResourceStatus}
+        loading={<RequestDetailSkeleton />}
+        error={
+          <div data-ui-state={errorState ?? "error"}>
+            <BusinessPartnerPageFrame title="Edit Business Partner request">
+              <ErrorNotice detail={error ?? ""} onRetry={reload} />
+            </BusinessPartnerPageFrame>
+          </div>
+        }
+        empty={null}
+      >
+        {null}
+      </PageResourceBoundary>
     );
-  if (!view) return <RequestDetailSkeleton />;
   const request = view.request,
     caseView = view.case,
     href = `/mdg/business-partner/requests/${encodeURIComponent(caseView.id)}`;
   if (!governedCaseActions(caseView).includes("edit"))
     return (
       <div data-ui-state="unauthorized">
-        <PageSurface title={`Edit ${request.requestNo}`}>
+        <BusinessPartnerPageFrame title={`Edit ${request.requestNo}`}>
           <ErrorNotice detail="This governed case is not editable for the current principal and version. Return to its review page for available actions." />
-        </PageSurface>
+        </BusinessPartnerPageFrame>
       </div>
     );
   if(request.kind==="new_partner"&&request.source.kind==="manual"&&request.requestedRole==="supplier") return <BusinessPartnerRequestEntry initialRequest={view}/>;
@@ -2019,7 +2093,7 @@ export function BusinessPartnerRequestEdit({
   }
   return (
     <div data-ui-state={busy ? "mutation-pending" : (errorState ?? "ready")}>
-      <PageSurface
+      <BusinessPartnerPageFrame
         title={`Edit ${request.requestNo}`}
         description="Saving changes invalidates prior validation evidence and preserves optimistic concurrency."
         actions={
@@ -2099,7 +2173,7 @@ export function BusinessPartnerRequestEdit({
           </div>
         </form>
         <UnsavedChangesDialog navigation={navigation} />
-      </PageSurface>
+      </BusinessPartnerPageFrame>
     </div>
   );
 }
@@ -2113,12 +2187,12 @@ export function AuthorizedNewBusinessPartnerRequest() {
   if (!permissions.has("neon.relationship.entity_case.create"))
     return (
       <div data-ui-state="unauthorized">
-        <PageSurface
+        <BusinessPartnerPageFrame
           title="New business partner request"
           description="Create authority is assigned per operating organization."
         >
           <ErrorNotice detail="You do not have permission to create Business Partner requests in the selected context." />
-        </PageSurface>
+        </BusinessPartnerPageFrame>
       </div>
     );
   return <BusinessPartnerRequestEntry />;

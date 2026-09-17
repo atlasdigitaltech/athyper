@@ -35,6 +35,7 @@ import {
   type Inspection,
   type Json,
 } from "./workbench-model";
+import { useUnsavedChangesGuard } from "./unsaved-changes-guard";
 export function CompositionEditor({
   inspection,
   selection,
@@ -78,31 +79,7 @@ export function CompositionEditor({
   useEffect(() => {
     callbacks.current.onGuardChange(dirty, busy);
   }, [dirty, busy]);
-  useEffect(() => {
-    if (!dirty && !busy) return;
-    const unload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    const navigate = (e: MouseEvent) => {
-      if (!(e.target as Element)?.closest?.("a[href]")) return;
-      if (
-        busy ||
-        !window.confirm(
-          "Discard unsaved composition changes and leave this page?",
-        )
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    window.addEventListener("beforeunload", unload);
-    document.addEventListener("click", navigate, true);
-    return () => {
-      window.removeEventListener("beforeunload", unload);
-      document.removeEventListener("click", navigate, true);
-    };
-  }, [dirty, busy]);
+  useUnsavedChangesGuard(dirty, busy, "Discard unsaved composition changes and leave this page?");
   async function readRemote(discard: boolean) {
     if (lock.current || locked) return;
     if (

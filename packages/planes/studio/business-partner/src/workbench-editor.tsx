@@ -17,6 +17,7 @@ import {
   saveWorkingDraft,
   type EditableCollection,
 } from "./workbench-edit-model";
+import { useUnsavedChangesGuard } from "./unsaved-changes-guard";
 export function WorkbenchEditor({
   inspection,
   compact = false,
@@ -54,32 +55,7 @@ export function WorkbenchEditor({
     };
   }, [onGuardChange]);
   useEffect(() => onGuardChange(dirty, busy), [dirty, busy, onGuardChange]);
-  useEffect(() => {
-    if (!dirty && !busy) return;
-    const unload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    const navigate = (event: MouseEvent) => {
-      const link = (event.target as Element)?.closest?.("a[href]");
-      if (!link) return;
-      if (
-        busy ||
-        !window.confirm(
-          "Discard unsaved configuration changes and leave this page?",
-        )
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-    window.addEventListener("beforeunload", unload);
-    document.addEventListener("click", navigate, true);
-    return () => {
-      window.removeEventListener("beforeunload", unload);
-      document.removeEventListener("click", navigate, true);
-    };
-  }, [dirty, busy]);
+  useUnsavedChangesGuard(dirty, busy, "Discard unsaved configuration changes and leave this page?");
   async function fork() {
     if (!inspection.changeSetId) return;
     setBusy(true);

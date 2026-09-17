@@ -5,6 +5,7 @@ import { PrimaryDetails } from "./components/primary-details";
 import { ResourceSection } from "./components/resource-section";
 import {
   PageHeader,
+  PageResourceBoundary,
   useRecordPage,
   useAtlasBusinessContextPublisher,
 } from "@athyper/platform-shell";
@@ -260,33 +261,37 @@ export function BusinessPartner360Shell({
     [summary, section, url.roleLens, selectSection, navigate]);
   if (error)
     return (
-      <div className="bp360">
-        <PageHeader level="collection" title="Business Partner" />
-        <Card>
-          <h2>Unavailable</h2>
-          <p>{error}</p>
-          <button
-            className="a-button a-button--secondary"
-            onClick={() => setRetry((value) => value + 1)}
-          >
-            Try again
-          </button>
-          {operatingOrganizationId || companyCodeId || legalEntityId ? (
+      <PageResourceBoundary status="error" loading={null} empty={null} error={
+        <div className="bp360">
+          <PageHeader level="collection" title="Business Partner" />
+          <Card>
+            <h2>Unavailable</h2>
+            <p>{error}</p>
             <button
               className="a-button a-button--secondary"
-              onClick={() => {
-                const next = clearBusinessPartnerTransactionContext(
-                  new URL(window.location.href),
-                );
-                window.history.replaceState({}, "", next);
-                setRevision((value) => value + 1);
-              }}
+              onClick={() => setRetry((value) => value + 1)}
             >
-              Clear transaction context
+              Try again
             </button>
-          ) : null}
-        </Card>
-      </div>
+            {operatingOrganizationId || companyCodeId || legalEntityId ? (
+              <button
+                className="a-button a-button--secondary"
+                onClick={() => {
+                  const next = clearBusinessPartnerTransactionContext(
+                    new URL(window.location.href),
+                  );
+                  window.history.replaceState({}, "", next);
+                  setRevision((value) => value + 1);
+                }}
+              >
+                Clear transaction context
+              </button>
+            ) : null}
+          </Card>
+        </div>
+      }>
+        {null}
+      </PageResourceBoundary>
     );
   if (
     !summary ||
@@ -294,10 +299,14 @@ export function BusinessPartner360Shell({
     summary.identity.id !== businessPartnerId
   )
     return (
-      <div className="bp360" aria-label="Loading Business Partner">
-        <PageHeader level="collection" title="Loading Business Partner" />
-        <Skeleton className="bp360-shell-skeleton" />
-      </div>
+      <PageResourceBoundary status="loading" error={null} empty={null} loading={
+        <div className="bp360" aria-label="Loading Business Partner">
+          <PageHeader level="collection" title="Loading Business Partner" />
+          <Skeleton className="bp360-shell-skeleton" />
+        </div>
+      }>
+        {null}
+      </PageResourceBoundary>
     );
   const renderSection = (section: string) => {
     const manifest = summary.sections.find((item) => item.code === section);

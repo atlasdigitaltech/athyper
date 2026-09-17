@@ -8,6 +8,8 @@ vi.mock("@athyper/platform-shell", () => ({
   useRecordPage: () => {},
   useAtlasBusinessContextPublisher: publishContext,
   PageHeader: () => null,
+  PageResourceBoundary: ({ status, loading, error, empty, children }: { status: string; loading: unknown; error: unknown; empty: unknown; children: unknown }) =>
+    status === "loading" ? loading : status === "error" ? error : status === "empty" ? empty : children,
 }));
 vi.mock("@athyper/platform-shell-app-foundation", () => ({
   useApiClient: () => ({ request }),

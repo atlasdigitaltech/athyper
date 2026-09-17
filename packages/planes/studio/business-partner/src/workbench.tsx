@@ -481,7 +481,18 @@ export function BusinessPartnerWorkbench({
             <p role="status">Loading selected configuration…</p>
           ) : null}
           {compositionMode && visible.error ? (
-            <p role="alert">{visible.error}</p>
+            <p role="alert">
+              {visible.error}{" "}
+              <button
+                type="button"
+                className="a-button a-button--secondary"
+                onClick={() => {
+                  if (mayLeave()) setAttempt((n) => n + 1);
+                }}
+              >
+                Retry
+              </button>
+            </p>
           ) : null}
           {selected && !compositionMode ? (
             <fieldset
