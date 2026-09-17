@@ -2,19 +2,16 @@
 
 | Field | Value |
 | --- | --- |
-| Contract version | 1.0.1 |
 | Date | 2026-09-17 |
 | Scope | Neon, Mesh, Studio; application startup, shell, pages, shared services, package boundaries, deployment |
-| Status | Agreed architectural baseline; implementation and operational readiness are not certified |
-| Accountable owner | Frontend platform owner — named assignee pending |
-| Required reviewers | Plane owners, accessibility reviewer, API contract owner, IAM owner, deployment/release owner |
+| Status | Local development design; implementation progress is tracked in the build plan |
 | Companion | [Build Work Plan](build-work-plan.md) |
 
 ## 1. Purpose and authority
 
 Provide one reusable experience across three independently deployable applications. Business Partner is the first migration consumer, not the owner of generic layout behavior. Share pages and feature implementations as well as chrome; app route files remain thin framework adapters.
 
-This document defines the target, not a claim that every component exists. The detailed tree in Appendix A records the agreed component inventory. The decision rules in the main document resolve ambiguities in that tree and take precedence over its shorthand. Tree branches describing states are alternatives; configuration and behavior nodes are specifications, not literal DOM nodes.
+This document defines the target, not a claim that every component exists. The detailed tree in Appendix A records the agreed component inventory. The rules in the main document resolve ambiguities in that tree and take precedence over its shorthand. This is a local development effort; release governance and multi-instance infrastructure are future concerns, not build prerequisites. Tree branches describing states are alternatives; configuration and behavior nodes are specifications, not literal DOM nodes.
 
 Existing domain, security, and lifecycle authorities remain in force:
 
@@ -39,13 +36,22 @@ Source inspection identified the following foundations; it did not certify deplo
 | `packages/platform/entity/runtime/form-detail` | Reuse section navigation, scroll behavior, record/form adapters |
 | `packages/platform/entity/runtime/list-view` | Adopt shared workspace and toolbar conventions |
 | `packages/planes/*/shell` | Thin plane branding, context, capability and navigation adapters |
-| `EntityPageLayout` | Preserve collection-versus-record chrome ownership |
+| `EntityApplicationLayout` (`apps/neon/lib`) | Thin route/entity adapter; retain entityCode integration |
+| `EntityPageLayout` | Preserve collection-versus-record chrome ownership; not the entity detail runtime |
+| `PageFrame` / `PageHeader` | Presentation primitives composed by PageWorkspace |
+| `EntitySectionNavigation` and scroll hook | Shared navigation used by multiple page-kind runtimes |
+| `EntityFormRuntime` | Starting implementation for create/edit orchestration |
+| `EntityDetailRuntime` | Starting implementation for detail orchestration |
+| Shared intake controllers/contracts/state functions | Starting implementation for step lifecycle and intake presentation |
+| Business Partner Studio composition editor | Specialized content provider; not assumed to generalize across entities |
 | `EntityRecord360Panel` and its descriptor | Adapt compatibly to generic composition; replace closed provider assumptions through validated registration |
 | `RecordFooterSource` / `useRecordFooterSources` | Evolve into structured page-owned footer information |
 | `packages/platform/shell/content-hub` | Placeholder to develop into Knowledge integration; not a completed workspace |
 | `server/apps/platform-host` | Retain backend deployment boundary unless separate service requirements justify a split |
 
-Relevant policy scripts and OpenAPI workflows already exist. Their presence is not proof of complete coverage; the work plan requires rule-to-check mapping and negative fixtures.
+These components are complementary layers, not competing replacements. Adapt through compatible exports before renaming or retiring implementations; a second real consumer must prove reuse.
+
+Relevant policy scripts and OpenAPI workflows already exist. Reuse the checks applicable to changed code; this local cleanup does not require a new enforcement program.
 
 ## 3. Architectural invariants
 
@@ -72,7 +78,7 @@ Startup states: loading, authentication required, application access denied, sta
 
 App fallbacks share branding, safe text, accessible status and recovery actions. Fatal fallback and framework root fallback cannot depend on the providers they replace. A framework root fallback is outside the failed tree. Framework server failures and ancestor-layout failures require their own Next.js adapters; do not assume a route `error.tsx` catches its parent layout.
 
-Timeouts are bounded. Exact required-request deadline, retry policy and slow-start threshold are pending decisions D-01. There is no fabricated percentage progress or automatic reload loop.
+Reuse existing bounded API request timeouts and cancellation; expose a safe retry when required bootstrap loading fails. If an existing path has no timeout, add one shared configurable deadline while implementing startup, rather than a per-page setting. There is no fabricated percentage progress or automatic reload loop.
 
 ## 5. Global shell
 
@@ -149,7 +155,7 @@ Escape dismisses the topmost dismissible surface. Ordinary dismissal returns foc
 
 ### 7.1 Layout decision ownership
 
-The page definition explicitly selects layout and navigation mode. The page/domain owner proposes the choice, the frontend platform reviewer checks it against these criteria. Responsive adaptation changes geometry, not task semantics.
+The page definition explicitly selects layout and navigation mode. Choose using the criteria below while implementing the page. Responsive adaptation changes geometry, not task semantics.
 
 | Definition | Selection criterion |
 | --- | --- |
@@ -175,7 +181,7 @@ Do not infer layout from fluctuating row counts or entity size. No section navig
 
 ### 7.3 Scroll, focus and navigation
 
-Keep a single primary scroll surface; select the exact existing scroll root in D-02 before migration. Header scrolls away; breadcrumbs/tabs and side panels stick where usable space permits. Tokens/measurements determine offsets; no per-route hard-coded offsets. The center grid track uses `minmax(0, 1fr)`. Atlas docking reduces actual available width. Narrow/zoomed views reduce sticky chrome, use a section selector and accessible overview disclosure/drawer. Never mount duplicate forms for responsive layouts.
+Keep the existing primary page scroll root and a single primary scroll surface; verify its actual overflow behavior while implementing the workspace. Header scrolls away; breadcrumbs/tabs and side panels stick where usable space permits. Tokens/measurements determine offsets; no per-route hard-coded offsets. The center grid track uses `minmax(0, 1fr)`. Atlas docking reduces actual available width. Narrow/zoomed views reduce sticky chrome, use a section selector and accessible overview disclosure/drawer. Never mount duplicate forms for responsive layouts.
 
 Clicking a scroll section navigates and focuses its heading. Passive observation changes selection without moving focus and replaces URL state rather than flooding history. Explicit navigation supports Back/Forward. Restore deep links after data is available, recalculate on layout changes, handle the final short section, and resolve unavailable destinations safely.
 
@@ -252,7 +258,7 @@ Keep public exports compatible while extracting internal files. Do not create a 
 
 The two contract trees have different responsibilities, not a requirement for manual mirroring. Each public wire request/response/descriptor has one canonical schema owner. Backend models/ports cross that boundary through explicit mappings. Generate secondary representations when appropriate; validate actual serialized responses against the public contract.
 
-Shared source compilation is insufficient for deployed version skew. Define a supported frontend/backend version window in D-03, test retained supported consumer contracts against candidate backends, and include errors, enums, optional fields, unknown fields and descriptor schema versions. Evolve additively first; remove/rename only through a documented migration and retirement process. Coordinate frontend rollback with backend compatibility.
+Frontend and backend are developed together at the same local commit. Update public types, parsers and callers together, keep one canonical wire shape, and validate relevant serialized responses. Keep existing contract/OpenAPI checks. Do not build a supported historical consumer window or compatibility negotiation now; revisit version skew when releases become independent. Existing persisted definitions still require explicit migration or compatible parsing when their schema changes.
 
 | Family | Allowed direction | Forbidden direction |
 | --- | --- | --- |
@@ -264,68 +270,176 @@ Shared source compilation is insufficient for deployed version skew. Define a su
 
 Contracts must remain acyclic. Separate browser/server entry points; do not export server secrets, storage clients or backend implementations through browser barrels. Apply existing governance classification and dependency budgets.
 
-Existing policy scripts (`policy:plane-boundaries`, `policy:server-boundaries`, `policy:server-rebuild-boundaries`, `policy:content-ui-boundaries`, `policy:release-boundaries`) and OpenAPI workflows are starting points. Map every rule to a required CI check, cover aliases/relative imports/re-exports/dynamic imports/package edges, and prove rejection with negative fixtures. Add a graph tool only if existing enforcement cannot cover the rule. Exceptions require owner, rationale and removal condition.
+Use existing boundary policies and OpenAPI checks when touching their scope. Do not add a second governance framework or exhaustive negative-fixture program for this local cleanup. Keep focused tests for meaningful new schema/authorization behavior and regressions.
 
-## 11. Deployment and cache ownership
+## 11. Deployment direction — future work
 
-Deploy each plane as an independent immutable artifact. On one server, run three processes/containers behind a reverse proxy. On multiple servers, move the same artifacts behind configured hostnames/load balancers. Use an environment-specific plane URL registry; do not construct sibling hostnames in UI code.
+Keep three independently buildable apps with shared compiled packages. They may later run as separate processes/containers on one server or on multiple servers. Keep configuration outside UI components, preserve existing BFF/session/storage integration, and do not introduce hard-coded plane hostnames or process-local authoritative data.
 
-Browser calls remain same-origin through the plane BFF. Validate server environment configuration and expose only an allowlisted public projection. Build-time public values cannot be assumed mutable after artifact promotion. Existing standalone output must be checked for monorepo tracing and static/public assets. Keep deployment IDs coherent across replicas of the same release and plan rolling-version skew handling.
+Replica/cache coordination, deployment manifests, old-client compatibility, rollout cohorts and production promotion testing are deferred until actually needed. Existing IAM Redis session storage is not a generic Next.js cache API. No new cache infrastructure is required by this local UI cleanup.
 
-Shared identity-provider SSO does not remove per-plane session/access checks or require broad parent-domain cookies. Documents use durable storage; app-process memory is not authoritative session/preference storage.
+## 12. Practical local checks
 
-| Concern | Accountable role | Policy |
-| --- | --- | --- |
-| Authentication sessions | IAM | Existing Redis session store; revocation/expiry/refresh coordination |
-| Browser query cache | Frontend platform | Context isolation and authorized invalidation |
-| Next.js server cache | Frontend platform + deployment owner | Explicit cacheability and cross-replica coordination |
-| Domain cache | Owning backend service | Domain freshness/invalidation semantics |
-| Static assets | Deployment owner | Immutable versioned delivery |
-| Documents/files | Content/storage owner | Durable storage and access enforcement |
+Use a small set of checks while building: one main and h1, usable keyboard focus and icon labels, no overlapping sticky controls, a narrow-window check, normal task completion, local failure/retry and preserved form input. Check authorization/context isolation when changing those paths. Unknown count is a state, not a numeric threshold: pending/failed is unknown, successful 0 is zero.
 
-Do not put generic Next.js cache functionality in `iam/session-store`. Redis may be shared operationally only with explicit namespace/access/capacity/eviction decisions; session and content cache policies differ. A deliberately uncached dynamic response is a valid initial policy. Before replicas, specify cache keys, authorization scope, TTL, invalidation propagation, outage behavior and deployment-version behavior. No authenticated response enters a shared cache without an explicit safe policy.
+Keep existing responsive, RTL and reduced-motion behavior; do not require an exhaustive new browser matrix for every extraction. Run affected typechecks and relevant tests, adding focused tests for actual failure modes. Use the flat task list in [Build Work Plan](build-work-plan.md).
 
-References for implementation-time verification: [Next.js self-hosting](https://nextjs.org/docs/app/guides/self-hosting), [standalone output](https://nextjs.org/docs/app/api-reference/config/next-config-js/output), [deployment ID](https://nextjs.org/docs/app/api-reference/config/next-config-js/deploymentId). Verify details against the installed version before changing deployment configuration.
+## 13. Maintaining this document
 
-## 12. Measurable acceptance and pending decisions
+Edit this document when implementation teaches us something. No owner-assignment ceremony, numbered pending-decision registry, document semver or PR-per-edit approval is required by this local plan. Git history records revisions. Keep the agreed component boundaries and domain authorization rules; clearly mark future features and never describe planned work as implemented.
 
-| ID | Decision/deliverable | Owner role (named assignee pending) | Closure gate |
+## 14. Entity reuse and extension contract
+
+### 14.1 Architecture and ownership
+
+Future entities reuse Main, PageWorkspace and page-kind runtimes. Business Partner is the first consumer; it is not a folder to copy for each entity. Composition and registered providers replace inheritance trees and entity-specific branches in generic components.
+
+```text
+PlatformShell → Main → PageWorkspace
+                        ├── Shared chrome, layout, states and action slots
+                        └── PageKindRuntime
+                            ├── CollectionRuntime
+                            ├── DetailRuntime
+                            ├── FormRuntime [create/edit]
+                            ├── IntakeRuntime
+                            ├── ReviewRuntime
+                            └── ConfigurationRuntime
+                                └── Registered content providers
+                                    ├── Generic fields/relationships/collections/summaries
+                                    ├── Specialized domain sections
+                                    └── Custom content editor/workspace
+```
+
+These are responsibilities, not mandatory new package boundaries. Runtime content never renders a second Main or recreates page chrome.
+
+| Responsibility | Owner |
+| --- | --- |
+| Header, columns, boundaries, toolbar/action slots and footer registration | Shared PageWorkspace |
+| Page-kind lifecycle and interaction orchestration | Page-kind runtime |
+| Fields, sections, navigation and supported composition | Validated entity page definition |
+| Specialized rendering and domain integration | Registered provider |
+| Permissions, persistence, validation authority and business transitions | Backend operation/service |
+
+### 14.2 One page-kind selector
+
+`pageKind` is the sole public selector: `collection`, `detail`, `create`, `edit`, `intake`, `review`, or `configuration`. A registered resolver maps these to the runtime above; create/edit share FormRuntime. There is no additional `template` field. Earlier illustrative definitions containing that field are superseded by this contract.
+
+“Template” is descriptive terminology only. Specialized content uses validated provider references. If multiple runtime strategies become necessary, define their behavior explicitly here rather than adding an undocumented second selector.
+
+### 14.3 Page-kind suggestions and explicit published choices
+
+Both layout and section-mode columns below are authoring suggestions, not mandatory values or dynamic heuristics. Published definitions record selected layout and any section navigation explicitly. Overrides follow section 7.1 criteria and validator-supported combinations. Counts and entity size must not change the layout unexpectedly.
+
+| Page kind | Suggested initial layout | Suggested initial section mode | Supported alternative and criterion |
 | --- | --- | --- | --- |
-| D-01 | Bootstrap deadline, slow-start threshold, retry policy and cancellation | Frontend platform + API | Before startup behavior migration |
-| D-02 | Primary scroll root, token values, minimum center width, rail widths, collapse thresholds | Frontend platform + accessibility | Before workspace migration |
-| D-03 | Public schema inventory, supported deployed consumer window and retirement policy | API contract + release + plane owners | Before independent-version release |
-| D-04 | Per-resource server cache policy, adapter/storage, invalidation, outage ownership | Frontend platform + deployment + IAM/backend | Before cache-dependent replica rollout |
-| D-05 | One-time rollout framework: selection mechanism, stable assignment, evidence requirements, rollback procedure and approval responsibilities | Release + plane owner | Framework agreed before the first production cohort; each cohort separately passes its readiness gate |
-| D-06 | Named accountable owner/reviewers and verified enforcement coverage | Engineering/repository owner (interim sponsor) | Ownership recorded before W0 exits; enforcement coverage verified in W1; both required for full closure |
+| Collection | `content` | None | Use `sections-content` with `switch` for distinct persistent views, or `scroll` for meaningful continuous sections |
+| Detail | `sections-content` if sectioned; otherwise `content` | `scroll` if sectioned; otherwise none | `switch` for distinct record workspaces; overview layout when persistent supplementary context is useful |
+| Create/Edit | `sections-content` for long forms; otherwise `content` | `scroll` if sectioned; otherwise none | Task steps only for a defined workflow; specialized switch views require state preservation |
+| Intake | `sections-content` within sectioned steps; otherwise `content` | `scroll` within a sectioned step; otherwise none | Step navigation is independent; distinct tools may use explicit `switch` if supported by the flow |
+| Review | `sections-content` if sectioned; otherwise `content` | `scroll` for continuous evidence; otherwise none | `switch` for separate evidence/comparison/decision views; overview layout for useful case/version context |
+| Configuration | `sections-content` for multiple workspace views; otherwise `content` | `switch` for distinct tools; otherwise none | `scroll` for a continuous configuration form; custom editor in selected content view |
 
-The existing engineering/repository owner acts as interim sponsor and initiates W0, assigning the named frontend platform owner and required reviewers. Baseline inventory may proceed while assignments are pending; W0 cannot exit until ownership is recorded. Assigning D-06 ownership does not close D-06: enforcement coverage must also be verified in W1.
+Horizontal page navigation and left section navigation are independent axes. Intake may expose Identify → Details → Review steps while the Details step uses scroll navigation for identity, addresses and contacts. Responsive geometry changes never silently switch the interaction mode.
 
-Closing D-05 establishes the rollout framework; it does not authorize any production cohort. Each cohort must separately record its route list, named owner/operator, observation duration, numeric thresholds, compatible fallback and parity evidence, then satisfy the framework’s readiness approval before activation. Later cohorts do not reopen D-05 unless they change the framework.
+### 14.4 Extension levels
 
-D-02 must record numeric values with units and test fixtures, not only words such as “narrow.” Derive breakpoint choices from minimum usable content plus rails/gaps and validate at 200% zoom and with Atlas docked. Unknown count is a state, not a numeric threshold: pending/failed is unknown, successful 0 is zero, successful positive value is a count.
+| Level | Entity supplies | Shared behavior retained |
+| --- | --- | --- |
+| 1 — Metadata configuration | Fields/groups, labels, bindings, sections and operation references | Full page-kind runtime and generic rendering |
+| 2 — Existing provider composition | Arrangement of existing relationship, summary and collection providers | Full page-kind runtime |
+| 3 — Specialized provider | Custom section, summary or domain action integration | Workspace and page-kind lifecycle |
+| 4 — Custom content workspace | Specialized editor with explicit lifecycle adapter | Chrome, geometry, boundaries, dirty state, navigation and action conventions |
 
-Minimum objective assertions: exactly one main and one page h1; no focusable hidden navigation; no obscured focused target/action/last field; no shell horizontal overflow in the approved viewport matrix; passive scroll never moves focus or pushes history; retry affects the failed scope; page failure disables dependent mutations; failed saves retain values; context transitions never show previous-scope data; active page alone owns footer metadata; modal dismissal restores valid focus.
+Use the smallest sufficient extension. Level 4 does not authorize a custom global shell, loading framework, footer or competing page action bar. Specialized content may have its own internal interactions. Promote a domain provider to shared only when another real consumer demonstrates compatible semantics.
 
-## 13. Change control
+### 14.5 Studio, intake and review
 
-The component structure and ownership principles are an accepted baseline subject to controlled amendments, not permanently frozen behavior. Full contract ratification remains pending named accountability and closure of D-01 through D-06. Implementation completeness and production readiness are not certified; decision closure is separate from implementation evidence. No named owners, numeric budgets, production status or test results are fabricated by this document.
+ConfigurationRuntime is a reusable wrapper for draft/revision context integration, view navigation, dirty/save integration, validation-result presentation and registered actions. Its content can be a supported generic metadata editor or a specialized composition editor. The current Business Partner Studio editor remains specialized until reuse is demonstrated. Authoring services retain authority over draft creation, revisions, transitions and publication.
 
-Changes use a reviewed PR updating this document, the work plan where affected, and a short decision entry with rationale and compatibility impact. Editorial corrections increment patch; compatible optional extensions increment minor; breaking public behavior/schema/component changes increment major. A breaking change requires affected plane review, migration and rollback guidance; authorization/session changes require IAM/domain authorization review; focus/navigation changes require accessibility review; deployment/cache changes require deployment review.
+IntakeRuntime manages step/section navigation, validation presentation, dirty integration, progress and recovery. The domain adapter supplies the flow, validation integration, draft persistence, duplicate checks, submission operation and result interpretation. Submit references an authorized operation; it does not mean direct record creation. A result may create/advance a governed request.
 
-Do not silently replace this canonical document with a new competing copy. Durable decisions stay under architecture. Execution evidence follows repository conventions in `governance/policy/reports/` when it must remain live, otherwise Git/release artifacts retain the history. Existing architecture guidance remains authoritative outside this document's scope.
+ReviewRuntime presents the subject, evidence, differences and permitted decisions. It must not assume all entities support Approve/Reject or that approval immediately materializes a business record. Frontend validation never replaces backend checks.
 
-### Revision record
+### 14.6 Definition and provider contracts
 
-- **1.0.1 (2026-09-17):** Clarified interim assignment authority, D-06 ownership versus enforcement closure, one-time D-05 versus recurring cohort readiness, and accepted-baseline status. No runtime architecture change.
+Use a discriminated definition by pageKind. Intake requires a compatible flow reference; review requires subject/operation integration; configuration requires authoring-context integration. Collection/detail definitions do not carry irrelevant intake fields. Model a common envelope plus kind-specific fields rather than one bag of optional properties.
+
+The following is illustrative target notation, not an implemented public schema. Choose the actual schema identifier/version in the shared contract while implementing it; this example does not change existing wire versions.
+
+```ts
+const assetDetailDefinition = {
+  schemaVersion: 1, // illustrative; confirm against the implemented contract
+  entityCode: "asset",
+  pageKind: "detail",
+  layout: "sections-content-overview",
+  sectionNavigation: { mode: "scroll" },
+  sections: [
+    { key: "identity", provider: "entity.fields",
+      options: { fieldGroup: "identity" } },
+    { key: "ownership", provider: "entity.relationships",
+      options: { relationship: "owners" } },
+    { key: "maintenance", provider: "asset.maintenance-history", options: {} },
+  ],
+  overview: [
+    { key: "summary", provider: "entity.summary",
+      options: { fieldGroup: "summary" } },
+  ],
+};
+```
+
+Provider-specific configuration belongs under the provider-validated `options` object in this target example. Earlier illustrations with top-level `fieldGroup` or `relationship` are superseded, not alternative supported forms. This example refinement is not a claim of wire-level backward compatibility: if inventory finds an implemented consumer of the earlier shape, adapt or explicitly migrate that local consumer and add a focused compatibility check before adoption.
+
+Each provider has a stable identifier, supported API version, supported page kinds/slots, validated options schema, required capabilities, rendering implementation and lifecycle adapter. Distinguish definition schema version, provider API compatibility and artifact release version. The public capability manifest contains serializable descriptions; the local runtime registry binds those descriptions to code. Metadata does not carry executable imports or functions.
+
+Lifecycle integration covers resource identity, shared data/cache access, cancellation/stale-result rejection, validation, dirty state, authorized actions and cleanup. Do not duplicate record requests independently without coordination. No arbitrary executable script, module path, SQL or CSS is permitted in options.
+
+### 14.7 Definition validation and provider availability scope
+
+| Layer | Responsibility |
+| --- | --- |
+| Authoring feedback | Actionable diagnostics while editing; cannot substitute for publication enforcement |
+| Publication enforcement | Reject invalid/incompatible definitions before activation |
+| Runtime defense | Safely reject unsupported schemas/required providers and re-evaluate current context |
+
+Validate page kind/schema, unique keys, field/group/relationship references, provider identifiers and option schemas, supported slots/kinds/layouts/navigation combinations, flow/operation references and required-versus-optional status. Publication verifies declared capabilities and references, not the future user's permission to execute them.
+
+**Check availability at three practical scopes:**
+
+1. **Current plane/runtime:** the current local Neon, Mesh or Studio registry must support required providers. Support in Studio's editor alone does not prove another plane can render a provider. Use the current build's registration data; do not implement artifact-manifest negotiation now.
+2. **Tenant/business enablement:** check applicable tenant/account capabilities when resolving the definition and again when context changes.
+3. **Request authorization:** enforce current resource/action permissions on the backend. Registration is not authorization evidence.
+
+Unsupported required provider/version produces a safe unsupported-definition state and disables dependent mutations. Optional providers may be omitted only when omission leaves a valid task; remove their navigation and adapt layout consistently. Never silently render an incomplete editable form as valid. Validate references/options on the backend before allowing publication of the new definition format, and defensively parse on the client.
+
+Multi-version provider manifests and environment-promotion compatibility are future deployment work. They do not block local runtime construction.
+
+### 14.8 Onboarding, packaging and completion
+
+```text
+Register entity schema and backend capabilities
+→ Select supported page kinds
+→ Author explicit page definitions
+→ Compose existing providers
+→ Implement only necessary specialized providers
+→ Validate and publish through governed lifecycle
+→ Register authorized routes/navigation
+→ Verify entity behavior and shared conventions
+```
+
+Not every entity requires every kind. Do not create an entity package just to copy generic pages. Apps retain thin route adapters; shared page geometry stays in platform shell; entity rendering stays in runtime packages; specialized providers stay in their appropriate domain/plane packages. Use the canonical existing-component lineage in section 2; do not create a competing replacement table.
+
+Build generic layout/state primitives first or alongside the shared definition contract. Finalize the actual local schema before wiring the resolver, provider bindings and publication parser to it. Adapt Business Partner, then prove reuse with a second entity and Mesh. Keep a few meaningful failure tests: unknown required provider, invalid options/reference, unsupported page-kind/slot and access denial. Do not build historical deployment fixtures for a local-only runtime.
+
+Completion requires a second entity with metadata-only sections and a specialized registered provider, no copied chrome/boundaries/scroll/footer implementation, no entity conditionals in the resolver, and parity for permissions, state, navigation and mutations. These are foundations to evolve; generic onboarding is not certified by the existence of current runtimes.
 
 ## Appendix A. Detailed component and behavior inventory
 
-The following agreed skeleton is preserved in full. Sections 5–6 clarify responsive action priorities and Atlas's separate transient/docked channels; section 7 defines layout selection; sections 10–13 add contract, cache, measurable acceptance and governance rules.
+The component inventory below retains the agreed UI structure. The final implementation checklist is simplified for local development; future production mechanisms are not prerequisites. Sections 5–6 clarify responsive action priorities and Atlas's separate transient/docked channels; section 7 defines layout selection; sections 10–13 describe shared contracts and the simplified local-development scope. Section 14 extends this preserved inventory with the authoritative page-kind runtime and entity extension contract.
 
 ```text
 ATHYPER SHARED APPLICATION EXPERIENCE — V1 DESIGN CONTRACT
 │
-├── Scope
+├── Scope [local build; future deployment mechanisms deferred]
 │   ├── Neon
 │   ├── Mesh
 │   └── Studio
@@ -1090,67 +1204,15 @@ ATHYPER SHARED APPLICATION EXPERIENCE — V1 DESIGN CONTRACT
 │       ├── Mesh → network accounts, collaboration, externally scoped content
 │       └── Studio → composition, drafts, validation, versions, publication
 │
-└── IMPLEMENTATION AND ACCEPTANCE CONTRACT
-    │
-    ├── Existing foundations to evolve
-    │   ├── PlatformShell and plane adapters
-    │   ├── PageFrame / PageHeader
-    │   ├── EntityPageLayout collection/record ownership
-    │   ├── EntitySectionNavigation and scroll behavior
-    │   ├── EntityRecord360Panel
-    │   ├── Existing 360 descriptor through compatibility adapters
-    │   ├── RecordFooterSource / useRecordFooterSources
-    │   ├── Shared quick-access infrastructure
-    │   └── Content-hub preparation and authorized content/document services
-    │
-    ├── Ownership
-    │   ├── app-foundation → application startup/providers/fallbacks
-    │   ├── platform-shell → shell and generic page geometry
-    │   ├── entity runtime → metadata-driven entity rendering
-    │   ├── plane packages → context and capability adapters
-    │   ├── domain packages → specialized providers
-    │   └── content-hub → shared Knowledge experience integration
-    │
-    ├── Migration sequence
-    │   ├── Record shared contracts/tokens/scroll ownership
-    │   ├── Extract shell components without changing behavior
-    │   ├── Standardize overlay, focus, and preference behavior
-    │   ├── Implement PageWorkspace and three layout variants
-    │   ├── Implement shared state boundaries/status/action lifecycle
-    │   ├── Migrate Business Partner detail
-    │   ├── Migrate Business Partner new request
-    │   ├── Migrate Studio model workspace
-    │   ├── Introduce versioned generic page-definition adapters
-    │   ├── Prove reuse with a second entity and a Mesh page
-    │   ├── Roll out across remaining routes
-    │   └── Remove duplicate layout/state markup and CSS
-    │
-    ├── Enforcement
-    │   ├── All planes use shared application and shell entry points
-    │   ├── Routes use PageWorkspace or documented application fallback
-    │   ├── Data-driven surfaces use shared state components
-    │   ├── No route-specific shell reconstruction
-    │   ├── No arbitrary page-level shell CSS overrides
-    │   └── No duplicated preference, favorites, or recent-history stores
-    │
-    └── Verification matrix
-        ├── Startup success / timeout / retry / authentication / access denial
-        ├── Provider failure and provider-independent fatal fallback
-        ├── Framework root recovery
-        ├── One-, two-, and three-column layouts across all planes
-        ├── Loading / error / empty / forbidden / not found / ready
-        ├── Partial section/panel/service failure
-        ├── Refresh failure with retained authorized data
-        ├── Failed saves preserve input
-        ├── Body failure disables dependent mutation actions
-        ├── Deep links / Back / Forward / final-section scroll tracking
-        ├── Context switches and cache isolation
-        ├── Footer information ownership and cleanup
-        ├── Desktop / mobile / Atlas docked / expanded content
-        ├── Keyboard / focus / screen-reader announcements
-        ├── Long titles / long labels / RTL / 200% zoom
-        ├── System / Light / Dark appearance
-        ├── Comfortable / Compact density
-        ├── Authorized search / Knowledge / favorites / recents
-        └── Application, metadata, record, and draft versions clearly distinguished
+└── LOCAL BUILD CHECKLIST
+    ├── Inspect active implementations and preserve unrelated local edits
+    ├── Consolidate startup and shell using existing packages
+    ├── Build shared PageWorkspace layouts and state handling
+    ├── Define one pageKind contract and validated provider registry
+    ├── Adapt Business Partner collection/detail/intake/Studio
+    ├── Prove reuse with another entity and Mesh
+    ├── Complete supported utilities and Knowledge features
+    ├── Remove verified duplicate code and styles
+    ├── Check affected flows, keyboard/narrow layout and relevant tests
+    └── Defer replicas, release cohorts and version-skew machinery until needed
 ```
