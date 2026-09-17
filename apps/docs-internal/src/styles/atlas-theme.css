@@ -1,0 +1,68 @@
+/*
+ * Restyles Starlight's default palette with the Atlas Modern brand tokens
+ * already defined in packages/platform/foundation/theme (COLOR_TOKENS,
+ * FOUNDATION_TOKENS.typography) and packages/platform/foundation/brand
+ * (ATLAS_MODERN_BRAND). No layout or component changes — only the CSS
+ * custom properties Starlight itself reads. Keep this file's values in
+ * sync with that source of truth if it changes; there is no automated
+ * link between them since this site doesn't import the theme package.
+ *
+ * Identical copy lives at apps/docs-internal/src/styles/atlas-theme.css —
+ * duplicated rather than shared as a workspace package, since it's a
+ * single small CSS file with no logic.
+ */
+@layer starlight.base {
+  :root {
+    /* Atlas Modern — dark (Starlight's un-attributed root is its dark set) */
+    --sl-color-accent-low: color-mix(in srgb, #234b84 24%, black);
+    --sl-color-accent: color-mix(in srgb, #234b84 32%, white);
+    --sl-color-accent-high: #b7c9e4;
+
+    --sl-color-white: #e8edf5;
+    --sl-color-gray-1: #cbd3e0;
+    --sl-color-gray-2: #a8b3c7;
+    --sl-color-gray-3: #7f8ba3;
+    --sl-color-gray-4: #52627a;
+    --sl-color-gray-5: #33425a;
+    --sl-color-gray-6: #17243a;
+    --sl-color-black: #0b1220;
+
+    --sl-color-text: var(--sl-color-gray-2);
+    --sl-color-text-accent: var(--sl-color-accent-high);
+    --sl-color-bg: var(--sl-color-black);
+    --sl-color-bg-nav: #111b2e;
+    --sl-color-bg-sidebar: #111b2e;
+    --sl-color-bg-inline-code: #1d2a40;
+    --sl-color-bg-accent: var(--sl-color-accent-high);
+    --sl-color-hairline-light: var(--sl-color-gray-5);
+    --sl-color-hairline: var(--sl-color-gray-6);
+    --sl-color-hairline-shade: var(--sl-color-black);
+
+    --sl-font: 'Geist', 'Inter', var(--sl-font-system);
+  }
+
+  :root[data-theme='light'] {
+    /* Atlas Modern — light */
+    --sl-color-accent-low: color-mix(in srgb, #234b84 8%, white);
+    --sl-color-accent: #234b84;
+    --sl-color-accent-high: color-mix(in srgb, #234b84 82%, black);
+
+    --sl-color-white: #172033;
+    --sl-color-gray-1: #2a3548;
+    --sl-color-gray-2: #5b6578;
+    --sl-color-gray-3: #7c8698;
+    --sl-color-gray-4: #aab4c5;
+    --sl-color-gray-5: #d5dce7;
+    --sl-color-gray-6: #eef2f7;
+    --sl-color-gray-7: #f8fafc;
+    --sl-color-black: #ffffff;
+
+    --sl-color-text-accent: var(--sl-color-accent);
+    --sl-color-bg: #f8fafc;
+    --sl-color-bg-nav: #f8fafc;
+    --sl-color-bg-inline-code: var(--sl-color-gray-6);
+    --sl-color-bg-accent: var(--sl-color-accent);
+    --sl-color-hairline-light: var(--sl-color-gray-6);
+    --sl-color-hairline-shade: var(--sl-color-gray-6);
+  }
+}

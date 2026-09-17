@@ -18,6 +18,16 @@ export default defineConfig({
         // gain `audience: public` frontmatter. Empty until the first
         // promotion (see plan rollout step 2: organization-setup first).
       ],
+      customCss: ["./src/styles/atlas-theme.css"],
+      head: [
+        {
+          tag: "link",
+          attrs: {
+            rel: "stylesheet",
+            href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap",
+          },
+        },
+      ],
     }),
   ],
 });

@@ -15,6 +15,16 @@ export default defineConfig({
       description: "Internal engineering and business documentation.",
       // No manual sidebar: this audience gets everything staged, so nav
       // autogenerates from the staged directory structure.
+      customCss: ["./src/styles/atlas-theme.css"],
+      head: [
+        {
+          tag: "link",
+          attrs: {
+            rel: "stylesheet",
+            href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap",
+          },
+        },
+      ],
     }),
   ],
 });
