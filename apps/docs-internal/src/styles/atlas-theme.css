@@ -66,3 +66,37 @@
     --sl-color-hairline-shade: var(--sl-color-gray-6);
   }
 }
+
+/*
+ * Persistent dark-navy sidebar, matching the product shell's rail
+ * (packages/platform/shell/shell/src/styles.css .athyper-shell__rail):
+ * a fixed `linear-gradient(165deg, story-start, story-end)` that stays
+ * dark in both the app's light and dark modes, not tied to page theme.
+ * Deliberately outside any @layer so it wins over Starlight's own
+ * `@layer starlight.core` sidebar rules regardless of load order.
+ */
+.sidebar-pane {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, #234b84 24%, black),
+    color-mix(in srgb, #234b84 64%, black)
+  );
+  border-inline-end: none;
+
+  /* Re-scope the tokens Starlight's sidebar markup reads (see
+     @astrojs/starlight SidebarSublist.astro) so link text stays legible
+     on the fixed-dark background regardless of the page's own theme. */
+  --sl-color-gray-2: color-mix(in srgb, white 78%, transparent);
+  --sl-color-white: #ffffff;
+  --sl-color-hairline-light: color-mix(in srgb, white 14%, transparent);
+}
+
+.sidebar-pane a[aria-current='page'] {
+  background: color-mix(in srgb, white 16%, transparent);
+  color: #ffffff;
+  box-shadow: inset 3px 0 0 color-mix(in srgb, #234b84 38%, white);
+}
+
+.sidebar-pane .large {
+  color: #ffffff;
+}
