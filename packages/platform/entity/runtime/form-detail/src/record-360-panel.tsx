@@ -3,7 +3,7 @@ import {
   EntitySectionNavigation,
   useEntitySectionScroll,
 } from "./section-navigation";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Component, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { EntityRecord360PanelV1 } from "@athyper/contract-platform-entity-runtime";
 
 export interface Record360Section {
@@ -210,7 +210,7 @@ function ProgressiveSection({
     >
       <h2 id={id}>{item.label}</h2>
       {loaded || selected ? (
-        children
+        <SectionBoundary label={item.label}>{children}</SectionBoundary>
       ) : (
         <div
           className="a-record-360__placeholder"
@@ -219,4 +219,30 @@ function ProgressiveSection({
       )}
     </section>
   );
+}
+
+/**
+ * A render failure in one section must not take down neighboring sections or the panel's
+ * heading/navigation. Matches the existing ShellSurfaceBoundary convention (local class
+ * boundary, Retry resets local state) rather than introducing a different pattern.
+ */
+class SectionBoundary extends Component<
+  { readonly label: string; readonly children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div role="alert" className="a-record-360__section-error">
+        <p>{this.props.label} could not be displayed.</p>
+        <button type="button" onClick={() => this.setState({ failed: false })}>
+          Try again
+        </button>
+      </div>
+    );
+  }
 }
