@@ -13,6 +13,11 @@ export default defineConfig({
     starlight({
       title: "athyper Docs",
       description: "athyper business workflow documentation.",
+      logo: {
+        src: "./src/assets/logo.svg",
+        alt: "athyper",
+      },
+      favicon: "/favicon.svg",
       sidebar: [
         // Add entries here as workspace docs clear editorial review and
         // gain `audience: public` frontmatter. Empty until the first

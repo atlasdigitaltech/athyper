@@ -13,6 +13,11 @@ export default defineConfig({
     starlight({
       title: "athyper Wiki",
       description: "Internal engineering and business documentation.",
+      logo: {
+        src: "./src/assets/logo.svg",
+        alt: "athyper",
+      },
+      favicon: "/favicon.svg",
       // No manual sidebar: this audience gets everything staged, so nav
       // autogenerates from the staged directory structure.
       customCss: ["./src/styles/atlas-theme.css"],
