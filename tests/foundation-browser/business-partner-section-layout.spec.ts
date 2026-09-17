@@ -9,7 +9,7 @@ const styles = [
 ]
   .map((path) => readFileSync(path, "utf8").replace(/@import[^;]+;/g, ""))
   .join("\n");
-const script = buildSync({
+const bundle = buildSync({
   stdin: {
     resolveDir: process.cwd(),
     loader: "tsx",
@@ -27,25 +27,28 @@ createRoot(document.getElementById('root')).render(<div className="bp360"><div c
   },
   bundle: true,
   write: false,
+  outfile: "fixture.js",
   format: "iife",
   platform: "browser",
   jsx: "automatic",
   define: { "process.env.NODE_ENV": '"test"' },
   tsconfig: resolve("tooling/config/tsconfig-react.json"),
   logLevel: "silent",
-}).outputFiles[0]!.text;
+});
+const script = bundle.outputFiles.find((file) => file.path.endsWith(".js"))!.text;
+const importedStyles = bundle.outputFiles.filter((file) => file.path.endsWith(".css")).map((file) => file.text).join("\n");
 test("remaining partner sections use aligned responsive field grids", async ({
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.setContent(
-    `<style>${styles}body{padding:24px;margin:0}*{box-sizing:border-box}</style><div id="root"></div>`,
+    `<style>${importedStyles}\n${styles}body{padding:24px;margin:0}*{box-sizing:border-box}</style><div id="root"></div>`,
   );
   await page.addScriptTag({ content: script });
   for (const title of [
     "Roles",
     "Supplier role",
-    "Northwind Bank · •••• 6819",
+    "Northwind Bank · GBP · •••• 6819",
     "Commodity capabilities",
   ]) {
     const card = page

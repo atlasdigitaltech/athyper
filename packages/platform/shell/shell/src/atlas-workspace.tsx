@@ -22,7 +22,7 @@ import {
   PanelRightIcon,
   AtlasBrandIcon,
 } from "@athyper/platform-icons";
-import { Tooltip } from "@athyper/platform-ui";
+import { Tooltip, useModalIsolation } from "@athyper/platform-ui";
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -49,6 +49,7 @@ export interface AtlasWorkspaceProps {
   readonly pinned?: boolean;
   readonly onPinnedChange?: (pinned: boolean) => void;
   readonly onClose?: () => void;
+  readonly restoreFocusOnUnmount?: boolean;
 }
 
 export function AtlasWorkspace({
@@ -59,8 +60,16 @@ export function AtlasWorkspace({
   pinned = false,
   onPinnedChange,
   onClose,
+  restoreFocusOnUnmount = true,
 }: AtlasWorkspaceProps) {
   const surface = useAtlasSurface();
+  const panel = useRef<HTMLElement>(null);
+  const modal = Boolean(onClose && (!pinned || mode === "fullscreen"));
+  useModalIsolation(panel, modal, {
+    initialFocus: () => panel.current?.querySelector<HTMLElement>('[contenteditable="true"]') ?? null,
+    outside: () => Array.from(panel.current?.parentElement?.querySelectorAll<HTMLElement>(":scope > .athyper-atlas-workspace__scrim") ?? []),
+    restoreFocus: false,
+  });
   useEffect(() => {
     setHistoryOpen(mode === "fullscreen");
     requestAnimationFrame(() => composer.current?.focus());
@@ -237,7 +246,7 @@ export function AtlasWorkspace({
         : null;
     composer.current?.focus();
     return () => {
-      if (previous?.isConnected) previous.focus();
+      if (restoreFocusOnUnmount && previous?.isConnected) previous.focus();
     };
   }, []);
   const draftKey = `${scope.storageKey}:atlas-draft:v2:${atlas.threadId ?? "new"}`;
@@ -257,8 +266,11 @@ export function AtlasWorkspace({
   };
   return (
     <section
+      ref={panel}
+      role={modal ? "dialog" : undefined}
+      aria-modal={modal || undefined}
       onKeyDown={(event) => {
-        if (event.key === "Escape" && onClose) {
+        if (event.key === "Escape" && !event.defaultPrevented && onClose) {
           event.preventDefault();
           onClose();
         }

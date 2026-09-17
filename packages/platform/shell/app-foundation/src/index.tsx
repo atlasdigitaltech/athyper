@@ -5,12 +5,13 @@ export { readBrowserCsrfToken } from "./browser-csrf";
 
 import { parseInstant } from "@athyper/platform-temporal";
 export * from "./boundaries";
+export { ApplicationLoading, ApplicationFatalError, ApplicationError } from "./application-fallbacks";
 export * from "./error-taxonomy";
 export { FeatureGate, PermissionGate, RouteGuard, classifyServerDenial, runGuardedMutation, useAccessSnapshot, useHasAnyPermission, useHasPermission, useIsFeatureEnabled } from "@athyper/platform-shell-runtime";
 
 import { principalQueryScope, type PrincipalQueryScope, type SanitizedSession, type SessionNextAction } from "@athyper/contract-platform-auth-session";
-import { ApiTransportError, type ExperienceBootstrap, type ExperienceFeature, type ExperienceProfile, type ExperienceWorkspace, type HttpClient } from "@athyper/platform-api-client";
-import { PlatformQueryProvider, PrincipalQueryLifecycle, type DehydratedState, type QueryClient } from "@athyper/platform-query";
+import { createHttpClient, ApiTransportError, type ExperienceBootstrap, type ExperienceFeature, type ExperienceProfile, type ExperienceWorkspace, type HttpClient } from "@athyper/platform-api-client";
+import { getBrowserQueryClient, PlatformQueryProvider, PrincipalQueryLifecycle, type DehydratedState, type QueryClient } from "@athyper/platform-query";
 import { AccessProvider, createAccessSnapshot, type AccessDiagnostic } from "@athyper/platform-shell-runtime";
 import { validateSurfaceOpen, type SurfaceFrame, type SurfaceKind } from "@athyper/platform-surface-kit";
 import { Toast, ToastRegion } from "@athyper/platform-ui";
@@ -48,6 +49,13 @@ export interface AppFoundationProvidersProps {
   readonly onAccessDiagnostic?: (event: AccessDiagnostic) => void;
   readonly navigation?: ApplicationNavigation;
   readonly children: ReactNode;
+}
+
+/** Browser client setup shared by plane adapters; routing and bootstrap stay app-owned. */
+export function BrowserApplicationProviders(props: Omit<AppFoundationProvidersProps, "apiClient" | "queryClient">) {
+  const [queryClient] = useState(getBrowserQueryClient);
+  const apiClient = useMemo(() => createHttpClient({ csrfToken: readBrowserCsrfToken }), []);
+  return <AppFoundationProviders {...props} queryClient={queryClient} apiClient={apiClient} />;
 }
 
 /** Provider nesting is security-significant; keep this order aligned with the Phase 6 contract. */

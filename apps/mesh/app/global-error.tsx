@@ -1,4 +1,7 @@
 "use client";
 import * as React from "react";
-import { GlobalAppErrorBoundary } from "@athyper/platform-shell-app-foundation";
-export default function GlobalError({ error }: { readonly error: Error & { digest?: string } }) { return <GlobalAppErrorBoundary applicationName="Athyper Mesh" error={error} reset={() => window.location.reload()} />; }
+import { ApplicationFatalError } from "@athyper/platform-shell-app-foundation";
+
+export default function GlobalError({ error }: { readonly error: Error & { digest?: string } }) {
+  return <ApplicationFatalError plane="mesh" error={error} />;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { BellIcon, CheckIcon, ChevronRightIcon, CircleCheckIcon, ClipboardCheckIcon, InboxIcon, InfoIcon, WarningIcon } from "@athyper/platform-icons";
+import { activityCount } from "./activity-counts";
 import { Drawer } from "@athyper/platform-ui";
 import * as React from "react";
 import { useState } from "react";
@@ -66,11 +67,12 @@ interface ShellActivityCenterProps {
 }
 
 export function ShellActivityCenter({ activeTab, dataSource, onTabChange, onClose }: ShellActivityCenterProps) {
+  const countsReady = Boolean(dataSource && !dataSource.loading && !dataSource.error);
   const notifications = dataSource?.notifications ?? [];
   const inbox = dataSource?.inbox ?? [];
   const [notificationScope, setNotificationScope] = useState<"all" | "unread">("all");
   const [inboxScope, setInboxScope] = useState<"all" | "priority">("all");
-  const unreadCount = dataSource?.unreadNotificationCount ?? notifications.filter((item) => item.unread).length;
+  const unreadCount = activityCount(dataSource, "notifications");
   const priorityCount = inbox.filter((item) => item.priority === "high" || item.priority === "urgent").length;
   const visibleNotifications = notificationScope === "unread" ? notifications.filter((item) => item.unread) : notifications;
   const visibleInbox = inboxScope === "priority" ? inbox.filter((item) => item.priority === "high" || item.priority === "urgent") : inbox;
@@ -93,21 +95,21 @@ export function ShellActivityCenter({ activeTab, dataSource, onTabChange, onClos
     <Drawer.Tabs value={activeTab} onValueChange={(value) => onTabChange(value as ShellActivityTab)}>
       <Drawer.Navigation className="athyper-activity-center__tabs" aria-label="Activity type"><Drawer.TabList className="athyper-activity-center__tab-list">
         <ActivityTab label="Notifications" kind="notifications" count={unreadCount}/>
-        <ActivityTab label="Inbox" kind="inbox" count={dataSource?.openInboxCount ?? inbox.length}/>
+        <ActivityTab label="Inbox" kind="inbox" count={activityCount(dataSource, "inbox")}/>
       </Drawer.TabList></Drawer.Navigation>
 
       <Drawer.Toolbar className="athyper-activity-center__toolbar">
         <div className="athyper-activity-center__filters" aria-label={`${activeTab === "notifications" ? "Notification" : "Inbox"} filters`}>
           {activeTab === "notifications" ? <>
-            <FilterButton label="All" count={notifications.length} active={notificationScope === "all"} onClick={() => setNotificationScope("all")}/>
+            <FilterButton label="All" count={countsReady ? notifications.length : undefined} active={notificationScope === "all"} onClick={() => setNotificationScope("all")}/>
             <FilterButton label="Unread" count={unreadCount} active={notificationScope === "unread"} onClick={() => setNotificationScope("unread")}/>
           </> : <>
-            <FilterButton label="All" count={inbox.length} active={inboxScope === "all"} onClick={() => setInboxScope("all")}/>
-            <FilterButton label="Priority" count={priorityCount} active={inboxScope === "priority"} onClick={() => setInboxScope("priority")}/>
+            <FilterButton label="All" count={countsReady ? inbox.length : undefined} active={inboxScope === "all"} onClick={() => setInboxScope("all")}/>
+            <FilterButton label="Priority" count={countsReady ? priorityCount : undefined} active={inboxScope === "priority"} onClick={() => setInboxScope("priority")}/>
           </>}
         </div>
         {activeTab === "notifications" ? <div className="athyper-activity-center__toolbar-actions">
-          {unreadCount > 0 && dataSource?.onMarkAllNotificationsRead ? <button className="athyper-activity-center__quiet-action" type="button" onClick={() => void dataSource.onMarkAllNotificationsRead?.()}>Mark all read</button> : null}
+          {unreadCount !== undefined && unreadCount > 0 && dataSource?.onMarkAllNotificationsRead ? <button className="athyper-activity-center__quiet-action" type="button" onClick={() => void dataSource.onMarkAllNotificationsRead?.()}>Mark all read</button> : null}
           <PushEnrollmentControl dataSource={dataSource}/>
         </div> : null}
       </Drawer.Toolbar>
@@ -125,12 +127,12 @@ function PushEnrollmentControl({dataSource}:{readonly dataSource?:ShellActivityD
   return <button className="athyper-activity-center__quiet-action" type="button" title={dataSource?.pushEnrollmentError} onClick={()=>void dataSource?.onEnableBrowserPush?.()}>Enable alerts</button>;
 }
 
-function ActivityTab({ label, kind, count }: { readonly label: string; readonly kind: ShellActivityTab; readonly count: number }) {
-  return <Drawer.Tab id={`athyper-activity-tab-${kind}`} value={kind} aria-controls="athyper-activity-center-content"><span><ActivityGlyph kind={kind}/>{label}</span>{count > 0 ? <b aria-label={`${count} ${kind === "notifications" ? "unread" : "open"}`}>{formatCount(count)}</b> : null}</Drawer.Tab>;
+function ActivityTab({ label, kind, count }: { readonly label: string; readonly kind: ShellActivityTab; readonly count?: number }) {
+  return <Drawer.Tab data-count-state={count === undefined ? "unknown" : count === 0 ? "zero" : "known"} aria-label={`${label}${count === undefined ? ", count unavailable" : `, ${count}`}`} id={`athyper-activity-tab-${kind}`} value={kind} aria-controls="athyper-activity-center-content"><span><ActivityGlyph kind={kind}/>{label}</span>{count !== undefined && count > 0 ? <b aria-label={`${count} ${kind === "notifications" ? "unread" : "open"}`}>{formatCount(count)}</b> : null}</Drawer.Tab>;
 }
 
-function FilterButton({ label, count, active, onClick }: { readonly label: string; readonly count: number; readonly active: boolean; readonly onClick: () => void }) {
-  return <button type="button" aria-pressed={active} onClick={onClick}>{label}<span>{formatCount(count)}</span></button>;
+function FilterButton({ label, count, active, onClick }: { readonly label: string; readonly count?: number; readonly active: boolean; readonly onClick: () => void }) {
+  return <button type="button" aria-pressed={active} onClick={onClick}>{label}{count === undefined ? <span aria-label="Count unavailable">—</span> : <span>{formatCount(count)}</span>}</button>;
 }
 
 function NotificationRow({ item, onMarkRead }: { readonly item: ShellNotificationItem; readonly onMarkRead?: (item: ShellNotificationItem) => void | Promise<void> }) {

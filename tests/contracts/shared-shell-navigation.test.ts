@@ -337,13 +337,9 @@ test("rejects unsafe, duplicate, and traversing route declarations", () => {
 
 test("shared shell keeps global actions and breadcrumbs in compact separate rows", async () => {
   const [source, styles, messages] = await Promise.all([
-    readFile(
-      new URL(
-        "../../packages/platform/shell/shell/src/client.tsx",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
+    Promise.all(["client.tsx", "shell-header-actions.tsx", "shell-navigation.tsx", "shell-preferences.ts"].map((file) =>
+      readFile(new URL(`../../packages/platform/shell/shell/src/${file}`, import.meta.url), "utf8")
+    )).then((sources) => sources.join("\n")),
     readFile(
       new URL(
         "../../packages/platform/shell/shell/src/styles.css",
@@ -360,7 +356,7 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
     ),
   ]);
 
-  assert.match(source, /<BusinessContext /);
+  assert.match(source, /<BusinessContext\s/);
   assert.match(source, /className="athyper-shell__rail-brand"/);
   assert.match(source, /className="athyper-shell__desktop-brand"/);
   assert.match(source, /className="athyper-shell__desktop-brand-toggle"/);
@@ -371,7 +367,7 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   assert.match(source, /className="athyper-shell__rail-toggle"/);
   assert.match(
     source,
-    /aria-label=\{t\(collapsed \? "shell\.navigation\.expand" : "shell\.navigation\.collapse"\)\}/,
+    /aria-label=\{t\(\s*collapsed\s*\? "shell\.navigation\.expand"\s*: "shell\.navigation\.collapse",?\s*\)\}/,
   );
   assert.match(source, /className="athyper-shell__brand-tooltip"/);
   assert.match(source, /className="athyper-shell__navigation-peek"/);
@@ -379,12 +375,12 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
     source,
     /<QuickAccessRailActions[^>]*onPeek=\{setNavigationPeek\}/,
   );
-  assert.match(source, /workspace:t\("shell\.quick\.label"\)/);
+  assert.match(source, /workspace:\s*t\("shell\.quick\.label"\)/);
   assert.match(
     source,
-    /data-activity-open=\{headerAction === "notifications" \|\| headerAction === "inbox"\}/,
+    /data-activity-open=\{\s*headerAction === "notifications" \|\| headerAction === "inbox"\s*\}/,
   );
-  assert.match(source, /<SidebarProfile /);
+  assert.match(source, /<SidebarProfile\s/);
   assert.match(source, /className="athyper-shell__profile"/);
   assert.match(messages, /"shell\.profile\.organization": "Organization"/);
   assert.match(messages, /"shell\.profile\.email": "Email address"/);
@@ -394,14 +390,14 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   assert.match(source, /className="athyper-shell__nav-label"/);
   assert.match(source, /onPointerEnter=/);
   assert.match(source, /min-width: 761px\) and \(max-width: 1100px/);
-  assert.match(source, /athyper_shell_collapsed=\$\{next\}/);
+  assert.match(source, /athyper_shell_collapsed=\$\{value\}/);
   assert.match(source, /aria-label=\{`\$\{applicationName\} home`\}/);
   assert.doesNotMatch(source, /title=\{`\$\{applicationName\} home`\}/);
   assert.doesNotMatch(source, /className="athyper-shell__brand"/);
   assert.doesNotMatch(source, /<ContextSwitcher /);
   assert.match(source, /Switch your authorized workspace/);
   assert.match(source, /fetch\("\/api\/auth\/contexts"/);
-  assert.match(source, /<HeaderActions navigation=\{navigation\}/);
+  assert.match(source, /<HeaderActions\s+navigation=\{navigation\}/);
   for (const action of ["search", "notifications", "inbox", "agent"]) {
     assert.match(source, new RegExp(`kind="${action}"`));
   }
@@ -563,7 +559,7 @@ test("business-context switchability is based only on resolved authorized contex
       "utf8",
     ),
   ]);
-  assert.match(source, /interactive=\{status==="ready"&&contexts\.length>1\}/);
+  assert.match(source, /interactive=\{status\s*===\s*"ready"\s*&&\s*contexts\.length\s*>\s*1\}/);
   assert.doesNotMatch(source, /interactive=\{status!=="ready"/);
   assert.match(studioLayout, /loadShellContexts\(\)/);
   assert.match(studioLayout, /contexts=\{contexts\}/);

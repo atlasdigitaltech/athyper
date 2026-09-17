@@ -1,10 +1,11 @@
 "use client";
 
+import { useModalIsolation } from "@athyper/platform-ui";
 import { parseInstant } from "@athyper/platform-temporal";
 import * as React from "react";
 import { ChevronRightIcon, ClockIcon, CloseIcon, ContactRoundIcon, FileTextIcon, HistoryIcon, PanelsTopLeftIcon, SearchIcon, StarIcon } from "@athyper/platform-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { DerivedShellNavigation } from "./core";
+import { canAccessRoute, type DerivedShellNavigation } from "./core";
 
 export type ShellQuickAccessTab = "favourites" | "recent";
 export type ShellQuickAccessKind = "record" | "page";
@@ -33,6 +34,8 @@ interface QuickAccessStore {
 }
 
 interface ShellQuickAccessProps {
+  readonly modal?: boolean;
+  readonly plane?: string;
   readonly activeTab: ShellQuickAccessTab;
   readonly tenantId: string;
   readonly accountScope: string;
@@ -46,29 +49,28 @@ interface ShellQuickAccessProps {
 const EMPTY_STORE: QuickAccessStore = Object.freeze({ favourites: Object.freeze([]), recent: Object.freeze([]) });
 const MAX_RECENT_ITEMS = 50;
 
-export function ShellQuickAccess({ activeTab, tenantId, accountScope, path, navigation, dataSource, onTabChange, onClose }: ShellQuickAccessProps) {
-  const storageKey = useMemo(() => `athyper.shell.quick-access.v1:${hashScope(`${tenantId}:${accountScope}`)}`, [tenantId, accountScope]);
+export function ShellQuickAccess({ plane = "shared", modal = false, activeTab, tenantId, accountScope, path, navigation, dataSource, onTabChange, onClose }: ShellQuickAccessProps) {
+  const storageKey = useMemo(() => quickAccessStorageKey(plane, tenantId, accountScope), [plane, tenantId, accountScope]);
   const [localStore, setLocalStore] = useState<QuickAccessStore>(EMPTY_STORE);
   const [query, setQuery] = useState("");
   const [recentKind, setRecentKind] = useState<ShellQuickAccessKind>("record");
   const [confirmClear, setConfirmClear] = useState(false);
   const [undoRecent, setUndoRecent] = useState<readonly ShellQuickAccessItem[]>();
   const search = useRef<HTMLInputElement>(null);
+  const panel = useRef<HTMLElement>(null);
+  useModalIsolation(panel, modal, { initialFocus: () => search.current, restoreFocus: false });
   const undoTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const durableRecords = useDurableRecordFavourites(navigation, dataSource?.favourites !== undefined);
 
   useEffect(() => {
     const stored = readStore(storageKey);
-    const current = dataSource?.recent === undefined ? currentQuickAccessItem(path, navigation) : undefined;
-    const next = current ? rememberVisit(stored, current) : stored;
-    setLocalStore(next);
-    if (current) writeStore(storageKey, next);
+    setLocalStore(stored);
   }, [storageKey, path, navigation, dataSource]);
 
   useEffect(() => {
     requestAnimationFrame(() => search.current?.focus());
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !event.defaultPrevented) {
         event.preventDefault();
         onClose();
       }
@@ -79,8 +81,8 @@ export function ShellQuickAccess({ activeTab, tenantId, accountScope, path, navi
 
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
-  const favourites = dataSource?.favourites ?? mergeFavourites(durableRecords.items, localStore.favourites);
-  const recent = dataSource?.recent ?? localStore.recent;
+  const favourites = (dataSource?.favourites ?? mergeFavourites(durableRecords.items, localStore.favourites)).filter((item) => canAccessRoute(navigation, item.href.split(/[?#]/)[0]!));
+  const recent = (dataSource?.recent ?? localStore.recent).filter((item) => canAccessRoute(navigation, item.href.split(/[?#]/)[0]!));
   const favouriteHrefs = useMemo(() => new Set(favourites.map((item) => item.href)), [favourites]);
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const matchingFavourites = useMemo(() => favourites.filter((item) => matchesItem(item, normalizedQuery)), [favourites, normalizedQuery]);
@@ -151,7 +153,7 @@ export function ShellQuickAccess({ activeTab, tenantId, accountScope, path, navi
   const visibleCount = activeTab === "favourites" ? matchingFavourites.length : matchingRecent.length;
   const visibleNoun = activeTab === "favourites" ? "favourite" : recentKind;
   const summary = `${visibleCount}${normalizedQuery ? " matching" : ""} ${visibleNoun}${visibleCount === 1 ? "" : "s"}`;
-  return <aside id="athyper-quick-access" className="athyper-quick-access" role="dialog" aria-modal="false" aria-labelledby="athyper-quick-access-title">
+  return <aside ref={panel} id="athyper-quick-access" className="athyper-quick-access" role="dialog" aria-modal={modal} aria-labelledby="athyper-quick-access-title">
     <header className="athyper-quick-access__header">
       <span className="athyper-quick-access__hero-icon" aria-hidden="true"><StarIcon data-filled="true" /></span>
       <span>
@@ -208,11 +210,12 @@ function useDurableRecordFavourites(navigation: DerivedShellNavigation, disabled
     } catch { /* Quick Access keeps local page favourites available offline. */ }
   }, [disabled]);
   useEffect(() => { void load(); const changed = () => void load(); window.addEventListener("athyper:record-bookmarks-changed", changed); return () => window.removeEventListener("athyper:record-bookmarks-changed", changed); }, [load]);
-  const items = useMemo(() => rows.map((row): ShellQuickAccessItem => {
+  const items = useMemo(() => rows.flatMap((row): ShellQuickAccessItem[] => {
     const route = navigation.routes.find((candidate) => candidate.href.endsWith(`/${row.entityCode}`) || candidate.id === row.entityCode);
+    if (!route) return [];
     const label = row.label ?? row.recordId;
     const href = route ? `${route.href}?q=${encodeURIComponent(label)}` : navigation.landingHref ?? "/";
-    return { id: `record-bookmark:${row.entityCode}:${row.recordId}`, href, label, description: route?.label ?? humanize(row.entityCode), group: route?.label ?? humanize(row.entityCode), kind: "record", visitedAt: row.createdAt };
+    return [{ id: `record-bookmark:${row.entityCode}:${row.recordId}`, href, label, description: route.label, group: route.label, kind: "record", visitedAt: row.createdAt }];
   }), [rows, navigation]);
   const remove = React.useCallback(async (id: string) => {
     const match = /^record-bookmark:([a-z][a-z0-9_.-]{0,126}):([0-9a-f-]{36})$/iu.exec(id);
@@ -283,6 +286,25 @@ function QuickAccessEmpty({ variant, filtered, recentKind, onShowRecent, onShowP
   </div>;
 }
 
+export function quickAccessStorageKey(plane: string, tenantId: string, accountScope: string): string {
+  return `athyper.shell.quick-access.v2:${hashScope(JSON.stringify([plane, tenantId, accountScope]))}`;
+}
+
+/** Record authorized route visits independently of whether Quick Access is open. */
+export function useRememberQuickAccessVisit(plane: string, tenantId: string, accountScope: string, path: string, navigation: DerivedShellNavigation, enabled: boolean) {
+  const previous = useRef<string | undefined>(undefined);
+  const key = quickAccessStorageKey(plane, tenantId, accountScope);
+  const pathname = path.split(/[?#]/)[0]!;
+  useEffect(() => {
+    const visit = `${key}:${pathname}`;
+    if (!enabled || previous.current === visit || !canAccessRoute(navigation, pathname)) return;
+    const item = currentQuickAccessItem(pathname, navigation);
+    if (!item) return;
+    previous.current = visit;
+    writeStore(key, rememberVisit(readStore(key), item));
+  }, [key, pathname, navigation, enabled]);
+}
+
 function currentQuickAccessItem(path: string, navigation: DerivedShellNavigation): ShellQuickAccessItem | undefined {
   const route = [...navigation.routes].sort((left, right) => right.href.length - left.href.length).find((candidate) => candidate.href === path || (candidate.href !== "/" && path.startsWith(`${candidate.href}/`)));
   if (!route || path.startsWith("/auth/") || path === "/select-context") return undefined;
@@ -335,7 +357,7 @@ function readStore(key: string): QuickAccessStore {
     const value = JSON.parse(localStorage.getItem(key) ?? "{}") as { favourites?: unknown; recent?: unknown };
     return { favourites: parseItems(value.favourites), recent: parseItems(value.recent).slice(0, MAX_RECENT_ITEMS) };
   } catch {
-    localStorage.removeItem(key);
+    try { localStorage.removeItem(key); } catch { /* Storage access itself can be denied. */ }
     return EMPTY_STORE;
   }
 }

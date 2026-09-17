@@ -1572,6 +1572,9 @@ importers:
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../foundation/api-client
+      '@athyper/platform-brand':
+        specifier: workspace:*
+        version: link:../../foundation/brand
       '@athyper/platform-iam-session':
         specifier: workspace:*
         version: link:../../iam/session

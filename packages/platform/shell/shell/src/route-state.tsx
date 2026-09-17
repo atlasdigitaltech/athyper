@@ -9,7 +9,7 @@ export function ShellRouteProvider({pathname,children}:{readonly pathname:string
   const [record,setRecord]=useState<RecordBreadcrumbBinding>();
   const [binding,setBinding]=useState<EntityBreadcrumbBinding>();
   const value=useMemo(()=>({pathname,binding,setBinding,record,setRecord}),[pathname,binding,record]);
-  return <ShellRouteContext.Provider value={value}><RecordFooterProvider>{children}</RecordFooterProvider></ShellRouteContext.Provider>;
+  return <ShellRouteContext.Provider value={value}><RecordFooterProvider scopeKey={pathname}>{children}</RecordFooterProvider></ShellRouteContext.Provider>;
 }
 export const useShellRoute=()=>useContext(ShellRouteContext);
 /** Registration lasts only as long as the authorized application descriptor. */

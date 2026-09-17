@@ -4,7 +4,7 @@ import { EntityRecordHeader } from "./record-header";
 import { useEffect, useState, type FormEvent } from "react";
 import type { EntityDetailDescriptorV1, EntityFormDescriptorV1, EntityRecordV1, EntitySurfaceFieldV1 } from "@athyper/contract-platform-entity-runtime";
 import { entityDescriptorClient } from "@athyper/platform-entity-descriptor-client";
-import { PageFrame, PageHeader, useRecordPage, useAtlasBusinessContextPublisher } from "@athyper/platform-shell";
+import { PageFrame, PageHeader, PageWorkspace, useRecordPage, useAtlasBusinessContextPublisher } from "@athyper/platform-shell";
 import { useApiClient, useSessionIdentity } from "@athyper/platform-shell-app-foundation";
 import { Button, Card, Checkbox, Input, Label, Select } from "@athyper/platform-ui";
 
@@ -32,7 +32,7 @@ export function EntityDetailRuntime({ entityCode, recordId, editHref }: { readon
     return () => { active = false; };
   }, [client, entityCode, recordId, key]);
   useAtlasBusinessContextPublisher({kind:"record",entityCode,recordId,section:activeSection,dirty:false,savedRevision:loaded?.key===key&&loaded.record.version!==undefined?String(loaded.record.version):undefined});
-  if (!loaded || loaded.key !== key) return <PageFrame><PageHeader level="collection" title={humanize(entityCode)}/><Card><p role="status">{status}</p></Card></PageFrame>;
+  if (!loaded || loaded.key !== key) return <PageWorkspace header={{ level: "collection", title: humanize(entityCode) }}><Card><p role="status">{status}</p></Card></PageWorkspace>;
   const { descriptor, record } = loaded;
   const presentation = descriptor.presentation ?? parseEntityRecordPresentation({ schemaVersion: 1, titleField: descriptor.titleField, sections: [{ key: "overview", label: "Overview", fields: descriptor.fields.map(field => field.key) }], actions: [{ key: "edit", label: "Edit", operationKey: "patch", placement: "primary" }] });
   const section = presentation.sections.find(item => item.key === activeSection) ?? presentation.sections[0];
@@ -41,11 +41,11 @@ export function EntityDetailRuntime({ entityCode, recordId, editHref }: { readon
     actions: presentation.actions.flatMap(action => action.operationKey === "patch" && editHref && descriptor.actions.some(item => item.kind === "edit") ? [{ key: action.key, label: action.label, placement: action.placement, href: editHref }] : []),
   });
   const fields = section ? descriptor.fields.filter(field => section.fields.includes(field.key)) : descriptor.fields;
-  return <PageFrame width="wide"><EntityRecordHeader header={header} activeSection={section?.key} onSelectSection={setActiveSection}
-    technicalDetails={<dl><div><dt>Record ID</dt><dd>{record.id}</dd></div><div><dt>Release</dt><dd>{descriptor.revision.release}</dd></div>{record.version === undefined ? null : <div><dt>Version</dt><dd>{record.version}</dd></div>}</dl>}/>
+  return <PageWorkspace width="wide" status={status ? <p role="status">{status}</p> : null} header={<EntityRecordHeader header={header} activeSection={section?.key} onSelectSection={setActiveSection}
+    technicalDetails={<dl><div><dt>Record ID</dt><dd>{record.id}</dd></div><div><dt>Release</dt><dd>{descriptor.revision.release}</dd></div>{record.version === undefined ? null : <div><dt>Version</dt><dd>{record.version}</dd></div>}</dl>}/>}
+    >
     <Card className="a-record-detail-content"><h2>{section?.label ?? "Details"}</h2><dl className="a-record-detail-fields">{fields.map(field => <div key={field.key}><dt>{field.label}</dt><dd>{display(record.values[field.key])}</dd></div>)}</dl></Card>
-    {status ? <p role="status">{status}</p> : null}
-  </PageFrame>;
+  </PageWorkspace>;
 }
 
 function Field({ field, value, onChange }: { readonly field: EntitySurfaceFieldV1; readonly value: unknown; readonly onChange: (value: unknown) => void }) { const id = `entity-field-${field.key}`; if (field.kind === "boolean") return <Label htmlFor={id}><Checkbox id={id} checked={value === true} disabled={field.readOnly} onChange={(event) => onChange(event.currentTarget.checked)}/>{field.label}</Label>; if (field.options?.length) return <Label htmlFor={id}><span>{field.label}</span><Select id={id} value={String(value ?? "")} required={field.required} disabled={field.readOnly} onChange={(event) => onChange(event.currentTarget.value)}><option value="">Select…</option>{field.options.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</Select></Label>; return <Label htmlFor={id}><span>{field.label}</span><Input id={id} value={String(value ?? "")} required={field.required} readOnly={field.readOnly} type={inputType(field.kind)} onChange={(event) => onChange(event.currentTarget.value)}/></Label>; }

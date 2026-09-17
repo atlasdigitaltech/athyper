@@ -2,6 +2,7 @@
 import React, {
   createContext,
   useContext,
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -11,32 +12,57 @@ export interface RecordSource {
   readonly sourceObject: string;
   readonly observedAt: string;
 }
+type Registration = {
+  readonly owner: object;
+  readonly scopeKey: string;
+  readonly sources: readonly RecordSource[];
+};
 const Context = createContext<
   | {
-      sources: readonly RecordSource[];
-      setSources: React.Dispatch<React.SetStateAction<readonly RecordSource[]>>;
+      readonly sources: readonly RecordSource[];
+      readonly scopeKey: string;
+      readonly register: (value: Registration) => () => void;
     }
   | undefined
 >(undefined);
 export function RecordFooterProvider({
   children,
+  scopeKey = "default",
 }: {
   readonly children: ReactNode;
+  readonly scopeKey?: string;
 }) {
-  const [sources, setSources] = useState<readonly RecordSource[]>([]);
-  const value = useMemo(() => ({ sources, setSources }), [sources]);
+  const [registration, setRegistration] = useState<Registration>();
+  const register = useCallback((value: Registration) => {
+    setRegistration(value);
+    return () =>
+      setRegistration((current) =>
+        current?.owner === value.owner ? undefined : current,
+      );
+  }, []);
+  // Scope changes hide the previous record synchronously without remounting page input.
+  const sources =
+    registration?.scopeKey === scopeKey ? registration.sources : [];
+  const value = useMemo(
+    () => ({ sources, scopeKey, register }),
+    [sources, scopeKey, register],
+  );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 /** Only the active, authorized record section owns the footer provenance. */
 export function useRecordFooterSources(sources: readonly RecordSource[]) {
-  const setSources = useContext(Context)?.setSources;
+  const context = useContext(Context);
+  const register = context?.register,
+    scopeKey = context?.scopeKey;
   const serialized = JSON.stringify(sources);
   useEffect(() => {
-    if (!setSources) return;
-    const next = JSON.parse(serialized) as readonly RecordSource[];
-    setSources(next);
-    return () => setSources((current) => (current === next ? [] : current));
-  }, [setSources, serialized]);
+    if (!register || scopeKey === undefined) return;
+    return register({
+      owner: {},
+      scopeKey,
+      sources: JSON.parse(serialized) as readonly RecordSource[],
+    });
+  }, [register, scopeKey, serialized]);
 }
 export function RecordFooterSource() {
   const sources = useContext(Context)?.sources ?? [];

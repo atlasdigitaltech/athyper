@@ -1,4 +1,6 @@
 "use client";
+import { useModalIsolation, registerModalBranch } from "./modal-isolation";
+export { useModalIsolation } from "./modal-isolation";
 
 import * as React from "react";
 import { DatePicker } from "./date-picker";
@@ -132,6 +134,12 @@ export function MenuContent({ className, portal = false, style, ...props }: HTML
     window.addEventListener("scroll", update, true);
     return () => { window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true); };
   }, [c, c.open, portal]);
+  useEffect(() => {
+    if (!c.open || !portal || !position || !c.root.current || !c.content.current) return;
+    const unregister = registerModalBranch(c.root.current, c.content.current);
+    c.content.current.querySelector<HTMLElement>('[role="menuitem"]:not(:disabled)')?.focus();
+    return unregister;
+  }, [c.open, portal, c.root, c.content, Boolean(position)]);
   if (!c.open) return null;
   const content = <div ref={c.content} role="menu" className={cx("a-menu__content", portal && "a-menu__content--portal", className)} style={portal ? { ...style, left: position?.left, top: position?.top, visibility: position ? "visible" : "hidden" } : style} {...props} />;
   return portal && typeof document !== "undefined" ? createPortal(content, document.body) : content;
@@ -161,26 +169,13 @@ export const DrawerClose = DialogClose;
 
 export function DrawerPanel({ size = "standard", variant = "task", mobilePresentation = "fullscreen", className, children, id, ...props }: HTMLAttributes<HTMLDivElement> & { readonly size?: DrawerSize; readonly variant?: DrawerVariant; readonly mobilePresentation?: DrawerMobilePresentation }) {
   const dialog = useContext(DialogContext); if (!dialog) throw new Error("DrawerPanel must be inside DrawerRoot");
-  const titleId = useId(), descriptionId = useId(), panel = useRef<HTMLDivElement>(null), closeButton = useRef<HTMLButtonElement>(null), restore = useRef<HTMLElement | null>(null), [portalReady, setPortalReady] = useState(false);
+  const titleId = useId(), descriptionId = useId(), panel = useRef<HTMLDivElement>(null), closeButton = useRef<HTMLButtonElement>(null), [portalReady, setPortalReady] = useState(false);
   useEffect(() => setPortalReady(true), []);
-  useEffect(() => {
-    if (!dialog.open || !portalReady) return;
-    restore.current = document.activeElement as HTMLElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    (closeButton.current ?? firstFocusable(panel.current))?.focus();
-    const key = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || !isTopmostModal(panel.current)) return;
-      if (event.key === "Escape") { event.preventDefault(); dialog.setOpen(false); return; }
-      if (event.key !== "Tab" || !panel.current) return;
-      const items = focusableElements(panel.current), first = items[0], last = items.at(-1);
-      if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    window.addEventListener("keydown", key);
-    return () => { window.removeEventListener("keydown", key); document.body.style.overflow = previousOverflow; restore.current?.focus(); };
-  }, [dialog.open, dialog.setOpen, portalReady]);
+  useModalIsolation(panel, dialog.open && portalReady, {
+    initialFocus: () => closeButton.current,
+    outside: () => Array.from(panel.current?.parentElement?.querySelectorAll<HTMLElement>(":scope > .a-dialog-scrim") ?? []),
+    onEscape: () => dialog.setOpen(false),
+  });
   if (!dialog.open || !portalReady) return null;
   const context = { titleId, descriptionId, closeButton };
   return createPortal(<div className="a-drawer-layer" data-variant={variant} data-mobile-presentation={mobilePresentation}>
@@ -211,16 +206,13 @@ export function DrawerTabPanel(props: Parameters<typeof TabsContent>[0]) { retur
 
 export const Drawer = Object.freeze({ Root: DrawerRoot, Trigger: DrawerTrigger, Close: DrawerClose, Panel: DrawerPanel, Header: DrawerHeader, Navigation: DrawerNavigation, Toolbar: DrawerToolbar, Context: DrawerContext, Metric: DrawerMetric, Body: DrawerBody, Footer: DrawerFooter, FooterSummary: DrawerFooterSummary, FooterActions: DrawerFooterActions, Tabs: DrawerTabs, TabList: DrawerTabList, Tab: DrawerTab, TabPanel: DrawerTabPanel });
 
-function focusableElements(owner: HTMLElement): HTMLElement[] { return [...owner.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(element => !element.closest('[hidden], [inert]')); }
-function firstFocusable(owner: HTMLElement | null): HTMLElement | null { return owner ? focusableElements(owner)[0] ?? null : null; }
-function isTopmostModal(panel: HTMLElement | null): boolean {
-  const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]');
-  return dialogs.item(dialogs.length - 1) === panel;
-}
 function ModalContent({ title, description, children, className, variant }: { readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string; readonly variant: "dialog" | "drawer" }) {
-  const c = useContext(DialogContext); if (!c) throw new Error("DialogContent must be inside Dialog"); const titleId = useId(); const descriptionId = useId(); const panel = useRef<HTMLDivElement>(null); const restore = useRef<HTMLElement | null>(null); const [portalReady, setPortalReady] = useState(false);
+  const c = useContext(DialogContext); if (!c) throw new Error("DialogContent must be inside Dialog"); const titleId = useId(); const descriptionId = useId(); const panel = useRef<HTMLDivElement>(null); const [portalReady, setPortalReady] = useState(false);
   useEffect(() => setPortalReady(true), []);
-  useEffect(() => { if (!c.open || (variant === "drawer" && !portalReady)) return; restore.current = document.activeElement as HTMLElement; const previousOverflow = document.body.style.overflow; document.body.style.overflow = "hidden"; const first = panel.current?.querySelector<HTMLElement>('button:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'); first?.focus(); const key = (event: KeyboardEvent) => { if (event.defaultPrevented || !isTopmostModal(panel.current)) return; if (event.key === "Escape") { event.preventDefault(); c.setOpen(false); } if (event.key === "Tab" && panel.current) { const items = [...panel.current.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])')]; if (!items.length) return; const firstItem = items[0]; const lastItem = items[items.length - 1]; if (event.shiftKey && document.activeElement === firstItem) { event.preventDefault(); lastItem?.focus(); } else if (!event.shiftKey && document.activeElement === lastItem) { event.preventDefault(); firstItem?.focus(); } } }; document.addEventListener("keydown", key); return () => { document.removeEventListener("keydown", key); document.body.style.overflow = previousOverflow; restore.current?.focus(); }; }, [c.open, c.setOpen, portalReady, variant]);
+  useModalIsolation(panel, c.open && (variant !== "drawer" || portalReady), {
+    outside: () => Array.from(panel.current?.parentElement?.querySelectorAll<HTMLElement>(":scope > .a-dialog-scrim") ?? []),
+    onEscape: () => c.setOpen(false),
+  });
   if (!c.open) return null;
   const drawer = variant === "drawer";
   if (drawer && !portalReady) return null;
