@@ -24,6 +24,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 const DOCS_ROOT = path.join(REPO_ROOT, "docs");
 
+// Kept in sync with the plane list in apps/docs-external/src/components/SiteTitle.astro.
+const PLANES = [
+  { dir: "neon", name: "Neon" },
+  { dir: "mesh", name: "Mesh" },
+  { dir: "studio", name: "Studio" },
+];
+
 const target = parseTarget(process.argv);
 const empty = process.argv.includes("--empty");
 const APP_DIR = path.join(REPO_ROOT, "apps", `docs-${target}`);
@@ -183,6 +190,25 @@ function main() {
     // must deny unauthenticated access before real content ever lands)
     // even before any docs/ file is approved for this target.
     writePlaceholder();
+  }
+
+  if (target === "external") {
+    // The header's Neon/Mesh/Studio plane switcher (src/components/
+    // SiteTitle.astro) always links to /neon/, /mesh/, /studio/ — stub
+    // each one out until real audience: public content lands under it,
+    // so the switcher never 404s.
+    for (const plane of PLANES) {
+      const hasContent = manifestEntries.some((e) => e.href.startsWith(`/${plane.dir}`));
+      if (hasContent) continue;
+      const outAbsPath = path.join(CONTENT_OUT, plane.dir, "index.md");
+      fs.mkdirSync(path.dirname(outAbsPath), { recursive: true });
+      fs.writeFileSync(
+        outAbsPath,
+        stringifyFrontmatter({ title: `athyper ${plane.name}` }) +
+          "\n" +
+          `No public documentation has been published for ${plane.name} yet.\n`
+      );
+    }
   }
 
   // Copy assets referenced by staged pages.

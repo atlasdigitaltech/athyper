@@ -24,6 +24,9 @@ export default defineConfig({
         // promotion (see plan rollout step 2: organization-setup first).
       ],
       customCss: ["./src/styles/atlas-theme.css"],
+      components: {
+        Header: "./src/components/Header.astro",
+      },
       head: [
         {
           tag: "link",
