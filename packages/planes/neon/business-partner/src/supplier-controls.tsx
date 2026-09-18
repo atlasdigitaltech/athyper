@@ -8,7 +8,7 @@ import {
   useApplicationNavigation,
   usePermissions,
 } from "@athyper/platform-shell-app-foundation";
-import { PageSurface } from "@athyper/platform-surface-kit";
+import { BusinessPartnerPageFrame } from "./page-frame";
 import {
   Badge,
   Button,
@@ -240,7 +240,7 @@ export function SupplierControls({
   }
 
   return (
-    <PageSurface
+    <BusinessPartnerPageFrame
       title="Supplier controls"
       description="Qualification, preference, payment readiness, activation, and terminal lifecycle changes use their native governed authorities."
       actions={
@@ -587,7 +587,7 @@ export function SupplierControls({
           <p>No supplier role is visible in this authorized scope.</p>
         </Card>
       ) : null}
-    </PageSurface>
+    </BusinessPartnerPageFrame>
   );
 }
 

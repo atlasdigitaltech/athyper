@@ -14,7 +14,7 @@ import {
   usePermissions,
   useToasts,
 } from "@athyper/platform-shell-app-foundation";
-import { PageSurface } from "@athyper/platform-surface-kit";
+import { BusinessPartnerPageFrame } from "./page-frame";
 import {
   Badge,
   Button,
@@ -97,7 +97,7 @@ export function GovernedBusinessPartnerRoleExtension({
   if (!permissions.has("neon.relationship.entity_case.create")) {
     return (
       <div data-ui-state="unauthorized">
-        <PageSurface
+        <BusinessPartnerPageFrame
           title={
             requestedRole
               ? `Add ${requestedRole} role`
@@ -108,7 +108,7 @@ export function GovernedBusinessPartnerRoleExtension({
           <Notice>
             You do not have permission to create a governed role-extension case.
           </Notice>
-        </PageSurface>
+        </BusinessPartnerPageFrame>
       </div>
     );
   }
@@ -219,7 +219,7 @@ function RoleExtensionForm({
 
   return (
     <div data-ui-state={busy ? "mutation-pending" : error ? "error" : "ready"}>
-      <PageSurface
+      <BusinessPartnerPageFrame
         contentOnly={Boolean(intake)}
         title={
           requestedRole
@@ -369,7 +369,7 @@ function RoleExtensionForm({
           </EntityIntakeForm>
         ) : null}
         {error && !aggregate ? <Notice>{error}</Notice> : null}
-      </PageSurface>
+      </BusinessPartnerPageFrame>
     </div>
   );
 }

@@ -11,7 +11,7 @@ import {
   useApiClient,
   usePermissions,
 } from "@athyper/platform-shell-app-foundation";
-import { PageSurface } from "@athyper/platform-surface-kit";
+import { BusinessPartnerPageFrame } from "./page-frame";
 import { Button, Card, Input, Label, Select } from "@athyper/platform-ui";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
@@ -205,11 +205,11 @@ export function BusinessPartnerRequestContent({
 
   if (!permissions.has("neon.relationship.entity_case.create"))
     return (
-      <PageSurface title="New request">
+      <BusinessPartnerPageFrame title="New request">
         <p role="alert">
           You do not have permission to create business partner requests.
         </p>
-      </PageSurface>
+      </BusinessPartnerPageFrame>
     );
   function changeRole(answers: Readonly<Record<string, string>>) {
     const nextRole = answers.requested_role;
@@ -269,7 +269,7 @@ export function BusinessPartnerRequestContent({
   return (
     <>
       <div hidden={Boolean(intake && intake.state.currentStep !== "partner")}>
-        <PageSurface
+        <BusinessPartnerPageFrame
           contentOnly={Boolean(intake)}
           title="New business partner request"
           description="Choose a role, check for an existing partner, then enter details and submit the request for approval."
@@ -373,7 +373,7 @@ export function BusinessPartnerRequestContent({
               ) : null}
             </Card>
           ) : null}
-        </PageSurface>
+        </BusinessPartnerPageFrame>
       </div>
       {role && target ? (
         <div

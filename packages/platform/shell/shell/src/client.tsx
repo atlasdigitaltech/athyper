@@ -201,6 +201,7 @@ export function ShellChrome({
     path,
     navigation,
     experienceState === "ready" && quickAccess?.recent === undefined,
+    routeState?.record,
   );
   const [navigationPeek, setNavigationPeek] = useState<ShellNavigationPeek>();
   const menuButton = useRef<HTMLButtonElement>(null),

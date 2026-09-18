@@ -9,7 +9,7 @@ import {
   useApiClient,
   useToasts,
 } from "@athyper/platform-shell-app-foundation";
-import { PageSurface } from "@athyper/platform-surface-kit";
+import { BusinessPartnerPageFrame } from "./page-frame";
 import { Button, Card, Input, Label, Select } from "@athyper/platform-ui";
 import {
   useNeonWorkContext,
@@ -103,7 +103,7 @@ export function NewCustomerRequest() {
     }
   }
   return (
-    <PageSurface
+    <BusinessPartnerPageFrame
       contentOnly={Boolean(intake)}
       title="New customer onboarding request"
       description="Register an organization customer in an authorized sales scope."
@@ -175,7 +175,7 @@ export function NewCustomerRequest() {
           {intake ? "Continue to review" : "Create customer draft"}
         </Button>
       </EntityIntakeForm>
-    </PageSurface>
+    </BusinessPartnerPageFrame>
   );
 }
 function value(data: FormData, name: string): string {

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@athyper/platform-api-client": "workspace:*",
+    "@athyper/platform-shell": "workspace:*",
     "@athyper/platform-shell-app-foundation": "workspace:*",
     "@athyper/platform-surface-kit": "workspace:*",
     "@athyper/platform-ui": "workspace:*",

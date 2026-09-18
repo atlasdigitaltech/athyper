@@ -6,6 +6,7 @@ import * as React from "react";
 import { ChevronRightIcon, ClockIcon, CloseIcon, ContactRoundIcon, FileTextIcon, HistoryIcon, PanelsTopLeftIcon, SearchIcon, StarIcon } from "@athyper/platform-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { canAccessRoute, type DerivedShellNavigation } from "./core";
+import type { RecordBreadcrumbBinding } from "./route-state";
 
 export type ShellQuickAccessTab = "favourites" | "recent";
 export type ShellQuickAccessKind = "record" | "page";
@@ -290,28 +291,34 @@ export function quickAccessStorageKey(plane: string, tenantId: string, accountSc
   return `athyper.shell.quick-access.v2:${hashScope(JSON.stringify([plane, tenantId, accountScope]))}`;
 }
 
-/** Record authorized route visits independently of whether Quick Access is open. */
-export function useRememberQuickAccessVisit(plane: string, tenantId: string, accountScope: string, path: string, navigation: DerivedShellNavigation, enabled: boolean) {
+/**
+ * Record authorized route visits independently of whether Quick Access is open. resolvedRecord is the
+ * same binding useRecordBreadcrumb already registers for breadcrumbs — reused here so a record page's
+ * actual resolved title (not a humanized/opaque URL segment) reaches Recent, without requiring pages to
+ * register their identity a second time through a separate mechanism.
+ */
+export function useRememberQuickAccessVisit(plane: string, tenantId: string, accountScope: string, path: string, navigation: DerivedShellNavigation, enabled: boolean, resolvedRecord?: RecordBreadcrumbBinding) {
   const previous = useRef<string | undefined>(undefined);
   const key = quickAccessStorageKey(plane, tenantId, accountScope);
   const pathname = path.split(/[?#]/)[0]!;
+  const resolvedLabel = resolvedRecord?.pathname === pathname ? resolvedRecord.label : undefined;
   useEffect(() => {
     const visit = `${key}:${pathname}`;
     if (!enabled || previous.current === visit || !canAccessRoute(navigation, pathname)) return;
-    const item = currentQuickAccessItem(pathname, navigation);
+    const item = currentQuickAccessItem(pathname, navigation, resolvedLabel);
     if (!item) return;
     previous.current = visit;
     writeStore(key, rememberVisit(readStore(key), item));
-  }, [key, pathname, navigation, enabled]);
+  }, [key, pathname, navigation, enabled, resolvedLabel]);
 }
 
-function currentQuickAccessItem(path: string, navigation: DerivedShellNavigation): ShellQuickAccessItem | undefined {
+function currentQuickAccessItem(path: string, navigation: DerivedShellNavigation, resolvedLabel?: string): ShellQuickAccessItem | undefined {
   const route = [...navigation.routes].sort((left, right) => right.href.length - left.href.length).find((candidate) => candidate.href === path || (candidate.href !== "/" && path.startsWith(`${candidate.href}/`)));
   if (!route || path.startsWith("/auth/") || path === "/select-context") return undefined;
   const suffix = path.slice(route.href === "/" ? 1 : route.href.length + 1).split("/").filter(Boolean);
   const last = suffix.at(-1);
   const decoded = last ? safeDecode(last) : undefined;
-  const usefulDetail = decoded && !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(decoded) ? humanize(decoded) : undefined;
+  const usefulDetail = resolvedLabel ?? (decoded && !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(decoded) ? humanize(decoded) : undefined);
   return {
     id: path,
     href: path,

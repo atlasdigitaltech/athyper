@@ -5,6 +5,7 @@ import { useOrganizationSelection } from "./use-organization-selection";
 import { SupplierProcessPreview } from "./supplier-process-preview";
 import { SupplierProcessCorrection } from "./supplier-process-correction";
 import { PageNavigation, PageResourceBoundary, PageWorkspace, useDeepLinkedTabState, useRecordBreadcrumb, useRegisterEntityTaskHeader, type PageResourceStatus } from "@athyper/platform-shell";
+import { BusinessPartnerPageFrame } from "./page-frame";
 import { RequestLifecycle, RequestWorkspaceOverview, RequestWorkspaceDetails, RequestActivity, requestKind, requestTab } from "./request-workspace";
 import { restoreProfileAnswers } from "./request-relationships";
 import { RequestAttachmentField, RequestAttachmentScope } from "./request-attachment-field";
@@ -102,35 +103,7 @@ export * from "./role-extension-experience";
 export * from "./applicant-experience";
 export * from "./mesh-proposal-experience";
 
-/** Shared page frame for BP surfaces: avoids nesting a second main/h1 inside the shell's own Main. contentOnly defers header ownership to an ancestor (e.g. an intake step chrome); toolbar renders content search/filter controls above the body, per the shared page-toolbar convention. */
-function BusinessPartnerPageFrame({
-  title,
-  description,
-  actions,
-  toolbar,
-  contentOnly = false,
-  className,
-  children,
-}: {
-  readonly title: ReactNode;
-  readonly description?: ReactNode;
-  readonly actions?: ReactNode;
-  readonly toolbar?: ReactNode;
-  readonly contentOnly?: boolean;
-  readonly className?: string;
-  readonly children?: ReactNode;
-}) {
-  return contentOnly ? (
-    <section className={className}>
-      {toolbar}
-      {children}
-    </section>
-  ) : (
-    <PageWorkspace header={{ level: "collection", title, description, actions }} toolbar={toolbar} className={className}>
-      {children}
-    </PageWorkspace>
-  );
-}
+export { BusinessPartnerPageFrame };
 
 export function BusinessPartnerRecord({
   businessPartnerId,

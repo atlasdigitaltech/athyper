@@ -2,7 +2,7 @@
 import {useEffect,useMemo,useState} from "react";
 import {useApiClient,usePermissions,useSessionIdentity} from "@athyper/platform-shell-app-foundation";
 import {useNeonWorkContext} from "@athyper/product-neon-shell";
-import {PageSurface} from "@athyper/platform-surface-kit";
+import {BusinessPartnerPageFrame} from "./page-frame";
 import {Card} from "@athyper/platform-ui";
 import {Banking} from "./360/components/commercial-controls";
 import {createBusinessPartner360CommercialClient} from "./360/business-partner-360-commercial-client";
@@ -31,7 +31,7 @@ export function BankingWorkspace({businessPartnerId,mode="manage",initialCompany
  const verification=assignments.find(a=>a["companyCodeId"]===companyCodeId)?.["verificationId"] ?? (selectedAccount?.["verificationState"] as Row|undefined)?.["id"];
  const base=`/mdg/business-partner/${encodeURIComponent(businessPartnerId)}`;
  const companyQuery=companyCodeId?`?companyCodeId=${encodeURIComponent(companyCodeId)}`:"";
- return <PageSurface title={embedded?"Bank accounts":mode==="manage"?"Manage banking":"Bank verification"} description="Partner account facts are shared. Usage and acceptance are configured separately for each company.">
+ return <BusinessPartnerPageFrame contentOnly={embedded} title={embedded?"Bank accounts":mode==="manage"?"Manage banking":"Bank verification"} description="Partner account facts are shared. Usage and acceptance are configured separately for each company.">
   {!embedded?<p><a href={`${base}?section=banking&tab=360`}>Back to partner Banking</a> · <a href={`${base}/${mode==="manage"?"bank-verification":"banking"}${companyQuery}`}>{mode==="manage"?"Open bank verification":"Manage banking"}</a></p>:null}
   {!embedded?<Card><label htmlFor="banking-company">Company</label><select id="banking-company" value={companyCodeId} onChange={event=>{setCompanyCodeId(event.target.value);setSelected("");}} disabled={work.status!=="ready"}>
    <option value="">All authorized companies — view accounts</option>
@@ -58,5 +58,5 @@ export function BankingWorkspace({businessPartnerId,mode="manage",initialCompany
    {...(mode==="verification"&&verification?{initialVerificationId:String(verification)}:{})}
    {...(mode==="verification"&&selectedAccount?.["bankProjectionId"]?{bankProjectionId:String(selectedAccount["bankProjectionId"])}:{})}
    {...(data["supplierCompanyProfileId"]?{supplierCompanyProfileId:String(data["supplierCompanyProfileId"])}:{})}/>:null}
- </PageSurface>;
+ </BusinessPartnerPageFrame>;
 }

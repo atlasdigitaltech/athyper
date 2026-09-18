@@ -6,7 +6,7 @@ import {
   useApiClient,
   usePermissions,
 } from "@athyper/platform-shell-app-foundation";
-import { PageSurface } from "@athyper/platform-surface-kit";
+import { BusinessPartnerPageFrame } from "./page-frame";
 import {
   Badge,
   Button,
@@ -332,7 +332,7 @@ export function CustomerControls({
   const run = useCommandRunner({ setBusy, setError, reload, errorMessage });
 
   return (
-    <PageSurface
+    <BusinessPartnerPageFrame
       title="Customer credit and lifecycle"
       description="Credit approval is independent from registration approval; activation is pinned to current sales and AR readiness."
       actions={
@@ -790,7 +790,7 @@ export function CustomerControls({
           <p>No customer role is visible in this authorized scope.</p>
         </Card>
       ) : null}
-    </PageSurface>
+    </BusinessPartnerPageFrame>
   );
 }
 
