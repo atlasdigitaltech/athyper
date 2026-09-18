@@ -73,6 +73,10 @@ export function EntityRecord360Panel({
   });
   return (
     <div ref={root} className="a-record-360">
+      {/* Not platform-ui's Tabs/TabsList: those keep every panel mounted and toggle hidden, but only one
+          tab's content ever exists here (single shared tabpanel below) so the "360" tab's scroll-linked
+          progressive loading can assume it's the only rendered content. Forcing the always-mounted model
+          would mean restructuring that, not reusing it. */}
       <div
         ref={tabsRoot}
         role="tablist"
