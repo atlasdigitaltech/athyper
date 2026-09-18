@@ -56,7 +56,7 @@ function humanize(value: string): string { return value.replace(/[_.-]+/g, " ").
 function safeError(error: unknown): string { return error instanceof Error && error.message ? error.message : "The governed entity surface is unavailable."; }
 export { EntityRecordHeader } from "./record-header";
 
-export { EntityRecord360Panel, type Record360Section } from "./record-360-panel";
+export { EntityRecord360Panel, EntityRecord360ModeNavigation, type Record360Section } from "./record-360-panel";
 
 export { RelatedRecord, RelatedSectionError, PostalAddress, AddressSummary, ContactSummary, postalAddressLines, detailValue, safeChannelHref } from "./related-record";
 
@@ -69,6 +69,7 @@ export * from "./intake-classification";
 export * from "./entity-lookup";
 export * from "./reference-lookup";
 export * from "./data-surface";
+export { useDataValidation, type DisplayIssue } from "./data-validation";
 
 export { CollectionSection, AddressesSection, ContactsSection, BankAccountsSection, CertificationsSection, SupportingDocumentsSection } from "./collection-section";
 

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@athyper/contract-platform-entity-list": "workspace:*",
+    "@athyper/platform-brand": "workspace:*",
     "@athyper/platform-entity-list-view": "workspace:*",
     "@athyper/platform-icons": "workspace:*",
     "@athyper/platform-shell": "workspace:*",

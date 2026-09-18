@@ -2,7 +2,10 @@
 
 import type { EntityListScopeCoordinateV1 } from "@athyper/contract-platform-entity-list";
 import { EntityListRuntime, ListScopeControl } from "@athyper/platform-entity-list-view";
+import { getPlaneBrand } from "@athyper/platform-brand";
 import { ContactRoundIcon, FileTextIcon, NetworkIcon } from "@athyper/platform-icons";
+
+const MESH_APPLICATION_NAME = getPlaneBrand("mesh").applicationName;
 import { PageFrame, PageHeader } from "@athyper/platform-shell";
 import { readBrowserCsrfToken, useApiClient } from "@athyper/platform-shell-app-foundation";
 import { useMeshAccountContext } from "@athyper/product-mesh-shell";
@@ -33,7 +36,7 @@ export function BusinessPartnerNetworkList() {
   const coordinate = useMemo<EntityListScopeCoordinateV1 | undefined>(() => accounts.selected ? Object.freeze({ networkAccountId: accounts.selected.networkAccountId }) : undefined, [accounts.selected?.networkAccountId]);
   const selected = accounts.selected;
   const control = <ListScopeControl id="mesh-list-network-account" label="Acting account" value={selected?.networkAccountId} options={accounts.accounts.map((account) => ({ value: account.networkAccountId, label: `${account.code} · ${account.displayName} · ${account.role}` }))} status={accounts.status} loadingLabel="Loading network accounts…" emptyLabel="No authorized network accounts" selectLabel="Select a network account" summaryLabel="Authorized acting account" accessLabel={selected ? `${selected.role} access` : undefined} onChange={(value) => { if (value) accounts.select(value); }}/>;
-  return <><NetworkExchangeWorkspace key={selected?.networkAccountId??"none"}/><EntityListRuntime client={client} entityCode="network_relationship" scopeCoordinate={coordinate} scopeControl={control}/></>;
+  return <><NetworkExchangeWorkspace key={selected?.networkAccountId??"none"}/><EntityListRuntime client={client} entityCode="network_relationship" scopeCoordinate={coordinate} scopeControl={control} applicationName={MESH_APPLICATION_NAME}/></>;
 }
 
 type NetworkCommand={readonly id:string;readonly status:string;readonly rowVersion:number;readonly evidenceId:string;readonly replayed:boolean};

@@ -14,6 +14,12 @@ export interface ExplainabilitySection {
   readonly state: "ready" | "empty" | "partial" | "unavailable";
   readonly data: Readonly<Record<string, unknown>>;
   readonly page?: Readonly<{ nextCursor?: string; limit: number }>;
+  readonly provenance: readonly Readonly<{
+    plane: string;
+    service: string;
+    sourceObject: string;
+    observedAt: string;
+  }>[];
 }
 export interface ExplainabilityQuery extends SummaryQuery {
   readonly sectionCode: ExplainabilitySectionCode;

@@ -43,7 +43,8 @@ import {parseEntityRecordPresentation} from './packages/contracts/platform/entit
 const sections=['overview','identity','contacts','addresses','identifiers-tax','governance','banking','qualifications-certificates','roles-scope','supplier-company','customer-company','credit','network','requests','business-activity','activity','comments','attachments'];
 const identity={scope:{tenantId:'tenant',principalId:'principal',authEpoch:1}};
 const partner='33333333-3333-4333-8333-333333333333';
-const summary={schemaVersion:1,asOf:'2026-09-08',generatedAt:'2026-09-08T10:00:00Z',businessPartnerVersion:1,identity:{id:partner,displayName:'Cendana Office',legalName:'Cendana Office Sdn Bhd',code:'ATH-APAC-003',category:'organization',lifecycleStatus:'active'},scope:{businessPartnerId:partner,asOf:'2026-09-08'},roles:[{id:'supplier',code:'supplier',status:'active'},{id:'customer',code:'customer',status:'active'}],primaryContact:{id:'contact',primary:true,displayName:'Amelia Hart',email:'amelia@example.test',phone:'+60 3 1234 5678',verified:true},primaryAddress:{id:'address',primary:true,purpose:'registered',lines:['Suite 12','18 Jalan Cendana'],locality:'Kuala Lumpur',postalCode:'50250',countryCode:'MY',verified:true},identifiers:[],openWork:{activeRequestCount:2,returnedRequestCount:0},recentActivity:[],sections:sections.map(code=>({code,authorization:'granted',state:'ready',count:1})),provenance:[],completeness:{status:'complete',percent:100,requiredCount:4,completeCount:4,restrictedCount:0,required:[],recommended:[],readOnly:false,fingerprint:'x'},collaboration:{canComment:true}};
+const search=new URL(window.location.href).searchParams;
+const summary={schemaVersion:1,asOf:'2026-09-08',generatedAt:'2026-09-08T10:00:00Z',businessPartnerVersion:1,identity:{id:partner,displayName:'Cendana Office',legalName:'Cendana Office Sdn Bhd',code:'ATH-APAC-003',category:'organization',lifecycleStatus:'active'},scope:{businessPartnerId:partner,asOf:'2026-09-08',...(search.get('operatingOrganizationId')?{operatingOrganizationId:search.get('operatingOrganizationId')}:{}) ,...(search.get('companyCodeId')?{companyCodeId:search.get('companyCodeId')}:{})},roles:[{id:'supplier',code:'supplier',status:'active'},{id:'customer',code:'customer',status:'active'}],primaryContact:{id:'contact',primary:true,displayName:'Amelia Hart',email:'amelia@example.test',phone:'+60 3 1234 5678',verified:true},primaryAddress:{id:'address',primary:true,purpose:'registered',lines:['Suite 12','18 Jalan Cendana'],locality:'Kuala Lumpur',postalCode:'50250',countryCode:'MY',verified:true},identifiers:[],openWork:{activeRequestCount:2,returnedRequestCount:0},recentActivity:[],sections:sections.map(code=>({code,authorization:'granted',state:'ready',count:1})),provenance:[],completeness:{status:'complete',percent:100,requiredCount:4,completeCount:4,restrictedCount:0,required:[],recommended:[],readOnly:false,fingerprint:'x'},collaboration:{canComment:true}};
 summary.recordHeader={title:'Cendana Office',code:'ATH-APAC-003',entityLabel:'Business Partner',iconKey:'contact',badges:[],context:[],actions:[],readOnly:false,sections:${JSON.stringify(presentation.sections)},related:parseEntityRecordPresentation(${JSON.stringify(presentation)}).related};
 window.__requests=[];
 const client={async request(operation,input){const path=typeof operation.path==='function'?operation.path(input.params??{}):operation.path;window.__requests.push({path,query:input.query,method:operation.method});
@@ -106,6 +107,13 @@ test("continuous navigation, real tabs, documents, and browser history", async (
   await page.setViewportSize({ width: 1920, height: 1000 });
   await page.goto("https://neon.test/partner");
   await page.addScriptTag({ content: (await bundle).script });
+  await expect(page.locator(".athyper-page-workspace")).toHaveCount(1);
+  await expect(page.locator('[data-slot="page-navigation"]')).toHaveCount(1);
+  await expect(page.locator('[data-slot="page-navigation"]')).toHaveAttribute("data-navigation-band", "shell");
+  await expect(page.locator('[data-slot="page-navigation"]')).toContainText("360 View");
+  await expect(page.locator('[data-slot="page-toolbar"]')).toHaveCount(1);
+  await expect(page.locator('[data-slot="page-body"]')).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   await expect(page.getByRole("tab")).toHaveText(["360 View", "Roles & scope", "Requests", "Business Transactions", "Activity", "Comments", "Attachments"]);
   await expect(
     page.getByRole("heading", { name: "Primary Contact", exact: true }),
@@ -174,6 +182,18 @@ test("continuous navigation, real tabs, documents, and browser history", async (
     ),
   ).toBe(1);
   expect(errors).toEqual([]);
+});
+
+test("changing transaction context retains the workspace and updates the route", async ({ page }) => {
+  await page.goto("https://neon.test/partner?section=overview&tab=360&operatingOrganizationId=44444444-4444-4444-8444-444444444444&companyCodeId=55555555-5555-4555-8555-555555555555");
+  await page.addScriptTag({ content: (await bundle).script });
+  await page.getByRole("button", { name: "Change context" }).click();
+  await expect(page.getByRole("region", { name: "Transaction context" })).toBeFocused();
+  await page.getByRole("combobox", { name: "Transaction organization" }).selectOption("44444444-4444-4444-8444-444444444444");
+  await page.getByRole("combobox", { name: "Transaction company" }).selectOption("55555555-5555-4555-8555-555555555555");
+  await page.getByRole("button", { name: "Use this context" }).click();
+  await expect.poll(() => page.url()).toContain("operatingOrganizationId=44444444-4444-4444-8444-444444444444");
+  await expect(page.locator(".athyper-page-workspace")).toHaveCount(1);
 });
 
 test("deep links and narrow screens preserve accessible section navigation", async ({

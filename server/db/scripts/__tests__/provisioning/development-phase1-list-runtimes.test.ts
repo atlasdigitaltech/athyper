@@ -2,14 +2,26 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildDevelopmentPhase1ListProjection } from "../../provisioning/provision-development-phase1-list-runtimes.js";
 
-test("Phase 1 Mesh and Studio list publications are deterministic and plane-safe", () => {
+test("Phase 1 Neon, Mesh and Studio list publications are deterministic and plane-safe", () => {
   const permission = "11111111-1111-4111-8111-111111111111";
+  const neon = buildDevelopmentPhase1ListProjection("neon", permission);
   const mesh = buildDevelopmentPhase1ListProjection("mesh", permission);
   const studio = buildDevelopmentPhase1ListProjection("studio", permission);
   assert.deepEqual(
     mesh,
     buildDevelopmentPhase1ListProjection("mesh", permission),
   );
+  assert.deepEqual(neon, buildDevelopmentPhase1ListProjection("neon", permission));
+  assert.equal(neon.projection.descriptor.compiled_json.entityCode, "currency");
+  assert.equal(neon.projection.descriptor.compiled_json.storage.schema, "shared");
+  assert.deepEqual(neon.projection.contract.contract_json.operations, [
+    { code: "read", permissionCode: "neon.reference.currency.read" },
+  ]);
+  assert.deepEqual(neon.projection.descriptor.compiled_json.operations, {
+    read: { code: "read", permissionCode: "neon.reference.currency.read" },
+  });
+  assert.equal(neon.projection.descriptor.compiled_json.listPresentation.dataOperations, undefined);
+  assert.equal(neon.releaseNo, 1);
   assert.equal(
     mesh.projection.descriptor.compiled_json.entityCode,
     "network_relationship",

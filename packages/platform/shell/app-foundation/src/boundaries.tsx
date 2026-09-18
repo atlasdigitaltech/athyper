@@ -44,13 +44,16 @@ export function GlobalAppErrorBoundary(props: AppErrorBoundaryProps) {
   return <html lang="en"><body><AppErrorBoundary {...props} /></body></html>;
 }
 
-export function ErrorSurface({ model, reset, applicationName = "Athyper", onCompare, surface = "page", homeHref, homeLabel = "Return to workspace" }: { readonly model: AppErrorModel; readonly reset?: () => void; readonly applicationName?: string; readonly onCompare?: () => void; readonly surface?: "page" | "content"; readonly homeHref?: string; readonly homeLabel?: string }) {
+export function ErrorSurface({ model, reset, applicationName = "Athyper", onCompare, surface = "page", homeHref, homeLabel = "Return to workspace", tone, icon }: { readonly model: AppErrorModel; readonly reset?: () => void; readonly applicationName?: string; readonly onCompare?: () => void; readonly surface?: "page" | "content"; readonly homeHref?: string; readonly homeLabel?: string; readonly tone?: "danger" | "warning" | "muted"; readonly icon?: ReactNode }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, [model.kind]);
+  const presentation = KIND_PRESENTATION[model.kind];
+  const effectiveTone = tone ?? presentation.tone;
+  const effectiveIcon = icon ?? presentation.icon;
   const content = <>
     <PresentationCard className="a-error-surface__card" aria-labelledby="app-error-title" aria-describedby="app-error-description">
       <div role="alert" aria-live="assertive" aria-atomic="true" className="a-visually-hidden">An error needs your attention.</div>
-      <div aria-hidden="true" className="a-error-surface__mark">!</div>
+      <div aria-hidden="true" className="a-error-surface__mark" data-tone={effectiveTone}>{effectiveIcon}</div>
       <p className="a-eyebrow">{applicationName}</p>
       <h1 id="app-error-title" ref={heading} tabIndex={-1} className="a-error-surface__title">{model.title}</h1>
       <p id="app-error-description" className="a-error-surface__description">{model.description}</p>
@@ -60,8 +63,8 @@ export function ErrorSurface({ model, reset, applicationName = "Athyper", onComp
     </PresentationCard>
   </>;
   return surface === "content"
-    ? <section className="a-error-surface a-error-surface--content" data-error-kind={model.kind}>{content}</section>
-    : <main className="a-error-surface" data-error-kind={model.kind}>{content}</main>;
+    ? <section className="a-error-surface a-error-surface--content" data-error-kind={model.kind} data-tone={effectiveTone}>{content}</section>
+    : <main className="a-error-surface" data-error-kind={model.kind} data-tone={effectiveTone}>{content}</main>;
 }
 
 function actions(model: AppErrorModel, reset?: () => void, onCompare?: () => void): ReactNode {
@@ -75,7 +78,36 @@ function actions(model: AppErrorModel, reset?: () => void, onCompare?: () => voi
 function IdentityActionList({ actions }: { readonly actions: readonly string[] }) { return actions.length ? <div className="a-error-surface__notice"><p><strong>Required actions</strong></p><ul>{actions.map((action) => <li key={action}>{humanize(action)}</li>)}</ul></div> : null; }
 function humanize(value: string): string { return value.replace(/[._-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 
-export function NotFoundBoundary({ applicationName = "Athyper", surface = "page", homeHref, homeLabel }: { readonly applicationName?: string; readonly surface?: "page" | "content"; readonly homeHref?: string; readonly homeLabel?: string }) { return <ErrorSurface applicationName={applicationName} surface={surface} homeHref={homeHref} homeLabel={homeLabel} model={Object.freeze({ kind: "unexpected", title: "Page not found", description: "We could not find this page in your current workspace. Check the address, or return to a page available from the navigation.", action: "none", canRetry: false, preserveInput: false, requiredActions: [] })} />; }
+function Glyph({ children }: { readonly children: ReactNode }) {
+  return <svg viewBox="0 0 24 24" width="1.5rem" height="1.5rem" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>;
+}
+function NotFoundIcon() { return <Glyph><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" /><path d="M9.5 13.4a1.5 1.5 0 1 1 2.1 1.37c-.63.27-1.1.85-1.1 1.53" /><path d="M10.5 18.5h.01" /></Glyph>; }
+function LockIcon() { return <Glyph><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></Glyph>; }
+function ShieldIcon() { return <Glyph><path d="M12 3 4 6.5V11c0 5 3.4 8.4 8 9.6 4.6-1.2 8-4.6 8-9.6V6.5L12 3Z" /></Glyph>; }
+function ShieldAlertIcon() { return <Glyph><path d="M12 3 4 6.5V11c0 5 3.4 8.4 8 9.6 4.6-1.2 8-4.6 8-9.6V6.5L12 3Z" /><path d="M12 8v4M12 16h.01" /></Glyph>; }
+function MergeIcon() { return <Glyph><circle cx="6" cy="6" r="2.5" /><circle cx="18" cy="18" r="2.5" /><path d="M6 8.5V14a5 5 0 0 0 5 5h1" /></Glyph>; }
+function AlertCircleIcon() { return <Glyph><circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h.01" /></Glyph>; }
+function ClockIcon() { return <Glyph><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></Glyph>; }
+function WifiOffIcon() { return <Glyph><path d="M2 8.5a15 15 0 0 1 4.2-2.6M10.7 5a16 16 0 0 1 11.3 3.5M5 12.5a10 10 0 0 1 3.5-2M9.5 16a5 5 0 0 1 5 0" /><path d="M2 2l20 20" /><path d="M12 20h.01" /></Glyph>; }
+function ServerOffIcon() { return <Glyph><rect x="2" y="3" width="20" height="8" rx="2" /><rect x="2" y="13" width="20" height="8" rx="2" /><path d="M6 7h.01M6 17h.01" /></Glyph>; }
+function AlertTriangleIcon() { return <Glyph><path d="M12 3 2.5 20h19L12 3Z" /><path d="M12 9v4M12 17h.01" /></Glyph>; }
+
+const KIND_PRESENTATION: Readonly<Record<AppErrorModel["kind"], { readonly tone: "danger" | "warning" | "muted"; readonly icon: ReactNode }>> = Object.freeze({
+  authentication: { tone: "muted", icon: <LockIcon /> },
+  "required-action": { tone: "muted", icon: <ShieldIcon /> },
+  "permission-denied": { tone: "muted", icon: <ShieldAlertIcon /> },
+  "context-mismatch": { tone: "muted", icon: <LockIcon /> },
+  "not-found": { tone: "muted", icon: <NotFoundIcon /> },
+  conflict: { tone: "warning", icon: <MergeIcon /> },
+  validation: { tone: "warning", icon: <AlertCircleIcon /> },
+  "rate-limit": { tone: "warning", icon: <ClockIcon /> },
+  "service-unavailable": { tone: "danger", icon: <ServerOffIcon /> },
+  network: { tone: "warning", icon: <WifiOffIcon /> },
+  offline: { tone: "warning", icon: <WifiOffIcon /> },
+  unexpected: { tone: "danger", icon: <AlertTriangleIcon /> },
+});
+
+export function NotFoundBoundary({ applicationName = "Athyper", surface = "page", homeHref, homeLabel }: { readonly applicationName?: string; readonly surface?: "page" | "content"; readonly homeHref?: string; readonly homeLabel?: string }) { return <ErrorSurface applicationName={applicationName} surface={surface} homeHref={homeHref} homeLabel={homeLabel} tone="muted" icon={<NotFoundIcon />} model={Object.freeze({ kind: "unexpected", title: "Page not found", description: "We could not find this page in your current workspace. Check the address, or return to a page available from the navigation.", action: "none", canRetry: false, preserveInput: false, requiredActions: [] })} />; }
 
 export function EmptyStateBoundary({ title = "Nothing here yet", description = "There is no content to show.", action }: { readonly title?: string; readonly description?: string; readonly action?: ReactNode }) { return <section className="a-empty-state" aria-labelledby="empty-state-title"><h2 id="empty-state-title">{title}</h2><p>{description}</p>{action}</section>; }
 

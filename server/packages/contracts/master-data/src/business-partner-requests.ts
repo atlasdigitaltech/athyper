@@ -390,6 +390,13 @@ export interface BusinessPartnerTaskExecutionView {
 
 export interface BusinessPartnerRequestView {
   readonly request: BusinessPartnerRequest;
+  /** Immutable case snapshot that supplied the request view. */
+  readonly provenance: readonly Readonly<{
+    plane: "neon";
+    service: "master-data";
+    sourceObject: "snapshot.entity_snapshot";
+    observedAt: string;
+  }>[];
   readonly validationFindings: readonly BusinessPartnerRequestValidationFinding[];
   readonly validationRun?: Readonly<{evaluationId:string;evaluatedAt:string;snapshotId:string;requestVersion:number;stale:boolean}>;
   /** Whether the persisted evaluation belongs to the current saved snapshot. */
@@ -674,6 +681,13 @@ export interface BusinessPartnerAggregateQuery {
 }
 
 export interface BusinessPartnerAggregate {
+  /** Transactionally consistent read projection for this aggregate response. */
+  readonly provenance: readonly Readonly<{
+    plane: "neon";
+    service: "master-data";
+    sourceObject: "master.business_partner.aggregate_projection";
+    observedAt: string;
+  }>[];
   readonly businessPartner: Readonly<{
     id: string;
     code: string;

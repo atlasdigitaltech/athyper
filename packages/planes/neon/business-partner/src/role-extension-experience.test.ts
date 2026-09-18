@@ -9,6 +9,12 @@ function aggregate(
   roles: "none" | "supplier" | "customer" | "both",
 ): PartnerAggregate {
   return {
+    provenance: [{
+      plane: "neon",
+      service: "master-data",
+      sourceObject: "master.business_partner.aggregate_projection",
+      observedAt: "2026-09-04T00:00:00Z",
+    }],
     businessPartner: {
       id: "bp-1",
       code: "BP.R2",

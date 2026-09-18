@@ -1,6 +1,7 @@
 import { useAuditedReveal } from "../use-audited-reveal";
 import { businessLabel, safeDocumentUrl } from "../display-values";
 import { parseInstant } from "@athyper/platform-temporal";
+import { useRecordFooterSources } from "@athyper/platform-shell";
 import {
   useApiClient,
   useSessionIdentity,
@@ -68,6 +69,7 @@ function Commercial({ code }: { code: CommercialSectionCode }) {
       });
     return () => controller.abort();
   }, [client, key]);
+  useRecordFooterSources(!failed && value ? value.provenance : []);
   if (failed)
     return (
       <Card className="bp360-section-card">

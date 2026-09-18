@@ -1,7 +1,7 @@
 # Shared Application Experience — System Design
 
 | Field | Value |
-| --- | --- |
+| --------- | ------------------------------------------------------------------------------------------------------ |
 | Date | 2026-09-17 |
 | Scope | Neon, Mesh, Studio; application startup, shell, pages, shared services, package boundaries, deployment |
 | Status | Local development design; implementation progress is tracked in the build plan |
@@ -29,7 +29,7 @@ Do not use this cleanup to change domain authorization, publication authority, o
 Source inspection identified the following foundations; it did not certify deployed behavior or execute their test suites.
 
 | Existing location | Target treatment |
-| --- | --- |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `apps/{neon,mesh,studio}` | Retain independent Next.js deployment units and route trees |
 | `packages/platform/shell/app-foundation` | Consolidate root, providers, bootstrap integration and fallbacks |
 | `packages/platform/shell/shell` | Extract shared chrome, workspace, footer context and overlay coordination |
@@ -136,7 +136,7 @@ AtlasPresentation: Closed | Transient | Docked | Expanded
 Only one transient shell surface is active. Docked Atlas may coexist. Expanded Atlas occupies the transient channel and records its previous presentation. There is one conversation/session instance across presentation transitions, not independent copies.
 
 | Event | Required transition |
-| --- | --- |
+| ---------------------- | ----------------------------------------------------------------------------- |
 | Open Atlas | Use saved supported preference; otherwise supported transient presentation |
 | Dock | Transfer presentation to dock and clear transient Atlas |
 | Expand | Record prior mode; occupy expanded surface; preserve conversation |
@@ -158,7 +158,7 @@ Escape dismisses the topmost dismissible surface. Ordinary dismissal returns foc
 The page definition explicitly selects layout and navigation mode. Choose using the criteria below while implementing the page. Responsive adaptation changes geometry, not task semantics.
 
 | Definition | Selection criterion |
-| --- | --- |
+| --------------------------- | --------------------------------------------------------------------------- |
 | `content` | Default; section navigation provides no useful orientation |
 | `sections-content` | Multiple meaningful continuous sections or distinct workspace views |
 | `sections-content-overview` | Section-oriented page plus supplementary context useful throughout the task |
@@ -172,6 +172,7 @@ Do not infer layout from fluctuating row counts or entity size. No section navig
 - Breadcrumbs derive from registered routes and safe resolved identity, not raw URL segments. Ancestors link; current item is non-link current-page text. Intermediate ancestors collapse accessibly on narrow layouts.
 - One page h1. Header title wraps; badges and actions share consistent placement. Large header scrolls naturally away. Never hide/move a focused control through collapse behavior.
 - Tabs, route links and workflow steps use different semantics. Slow-loading tabs use manual activation. Workflow navigation respects validation and permitted transitions.
+- Page navigation declares its scope: `application`, `record-mode`, `workflow`, or `section`, plus placement `content` or `shell`. `PageWorkspace` owns the vertical gap between PageHeader, PageNavigation, status, and body; navigation implementations add no outer margin. `content` is the default. A `shell` band is reserved for primary record-mode navigation: it spans the shell body like the breadcrumb band, with the breadcrumb label inset, while PageHeader and PageBody remain on the readable PageFrame rail. Application navigation is header-integrated. Workflow navigation retains its stepper semantics. Section navigation belongs inside PageLayout below record-mode navigation. A detail with one section has no page navigation: its section heading is sufficient.
 - Status region retains authorized data during refresh, exposes persistent refresh errors, and avoids duplicate announcements/toasts. Access revocation removes data rather than preserving it as stale.
 - Content toolbar owns search, filters, views and selection actions. Page action bar owns task mutations/navigation.
 - Independent section boundaries preserve neighboring content. Do not create a boundary per field/decorative card.
@@ -261,7 +262,7 @@ The two contract trees have different responsibilities, not a requirement for ma
 Frontend and backend are developed together at the same local commit. Update public types, parsers and callers together, keep one canonical wire shape, and validate relevant serialized responses. Keep existing contract/OpenAPI checks. Do not build a supported historical consumer window or compatibility negotiation now; revisit version skew when releases become independent. Existing persisted definitions still require explicit migration or compatible parsing when their schema changes.
 
 | Family | Allowed direction | Forbidden direction |
-| --- | --- | --- |
+| ------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | Apps | Plane/platform packages | Other app internals |
 | Plane implementations | Shared platform/contracts | Other plane internals |
 | Platform implementations | Lower-level shared packages/contracts | Plane/app implementations |
@@ -301,6 +302,52 @@ This section originally framed the page-kind runtime as the eventual single mech
 
 The remainder of section 14 describes the page-kind runtime under its corrected, narrower scope. Read every "future entity" reference below as "future flat reference/configuration entity," not as a universal replacement for the case runtime.
 
+### 14.0.1 Shared application presentation for governed entities
+
+The runtime distinction in §14.0 concerns domain execution and publication authority. It does not prohibit governed entities from using generic application descriptors, overview cards, collection/task-list renderers, intake presentation, or shared workspace boundaries. Business Partner and Currency share presentation infrastructure while retaining their appropriate backend contracts. Do not equate retaining the case runtime with retaining entity-specific page chrome.
+
+**Source-verified baseline:** the Business Partner overview, manage, and requests routes already delegate to `NeonEntityApplicationSection` with keys `overview`, `manage`, and `review`. Their layout supplies `entityCode="business_partner"` to `EntityApplicationLayout` / `NeonEntityApplication`. The platform `EntityApplicationSection` resolves descriptor content kinds `overview`, `entity_list`, and `task_list` to `EntityOverviewRuntime` or `EntityListRuntime`. These are existing generic implementations, not replacements to build.
+
+| Surface                                     | Shared presentation responsibility                                                                                                        | Domain responsibility retained                                                                                                   |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `/mdg/business-partner`                     | Application header/navigation; overview cards for queues, views, recently updated records, Favorites; independent resource states         | Authorized overview sources, labels, destinations and available operations                                                       |
+| `/mdg/business-partner/manage`              | Collection, saved views, search/filter/sort, density, pagination, selection and row presentation                                          | Record descriptor, authorized reader, partner scope/eligibility and record actions                                               |
+| `/mdg/business-partner/requests`            | Task-list presentation using the existing list engine, context control slot and independent view namespace                                | Request descriptor, organization requirement, case states and authorized request actions                                         |
+| `/mdg/business-partner/new`                 | Existing `EntityIntake`, `EntityIntakeForm`, step navigation, field/section presentation, error summary and workspace action/status slots | Role selection rules, published intake surfaces, qualifications, duplicate checks, payload mapping, draft/save/submit operations |
+| `/mdg/business-partner/requests/:requestId` | Workspace header, tab navigation, progress presentation, resource boundaries, action outcomes and footer                                  | Governed case data, evidence, review decisions, supplier journey, lifecycle operations and materialization                       |
+
+**Target composition:** thin route → shared application/workspace presentation → descriptor-selected content and registered domain adapters → authorized backend operations. Keep current URLs and thin route adapters; removing entity-named route files is not a completion criterion. Do not introduce a second page-kind selector or a new universal workflow engine.
+
+#### Application and scope adapter boundary
+
+Evolve the existing application/list packages. `ManagementWorkspace` currently composes `PageFrame` and `EntityPageLayout`; preserve collection/record/task header handoff when adding shared workspace slots. Avoid nested frames, duplicate navigation or a second `h1`.
+
+The Neon list adapter currently contains a Business Partner identity branch, partner-role/eligible-operation state, and an inline resolver allowlist. Extract partner rules behind a small registered scope adapter selected by a validated descriptor capability/resolver identifier. Keep generic organization selection and Neon context discovery in the plane layer. The proposed adapter owns applicable scope controls, URL-to-scope interpretation, scope validation and query mapping; it does not own generic table rendering or replace server authorization. Reuse existing contract identifiers where sufficient; do not invent a parallel descriptor schema. Unknown required adapters fail closed with a recoverable unavailable state. Treat this extraction as planned, not implemented.
+
+Keep application, record-list and request-list contracts distinct. Requests use their own descriptor, view namespace and required context; do not leak record-directory role/eligibility filters into request queries. Context changes invalidate prior-context data and scoped selection. Preserve saved-view IDs, density, search/filter/sort state, navigation history and authorized Favorites.
+
+#### Intake presentation and validation
+
+The new-request route already enters through `AuthorizedNewBusinessPartnerRequest`; `request-entry.tsx` loads a published flow and mounts `EntityIntake`. Supplier and customer content use shared form infrastructure with domain submission adapters. Extend these existing seams rather than replacing intake with Currency's read-only detail runtime.
+
+- Keep Partner → Details → Review & submit as workflow navigation, independent of Details section navigation. Preserve draft values and valid checkpoints when navigating steps.
+- Keep the task header registration as the single header owner, including Cancel and draft/save status. Use shared workspace status/action slots only where ownership is clear.
+- Keep the initial flow-descriptor load distinct across loading, denied, failure/retry and ready handling. The current entry reuses `loadPublishedForm` from its error control; preserve that retry behavior without losing existing user input. Do not silently reset an active draft when its descriptor changes; reconcile compatible checkpoints or explain why restart is required.
+- Present a shared validation summary with linked field errors, inline errors and section issue counts. After explicit validation failure, announce/focus the summary; activating an error must reveal its step/section and focus its field. Passive scrolling must not move keyboard focus. Keep error summary, action errors and background refresh notices semantically distinct.
+- Preserve role/profile-dependent fields, scope authorization, relationship/attachment handling, dirty-state protection and failure recovery. Saving a draft, submitting for review, approving and materializing remain separate backend operations. Submission failure retains values and must not repeat a successful draft creation merely to retry submission.
+
+#### Request detail presentation and lifecycle
+
+Request detail already uses `PageNavigation` for Overview, Request details, Review and Activity and has workspace/header infrastructure. Preserve hash deep links (`#details`, `#review` and supported siblings), direct reload and Back/Forward behavior. Put tab content in its correct region while retaining the current controller.
+
+The supplied screenshots show a supplier journey repeated above different tab bodies. Source inspection places supplier process content in the navigation's shared `aside`. Verify this in an authenticated walkthrough before changing geometry: retain compact shared lifecycle context, and locate lengthy journey/evidence/history content in the appropriate tab with explicit links. Do not remove domain information or duplicate it in every tab solely for visual consistency.
+
+Approval is not completion: show validation, approval, materialization/application, activation and closure from their authoritative backend states. An Approved request with completion Not Started can be valid; never infer all stages complete from its approval badge. Expose only authorized actions, retain concurrency/version checks, isolate independent panel errors, and register request provenance separately from the resulting partner record.
+
+#### Completion evidence
+
+Business Partner remains in progress until the application overview, manage, requests, intake, request detail and record/360 surfaces have an explicit ownership map and affected authenticated checks. Include loading, empty, denied, retry, context isolation, footer registration, route/query/hash history, keyboard focus and preserved drafts. Existing passing checks remain evidence for their tested scope only. Purchase Order is blocked until this Business Partner work is complete. Build sequencing is maintained in the [Build Work Plan](build-work-plan.md).
+
 ### 14.1 Architecture and ownership
 
 Future reference/configuration entities (see 14.0 for scope) reuse Main, PageWorkspace and page-kind runtimes; this is not the mechanism for transactional/governed entities like Business Partner. Composition and registered providers replace inheritance trees and entity-specific branches in generic components.
@@ -324,7 +371,7 @@ PlatformShell → Main → PageWorkspace
 These are responsibilities, not mandatory new package boundaries. Runtime content never renders a second Main or recreates page chrome.
 
 | Responsibility | Owner |
-| --- | --- |
+| ------------------------------------------------------------------------- | -------------------------------- |
 | Header, columns, boundaries, toolbar/action slots and footer registration | Shared PageWorkspace |
 | Page-kind lifecycle and interaction orchestration | Page-kind runtime |
 | Fields, sections, navigation and supported composition | Validated entity page definition |
@@ -342,7 +389,7 @@ These are responsibilities, not mandatory new package boundaries. Runtime conten
 Both layout and section-mode columns below are authoring suggestions, not mandatory values or dynamic heuristics. Published definitions record selected layout and any section navigation explicitly. Overrides follow section 7.1 criteria and validator-supported combinations. Counts and entity size must not change the layout unexpectedly.
 
 | Page kind | Suggested initial layout | Suggested initial section mode | Supported alternative and criterion |
-| --- | --- | --- | --- |
+| ------------- | -------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
 | Collection | `content` | None | Use `sections-content` with `switch` for distinct persistent views, or `scroll` for meaningful continuous sections |
 | Detail | `sections-content` if sectioned; otherwise `content` | `scroll` if sectioned; otherwise none | `switch` for distinct record workspaces; overview layout when persistent supplementary context is useful |
 | Create/Edit | `sections-content` for long forms; otherwise `content` | `scroll` if sectioned; otherwise none | Task steps only for a defined workflow; specialized switch views require state preservation |
@@ -355,7 +402,7 @@ Horizontal page navigation and left section navigation are independent axes. Int
 ### 14.4 Extension levels
 
 | Level | Entity supplies | Shared behavior retained |
-| --- | --- | --- |
+| --------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 1 — Metadata configuration | Fields/groups, labels, bindings, sections and operation references | Full page-kind runtime and generic rendering |
 | 2 — Existing provider composition | Arrangement of existing relationship, summary and collection providers | Full page-kind runtime |
 | 3 — Specialized provider | Custom section, summary or domain action integration | Workspace and page-kind lifecycle |
@@ -385,15 +432,24 @@ const assetDetailDefinition = {
   layout: "sections-content-overview",
   sectionNavigation: { mode: "scroll" },
   sections: [
-    { key: "identity", provider: "entity.fields",
-      options: { fieldGroup: "identity" } },
-    { key: "ownership", provider: "entity.relationships",
-      options: { relationship: "owners" } },
+    {
+      key: "identity",
+      provider: "entity.fields",
+      options: { fieldGroup: "identity" },
+    },
+    {
+      key: "ownership",
+      provider: "entity.relationships",
+      options: { relationship: "owners" },
+    },
     { key: "maintenance", provider: "asset.maintenance-history", options: {} },
   ],
   overview: [
-    { key: "summary", provider: "entity.summary",
-      options: { fieldGroup: "summary" } },
+    {
+      key: "summary",
+      provider: "entity.summary",
+      options: { fieldGroup: "summary" },
+    },
   ],
 };
 ```
@@ -407,7 +463,7 @@ Lifecycle integration covers resource identity, shared data/cache access, cancel
 ### 14.7 Definition validation and provider availability scope
 
 | Layer | Responsibility |
-| --- | --- |
+| ----------------------- | ------------------------------------------------------------------------------------ |
 | Authoring feedback | Actionable diagnostics while editing; cannot substitute for publication enforcement |
 | Publication enforcement | Reject invalid/incompatible definitions before activation |
 | Runtime defense | Safely reject unsupported schemas/required providers and re-evaluate current context |

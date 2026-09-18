@@ -21,6 +21,7 @@
     "@athyper/platform-api-client": "workspace:*",
     "@athyper/platform-icons": "workspace:*",
     "@athyper/platform-shell": "workspace:*",
+    "@athyper/platform-shell-app-foundation": "workspace:*",
     "@athyper/platform-temporal": "workspace:*",
     "@athyper/platform-ui": "workspace:*",
     "@athyper/platform-i18n": "workspace:*",

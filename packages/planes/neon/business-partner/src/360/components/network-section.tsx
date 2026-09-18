@@ -2,6 +2,7 @@ import {
   useApiClient,
   useSessionIdentity,
 } from "@athyper/platform-shell-app-foundation";
+import { useRecordFooterSources } from "@athyper/platform-shell";
 import { Card, Skeleton } from "@athyper/platform-ui";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -52,6 +53,7 @@ export function NetworkSection() {
       });
     return () => controller.abort();
   }, [client, key]);
+  useRecordFooterSources(!failed && value ? value.provenance : []);
   if (failed)
     return (
       <Card className="bp360-section-card">

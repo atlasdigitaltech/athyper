@@ -10,19 +10,18 @@ import {
   createBusinessPartner360RoleClient,
   roleCompanyQueryKey,
   type RoleCompanySection,
-  type RoleCompanySectionCode,
 } from "../business-partner-360-role-client";
 import { useBusinessPartner360 } from "../business-partner-360-context";
-export function RolesScopeSection() {
-  return <ScopedSection code="roles-scope" />;
-}
+import { useRecordFooterSources } from "@athyper/platform-shell";
 export function SupplierCompanySection() {
   return <ScopedSection code="supplier-company" />;
 }
 export function CustomerCompanySection() {
   return <ScopedSection code="customer-company" />;
 }
-function ScopedSection({ code }: { code: RoleCompanySectionCode }) {
+type CompanyConfigurationSectionCode = "supplier-company" | "customer-company";
+
+function ScopedSection({ code }: { code: CompanyConfigurationSectionCode }) {
   const http = useApiClient(),
     identity = useSessionIdentity(),
     { summary, roleLens } = useBusinessPartner360(),
@@ -64,6 +63,9 @@ function ScopedSection({ code }: { code: RoleCompanySectionCode }) {
       });
     return () => controller.abort();
   }, [client, key]);
+  useRecordFooterSources(
+    !failed && value && loadedKey === key ? value.provenance : [],
+  );
   if (failed)
     return (
       <Card className="bp360-section-card">
@@ -96,42 +98,13 @@ function ScopedSection({ code }: { code: RoleCompanySectionCode }) {
           <p>Governed actions are disabled for an explicit as-of date.</p>
         </Card>
       ) : null}
-      {code === "roles-scope" ? (
-        <Roles data={data} />
-      ) : code === "supplier-company" ? (
+      {code === "supplier-company" ? (
         <Supplier data={data} />
       ) : (
         <Customer data={data} />
       )}{" "}
       {!readOnly ? <Actions id={summary.identity.id} code={code} /> : null}
     </div>
-  );
-}
-export function Roles({ data }: { data: Readonly<Record<string, unknown>> }) {
-  return (
-    <>
-      <Cards
-        title="Roles"
-        rows={array(data["roles"])}
-        fields={["role", "roleCode", "status"]}
-      />
-      <Cards
-        title="Operating-organization assignments"
-        rows={array(data["organizationAssignments"])}
-        fields={[
-          "partnerRole",
-          "operatingOrganizationId",
-          "effectiveFrom",
-          "effectiveUntil",
-          "status",
-        ]}
-      />
-      <Cards
-        title="Legal-entity assignments"
-        rows={array(data["legalEntityAssignments"])}
-        fields={["legalEntityId", "effectiveFrom", "effectiveUntil"]}
-      />
-    </>
   );
 }
 export function Supplier({
@@ -211,31 +184,6 @@ function Customer({ data }: { data: Readonly<Record<string, unknown>> }) {
     </>
   );
 }
-function Actions({ code }: { id: string; code: RoleCompanySectionCode }) {
-  const { summary } = useBusinessPartner360();
-  const keys =
-    code === "roles-scope"
-      ? ["add_role", "assign_organization"]
-      : ["add_role", "assign_organization", "configure_company"];
-  const actions = summary.completeness.readOnly
-    ? []
-    : (summary.recordHeader?.actions.filter(
-        (action) =>
-          keys.includes(action.operationKey ?? action.key),
-      ) ?? []);
-  if (!actions.length) return null;
-  return (
-    <Card className="bp360-section-card">
-      <h2>Setup actions</h2>
-      <div className="bp-actions">
-        {actions.map((action) => (
-          <BusinessPartnerAction key={action.key} action={action} />
-        ))}
-      </div>
-    </Card>
-  );
-}
-
 function Cards({
   title,
   rows,
@@ -265,6 +213,28 @@ function Cards({
     </Card>
   );
 }
+function Actions({ code }: { id: string; code: CompanyConfigurationSectionCode }) {
+  const { summary } = useBusinessPartner360();
+  const keys = ["add_role", "assign_organization", "configure_company"];
+  const actions = summary.completeness.readOnly
+    ? []
+    : (summary.recordHeader?.actions.filter(
+        (action) =>
+          keys.includes(action.operationKey ?? action.key),
+      ) ?? []);
+  if (!actions.length) return null;
+  return (
+    <Card className="bp360-section-card">
+      <h2>Setup actions</h2>
+      <div className="bp-actions">
+        {actions.map((action) => (
+          <BusinessPartnerAction key={action.key} action={action} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function asRows(value: unknown): readonly Readonly<Record<string, unknown>>[] {
   return Array.isArray(value)
     ? value.filter((item): item is Readonly<Record<string, unknown>> =>
@@ -315,13 +285,6 @@ function fieldValue(row: Readonly<Record<string, unknown>>, field: string) {
   return ["role", "partnerRole", "status", "type"].includes(field)
     ? businessLabel(String(row[field] ?? "")) || "—"
     : show(row[field]);
-}
-function array(value: unknown) {
-  return Array.isArray(value)
-    ? (value.filter(
-        (item) => item && typeof item === "object" && !Array.isArray(item),
-      ) as readonly Readonly<Record<string, unknown>>[])
-    : [];
 }
 function record(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value)

@@ -28,7 +28,8 @@ function Record() {
     </PageLayout>:<p role="status">Loading</p>}
   </PageWorkspace>;
 }
-function App(){ const [record,setRecord]=useState(true); return <><button onClick={()=>setRecord(v=>!v)}>Toggle record</button><main id="main-content" tabIndex={-1}><EntityPageLayout collectionHeader={<PageHeader level="collection" title="Collection"/>} collectionNavigation={<nav aria-label="Collection">Collection navigation</nav>}>{record?<Record/>:<p>Collection rows</p>}</EntityPageLayout></main></>; }
+function SharedTask(){const [failed,setFailed]=useState(false);return <PageWorkspace contentOnly status={failed?<p role="alert">Task action failed</p>:null} actions={<button onClick={()=>setFailed(true)}>Run task</button>}><label>Task draft<input/></label></PageWorkspace>}
+function App(){ const [record,setRecord]=useState(true),[task,setTask]=useState(false); return <><button onClick={()=>setRecord(v=>!v)}>Toggle record</button><button onClick={()=>setTask(v=>!v)}>Toggle shared task</button><main id="main-content" tabIndex={-1}><EntityPageLayout collectionHeader={<PageHeader level="collection" title="Collection"/>} collectionNavigation={<nav aria-label="Collection">Collection navigation</nav>}>{task?<SharedTask/>:record?<Record/>:<p>Collection rows</p>}</EntityPageLayout></main></>; }
 createRoot(document.getElementById('root')).render(<App/>);
 ` }, bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic",
   define: { "process.env.NODE_ENV": '"test"' }, tsconfig: resolve("tooling/config/tsconfig-react.json"), logLevel: "silent",
@@ -78,4 +79,19 @@ test("three layouts collapse without horizontal overflow or another scroll root"
     await expect(nav).toHaveCount(variant==='content'?0:1);
   }
   expect(await page.locator('.athyper-page-workspace, .athyper-page-workspace *').evaluateAll(elements=>elements.some(element=>['auto','scroll'].includes(getComputedStyle(element).overflowY)))).toBe(false);
+});
+
+test("content-only workspace retains the ancestor header and still supplies state and actions", async ({page}) => {
+  await page.getByRole("button", {name:"Toggle shared task"}).click();
+  await expect(page.getByRole("heading", {level:1})).toHaveText("Collection");
+  await expect(page.getByRole("heading", {level:1})).toHaveCount(1);
+  await expect(page.locator(".athyper-page-workspace")).toHaveCount(1);
+  await expect(page.locator(".athyper-page-frame")).toHaveCount(0);
+  const input=page.getByRole("textbox", {name:"Task draft"});
+  await input.fill("Retained task input");
+  await input.evaluate(element => { (element as HTMLElement).dataset.original="true"; });
+  await page.getByRole("button", {name:"Run task"}).click();
+  await expect(page.getByRole("alert")).toHaveText("Task action failed");
+  await expect(input).toHaveValue("Retained task input");
+  await expect(input).toHaveAttribute("data-original", "true");
 });

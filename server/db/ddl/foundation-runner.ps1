@@ -418,7 +418,7 @@ function Invoke-PlaneBuild {
                 $path -eq 'common/audit/12_reference_seed.sql' -or
                 $path -eq "planes/$PlaneName/master/12_platform_catalog_reference_seed.sql" -or
                 $path -eq "planes/$PlaneName/control/12_platform_catalog_reference_seed.sql" -or
-                $path -match "^planes/$PlaneName/authz/(?:12|13|14)_.*permission_reference_seed\.sql$"
+                $path -match "^planes/$PlaneName/authz/(?:12|13|14|15)_.*permission_reference_seed\.sql$"
             -not $isReferencePhase -or $isRequiredAuthorityReference
         })
         $currencyPath = [IO.Path]::GetFullPath((Join-Path $ddlRoot 'common/shared/reference-data/003_currency.sql'))

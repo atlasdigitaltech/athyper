@@ -395,6 +395,12 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         : undefined;
     return {
       request,
+      provenance: [{
+        plane: "neon" as const,
+        service: "master-data" as const,
+        sourceObject: "snapshot.entity_snapshot" as const,
+        observedAt: date(row["snapshot_observed_at"]),
+      }],
       validationFindings: findings,
       ...(validationRunRow ? {validationRun: {evaluationId:text(validationRunRow,"evaluation_id"),evaluatedAt:date(validationRunRow["evaluated_at"]),snapshotId:text(validationRunRow,"evaluated_snapshot_id"),requestVersion:Number(validationRunRow["version_number"]),stale:validationRunRow["stale"] === true}} : {}),
       validationCurrent: Boolean(
@@ -453,6 +459,11 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     operatingOrganizationId: string,
     transaction: Tx,
   ): Promise<BusinessPartnerAggregate | null> {
+    const projection = (
+      await sql<Row>`SELECT transaction_timestamp() observed_at`.execute(
+        transaction,
+      )
+    ).rows[0];
     const bp = (
       await sql<Row>`SELECT bp.* FROM master.business_partner bp
         LEFT JOIN master.business_partner_operating_organization_assignment a
@@ -488,6 +499,12 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         transaction,
       );
     return {
+      provenance: [{
+        plane: "neon" as const,
+        service: "master-data" as const,
+        sourceObject: "master.business_partner.aggregate_projection" as const,
+        observedAt: date(projection!["observed_at"]),
+      }],
       businessPartner: {
         id: text(bp, "id"),
         code: text(bp, "code"),
@@ -1283,7 +1300,7 @@ async function readOnboardingCycle(tx: Tx, tenantId: string, caseId: string) {
   };
 }
 
-const CASE_SELECT = `c.*,s.payload_json,i.id invitation_id,i.registration_mode invitation_registration_mode,
+const CASE_SELECT = `c.*,s.payload_json,s.captured_at snapshot_observed_at,i.id invitation_id,i.registration_mode invitation_registration_mode,
  i.applicant_principal_id,
  (SELECT v.evaluation_id FROM document.entity_case_validation v WHERE v.tenant_id=c.tenant_id AND v.entity_case_id=c.id ORDER BY v.evaluated_at DESC,v.id DESC LIMIT 1) validation_evaluation_id,
  (SELECT v.evaluated_snapshot_id FROM document.entity_case_validation v WHERE v.tenant_id=c.tenant_id AND v.entity_case_id=c.id ORDER BY v.evaluated_at DESC,v.id DESC LIMIT 1) validation_snapshot_id,

@@ -74,6 +74,7 @@
     "db:provision:development:phase1-list-fixtures": "tsx scripts/provisioning/provision-development-phase1-list-fixtures.ts",
     "db:provision:development:northwind-mesh": "tsx scripts/provisioning/provision-development-northwind-mesh-fixture.ts",
     "db:provision:development:phase1-list-runtime": "tsx scripts/provisioning/provision-development-phase1-list-runtimes.ts",
+    "db:provision:neon:currency-runtime": "tsx scripts/provisioning/provision-development-phase1-list-runtimes.ts --plane neon",
     "db:provision:mesh": "tsx scripts/provisioning/provision-mesh.ts",
     "db:provision:three-plane:plan": "tsx scripts/provisioning/provision-three-plane.ts --plan",
     "db:provision:three-plane": "tsx scripts/provisioning/provision-three-plane.ts --apply",

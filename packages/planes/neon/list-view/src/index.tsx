@@ -10,15 +10,21 @@ import {
   useEntityApplication,
   DirectoryFilterContext,
 } from "@athyper/platform-entity-list-view";
+import { getPlaneBrand } from "@athyper/platform-brand";
 import {
   useApiClient,
   useApplicationNavigation,
 } from "@athyper/platform-shell-app-foundation";
+
+const NEON_APPLICATION_NAME = getPlaneBrand("neon").applicationName;
 import {
   useNeonOperatingOrganization,
-  useNeonWorkContext,
 } from "@athyper/product-neon-shell";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
+import {
+  NeonScopeAdapter,
+  supportsNeonWorkContextResolver,
+} from "./scope-adapters";
 
 export function NeonEntityList({
   entityCode,
@@ -44,6 +50,7 @@ export function NeonEntityList({
         renderScopeControl={app.renderScopeControl}
         contentOnly
         initialDensity={initialDensity}
+        applicationName={NEON_APPLICATION_NAME}
       />
     );
   return (
@@ -65,9 +72,9 @@ function ScopedNeonEntityList({
   children,
   onNavigate,
   activePath,
-  initialPartnerRole,
+  initialDirectoryQuery,
 }: {
-  readonly initialPartnerRole?: "supplier" | "customer";
+  readonly initialDirectoryQuery?: string;
   readonly activePath?: string;
   readonly onNavigate?: (href: string) => void;
   readonly applicationOnly?: boolean;
@@ -77,109 +84,29 @@ function ScopedNeonEntityList({
   readonly navigationOnly?: boolean;
   readonly initialDensity?: ListDensity;
 }) {
-  const work = useNeonWorkContext();
-  const operating = useNeonOperatingOrganization();
-  const [organizationIds, setOrganizationIds] = useState<readonly string[]>([]);
-  const [companyIds, setCompanyIds] = useState<readonly string[]>([]);
-  const [partnerRole, setPartnerRole] = useState<
-    "supplier" | "customer" | undefined
-  >(initialPartnerRole);
-  const [eligibleOperation, setEligibleOperation] = useState<
-    "order" | "invoice" | "payment"
-  >();
-  useEffect(() => {
-    setPartnerRole(initialPartnerRole);
-    setEligibleOperation(undefined);
-  }, [initialPartnerRole]);
-  const coordinate = useMemo<EntityListScopeCoordinateV1 | undefined>(() => {
-    if (
-      !organizationIds.length &&
-      !companyIds.length &&
-      !partnerRole &&
-      !eligibleOperation
-    )
-      return undefined;
-    const company =
-      companyIds.length === 1
-        ? work.companies.find((item) => item.companyCodeId === companyIds[0])
-        : undefined;
-    if (
-      eligibleOperation &&
-      organizationIds.length === 1 &&
-      company &&
-      partnerRole
-    )
-      return {
-        partnerRole,
-        eligibleOperation,
-        operatingOrganizationId: organizationIds[0],
-        companyCodeId: company.companyCodeId,
-        legalEntityId: company.legalEntityId,
-      };
-    return {
-      ...(partnerRole ? { partnerRole } : {}),
-      ...(organizationIds.length
-        ? { operatingOrganizationIds: organizationIds }
-        : {}),
-      ...(companyIds.length ? { companyCodeIds: companyIds } : {}),
-    };
-  }, [
-    organizationIds,
-    companyIds,
-    partnerRole,
-    eligibleOperation,
-    work.companies,
-  ]);
   return (
-    <DirectoryFilterContext.Provider
-      value={{
-        value: {
-          partnerRole,
-          eligibleOperation,
-          operatingOrganizationIds: organizationIds,
-          companyCodeIds: companyIds,
-        },
-        organizations: operating.organizations,
-        companies: work.companies,
-        unavailable: work.status !== "ready" || operating.status !== "ready",
-        apply: (value) => {
-          setOrganizationIds(value.operatingOrganizationIds ?? []);
-          setCompanyIds(value.companyCodeIds ?? []);
-          setPartnerRole(value.partnerRole === "supplier" || value.partnerRole === "customer" ? value.partnerRole : undefined);
-          const compatible =
-            value.operatingOrganizationIds?.length === 1 &&
-            value.companyCodeIds?.length === 1 &&
-            operating.organizations
-              .find((org) => org.id === value.operatingOrganizationIds?.[0])
-              ?.companyAssignments.some(
-                (item) => item.companyCodeId === value.companyCodeIds?.[0],
-              );
-          setEligibleOperation(
-            (value.partnerRole === "supplier" || value.partnerRole === "customer") && compatible &&
-            (value.eligibleOperation === "order" || value.eligibleOperation === "invoice" || value.eligibleOperation === "payment")
-              ? value.eligibleOperation : undefined,
-          );
-        },
-      }}
-    >
-      <EntityListRuntime
-        client={client}
-        entityCode={entityCode}
-        scopeCoordinate={coordinate}
-        renderScopeControl={(input) =>
-          input.scope.workContext ? <NeonRequiredContext {...input} /> : null
-        }
-        initialDensity={initialDensity}
-        navigationOnly={navigationOnly}
-        applicationOnly={applicationOnly}
-        onNavigate={onNavigate}
-        activePath={activePath}
-        children={children}
-        scopePending={
-          work.status === "loading" || operating.status === "loading"
-        }
-      />
-    </DirectoryFilterContext.Provider>
+    <NeonScopeAdapter entityCode={entityCode} initialDirectoryQuery={initialDirectoryQuery}>
+      {({ coordinate, directory, scopePending }) => (
+        <DirectoryFilterContext.Provider value={directory}>
+          <EntityListRuntime
+            client={client}
+            entityCode={entityCode}
+            scopeCoordinate={coordinate}
+            renderScopeControl={(input) =>
+              input.scope.workContext ? <NeonRequiredContext {...input} /> : null
+            }
+            initialDensity={initialDensity}
+            navigationOnly={navigationOnly}
+            applicationOnly={applicationOnly}
+            onNavigate={onNavigate}
+            activePath={activePath}
+            children={children}
+            scopePending={scopePending}
+            applicationName={NEON_APPLICATION_NAME}
+          />
+        </DirectoryFilterContext.Provider>
+      )}
+    </NeonScopeAdapter>
   );
 }
 
@@ -194,8 +121,6 @@ export function NeonEntityApplication({
   readonly initialDirectoryQuery?: string;
   readonly activePath?: string;
 }) {
-  const role = new URLSearchParams(initialDirectoryQuery).get("role");
-  const initialPartnerRole = entityCode === "business_partner" && (role === "supplier" || role === "customer") ? role : undefined;
   const client = useApiClient(),
     navigation = useApplicationNavigation();
   return (
@@ -204,7 +129,7 @@ export function NeonEntityApplication({
       entityCode={entityCode}
       applicationOnly
       onNavigate={navigation.push}
-      initialPartnerRole={initialPartnerRole}
+      initialDirectoryQuery={initialDirectoryQuery}
       activePath={activePath}
     >
       {children}
@@ -227,10 +152,7 @@ function NeonRequiredContext({
   if (!requirement) return null;
   // Registered readers currently require one organization. Unsupported contracts stay closed.
   if (
-    ![
-      "platform.document_relationship.v1",
-      "neon.business_partner.operating_organization.v1",
-    ].includes(requirement.resolver) ||
+    !supportsNeonWorkContextResolver(requirement.resolver) ||
     requirement.requiredCoordinates.length !== 1 ||
     requirement.requiredCoordinates[0] !== "operatingOrganizationId"
   )

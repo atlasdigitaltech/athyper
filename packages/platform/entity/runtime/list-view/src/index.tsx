@@ -3,6 +3,8 @@ import { isListViewAllowed, constrainEmbeddedViewState } from "./view-policy";
 import { lookupInitialState } from "./lookup-directory";
 import { EntityTaskHeaderProvider, useEntityTaskHeader } from "@athyper/platform-shell";
 import { useAtlasBusinessContextPublisher } from "@athyper/platform-shell";
+import { ErrorSurface } from "@athyper/platform-shell-app-foundation";
+import { classifyAppError } from "@athyper/platform-shell-app-foundation/error-taxonomy";
 import { AppliedFilters, type AppliedFilterChip } from "./applied-filters";
 import {
   useDirectoryFilters,
@@ -284,6 +286,8 @@ export interface EntityListRuntimeProps {
   readonly activePath?: string;
   readonly onNavigate?: (href: string) => void;
   readonly initialDensity?: "compact" | "comfortable" | "spacious";
+  /** Plane brand identity shown on application-tier failure surfaces (e.g. "Athyper Neon"). */
+  readonly applicationName?: string;
 }
 
 export function EntityListRuntime(props: EntityListRuntimeProps) {
@@ -320,6 +324,7 @@ function EntityApplicationContent({
   children,
   onNavigate,
   activePath,
+  applicationName,
 }: EntityListRuntimeProps) {
   const taskHeader = useEntityTaskHeader();
   const locale = useOptionalI18n()?.localization.uiLocale;
@@ -394,6 +399,7 @@ function EntityApplicationContent({
           loading={!error}
           error={error}
           retry={() => setAttempt((value) => value + 1)}
+          applicationName={applicationName}
         />
       </>
     );
@@ -518,6 +524,7 @@ function EntityCollectionRuntime({
   onNavigate,
   activePath,
   initialDensity = "comfortable",
+  applicationName,
 }: EntityListRuntimeProps) {
   const inherited = useEntityApplication();
   const locale = useOptionalI18n()?.localization.uiLocale;
@@ -914,6 +921,7 @@ function EntityCollectionRuntime({
           loading={scopePending || loading}
           error={error}
           retry={() => setAttempt((value) => value + 1)}
+          applicationName={applicationName}
         />
       </>
     );
@@ -1014,6 +1022,7 @@ function EntityCollectionRuntime({
         loading
         error={error}
         retry={() => setAttempt((value) => value + 1)}
+        applicationName={applicationName}
       />
     );
   const fields = visibleListFields(descriptor, state);
@@ -5066,6 +5075,7 @@ function ListFrame({
   contentOnly = false,
   headerOnly = false,
   density = "comfortable",
+  applicationName,
 }: {
   readonly contentOnly?: boolean;
   readonly headerOnly?: boolean;
@@ -5074,6 +5084,7 @@ function ListFrame({
   readonly loading: boolean;
   readonly error?: ApiTransportError;
   readonly retry: () => void;
+  readonly applicationName?: string;
 }) {
   return (
     <PageFrame
@@ -5127,7 +5138,7 @@ function ListFrame({
         />
       ) : null}
       {error ? (
-        <ErrorState error={error} retry={retry} application={headerOnly} />
+        <ErrorState error={error} retry={retry} application={headerOnly} applicationName={applicationName} />
       ) : loading ? (
         <>
           {!contentOnly ? <EntityNavigationSkeleton /> : null}
@@ -5154,12 +5165,16 @@ function ErrorState({
   retry,
   compact = false,
   application = false,
+  applicationName,
 }: {
   readonly error: ApiTransportError;
   readonly retry: () => void;
   readonly compact?: boolean;
   readonly application?: boolean;
+  readonly applicationName?: string;
 }) {
+  const model = classifyAppError({ error });
+  if (application) return <ErrorSurface model={model} reset={retry} surface="content" applicationName={applicationName} />;
   return (
     <Card
       className={`a-entity-list__state a-entity-list__state--error${compact ? " a-entity-list__state--inline" : " a-entity-list__state--empty"}`}
@@ -5170,17 +5185,19 @@ function ErrorState({
       </span>
       <div>
         <h2>
-          {application
-            ? "This application is unavailable"
+          {model.kind === "not-found"
+            ? model.title
             : compact
               ? "The latest results could not be loaded"
               : "This list is unavailable"}
         </h2>
-        <p>We couldn’t load this page. Please try again.</p>
+        <p>{model.kind === "not-found" ? model.description : "We couldn’t load this page. Please try again."}</p>
       </div>
-      <Button size="small" variant="secondary" onClick={retry}>
-        Try again
-      </Button>
+      {model.canRetry ? (
+        <Button size="small" variant="secondary" onClick={retry}>
+          Try again
+        </Button>
+      ) : null}
       <details className="a-entity-list__error-details">
         <summary>Technical details</summary>
         <p>{error.message}</p>

@@ -3,7 +3,7 @@ import {
   EntitySectionNavigation,
   useEntitySectionScroll,
 } from "./section-navigation";
-import { Component, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Component, useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { EntityRecord360PanelV1 } from "@athyper/contract-platform-entity-runtime";
 
 export interface Record360Section {
@@ -11,6 +11,57 @@ export interface Record360Section {
   readonly label: string;
   readonly count?: number;
   readonly status?: string;
+}
+
+export function EntityRecord360ModeNavigation({
+  panel,
+  activeTab,
+  activeSection,
+  onNavigate,
+  navigationId,
+  navigationRef,
+}: {
+  readonly panel: EntityRecord360PanelV1;
+  readonly activeTab: string;
+  readonly activeSection: string;
+  readonly onNavigate: (section: string, tab: string) => void;
+  readonly navigationId: string;
+  readonly navigationRef: RefObject<HTMLDivElement | null>;
+}) {
+  const tab = panel.tabs.find((item) => item.key === activeTab) ?? panel.tabs[0]!;
+  return <div
+    ref={navigationRef}
+    role="tablist"
+    aria-label="Record views"
+    className="a-record-360__tabs"
+    onKeyDown={(event) => {
+      const buttons = Array.from(
+        navigationRef.current!.querySelectorAll<HTMLButtonElement>("[role=tab]"),
+      );
+      const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      const next = event.key === "ArrowRight" ? (index + 1) % buttons.length
+        : event.key === "ArrowLeft" ? (index - 1 + buttons.length) % buttons.length
+          : event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : undefined;
+      if (next !== undefined) {
+        event.preventDefault();
+        buttons[next]?.focus();
+        buttons[next]?.click();
+      }
+    }}
+  >
+    {panel.tabs.map((item) => <button
+      key={item.key}
+      type="button"
+      role="tab"
+      id={`${navigationId}-tab-${item.key}`}
+      aria-controls={`${navigationId}-content`}
+      aria-selected={item.key === tab.key}
+      tabIndex={item.key === tab.key ? 0 : -1}
+      onClick={() => onNavigate(item.sectionKey ?? activeSection, item.key)}
+    >
+      {item.label}
+    </button>)}
+  </div>;
 }
 
 /** Shared scroll navigation. The adapter supplies only authorized section providers. */
@@ -24,6 +75,8 @@ export function EntityRecord360Panel({
   onObserve,
   renderSection,
   renderSidebar,
+  modeNavigationRef,
+  modeNavigationId,
 }: {
   readonly panel: EntityRecord360PanelV1;
   readonly sections: readonly Record360Section[];
@@ -36,10 +89,15 @@ export function EntityRecord360Panel({
   readonly renderSidebar: (
     provider: EntityRecord360PanelV1["sidebar"][number],
   ) => ReactNode;
+  /** When provided, the record-mode tabs are rendered by PageWorkspace.navigation. */
+  readonly modeNavigationRef?: RefObject<HTMLDivElement | null>;
+  readonly modeNavigationId?: string;
 }) {
   const root = useRef<HTMLDivElement>(null),
-    tabsRoot = useRef<HTMLDivElement>(null),
-    id = useId();
+    internalNavigationRef = useRef<HTMLDivElement>(null),
+    generatedNavigationId = useId(),
+    tabsRoot = modeNavigationRef ?? internalNavigationRef,
+    navigationId = modeNavigationId ?? generatedNavigationId;
   const rail = panel.sections.flatMap(
     (key) => sections.find((item) => item.key === key) ?? [],
   );
@@ -73,61 +131,12 @@ export function EntityRecord360Panel({
   });
   return (
     <div ref={root} className="a-record-360">
-      {/* Not platform-ui's Tabs/TabsList: those keep every panel mounted and toggle hidden, but only one
-          tab's content ever exists here (single shared tabpanel below) so the "360" tab's scroll-linked
-          progressive loading can assume it's the only rendered content. Forcing the always-mounted model
-          would mean restructuring that, not reusing it. */}
+      {modeNavigationRef ? null : <EntityRecord360ModeNavigation panel={panel} activeTab={activeTab} activeSection={activeSection} onNavigate={onNavigate} navigationId={navigationId} navigationRef={tabsRoot} />}
       <div
-        ref={tabsRoot}
-        role="tablist"
-        aria-label="Record views"
-        className="a-record-360__tabs"
-        onKeyDown={(event) => {
-          const buttons = Array.from(
-            tabsRoot.current!.querySelectorAll<HTMLButtonElement>("[role=tab]"),
-          );
-          const index = buttons.indexOf(
-            document.activeElement as HTMLButtonElement,
-          );
-          const next =
-            event.key === "ArrowRight"
-              ? (index + 1) % buttons.length
-              : event.key === "ArrowLeft"
-                ? (index - 1 + buttons.length) % buttons.length
-                : event.key === "Home"
-                  ? 0
-                  : event.key === "End"
-                    ? buttons.length - 1
-                    : undefined;
-          if (next !== undefined) {
-            event.preventDefault();
-            buttons[next]?.focus();
-            buttons[next]?.click();
-          }
-        }}
-      >
-        {panel.tabs.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            role="tab"
-            id={`${id}-tab-${item.key}`}
-            aria-controls={`${id}-content`}
-            aria-selected={item.key === tab.key}
-            tabIndex={item.key === tab.key ? 0 : -1}
-            onClick={() =>
-              onNavigate(item.sectionKey ?? activeSection, item.key)
-            }
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-      <div
-        id={`${id}-content`}
+        id={`${navigationId}-content`}
         role="tabpanel"
         tabIndex={-1}
-        aria-labelledby={`${id}-tab-${tab.key}`}
+        aria-labelledby={`${navigationId}-tab-${tab.key}`}
         className={
           tab.provider === "360"
             ? "a-record-360__layout"
@@ -218,7 +227,7 @@ function ProgressiveSection({
       ) : (
         <div
           className="a-record-360__placeholder"
-          aria-label={`${item.label} loads when approached`}
+          aria-hidden="true"
         />
       )}
     </section>

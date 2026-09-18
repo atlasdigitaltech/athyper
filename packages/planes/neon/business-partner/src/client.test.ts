@@ -27,6 +27,12 @@ const governedCase = {
     updatedAt: "2026-09-04T01:00:00.000Z",
   },
 };
+const provenance = [{
+  plane: "neon",
+  service: "master-data",
+  sourceObject: "snapshot.entity_snapshot",
+  observedAt: "2026-09-04T01:00:00.000Z",
+}];
 
 function clientFor(body: unknown) {
   return createBusinessPartnerClient({
@@ -38,7 +44,7 @@ function clientFor(body: unknown) {
 
 describe("Business Partner case client", () => {
   it("parses the pinned onboarding cycle and linked subjects", async () => {
-    const view = await clientFor({case:governedCase,request:{id:governedCase.id},validationFindings:[],onboardingCycle:{runId:"80000000-0000-4000-8000-000000000008",code:"BPONB-BPR-1",name:"Supplier onboarding BPR-1",status:"running",template:{code:"BP_SUPPLIER_ONBOARDING",version:1,hash:"c".repeat(64),releaseId:"90000000-0000-4000-8000-000000000009"},tasks:[{id:"a0000000-0000-4000-8000-00000000000a",code:"INVITATION",name:"Invitation",status:"completed",completionMode:"system",completionEvidence:{eventCode:"business_partner.case.created"}}],subjects:[{role:"onboarding_case",primary:true,entityCaseId:governedCase.id}]}}).view(governedCase.id);
+    const view = await clientFor({case:governedCase,request:{id:governedCase.id},provenance,validationFindings:[],onboardingCycle:{runId:"80000000-0000-4000-8000-000000000008",code:"BPONB-BPR-1",name:"Supplier onboarding BPR-1",status:"running",template:{code:"BP_SUPPLIER_ONBOARDING",version:1,hash:"c".repeat(64),releaseId:"90000000-0000-4000-8000-000000000009"},tasks:[{id:"a0000000-0000-4000-8000-00000000000a",code:"INVITATION",name:"Invitation",status:"completed",completionMode:"system",completionEvidence:{eventCode:"business_partner.case.created"}}],subjects:[{role:"onboarding_case",primary:true,entityCaseId:governedCase.id}]}}).view(governedCase.id);
     expect(view.onboardingCycle).toMatchObject({status:"running",template:{code:"BP_SUPPLIER_ONBOARDING",version:1},tasks:[{code:"INVITATION",status:"completed"}],subjects:[{role:"onboarding_case",primary:true}]});
   });
 
@@ -46,6 +52,7 @@ describe("Business Partner case client", () => {
     const view = await clientFor({
       case: governedCase,
       request: { id: governedCase.id },
+      provenance,
       validationFindings: [],
       workflow: {
         requestId: "50000000-0000-4000-8000-000000000005",
@@ -69,6 +76,7 @@ describe("Business Partner case client", () => {
       clientFor({
         case: governedCase,
         request: { id: governedCase.id },
+        provenance,
         validationFindings: [],
         workflow: {
           requestId: "50000000-0000-4000-8000-000000000005",
@@ -94,10 +102,10 @@ describe("Business Partner case client", () => {
       materializer: { code: "neon.internal_business_partner", version: "1" }, applicationFingerprint: "c".repeat(64), completedAt: "2026-09-04T01:00:00Z", completedBy: "principal-1",
       result: { businessPartnerId: "partner-1", partnerRole: "supplier", roleId: "supplier-1" }, lineage: [],
     };
-    const view = await clientFor({ case: governedCase, request: { id: governedCase.id }, validationFindings: [], materializationProof: { ...proof, payload: { taxId: "restricted" } } }).view(governedCase.id);
+    const view = await clientFor({ case: governedCase, request: { id: governedCase.id }, provenance, validationFindings: [], materializationProof: { ...proof, payload: { taxId: "restricted" } } }).view(governedCase.id);
     expect(view.materializationProof).toMatchObject({ materializationId: "materialization-1", result: { businessPartnerId: "partner-1" }, lineage: [] });
     expect(view.materializationProof).not.toHaveProperty("payload");
-    await expect(clientFor({ case: governedCase, request: { id: governedCase.id }, validationFindings: [], materializationProof: { ...proof, lineage: Array.from({ length: 26 }, () => ({})) } }).view(governedCase.id)).rejects.toThrow(/contract is invalid/);
+    await expect(clientFor({ case: governedCase, request: { id: governedCase.id }, provenance, validationFindings: [], materializationProof: { ...proof, lineage: Array.from({ length: 26 }, () => ({})) } }).view(governedCase.id)).rejects.toThrow(/contract is invalid/);
   });
 });
 

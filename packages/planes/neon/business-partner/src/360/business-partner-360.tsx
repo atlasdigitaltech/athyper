@@ -1,10 +1,13 @@
 "use client";
 import { BUSINESS_PARTNER_360_PANEL } from "./panel-definition";
-import { EntityRecord360Panel } from "@athyper/platform-entity-form-detail";
+import {
+  EntityRecord360ModeNavigation,
+  EntityRecord360Panel,
+} from "@athyper/platform-entity-form-detail";
 import { PrimaryDetails } from "./components/primary-details";
 import { ResourceSection } from "./components/resource-section";
 import {
-  PageHeader,
+  PageWorkspace,
   PageResourceBoundary,
   useRecordPage,
   useAtlasBusinessContextPublisher,
@@ -15,14 +18,24 @@ import {
   useSessionIdentity,
 } from "@athyper/platform-shell-app-foundation";
 import { Card, Skeleton } from "@athyper/platform-ui";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   createBusinessPartner360Client,
   summaryQueryKey,
   type RoleLens,
   type Summary,
 } from "./business-partner-360-client";
-import { type BusinessPartner360State, BusinessPartner360Provider } from "./business-partner-360-context";
+import {
+  type BusinessPartner360State,
+  BusinessPartner360Provider,
+} from "./business-partner-360-context";
 import {
   AccessScopeCard,
   RecordTechnicalDetails,
@@ -73,7 +86,9 @@ export function BusinessPartner360Shell({
     [showTransactionContext, setShowTransactionContext] = useState(false),
     [requiredCoordinates, setRequiredCoordinates] =
       useState<readonly string[]>(),
-    [, setScrollRevision] = useState(0);
+    [, setScrollRevision] = useState(0),
+    modeNavigationRef = useRef<HTMLDivElement>(null),
+    modeNavigationId = useId();
   const url = readUrl();
   const authEpoch = identity.scope?.authEpoch ?? 0;
   const previousBusinessPartnerId = useRef(businessPartnerId);
@@ -105,9 +120,13 @@ export function BusinessPartner360Shell({
       authEpoch,
     ],
   );
-  const panel = useMemo(() => realignPartnerPanel(
+  const panel = useMemo(
+    () =>
+      realignPartnerPanel(
     summary?.recordHeader?.panel ?? BUSINESS_PARTNER_360_PANEL,
-  ), [summary?.recordHeader?.panel]);
+      ),
+    [summary?.recordHeader?.panel],
+  );
   const overviewTab = panel.tabs.find((tab) => tab.provider === "360")!;
   const legacyTab = panel.tabs.find((tab) => tab.sectionKey === url.section);
   const tab =
@@ -217,7 +236,8 @@ export function BusinessPartner360Shell({
     [],
   );
 
-  const selectSection = useCallback((code: string) =>
+  const selectSection = useCallback(
+    (code: string) =>
     navigate({
       section: code,
       tab:
@@ -226,8 +246,13 @@ export function BusinessPartner360Shell({
           : undefined) ??
         panel.tabs.find((tab) => tab.sectionKey === code)?.key ??
         overviewTab.key,
-    }), [navigate, panel, overviewTab.key]);
-  const contextValue = useMemo<BusinessPartner360State | undefined>(() => summary ? {
+      }),
+    [navigate, panel, overviewTab.key],
+  );
+  const contextValue = useMemo<BusinessPartner360State | undefined>(
+    () =>
+      summary
+        ? {
         summary,
         section,
         roleLens: url.roleLens,
@@ -257,13 +282,21 @@ export function BusinessPartner360Shell({
           window.history.pushState({}, "", next);
           setRevision((value) => value + 1);
         },
-      } : undefined,
-    [summary, section, url.roleLens, selectSection, navigate]);
+          }
+        : undefined,
+    [summary, section, url.roleLens, selectSection, navigate],
+  );
   if (error)
     return (
-      <PageResourceBoundary status="error" loading={null} empty={null} error={
-        <div className="bp360">
-          <PageHeader level="collection" title="Business Partner" />
+      <PageResourceBoundary
+        status="error"
+        loading={null}
+        empty={null}
+        error={
+          <PageWorkspace
+            className="bp360"
+            header={{ level: "collection", title: "Business Partner" }}
+          >
           <Card>
             <h2>Unavailable</h2>
             <p>{error}</p>
@@ -288,8 +321,9 @@ export function BusinessPartner360Shell({
               </button>
             ) : null}
           </Card>
-        </div>
-      }>
+          </PageWorkspace>
+        }
+      >
         {null}
       </PageResourceBoundary>
     );
@@ -299,12 +333,20 @@ export function BusinessPartner360Shell({
     summary.identity.id !== businessPartnerId
   )
     return (
-      <PageResourceBoundary status="loading" error={null} empty={null} loading={
-        <div className="bp360" aria-label="Loading Business Partner">
-          <PageHeader level="collection" title="Loading Business Partner" />
+      <PageResourceBoundary
+        status="loading"
+        error={null}
+        empty={null}
+        loading={
+          <PageWorkspace
+            className="bp360"
+            aria-label="Loading Business Partner"
+            header={{ level: "collection", title: "Loading Business Partner" }}
+          >
           <Skeleton className="bp360-shell-skeleton" />
-        </div>
-      }>
+          </PageWorkspace>
+        }
+      >
         {null}
       </PageResourceBoundary>
     );
@@ -361,18 +403,31 @@ export function BusinessPartner360Shell({
     window.history.replaceState(window.history.state, "", next);
     setScrollRevision((value) => value + 1);
   };
+  const navigateRecordMode = (code: string, nextTab: string) =>
+    navigate({
+      section:
+        nextTab === overviewTab.key && !railSections.includes(code)
+          ? (railSections[0] ?? "overview")
+          : code,
+      tab: nextTab,
+    });
   return (
-    <BusinessPartner360Provider
-      value={contextValue!}
-    >
-      <div
-        className="bp360"
-        data-bp360-ready="true"
-        data-bp360-section={section}
-        data-bp360-role-lens={url.roleLens}
-        data-bp360-historical={url.asOf ? "true" : "false"}
-      >
-        <IdentityHeader />
+    <BusinessPartner360Provider value={contextValue!}>
+      <PageWorkspace
+        header={<IdentityHeader />}
+        navigation={
+          <EntityRecord360ModeNavigation
+            panel={panel}
+            activeTab={tab.key}
+            activeSection={section}
+            onNavigate={navigateRecordMode}
+            navigationId={modeNavigationId}
+            navigationRef={modeNavigationRef}
+          />
+        }
+        navigationKind="record-mode"
+        navigationBand="shell"
+        toolbar={
         <TransactionContextBar
           expanded={showTransactionContext}
           onToggle={() => {
@@ -380,6 +435,13 @@ export function BusinessPartner360Shell({
             setShowTransactionContext((value) => !value);
           }}
         />
+        }
+        className="bp360"
+        data-bp360-ready="true"
+        data-bp360-section={section}
+        data-bp360-role-lens={url.roleLens}
+        data-bp360-historical={url.asOf ? "true" : "false"}
+      >
         {showTransactionContext ? (
           <section
             id="bp-transaction-context"
@@ -420,22 +482,16 @@ export function BusinessPartner360Shell({
           activeSection={section}
           activeTab={tab.key}
           navigationRevision={revision}
-          onNavigate={(code, nextTab) =>
-            navigate({
-              section:
-                nextTab === overviewTab.key && !railSections.includes(code)
-                  ? (railSections[0] ?? "overview")
-                  : code,
-              tab: nextTab,
-            })
-          }
+          onNavigate={navigateRecordMode}
           onObserve={observeSection}
+          modeNavigationId={modeNavigationId}
+          modeNavigationRef={modeNavigationRef}
           renderSection={renderSection}
           renderSidebar={(item) => (
             <PrimaryDetails provider={item.provider} label={item.label} />
           )}
         />
-      </div>
+      </PageWorkspace>
     </BusinessPartner360Provider>
   );
 }

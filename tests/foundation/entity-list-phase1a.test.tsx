@@ -2151,8 +2151,9 @@ test("directory filters are metadata-gated and stage company changes until Apply
     await click(".a-entity-list__filter-actions button:last-child");
     assert.equal(calls, 1);
     assert.equal(
-      dom.window.document.querySelectorAll(".a-directory-filter__chips button")
-        .length,
+      dom.window.document.querySelectorAll(
+        '[aria-label="Applied filters"] .a-applied-filters__list button',
+      ).length,
       3,
     );
     assert.match(
@@ -2345,8 +2346,9 @@ test("scope quick filters stage values, enforce dependencies and reset", async (
     await click(".a-entity-list__filter-actions button:last-child");
     assert.equal(calls, 2);
     assert.equal(
-      dom.window.document.querySelectorAll(".a-directory-filter__chips button")
-        .length,
+      dom.window.document.querySelectorAll(
+        '[aria-label="Applied filters"] .a-applied-filters__list button',
+      ).length,
       0,
     );
   } finally {

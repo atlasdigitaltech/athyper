@@ -8,6 +8,12 @@ vi.mock("@athyper/platform-shell", () => ({
   useRecordPage: () => {},
   useAtlasBusinessContextPublisher: publishContext,
   PageHeader: () => null,
+  PageWorkspace: ({ toolbar, children }: { toolbar?: unknown; children?: unknown }) => (
+    <>
+      {toolbar}
+      {children}
+    </>
+  ),
   PageResourceBoundary: ({ status, loading, error, empty, children }: { status: string; loading: unknown; error: unknown; empty: unknown; children: unknown }) =>
     status === "loading" ? loading : status === "error" ? error : status === "empty" ? empty : children,
   PlanePageFrame: ({ toolbar, children }: { toolbar?: unknown; children?: unknown }) => (

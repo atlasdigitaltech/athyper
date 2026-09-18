@@ -1,7 +1,7 @@
 import {createOperation,encodePathSegment,type HttpClient} from "@athyper/platform-api-client";
 import type {SummaryQuery} from "./business-partner-360-client";
 
-export interface NetworkSection {readonly schemaVersion:1;readonly sectionCode:"network";readonly state:"ready"|"empty"|"partial"|"stale"|"unavailable";readonly data:Readonly<Record<string,unknown>>;}
+export interface NetworkSection {readonly schemaVersion:1;readonly sectionCode:"network";readonly state:"ready"|"empty"|"partial"|"stale"|"unavailable";readonly data:Readonly<Record<string,unknown>>;readonly provenance:readonly Readonly<{plane:string;service:string;sourceObject:string;observedAt:string}>[];}
 export interface NetworkQuery extends SummaryQuery {readonly sectionCode:"network";}
 const operation=createOperation<NetworkSection>({method:"GET",path:({businessPartnerId})=>`/api/neon/business-partners/${encodePathSegment(businessPartnerId)}/360/network`,parse});
 export function createBusinessPartner360NetworkClient(http:HttpClient){return{read:(query:NetworkQuery,signal?:AbortSignal)=>http.request(operation,{params:{businessPartnerId:query.businessPartnerId},query:{roleLens:query.roleLens,...(query.operatingOrganizationId?{operatingOrganizationId:query.operatingOrganizationId}:{}),...(query.companyCodeId?{companyCodeId:query.companyCodeId}:{}),...(query.legalEntityId?{legalEntityId:query.legalEntityId}:{}),...(query.asOf?{asOf:query.asOf}:{}),permissionEpoch:query.authEpoch},signal})};}

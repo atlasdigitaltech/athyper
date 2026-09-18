@@ -2,6 +2,7 @@ import {
   useApiClient,
   useSessionIdentity,
 } from "@athyper/platform-shell-app-foundation";
+import { useRecordFooterSources } from "@athyper/platform-shell";
 import { Card, Skeleton } from "@athyper/platform-ui";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -99,6 +100,7 @@ function Section({ code }: { code: ExplainabilitySectionCode }) {
   const current = state?.baseKey === baseKey ? state : undefined;
   const value = current?.value,
     failed = current?.failed;
+  useRecordFooterSources(!failed && value ? value.provenance : []);
   if (failed && !value)
     return (
       <Card className="bp360-section-card">

@@ -30,6 +30,16 @@ const entityRoutes: Readonly<
       },
     ],
   },
+  org: {
+    defaultEntityCode: "currency",
+    entities: [
+      {
+        code: "currency",
+        routeSlug: "currencies",
+        name: "Currencies",
+      },
+    ],
+  },
   buy: {
     defaultEntityCode: "purchase_order",
     entities: [

@@ -6,6 +6,7 @@ export type AppErrorKind =
   | "required-action"
   | "permission-denied"
   | "context-mismatch"
+  | "not-found"
   | "conflict"
   | "validation"
   | "rate-limit"
@@ -49,6 +50,7 @@ export function classifyAppError(input: ClassifyAppErrorInput): AppErrorModel {
   if (facts.code === "AUTH_CONTEXT_MISMATCH") return model("context-mismatch", "Your access context changed", "Choose an active context before continuing.", "select-context", false, false, common);
   if ((facts.status === 403 && REQUIRED_ACTION_CODES.has(facts.code ?? "")) || requiredActions.length > 0) return model("required-action", "Action required", "Complete the required identity action before continuing.", "complete-action", false, true, common);
   if (facts.status === 403 || facts.transportKind === "authorization") return model("permission-denied", "Access denied", "You do not have permission to view this resource.", "none", false, false, common);
+  if (facts.status === 404 || facts.transportKind === "not-found") return model("not-found", "Record not found", "This record does not exist, or it may have been moved or removed. Check the link or return to the workspace.", "none", false, false, common);
   if (facts.status === 409 || facts.transportKind === "conflict") return model("conflict", "This item changed", "Keep your input while you reload the latest version or compare changes.", "reload-compare", false, true, common);
   if (facts.status === 422 || facts.transportKind === "validation") return model("validation", "Check your entries", "Correct the highlighted fields and submit again. Your input has been kept.", "correct-fields", false, true, common);
   if (facts.status === 429 || facts.transportKind === "rate-limit") {

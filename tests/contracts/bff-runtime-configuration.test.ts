@@ -109,6 +109,12 @@ test("Neon overlays preserve generated slugs and reject orphaned runtime module 
         assert.ok(
           module.entities.some((e) => e.code === module.defaultEntityCode),
         );
+  const organization = neonCatalogRoutes
+    .flatMap((workspace) => workspace.modules)
+    .find((module) => module.code === "org");
+  assert.deepEqual(organization?.entities, [
+    { code: "currency", routeSlug: "currencies", name: "Currencies" },
+  ]);
   assert.throws(
     () =>
       applyNeonEntityRoutes(

@@ -4,7 +4,7 @@ import { businessPartnerErrorMessage, useCommandRunner } from "./command-feedbac
 import { useOrganizationSelection } from "./use-organization-selection";
 import { SupplierProcessPreview } from "./supplier-process-preview";
 import { SupplierProcessCorrection } from "./supplier-process-correction";
-import { PageNavigation, PageResourceBoundary, PageWorkspace, useDeepLinkedTabState, useRecordBreadcrumb, useRegisterEntityTaskHeader, type PageResourceStatus } from "@athyper/platform-shell";
+import { PageNavigation, PageResourceBoundary, PageWorkspace, useDeepLinkedTabState, useRecordBreadcrumb, useRecordFooterSources, useRegisterEntityTaskHeader, type PageResourceStatus } from "@athyper/platform-shell";
 import { BusinessPartnerPageFrame } from "./page-frame";
 import { RequestLifecycle, RequestWorkspaceOverview, RequestWorkspaceDetails, RequestActivity, requestKind, requestTab } from "./request-workspace";
 import { restoreProfileAnswers } from "./request-relationships";
@@ -27,7 +27,6 @@ import {
   usePermissions,
   useToasts,
 } from "@athyper/platform-shell-app-foundation";
-import { PageSurface } from "@athyper/platform-surface-kit";
 import {
   Badge,
   Button,
@@ -656,17 +655,12 @@ function RequestDetailSurface({request,caseView,children,actions,commandBar,stat
     </>,
   }), [title, actions, labels, request, caseView, copyState]);
   const shared = useRegisterEntityTaskHeader(header);
-  // Shared: an ancestor task header already owns the header row; stay a bare section so nothing duplicates it.
-  // Not shared: this is the outermost owner, so render the real workspace to get the header row *and* a proper action-bar slot for the command bar.
+  // Shared: an ancestor task header already owns the header row. Keep it while using the same status/body/action slots.
+  // Not shared: this surface owns the header and renders the complete workspace.
   return shared ? (
-    // Note: this moves the status notice one position earlier than before (now leads the body instead of
-    // sitting between the summary and the tabs) since children can no longer be split from outside; still
-    // the first thing shown, so the notice remains immediately visible.
-    <PageSurface contentOnly title={title}>
-      {status}
+    <PageWorkspace contentOnly status={status} actions={commandBar}>
       {children}
-      {commandBar}
-    </PageSurface>
+    </PageWorkspace>
   ) : (
     <PageWorkspace header={{ level: "collection", ...header }} status={status} actions={commandBar}>
       {children}
@@ -951,6 +945,7 @@ export function BusinessPartnerRequestDetail({
   useEffect(() => {
     void reload();
   }, [reload]);
+  useRecordFooterSources(view?.provenance ?? []);
   const actions = view ? governedCaseActions(view.case) : [];
   const run = useCommandRunner({
     setBusy, setError, reload, errorMessage: message, blocked: Boolean(busy || loading),
@@ -1132,10 +1127,7 @@ export function BusinessPartnerRequestDetail({
           ariaLabel="Business Partner request"
           value={activeTab}
           onValueChange={selectTab}
-          aside={<>
-            <RequestLifecycle view={view} />
-            {request.kind === "new_partner" && request.source.kind === "manual" && request.requestedRole === "supplier" ? <SupplierProcessCorrection request={request} onChanged={reload} notificationPins={notificationPins} /> : null}
-          </>}
+          aside={<RequestLifecycle view={view} />}
           items={[
             {
               value: "overview",
@@ -1154,6 +1146,7 @@ export function BusinessPartnerRequestDetail({
               value: "review",
               label: "Review",
               content: <div className="bp-request-review">
+                {request.kind === "new_partner" && request.source.kind === "manual" && request.requestedRole === "supplier" ? <SupplierProcessCorrection request={request} onChanged={reload} notificationPins={notificationPins} /> : null}
                 <ValidationPanel view={view} />
                 <EvidencePanel request={request} />
                 <WorkflowPanel view={view} />
@@ -1217,6 +1210,7 @@ export function BusinessPartnerAggregateDetail({
     selection.selected,
     selection.company?.companyCodeId,
   ]);
+  useRecordFooterSources(!error && aggregate ? aggregate.provenance : []);
   return (
     <BusinessPartnerPageFrame
       title={

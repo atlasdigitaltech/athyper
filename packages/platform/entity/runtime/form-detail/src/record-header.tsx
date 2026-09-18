@@ -65,8 +65,14 @@ export function EntityRecordHeader({
   const otherSections = header.sections.filter(
     (item) => !primarySections.includes(item),
   );
-  const action = (item: EntityRecordHeaderV1["actions"][number]) =>
-    <EntityRecordAction key={item.key} action={item} handlers={actionHandlers} readOnly={header.readOnly} />;
+  const action = (item: EntityRecordHeaderV1["actions"][number]) => (
+    <EntityRecordAction
+      key={item.key}
+      action={item}
+      handlers={actionHandlers}
+      readOnly={header.readOnly}
+    />
+  );
   const section = (item: EntityRecordHeaderV1["sections"][number]) => (
     <button
       key={item.key}
@@ -140,7 +146,7 @@ export function EntityRecordHeader({
           ) : null}
         </div>
       ) : null}
-      {header.sections.length ? (
+      {header.sections.length > 1 ? (
         <nav
           className="athyper-section-nav a-record-header__nav"
           aria-label="Record sections"

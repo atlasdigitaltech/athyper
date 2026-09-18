@@ -3,9 +3,7 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { JSDOM } from "jsdom";
-import {
-  useRecordPage,
-} from "../../packages/platform/shell/shell/src/entity-page-layout";
+import { useRecordPage } from "../../packages/platform/shell/shell/src/entity-page-layout";
 import { ManagementWorkspace } from "../../packages/platform/shell/shell/src/management-workspace";
 import { EntityRecordHeader } from "../../packages/platform/entity/runtime/form-detail/src/record-header";
 import {
@@ -89,6 +87,40 @@ describe("Shared metadata record header", () => {
     assert.equal(host.querySelector("h1")?.textContent, "Business Partners");
     assert.ok(host.textContent?.includes("Manage"));
   });
+  it("exposes shared status, toolbar, body and action slots without changing collection ownership", async () => {
+    await act(async () =>
+      root.render(
+        <ManagementWorkspace
+          header={<h1>Business Partners</h1>}
+          navigation={<nav>Manage</nav>}
+          status={<p>Refreshing records</p>}
+          toolbar={<input aria-label="Search partners" />}
+          actions={<button type="button">Export</button>}
+          actionOutcome={<p>Export ready</p>}
+        >
+          <div>Collection</div>
+        </ManagementWorkspace>,
+      ),
+    );
+    assert.equal(host.querySelectorAll("h1").length, 1);
+    assert.equal(
+      host.querySelector('[data-slot="page-status"]')?.textContent,
+      "Refreshing records",
+    );
+    assert.ok(
+      host.querySelector(
+        '[data-slot="page-toolbar"] input[aria-label="Search partners"]',
+      ),
+    );
+    assert.equal(
+      host.querySelector('[data-slot="page-body"]')?.textContent,
+      "Collection",
+    );
+    assert.equal(
+      host.querySelector('[data-slot="page-actions"]')?.textContent,
+      "ExportExport ready",
+    );
+  });
   it("uses the same renderer for documents and navigates overflow sections", async () => {
     let selected = "";
     const documentHeader = resolveRecordHeader(
@@ -126,6 +158,18 @@ describe("Shared metadata record header", () => {
       0,
     );
     assert.ok(host.textContent?.includes("Historical read-only view"));
+  });
+  it("does not render navigation for a detail with only one section", async () => {
+    await act(async () =>
+      root.render(
+        <EntityRecordHeader
+          header={{ ...header, sections: [header.sections[0]!] }}
+          activeSection="overview"
+        />,
+      ),
+    );
+    assert.equal(host.querySelector('[aria-label="Record sections"]'), null);
+    assert.equal(host.querySelectorAll("h1").length, 1);
   });
   it("rejects unknown bindings and removes unreadable header fields and unpermitted actions", () => {
     assert.throws(

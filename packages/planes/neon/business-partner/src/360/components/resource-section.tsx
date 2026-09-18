@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createOperation } from "@athyper/platform-api-client";
 import { useApiClient } from "@athyper/platform-shell-app-foundation";
+import { useRecordFooterSources } from "@athyper/platform-shell";
 import { Card, Skeleton } from "@athyper/platform-ui";
 import { useBusinessPartner360 } from "../business-partner-360-context";
 import { AuthorizedAttachment } from "./commercial-controls";
@@ -8,6 +9,12 @@ import { businessLabel } from "../display-values";
 
 interface ResourcePage {
   data: { items: readonly Record<string, unknown>[]; nextCursor?: string };
+  provenance: readonly Readonly<{
+    plane: string;
+    service: string;
+    sourceObject: string;
+    observedAt: string;
+  }>[];
 }
 const read = createOperation<ResourcePage>({
   method: "GET",
@@ -95,6 +102,7 @@ export function ResourceSection({
       });
     return () => controller.abort();
   }, [http, query, summary.identity.id, code, retry]);
+  useRecordFooterSources(!failed && page ? page.provenance : []);
   return (
     <div className="bp360-section-list">
       <Card className="bp360-section-card">

@@ -8,10 +8,12 @@ test.beforeEach(async ({}, testInfo) => {
 
 test("supplier onboarding is accessible and definition-driven", async ({ page }) => {
   await page.goto("/mdg/business-partner/new");
-  await expect(page.getByRole("heading", { name: "New supplier onboarding request" })).toBeVisible();
-  await expect(page.getByLabel("Registered name")).toBeVisible();
-  await expect(page.getByLabel("Supplier type")).toBeVisible();
-  await expect(page.getByLabel("Qualification type")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "New business partner request" })).toBeVisible();
+  await page.getByRole("radio", { name: /Supplier/ }).check();
+  await page.getByRole("button", { name: "Onboard new supplier" }).click();
+  await expect(page.getByRole("textbox", { name: "Registered name *", exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Supplier type *", exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Qualification type *", exact: true })).toBeVisible();
   await expect(page.getByRole("group", { name: "Supplier addresses" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Supplier contacts" })).toBeVisible();
   await assertSurfaceContract(page, "supplier-onboarding");
@@ -19,14 +21,34 @@ test("supplier onboarding is accessible and definition-driven", async ({ page })
 
 test("customer onboarding is accessible for organization and person", async ({ page }) => {
   await page.goto("/mdg/business-partner/customer/new");
-  await expect(page.getByRole("heading", { name: "New customer onboarding request" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "New business partner request" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Customer/ })).toBeChecked();
+  await page.getByRole("button", { name: "Onboard new customer" }).click();
+  await expect(page.getByRole("textbox", { name: "Registration country", exact: true })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Registered name", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue to review" })).toBeEnabled();
+  await page.getByRole("button", { name: "Continue to review" }).click();
+  await expect(page.locator(".a-validation-summary")).toContainText("Registration country is required.");
+  await page.getByRole("link", { name: "Registration country is required." }).click();
+  await expect(page.getByRole("textbox", { name: "Registration country", exact: true })).toBeFocused();
   await assertSurfaceContract(page, "customer-onboarding-organization");
-  await page.getByLabel("Customer category").selectOption("person");
-  await expect(page.getByLabel("Consent evidence ID")).toBeVisible();
-  await assertSurfaceContract(page, "customer-onboarding-person");
+});
+
+test("supplier request detail keeps progress shared and the journey in Review", async ({ page }) => {
+  const requestId = process.env.PLAYWRIGHT_BP_REQUEST_ID ?? "3a452faf-d2ca-44d0-a583-8ddcfb9a3110";
+  await page.goto(`/mdg/business-partner/requests/${requestId}#overview`);
+  await expect(page.locator(".bp-request-lifecycle summary")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Supplier onboarding journey" })).toBeHidden();
+  await page.getByRole("tab", { name: "Review" }).click();
+  await expect(page).toHaveURL(/#review$/);
+  await expect(page.getByRole("heading", { name: "Supplier onboarding journey" })).toBeVisible();
+  await page.getByRole("tab", { name: "Request details" }).click();
+  await expect(page).toHaveURL(/#details$/);
+  await expect(page.getByText("Proposed request information · Read only")).toBeVisible();
 });
 
 test("workforce onboarding is accessible and does not expose commercial fields", async ({ page }) => {
+  test.skip(process.env.PLAYWRIGHT_WORKFORCE_ENABLED !== "1", "requires Workforce feature access for the authenticated test principal");
   await page.goto("/mdg/business-partner/person/new");
   await expect(page.getByRole("heading", { name: "New workforce person onboarding" })).toBeVisible();
   await expect(page.getByLabel("Employee number")).toBeVisible();

@@ -334,6 +334,9 @@ it("shows inline metadata validation, focuses invalid fields, and preserves over
  const input=container.querySelector('input')!;
  expect(container.textContent).not.toContain("Registered name is required.");
  await act(async()=>container.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+ const summaryLink=container.querySelector<HTMLAnchorElement>('.a-validation-summary a')!;
+ expect(summaryLink.textContent).toContain("Registered name is required.");
+ await act(async()=>summaryLink.click());
  expect(container.querySelector('.a-field-error')?.textContent).toContain("Registered name is required.");
  expect(input.getAttribute('aria-invalid')).toBe('true');expect(document.activeElement).toBe(input);
  expect(input.hasAttribute('maxlength')).toBe(false);

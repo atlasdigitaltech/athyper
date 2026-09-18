@@ -187,6 +187,7 @@ common/master/12_system_authority_reference_seed.sql
 planes/neon/master/12_platform_catalog_reference_seed.sql
 planes/neon/control/12_platform_catalog_reference_seed.sql
 planes/neon/authz/14_permission_reference_seed.sql
+planes/neon/authz/15_currency_reference_permission.sql
 planes/neon/control/12_business_partner_360_feature_seed.sql
 common/authz/14_workflow_permission_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql
