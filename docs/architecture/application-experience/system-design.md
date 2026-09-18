@@ -290,9 +290,20 @@ Edit this document when implementation teaches us something. No owner-assignment
 
 ## 14. Entity reuse and extension contract
 
+### 14.0 Scope: three mechanisms, not one — updated after real publication investigation
+
+This section originally framed the page-kind runtime as the eventual single mechanism for every entity, with Business Partner as its first migration consumer. Investigation into the actual publication pipeline (checking what is genuinely published in the live database, not just what the frontend contracts declare) found this needs correcting rather than pursued as originally written:
+
+- **Neon already has a separate, real, working mechanism — the case runtime** — that governs Business Partner today: rich operation scope, lifecycle transitions, and authorization semantics that the page-kind descriptor contract does not model and was never going to reach parity with cheaply. Studio's composition editor authors for the case runtime only; there is no authoring path for the page-kind descriptor contract anywhere in the product today, only raw developer scripts.
+- **Decision: the case runtime is the permanent mechanism for transactional/governed entities** (anything with lifecycle, workflow, or business transitions — Business Partner and any future entity of that shape). It is not a "legacy path pending migration." Section 14.1's framing of Business Partner as "the first consumer" of the page-kind runtime is superseded — Business Partner does not migrate onto it.
+- **The page-kind runtime (sections 14.1–14.7 below) is scoped down to flat reference/configuration data only** — entities with no lifecycle, no relationships, no governance workflow (currency, country, unit-of-measure, and similar). For that narrow class, a script-authored publish (reviewed like any other change) is a proportionate, permanent authoring mechanism; building a Studio authoring UI to reach case-runtime parity is not warranted for data this simple.
+- **Mesh document exchange is a third, separate mechanism, not yet designed.** It is cross-network, cross-tenant document/data flow — not a record CRUD experience — and forcing it into the page-kind vocabulary would repeat the same abstraction mismatch this section already avoided once for `EntityRecord360Panel`'s tab strip. Its design is deliberately deferred to its own future pass, not folded into this section's contract.
+
+The remainder of section 14 describes the page-kind runtime under its corrected, narrower scope. Read every "future entity" reference below as "future flat reference/configuration entity," not as a universal replacement for the case runtime.
+
 ### 14.1 Architecture and ownership
 
-Future entities reuse Main, PageWorkspace and page-kind runtimes. Business Partner is the first consumer; it is not a folder to copy for each entity. Composition and registered providers replace inheritance trees and entity-specific branches in generic components.
+Future reference/configuration entities (see 14.0 for scope) reuse Main, PageWorkspace and page-kind runtimes; this is not the mechanism for transactional/governed entities like Business Partner. Composition and registered providers replace inheritance trees and entity-specific branches in generic components.
 
 ```text
 PlatformShell → Main → PageWorkspace
@@ -354,7 +365,7 @@ Use the smallest sufficient extension. Level 4 does not authorize a custom globa
 
 ### 14.5 Studio, intake and review
 
-ConfigurationRuntime is a reusable wrapper for draft/revision context integration, view navigation, dirty/save integration, validation-result presentation and registered actions. Its content can be a supported generic metadata editor or a specialized composition editor. The current Business Partner Studio editor remains specialized until reuse is demonstrated. Authoring services retain authority over draft creation, revisions, transitions and publication.
+ConfigurationRuntime is a reusable wrapper for draft/revision context integration, view navigation, dirty/save integration, validation-result presentation and registered actions. Its content can be a supported generic metadata editor or a specialized composition editor. Per the 14.0 scope correction, the Business Partner Studio editor is specialized permanently, not pending migration — it authors for the case runtime, which this section's ConfigurationRuntime does not cover. Authoring services retain authority over draft creation, revisions, transitions and publication.
 
 IntakeRuntime manages step/section navigation, validation presentation, dirty integration, progress and recovery. The domain adapter supplies the flow, validation integration, draft persistence, duplicate checks, submission operation and result interpretation. Submit references an authorized operation; it does not mean direct record creation. A result may create/advance a governed request.
 

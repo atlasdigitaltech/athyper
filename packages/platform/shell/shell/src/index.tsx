@@ -35,6 +35,6 @@ export { ManagementWorkspace, ManagementNavigation, ManagementToolbar, type Mana
 
 export * from "./task-header";
 
-export { PageWorkspace, PageLayout, type PageWorkspaceProps, type PageLayoutProps } from "./page-workspace";
+export { PageWorkspace, PageLayout, PlanePageFrame, type PageWorkspaceProps, type PageLayoutProps, type PlanePageFrameProps } from "./page-workspace";
 export { PageNavigation, useDeepLinkedTabState, type PageNavigationTabItem, type PageNavigationTabsProps, type DeepLinkedTabStateOptions } from "./page-navigation";
 export { PageResourceBoundary, type PageResourceStatus, type PageResourceBoundaryProps } from "./page-resource-boundary";

@@ -26,6 +26,30 @@ export function PageWorkspace({ header, navigation, status, toolbar, actions, ac
   </PageFrame>;
 }
 
+export interface PlanePageFrameProps {
+  readonly title: ReactNode;
+  readonly description?: ReactNode;
+  readonly actions?: ReactNode;
+  readonly toolbar?: ReactNode;
+  readonly contentOnly?: boolean;
+  readonly className?: string;
+  readonly children?: ReactNode;
+}
+
+/** Shared page frame for plane-local surfaces: avoids nesting a second main/h1 inside the shell's own Main. contentOnly defers header ownership to an ancestor (e.g. an intake step chrome); toolbar renders content search/filter controls above the body, per the shared page-toolbar convention. */
+export function PlanePageFrame({ title, description, actions, toolbar, contentOnly = false, className, children }: PlanePageFrameProps) {
+  return contentOnly ? (
+    <section className={className}>
+      {toolbar}
+      {children}
+    </section>
+  ) : (
+    <PageWorkspace header={{ level: "collection", title, description, actions }} toolbar={toolbar} className={className}>
+      {children}
+    </PageWorkspace>
+  );
+}
+
 type PageLayoutSlots =
   | { readonly variant?: "content"; readonly sectionNavigation?: never; readonly overview?: never }
   | { readonly variant: "sections-content"; readonly sectionNavigation: ReactNode; readonly overview?: never }

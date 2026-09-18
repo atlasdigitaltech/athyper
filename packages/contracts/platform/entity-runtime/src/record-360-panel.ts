@@ -2,6 +2,8 @@
 export interface EntityRecord360PanelV1 {
   readonly schemaVersion: 1;
   readonly kind: "360";
+  /** The shared entity-runtime page-kind vocabulary (system-design.md §14.2). A 360 panel is always a detail page. */
+  readonly pageKind: "detail";
   readonly sections: readonly string[];
   readonly tabs: readonly {
     readonly key: string;
@@ -92,6 +94,7 @@ export function parseRecord360Panel(value: unknown): EntityRecord360PanelV1 {
   return {
     schemaVersion: 1,
     kind: "360",
+    pageKind: "detail",
     sections,
     tabs,
     sidebar,

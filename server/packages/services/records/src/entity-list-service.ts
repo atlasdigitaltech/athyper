@@ -1,6 +1,8 @@
 import { resolveIntakeFormChoices } from "./intake-form-choices.js";
 import { authorizeListContextDiscovery } from "./list-context-discovery.js";
 import {
+  parseEntityDetailDescriptor,
+  parseEntityFormDescriptor,
   parseEntityRecordPresentation,
   readableRecordPresentation,
 } from "@athyper/contract-platform-entity-runtime";
@@ -374,23 +376,23 @@ export function createEntityListService(options: {
         );
       const label = humanize(entityCode),
         projection = { entityCode, mode, fields: visible, operation };
-      return Object.freeze({
+      return parseEntityFormDescriptor({
         schema: "athyper.entity-form-descriptor/1",
         plane: descriptor.planeKey,
-        entity: Object.freeze({
+        entity: {
           code: entityCode,
           label,
           pluralLabel: pluralize(label),
-        }),
+        },
         revision: surfaceRevision(descriptor, projection),
         mode,
         title: mode === "create" ? `New ${label}` : `Edit ${label}`,
         description: `${mode === "create" ? "Create" : "Update"} a governed ${label.toLocaleLowerCase()} record.`,
-        fields: Object.freeze(visible),
-        submit: Object.freeze({
+        fields: visible,
+        submit: {
           operation,
           label: mode === "create" ? `Create ${label}` : `Save ${label}`,
-        }),
+        },
       });
     },
     async detailDescriptor(
@@ -512,15 +514,15 @@ export function createEntityListService(options: {
         ),
         titleField,
       );
-      return Object.freeze({
+      return parseEntityDetailDescriptor({
         schema: "athyper.entity-detail-descriptor/1",
         presentation,
         plane: descriptor.planeKey,
-        entity: Object.freeze({
+        entity: {
           code: entityCode,
           label: humanize(entityCode),
           pluralLabel: pluralize(humanize(entityCode)),
-        }),
+        },
         revision: surfaceRevision(descriptor, {
           entityCode,
           fields,
@@ -529,8 +531,8 @@ export function createEntityListService(options: {
           presentation,
         }),
         titleField,
-        fields: Object.freeze(fields),
-        actions: Object.freeze(actions),
+        fields,
+        actions,
       });
     },
     async record(
