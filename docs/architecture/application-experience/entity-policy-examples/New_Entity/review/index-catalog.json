@@ -1,0 +1,238 @@
+{
+  "runtimeArtifact": false,
+  "source": {
+    "database": "athyper_neon",
+    "method": "pg_indexes",
+    "scope": "local_read_only_snapshot",
+    "ddlEvidence": [
+      {
+        "path": "server/db/ddl/planes/neon/master/06_indexes.sql",
+        "sha256": "8276ec64d3a2510e31b2170b2730fcc561396bcb6afdf5d60b1065ea59593b7a"
+      }
+    ]
+  },
+  "indexes": [
+    {
+      "ref": "master.business_partner.business_partner_category_ownership_idx",
+      "table": "master.business_partner",
+      "name": "business_partner_category_ownership_idx",
+      "columns": [
+        "tenant_id",
+        "partner_category",
+        "ownership_class",
+        "status"
+      ],
+      "supports": [
+        "filter"
+      ],
+      "definition": "CREATE INDEX business_partner_category_ownership_idx ON master.business_partner USING btree (tenant_id, partner_category, ownership_class, status)",
+      "keyParts": [
+        {
+          "kind": "column",
+          "column": "tenant_id",
+          "defaultOpclass": true
+        },
+        {
+          "kind": "column",
+          "column": "partner_category",
+          "defaultOpclass": true
+        },
+        {
+          "kind": "column",
+          "column": "ownership_class",
+          "defaultOpclass": true
+        },
+        {
+          "kind": "column",
+          "column": "status",
+          "defaultOpclass": true
+        }
+      ],
+      "unique": false,
+      "predicate": ""
+    },
+    {
+      "ref": "master.business_partner.business_partner_code_sort_idx",
+      "table": "master.business_partner",
+      "name": "business_partner_code_sort_idx",
+      "columns": [
+        "tenant_id",
+        "code"
+      ],
+      "keyParts": [
+        {
+          "kind": "column",
+          "column": "tenant_id",
+          "defaultOpclass": true
+        },
+        {
+          "kind": "expression",
+          "expression": "lower(code)",
+          "fieldColumn": "code",
+          "caseFold": true,
+          "opclass": "text_ops",
+          "defaultOpclass": true
+        }
+      ],
+      "supports": [
+        "sort"
+      ],
+      "unique": false,
+      "predicate": "",
+      "definition": "CREATE INDEX business_partner_code_sort_idx ON master.business_partner USING btree (tenant_id, lower(code))"
+    },
+    {
+      "ref": "master.business_partner.business_partner_code_uq",
+      "table": "master.business_partner",
+      "name": "business_partner_code_uq",
+      "columns": [
+        "tenant_id",
+        "code"
+      ],
+      "supports": [
+        "filter",
+        "prefix_search"
+      ],
+      "definition": "CREATE UNIQUE INDEX business_partner_code_uq ON master.business_partner USING btree (tenant_id, lower(code) text_pattern_ops)",
+      "keyParts": [
+        {
+          "kind": "column",
+          "column": "tenant_id",
+          "defaultOpclass": true
+        },
+        {
+          "kind": "expression",
+          "expression": "lower(code)",
+          "fieldColumn": "code",
+          "caseFold": true,
+          "opclass": "text_pattern_ops",
+          "defaultOpclass": false
+        }
+      ],
+      "unique": true,
+      "predicate": ""
+    },
+    {
+      "ref": "master.business_partner.business_partner_name_idx",
+      "table": "master.business_partner",
+      "name": "business_partner_name_idx",
+      "columns": [
+        "tenant_id",
+        "name"
+      ],
+      "supports": [
+        "filter",
+        "prefix_search"
+      ],
+      "definition": "CREATE INDEX business_partner_name_idx ON master.business_partner USING btree (tenant_id, lower(name) text_pattern_ops)",
+      "keyParts": [
+        {
+          "kind": "column",
+          "column": "tenant_id",
+          "defaultOpclass": true
+        },
+        {
+          "kind": "expression",
+          "expression": "lower(name)",
+          "fieldColumn": "name",
+          "caseFold": true,
+          "opclass": "text_pattern_ops",
+          "defaultOpclass": false
+        }
+      ],
+      "unique": false,
+      "predicate": ""
+    },
+    {
+      "ref": "master.business_partner.business_partner_name_sort_idx",
+      "table": "master.business_partner",
+      "name": "business_partner_name_sort_idx",
+      "columns": [
+        "tenant_id",
+        "name"
+      ],
+      "keyParts": [
+        {
+          "kind": "column",
+          "column": "tenant_id",
+          "defaultOpclass": true
+        },
+        {
+          "kind": "expression",
+          "expression": "lower(name)",
+          "fieldColumn": "name",
+          "caseFold": true,
+          "opclass": "text_ops",
+          "defaultOpclass": true
+        }
+      ],
+      "supports": [
+        "sort"
+      ],
+      "unique": false,
+      "predicate": "",
+      "definition": "CREATE INDEX business_partner_name_sort_idx ON master.business_partner USING btree (tenant_id, lower(name))"
+    },
+    {
+      "ref": "master.business_partner.business_partner_registration_country_idx",
+      "table": "master.business_partner",
+      "name": "business_partner_registration_country_idx",
+      "columns": [
+        "tenant_id",
+        "registration_country_code"
+      ],
+      "supports": [
+        "filter"
+      ],
+      "definition": "CREATE INDEX business_partner_registration_country_idx ON master.business_partner USING btree (tenant_id, registration_country_code) WHERE (registration_country_code IS NOT NULL)",
+      "keyParts": [
+        {
+          "kind": "column",
+          "column": "tenant_id",
+          "defaultOpclass": true
+        },
+        {
+          "kind": "column",
+          "column": "registration_country_code",
+          "defaultOpclass": true
+        }
+      ],
+      "unique": false,
+      "predicate": "(registration_country_code IS NOT NULL)"
+    },
+    {
+      "ref": "master.business_partner.business_partner_status_idx",
+      "table": "master.business_partner",
+      "name": "business_partner_status_idx",
+      "columns": [
+        "tenant_id",
+        "status",
+        "code"
+      ],
+      "supports": [
+        "filter",
+        "sort"
+      ],
+      "definition": "CREATE INDEX business_partner_status_idx ON master.business_partner USING btree (tenant_id, status, code)",
+      "keyParts": [
+        {
+          "kind": "column",
+          "column": "tenant_id",
+          "defaultOpclass": true
+        },
+        {
+          "kind": "column",
+          "column": "status",
+          "defaultOpclass": true
+        },
+        {
+          "kind": "column",
+          "column": "code",
+          "defaultOpclass": true
+        }
+      ],
+      "unique": false,
+      "predicate": ""
+    }
+  ]
+}

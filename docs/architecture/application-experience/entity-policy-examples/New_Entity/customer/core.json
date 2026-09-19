@@ -26,22 +26,17 @@
       "dataType": "uuid",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.customer.id",
+        "labelKey": "entity.customer.core.fields.id.label",
         "defaultText": "Id"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
       "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
     },
     {
       "key": "business_partner_id",
@@ -52,22 +47,12 @@
       "dataType": "uuid",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.customer.business_partner_id",
+        "labelKey": "entity.customer.core.fields.business_partner_id.label",
         "defaultText": "Business Partner Id"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "uuid"
     },
     {
       "key": "status",
@@ -75,26 +60,20 @@
         "sourceObject": "master.customer",
         "column": "status"
       },
-      "dataType": "domain",
+      "dataType": "string",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.customer.status",
+        "labelKey": "entity.customer.core.fields.status.label",
         "defaultText": "Status"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
       "storageType": "master.customer_status_d",
-      "domainCode": "master.customer_status_d",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
     },
     {
       "key": "customer_code",
@@ -103,24 +82,13 @@
         "column": "customer_code"
       },
       "dataType": "string",
+      "storageType": "text",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.customer.customer_code",
+        "labelKey": "entity.customer.core.fields.customer_code.label",
         "defaultText": "Customer Code"
       },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "valueOrigin": "stored"
     },
     {
       "key": "customer_type",
@@ -128,234 +96,14 @@
         "sourceObject": "master.customer",
         "column": "customer_type"
       },
-      "dataType": "domain",
+      "dataType": "string",
+      "storageType": "master.customer_type_d",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.customer.customer_type",
+        "labelKey": "entity.customer.core.fields.customer_type.label",
         "defaultText": "Customer Type"
       },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "master.customer_type_d",
-      "domainCode": "master.customer_type_d",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "record_version",
-      "binding": {
-        "sourceObject": "master.customer",
-        "column": "record_version"
-      },
-      "dataType": "integer",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.customer.record_version",
-        "defaultText": "Record Version"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "bigint",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "is_active",
-      "binding": {
-        "sourceObject": "master.customer",
-        "column": "is_active"
-      },
-      "dataType": "boolean",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.customer.is_active",
-        "defaultText": "Is Active"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "boolean",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "status_changed_at",
-      "binding": {
-        "sourceObject": "master.customer",
-        "column": "status_changed_at"
-      },
-      "dataType": "datetime",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.customer.status_changed_at",
-        "defaultText": "Status Changed At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamptz",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "status_changed_by",
-      "binding": {
-        "sourceObject": "master.customer",
-        "column": "status_changed_by"
-      },
-      "dataType": "uuid",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.customer.status_changed_by",
-        "defaultText": "Status Changed By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "created_at",
-      "binding": {
-        "sourceObject": "master.customer",
-        "column": "created_at"
-      },
-      "dataType": "datetime",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.customer.created_at",
-        "defaultText": "Created At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamptz",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "created_by",
-      "binding": {
-        "sourceObject": "master.customer",
-        "column": "created_by"
-      },
-      "dataType": "uuid",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.customer.created_by",
-        "defaultText": "Created By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "updated_at",
-      "binding": {
-        "sourceObject": "master.customer",
-        "column": "updated_at"
-      },
-      "dataType": "datetime",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.customer.updated_at",
-        "defaultText": "Updated At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamptz",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "updated_by",
-      "binding": {
-        "sourceObject": "master.customer",
-        "column": "updated_by"
-      },
-      "dataType": "uuid",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.customer.updated_by",
-        "defaultText": "Updated By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "valueOrigin": "stored"
     }
   ],
   "businessContext": {
@@ -494,23 +242,62 @@
       ],
       "unknownBehavior": "cannot_authorize_operation",
       "commitRecheck": true
+    },
+    {
+      "code": "COMPLETENESS_CUSTOMER_ROLE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.completeness.customer.role.v1",
+      "evaluatorStatus": "proposed_requires_registry_verification",
+      "sourceFieldCode": "role.customer",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "unknownBehavior": "show_unavailable_never_authorize"
     }
   ],
-  "fieldSelection": {
-    "default": "deny",
-    "publicReadFields": [
-      "id",
-      "business_partner_id",
-      "status"
-    ],
-    "additionalFieldsRequireHandlerApproval": true
-  },
-  "dependencies": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",
     "missingEvaluator": "block_write",
     "uiVisibilityGrantsAccess": false
   },
-  "artifactHash": "sha256:2b813100b815adbb92cebde524dea5c8c696e09bcbf38de704f665c981c29e60"
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.customer",
+      "column": "business_partner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.customer",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.customer",
+      "column": "record_version",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.customer",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "artifactHash": "sha256:b1a719235a8476179864d837309fd21284eba6838e2644aead850060348b213a",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  }
 }

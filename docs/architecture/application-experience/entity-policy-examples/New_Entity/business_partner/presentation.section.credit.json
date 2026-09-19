@@ -47,7 +47,67 @@
   "load": "on_visible",
   "requiredContext": "resolve_from_target_core",
   "dependencies": [
+    "business_partner_request/operation",
     "customer/core"
   ],
-  "artifactHash": "sha256:f1d8a6b3fafd1bf0844a46c0a08e282f8634bc4ee8c8c74c4333873360ef5316"
+  "completenessPacks": [
+    {
+      "category": "organization",
+      "code": "customer_credit",
+      "requirements": [
+        {
+          "actionCode": "configure_company",
+          "code": "customer.company",
+          "fieldCode": "company.customer.profile",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.credit.completenessPacks.customer_credit.requirements.customer.company.label",
+            "defaultText": "Configure customer company"
+          },
+          "sectionCode": "customer-company",
+          "severity": "required",
+          "factRef": {
+            "entityCode": "customer",
+            "code": "COMPANY_PROFILE_COMPLETE"
+          },
+          "enforcement": "operation_gate",
+          "operationBindingRef": {
+            "artifactRef": "business_partner_request/operation.json",
+            "bindingKey": "customer.readiness"
+          }
+        },
+        {
+          "actionCode": "configure_company",
+          "code": "customer.credit",
+          "fieldCode": "credit.current",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.credit.completenessPacks.customer_credit.requirements.customer.credit.label",
+            "defaultText": "Open credit review"
+          },
+          "requiresVerified": true,
+          "sectionCode": "credit",
+          "severity": "recommended",
+          "factRef": {
+            "entityCode": "customer",
+            "code": "CREDIT_REVIEW_CURRENT"
+          },
+          "enforcement": "operation_gate",
+          "operationBindingRef": {
+            "artifactRef": "business_partner_request/operation.json",
+            "bindingKey": "customer.readiness"
+          }
+        }
+      ],
+      "role": "customer",
+      "scope": "company",
+      "version": 1
+    }
+  ],
+  "completenessEvaluation": {
+    "source": "server_contextual_facts",
+    "evaluate": "section_open_only",
+    "remediationActionResolution": "registered_domain_operation_to_request_flow",
+    "missingResolver": "hide_action_with_diagnostic",
+    "noImplicitOperationAuthority": true
+  },
+  "artifactHash": "sha256:ec585003bee890d858303255970e2abaed783109cf87f699851c158323d9222f"
 }

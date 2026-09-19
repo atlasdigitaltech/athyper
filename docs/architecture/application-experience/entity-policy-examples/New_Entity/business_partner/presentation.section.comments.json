@@ -14,9 +14,10 @@
     "includeInAggregate": false
   },
   "authorization": {
-    "viewPermission": "neon.business_partner.comments.read",
+    "viewPermission": "neon.collaboration.comment.read",
     "permissionStatus": "proposed_requires_catalog_verification",
-    "discoverableWhenDenied": false
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
   },
   "load": "on_visible",
   "resourceStates": [
@@ -33,5 +34,37 @@
   "dependencies": [
     "business_partner/core"
   ],
-  "artifactHash": "sha256:654485f4f5e4cc2c30a41e770ab5b0772accf3ccfb926aacb0fc1f2fe40915e0"
+  "artifactHash": "sha256:38d6ffff4726ed40e39eb1ff87a914fadd6cb75d29e592fb565fd2bd24c73ac0",
+  "availableOperations": [
+    {
+      "key": "create",
+      "permissionCode": "neon.collaboration.comment.create",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "platform.comments.create.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "update_own",
+      "permissionCode": "neon.collaboration.comment.update_own",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "platform.comments.update_own.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "archive_own",
+      "permissionCode": "neon.collaboration.comment.archive_own",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "platform.comments.archive_own.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    }
+  ]
 }

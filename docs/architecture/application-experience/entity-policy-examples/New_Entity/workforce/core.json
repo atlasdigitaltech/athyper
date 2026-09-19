@@ -9,8 +9,7 @@
   "storage": {
     "kind": "handler_projection",
     "sourceObjects": [
-      "master.employee",
-      "master.employment"
+      "master.employee"
     ],
     "primaryObject": "master.employee",
     "idField": "id",
@@ -27,126 +26,17 @@
       "dataType": "uuid",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.employee.id",
+        "labelKey": "entity.workforce.core.fields.id.label",
         "defaultText": "Id"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
       "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "code",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "code"
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
       },
-      "dataType": "string",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.employee.code",
-        "defaultText": "Code"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "name",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "name"
-      },
-      "dataType": "string",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.employee.name",
-        "defaultText": "Name"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "principal_id",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "principal_id"
-      },
-      "dataType": "uuid",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.principal_id",
-        "defaultText": "Principal Id"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "person_id",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "person_id"
-      },
-      "dataType": "uuid",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.employee.person_id",
-        "defaultText": "Person Id"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "writePolicy": "system_managed"
     },
     {
       "key": "employee_number",
@@ -157,74 +47,12 @@
       "dataType": "string",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.employee.employee_number",
+        "labelKey": "entity.workforce.core.fields.employee_number.label",
         "defaultText": "Employee Number"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "first_name",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "first_name"
-      },
-      "dataType": "string",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.employee.first_name",
-        "defaultText": "First Name"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "last_name",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "last_name"
-      },
-      "dataType": "string",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.employee.last_name",
-        "defaultText": "Last Name"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "text"
     },
     {
       "key": "display_name",
@@ -235,74 +63,12 @@
       "dataType": "string",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.employee.display_name",
+        "labelKey": "entity.workforce.core.fields.display_name.label",
         "defaultText": "Display Name"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "email",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "email"
-      },
-      "dataType": "string",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.email",
-        "defaultText": "Email"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "phone",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "phone"
-      },
-      "dataType": "string",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.phone",
-        "defaultText": "Phone"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "text"
     },
     {
       "key": "employment_type",
@@ -313,100 +79,12 @@
       "dataType": "string",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.employee.employment_type",
+        "labelKey": "entity.workforce.core.fields.employment_type.label",
         "defaultText": "Employment Type"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "department",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "department"
-      },
-      "dataType": "string",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.department",
-        "defaultText": "Department"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "title",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "title"
-      },
-      "dataType": "string",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.title",
-        "defaultText": "Title"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "manager_id",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "manager_id"
-      },
-      "dataType": "uuid",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.manager_id",
-        "defaultText": "Manager Id"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "text"
     },
     {
       "key": "company_code_id",
@@ -417,74 +95,12 @@
       "dataType": "uuid",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.employee.company_code_id",
+        "labelKey": "entity.workforce.core.fields.company_code_id.label",
         "defaultText": "Company Code Id"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "hire_date",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "hire_date"
-      },
-      "dataType": "date",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.hire_date",
-        "defaultText": "Hire Date"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "date",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "termination_date",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "termination_date"
-      },
-      "dataType": "date",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.termination_date",
-        "defaultText": "Termination Date"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "date",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "uuid"
     },
     {
       "key": "status",
@@ -495,204 +111,17 @@
       "dataType": "string",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.employee.status",
+        "labelKey": "entity.workforce.core.fields.status.label",
         "defaultText": "Status"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
       "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "is_active",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "is_active"
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
       },
-      "dataType": "boolean",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.is_active",
-        "defaultText": "Is Active"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "boolean",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "status_changed_at",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "status_changed_at"
-      },
-      "dataType": "datetime",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.status_changed_at",
-        "defaultText": "Status Changed At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamptz",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "status_changed_by",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "status_changed_by"
-      },
-      "dataType": "uuid",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.status_changed_by",
-        "defaultText": "Status Changed By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "created_at",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "created_at"
-      },
-      "dataType": "datetime",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.employee.created_at",
-        "defaultText": "Created At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamptz",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "created_by",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "created_by"
-      },
-      "dataType": "uuid",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.employee.created_by",
-        "defaultText": "Created By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "updated_at",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "updated_at"
-      },
-      "dataType": "datetime",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.updated_at",
-        "defaultText": "Updated At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamptz",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "updated_by",
-      "binding": {
-        "sourceObject": "master.employee",
-        "column": "updated_by"
-      },
-      "dataType": "uuid",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.employee.updated_by",
-        "defaultText": "Updated By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "writePolicy": "system_managed"
     }
   ],
   "businessContext": {
@@ -828,24 +257,42 @@
       "commitRecheck": true
     }
   ],
-  "fieldSelection": {
-    "default": "deny",
-    "publicReadFields": [
-      "id",
-      "employee_number",
-      "display_name",
-      "employment_type",
-      "company_code_id",
-      "status"
-    ],
-    "additionalFieldsRequireHandlerApproval": true
-  },
-  "dependencies": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",
     "missingEvaluator": "block_write",
     "uiVisibilityGrantsAccess": false
   },
-  "artifactHash": "sha256:77475b6d8587243ae2f035bae2fa863db08de003c5b0bf0b0671848475fab3fb"
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.employee",
+      "column": "company_code_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.employee",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.employee",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "artifactHash": "sha256:ce7df1ed17dfce6c178b827664f49cc20be3467695f0a152452fa1a1f2e98fa0",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  }
 }

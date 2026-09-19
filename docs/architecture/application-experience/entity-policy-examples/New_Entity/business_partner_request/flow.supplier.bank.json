@@ -8,8 +8,6 @@
   "plane": "neon",
   "flowKey": "supplier.bank",
   "journey": "supplier",
-  "draftEntityCode": "business_partner_request",
-  "materializesEntityCode": "business_partner",
   "requestContract": {
     "kind": "required_path_contract",
     "requestKind": "supplier.bank",
@@ -33,126 +31,30 @@
     "import",
     "api"
   ],
-  "sourceMappings": {
-    "internal": {
-      "allowedJourneys": [
-        "supplier",
-        "customer",
-        "workforce"
-      ],
-      "destination": "business_partner_request",
-      "directMasterWrite": false,
-      "requiredProvenance": [
-        "principalId"
-      ],
-      "snapshotPinned": false,
-      "source": "internal",
-      "strategy": "declarative_mapping",
-      "version": "2.0.0"
-    },
-    "portal": {
-      "allowedJourneys": [
-        "supplier",
-        "customer",
-        "workforce"
-      ],
-      "destination": "business_partner_request",
-      "directMasterWrite": false,
-      "requiredProvenance": [
-        "invitationId",
-        "applicantPrincipalId"
-      ],
-      "snapshotPinned": false,
-      "source": "portal",
-      "strategy": "declarative_mapping",
-      "version": "2.0.0"
-    },
-    "mesh": {
-      "allowedJourneys": [
-        "supplier",
-        "customer"
-      ],
-      "destination": "business_partner_request",
-      "directMasterWrite": false,
-      "requiredProvenance": [
-        "projectionId",
-        "snapshotId",
-        "acceptedFieldPaths"
-      ],
-      "snapshotPinned": true,
-      "source": "mesh",
-      "strategy": "selective_acceptance",
-      "version": "2.0.0"
-    },
-    "import": {
-      "allowedJourneys": [
-        "supplier",
-        "customer",
-        "workforce"
-      ],
-      "destination": "business_partner_request",
-      "directMasterWrite": false,
-      "requiredProvenance": [
-        "systemCode",
-        "entityId",
-        "payloadHash"
-      ],
-      "snapshotPinned": false,
-      "source": "import",
-      "strategy": "declarative_mapping",
-      "version": "2.0.0"
-    },
-    "api": {
-      "allowedJourneys": [
-        "supplier",
-        "customer",
-        "workforce"
-      ],
-      "destination": "business_partner_request",
-      "directMasterWrite": false,
-      "requiredProvenance": [
-        "systemCode",
-        "entityId",
-        "payloadHash"
-      ],
-      "snapshotPinned": false,
-      "source": "api",
-      "strategy": "declarative_mapping",
-      "version": "2.0.0"
-    }
-  },
-  "steps": [
-    {
-      "stepKey": "capture",
-      "presentationRef": "business_partner_request/presentation.section.form.request.json"
-    },
-    {
-      "stepKey": "evidence",
-      "presentationRef": "business_partner_request/presentation.section.evidence.json"
-    },
-    {
-      "stepKey": "review",
-      "presentationRef": "business_partner_request/presentation.review.json",
-      "operationKey": "submit"
-    }
-  ],
-  "persistence": {
-    "saveOperation": "save_draft",
-    "resume": "persisted_draft_and_pinned_release",
-    "releaseChange": "explicit_compatible_migration_or_finish_pinned",
-    "contextChange": "invalidate_validation_and_approval"
-  },
-  "serverValidation": {
-    "onSave": "partial_draft",
-    "onSubmit": "complete_schema_and_policy",
-    "onMaterialize": "revalidate_full_authority_and_context"
-  },
   "dependencies": [
     "business_partner_request/core",
+    "business_partner_request/flow.base",
     "business_partner_request/operation",
     "business_partner_request/presentation.review",
     "business_partner_request/presentation.section.evidence",
     "business_partner_request/presentation.section.form.request"
   ],
-  "artifactHash": "sha256:327831f08dbfb3189a85bc2fb333b528fbfcdfd6e1b81a51a39c153889711ee9"
+  "sourceMappingKeys": [
+    "internal",
+    "portal",
+    "mesh",
+    "import",
+    "api"
+  ],
+  "presentationSlots": {
+    "capture": "business_partner_request/presentation.section.form.request.json"
+  },
+  "flowKind": "variant",
+  "baseFlowRef": "business_partner_request/flow.base.json",
+  "composition": {
+    "stage": "artifact_preparation",
+    "cacheKey": "base_hash_and_variant_hash",
+    "securityOverride": "forbidden"
+  },
+  "artifactHash": "sha256:aadd5c92cea81d9d8d8c0bbb03ab30bbec6912d18204e7c85b82372c30da46ea"
 }

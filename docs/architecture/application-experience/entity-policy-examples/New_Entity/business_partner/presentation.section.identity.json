@@ -36,7 +36,7 @@
       "fieldKey": "ownership_class"
     },
     {
-      "fieldKey": "legal_form"
+      "fieldKey": "legal_form_value_id"
     },
     {
       "fieldKey": "incorporation_date"
@@ -76,5 +76,5 @@
   "dependencies": [
     "business_partner/core"
   ],
-  "artifactHash": "sha256:8dc817270af4d09800f24b973db4c0cdb34bdba22d65ffabc5469537c0eef950"
+  "artifactHash": "sha256:18250d6f6c60daa9552d985dfc35f77a67c854c12832e3bbee54374689d40a84"
 }

@@ -26,22 +26,17 @@
       "dataType": "uuid",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.address.id",
+        "labelKey": "entity.address.core.fields.id.label",
         "defaultText": "Id"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
       "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
     },
     {
       "key": "line1",
@@ -52,22 +47,12 @@
       "dataType": "string",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.address.line1",
+        "labelKey": "entity.address.core.fields.line1.label",
         "defaultText": "Line1"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "text"
     },
     {
       "key": "line2",
@@ -78,22 +63,12 @@
       "dataType": "string",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.address.line2",
+        "labelKey": "entity.address.core.fields.line2.label",
         "defaultText": "Line2"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "text"
     },
     {
       "key": "city",
@@ -104,22 +79,12 @@
       "dataType": "string",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.address.city",
+        "labelKey": "entity.address.core.fields.city.label",
         "defaultText": "City"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "text"
     },
     {
       "key": "postal_code",
@@ -130,16 +95,11 @@
       "dataType": "string",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.address.postal_code",
+        "labelKey": "entity.address.core.fields.postal_code.label",
         "defaultText": "Postal Code"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
       "dynamicFacets": [
         {
           "facet": "required",
@@ -156,12 +116,7 @@
           "serverAuthoritative": true
         }
       ],
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "text"
     },
     {
       "key": "country_code",
@@ -172,26 +127,16 @@
       "dataType": "string",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.address.country_code",
+        "labelKey": "entity.address.core.fields.country_code.label",
         "defaultText": "Country Code"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
       "referenceConfig": {
         "targetEntityCode": "country",
         "valueField": "code"
       },
-      "storageType": "character(2)",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "character(2)"
     },
     {
       "key": "validation_status",
@@ -202,22 +147,17 @@
       "dataType": "string",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.address.validation_status",
+        "labelKey": "entity.address.core.fields.validation_status.label",
         "defaultText": "Validation Status"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
       "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
     }
   ],
   "businessContext": {
@@ -253,7 +193,8 @@
   },
   "readinessFacts": [],
   "dependencies": [
-    "country/core"
+    "country/core",
+    "platform/core-field-defaults.v1"
   ],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
@@ -261,5 +202,28 @@
     "missingEvaluator": "block_write",
     "uiVisibilityGrantsAccess": false
   },
-  "artifactHash": "sha256:d57f105628d61a44ee919139c3abab5d70b641cf56257428fa3a03fda0b9cafd"
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.address",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.address",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "artifactHash": "sha256:7900ea46e8cbb6d5c2dd047909952c95446307a8924a0bfbd10cdc4e1986af56",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  }
 }

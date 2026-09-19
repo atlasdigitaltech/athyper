@@ -24,5 +24,6 @@
   "dependencies": [
     "business_partner_request/core"
   ],
-  "artifactHash": "sha256:479c17ff9768c1898e0d370fd3432ede25fcbbc725182828b713ac9b49df7c10"
+  "artifactHash": "sha256:d8defc7220d1de6bcda52530b3bac40da326386665148a6f8d9179284ba6dec4",
+  "accessAuthority": "operation_authorized_parent_flow"
 }

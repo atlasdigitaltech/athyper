@@ -9,8 +9,7 @@
   "storage": {
     "kind": "handler_projection",
     "sourceObjects": [
-      "master.certification",
-      "master.certification_type"
+      "master.certification"
     ],
     "primaryObject": "master.certification",
     "idField": "id",
@@ -27,22 +26,17 @@
       "dataType": "uuid",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.certification.id",
+        "labelKey": "entity.certification.core.fields.id.label",
         "defaultText": "Id"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
       "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
     },
     {
       "key": "company_code_id",
@@ -53,22 +47,12 @@
       "dataType": "uuid",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.certification.company_code_id",
+        "labelKey": "entity.certification.core.fields.company_code_id.label",
         "defaultText": "Company Code Id"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "uuid"
     },
     {
       "key": "document_attachment_id",
@@ -79,74 +63,12 @@
       "dataType": "uuid",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.certification.document_attachment_id",
+        "labelKey": "entity.certification.core.fields.document_attachment_id.label",
         "defaultText": "Document Attachment Id"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "owner_type",
-      "binding": {
-        "sourceObject": "master.certification",
-        "column": "owner_type"
-      },
-      "dataType": "string",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.certification.owner_type",
-        "defaultText": "Owner Type"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "owner_id",
-      "binding": {
-        "sourceObject": "master.certification",
-        "column": "owner_id"
-      },
-      "dataType": "uuid",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.certification.owner_id",
-        "defaultText": "Owner Id"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "uuid"
     },
     {
       "key": "certification_type_id",
@@ -157,22 +79,12 @@
       "dataType": "uuid",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.certification.certification_type_id",
+        "labelKey": "entity.certification.core.fields.certification_type_id.label",
         "defaultText": "Certification Type Id"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "uuid"
     },
     {
       "key": "custom_name",
@@ -183,22 +95,12 @@
       "dataType": "string",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.certification.custom_name",
+        "labelKey": "entity.certification.core.fields.custom_name.label",
         "defaultText": "Custom Name"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "text"
     },
     {
       "key": "certificate_number",
@@ -209,22 +111,12 @@
       "dataType": "string",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.certification.certificate_number",
+        "labelKey": "entity.certification.core.fields.certificate_number.label",
         "defaultText": "Certificate Number"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "text"
     },
     {
       "key": "certified_by",
@@ -235,74 +127,12 @@
       "dataType": "string",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.certification.certified_by",
+        "labelKey": "entity.certification.core.fields.certified_by.label",
         "defaultText": "Certified By"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "certified_location",
-      "binding": {
-        "sourceObject": "master.certification",
-        "column": "certified_location"
-      },
-      "dataType": "string",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.certification.certified_location",
-        "defaultText": "Certified Location"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "additional_info",
-      "binding": {
-        "sourceObject": "master.certification",
-        "column": "additional_info"
-      },
-      "dataType": "string",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.certification.additional_info",
-        "defaultText": "Additional Info"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "text"
     },
     {
       "key": "effective_from",
@@ -313,22 +143,12 @@
       "dataType": "date",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.certification.effective_from",
+        "labelKey": "entity.certification.core.fields.effective_from.label",
         "defaultText": "Effective From"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "date",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "date"
     },
     {
       "key": "effective_until",
@@ -339,22 +159,12 @@
       "dataType": "date",
       "nullable": true,
       "label": {
-        "labelKey": "entity.master.certification.effective_until",
+        "labelKey": "entity.certification.core.fields.effective_until.label",
         "defaultText": "Effective Until"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "date",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "date"
     },
     {
       "key": "status",
@@ -365,230 +175,17 @@
       "dataType": "string",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.certification.status",
+        "labelKey": "entity.certification.core.fields.status.label",
         "defaultText": "Status"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
       "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "is_active",
-      "binding": {
-        "sourceObject": "master.certification",
-        "column": "is_active"
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
       },
-      "dataType": "boolean",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.certification.is_active",
-        "defaultText": "Is Active"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "boolean",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "status_changed_at",
-      "binding": {
-        "sourceObject": "master.certification",
-        "column": "status_changed_at"
-      },
-      "dataType": "datetime",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.certification.status_changed_at",
-        "defaultText": "Status Changed At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamp",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "status_changed_by",
-      "binding": {
-        "sourceObject": "master.certification",
-        "column": "status_changed_by"
-      },
-      "dataType": "uuid",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.certification.status_changed_by",
-        "defaultText": "Status Changed By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "created_at",
-      "binding": {
-        "sourceObject": "master.certification",
-        "column": "created_at"
-      },
-      "dataType": "datetime",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.certification.created_at",
-        "defaultText": "Created At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamp",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "created_by",
-      "binding": {
-        "sourceObject": "master.certification",
-        "column": "created_by"
-      },
-      "dataType": "uuid",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.certification.created_by",
-        "defaultText": "Created By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "updated_at",
-      "binding": {
-        "sourceObject": "master.certification",
-        "column": "updated_at"
-      },
-      "dataType": "datetime",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.certification.updated_at",
-        "defaultText": "Updated At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamp",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "updated_by",
-      "binding": {
-        "sourceObject": "master.certification",
-        "column": "updated_by"
-      },
-      "dataType": "uuid",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.certification.updated_by",
-        "defaultText": "Updated By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "site_id",
-      "binding": {
-        "sourceObject": "master.certification",
-        "column": "site_id"
-      },
-      "dataType": "uuid",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.certification.site_id",
-        "defaultText": "Site Id"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "writePolicy": "system_managed"
     }
   ],
   "businessContext": {
@@ -623,28 +220,47 @@
     "presentationMayOnlyNarrow": true
   },
   "readinessFacts": [],
-  "fieldSelection": {
-    "default": "deny",
-    "publicReadFields": [
-      "id",
-      "company_code_id",
-      "document_attachment_id",
-      "certification_type_id",
-      "custom_name",
-      "certificate_number",
-      "certified_by",
-      "effective_from",
-      "effective_until",
-      "status"
-    ],
-    "additionalFieldsRequireHandlerApproval": true
-  },
-  "dependencies": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",
     "missingEvaluator": "block_write",
     "uiVisibilityGrantsAccess": false
   },
-  "artifactHash": "sha256:abc25901d3987441a8dbe8300a9abb43f77007332e5f6ea7d371ba80c3cda252"
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.certification",
+      "column": "company_code_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.certification",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.certification",
+      "column": "owner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.certification",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "artifactHash": "sha256:e1241422166708898d676a0a1fbc1fa5c33469f42e4830f143a1b18b0dbaf96d",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  }
 }

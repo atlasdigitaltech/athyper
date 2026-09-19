@@ -8,8 +8,6 @@
   "plane": "neon",
   "flowKey": "partner.amend",
   "journey": "governance",
-  "draftEntityCode": "business_partner_request",
-  "materializesEntityCode": "business_partner",
   "requestContract": {
     "kind": "required_path_contract",
     "requestKind": "partner.amend",
@@ -27,72 +25,27 @@
     "internal",
     "api"
   ],
-  "sourceMappings": {
-    "internal": {
-      "allowedJourneys": [
-        "governance"
-      ],
-      "destination": "business_partner_request",
-      "directMasterWrite": false,
-      "requiredProvenance": [
-        "principalId"
-      ],
-      "snapshotPinned": false,
-      "source": "internal",
-      "strategy": "declarative_mapping",
-      "version": "2.0.0",
-      "reviewDecision": "explicit_governance_scope_for_this_flow"
-    },
-    "api": {
-      "allowedJourneys": [
-        "governance"
-      ],
-      "destination": "business_partner_request",
-      "directMasterWrite": false,
-      "requiredProvenance": [
-        "systemCode",
-        "entityId",
-        "payloadHash"
-      ],
-      "snapshotPinned": false,
-      "source": "api",
-      "strategy": "declarative_mapping",
-      "version": "2.0.0",
-      "reviewDecision": "explicit_governance_scope_for_this_flow"
-    }
-  },
-  "steps": [
-    {
-      "stepKey": "capture",
-      "presentationRef": "business_partner_request/presentation.section.form.request.json"
-    },
-    {
-      "stepKey": "evidence",
-      "presentationRef": "business_partner_request/presentation.section.evidence.json"
-    },
-    {
-      "stepKey": "review",
-      "presentationRef": "business_partner_request/presentation.review.json",
-      "operationKey": "submit"
-    }
-  ],
-  "persistence": {
-    "saveOperation": "save_draft",
-    "resume": "persisted_draft_and_pinned_release",
-    "releaseChange": "explicit_compatible_migration_or_finish_pinned",
-    "contextChange": "invalidate_validation_and_approval"
-  },
-  "serverValidation": {
-    "onSave": "partial_draft",
-    "onSubmit": "complete_schema_and_policy",
-    "onMaterialize": "revalidate_full_authority_and_context"
-  },
   "dependencies": [
     "business_partner_request/core",
+    "business_partner_request/flow.base",
     "business_partner_request/operation",
     "business_partner_request/presentation.review",
     "business_partner_request/presentation.section.evidence",
     "business_partner_request/presentation.section.form.request"
   ],
-  "artifactHash": "sha256:2a0288f7a9082ed8d9df24e8a11fcf477ae75c8ec2d79d6f1bd2a981e8be1886"
+  "sourceMappingKeys": [
+    "internal.governance",
+    "api.governance"
+  ],
+  "presentationSlots": {
+    "capture": "business_partner_request/presentation.section.form.request.json"
+  },
+  "flowKind": "variant",
+  "baseFlowRef": "business_partner_request/flow.base.json",
+  "composition": {
+    "stage": "artifact_preparation",
+    "cacheKey": "base_hash_and_variant_hash",
+    "securityOverride": "forbidden"
+  },
+  "artifactHash": "sha256:6c6392534125467c2c1971f4d17261c4f97e37113deb35b7896ce1bfb2f84663"
 }

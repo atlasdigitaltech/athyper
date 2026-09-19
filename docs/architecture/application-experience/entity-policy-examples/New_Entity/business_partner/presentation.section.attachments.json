@@ -14,9 +14,10 @@
     "includeInAggregate": false
   },
   "authorization": {
-    "viewPermission": "neon.business_partner.attachments.read",
+    "viewPermission": "neon.collaboration.attachment.read",
     "permissionStatus": "proposed_requires_catalog_verification",
-    "discoverableWhenDenied": false
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
   },
   "load": "on_visible",
   "resourceStates": [
@@ -33,5 +34,47 @@
   "dependencies": [
     "business_partner/core"
   ],
-  "artifactHash": "sha256:60b553c90e53b31b4fa4d0a85f99fc95de3a48597983e1a0681582410792c693"
+  "artifactHash": "sha256:e91747fa94ebdaff6d4d5e9fb9301b270abf08d800a9ca39dc430e1bcf857e1e",
+  "availableOperations": [
+    {
+      "key": "create",
+      "permissionCode": "neon.collaboration.attachment.create",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "platform.attachments.create.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "finalize",
+      "permissionCode": "neon.collaboration.attachment.finalize",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "platform.attachments.finalize.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "download",
+      "permissionCode": "neon.collaboration.attachment.download",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "platform.attachments.download.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    },
+    {
+      "key": "archive",
+      "permissionCode": "neon.collaboration.attachment.archive",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "platform.attachments.archive.v1",
+        "registryRequired": true
+      },
+      "owner": "platform_service"
+    }
+  ]
 }

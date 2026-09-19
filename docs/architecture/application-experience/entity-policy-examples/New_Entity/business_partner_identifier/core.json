@@ -26,22 +26,17 @@
       "dataType": "uuid",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.business_partner_identifier.id",
+        "labelKey": "entity.business_partner_identifier.core.fields.id.label",
         "defaultText": "Id"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
       "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
     },
     {
       "key": "business_partner_id",
@@ -52,22 +47,12 @@
       "dataType": "uuid",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.business_partner_identifier.business_partner_id",
+        "labelKey": "entity.business_partner_identifier.core.fields.business_partner_id.label",
         "defaultText": "Business Partner Id"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "uuid"
     },
     {
       "key": "identifier_value",
@@ -78,452 +63,19 @@
       "dataType": "string",
       "nullable": false,
       "label": {
-        "labelKey": "entity.master.business_partner_identifier.identifier_value",
+        "labelKey": "entity.business_partner_identifier.core.fields.identifier_value.label",
         "defaultText": "Identifier Value"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "masked_only",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "mask": {
-        "classification": "restricted",
-        "readPermissionCode": "neon.relationship.business_partner_identifier.read_masked",
-        "fallback": "••••",
-        "plaintextInNormalQueries": false,
-        "reveal": {
-          "permissionCode": "neon.relationship.business_partner_identifier.reveal",
-          "requiresElevatedAssurance": true,
-          "historicalSnapshotAllowed": false,
-          "claim": "single_use_purpose_bound_expiring",
-          "audit": "same_transaction",
-          "cacheable": false
-        }
-      },
       "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "scheme_code",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "scheme_code"
-      },
-      "dataType": "string",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.scheme_code",
-        "defaultText": "Scheme Code"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "issuing_authority",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "issuing_authority"
-      },
-      "dataType": "string",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.issuing_authority",
-        "defaultText": "Issuing Authority"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "issuing_country_code",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "issuing_country_code"
-      },
-      "dataType": "string",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.issuing_country_code",
-        "defaultText": "Issuing Country Code"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "character(2)",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "issued_at",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "issued_at"
-      },
-      "dataType": "date",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.issued_at",
-        "defaultText": "Issued At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "date",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "effective_until",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "effective_until"
-      },
-      "dataType": "date",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.effective_until",
-        "defaultText": "Effective Until"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "date",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "is_primary",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "is_primary"
-      },
-      "dataType": "boolean",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.is_primary",
-        "defaultText": "Is Primary"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "boolean",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "verified_at",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "verified_at"
-      },
-      "dataType": "datetime",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.verified_at",
-        "defaultText": "Verified At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamptz",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "verified_by",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "verified_by"
-      },
-      "dataType": "uuid",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.verified_by",
-        "defaultText": "Verified By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "status",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "status"
-      },
-      "dataType": "domain",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.status",
-        "defaultText": "Status"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "master.partner_extension_status_d",
-      "domainCode": "master.partner_extension_status_d",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "is_active",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "is_active"
-      },
-      "dataType": "boolean",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.is_active",
-        "defaultText": "Is Active"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "boolean",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "status_changed_at",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "status_changed_at"
-      },
-      "dataType": "datetime",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.status_changed_at",
-        "defaultText": "Status Changed At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamptz",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "status_changed_by",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "status_changed_by"
-      },
-      "dataType": "uuid",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.status_changed_by",
-        "defaultText": "Status Changed By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "created_at",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "created_at"
-      },
-      "dataType": "datetime",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.created_at",
-        "defaultText": "Created At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamptz",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "created_by",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "created_by"
-      },
-      "dataType": "uuid",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.created_by",
-        "defaultText": "Created By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "updated_at",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "updated_at"
-      },
-      "dataType": "datetime",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.updated_at",
-        "defaultText": "Updated At"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "timestamptz",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
-    },
-    {
-      "key": "updated_by",
-      "binding": {
-        "sourceObject": "master.business_partner_identifier",
-        "column": "updated_by"
-      },
-      "dataType": "uuid",
-      "nullable": true,
-      "label": {
-        "labelKey": "entity.master.business_partner_identifier.updated_by",
-        "defaultText": "Updated By"
-      },
-      "valueOrigin": "stored",
-      "writePolicy": "handler_only",
-      "readPolicy": "excluded_until_explicitly_authorized",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "uuid",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
+      "protection": {
+        "normalProjection": {
+          "mode": "masked",
+          "maskedDisplay": "••••",
+          "plaintextInNormalQueries": false
+        },
+        "sensitivity": "restricted"
       }
     }
   ],
@@ -559,21 +111,42 @@
     "presentationMayOnlyNarrow": true
   },
   "readinessFacts": [],
-  "fieldSelection": {
-    "default": "deny",
-    "publicReadFields": [
-      "id",
-      "business_partner_id",
-      "identifier_value"
-    ],
-    "additionalFieldsRequireHandlerApproval": true
-  },
-  "dependencies": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",
     "missingEvaluator": "block_write",
     "uiVisibilityGrantsAccess": false
   },
-  "artifactHash": "sha256:6e36bc5b338b8c995f3720ac9f3ce151c09924bab2507fb52041c712a1aa01fd"
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.business_partner_identifier",
+      "column": "business_partner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_identifier",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_identifier",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "artifactHash": "sha256:9e55459ae6227607dd58948ec4b039f6191a4bbd89fea6f52e093a32dcbcc911",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  }
 }

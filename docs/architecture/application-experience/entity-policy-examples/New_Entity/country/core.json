@@ -26,22 +26,12 @@
       "dataType": "string",
       "nullable": false,
       "label": {
-        "labelKey": "entity.shared.country.code",
+        "labelKey": "entity.country.core.fields.code.label",
         "defaultText": "Code"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "character(2)",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "character(2)"
     },
     {
       "key": "name",
@@ -52,22 +42,12 @@
       "dataType": "string",
       "nullable": false,
       "label": {
-        "labelKey": "entity.shared.country.name",
+        "labelKey": "entity.country.core.fields.name.label",
         "defaultText": "Name"
       },
       "valueOrigin": "stored",
-      "writePolicy": "handler_only",
       "readPolicy": "authorized_projection",
-      "validation": {
-        "requiredOn": [],
-        "rules": []
-      },
-      "storageType": "text",
-      "authoringPolicy": {
-        "ownership": "system",
-        "customizationPolicy": "facet_only",
-        "securityMayOnlyTighten": true
-      }
+      "storageType": "text"
     }
   ],
   "businessContext": {
@@ -83,12 +63,32 @@
     ],
     "load": "bounded_lookup"
   },
-  "dependencies": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
   "validationAuthority": {
     "fieldRules": "compiled_and_server_enforced",
     "domainRules": "registered_handler_and_database_constraints",
     "missingEvaluator": "block_write",
     "uiVisibilityGrantsAccess": false
   },
-  "artifactHash": "sha256:7906041b22e45fdef0d996f4f4e28a1a06174808a61f5367f2d584ecd74dcac3"
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "shared.country",
+      "column": "code",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "artifactHash": "sha256:d7ec514519bf56c39fad43c9d12effc114c1de33cb1a534231ba9af004292a16",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  }
 }

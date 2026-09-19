@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "contractStatus",
+    "artifactType",
+    "artifactKey",
+    "entityCode",
+    "plane",
+    "dependencies",
+    "artifactHash"
+  ],
+  "properties": {
+    "artifactHash": {},
+    "artifactKey": {},
+    "artifactType": {
+      "const": "core"
+    },
+    "businessContext": {},
+    "capabilities": {},
+    "contractStatus": {},
+    "coreKind": {},
+    "defaultsProfile": {},
+    "defaultsProfileRef": {},
+    "deferredRelations": {},
+    "dependencies": {},
+    "editRuntimeTier": {},
+    "entityCode": {},
+    "fieldAccess": {},
+    "fieldDefaults": {},
+    "fields": {},
+    "operationDefaults": {},
+    "ownerBinding": {},
+    "plane": {
+      "const": "neon"
+    },
+    "profileKey": {},
+    "projectionPolicy": {},
+    "protections": {},
+    "query": {},
+    "querySafetyLimits": {},
+    "readinessFacts": {},
+    "referencePicker": {},
+    "relationDefaults": {},
+    "relations": {},
+    "schema": {},
+    "schemaVersion": {
+      "const": 2
+    },
+    "serverDependencies": {},
+    "storage": {},
+    "validationAuthority": {}
+  }
+}

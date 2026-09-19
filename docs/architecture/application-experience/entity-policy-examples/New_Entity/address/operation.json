@@ -37,51 +37,21 @@
       },
       "idempotency": "required",
       "draftEntityCode": "business_partner_request",
-      "ownerChangeIsolationRequired": true
+      "ownerChangeIsolationRequired": true,
+      "targetBinding": {
+        "targetEntityCode": "address",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
     }
   ],
   "policyBindings": [],
-  "evaluationContract": {
-    "context": [
-      "record.current",
-      "record.proposed",
-      "record.changedPaths",
-      "actor",
-      "businessContext",
-      "evidence",
-      "asOf"
-    ],
-    "combining": "deny_overrides",
-    "missingRequiredPolicy": "block",
-    "unavailablePolicy": "block",
-    "invalidPolicy": "block",
-    "decisionTrace": "server_audit",
-    "dynamicDecisionsCache": "not_shared",
-    "policyRevision": "pin_at_submission_revalidate_security_at_commit"
-  },
-  "concurrency": {
-    "expectedRecordVersionRequired": true,
-    "approvalBoundToPayloadHash": true,
-    "materializationIdempotent": true
-  },
   "dependencies": [
-    "address/core"
+    "address/core",
+    "platform/governed-child-operation.v1"
   ],
-  "consumedBy": [
-    "server_reads",
-    "server_writes"
-  ],
-  "browserProjection": "authorized_action_summary_only",
-  "transactionOrder": [
-    "resolve_pinned_release",
-    "authorize_current_actor",
-    "resolve_persisted_context",
-    "validate_input",
-    "evaluate_preconditions",
-    "compare_record_version",
-    "commit_domain_changes_and_audit",
-    "enqueue_outbox"
-  ],
-  "handlerBindingStatus": "proposed_registry_keys_require_implementation_verification",
-  "artifactHash": "sha256:ac361136ecda1a2f31ac14b18b9f36cf8c5a9949336e399765bc42d6c1b5ca17"
+  "artifactHash": "sha256:75694f8e49ee6073241ab23530cc6279fa2464d0692c7dbee6c0ca8ccab9ff54",
+  "operationDefaultsProfile": "platform.governed-child-operation.v1",
+  "operationDefaultsProfileRef": "platform/governed-child-operation.v1.json"
 }

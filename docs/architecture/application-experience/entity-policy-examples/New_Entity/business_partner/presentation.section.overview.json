@@ -34,7 +34,7 @@
       "fieldKey": "ownership_class"
     },
     {
-      "fieldKey": "legal_form"
+      "fieldKey": "legal_form_value_id"
     },
     {
       "fieldKey": "incorporation_date"
@@ -50,6 +50,21 @@
     },
     {
       "fieldKey": "record_version"
+    },
+    {
+      "fieldKey": "business_type_value_id"
+    },
+    {
+      "fieldKey": "founded_year"
+    },
+    {
+      "fieldKey": "employee_count"
+    },
+    {
+      "fieldKey": "employee_count_as_of"
+    },
+    {
+      "fieldKey": "employee_count_scope"
     }
   ],
   "authorization": {
@@ -74,5 +89,179 @@
   "dependencies": [
     "business_partner/core"
   ],
-  "artifactHash": "sha256:7d8bb28d9fa2b5ffdf03276be5ab744a2dcdd0b87b1c14ca06c5e130e9f35b9f"
+  "completenessPacks": [
+    {
+      "category": "organization",
+      "code": "organization_base",
+      "requirements": [
+        {
+          "actionCode": "amend_partner",
+          "code": "organization.legal_name",
+          "fieldCode": "partner.legalName",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.overview.completenessPacks.organization_base.requirements.organization.legal_name.label",
+            "defaultText": "Add legal name"
+          },
+          "sectionCode": "identity",
+          "severity": "required",
+          "factRef": {
+            "entityCode": "business_partner",
+            "code": "COMPLETENESS_ORGANIZATION_LEGAL_NAME"
+          },
+          "enforcement": "informational"
+        },
+        {
+          "actionCode": "lifecycle",
+          "code": "organization.lifecycle",
+          "fieldCode": "partner.lifecycleStatus",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.overview.completenessPacks.organization_base.requirements.organization.lifecycle.label",
+            "defaultText": "Review lifecycle"
+          },
+          "sectionCode": "identity",
+          "severity": "required",
+          "factRef": {
+            "entityCode": "business_partner",
+            "code": "BUSINESS_PARTNER_ACTIVE"
+          },
+          "enforcement": "informational"
+        },
+        {
+          "actionCode": "amend_partner",
+          "code": "organization.primary_address",
+          "fieldCode": "address.primary",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.overview.completenessPacks.organization_base.requirements.organization.primary_address.label",
+            "defaultText": "Add primary address"
+          },
+          "requiresVerified": true,
+          "sectionCode": "addresses",
+          "severity": "required",
+          "factRef": {
+            "entityCode": "business_partner",
+            "code": "COMPLETENESS_ORGANIZATION_PRIMARY_ADDRESS"
+          },
+          "enforcement": "informational"
+        },
+        {
+          "actionCode": "amend_partner",
+          "code": "organization.primary_contact",
+          "fieldCode": "contact.primary",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.overview.completenessPacks.organization_base.requirements.organization.primary_contact.label",
+            "defaultText": "Add primary contact"
+          },
+          "requiresVerified": true,
+          "sectionCode": "contacts",
+          "severity": "recommended",
+          "factRef": {
+            "entityCode": "business_partner",
+            "code": "COMPLETENESS_ORGANIZATION_PRIMARY_CONTACT"
+          },
+          "enforcement": "informational"
+        },
+        {
+          "actionCode": "amend_partner",
+          "code": "organization.identifier",
+          "fieldCode": "identifier.primary",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.overview.completenessPacks.organization_base.requirements.organization.identifier.label",
+            "defaultText": "Add verified identifier"
+          },
+          "requiresVerified": true,
+          "sectionCode": "identifiers-tax",
+          "severity": "recommended",
+          "factRef": {
+            "entityCode": "business_partner",
+            "code": "COMPLETENESS_ORGANIZATION_IDENTIFIER"
+          },
+          "enforcement": "informational"
+        },
+        {
+          "actionCode": "add_role",
+          "code": "organization.commercial_role",
+          "fieldCode": "role.any_commercial",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.overview.completenessPacks.organization_base.requirements.organization.commercial_role.label",
+            "defaultText": "Add supplier or customer role"
+          },
+          "sectionCode": "roles-scope",
+          "severity": "recommended",
+          "factRef": {
+            "entityCode": "business_partner",
+            "code": "COMPLETENESS_ORGANIZATION_COMMERCIAL_ROLE"
+          },
+          "enforcement": "informational"
+        }
+      ],
+      "scope": "global",
+      "version": 1
+    },
+    {
+      "category": "person",
+      "code": "person_base",
+      "requirements": [
+        {
+          "actionCode": "amend_partner",
+          "code": "person.name",
+          "fieldCode": "person.name",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.overview.completenessPacks.person_base.requirements.person.name.label",
+            "defaultText": "Complete personal identity"
+          },
+          "sectionCode": "identity",
+          "severity": "required",
+          "factRef": {
+            "entityCode": "business_partner",
+            "code": "COMPLETENESS_PERSON_NAME"
+          },
+          "enforcement": "informational"
+        },
+        {
+          "actionCode": "amend_partner",
+          "code": "person.contact",
+          "fieldCode": "contact.primary",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.overview.completenessPacks.person_base.requirements.person.contact.label",
+            "defaultText": "Add primary contact"
+          },
+          "requiresVerified": true,
+          "sectionCode": "contacts",
+          "severity": "recommended",
+          "factRef": {
+            "entityCode": "business_partner",
+            "code": "COMPLETENESS_PERSON_CONTACT"
+          },
+          "enforcement": "informational"
+        },
+        {
+          "actionCode": "amend_partner",
+          "code": "person.identifier",
+          "fieldCode": "person.identifier.verified_presence",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.overview.completenessPacks.person_base.requirements.person.identifier.label",
+            "defaultText": "Add verified identity"
+          },
+          "requiresVerified": true,
+          "sectionCode": "identifiers-tax",
+          "severity": "recommended",
+          "factRef": {
+            "entityCode": "business_partner",
+            "code": "COMPLETENESS_PERSON_IDENTIFIER"
+          },
+          "enforcement": "informational"
+        }
+      ],
+      "scope": "global",
+      "version": 1
+    }
+  ],
+  "completenessEvaluation": {
+    "source": "server_contextual_facts",
+    "evaluate": "section_open_only",
+    "remediationActionResolution": "registered_domain_operation_to_request_flow",
+    "missingResolver": "hide_action_with_diagnostic",
+    "noImplicitOperationAuthority": true
+  },
+  "artifactHash": "sha256:ae1d113de218f246d7dd4d473eb3094f6af73a4045f69923b86b85431588a554"
 }

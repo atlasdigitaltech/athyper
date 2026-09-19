@@ -34,5 +34,36 @@
   "dependencies": [
     "business_partner/core"
   ],
-  "artifactHash": "sha256:e4b2668e2e06d45964446a336add09f662d1ee949da4d86b37f7ef41be7b9af4"
+  "artifactHash": "sha256:ecfff25ebfdc44a07d8945686c96a1de85c18be79db75deafc6f9f5872e32638",
+  "queryPresentation": {
+    "search": {
+      "fieldKeys": [
+        "name",
+        "code"
+      ],
+      "mode": "prefix_casefold",
+      "placeholder": {
+        "labelKey": "entity.business_partner.presentation.list.search.placeholder",
+        "defaultText": "Search name or code"
+      }
+    },
+    "quickFilters": [
+      {
+        "fieldKey": "status",
+        "control": "select",
+        "label": {
+          "labelKey": "entity.business_partner.presentation.list.filters.status.label",
+          "defaultText": "Status"
+        }
+      },
+      {
+        "fieldKey": "registration_country_code",
+        "control": "select",
+        "label": {
+          "labelKey": "entity.business_partner.presentation.list.filters.registration_country_code.label",
+          "defaultText": "Registration country"
+        }
+      }
+    ]
+  }
 }

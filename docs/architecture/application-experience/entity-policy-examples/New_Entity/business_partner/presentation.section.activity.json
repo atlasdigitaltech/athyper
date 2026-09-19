@@ -7,7 +7,7 @@
   "entityCode": "business_partner",
   "plane": "neon",
   "sectionKey": "activity",
-  "rendererKey": "platform.related-collection.v1",
+  "rendererKey": "platform.activity-timeline.v1",
   "dataBinding": {
     "kind": "registered_service",
     "handlerKey": "neon.bp.section.activity.v1",
@@ -18,42 +18,7 @@
     "scopeAuthority": "server",
     "includeInAggregate": false
   },
-  "coreRef": "business_partner/core.json",
-  "fieldBindings": [
-    {
-      "fieldKey": "code"
-    },
-    {
-      "fieldKey": "name"
-    },
-    {
-      "fieldKey": "registration_country_code"
-    },
-    {
-      "fieldKey": "partner_category"
-    },
-    {
-      "fieldKey": "ownership_class"
-    },
-    {
-      "fieldKey": "legal_form"
-    },
-    {
-      "fieldKey": "incorporation_date"
-    },
-    {
-      "fieldKey": "website_url"
-    },
-    {
-      "fieldKey": "description"
-    },
-    {
-      "fieldKey": "status"
-    },
-    {
-      "fieldKey": "record_version"
-    }
-  ],
+  "fieldBindings": [],
   "authorization": {
     "viewPermission": "neon.relationship.business_partner_activity.read",
     "fieldPermissions": [],
@@ -73,8 +38,12 @@
   },
   "load": "on_visible",
   "requiredContext": "resolve_from_target_core",
-  "dependencies": [
-    "business_partner/core"
-  ],
-  "artifactHash": "sha256:edcf64969b80bb71ed3dc2d79efa104417e32f9d308d9fa6baf51c1120bf7af6"
+  "dependencies": [],
+  "artifactHash": "sha256:eb7ae5fdd68141bd9c4bb32b5cbf44d55d13ac2dcbd565deb876d1a4aa42926e",
+  "contentModel": {
+    "kind": "registered_event_stream",
+    "handlerKey": "neon.bp.activity.timeline.v1",
+    "eventScope": "business_partner",
+    "implementationStatus": "draft_requires_handler_registration"
+  }
 }

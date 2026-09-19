@@ -10,6 +10,7 @@
   "rendererKey": "platform.postal-address.v1",
   "coreRef": "address/core.json",
   "ownerBinding": "supplied_by_parent_relation",
+  "accessAuthority": "operation_authorized_parent_flow",
   "fieldBindings": [
     {
       "fieldKey": "line1"
@@ -40,5 +41,5 @@
   "dependencies": [
     "address/core"
   ],
-  "artifactHash": "sha256:a451e402db2d9bca70689229afb2d3ab9e9ace09d19fb7dfb8f0420fd913e435"
+  "artifactHash": "sha256:73c6717cd47042096b96291c2aa38e52d8e7160d13a4bf65a21c23dd2bc99645"
 }

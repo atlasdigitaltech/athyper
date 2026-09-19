@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "contractStatus",
+    "artifactType",
+    "artifactKey",
+    "entityCode",
+    "plane",
+    "dependencies",
+    "artifactHash"
+  ],
+  "properties": {
+    "artifactHash": {},
+    "artifactKey": {},
+    "artifactType": {
+      "const": "flow"
+    },
+    "baseFlowRef": {},
+    "composition": {},
+    "contractStatus": {},
+    "dependencies": {},
+    "draftEntityCode": {},
+    "entityCode": {},
+    "flowKey": {},
+    "flowKind": {},
+    "flowRefs": {},
+    "journey": {},
+    "materializesEntityCode": {},
+    "persistence": {},
+    "plane": {
+      "const": "neon"
+    },
+    "presentationSlots": {},
+    "requestContract": {},
+    "schema": {},
+    "schemaVersion": {
+      "const": 2
+    },
+    "selection": {},
+    "serverValidation": {},
+    "sourceMappingCatalog": {},
+    "sourceMappingKeys": {},
+    "steps": {},
+    "supportedSources": {}
+  }
+}

@@ -8,8 +8,6 @@
   "plane": "neon",
   "flowKey": "workforce.new",
   "journey": "workforce",
-  "draftEntityCode": "business_partner_request",
-  "materializesEntityCode": "business_partner",
   "requestContract": {
     "kind": "required_path_contract",
     "requestKind": "workforce.new",
@@ -40,109 +38,29 @@
     "import",
     "api"
   ],
-  "sourceMappings": {
-    "internal": {
-      "allowedJourneys": [
-        "supplier",
-        "customer",
-        "workforce"
-      ],
-      "destination": "business_partner_request",
-      "directMasterWrite": false,
-      "requiredProvenance": [
-        "principalId"
-      ],
-      "snapshotPinned": false,
-      "source": "internal",
-      "strategy": "declarative_mapping",
-      "version": "2.0.0"
-    },
-    "portal": {
-      "allowedJourneys": [
-        "supplier",
-        "customer",
-        "workforce"
-      ],
-      "destination": "business_partner_request",
-      "directMasterWrite": false,
-      "requiredProvenance": [
-        "invitationId",
-        "applicantPrincipalId"
-      ],
-      "snapshotPinned": false,
-      "source": "portal",
-      "strategy": "declarative_mapping",
-      "version": "2.0.0"
-    },
-    "import": {
-      "allowedJourneys": [
-        "supplier",
-        "customer",
-        "workforce"
-      ],
-      "destination": "business_partner_request",
-      "directMasterWrite": false,
-      "requiredProvenance": [
-        "systemCode",
-        "entityId",
-        "payloadHash"
-      ],
-      "snapshotPinned": false,
-      "source": "import",
-      "strategy": "declarative_mapping",
-      "version": "2.0.0"
-    },
-    "api": {
-      "allowedJourneys": [
-        "supplier",
-        "customer",
-        "workforce"
-      ],
-      "destination": "business_partner_request",
-      "directMasterWrite": false,
-      "requiredProvenance": [
-        "systemCode",
-        "entityId",
-        "payloadHash"
-      ],
-      "snapshotPinned": false,
-      "source": "api",
-      "strategy": "declarative_mapping",
-      "version": "2.0.0"
-    }
-  },
-  "steps": [
-    {
-      "stepKey": "capture",
-      "presentationRef": "business_partner_request/presentation.section.form.workforceReview.json"
-    },
-    {
-      "stepKey": "evidence",
-      "presentationRef": "business_partner_request/presentation.section.evidence.json"
-    },
-    {
-      "stepKey": "review",
-      "presentationRef": "business_partner_request/presentation.review.json",
-      "operationKey": "submit"
-    }
-  ],
-  "persistence": {
-    "saveOperation": "save_draft",
-    "resume": "persisted_draft_and_pinned_release",
-    "releaseChange": "explicit_compatible_migration_or_finish_pinned",
-    "contextChange": "invalidate_validation_and_approval"
-  },
-  "serverValidation": {
-    "onSave": "partial_draft",
-    "onSubmit": "complete_schema_and_policy",
-    "onMaterialize": "revalidate_full_authority_and_context"
-  },
   "dependencies": [
     "business_partner_request/core",
+    "business_partner_request/flow.base",
     "business_partner_request/operation",
     "business_partner_request/presentation.review",
     "business_partner_request/presentation.section.evidence",
     "business_partner_request/presentation.section.form.workforceReview"
   ],
-  "artifactHash": "sha256:f9ea1caa340b8900f51264a1c3c8cd2bcb937e8b2159d03aa2330b17821ccb9e"
+  "sourceMappingKeys": [
+    "internal",
+    "portal",
+    "import",
+    "api"
+  ],
+  "presentationSlots": {
+    "capture": "business_partner_request/presentation.section.form.workforceReview.json"
+  },
+  "flowKind": "variant",
+  "baseFlowRef": "business_partner_request/flow.base.json",
+  "composition": {
+    "stage": "artifact_preparation",
+    "cacheKey": "base_hash_and_variant_hash",
+    "securityOverride": "forbidden"
+  },
+  "artifactHash": "sha256:d4a3380c3e0c2545b2237634476138a0f1ee649e8d8bc662335ab3c7e088c36f"
 }

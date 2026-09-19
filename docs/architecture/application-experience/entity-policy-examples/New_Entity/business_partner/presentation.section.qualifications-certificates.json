@@ -49,7 +49,70 @@
   "dependencies": [
     "business_partner_commodity_capability/core",
     "business_partner_qualification/core",
-    "certification/core"
+    "business_partner_qualification/operation",
+    "certification/core",
+    "certification/operation"
   ],
-  "artifactHash": "sha256:9368113d83f7003c08dfbaa7ca5d9ab4aaca11685492494247c819d1f3333bf6"
+  "artifactHash": "sha256:d57fc8e1da8f318051c88836aeab6db80f4ae354fa68af9b1f83d48c6eb21509",
+  "childCollections": [
+    {
+      "key": "qualifications",
+      "entityCode": "business_partner_qualification",
+      "coreRef": "business_partner_qualification/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "partner_role"
+        },
+        {
+          "fieldKey": "qualification_type_code"
+        },
+        {
+          "fieldKey": "decision"
+        },
+        {
+          "fieldKey": "effective_from"
+        },
+        {
+          "fieldKey": "effective_until"
+        },
+        {
+          "fieldKey": "next_review_at"
+        }
+      ],
+      "load": "on_visible",
+      "operationRef": "business_partner_qualification/operation.json"
+    },
+    {
+      "key": "certifications",
+      "entityCode": "certification",
+      "coreRef": "certification/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "certification_type_id"
+        },
+        {
+          "fieldKey": "custom_name"
+        },
+        {
+          "fieldKey": "certificate_number"
+        },
+        {
+          "fieldKey": "certified_by"
+        },
+        {
+          "fieldKey": "effective_from"
+        },
+        {
+          "fieldKey": "effective_until"
+        },
+        {
+          "fieldKey": "status"
+        }
+      ],
+      "load": "on_visible",
+      "operationRef": "certification/operation.json"
+    }
+  ]
 }

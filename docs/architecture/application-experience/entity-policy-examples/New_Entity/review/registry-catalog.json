@@ -1,0 +1,549 @@
+{
+  "runtimeArtifact": false,
+  "source": {
+    "method": "compiled artifact key inventory",
+    "scope": "draft registry evidence"
+  },
+  "entries": [
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.completeness.customer.role.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.completeness.organization.commercial_role.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.completeness.organization.identifier.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.completeness.organization.legal_name.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.completeness.organization.lifecycle.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.completeness.organization.primary_address.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.completeness.organization.primary_contact.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.completeness.person.contact.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.completeness.person.identifier.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.completeness.person.name.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.completeness.supplier.certificate.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.completeness.supplier.role.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.duplicate.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.readiness.bank_verified_when_payable.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.readiness.business_partner_active.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.readiness.company_profile_complete.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.readiness.credit_review_current.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.readiness.employee_active.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.readiness.employment_effective.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.readiness.no_prohibitive_block.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.readiness.onboarding_complete.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.readiness.primary_assignment_effective.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.readiness.procurement_assignment_effective.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.readiness.qualification_current.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "neon.bp.readiness.sales_assignment_effective.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "evaluator",
+      "key": "platform.evidence.admission.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.address.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.address_link.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.activity.timeline.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.bank.reveal.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.contact.channels.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.governed-request.create.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.business_partner_commodity_capability.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.business_partner_governance_relation.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.business_partner_identifier.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.business_partner_industry_classification.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.business_partner_operating_organization_assignment.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.business_partner_qualification.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.business_partner_tax_registration.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.certification.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.contact_person.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.customer.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.customer_company_profile.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.supplier.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.relation.supplier_company_profile.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.activity.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.addresses.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.banking.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.business-activity.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.contacts.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.credit.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.customer-company.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.identifiers-tax.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.identity.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.network.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.overview.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.qualifications-certificates.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.requests.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.roles-scope.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.supplier-company.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.workforce.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.tax.reveal.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner.print_statement.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner.share_mesh.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_banking.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_commodity_capability.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_governance_relation.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_identifier.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_industry_classification.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_operating_organization_assignment.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_qualification.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_request.approve.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_request.create_draft.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_request.materialize.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_request.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_request.reject.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_request.return.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_request.save_draft.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_request.submit.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.business_partner_tax_registration.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.certification.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.contact_person.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.customer.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.customer_company_profile.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.request.capture.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.request.evidence.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.supplier.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.supplier_company_profile.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.workforce.read.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "platform.attachments.archive.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "platform.attachments.create.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "platform.attachments.download.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "platform.attachments.finalize.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "platform.comments.archive_own.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "platform.comments.create.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "platform.comments.update_own.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.activity-timeline.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.attachments.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.comments.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.contact-channels.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.fields.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.form.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.postal-address.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.related-collection.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.request-capture.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.request-evidence.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "resolver",
+      "key": "neon.business-context.v1",
+      "status": "requires_registry_publication"
+    }
+  ]
+}

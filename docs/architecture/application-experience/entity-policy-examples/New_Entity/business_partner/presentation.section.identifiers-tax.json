@@ -19,14 +19,7 @@
     "includeInAggregate": false
   },
   "coreRef": "business_partner_identifier/core.json",
-  "fieldBindings": [
-    {
-      "fieldKey": "business_partner_id"
-    },
-    {
-      "fieldKey": "identifier_value"
-    }
-  ],
+  "fieldBindings": [],
   "authorization": {
     "viewPermission": "neon.relationship.business_partner_identifier.read_masked",
     "fieldPermissions": [
@@ -50,10 +43,49 @@
   "requiredContext": "resolve_from_target_core",
   "dependencies": [
     "business_partner_identifier/core",
-    "business_partner_tax_registration/core"
+    "business_partner_tax_registration/core",
+    "business_partner_tax_registration/operation"
   ],
   "additionalCoreRefs": [
     "business_partner_tax_registration/core.json"
   ],
-  "artifactHash": "sha256:88e48ce670650b8f8542e933b220f97d5c148203c8849418dd9af215d883aa68"
+  "artifactHash": "sha256:5f1c24c061e953ef90865db14097dff5257c498adc5ffb9e993174a300361701",
+  "childCollections": [
+    {
+      "key": "identifiers",
+      "entityCode": "business_partner_identifier",
+      "coreRef": "business_partner_identifier/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "identifier_value"
+        }
+      ],
+      "load": "on_visible",
+      "sensitiveFieldHandling": "masked_by_default_with_explicit_operation"
+    },
+    {
+      "key": "tax_registrations",
+      "entityCode": "business_partner_tax_registration",
+      "coreRef": "business_partner_tax_registration/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "registration_type_code"
+        },
+        {
+          "fieldKey": "registration_number"
+        },
+        {
+          "fieldKey": "effective_from"
+        },
+        {
+          "fieldKey": "effective_until"
+        }
+      ],
+      "load": "on_visible",
+      "operationRef": "business_partner_tax_registration/operation.json",
+      "sensitiveFieldHandling": "masked_by_default_with_explicit_operation"
+    }
+  ]
 }

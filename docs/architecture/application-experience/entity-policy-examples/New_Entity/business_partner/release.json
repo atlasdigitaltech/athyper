@@ -2,9 +2,9 @@
   "schema": "athyper.entity-release-envelope/2.0-draft",
   "contractStatus": "unsigned_review_only",
   "artifactType": "release_envelope",
-  "releaseId": "bp-prototype-review-2",
+  "releaseId": "bp-prototype-review-1",
   "publicationKey": "neon.business_partner.aggregate",
-  "releaseNo": 2,
+  "releaseNo": 1,
   "supersedesReleaseId": null,
   "targetPlanes": [
     "neon"
@@ -19,42 +19,42 @@
       "artifactType": "core",
       "entityCode": "address",
       "ref": "address/core.json",
-      "hash": "sha256:d57f105628d61a44ee919139c3abab5d70b641cf56257428fa3a03fda0b9cafd"
+      "hash": "sha256:7900ea46e8cbb6d5c2dd047909952c95446307a8924a0bfbd10cdc4e1986af56"
     },
     {
       "artifactKey": "address/operation",
       "artifactType": "operation",
       "entityCode": "address",
       "ref": "address/operation.json",
-      "hash": "sha256:ac361136ecda1a2f31ac14b18b9f36cf8c5a9949336e399765bc42d6c1b5ca17"
+      "hash": "sha256:75694f8e49ee6073241ab23530cc6279fa2464d0692c7dbee6c0ca8ccab9ff54"
     },
     {
       "artifactKey": "address/presentation.section",
       "artifactType": "presentation_section",
       "entityCode": "address",
       "ref": "address/presentation.section.json",
-      "hash": "sha256:a451e402db2d9bca70689229afb2d3ab9e9ace09d19fb7dfb8f0420fd913e435"
+      "hash": "sha256:73c6717cd47042096b96291c2aa38e52d8e7160d13a4bf65a21c23dd2bc99645"
     },
     {
       "artifactKey": "address_link/core",
       "artifactType": "core",
       "entityCode": "address_link",
       "ref": "address_link/core.json",
-      "hash": "sha256:af074c5c579522999c9ddc43f10f839b1f3dc6ed15107601e6c07eca4ac757cb"
+      "hash": "sha256:bd5a3e79d3ffbe1e75a84d144cf7d1a09e706225445f2d20df1437a757f893e3"
     },
     {
       "artifactKey": "address_link/operation",
       "artifactType": "operation",
       "entityCode": "address_link",
       "ref": "address_link/operation.json",
-      "hash": "sha256:fd6fb6ea3eca6580b5afb2520db13774d17e0a7bd60a8c7757be7b429e2891a0"
+      "hash": "sha256:8c95e607d8c1c07df597fc2baf57f5cbe48a1825492dc7f5428f1962f126d5d1"
     },
     {
       "artifactKey": "business_partner/core",
       "artifactType": "core",
       "entityCode": "business_partner",
       "ref": "business_partner/core.json",
-      "hash": "sha256:cf7f99970239176fe0a8c0d12673ccf9741fbe8a9b2f349cd36ad82af9ede0ca"
+      "hash": "sha256:bae6bf21619310874fac8cfe6c8e023470bc84ac0fb48004b05990d538a2573e"
     },
     {
       "artifactKey": "business_partner/flow.intake",
@@ -68,28 +68,28 @@
       "artifactType": "operation",
       "entityCode": "business_partner",
       "ref": "business_partner/operation.json",
-      "hash": "sha256:dd0aa6a99d8bc1f42ee4b577db7dd2cd32cfe28c866e6a399c4d5ece328cbddf"
+      "hash": "sha256:91d59e8742a8025490684938d3bab24e723621a1bf9bcbae61079c4ce7f9c3e6"
     },
     {
       "artifactKey": "business_partner/presentation.detail",
       "artifactType": "presentation_surface",
       "entityCode": "business_partner",
       "ref": "business_partner/presentation.detail.json",
-      "hash": "sha256:6451b7ea6fc9aae07c1f63f20411062591af98561649d1a389d1484a9d04da5f"
+      "hash": "sha256:5194195cc141dde3a00b8ab4cc2663f2529ef2a0f4f90fd1397884057b3a49fc"
     },
     {
       "artifactKey": "business_partner/presentation.list",
       "artifactType": "presentation_surface",
       "entityCode": "business_partner",
       "ref": "business_partner/presentation.list.json",
-      "hash": "sha256:e4b2668e2e06d45964446a336add09f662d1ee949da4d86b37f7ef41be7b9af4"
+      "hash": "sha256:ecfff25ebfdc44a07d8945686c96a1de85c18be79db75deafc6f9f5872e32638"
     },
     {
       "artifactKey": "business_partner/presentation.section.activity",
       "artifactType": "presentation_section",
       "entityCode": "business_partner",
       "ref": "business_partner/presentation.section.activity.json",
-      "hash": "sha256:edcf64969b80bb71ed3dc2d79efa104417e32f9d308d9fa6baf51c1120bf7af6"
+      "hash": "sha256:eb7ae5fdd68141bd9c4bb32b5cbf44d55d13ac2dcbd565deb876d1a4aa42926e"
     },
     {
       "artifactKey": "business_partner/presentation.section.addresses",
@@ -103,7 +103,7 @@
       "artifactType": "presentation_section",
       "entityCode": "business_partner",
       "ref": "business_partner/presentation.section.attachments.json",
-      "hash": "sha256:60b553c90e53b31b4fa4d0a85f99fc95de3a48597983e1a0681582410792c693"
+      "hash": "sha256:e91747fa94ebdaff6d4d5e9fb9301b270abf08d800a9ca39dc430e1bcf857e1e"
     },
     {
       "artifactKey": "business_partner/presentation.section.banking",
@@ -117,28 +117,28 @@
       "artifactType": "presentation_section",
       "entityCode": "business_partner",
       "ref": "business_partner/presentation.section.business-activity.json",
-      "hash": "sha256:9134a1ee567dd93859b001351a5d94986bbea94f396532a76ef440f00b9b617b"
+      "hash": "sha256:433614f63a61d6318d97b232a5567437b90d88ac79d0f1b27af499f456daf94a"
     },
     {
       "artifactKey": "business_partner/presentation.section.comments",
       "artifactType": "presentation_section",
       "entityCode": "business_partner",
       "ref": "business_partner/presentation.section.comments.json",
-      "hash": "sha256:654485f4f5e4cc2c30a41e770ab5b0772accf3ccfb926aacb0fc1f2fe40915e0"
+      "hash": "sha256:38d6ffff4726ed40e39eb1ff87a914fadd6cb75d29e592fb565fd2bd24c73ac0"
     },
     {
       "artifactKey": "business_partner/presentation.section.contacts",
       "artifactType": "presentation_section",
       "entityCode": "contact_person",
       "ref": "business_partner/presentation.section.contacts.json",
-      "hash": "sha256:2227d7b6a1e96a480fec8f0dcff759b4edbddd2b27cbd9e880eb4c4374392bfe"
+      "hash": "sha256:fdb37475f0b6bf2548f4c813a496131a272fc198c1d0ec386e7ab0c8ba7c03e2"
     },
     {
       "artifactKey": "business_partner/presentation.section.credit",
       "artifactType": "presentation_section",
       "entityCode": "customer",
       "ref": "business_partner/presentation.section.credit.json",
-      "hash": "sha256:f1d8a6b3fafd1bf0844a46c0a08e282f8634bc4ee8c8c74c4333873360ef5316"
+      "hash": "sha256:ec585003bee890d858303255970e2abaed783109cf87f699851c158323d9222f"
     },
     {
       "artifactKey": "business_partner/presentation.section.customer-company",
@@ -152,35 +152,35 @@
       "artifactType": "presentation_section",
       "entityCode": "business_partner_identifier",
       "ref": "business_partner/presentation.section.identifiers-tax.json",
-      "hash": "sha256:88e48ce670650b8f8542e933b220f97d5c148203c8849418dd9af215d883aa68"
+      "hash": "sha256:5f1c24c061e953ef90865db14097dff5257c498adc5ffb9e993174a300361701"
     },
     {
       "artifactKey": "business_partner/presentation.section.identity",
       "artifactType": "presentation_section",
       "entityCode": "business_partner",
       "ref": "business_partner/presentation.section.identity.json",
-      "hash": "sha256:8dc817270af4d09800f24b973db4c0cdb34bdba22d65ffabc5469537c0eef950"
+      "hash": "sha256:18250d6f6c60daa9552d985dfc35f77a67c854c12832e3bbee54374689d40a84"
     },
     {
       "artifactKey": "business_partner/presentation.section.network",
       "artifactType": "presentation_section",
       "entityCode": "business_partner",
       "ref": "business_partner/presentation.section.network.json",
-      "hash": "sha256:16a0b8f64d2a93a64364667454f20b66f89e19851293d4890d1dc6607e56ac2d"
+      "hash": "sha256:4a0161915321ac3e6c2e41cd93b158ed45eda5c980431d331434fdbe5842a2e0"
     },
     {
       "artifactKey": "business_partner/presentation.section.overview",
       "artifactType": "presentation_section",
       "entityCode": "business_partner",
       "ref": "business_partner/presentation.section.overview.json",
-      "hash": "sha256:7d8bb28d9fa2b5ffdf03276be5ab744a2dcdd0b87b1c14ca06c5e130e9f35b9f"
+      "hash": "sha256:ae1d113de218f246d7dd4d473eb3094f6af73a4045f69923b86b85431588a554"
     },
     {
       "artifactKey": "business_partner/presentation.section.qualifications-certificates",
       "artifactType": "presentation_section",
       "entityCode": "business_partner_qualification",
       "ref": "business_partner/presentation.section.qualifications-certificates.json",
-      "hash": "sha256:9368113d83f7003c08dfbaa7ca5d9ab4aaca11685492494247c819d1f3333bf6"
+      "hash": "sha256:d57fc8e1da8f318051c88836aeab6db80f4ae354fa68af9b1f83d48c6eb21509"
     },
     {
       "artifactKey": "business_partner/presentation.section.requests",
@@ -194,266 +194,273 @@
       "artifactType": "presentation_section",
       "entityCode": "business_partner_operating_organization_assignment",
       "ref": "business_partner/presentation.section.roles-scope.json",
-      "hash": "sha256:8bebca1a9639c37ba5fe7a9541e026b3bd29537a6c2eeb51e1f2ab55e432ca23"
+      "hash": "sha256:e2fd5eb47305adcbc2884c69c1c8e01d86965762d70dcf1497f2db4d6686450d"
     },
     {
       "artifactKey": "business_partner/presentation.section.supplier-company",
       "artifactType": "presentation_section",
       "entityCode": "supplier_company_profile",
       "ref": "business_partner/presentation.section.supplier-company.json",
-      "hash": "sha256:25c089239d9144ef0ce819a3276ccb75a36b3cda4d7636510c69afe56209e9f9"
+      "hash": "sha256:d2d9c4f97ea9d7e5f522c4bf9a6bc74687d3ba3c171337b7577b416d855df9ad"
     },
     {
       "artifactKey": "business_partner/presentation.section.workforce",
       "artifactType": "presentation_section",
       "entityCode": "workforce",
       "ref": "business_partner/presentation.section.workforce.json",
-      "hash": "sha256:98ef5a3ec36c52585d09721fe8f2513d02f7fee92666f9dab8ffb121f64ed732"
+      "hash": "sha256:7ed498fc3f9293ce0947a7eb23376d1ff3bc35ab4872f0738385b230cbc9e319"
     },
     {
       "artifactKey": "business_partner_banking/core",
       "artifactType": "core",
       "entityCode": "business_partner_banking",
       "ref": "business_partner_banking/core.json",
-      "hash": "sha256:8795bc9f5e89eb41bd6cf0b8e8eeac17511789da99c813473148e6fe58bafd22"
+      "hash": "sha256:8e56417ae9952448b177693d573a72ce247852a31365ab265fb344ceada406be"
     },
     {
       "artifactKey": "business_partner_banking/operation",
       "artifactType": "operation",
       "entityCode": "business_partner_banking",
       "ref": "business_partner_banking/operation.json",
-      "hash": "sha256:729e7bd7683fd3acd9bdeeb369e61526be0308d18fd0624e6313b4742b9342f3"
+      "hash": "sha256:a87740ca82d6fc7e1ea615f5b1943a0c35b86622b890514b560892a6e9af55b6"
     },
     {
       "artifactKey": "business_partner_commodity_capability/core",
       "artifactType": "core",
       "entityCode": "business_partner_commodity_capability",
       "ref": "business_partner_commodity_capability/core.json",
-      "hash": "sha256:23e40ff9ca29e41bbda0a7608a4aae8ada4e22b6e591d93c7477fbd31205e466"
+      "hash": "sha256:5050f0d64ac7611de394204d70ccd33ca312b2014785f3e89fd19eab22ddb1c9"
     },
     {
       "artifactKey": "business_partner_commodity_capability/operation",
       "artifactType": "operation",
       "entityCode": "business_partner_commodity_capability",
       "ref": "business_partner_commodity_capability/operation.json",
-      "hash": "sha256:771a7d98bfc02db25491acb687555d797a93e01bd45cc0d521ac7c95cdbe63df"
+      "hash": "sha256:e70f1c3b1787b5c40442f958938207100d2ff1b22d781dda866c5170bee9988c"
     },
     {
       "artifactKey": "business_partner_governance_relation/core",
       "artifactType": "core",
       "entityCode": "business_partner_governance_relation",
       "ref": "business_partner_governance_relation/core.json",
-      "hash": "sha256:a599f5235e07b2660562512faed0bd3c744f6c3a75b1c733fda22ce256af6cc3"
+      "hash": "sha256:b0d5626933a0feb5f1400e4ca88fa3375409aa71c3c9cd03571bbe9bec76551d"
     },
     {
       "artifactKey": "business_partner_governance_relation/operation",
       "artifactType": "operation",
       "entityCode": "business_partner_governance_relation",
       "ref": "business_partner_governance_relation/operation.json",
-      "hash": "sha256:737a6dafdfa7e25927b0c7d8a558fc3258227201479ea35a92d7a9815fc14b38"
+      "hash": "sha256:00d3f47b1492ff7f4980eb263ba596e52f3a1eff928a49db6e047649e4798b7f"
     },
     {
       "artifactKey": "business_partner_identifier/core",
       "artifactType": "core",
       "entityCode": "business_partner_identifier",
       "ref": "business_partner_identifier/core.json",
-      "hash": "sha256:6e36bc5b338b8c995f3720ac9f3ce151c09924bab2507fb52041c712a1aa01fd"
+      "hash": "sha256:9e55459ae6227607dd58948ec4b039f6191a4bbd89fea6f52e093a32dcbcc911"
     },
     {
       "artifactKey": "business_partner_identifier/operation",
       "artifactType": "operation",
       "entityCode": "business_partner_identifier",
       "ref": "business_partner_identifier/operation.json",
-      "hash": "sha256:312582704540bcd5bbea24034897616f119f3a97d3178290dcab9d6c3a528f51"
+      "hash": "sha256:8a2b3ec821b7da5bf93ecb74fcb8cb0a946ed6fed91c6b7e6ce62f55232bdfcb"
     },
     {
       "artifactKey": "business_partner_industry_classification/core",
       "artifactType": "core",
       "entityCode": "business_partner_industry_classification",
       "ref": "business_partner_industry_classification/core.json",
-      "hash": "sha256:ed6ec87eb2c59a3a77e066b4c4a6c3389810506f585b9d2c80be875955d5c15f"
+      "hash": "sha256:f0b64344a0dbaf2a222db891ed955fcbcc4a168480786912752d3a2755c8757f"
     },
     {
       "artifactKey": "business_partner_industry_classification/operation",
       "artifactType": "operation",
       "entityCode": "business_partner_industry_classification",
       "ref": "business_partner_industry_classification/operation.json",
-      "hash": "sha256:dabe04cbd3c1d45254ccd2dae8909bc6492bc2a0aaa32134e73fdb8008a325b5"
+      "hash": "sha256:c2480eb406b3ca8dccb9ec2dd7eba290e0551a6a29735285886cd58d5b4a030b"
     },
     {
       "artifactKey": "business_partner_operating_organization_assignment/core",
       "artifactType": "core",
       "entityCode": "business_partner_operating_organization_assignment",
       "ref": "business_partner_operating_organization_assignment/core.json",
-      "hash": "sha256:fa02cf9310853ea2a8c98b684a5c14249e95f7ed1393cb8fa8483ab66f62ed37"
+      "hash": "sha256:c966d6e649ad1a522727a745831afb1345e688816614c239fe5b9ed6d47b7482"
     },
     {
       "artifactKey": "business_partner_operating_organization_assignment/operation",
       "artifactType": "operation",
       "entityCode": "business_partner_operating_organization_assignment",
       "ref": "business_partner_operating_organization_assignment/operation.json",
-      "hash": "sha256:aea12465a07f13cab1dce6cf78dec1370c01e70755f168d3f7e02af58db0f07a"
+      "hash": "sha256:c3a9b259c917f11f0d85e3dece33495ce195c0bdcdcfe12e45ecfa9f673f0d87"
     },
     {
       "artifactKey": "business_partner_qualification/core",
       "artifactType": "core",
       "entityCode": "business_partner_qualification",
       "ref": "business_partner_qualification/core.json",
-      "hash": "sha256:a3c0f3a84d8f4de15e538a221ebd0a5cd8f41c3fa217663b87cd2d176bb6a5f6"
+      "hash": "sha256:314fae4e5a952e6e04c687b361fad877c09972df93962f1298df8c90e93ca3f3"
     },
     {
       "artifactKey": "business_partner_qualification/operation",
       "artifactType": "operation",
       "entityCode": "business_partner_qualification",
       "ref": "business_partner_qualification/operation.json",
-      "hash": "sha256:40f12d799bdbcd7f041af5ce0960c38abac10b9a96c9bd2c1fe1e93945eac602"
+      "hash": "sha256:ec4f7739197f639717f11647589dc218c75854aa7b31aaa333d9b02debf81fc0"
     },
     {
       "artifactKey": "business_partner_request/core",
       "artifactType": "core",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/core.json",
-      "hash": "sha256:4c7556c7b1f8da9e96c53cc226012278102a407a5cb26f40505c1a35dc255150"
+      "hash": "sha256:7cdc514e45eb4880676b49aecf9308aa4076fe0f2bd03ed873d7e0a0778157d2"
+    },
+    {
+      "artifactKey": "business_partner_request/flow.base",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.base.json",
+      "hash": "sha256:285220e899523c8f82062b3b0538bbef75da5a37e85a6fb4fb0cacdfd1a1e10a"
     },
     {
       "artifactKey": "business_partner_request/flow.customer.add",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.customer.add.json",
-      "hash": "sha256:2404d103d5a9e6889e0bdcff0ad8d5275d213033e4b0a78499e86a5e483da8d3"
+      "hash": "sha256:38f2e9e3ec5e71f02fee5e6b4a09ca21dff0ed90cbc9a07037f10098f91c34f6"
     },
     {
       "artifactKey": "business_partner_request/flow.customer.company",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.customer.company.json",
-      "hash": "sha256:24a08847dda65f6286dd35d8afd02c591c9b2e43277a8a193c89b44dafc0fa92"
+      "hash": "sha256:403b282f65a60009a443805fb532c1d35af216e5f05de43a742658c1609348c2"
     },
     {
       "artifactKey": "business_partner_request/flow.customer.credit",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.customer.credit.json",
-      "hash": "sha256:5ba1f6ef75c09760f1f5ba1397e63aa2f28c34af3a2c7913c3b28705b3ba85df"
+      "hash": "sha256:834863df91af78b98e79e7259dea90d3ddbc00f17b7b3f2ab1cb88a562a47790"
     },
     {
       "artifactKey": "business_partner_request/flow.customer.new",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.customer.new.json",
-      "hash": "sha256:8e17acf7d81a0ed6d410b6ccac51f5487847f19d04c2117cb34248036432c754"
+      "hash": "sha256:694912836f9d0240185b4d47a86bd1dbd912a39186b22b1e483f4b12ce6438df"
     },
     {
       "artifactKey": "business_partner_request/flow.partner.amend",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.partner.amend.json",
-      "hash": "sha256:2a0288f7a9082ed8d9df24e8a11fcf477ae75c8ec2d79d6f1bd2a981e8be1886"
+      "hash": "sha256:6c6392534125467c2c1971f4d17261c4f97e37113deb35b7896ce1bfb2f84663"
     },
     {
       "artifactKey": "business_partner_request/flow.partner.archive",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.partner.archive.json",
-      "hash": "sha256:6120c069dd3a1cddea58118066abcd7be2885e24e034c59ed32273e8078b8ebb"
+      "hash": "sha256:d327aa60ee6a58b0ac5d1691338a8034e4e1da89efe6fd9880547fbad2bb9535"
     },
     {
       "artifactKey": "business_partner_request/flow.partner.assign",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.partner.assign.json",
-      "hash": "sha256:0ea43fec412ee51fea20e4640353f035a52771a751e5e5d1a6d2aabdffe3b01a"
+      "hash": "sha256:cc45c058abec98b3222f0523989ce27b2080c1d19a9efab70f3b733e7dd44408"
     },
     {
       "artifactKey": "business_partner_request/flow.partner.deactivate",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.partner.deactivate.json",
-      "hash": "sha256:d5dfdee3cd84593b9780061110ec514f94ce0e115818c6b2a2cdc482eae06681"
+      "hash": "sha256:03b63a4b26c34abde4359f8d0b1efcce10391afb5bc4316ebd1b3f2896ae6049"
     },
     {
       "artifactKey": "business_partner_request/flow.partner.reactivate",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.partner.reactivate.json",
-      "hash": "sha256:447667fed831efe710f1c2691c8771a52496cc2fc39f3fc896f47a0c37688c51"
+      "hash": "sha256:9f534fdbf1dad73575fe09a5b17e83ad713a574ad715e8a8daa62ff619f7cdfa"
     },
     {
       "artifactKey": "business_partner_request/flow.supplier.activate",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.supplier.activate.json",
-      "hash": "sha256:a726b373321d2198605e74cdfa56a6d91316236f5549dff02fa519fce0711246"
+      "hash": "sha256:b9b8883f8a9407405a89d3b58e9587d8cded2f247d7bc005281816406a012d9b"
     },
     {
       "artifactKey": "business_partner_request/flow.supplier.add",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.supplier.add.json",
-      "hash": "sha256:740f4fcd651fc33b5291aaba28333ca87969dbb3e62ff31729c9abaac6c37ea3"
+      "hash": "sha256:9d5e6e4adf377c56f08b67524fa1d1b8a7b32f2e40f117ec9c2a82e4f6dba42a"
     },
     {
       "artifactKey": "business_partner_request/flow.supplier.bank",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.supplier.bank.json",
-      "hash": "sha256:327831f08dbfb3189a85bc2fb333b528fbfcdfd6e1b81a51a39c153889711ee9"
+      "hash": "sha256:aadd5c92cea81d9d8d8c0bbb03ab30bbec6912d18204e7c85b82372c30da46ea"
     },
     {
       "artifactKey": "business_partner_request/flow.supplier.company",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.supplier.company.json",
-      "hash": "sha256:a61aaba39cc932c37dd36386ae048678206122dcee39630ab97e8c5efea79190"
+      "hash": "sha256:578eb55341fe7d81bdb5677c933169fa173c68e223eb25c89799fecabbba39ee"
     },
     {
       "artifactKey": "business_partner_request/flow.supplier.new",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.supplier.new.json",
-      "hash": "sha256:170d0b5daa80c43d8200facce29c6098751d044855c3c24a6517b975a05a97a7"
+      "hash": "sha256:096153240821431b74c7acc39a3309dd6ad51102eeff9affc5b98d2b2badc7cf"
     },
     {
       "artifactKey": "business_partner_request/flow.supplier.qualify",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.supplier.qualify.json",
-      "hash": "sha256:84123c91e211c158926ff7e2adb1dc0562724217b05640aca85464a12fb5f11a"
+      "hash": "sha256:246cf97f33ea6bb4fcd8a3310dd1e1d0a1260d176fcaf50afa140358023dfbf8"
     },
     {
       "artifactKey": "business_partner_request/flow.workforce.add",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.workforce.add.json",
-      "hash": "sha256:632d14b84e222b8b51ba342c574124e45d16b4d8773e976788d30bb87a714b22"
+      "hash": "sha256:16c4a137b72d32532b5cb718847ec4da0db0f2416fe05dfbfc1bd77883e311d5"
     },
     {
       "artifactKey": "business_partner_request/flow.workforce.change",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.workforce.change.json",
-      "hash": "sha256:f753bcdbc4021eb586867ffa95d0133f0c099572fd7a4ca016ad25c1baaa2d61"
+      "hash": "sha256:ec8ad5625fdf8dc2e432c35f2e91bdbc735e397c3894d27249ecadcc1d2cd976"
     },
     {
       "artifactKey": "business_partner_request/flow.workforce.new",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.workforce.new.json",
-      "hash": "sha256:f9ea1caa340b8900f51264a1c3c8cd2bcb937e8b2159d03aa2330b17821ccb9e"
+      "hash": "sha256:d4a3380c3e0c2545b2237634476138a0f1ee649e8d8bc662335ab3c7e088c36f"
     },
     {
       "artifactKey": "business_partner_request/flow.workforce.offboard",
       "artifactType": "flow",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/flow.workforce.offboard.json",
-      "hash": "sha256:0d624269fa4278645f482f08785fb6031a8b25695634015819d3999e8c15c118"
+      "hash": "sha256:7d144f1de530136a48e61d801b5ea78a2952ffda96c8fe404833ac94de159a16"
     },
     {
       "artifactKey": "business_partner_request/operation",
       "artifactType": "operation",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/operation.json",
-      "hash": "sha256:85a686c4ecc7b105305f3bdecc25165bdcb44d95c888415f9614a2df8cc2ac00"
+      "hash": "sha256:d585ac78975c84174fda70ca8531aec2c308d6366de11a43dc1a5e59828c77c0"
     },
     {
       "artifactKey": "business_partner_request/presentation.detail",
@@ -481,168 +488,182 @@
       "artifactType": "presentation_section",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/presentation.section.capture.json",
-      "hash": "sha256:092a4d4e503d88d937fb9a1de2eae60ce0a252fcd1275f4cf65dae4fa93c87b7"
+      "hash": "sha256:86ce6da2a8bd41b5a7d5f963511a8ac64e167bb539c73b9d459156ceda96a45c"
     },
     {
       "artifactKey": "business_partner_request/presentation.section.evidence",
       "artifactType": "presentation_section",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/presentation.section.evidence.json",
-      "hash": "sha256:8068d6d6652cd8f951c94f693d95f1afbe1c2eb454ccae616236499a0c7165eb"
+      "hash": "sha256:b83b048f07c5c5ee3cd1940810cdd66a6dd417a8290bae8385c274ac31f910d7"
     },
     {
       "artifactKey": "business_partner_request/presentation.section.form.customerCredit",
       "artifactType": "presentation_section",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/presentation.section.form.customerCredit.json",
-      "hash": "sha256:295b856f3c0534a2246c4e1e9732ceeeb08a4ee4dd427e98db2662f5e243b186"
+      "hash": "sha256:811e9fc1759883d30c0a8687e280079fa2c1ec70f1ab08c3d3ae23cb33b01c31"
     },
     {
       "artifactKey": "business_partner_request/presentation.section.form.request",
       "artifactType": "presentation_section",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/presentation.section.form.request.json",
-      "hash": "sha256:fb2501ff384692db35177ab5cdd3e550b39f22884f0209189413f23896955d37"
+      "hash": "sha256:ee4f28fa7b9d6b363e727e27ac69cf0b77bda92729c203c25217ed667cabdde3"
     },
     {
       "artifactKey": "business_partner_request/presentation.section.form.supplierQualification",
       "artifactType": "presentation_section",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/presentation.section.form.supplierQualification.json",
-      "hash": "sha256:a1521c7489e70d0da5875dc1fdd05d1891335778416ab04dbf631c6fcde93d01"
+      "hash": "sha256:8cda418449baee6534e082aeba699a7f9f09cfbc7a9a5c7c9083ea7ee1854d19"
     },
     {
       "artifactKey": "business_partner_request/presentation.section.form.supplierRequest",
       "artifactType": "presentation_section",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/presentation.section.form.supplierRequest.json",
-      "hash": "sha256:c7f35f6c7ba110ba3494de753f3f605465d5d3a9ab8f2651af80d0510b90f8ed"
+      "hash": "sha256:103fd7e5c65d372c23cd23472f0e1a481ffaf080f81cb59a74d75a280cdbca9b"
     },
     {
       "artifactKey": "business_partner_request/presentation.section.form.workforceReview",
       "artifactType": "presentation_section",
       "entityCode": "business_partner_request",
       "ref": "business_partner_request/presentation.section.form.workforceReview.json",
-      "hash": "sha256:479c17ff9768c1898e0d370fd3432ede25fcbbc725182828b713ac9b49df7c10"
+      "hash": "sha256:d8defc7220d1de6bcda52530b3bac40da326386665148a6f8d9179284ba6dec4"
     },
     {
       "artifactKey": "business_partner_tax_registration/core",
       "artifactType": "core",
       "entityCode": "business_partner_tax_registration",
       "ref": "business_partner_tax_registration/core.json",
-      "hash": "sha256:3e6380a5f9b567406f55ed8748ddee35da82521d5ba2e68cdcbf0a25d5ee6a1b"
+      "hash": "sha256:664251bef180cf56db53eb8047ebc02e174e9b1bb9d44fe98a22d0c19ce1ded9"
     },
     {
       "artifactKey": "business_partner_tax_registration/operation",
       "artifactType": "operation",
       "entityCode": "business_partner_tax_registration",
       "ref": "business_partner_tax_registration/operation.json",
-      "hash": "sha256:be04b95a709623f9fced7a2742916d30897a1257bb1202e2f524cf61ad6e687f"
+      "hash": "sha256:f9b2d1609951fa0eb89e283256426a02fef5527f272eb3e16c0bfe2b3dcef360"
     },
     {
       "artifactKey": "certification/core",
       "artifactType": "core",
       "entityCode": "certification",
       "ref": "certification/core.json",
-      "hash": "sha256:abc25901d3987441a8dbe8300a9abb43f77007332e5f6ea7d371ba80c3cda252"
+      "hash": "sha256:e1241422166708898d676a0a1fbc1fa5c33469f42e4830f143a1b18b0dbaf96d"
     },
     {
       "artifactKey": "certification/operation",
       "artifactType": "operation",
       "entityCode": "certification",
       "ref": "certification/operation.json",
-      "hash": "sha256:252d6080d1ed35656589fbfec452d089d7234b63efafab11d455f8ce9259f7de"
+      "hash": "sha256:84c2e0954f699ce07e8d109cfc39751d162b4349c98ec28164fe24f4632a096a"
     },
     {
       "artifactKey": "contact_person/core",
       "artifactType": "core",
       "entityCode": "contact_person",
       "ref": "contact_person/core.json",
-      "hash": "sha256:d89e0aa5328d1a4c4af917f6fbd56f82061fc0d273b49c77af016dff9a6a2ae6"
+      "hash": "sha256:1f6a1d6a69e3d75100cb468d316b78c5f09a1efcaed25c6cdceaac8004195913"
     },
     {
       "artifactKey": "contact_person/operation",
       "artifactType": "operation",
       "entityCode": "contact_person",
       "ref": "contact_person/operation.json",
-      "hash": "sha256:381c7a9129003241d97232254410a81fdf93988442e5ba4fa0e16670f9646778"
+      "hash": "sha256:1ec165ba9e19b76cc41e184774ad03f684ed9eed02b2735d02cbf27b7233777a"
     },
     {
       "artifactKey": "country/core",
       "artifactType": "core",
       "entityCode": "country",
       "ref": "country/core.json",
-      "hash": "sha256:7906041b22e45fdef0d996f4f4e28a1a06174808a61f5367f2d584ecd74dcac3"
+      "hash": "sha256:d7ec514519bf56c39fad43c9d12effc114c1de33cb1a534231ba9af004292a16"
     },
     {
       "artifactKey": "customer/core",
       "artifactType": "core",
       "entityCode": "customer",
       "ref": "customer/core.json",
-      "hash": "sha256:2b813100b815adbb92cebde524dea5c8c696e09bcbf38de704f665c981c29e60"
+      "hash": "sha256:b1a719235a8476179864d837309fd21284eba6838e2644aead850060348b213a"
     },
     {
       "artifactKey": "customer/operation",
       "artifactType": "operation",
       "entityCode": "customer",
       "ref": "customer/operation.json",
-      "hash": "sha256:a076abc6872ebb3cd8db56f8a5f6c2679a02527b667b539422bee45810c15f5f"
+      "hash": "sha256:2f6425d74e486e838d9e8af693e3c947eb1449e6d5e10c94a2d0d41449e3fcae"
     },
     {
       "artifactKey": "customer_company_profile/core",
       "artifactType": "core",
       "entityCode": "customer_company_profile",
       "ref": "customer_company_profile/core.json",
-      "hash": "sha256:c2770bf2ef11e8a5ce5a986a304bf0a800f12134279c3173760b535f8145e255"
+      "hash": "sha256:2362bd1ceabce04f5b1a5ec8044b6baaacaf31012f64139d7ca4415051e6c7e8"
     },
     {
       "artifactKey": "customer_company_profile/operation",
       "artifactType": "operation",
       "entityCode": "customer_company_profile",
       "ref": "customer_company_profile/operation.json",
-      "hash": "sha256:7f11f8532f5b398e58168c931d2941f96c6a34dadc66be6262fb49c82d3ed0ed"
+      "hash": "sha256:c0abe40ea3a872d7a68af69647a6a323cbfc735d555b1327af1235bccadc53e8"
+    },
+    {
+      "artifactKey": "platform/core-field-defaults.v1",
+      "artifactType": "core",
+      "entityCode": "platform.core_field_defaults",
+      "ref": "platform/core-field-defaults.v1.json",
+      "hash": "sha256:562eb3e2bdfe414092679dfb6537199e07785c20cc97177f717afd2807c72e24"
+    },
+    {
+      "artifactKey": "platform/governed-child-operation.v1",
+      "artifactType": "core",
+      "entityCode": "platform.governed_child_operation",
+      "ref": "platform/governed-child-operation.v1.json",
+      "hash": "sha256:570055c27a9ac830ca3b22069c8e10ee046f4cc9399de9cbd721a070bed640da"
     },
     {
       "artifactKey": "supplier/core",
       "artifactType": "core",
       "entityCode": "supplier",
       "ref": "supplier/core.json",
-      "hash": "sha256:48f5c68c60574d575c9a7d00f6fd669006bc2c90f63bb09a4a939d88047ddf05"
+      "hash": "sha256:3064fa07430671e3507b6dc74927c921bf228e0af364bd1140e16e137ba7ba7f"
     },
     {
       "artifactKey": "supplier/operation",
       "artifactType": "operation",
       "entityCode": "supplier",
       "ref": "supplier/operation.json",
-      "hash": "sha256:9275bcc67689a56ae21ebbb6db02f1507a46d868525713c105b43f00fb09fb10"
+      "hash": "sha256:c28557fffebe10fa8e94afc36da5185c01466beeb911515d04fa82b094bbba80"
     },
     {
       "artifactKey": "supplier_company_profile/core",
       "artifactType": "core",
       "entityCode": "supplier_company_profile",
       "ref": "supplier_company_profile/core.json",
-      "hash": "sha256:2d529e65589b2855aea3fe64a41f864d84f370ddd44a5b2dd51a25d0ee8c86c6"
+      "hash": "sha256:7295d20d3fbd1182c6b1d4493a54d0e3a46c2148d65f0f3c9edf4f25f1ad31ee"
     },
     {
       "artifactKey": "supplier_company_profile/operation",
       "artifactType": "operation",
       "entityCode": "supplier_company_profile",
       "ref": "supplier_company_profile/operation.json",
-      "hash": "sha256:8f7f04323f0efc34606d62ea7076849b90a5fb55afce47e8739b8ef55c442c7b"
+      "hash": "sha256:6a8b1f2bbef269a43f1fbe1e5359426a5abf946c6191a4239ee5ab2ab5e2e575"
     },
     {
       "artifactKey": "workforce/core",
       "artifactType": "core",
       "entityCode": "workforce",
       "ref": "workforce/core.json",
-      "hash": "sha256:77475b6d8587243ae2f035bae2fa863db08de003c5b0bf0b0671848475fab3fb"
+      "hash": "sha256:ce7df1ed17dfce6c178b827664f49cc20be3467695f0a152452fa1a1f2e98fa0"
     },
     {
       "artifactKey": "workforce/operation",
       "artifactType": "operation",
       "entityCode": "workforce",
       "ref": "workforce/operation.json",
-      "hash": "sha256:c52a4af5964fee8cbc16098fffcae97444e9befb177de098db3b99dfad414a67"
+      "hash": "sha256:6a2fb17be873f1a517eddabee7ab3cdcf6eb1aabc7343321bf10d414d0c34d4a"
     }
   ],
   "activation": {
@@ -655,26 +676,23 @@
     "rollback": "explicit_new_activation_of_verified_retained_set",
     "inFlightReads": "pin_release_for_entire_request",
     "openUI": "pin_release_until_explicit_refresh",
-    "commands": "verify_release_and_record_version_reauthorize_current_actor"
+    "commands": "verify_release_and_record_version_reauthorize_current_actor",
+    "requiredChecks": [
+      "offline_artifact_validation",
+      "live_neon_storage_catalog_match",
+      "clean_to_upgraded_source_migration_type_parity"
+    ],
+    "liveSchemaCheck": {
+      "command": "python3 docs/architecture/application-experience/entity-policy-examples/New_Entity/verify_live_schema.py",
+      "missingDatabaseAccess": "block",
+      "schemaMismatch": "block",
+      "evidenceScope": "target_environment_and_release_hash"
+    },
+    "validateEvaluatorRegistry": true
   },
   "externalDependencies": [
     {
-      "serviceKey": "platform.workflow.v1",
-      "required": true,
-      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
-    },
-    {
-      "serviceKey": "platform.numbering.v1",
-      "required": true,
-      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
-    },
-    {
-      "serviceKey": "platform.attachments.v1",
-      "required": true,
-      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
-    },
-    {
-      "serviceKey": "platform.document-render.v1",
+      "serviceKey": "neon.bp.governed-materialization.v1",
       "required": true,
       "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
     },
@@ -684,7 +702,42 @@
       "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
     },
     {
-      "serviceKey": "neon.bp.governed-materialization.v1",
+      "serviceKey": "neon.evaluator-registry.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.attachments.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.audit.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.comments.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.document-render.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.entity-snapshot.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.numbering.v1",
+      "required": true,
+      "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+    },
+    {
+      "serviceKey": "platform.workflow.v1",
       "required": true,
       "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
     }
@@ -712,6 +765,6 @@
     "value": null,
     "status": "not_signed_do_not_activate"
   },
-  "artifactHash": "sha256:3e19c2aea376c94966dd73439f335064b08165022682eaa452e76d13ef7a64a9",
-  "releaseHash": "sha256:c4627d3fb6292bf1d649764c744a4b17c2d50790536ef2846081fc0dd8668dcf"
+  "releaseHash": "sha256:4ab675cd00cc9fa70d07915814ff23f458ee0aceecf9169ab4dbff9b8ec0d289",
+  "artifactHash": "sha256:0d62291f8e183b59c41bac2b62419916692122a8070290c897aa82c4d0a95fe8"
 }

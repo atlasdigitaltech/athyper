@@ -56,7 +56,106 @@
   "load": "on_visible",
   "requiredContext": "resolve_from_target_core",
   "dependencies": [
+    "business_partner_request/operation",
+    "supplier/core",
     "supplier_company_profile/core"
   ],
-  "artifactHash": "sha256:25c089239d9144ef0ce819a3276ccb75a36b3cda4d7636510c69afe56209e9f9"
+  "completenessPacks": [
+    {
+      "category": "organization",
+      "code": "supplier_payable",
+      "requirements": [
+        {
+          "actionCode": "configure_company",
+          "code": "supplier.company",
+          "fieldCode": "company.supplier.profile",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.supplier-company.completenessPacks.supplier_payable.requirements.supplier.company.label",
+            "defaultText": "Configure supplier company"
+          },
+          "sectionCode": "supplier-company",
+          "severity": "required",
+          "factRef": {
+            "entityCode": "supplier",
+            "code": "COMPANY_PROFILE_COMPLETE"
+          },
+          "enforcement": "operation_gate",
+          "operationBindingRef": {
+            "artifactRef": "business_partner_request/operation.json",
+            "bindingKey": "supplier.readiness"
+          }
+        },
+        {
+          "actionCode": "change_bank",
+          "code": "supplier.bank",
+          "fieldCode": "bank.verified_presence",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.supplier-company.completenessPacks.supplier_payable.requirements.supplier.bank.label",
+            "defaultText": "Verify bank account"
+          },
+          "requiresVerified": true,
+          "sectionCode": "banking",
+          "severity": "required",
+          "factRef": {
+            "entityCode": "supplier",
+            "code": "BANK_VERIFIED_WHEN_PAYABLE"
+          },
+          "enforcement": "operation_gate",
+          "operationBindingRef": {
+            "artifactRef": "business_partner_request/operation.json",
+            "bindingKey": "supplier.readiness"
+          }
+        },
+        {
+          "actionCode": "qualification",
+          "code": "supplier.qualification",
+          "fieldCode": "qualification.current",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.supplier-company.completenessPacks.supplier_payable.requirements.supplier.qualification.label",
+            "defaultText": "Start qualification"
+          },
+          "requiresVerified": true,
+          "sectionCode": "qualifications-certificates",
+          "severity": "recommended",
+          "factRef": {
+            "entityCode": "supplier",
+            "code": "QUALIFICATION_CURRENT"
+          },
+          "enforcement": "operation_gate",
+          "operationBindingRef": {
+            "artifactRef": "business_partner_request/operation.json",
+            "bindingKey": "supplier.readiness"
+          }
+        },
+        {
+          "actionCode": "certification",
+          "code": "supplier.certificate",
+          "fieldCode": "certification.current",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.supplier-company.completenessPacks.supplier_payable.requirements.supplier.certificate.label",
+            "defaultText": "Add certification"
+          },
+          "requiresVerified": true,
+          "sectionCode": "qualifications-certificates",
+          "severity": "recommended",
+          "factRef": {
+            "entityCode": "supplier",
+            "code": "COMPLETENESS_SUPPLIER_CERTIFICATE"
+          },
+          "enforcement": "informational"
+        }
+      ],
+      "role": "supplier",
+      "scope": "company",
+      "version": 1
+    }
+  ],
+  "completenessEvaluation": {
+    "source": "server_contextual_facts",
+    "evaluate": "section_open_only",
+    "remediationActionResolution": "registered_domain_operation_to_request_flow",
+    "missingResolver": "hide_action_with_diagnostic",
+    "noImplicitOperationAuthority": true
+  },
+  "artifactHash": "sha256:d2d9c4f97ea9d7e5f522c4bf9a6bc74687d3ba3c171337b7577b416d855df9ad"
 }

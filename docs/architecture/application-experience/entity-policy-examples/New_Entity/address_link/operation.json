@@ -37,51 +37,21 @@
       },
       "idempotency": "required",
       "draftEntityCode": "business_partner_request",
-      "ownerChangeIsolationRequired": true
+      "ownerChangeIsolationRequired": true,
+      "targetBinding": {
+        "targetEntityCode": "address_link",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
     }
   ],
   "policyBindings": [],
-  "evaluationContract": {
-    "context": [
-      "record.current",
-      "record.proposed",
-      "record.changedPaths",
-      "actor",
-      "businessContext",
-      "evidence",
-      "asOf"
-    ],
-    "combining": "deny_overrides",
-    "missingRequiredPolicy": "block",
-    "unavailablePolicy": "block",
-    "invalidPolicy": "block",
-    "decisionTrace": "server_audit",
-    "dynamicDecisionsCache": "not_shared",
-    "policyRevision": "pin_at_submission_revalidate_security_at_commit"
-  },
-  "concurrency": {
-    "expectedRecordVersionRequired": true,
-    "approvalBoundToPayloadHash": true,
-    "materializationIdempotent": true
-  },
   "dependencies": [
-    "address_link/core"
+    "address_link/core",
+    "platform/governed-child-operation.v1"
   ],
-  "consumedBy": [
-    "server_reads",
-    "server_writes"
-  ],
-  "browserProjection": "authorized_action_summary_only",
-  "transactionOrder": [
-    "resolve_pinned_release",
-    "authorize_current_actor",
-    "resolve_persisted_context",
-    "validate_input",
-    "evaluate_preconditions",
-    "compare_record_version",
-    "commit_domain_changes_and_audit",
-    "enqueue_outbox"
-  ],
-  "handlerBindingStatus": "proposed_registry_keys_require_implementation_verification",
-  "artifactHash": "sha256:fd6fb6ea3eca6580b5afb2520db13774d17e0a7bd60a8c7757be7b429e2891a0"
+  "artifactHash": "sha256:8c95e607d8c1c07df597fc2baf57f5cbe48a1825492dc7f5428f1962f126d5d1",
+  "operationDefaultsProfile": "platform.governed-child-operation.v1",
+  "operationDefaultsProfileRef": "platform/governed-child-operation.v1.json"
 }

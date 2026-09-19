@@ -36,51 +36,21 @@
         "denyUnresolved": true
       },
       "idempotency": "required",
-      "draftEntityCode": "business_partner_request"
+      "draftEntityCode": "business_partner_request",
+      "targetBinding": {
+        "targetEntityCode": "business_partner_commodity_capability",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
     }
   ],
   "policyBindings": [],
-  "evaluationContract": {
-    "context": [
-      "record.current",
-      "record.proposed",
-      "record.changedPaths",
-      "actor",
-      "businessContext",
-      "evidence",
-      "asOf"
-    ],
-    "combining": "deny_overrides",
-    "missingRequiredPolicy": "block",
-    "unavailablePolicy": "block",
-    "invalidPolicy": "block",
-    "decisionTrace": "server_audit",
-    "dynamicDecisionsCache": "not_shared",
-    "policyRevision": "pin_at_submission_revalidate_security_at_commit"
-  },
-  "concurrency": {
-    "expectedRecordVersionRequired": true,
-    "approvalBoundToPayloadHash": true,
-    "materializationIdempotent": true
-  },
   "dependencies": [
-    "business_partner_commodity_capability/core"
+    "business_partner_commodity_capability/core",
+    "platform/governed-child-operation.v1"
   ],
-  "consumedBy": [
-    "server_reads",
-    "server_writes"
-  ],
-  "browserProjection": "authorized_action_summary_only",
-  "transactionOrder": [
-    "resolve_pinned_release",
-    "authorize_current_actor",
-    "resolve_persisted_context",
-    "validate_input",
-    "evaluate_preconditions",
-    "compare_record_version",
-    "commit_domain_changes_and_audit",
-    "enqueue_outbox"
-  ],
-  "handlerBindingStatus": "proposed_registry_keys_require_implementation_verification",
-  "artifactHash": "sha256:771a7d98bfc02db25491acb687555d797a93e01bd45cc0d521ac7c95cdbe63df"
+  "artifactHash": "sha256:e70f1c3b1787b5c40442f958938207100d2ff1b22d781dda866c5170bee9988c",
+  "operationDefaultsProfile": "platform.governed-child-operation.v1",
+  "operationDefaultsProfileRef": "platform/governed-child-operation.v1.json"
 }

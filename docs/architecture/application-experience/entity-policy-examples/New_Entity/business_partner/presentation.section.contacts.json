@@ -19,23 +19,7 @@
     "includeInAggregate": false
   },
   "coreRef": "contact_person/core.json",
-  "fieldBindings": [
-    {
-      "fieldKey": "contact_name"
-    },
-    {
-      "fieldKey": "business_title"
-    },
-    {
-      "fieldKey": "department_name"
-    },
-    {
-      "fieldKey": "is_primary"
-    },
-    {
-      "fieldKey": "status"
-    }
-  ],
+  "fieldBindings": [],
   "authorization": {
     "viewPermission": "neon.relationship.business_partner_contact.read",
     "fieldPermissions": [],
@@ -56,7 +40,108 @@
   "load": "on_visible",
   "requiredContext": "resolve_from_target_core",
   "dependencies": [
-    "contact_person/core"
+    "contact_person/core",
+    "contact_person/operation"
   ],
-  "artifactHash": "sha256:2227d7b6a1e96a480fec8f0dcff759b4edbddd2b27cbd9e880eb4c4374392bfe"
+  "artifactHash": "sha256:fdb37475f0b6bf2548f4c813a496131a272fc198c1d0ec386e7ab0c8ba7c03e2",
+  "childCollections": [
+    {
+      "key": "contacts",
+      "entityCode": "contact_person",
+      "coreRef": "contact_person/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "contact_name"
+        },
+        {
+          "fieldKey": "business_title"
+        },
+        {
+          "fieldKey": "department_name"
+        },
+        {
+          "fieldKey": "is_primary"
+        },
+        {
+          "fieldKey": "status"
+        }
+      ],
+      "load": "on_visible",
+      "operationRef": "contact_person/operation.json"
+    },
+    {
+      "key": "channels",
+      "entityCode": "contact_channel",
+      "binding": {
+        "kind": "registered_aggregate_projection",
+        "handlerKey": "neon.bp.contact.channels.v1",
+        "sourceObjects": [
+          "master.contact_link",
+          "master.contact_email",
+          "master.contact_phone",
+          "master.contact_person_role"
+        ],
+        "ownerEntityCode": "business_partner",
+        "handlerRegistrationRequired": true
+      },
+      "rendererKey": "platform.contact-channels.v1",
+      "fields": [
+        {
+          "key": "channel_type",
+          "dataType": "string",
+          "readPolicy": "authorized_projection",
+          "sensitivity": "internal"
+        },
+        {
+          "key": "value",
+          "dataType": "string",
+          "readPolicy": "masked_only",
+          "protection": {
+            "normalProjection": {
+              "mode": "masked",
+              "maskedDisplay": "••••",
+              "plaintextInNormalQueries": false
+            },
+            "sensitivity": "restricted",
+            "dataCategory": "personal_contact"
+          },
+          "sensitivity": "restricted",
+          "dataCategory": "personal_contact"
+        },
+        {
+          "key": "purpose",
+          "dataType": "string",
+          "readPolicy": "authorized_projection",
+          "sensitivity": "internal"
+        },
+        {
+          "key": "is_primary",
+          "dataType": "boolean",
+          "readPolicy": "authorized_projection",
+          "sensitivity": "internal"
+        },
+        {
+          "key": "is_verified",
+          "dataType": "boolean",
+          "readPolicy": "authorized_projection",
+          "sensitivity": "internal"
+        },
+        {
+          "key": "effective_from",
+          "dataType": "datetime",
+          "readPolicy": "authorized_projection",
+          "sensitivity": "internal"
+        },
+        {
+          "key": "effective_until",
+          "dataType": "datetime",
+          "readPolicy": "authorized_projection",
+          "sensitivity": "internal"
+        }
+      ],
+      "load": "on_visible",
+      "implementationStatus": "draft_requires_handler_registration"
+    }
+  ]
 }

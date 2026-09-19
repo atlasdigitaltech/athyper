@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "contractStatus",
+    "artifactType",
+    "artifactKey",
+    "entityCode",
+    "plane",
+    "dependencies",
+    "artifactHash"
+  ],
+  "properties": {
+    "activation": {},
+    "artifactHash": {},
+    "artifactType": {
+      "const": "release_envelope"
+    },
+    "artifacts": {},
+    "contractStatus": {},
+    "externalDependencies": {},
+    "hashing": {},
+    "publicationKey": {},
+    "releaseHash": {},
+    "releaseId": {},
+    "releaseNo": {},
+    "runtimeCompatibility": {},
+    "schema": {},
+    "scope": {},
+    "signature": {},
+    "supersedesReleaseId": {},
+    "targetPlanes": {},
+    "schemaVersion": {
+      "const": 2
+    },
+    "plane": {
+      "const": "neon"
+    }
+  }
+}

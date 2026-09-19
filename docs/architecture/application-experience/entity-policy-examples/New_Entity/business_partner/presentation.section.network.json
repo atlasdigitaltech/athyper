@@ -19,41 +19,7 @@
     "includeInAggregate": false
   },
   "coreRef": "business_partner/core.json",
-  "fieldBindings": [
-    {
-      "fieldKey": "code"
-    },
-    {
-      "fieldKey": "name"
-    },
-    {
-      "fieldKey": "registration_country_code"
-    },
-    {
-      "fieldKey": "partner_category"
-    },
-    {
-      "fieldKey": "ownership_class"
-    },
-    {
-      "fieldKey": "legal_form"
-    },
-    {
-      "fieldKey": "incorporation_date"
-    },
-    {
-      "fieldKey": "website_url"
-    },
-    {
-      "fieldKey": "description"
-    },
-    {
-      "fieldKey": "status"
-    },
-    {
-      "fieldKey": "record_version"
-    }
-  ],
+  "fieldBindings": [],
   "authorization": {
     "viewPermission": "neon.relationship.business_partner_network.read",
     "fieldPermissions": [],
@@ -74,7 +40,45 @@
   "load": "on_visible",
   "requiredContext": "resolve_from_target_core",
   "dependencies": [
-    "business_partner/core"
+    "business_partner/core",
+    "business_partner_governance_relation/core",
+    "business_partner_governance_relation/operation"
   ],
-  "artifactHash": "sha256:16a0b8f64d2a93a64364667454f20b66f89e19851293d4890d1dc6607e56ac2d"
+  "artifactHash": "sha256:4a0161915321ac3e6c2e41cd93b158ed45eda5c980431d331434fdbe5842a2e0",
+  "childCollections": [
+    {
+      "key": "governance_relations",
+      "entityCode": "business_partner_governance_relation",
+      "coreRef": "business_partner_governance_relation/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "relation_type_code"
+        },
+        {
+          "fieldKey": "member_name"
+        },
+        {
+          "fieldKey": "member_type"
+        },
+        {
+          "fieldKey": "business_title"
+        },
+        {
+          "fieldKey": "ownership_pct"
+        },
+        {
+          "fieldKey": "appointed_date"
+        },
+        {
+          "fieldKey": "end_of_term"
+        },
+        {
+          "fieldKey": "status"
+        }
+      ],
+      "load": "on_visible",
+      "operationRef": "business_partner_governance_relation/operation.json"
+    }
+  ]
 }

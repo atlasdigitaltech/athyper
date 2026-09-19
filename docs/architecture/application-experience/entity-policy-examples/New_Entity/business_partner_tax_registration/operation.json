@@ -36,7 +36,13 @@
         "denyUnresolved": true
       },
       "idempotency": "required",
-      "draftEntityCode": "business_partner_request"
+      "draftEntityCode": "business_partner_request",
+      "targetBinding": {
+        "targetEntityCode": "business_partner_tax_registration",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
     },
     {
       "key": "reveal",
@@ -60,47 +66,11 @@
     }
   ],
   "policyBindings": [],
-  "evaluationContract": {
-    "context": [
-      "record.current",
-      "record.proposed",
-      "record.changedPaths",
-      "actor",
-      "businessContext",
-      "evidence",
-      "asOf"
-    ],
-    "combining": "deny_overrides",
-    "missingRequiredPolicy": "block",
-    "unavailablePolicy": "block",
-    "invalidPolicy": "block",
-    "decisionTrace": "server_audit",
-    "dynamicDecisionsCache": "not_shared",
-    "policyRevision": "pin_at_submission_revalidate_security_at_commit"
-  },
-  "concurrency": {
-    "expectedRecordVersionRequired": true,
-    "approvalBoundToPayloadHash": true,
-    "materializationIdempotent": true
-  },
   "dependencies": [
-    "business_partner_tax_registration/core"
+    "business_partner_tax_registration/core",
+    "platform/governed-child-operation.v1"
   ],
-  "consumedBy": [
-    "server_reads",
-    "server_writes"
-  ],
-  "browserProjection": "authorized_action_summary_only",
-  "transactionOrder": [
-    "resolve_pinned_release",
-    "authorize_current_actor",
-    "resolve_persisted_context",
-    "validate_input",
-    "evaluate_preconditions",
-    "compare_record_version",
-    "commit_domain_changes_and_audit",
-    "enqueue_outbox"
-  ],
-  "handlerBindingStatus": "proposed_registry_keys_require_implementation_verification",
-  "artifactHash": "sha256:be04b95a709623f9fced7a2742916d30897a1257bb1202e2f524cf61ad6e687f"
+  "artifactHash": "sha256:f9b2d1609951fa0eb89e283256426a02fef5527f272eb3e16c0bfe2b3dcef360",
+  "operationDefaultsProfile": "platform.governed-child-operation.v1",
+  "operationDefaultsProfileRef": "platform/governed-child-operation.v1.json"
 }

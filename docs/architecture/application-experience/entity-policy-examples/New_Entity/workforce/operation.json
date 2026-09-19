@@ -36,51 +36,21 @@
         "denyUnresolved": true
       },
       "idempotency": "required",
-      "draftEntityCode": "business_partner_request"
+      "draftEntityCode": "business_partner_request",
+      "targetBinding": {
+        "targetEntityCode": "workforce",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
     }
   ],
   "policyBindings": [],
-  "evaluationContract": {
-    "context": [
-      "record.current",
-      "record.proposed",
-      "record.changedPaths",
-      "actor",
-      "businessContext",
-      "evidence",
-      "asOf"
-    ],
-    "combining": "deny_overrides",
-    "missingRequiredPolicy": "block",
-    "unavailablePolicy": "block",
-    "invalidPolicy": "block",
-    "decisionTrace": "server_audit",
-    "dynamicDecisionsCache": "not_shared",
-    "policyRevision": "pin_at_submission_revalidate_security_at_commit"
-  },
-  "concurrency": {
-    "expectedRecordVersionRequired": true,
-    "approvalBoundToPayloadHash": true,
-    "materializationIdempotent": true
-  },
   "dependencies": [
-    "workforce/core"
+    "workforce/core",
+    "platform/governed-child-operation.v1"
   ],
-  "consumedBy": [
-    "server_reads",
-    "server_writes"
-  ],
-  "browserProjection": "authorized_action_summary_only",
-  "transactionOrder": [
-    "resolve_pinned_release",
-    "authorize_current_actor",
-    "resolve_persisted_context",
-    "validate_input",
-    "evaluate_preconditions",
-    "compare_record_version",
-    "commit_domain_changes_and_audit",
-    "enqueue_outbox"
-  ],
-  "handlerBindingStatus": "proposed_registry_keys_require_implementation_verification",
-  "artifactHash": "sha256:c52a4af5964fee8cbc16098fffcae97444e9befb177de098db3b99dfad414a67"
+  "artifactHash": "sha256:6a2fb17be873f1a517eddabee7ab3cdcf6eb1aabc7343321bf10d414d0c34d4a",
+  "operationDefaultsProfile": "platform.governed-child-operation.v1",
+  "operationDefaultsProfileRef": "platform/governed-child-operation.v1.json"
 }

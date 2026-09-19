@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "contractStatus",
+    "artifactType",
+    "artifactKey",
+    "entityCode",
+    "plane",
+    "dependencies",
+    "artifactHash"
+  ],
+  "properties": {
+    "actions": {},
+    "artifactHash": {},
+    "artifactKey": {},
+    "artifactType": {
+      "const": "presentation_surface"
+    },
+    "columns": {},
+    "contextControl": {},
+    "contractStatus": {},
+    "dataAuthority": {},
+    "dependencies": {},
+    "entityCode": {},
+    "excludedCapabilities": {},
+    "fieldDiff": {},
+    "header": {},
+    "layout": {},
+    "pageSizes": {},
+    "plane": {
+      "const": "neon"
+    },
+    "policyManifest": {},
+    "queryPresentation": {},
+    "restrictedValues": {},
+    "schema": {},
+    "schemaVersion": {
+      "const": 2
+    },
+    "sections": {},
+    "sort": {},
+    "surfaceKey": {}
+  }
+}

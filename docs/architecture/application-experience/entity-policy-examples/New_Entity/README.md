@@ -56,7 +56,7 @@ Start review with:
 - `business_partner/core.json`, `operation.json`, `presentation.detail.json`.
 - `address/core.json`, `address_link/core.json`, `address/presentation.section.json`.
 - `business_partner_request/operation.json`, `presentation.review.json`, and
-  the 19 `flow.<request-kind>.json` files.
+   `flow.base.json` and the 19 small `flow.<request-kind>.json` variants.
 - `business_partner/release.json` for the complete artifact inventory.
 - `review/source-coverage.json` for every property of the original bundle.
 
@@ -110,9 +110,23 @@ forbids inferring it from the active selector.
 ## Relations and physical bindings
 
 Fields have explicit `binding.sourceObject` + `binding.column`. Storage SQL types
-are retained separately from public data types. The catalogue is not permission
-to SELECT every field: `fieldSelection.default: deny` and `readPolicy` constrain
-normal reads; domain handlers must approve additional projections.
+are retained separately from public data types. Runtime Core includes projectable
+fields and compact `serverDependencies` needed for ownership/concurrency checks.
+Unused column catalogues live in `review/field-catalogue.json`, outside the release.
+`projectionPolicy.unknownField: deny` prevents automatic exposure. Server-only
+dependencies are never serialized into browser responses.
+
+`fieldDefaults` supplies handler-only writes, locked customization and static UI
+facets once per entity. Fields emit only exceptions. Identity and status fields
+are system-managed; BP name explicitly permits presentation facet customization.
+`tenantConfig` controls authoring/configuration visibility; it grants no record
+permission. UI `visibility` and `editability` remain distinct from authorization.
+
+The identical defaults now live once in `platform/core-field-defaults.v1.json`.
+Core artifacts reference that pinned profile. Effective precedence is field,
+entity overrides, then platform; validation runs on resolved values. Request forms
+own draft `defaultValue` declarations, and materialization owns persisted defaults;
+their absence from BP Core is intentional.
 
 Verified corrections include:
 
@@ -222,7 +236,7 @@ runtime envelope and must never be sent as one giant runtime response.
 | Field policies | Request Core, deny-overrides composition, portal allowlist |
 | Evidence, duplicate rules | Request Operation typed policy bindings |
 | Readiness gates | Supplier, Customer and Workforce Core declarations |
-| Completeness packs | BP detail Presentation; evaluate only requested facts |
+| Completeness packs | Lazy Overview, role-scope, supplier-company, credit and workforce sections |
 | Four workflow definitions | `review/workflow-policy-fixtures.json`; service configuration input |
 | API/import/internal/Mesh/portal mappings | Selected request Flow only; no direct master write |
 | Mesh safe schemas | BP share operation: explicit fields, prohibited paths, recipient relationship and selective acceptance |
@@ -272,10 +286,61 @@ Run from this directory:
 python3 validate.py
 ```
 
+For the mandatory live schema release gate (requires PostgreSQL client):
+
+```sh
+# Provide NEON_SCHEMA_DATABASE_URL through the environment/CI secret.
+python3 verify_live_schema.py
+```
+
+`.github/workflows/bp-artifact-schema-gate.yml` runs both checks; the release build
+depends on that workflow. Missing database access blocks the gate. The known local
+absence of the request table is expected to fail live validation until the target
+schema and reviewed contract agree; offline PASS does not mean releasable.
+
+Completeness items now have validated fact references. Items that gate commands also
+reference their exact Operation binding. Informational checks need no command gate.
+Manifest indexing and separately authorized export/report execution are specified
+in CONTRACT.md; UI query limits remain unchanged.
+
 The validator checks JSON parsing, required common properties, discriminator values,
-real hashes, dependency/reference closure, operation bindings, fields against current
-DDL, section field references, all 19 source flows and lossless source coverage.
-These are design consistency checks, not runtime integration or performance tests.
+real hashes, dependency/reference closure, operation bindings, storage and public
+types, section field references, translation-key collisions, all 19 source flows
+and lossless source coverage. Four negative checks cover phantom columns, corrupt
+storage types, inconsistent public types and conflicting translation keys.
+
+`review/storage-catalog.json` records independent read-only PostgreSQL catalog
+evidence. The local database lacks `document.business_partner_request`; that table
+uses a separately identified source-DDL fallback, bounded before the first table
+constraint, with a source-file digest. This is not proof of local migration parity.
+Recapture evidence after schema changes; production validation must query the target
+database. These are design checks, not integration or performance tests.
+
+## Audit correction decisions
+
+- Removed phantom `NOT`/`ELSE` columns and repaired storage/public types from catalog
+  evidence. The original unconstrained SQL regex is no longer a validator input.
+- Moved catalogue-only fields out of runtime Core and deduplicated field defaults.
+- Restored explicit UI facets, tenant configuration and locked identity fields.
+  `editRuntimeTier` permits only generic/full override; slot adapters remain deferred.
+- Snapshot capability points to the request materialization snapshot binding.
+  Additional lifecycle-triggered snapshots require a separately approved mapping;
+  they are not silently inferred from `hasLifecycle`.
+- Initial unsigned release is numbered 1 with no predecessor. Later releases must
+  identify their actual predecessor.
+- Shared invariant flow configuration lives in one base Flow. Variants carry request
+  requirements, journey/source selection and capture presentation. Resolve once into
+  a prepared flow keyed by base and variant hashes, never merge per record request.
+- Completeness packs load with their relevant sections, leaving the detail shell lean.
+- Translation keys include semantic ancestry; conflicting fallbacks are rejected.
+
+## Explicitly deferred
+
+Production signing/canonicalization, target database migration parity, registered
+execution handlers, complete payload JSON Schemas, runtime benchmarks and actual
+activation remain implementation work. Tenant custom-field storage remains disabled.
+Cross-entity field-policy authoring is not implemented: request categorical policies
+are retained, and each child continues to require its own server authorization.
 
 Before production adoption:
 
@@ -295,3 +360,43 @@ Before production adoption:
 `entity_contract_test_case` and `entity_baseline_import*` remain CI/authoring-only.
 No runtime source fixture, SQL migration, publication or activation is performed by
 this documentation package.
+# Organization business profile additions
+
+The approved initial profile scope is represented in:
+
+- `business_partner/core.json`: controlled Legal Form lookup reference.
+- `business_partner/core.json`: primary Business Type, Legal Form, Founded Year,
+  Employee Count, reporting date and organization/group scope.
+- `business_partner/presentation.section.overview.json`: the same fields on the
+  existing lazy overview section.
+
+DDL is in `server/db/ddl/planes/neon/master/18_business_partner_business_profile.sql`.
+It includes tenant constraints, lookup validation, organization-only guards, RLS
+and role grants. The DDL was checked in a rolled-back local PostgreSQL transaction;
+it has not been deployed. Read the organization-profile contract in `CONTRACT.md`
+for compatibility rules and outstanding runtime handler/materializer wiring.
+The release envelope remains an unsigned review artifact.
+
+## Review gates
+
+`validate.py` checks hashes, storage types, translation structure, query allow-lists,
+index evidence, protection/reveal bindings, relation-default compaction and local
+permission evidence. `verify_live_schema.py` and `verify_permission_catalog.py` are
+target-Neon release gates. The GitHub workflow runs both using the target database
+secret; it must pass before activation, including publication of every permission
+referenced by the release.
+
+`test_validate.py` runs a mutation suite against a temporary copy of this package.
+It proves that invalid policies, missing tenant identity, ineffective indexes,
+unmasked protected values, editable server-managed fields, permission mismatches,
+unsafe shared request targets, invalid child bindings and translation collisions fail
+validation. The validator uses explicit `AssertionError` raises, so these checks also
+remain active under `python -O`.
+
+Query/index evidence is expression-aware. The Business Partner name and code query paths use `lower(...)`; their DDL indexes use `text_pattern_ops` for reliable case-insensitive prefix search and their descriptor sorts explicitly use `casefold`. The live gate compares key expressions, operator classes, uniqueness and predicates rather than whole `pg_indexes.indexdef` strings, which avoids PostgreSQL-version formatting differences.
+
+The Business Partner aggregate excludes banking and workforce relations until their persisted ownership paths are published in reviewed storage evidence. Their existing sections stay server-owned; they do not gain aggregate relation authority from a handler name.
+
+The schema gate creates its libpq environment only from `NEON_SCHEMA_DATABASE_URL`: inherited `PG*` variables are stripped and unsupported URL parameters are rejected. It verifies the connected database name, reports the URL host/database on success, and rejects missing, invalid, or not-ready reviewed indexes.
+
+Before marking `sourceMigrationParityVerified` true, run `verify_source_migration_parity.py` with clean and upgraded PostgreSQL URLs. It compares every reviewed column’s type, base type, and nullability, and only updates the flag with `--write-evidence` after an exact match.

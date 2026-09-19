@@ -757,5 +757,20 @@
     "clientExposure": "redacted_authorized_subset",
     "independentAuthority": false
   },
-  "artifactHash": "sha256:85a686c4ecc7b105305f3bdecc25165bdcb44d95c888415f9614a2df8cc2ac00"
+  "snapshotBinding": {
+    "bindingKey": "business_partner.materialization_snapshot",
+    "operationKey": "materialize",
+    "serviceKey": "platform.entity-snapshot.v1",
+    "trigger": "successful_materialization",
+    "capture": [
+      "approved_payload",
+      "target_record_version",
+      "release_id",
+      "policy_revision",
+      "business_context"
+    ],
+    "idempotency": "one_per_materialization_receipt",
+    "lifecycleTriggerExtensions": "requires_approved_transition_mapping"
+  },
+  "artifactHash": "sha256:d585ac78975c84174fda70ca8531aec2c308d6366de11a43dc1a5e59828c77c0"
 }
