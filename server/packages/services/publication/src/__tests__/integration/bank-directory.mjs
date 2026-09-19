@@ -1,0 +1,70 @@
+// Run only against freshly built disposable databases. This test commits fixtures.
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { createHash,generateKeyPairSync,sign,verify,randomUUID } from 'node:crypto';
+import pg from 'pg';
+import { Kysely,PostgresDialect,sql } from 'kysely';
+import { BankDirectoryService } from '../../bank-directory-service.ts';
+import { KyselyPublicationAuthorityRepository } from '../../kysely-authority-repository.ts';
+import { KyselyPublicationAuthorityWork } from '../../kysely-publication-authority-work.ts';
+import { KyselyLocalProjectionRepository } from '../../kysely-local-projection-repository.ts';
+import { VerifiedPublicationArtifactLoader } from '../../publication-artifact-loader.ts';
+import { PublicationOrchestrator } from '../../publication-orchestrator.ts';
+import { resolveBankDirectoryReference,reconcileBankDirectoryReferences } from '../../bank-directory-reader.ts';
+if(process.env.BANK_DIRECTORY_DISPOSABLE_TEST!=='1')throw new Error('BANK_DIRECTORY_DISPOSABLE_TEST=1 is required; this test commits fixtures');
+const tenant='00000000-0000-0000-0000-000000000000',maker='11000000-0000-4000-8000-000000000001',checker='11000000-0000-4000-8000-000000000002';
+const databases=[];function database(plane,role){const db=new Kysely({dialect:new PostgresDialect({pool:new pg.Pool({host:'127.0.0.1',port:Number(process.env.BANK_DIRECTORY_TEST_PORT??55439),user:'postgres',database:`athyper_${plane}`,options:`-c app.current_tenant_id=${tenant} -c app.database_plane=${plane}${role?` -c role=${role}`:''}`})})});databases.push(db);return db;}
+const admin=database('studio');
+try{
+ assert.equal((await sql`SELECT count(*)::int n FROM shared.bank_directory_release`.execute(admin)).rows[0].n,0,'fresh Studio directory required');
+ await sql`SELECT set_config('app.current_principal_id',${tenant},false)`.execute(admin);
+ await sql`INSERT INTO master.principal(id,tenant_id,code,name,principal_type,created_by) VALUES(${maker}::uuid,${tenant}::uuid,'bank.maker','Test maker','user',${tenant}::uuid),(${checker}::uuid,${tenant}::uuid,'bank.checker','Test checker','user',${tenant}::uuid) ON CONFLICT(id) DO NOTHING`.execute(admin);
+ await sql`INSERT INTO publication.bank_directory_authority VALUES(true,${tenant}::uuid) ON CONFLICT(singleton) DO NOTHING`.execute(admin);
+ const studio=database('studio','athyper_publication_service'),authority=new KyselyPublicationAuthorityRepository(studio);
+ const locals=Object.fromEntries(['studio','neon','mesh'].map(p=>[p,database(p,'athyper_projection_applier')]));
+ const inspectPlane=async plane=>{const row=(await sql`SELECT r.* FROM shared.bank_directory_activation a JOIN shared.bank_directory_release r ON r.id=a.release_id`.execute(locals[plane])).rows[0];const releases=(await sql`SELECT id,content_hash hash FROM shared.bank_directory_release`.execute(locals[plane])).rows;return {available:true,releases,...(row?{releaseId:row.id,version:Number(row.version),hash:row.content_hash}:{})};};
+ const service=new BankDirectoryService({database:studio,authority,inspectPlane,inspectReferences:(plane,refs)=>reconcileBankDirectoryReferences(locals[plane],refs)});
+ const seed=JSON.parse(await readFile(new URL('../../../../../../db/seed/reference/bank-directory/development.v1.json',import.meta.url),'utf8'));
+ await assert.rejects(service.import({tenantId:randomUUID(),actorId:maker,idempotencyKey:'other',source:seed}),/AUTHORITY_REQUIRED/);
+ const draft=await service.import({tenantId:tenant,actorId:maker,idempotencyKey:'verified-seed-v1',source:seed});
+ assert.deepEqual(draft.validation_report.issues,[]);assert.equal(draft.validation_report.valid,true);
+ assert.equal((await service.import({tenantId:tenant,actorId:maker,idempotencyKey:'verified-seed-v1',source:seed})).id,draft.id);
+ await assert.rejects(service.import({tenantId:tenant,actorId:maker,idempotencyKey:'verified-seed-v1',source:{...seed,x:1}}),/IDEMPOTENCY_CONFLICT/);
+ assert.equal((await sql`SELECT count(*)::int n FROM shared.bank_directory_release`.execute(admin)).rows[0].n,0,'validation must roll back rehearsal');
+ await assert.rejects(service.review({tenantId:tenant,actorId:maker,revisionId:draft.id,decision:'approved',reason:'self'}),/SELF_APPROVAL_FORBIDDEN/);
+ const invalid=structuredClone(seed);invalid.payload.identifiers[0].value='INVALID';const bad=await service.import({tenantId:tenant,actorId:maker,idempotencyKey:'invalid',source:invalid});
+ await assert.rejects(service.review({tenantId:tenant,actorId:checker,revisionId:bad.id,decision:'approved',reason:'invalid'}),/REVALIDATION_REQUIRED/);
+ assert.equal((await service.review({tenantId:tenant,actorId:checker,revisionId:bad.id,decision:'rejected',reason:'Invalid BIC'})).release,null);
+ const stale=await service.import({tenantId:tenant,actorId:maker,idempotencyKey:'stale',source:seed});
+ const command={tenantId:tenant,actorId:checker,revisionId:draft.id,decision:'approved',reason:'Verified official bank sources'};
+ const {release}=await service.review(command);assert.equal((await service.review(command)).release.id,release.id);
+ await assert.rejects(service.review({tenantId:tenant,actorId:checker,revisionId:stale.id,decision:'approved',reason:'stale'}),/REVALIDATION_REQUIRED/);
+ await assert.rejects(sql`UPDATE snapshot.bank_directory_revision SET payload='{}' WHERE id=${draft.id}::uuid`.execute(admin),/immutable/);
+ await assert.rejects(sql`UPDATE publication.bank_directory_review SET reason='edited'`.execute(admin),/immutable/);
+ const missing=await resolveBankDirectoryReference(locals.neon,{releaseId:release.id,institutionId:draft.payload.institutions[0].id});assert.equal(missing.state,'pending');assert.equal('institution' in missing,false);
+ const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b)).map(([k,w])=>[k,canonical(w)])):v;
+ const canonicalizer={canonicalBytes:v=>Buffer.from(JSON.stringify(canonical(v))),sha256:b=>createHash('sha256').update(b).digest('hex')};
+ const {privateKey,publicKey}=generateKeyPairSync('ed25519');const signer={sign:async({bytes})=>({signature:sign(null,bytes,privateKey).toString('base64')})},verifier={verify:async({bytes,signature})=>verify(null,bytes,publicKey,Buffer.from(signature,'base64'))};
+ const blobs=new Map();const store={putImmutable:async({sha256,bytes})=>{if(blobs.has(sha256))assert.deepEqual(blobs.get(sha256),bytes);blobs.set(sha256,bytes);},get:async({expectedSha256})=>blobs.get(expectedSha256)};
+ const work=new KyselyPublicationAuthorityWork({database:studio,authority,store,signer,canonicalizer,bucket:'test',signingKeyId:'test-ed25519',targetEnvironment:'test',targetPlanes:['studio','neon','mesh']});
+ const first=await work.compile(release.id);assert.equal(first.compilationIds.length,3);assert.deepEqual(await work.compile(release.id),first);
+ const loader=new VerifiedPublicationArtifactLoader({store,verifier,canonicalizer,runtimeVersion:'1.0.0'});
+ for(const id of first.compilationIds){const {deploymentId}=await work.sign(id);assert.equal((await work.sign(id)).deploymentId,deploymentId);const {targetPlane}=await work.dispatch(deploymentId);const projection=new KyselyLocalProjectionRepository(locals[targetPlane]);const orchestrator=new PublicationOrchestrator(authority,projection,loader);const active=await orchestrator.deploy(deploymentId);assert.equal(active.status,'active');assert.equal((await orchestrator.deploy(deploymentId)).id,active.id);
+  const resolved=await resolveBankDirectoryReference(locals[targetPlane],{releaseId:release.id,institutionId:draft.payload.institutions[0].id});assert.equal(resolved.state,'resolved');assert.equal(resolved.hash,draft.content_hash);assert.equal(resolved.identifiers.length,1);
+  assert.equal((await resolveBankDirectoryReference(locals[targetPlane],{releaseId:release.id,institutionId:randomUUID()})).state,'unresolved');
+  await assert.rejects(projection.rollback({publicationKey:'shared.bank_directory',targetAppliedReleaseId:active.id}),/FORWARD_CORRECTION/);
+ }
+ const refs=await service.reconcileReferences(tenant,checker,[{releaseId:release.id,institutionId:draft.payload.institutions[0].id},{releaseId:release.id,institutionId:randomUUID()},{releaseId:randomUUID(),institutionId:draft.payload.institutions[0].id}]);assert.ok(refs.planes.every(p=>p.report.resolved===1&&p.report.pending===1&&p.report.unresolved===1));
+ const status=await service.reconcile(tenant,checker);assert.ok(status.planes.every(p=>p.state==='current'));assert.equal(status.deliveries.length,3);assert.ok(status.deliveries.every(d=>!!d.acknowledged_at));
+ const changed=structuredClone(seed);changed.payload.institutions[0].name='DBS Bank (development correction)';const second=await service.import({tenantId:tenant,actorId:maker,idempotencyKey:'v2',source:changed});assert.equal(second.validation_report.valid,true);const {release:r2}=await service.review({tenantId:tenant,actorId:checker,revisionId:second.id,decision:'approved',reason:'Test forward correction'});
+ const next=await work.compile(r2.id);for(const id of next.compilationIds){const {deploymentId}=await work.sign(id);const {targetPlane}=await work.dispatch(deploymentId);const deployment=await authority.getDeployment(deploymentId);const loaded=await loader.load(deployment);const projection=new KyselyLocalProjectionRepository(locals[targetPlane]);
+  const future=structuredClone(loaded.document),futureId=randomUUID();future.envelope.releaseId=futureId;future.envelope.releaseNo=3;future.envelope.payload.id=futureId;future.envelope.payload.version=3;future.manifest.releaseId=futureId;future.manifest.releaseNo=3;
+  await assert.rejects(projection.stage({deployment:{...deployment,deploymentId:randomUUID(),sourceReleaseId:futureId,sourceReleaseNo:3},artifact:future}),/PREDECESSOR_PENDING/);
+  const tampered=structuredClone(loaded.document);tampered.envelope.payload.contentHash='f'.repeat(64);await assert.rejects(projection.stage({deployment,artifact:tampered}),/VALIDATION_FAILED/);
+  assert.equal((await inspectPlane(targetPlane)).version,1);
+  const staged=await projection.stage({deployment,artifact:loaded.document});const rejected=await projection.verify({appliedReleaseId:staged.id,computedArtifactHash:'f'.repeat(64),evidence:loaded.verification});assert.equal(rejected.status,'rejected');await assert.rejects(projection.activate({appliedReleaseId:staged.id}));assert.equal((await inspectPlane(targetPlane)).version,1);
+ }
+ const missingHistory=new BankDirectoryService({database:studio,authority,inspectPlane:async()=>({available:true,releaseId:r2.id,version:2,hash:second.content_hash,releases:[{id:r2.id,hash:second.content_hash}]})});assert.ok((await missingHistory.reconcile(tenant,checker)).planes.every(p=>p.state==='missing_history'&&p.missingReleases.includes(release.id)));
+ const wrongHash=new BankDirectoryService({database:studio,authority,inspectPlane:async()=>({available:true,releaseId:r2.id,version:2,hash:'0'.repeat(64)})});assert.ok((await wrongHash.reconcile(tenant,checker)).planes.every(p=>p.state==='hash_mismatch'));
+ console.log('BANK_DIRECTORY_PIPELINE_OK: independent approval, immutable revisions, real Ed25519 artifacts, three-plane atomic activation and receipts, pending references, rejected imports and retained active heads');
+}finally{await Promise.all(databases.map(d=>d.destroy()));}

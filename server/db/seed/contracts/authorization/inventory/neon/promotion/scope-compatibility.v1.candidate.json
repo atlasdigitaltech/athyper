@@ -306,6 +306,27 @@
       ]
     },
     {
+      "permissionCode": "neon.context.catalog.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        },
+        {
+          "kind": "company_code",
+          "propagation": "exact"
+        },
+        {
+          "kind": "operating_organization",
+          "propagation": "subtree"
+        }
+      ]
+    },
+    {
       "permissionCode": "neon.organization.company_code.activate",
       "scopes": [
         {
@@ -877,5 +898,5 @@
       ]
     }
   ],
-  "sha256": "4fc7acc76a66df623a9e9a656da1359b388ab0f844ad06c526ae7ca1e8034ad8"
+  "sha256": "2c57f8aaee3aa3fb420c368d82eab03811bb8c8b375a75a0e6afe831bb8c5039"
 }

@@ -1,0 +1,62 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.contacts",
+  "entityCode": "contact_person",
+  "plane": "neon",
+  "sectionKey": "contacts",
+  "rendererKey": "platform.related-collection.v1",
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.contacts.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/contacts"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "contact_person/core.json",
+  "fieldBindings": [
+    {
+      "fieldKey": "contact_name"
+    },
+    {
+      "fieldKey": "business_title"
+    },
+    {
+      "fieldKey": "department_name"
+    },
+    {
+      "fieldKey": "is_primary"
+    },
+    {
+      "fieldKey": "status"
+    }
+  ],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner_contact.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [
+    "contact_person/core"
+  ],
+  "artifactHash": "sha256:2227d7b6a1e96a480fec8f0dcff759b4edbddd2b27cbd9e880eb4c4374392bfe"
+}

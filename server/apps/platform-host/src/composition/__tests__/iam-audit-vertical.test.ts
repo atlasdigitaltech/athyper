@@ -62,6 +62,24 @@ describe("IAM plus Audit vertical", () => {
     expect(sink.events[0]).toMatchObject({
       eventCode: "iam.authentication.succeeded", tenantId: "tenant-1", requestId: "request-1",
     });
+    for (const headers of [
+      {},
+      { authorization: "Bearer signed-token" },
+      { authorization: "Bearer invalid-token", "x-plane": "neon" },
+    ]) {
+      const rejected = await fetch(`${baseUrl}/api/audit/status`, { headers });
+      expect(rejected.status).toBe(401);
+      expect(rejected.headers.get("cache-control")).toBe("private, no-store");
+    }
+    const append = vi.spyOn(sink, "append").mockRejectedValue(new Error("Audit sink unavailable"));
+    try {
+      const unavailable = await fetch(`${baseUrl}/api/audit/status`, {
+        headers: { authorization: "Bearer signed-token", "x-plane": "neon" },
+      });
+      expect(unavailable.status).toBe(503);
+      expect(unavailable.headers.get("cache-control")).toBe("private, no-store");
+      await expect(unavailable.json()).resolves.toMatchObject({ code: "AUTH_AUDIT_UNAVAILABLE" });
+    } finally { append.mockRestore(); }
   });
 
   it("exposes the authenticated provisioning request contract", async () => {

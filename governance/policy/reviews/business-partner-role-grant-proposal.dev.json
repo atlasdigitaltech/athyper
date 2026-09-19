@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "kind": "separate_grant_change_proposal",
+  "status": "no_grant_changes_proposed",
+  "sourceSha256": "2cf94f7cf0d700b68de6c0ce41e5384149f7fc5af25f202c7a721db12b674b09",
+  "reviewPacket": "governance/policy/reviews/business-partner-named-role-recommendations.dev.json",
+  "batchManifests": [
+    {
+      "batchId": "bp-review-0011ad97ffebfd44",
+      "batchSha256": "ae4104b6a6be483fc5885aaa286b8889e2fb6c266ab80ff625fea6116719c33e"
+    },
+    {
+      "batchId": "bp-review-002dec0e75f6ee6c",
+      "batchSha256": "b3bb536aca3725246a164462aff484bc9bb232c5ae076678469d15a47d0847ac"
+    },
+    {
+      "batchId": "bp-review-016e22874168d49f",
+      "batchSha256": "80d63bb2813cfc681a08a252cec28e587841fc304e022c974beea504975b1571"
+    },
+    {
+      "batchId": "bp-review-0dbff841d7c4090f",
+      "batchSha256": "103cb5511d1e96b2ce556c6daacadc1197897d649370744b18069e6a089ea61a"
+    },
+    {
+      "batchId": "bp-review-0e09c3e7318f803e",
+      "batchSha256": "769239e69219790283f9a4d1097ed6d4d1f4eb157ee162fe1c942ba9e5faecf7"
+    },
+    {
+      "batchId": "bp-review-0faaf52bde6237fc",
+      "batchSha256": "8c57136b6dd4ef3a362d56bb509f3fdf889dd7db1bbbc26dfbccdae944c6bbfa"
+    },
+    {
+      "batchId": "bp-review-162dcf86eb803a25",
+      "batchSha256": "f7a0e5886ed791e3d300ad869d24d6f280a4a8d0d51829cdf530944d3a982c02"
+    },
+    {
+      "batchId": "bp-review-18e534de0b6cb799",
+      "batchSha256": "f3e85b8b26f2607b360f4f8e4ebe9b6af986ae781d22fcbe21ceefec81ff79eb"
+    },
+    {
+      "batchId": "bp-review-1af22b324f3b28fe",
+      "batchSha256": "4d2b41064f82b51c77d53404b9f901a173775aecb43d4326675a7455999839e2"
+    },
+    {
+      "batchId": "bp-review-2171c56f6e3a63d7",
+      "batchSha256": "4bda4651cf0b2189f27cff5cdcb3138c3ef7fabe6be654cb9d992687e534cd15"
+    },
+    {
+      "batchId": "bp-review-2f9adf27db58a2cb",
+      "batchSha256": "66f5ccde53918d8df969e3cda5f2ce2792cdca75387578c795cb20134f72e36a"
+    },
+    {
+      "batchId": "bp-review-3568895fe14deb13",
+      "batchSha256": "93fba7ed2a4467b667a73eb197a90fc29237aaf4be0633aa20bc6a4deacc2791"
+    },
+    {
+      "batchId": "bp-review-3dee4b0dddb72244",
+      "batchSha256": "24527a6df6d93697f902064432738982f3f4cee62e6d00a23055b27ed54705ea"
+    },
+    {
+      "batchId": "bp-review-408250ff5877e6e7",
+      "batchSha256": "f97b39ca6a7004a5e048a95f0381eb547ae2eb6bd7f38016033f28c48ca23601"
+    },
+    {
+      "batchId": "bp-review-42cb62c2c4a4efc2",
+      "batchSha256": "a88a675470887eb8ee8a94b73a1022cd00317ee76cb58c7b6f62707e66afa6eb"
+    },
+    {
+      "batchId": "bp-review-439168313e926862",
+      "batchSha256": "b89e0d2b0060c78f4db392b84d77068ebe7b6f894fbf05966da5e146d8735029"
+    },
+    {
+      "batchId": "bp-review-4634af9b2b55060d",
+      "batchSha256": "473d39d90e3f01f7029eae0a20404ec9d26c31b441c0b5e471d83f6233345447"
+    },
+    {
+      "batchId": "bp-review-47e7df8a1551112a",
+      "batchSha256": "c4f9e8756a71ba7cd3963c622ac8c9d9509aa32cec78da23957822a647989a51"
+    },
+    {
+      "batchId": "bp-review-499a1504d4f5c237",
+      "batchSha256": "e8d27024b2e013780a94049760ac8a75c6750fa2c939ba1ba5c4dc2be5947d0a"
+    },
+    {
+      "batchId": "bp-review-4cd381e66d858190",
+      "batchSha256": "a70ea64b4135096301a5f915fd12be77444574ab5f83ccd56f134b061a51221b"
+    },
+    {
+      "batchId": "bp-review-5ce791d3d6195398",
+      "batchSha256": "be7269c8161b1568e62dc69e15bdcb1403f5e33473f18c01620dce0ef887a108"
+    },
+    {
+      "batchId": "bp-review-6ae817e63f67f5e6",
+      "batchSha256": "d22a7d56dcd90f7db8be57645438b4cd85970750e8f1d5203c8d5e8fa88c0351"
+    },
+    {
+      "batchId": "bp-review-6c82dccac482697e",
+      "batchSha256": "02865e9189a7ba5efb96f22abb18e691c3ea9b4f21741fdca3ced9c10cc78879"
+    },
+    {
+      "batchId": "bp-review-6e956eb4a0c9be4b",
+      "batchSha256": "129805cab43118898bb1215a6914b2b07817cc2474bb83827d810b17d27e4292"
+    },
+    {
+      "batchId": "bp-review-6fe7cf083039e76b",
+      "batchSha256": "e1a967cced1530c4e7c9ed6525b296fec0556aa033112b55171ad3cd0c530e0f"
+    },
+    {
+      "batchId": "bp-review-7da894fb2cb8caf3",
+      "batchSha256": "3fcb6782024c1584d897c1c003444bdb4b6ecf85b4b233197282d796c8642f0d"
+    },
+    {
+      "batchId": "bp-review-8764eb0589b46e47",
+      "batchSha256": "5d8e122cba3040c3958bcad2a82afb1f0ac943e86b0a3e57a8efbaa662067b80"
+    },
+    {
+      "batchId": "bp-review-90bbc7908ef9f5a0",
+      "batchSha256": "b53ba2650f410160b7a4ad5586d345bf65eff1db0a27a54aaf54d0276d49b042"
+    },
+    {
+      "batchId": "bp-review-9184a5a0470cad97",
+      "batchSha256": "494a7d472875dae14e72c7fedbb7b64ee91a45f758c0179d3966bbf2ffd27de5"
+    },
+    {
+      "batchId": "bp-review-95af1c439382793d",
+      "batchSha256": "eb8cb11b4adccfacf069a9f965645b86af7c3e936acf85c413ce19f4cc173a21"
+    },
+    {
+      "batchId": "bp-review-983f61f8e77f4157",
+      "batchSha256": "bf809686410eaa51881e30ae38b6b2e7185c4183f41bab68786871ff1df1609d"
+    },
+    {
+      "batchId": "bp-review-a12f1aabf522b638",
+      "batchSha256": "3a23c3e00767d34ee71e94777637ed21335c32902bc6b56c1621f8da692141dd"
+    },
+    {
+      "batchId": "bp-review-a2a1131d60502250",
+      "batchSha256": "84c2bc494909a02912ee793d2d243c1737af3a5992d1c6ff424b3e4fce2f60ef"
+    },
+    {
+      "batchId": "bp-review-a6ffd2c3c31f38ce",
+      "batchSha256": "c3be32f8d0aa5e0dfa8afe99f78495fdabccbaf5e41572e50d380e0ff58c3b21"
+    },
+    {
+      "batchId": "bp-review-c096f28d853f27e2",
+      "batchSha256": "034f486a7598aaf4bb4c05c218dcb132b9678fdd4c08cf651e0ab4ca70ced54a"
+    },
+    {
+      "batchId": "bp-review-d07c1366d7b88e00",
+      "batchSha256": "1631defe4e4c3df8d0ef05099a72f3f06557db50b14c3530c9b6a93ab558453e"
+    },
+    {
+      "batchId": "bp-review-d251ffd2818534ac",
+      "batchSha256": "89c7fa0e9047bde7433f471cfc570c8fdd2bb128fc707b20cafa9232ae1e196a"
+    },
+    {
+      "batchId": "bp-review-d4abf633c2f6ebb8",
+      "batchSha256": "eb01e806f01891cab936622a361b9ec515337930ac10b02a9f7dcd971b619510"
+    },
+    {
+      "batchId": "bp-review-d4f39b9814d73346",
+      "batchSha256": "ecda5db93736199363a2c9ac394d6fe1ab135fde7b057565742c1a8ec46af353"
+    },
+    {
+      "batchId": "bp-review-da1e022b61a362c1",
+      "batchSha256": "8d648d701924309f5d0c560b1e1d4916d70d641321dc1026d1f9f357812890d1"
+    },
+    {
+      "batchId": "bp-review-e55882179c40eaad",
+      "batchSha256": "971766eba62c7f59a16e774997e21def552113f92c77331c15d1b827cd2010a7"
+    },
+    {
+      "batchId": "bp-review-e7ed9a3a4014d99a",
+      "batchSha256": "6dd2655d8cfc18e2a2f9872828c4e32f6c93a1b467f57ba5ab691aa3cf7f9771"
+    },
+    {
+      "batchId": "bp-review-eb17c622fa8096c7",
+      "batchSha256": "98206785f6773f3328b7cc656beb2d8a179dc87615067c06952d05606d6e5477"
+    },
+    {
+      "batchId": "bp-review-f25088bd0d7bb277",
+      "batchSha256": "7f7942a5fb964d32940c3a3fd606b3b53e775d8a53d75bd0fe1b3f2dc1861c79"
+    },
+    {
+      "batchId": "bp-review-f4bbc25cca3f264c",
+      "batchSha256": "a40e92b5050fb383002fcda186f22add1e55c468b13f66f00072503a2e3cd635"
+    },
+    {
+      "batchId": "bp-review-fbdb34b22a6373de",
+      "batchSha256": "311815ade571fa95a5f8367b0ddedc2191af30d6a16f176774bcc98ce173be5e"
+    },
+    {
+      "batchId": "bp-review-fec66db181de3b79",
+      "batchSha256": "5a87142b0bb7b9314d21c2561b6ba1000dac5d710e8ae38b6b697e1f74ceca4b"
+    }
+  ],
+  "changes": [],
+  "exclusionEffect": "Target-mapping exclusion only; no removal, expiry, denial, membership change or revocation of existing grants.",
+  "unmappedCapabilityEffect": "Remain under existing legacy authorization; assignment recommendations do not approve them for target enforcement.",
+  "futureSeparateDesign": [
+    "Explicit directory discovery versus tenant global-record read capabilities and named assignees",
+    "Global steward proposal/approval/application capabilities; no promotion from administrator roles",
+    "Company configurator capability with actual company-code ownership; no conversion from legal-entity grants",
+    "Sensitive purpose/data-class read, write and reveal grants"
+  ],
+  "applySupported": false,
+  "activationAuthorized": false
+}

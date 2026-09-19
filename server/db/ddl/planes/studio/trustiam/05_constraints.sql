@@ -7,3 +7,11 @@ ALTER TABLE trustiam.identity_provisioning_attempt ADD CONSTRAINT trustiam_ident
 ALTER TABLE trustiam.projection_reconciliation_attempt
  ADD CONSTRAINT trustiam_projection_reconciliation_attempt_projection_fk FOREIGN KEY(authority_tenant_id,projection_id) REFERENCES trustiam.application_projection(authority_tenant_id,id) ON DELETE RESTRICT,
  ADD CONSTRAINT trustiam_projection_reconciliation_attempt_replay_fk FOREIGN KEY(authority_tenant_id,manual_replay_of) REFERENCES trustiam.projection_reconciliation_attempt(authority_tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE trustiam.identity_projection
+ ADD CONSTRAINT trustiam_identity_projection_tenant_fk FOREIGN KEY(authority_tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+ ADD CONSTRAINT trustiam_identity_projection_organization_fk FOREIGN KEY(authority_tenant_id,organization_id) REFERENCES trustiam.organization(authority_tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE trustiam.identity_saga_attempt
+ ADD CONSTRAINT trustiam_identity_saga_attempt_projection_fk FOREIGN KEY(authority_tenant_id,identity_projection_id) REFERENCES trustiam.identity_projection(authority_tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT trustiam_identity_saga_attempt_replay_fk FOREIGN KEY(authority_tenant_id,manual_replay_of) REFERENCES trustiam.identity_saga_attempt(authority_tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE trustiam.provider_identity_callback_inbox
+ ADD CONSTRAINT trustiam_provider_identity_callback_projection_fk FOREIGN KEY(authority_tenant_id,identity_projection_id) REFERENCES trustiam.identity_projection(authority_tenant_id,id) ON DELETE RESTRICT;

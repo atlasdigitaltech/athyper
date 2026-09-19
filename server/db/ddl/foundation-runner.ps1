@@ -15,6 +15,8 @@ param(
 
     [string] $DatabaseUser,
 
+    [string] $ResumeFrom,
+
     [switch] $CreateDatabaseOnly,
     [switch] $AuthorizationIdempotency
 )
@@ -30,6 +32,9 @@ if ($CreateDatabaseOnly -and $All) {
 }
 if ($CreateDatabaseOnly -and $DryRun) {
     throw "Use db:foundation:plan for a dry run; database creation is not part of a manifest."
+}
+if (-not [string]::IsNullOrWhiteSpace($ResumeFrom) -and ($DryRun -or $CreateDatabaseOnly -or $All)) {
+    throw "-ResumeFrom requires one explicit plane apply operation."
 }
 if (-not [string]::IsNullOrWhiteSpace($DockerContainer)) {
     $Docker = $true
@@ -396,6 +401,14 @@ function Invoke-PlaneBuild {
     )
 
     $files = @(Get-ManifestFiles -ManifestRelativePath $Definition.Manifest)
+    if (-not [string]::IsNullOrWhiteSpace($ResumeFrom)) {
+        $relativePaths = [string[]] @($files | ForEach-Object { $_.RelativePath })
+        $resumeIndex = [Array]::IndexOf($relativePaths, $ResumeFrom)
+        if ($resumeIndex -lt 0) {
+            throw "Resume path is not present in the $PlaneName manifest: $ResumeFrom"
+        }
+        $files = @($files[$resumeIndex..($files.Count - 1)])
+    }
     if ($AuthorizationIdempotency) {
         $files = @($files | Where-Object {
             $path = $_.RelativePath
@@ -405,7 +418,7 @@ function Invoke-PlaneBuild {
                 $path -eq 'common/audit/12_reference_seed.sql' -or
                 $path -eq "planes/$PlaneName/master/12_platform_catalog_reference_seed.sql" -or
                 $path -eq "planes/$PlaneName/control/12_platform_catalog_reference_seed.sql" -or
-                $path -match "^planes/$PlaneName/authz/(?:12|13|14)_.+permission_reference_seed\.sql$"
+                $path -match "^planes/$PlaneName/authz/(?:12|13|14|15)_.*permission_reference_seed\.sql$"
             -not $isReferencePhase -or $isRequiredAuthorityReference
         })
         $currencyPath = [IO.Path]::GetFullPath((Join-Path $ddlRoot 'common/shared/reference-data/003_currency.sql'))
@@ -448,9 +461,13 @@ function Invoke-PlaneBuild {
         throw "Refusing $PlaneName build: expected $($Definition.Database), connected to $actualDatabase."
     }
 
-    Assert-FreshDatabase `
-        -DatabaseName $Definition.Database `
-        -ConnectionUrl $connectionUrl
+    if ([string]::IsNullOrWhiteSpace($ResumeFrom)) {
+        Assert-FreshDatabase `
+            -DatabaseName $Definition.Database `
+            -ConnectionUrl $connectionUrl
+    } else {
+        Write-Warning "Resuming $PlaneName at the explicit transactional boundary: $ResumeFrom"
+    }
 
     foreach ($file in $files) {
         Write-Host "  $($file.RelativePath)"

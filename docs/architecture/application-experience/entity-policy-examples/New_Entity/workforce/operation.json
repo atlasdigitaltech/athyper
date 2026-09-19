@@ -1,0 +1,86 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "operation",
+  "artifactKey": "workforce/operation",
+  "entityCode": "workforce",
+  "plane": "neon",
+  "operations": [
+    {
+      "key": "read",
+      "permissionCode": "neon.workforce.read",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.workforce.read.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "not_applicable"
+    },
+    {
+      "key": "request_change",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "permissionStatus": "requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.bp.governed-request.create.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required",
+      "draftEntityCode": "business_partner_request"
+    }
+  ],
+  "policyBindings": [],
+  "evaluationContract": {
+    "context": [
+      "record.current",
+      "record.proposed",
+      "record.changedPaths",
+      "actor",
+      "businessContext",
+      "evidence",
+      "asOf"
+    ],
+    "combining": "deny_overrides",
+    "missingRequiredPolicy": "block",
+    "unavailablePolicy": "block",
+    "invalidPolicy": "block",
+    "decisionTrace": "server_audit",
+    "dynamicDecisionsCache": "not_shared",
+    "policyRevision": "pin_at_submission_revalidate_security_at_commit"
+  },
+  "concurrency": {
+    "expectedRecordVersionRequired": true,
+    "approvalBoundToPayloadHash": true,
+    "materializationIdempotent": true
+  },
+  "dependencies": [
+    "workforce/core"
+  ],
+  "consumedBy": [
+    "server_reads",
+    "server_writes"
+  ],
+  "browserProjection": "authorized_action_summary_only",
+  "transactionOrder": [
+    "resolve_pinned_release",
+    "authorize_current_actor",
+    "resolve_persisted_context",
+    "validate_input",
+    "evaluate_preconditions",
+    "compare_record_version",
+    "commit_domain_changes_and_audit",
+    "enqueue_outbox"
+  ],
+  "handlerBindingStatus": "proposed_registry_keys_require_implementation_verification",
+  "artifactHash": "sha256:c52a4af5964fee8cbc16098fffcae97444e9befb177de098db3b99dfad414a67"
+}

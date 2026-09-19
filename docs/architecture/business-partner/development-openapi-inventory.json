@@ -1,0 +1,1154 @@
+{
+  "source": "https://api.dev.athyper.test/openapi.json",
+  "capturedAt": "2026-09-06T11:49:36.430Z",
+  "info": {
+    "title": "Athyper API",
+    "version": "0.1.0"
+  },
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/admin/atlas/experience/draft",
+      "operationId": "atlas.admin.experience.draft",
+      "tags": [
+        "Atlas Administration"
+      ],
+      "summary": "Read the Studio Atlas experience draft"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/atlas/experience/draft",
+      "operationId": "atlas.admin.experience.saveDraft",
+      "tags": [
+        "Atlas Administration"
+      ],
+      "summary": "Save a versioned Studio Atlas experience draft"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/atlas/experience/publish",
+      "operationId": "atlas.admin.experience.publish",
+      "tags": [
+        "Atlas Administration"
+      ],
+      "summary": "Publish the current Studio Atlas experience draft"
+    },
+    {
+      "method": "GET",
+      "path": "/api/atlas/experience",
+      "operationId": "atlas.experience.get",
+      "tags": [
+        "Atlas"
+      ],
+      "summary": "Read the permission-filtered Atlas experience"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/detail-descriptor",
+      "operationId": "entityDetail.descriptor",
+      "tags": [
+        "Entity runtime"
+      ],
+      "summary": "Compile an authorized browser-safe entity detail descriptor"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/form-descriptor",
+      "operationId": "entityForm.descriptor",
+      "tags": [
+        "Entity runtime"
+      ],
+      "summary": "Compile an authorized browser-safe entity form descriptor"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/list",
+      "operationId": "entityList.list",
+      "tags": [
+        "Entity runtime"
+      ],
+      "summary": "Query an authorized normalized entity list"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/list-descriptor",
+      "operationId": "entityList.descriptor",
+      "tags": [
+        "Entity runtime"
+      ],
+      "summary": "Compile an authorized browser-safe entity list descriptor"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/records/{recordId}",
+      "operationId": "entityDetail.record",
+      "tags": [
+        "Entity runtime"
+      ],
+      "summary": "Read an authorized record in a storage-independent envelope"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iam/contexts",
+      "operationId": "iam.listIdentityContexts",
+      "tags": [
+        "IAM"
+      ],
+      "summary": "List active exact-plane tenant memberships for the verified identity"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iam/identity-saga-attempts/{attemptId}/evidence",
+      "operationId": "iam.readIdentitySagaEvidence",
+      "tags": [
+        "IAM"
+      ],
+      "summary": "Read bounded identity saga audit evidence"
+    },
+    {
+      "method": "POST",
+      "path": "/api/iam/identity-saga-attempts/{attemptId}/replay",
+      "operationId": "iam.replayIdentitySaga",
+      "tags": [
+        "IAM"
+      ],
+      "summary": "Request maker-checker replay of an identity saga dead letter"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iam/me",
+      "operationId": "iam.getCurrentPrincipal",
+      "tags": [
+        "IAM"
+      ],
+      "summary": "Get the verified request principal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iam/projection-health",
+      "operationId": "iam.getProjectionHealth",
+      "tags": [
+        "IAM"
+      ],
+      "summary": "Read Studio-authoritative projection reconciliation health"
+    },
+    {
+      "method": "POST",
+      "path": "/api/iam/projection-reconciliation-attempts/{attemptId}/replay",
+      "operationId": "iam.replayProjectionReconciliation",
+      "tags": [
+        "IAM"
+      ],
+      "summary": "Request a reviewed replay of one dead-lettered projection attempt"
+    },
+    {
+      "method": "POST",
+      "path": "/api/iam/provisioning-requests",
+      "operationId": "iam.createProvisioningRequest",
+      "tags": [
+        "IAM"
+      ],
+      "summary": "Create an idempotent identity provisioning request"
+    },
+    {
+      "method": "POST",
+      "path": "/api/iam/trusted-devices",
+      "operationId": "iam.registerTrustedDevice",
+      "tags": [
+        "IAM"
+      ],
+      "summary": "Register remembered-device evidence after verified step-up"
+    },
+    {
+      "method": "POST",
+      "path": "/api/iam/trusted-devices/verify",
+      "operationId": "iam.verifyTrustedDevice",
+      "tags": [
+        "IAM"
+      ],
+      "summary": "Verify remembered-device evidence in the exact authenticated plane"
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/dead-letters",
+      "operationId": "jobs.listDeadLetters",
+      "tags": [
+        "Jobs"
+      ],
+      "summary": "List dead-lettered jobs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/executions",
+      "operationId": "jobs.listExecutions",
+      "tags": [
+        "Jobs"
+      ],
+      "summary": "List job executions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/jobs/admin/executions/{id}/cancel",
+      "operationId": "jobs.cancelExecution",
+      "tags": [
+        "Jobs"
+      ],
+      "summary": "cancel a job execution"
+    },
+    {
+      "method": "POST",
+      "path": "/api/jobs/admin/executions/{id}/replay",
+      "operationId": "jobs.replayExecution",
+      "tags": [
+        "Jobs"
+      ],
+      "summary": "replay a job execution"
+    },
+    {
+      "method": "POST",
+      "path": "/api/jobs/admin/executions/{id}/retry",
+      "operationId": "jobs.retryExecution",
+      "tags": [
+        "Jobs"
+      ],
+      "summary": "retry a job execution"
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/queues",
+      "operationId": "jobs.listQueues",
+      "tags": [
+        "Jobs"
+      ],
+      "summary": "List job queues"
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/schedules",
+      "operationId": "jobs.listSchedules",
+      "tags": [
+        "Jobs"
+      ],
+      "summary": "List job schedules"
+    },
+    {
+      "method": "POST",
+      "path": "/api/jobs/admin/schedules",
+      "operationId": "jobs.createSchedule",
+      "tags": [
+        "Jobs"
+      ],
+      "summary": "Create a job schedule"
+    },
+    {
+      "method": "POST",
+      "path": "/api/jobs/admin/schedules/preview",
+      "operationId": "jobs.previewSchedule",
+      "tags": [
+        "Jobs"
+      ],
+      "summary": "Preview a job schedule"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/jobs/admin/schedules/{id}",
+      "operationId": "jobs.updateSchedule",
+      "tags": [
+        "Jobs"
+      ],
+      "summary": "Update a job schedule"
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/schedules/{id}/audit",
+      "operationId": "jobs.getScheduleAudit",
+      "tags": [
+        "Jobs"
+      ],
+      "summary": "Get job schedule audit history"
+    },
+    {
+      "method": "POST",
+      "path": "/api/jobs/admin/schedules/{id}/deactivate",
+      "operationId": "jobs.deactivateSchedule",
+      "tags": [
+        "Jobs"
+      ],
+      "summary": "Deactivate a job schedule"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mesh/network-accounts",
+      "operationId": "meshNetworkAccounts",
+      "tags": [
+        "Mesh experience"
+      ],
+      "summary": "Resolve principal-authorized Mesh network accounts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/neon/business-partner-definitions/active-descriptors",
+      "operationId": "neon.activeBusinessPartnerDefinitionDescriptors",
+      "tags": [
+        "NEON Business Partner Definitions"
+      ],
+      "summary": "Read verified locally active Business Partner forms and views"
+    },
+    {
+      "method": "GET",
+      "path": "/api/neon/business-partner-definitions/active-request-form",
+      "operationId": "neon.activeBusinessPartnerRequestForm",
+      "tags": [
+        "NEON Business Partner Definitions"
+      ],
+      "summary": "Read the verified locally active Supplier request form"
+    },
+    {
+      "method": "GET",
+      "path": "/api/neon/operating-organizations",
+      "operationId": "neonOperatingOrganizations",
+      "tags": [
+        "Neon experience"
+      ],
+      "summary": "Resolve permitted effective Neon operating organizations"
+    },
+    {
+      "method": "GET",
+      "path": "/api/neon/work-contexts",
+      "operationId": "neonWorkContexts",
+      "tags": [
+        "Neon experience"
+      ],
+      "summary": "Resolve permitted Neon company work contexts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/counts",
+      "operationId": "notifications.getCounts",
+      "tags": [
+        "Notifications"
+      ],
+      "summary": "Get notification counts for the authenticated principal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/push-configuration",
+      "operationId": "notifications.getPushConfiguration",
+      "tags": [
+        "Notifications"
+      ],
+      "summary": "Get browser push-notification availability"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/read-all",
+      "operationId": "notifications.markAllRead",
+      "tags": [
+        "Notifications"
+      ],
+      "summary": "Mark all notifications as read for the authenticated principal"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/{id}/dismiss",
+      "operationId": "notifications.dismiss",
+      "tags": [
+        "Notifications"
+      ],
+      "summary": "Dismiss a notification for the authenticated principal"
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/experience/bootstrap",
+      "operationId": "platformExperienceBootstrap",
+      "tags": [
+        "Platform experience"
+      ],
+      "summary": "Resolve the sanitized effective application experience"
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/experience/surfaces/{surfaceKey}",
+      "operationId": "getExperienceSurface",
+      "tags": [
+        "Platform experience"
+      ],
+      "summary": "Resolve the effective system, shared, tenant, and personal experience surface"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/platform/experience/surfaces/{surfaceKey}/arrangement",
+      "operationId": "deletePersonalSurfaceArrangement",
+      "tags": [
+        "Platform experience"
+      ],
+      "summary": "Reset the current principal's arrangement for one surface"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/platform/experience/surfaces/{surfaceKey}/arrangement",
+      "operationId": "savePersonalSurfaceArrangement",
+      "tags": [
+        "Platform experience"
+      ],
+      "summary": "Persist the current principal's arrangement for one effective surface revision"
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/localization/policies/{planeKey}",
+      "operationId": "platformLocalePolicy",
+      "tags": [
+        "Platform localization"
+      ],
+      "summary": "Read one exact-plane tenant locale policy"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/platform/localization/policies/{planeKey}",
+      "operationId": "updatePlatformLocalePolicy",
+      "tags": [
+        "Platform localization"
+      ],
+      "summary": "Activate tenant locales for a target plane from Studio"
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/navigation/slug-redirect",
+      "operationId": "resolveRouteSlugRedirect",
+      "tags": [
+        "Platform navigation"
+      ],
+      "summary": "Resolve an active historical route slug in the exact plane"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/platform/profile/locale",
+      "operationId": "updatePrincipalLocale",
+      "tags": [
+        "Platform localization"
+      ],
+      "summary": "Select an enabled locale for the current principal and plane"
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/verification",
+      "operationId": "platform.verification.snapshot",
+      "tags": [
+        "Platform verification"
+      ],
+      "summary": "Run authenticated read-only platform verification"
+    },
+    {
+      "method": "POST",
+      "path": "/api/platform/verification/runs",
+      "operationId": "platform.verification.run",
+      "tags": [
+        "Platform verification"
+      ],
+      "summary": "Run bounded synthetic platform verification"
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/deployments/{deploymentId}",
+      "operationId": "publication.getDeployment",
+      "tags": [
+        "Publication"
+      ],
+      "summary": "Get a publication deployment"
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/deployments/{deploymentId}/provenance",
+      "operationId": "publication.getDeploymentProvenance",
+      "tags": [
+        "Publication Operations"
+      ],
+      "summary": "Get publication deployment provenance"
+    },
+    {
+      "method": "POST",
+      "path": "/api/publication/deployments/{deploymentId}/retry",
+      "operationId": "publication.retryDeployment",
+      "tags": [
+        "Publication"
+      ],
+      "summary": "Retry a publication deployment"
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/operations/dead-letters",
+      "operationId": "publication.listDeadLetters",
+      "tags": [
+        "Publication Operations"
+      ],
+      "summary": "List publication delivery dead letters"
+    },
+    {
+      "method": "POST",
+      "path": "/api/publication/operations/deliveries/{deliveryId}/replay",
+      "operationId": "publication.replayDelivery",
+      "tags": [
+        "Publication Operations"
+      ],
+      "summary": "Replay a publication delivery"
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/operations/destinations/{plane}/{targetInstance}/health",
+      "operationId": "publication.getDestinationHealth",
+      "tags": [
+        "Publication Operations"
+      ],
+      "summary": "Get publication destination health"
+    },
+    {
+      "method": "POST",
+      "path": "/api/publication/publication-keys/{key}/rollback",
+      "operationId": "publication.rollbackRelease",
+      "tags": [
+        "Publication"
+      ],
+      "summary": "Roll back a publication key"
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/releases/{releaseId}",
+      "operationId": "publication.getRelease",
+      "tags": [
+        "Publication"
+      ],
+      "summary": "Get a publication release"
+    },
+    {
+      "method": "POST",
+      "path": "/api/publication/releases/{releaseId}/publish",
+      "operationId": "publication.publishRelease",
+      "tags": [
+        "Publication"
+      ],
+      "summary": "Publish a release"
+    },
+    {
+      "method": "GET",
+      "path": "/api/record-bookmarks",
+      "operationId": "recordBookmarks.list",
+      "tags": [
+        "Record favourites"
+      ],
+      "summary": "List the authenticated principal's record favourites"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/record-bookmarks/{entityCode}",
+      "operationId": "recordBookmarks.remove",
+      "tags": [
+        "Record favourites"
+      ],
+      "summary": "Idempotently remove explicit record favourites"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/record-bookmarks/{entityCode}",
+      "operationId": "recordBookmarks.add",
+      "tags": [
+        "Record favourites"
+      ],
+      "summary": "Idempotently add explicit record favourites"
+    },
+    {
+      "method": "GET",
+      "path": "/api/record-bookmarks/{entityCode}/membership",
+      "operationId": "recordBookmarks.membership",
+      "tags": [
+        "Record favourites"
+      ],
+      "summary": "Resolve favourite membership for a visible page"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/exports/{exportRequestId}/cancel",
+      "operationId": "records.cancelExport",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.cancelExport"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/exports/{exportRequestId}/download",
+      "operationId": "records.downloadExport",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.downloadExport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/exports/{exportRequestId}/restart",
+      "operationId": "records.restartExport",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.restartExport"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/imports/{sessionId}",
+      "operationId": "records.getImport",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.getImport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/cancel",
+      "operationId": "records.cancelImport",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.cancelImport"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/records/imports/{sessionId}/chunks/{chunkIndex}",
+      "operationId": "records.appendImportChunk",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.appendImportChunk"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/commit",
+      "operationId": "records.commitImport",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.commitImport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/complete",
+      "operationId": "records.completeImportUpload",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.completeImportUpload"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/imports/{sessionId}/error-report",
+      "operationId": "records.getImportErrorReport",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.getImportErrorReport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/file-complete",
+      "operationId": "records.completeFileUpload",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.completeFileUpload"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/file-upload",
+      "operationId": "records.prepareFileUpload",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.prepareFileUpload"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/preview",
+      "operationId": "records.previewImport",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.previewImport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/restart",
+      "operationId": "records.restartImport",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.restartImport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/validate",
+      "operationId": "records.validateImport",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.validateImport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/workbook-complete",
+      "operationId": "records.completeWorkbookUpload",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.completeWorkbookUpload"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/workbook-upload",
+      "operationId": "records.prepareWorkbookUpload",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.prepareWorkbookUpload"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/transfers",
+      "operationId": "records.listOwnTransfers",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.listOwnTransfers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/{entityCode}",
+      "operationId": "records.list",
+      "tags": [
+        "Records"
+      ],
+      "summary": "List records"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/{entityCode}",
+      "operationId": "records.create",
+      "tags": [
+        "Records"
+      ],
+      "summary": "Create a record"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/{entityCode}/exports",
+      "operationId": "records.requestExport",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.requestExport"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/{entityCode}/import-template.xlsx",
+      "operationId": "records.createWorkbookTemplate",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.createWorkbookTemplate"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/{entityCode}/imports",
+      "operationId": "records.beginImport",
+      "tags": [
+        "Records Transfer"
+      ],
+      "summary": "records.beginImport"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/records/{entityCode}/{recordId}",
+      "operationId": "records.delete",
+      "tags": [
+        "Records"
+      ],
+      "summary": "Delete a record"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/{entityCode}/{recordId}",
+      "operationId": "records.get",
+      "tags": [
+        "Records"
+      ],
+      "summary": "Get a record"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/records/{entityCode}/{recordId}",
+      "operationId": "records.patch",
+      "tags": [
+        "Records"
+      ],
+      "summary": "Patch a record"
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/{entityCode}/{recordId}/transitions/{transitionCode}",
+      "operationId": "records.transition",
+      "tags": [
+        "Records"
+      ],
+      "summary": "Transition a record"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/business-partner-case-contracts",
+      "operationId": "studio.authorBusinessPartnerCaseContract",
+      "tags": [
+        "STUDIO Business Partner Definitions"
+      ],
+      "summary": "Author an immutable Business Partner case contract revision"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/business-partner-case-contracts/simulations",
+      "operationId": "studio.simulateBusinessPartnerCaseContract",
+      "tags": [
+        "STUDIO Business Partner Definitions"
+      ],
+      "summary": "Dry-run Business Partner case contract compatibility without publication authority"
+    },
+    {
+      "method": "GET",
+      "path": "/api/studio/business-partner-case-contracts/{revisionId}",
+      "operationId": "studio.getBusinessPartnerCaseContract",
+      "tags": [
+        "STUDIO Business Partner Definitions"
+      ],
+      "summary": "Get a Business Partner case contract revision"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/business-partner-case-contracts/{revisionId}/publish",
+      "operationId": "studio.publishBusinessPartnerCaseContract",
+      "tags": [
+        "STUDIO Business Partner Definitions"
+      ],
+      "summary": "Approve and queue a signed Business Partner case contract publication"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/business-partner-definitions",
+      "operationId": "studio.authorBusinessPartnerDefinition",
+      "tags": [
+        "STUDIO Business Partner Definitions"
+      ],
+      "summary": "Author an immutable Business Partner definition revision"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/business-partner-definitions/simulations",
+      "operationId": "studio.simulateBusinessPartnerDefinition",
+      "tags": [
+        "STUDIO Business Partner Definitions"
+      ],
+      "summary": "Dry-run Business Partner definition compatibility without publication authority"
+    },
+    {
+      "method": "GET",
+      "path": "/api/studio/business-partner-definitions/{revisionId}",
+      "operationId": "studio.getBusinessPartnerDefinition",
+      "tags": [
+        "STUDIO Business Partner Definitions"
+      ],
+      "summary": "Get a Business Partner definition revision"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/business-partner-definitions/{revisionId}/publish",
+      "operationId": "studio.publishBusinessPartnerDefinition",
+      "tags": [
+        "STUDIO Business Partner Definitions"
+      ],
+      "summary": "Approve and queue a signed Business Partner definition publication"
+    },
+    {
+      "method": "GET",
+      "path": "/api/studio/experience-surfaces",
+      "operationId": "listExperienceSurfaceHistory",
+      "tags": [
+        "Studio experience"
+      ],
+      "summary": "Load Studio release history for one surface"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/experience-surfaces/atlas-drafts",
+      "operationId": "generateAtlasExperienceSurfaceDraft",
+      "tags": [
+        "Studio experience",
+        "Atlas"
+      ],
+      "summary": "Generate, validate, and persist an Atlas-authored surface draft without publication"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/experience-surfaces/drafts",
+      "operationId": "saveExperienceSurfaceDraft",
+      "tags": [
+        "Studio experience"
+      ],
+      "summary": "Validate and persist a human-authored experience surface draft"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/experience-surfaces/{releaseId}/publish",
+      "operationId": "publishExperienceSurface",
+      "tags": [
+        "Studio experience"
+      ],
+      "summary": "Publish a validated draft and apply its exact-plane projection"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/experience-surfaces/{releaseId}/rollback",
+      "operationId": "rollbackExperienceSurface",
+      "tags": [
+        "Studio experience"
+      ],
+      "summary": "Clone a historical release into a new human-review draft"
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/navigation/slug-redirects",
+      "operationId": "registerRouteSlugRedirect",
+      "tags": [
+        "Studio navigation"
+      ],
+      "summary": "Register a catalog slug change in its exact target plane"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/exports/{exportRequestId}/cancel",
+      "operationId": "public.v1.records.cancelExport",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.cancelExport"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/exports/{exportRequestId}/download",
+      "operationId": "public.v1.records.downloadExport",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.downloadExport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/exports/{exportRequestId}/restart",
+      "operationId": "public.v1.records.restartExport",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.restartExport"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/imports/{sessionId}",
+      "operationId": "public.v1.records.getImport",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.getImport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/cancel",
+      "operationId": "public.v1.records.cancelImport",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.cancelImport"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/records/imports/{sessionId}/chunks/{chunkIndex}",
+      "operationId": "public.v1.records.appendImportChunk",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.appendImportChunk"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/commit",
+      "operationId": "public.v1.records.commitImport",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.commitImport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/complete",
+      "operationId": "public.v1.records.completeImportUpload",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.completeImportUpload"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/imports/{sessionId}/error-report",
+      "operationId": "public.v1.records.getImportErrorReport",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.getImportErrorReport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/file-complete",
+      "operationId": "public.v1.records.completeFileUpload",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.completeFileUpload"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/file-upload",
+      "operationId": "public.v1.records.prepareFileUpload",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.prepareFileUpload"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/preview",
+      "operationId": "public.v1.records.previewImport",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.previewImport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/restart",
+      "operationId": "public.v1.records.restartImport",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.restartImport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/validate",
+      "operationId": "public.v1.records.validateImport",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.validateImport"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/workbook-complete",
+      "operationId": "public.v1.records.completeWorkbookUpload",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.completeWorkbookUpload"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/workbook-upload",
+      "operationId": "public.v1.records.prepareWorkbookUpload",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.prepareWorkbookUpload"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/transfers",
+      "operationId": "public.v1.records.listOwnTransfers",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.listOwnTransfers"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/{entityCode}/exports",
+      "operationId": "public.v1.records.requestExport",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.requestExport"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/{entityCode}/import-template.xlsx",
+      "operationId": "public.v1.records.createWorkbookTemplate",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.createWorkbookTemplate"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/{entityCode}/imports",
+      "operationId": "public.v1.records.beginImport",
+      "tags": [
+        "Public Records Transfer V1"
+      ],
+      "summary": "public.v1.records.beginImport"
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "operationId": "system.getHealth",
+      "tags": [
+        "System"
+      ],
+      "summary": "system.getHealth"
+    },
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "operationId": "system.getHealthz",
+      "tags": [
+        "System"
+      ],
+      "summary": "system.getHealthz"
+    },
+    {
+      "method": "GET",
+      "path": "/livez",
+      "operationId": "system.getLiveness",
+      "tags": [
+        "System"
+      ],
+      "summary": "system.getLiveness"
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "operationId": "telemetry.getPrometheusMetrics",
+      "tags": [
+        "Telemetry"
+      ],
+      "summary": "Export Prometheus metrics"
+    },
+    {
+      "method": "GET",
+      "path": "/readyz",
+      "operationId": "system.getReadiness",
+      "tags": [
+        "System"
+      ],
+      "summary": "system.getReadiness"
+    }
+  ]
+}

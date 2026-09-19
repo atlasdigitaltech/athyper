@@ -1,0 +1,117 @@
+{
+  "stage": 6,
+  "scope": "deployed dev Postgres/RLS, MinIO, Gotenberg and ClamAV; service entrypoints",
+  "seed": {
+    "runId": "21d2cc6f-961c-4c77-9835-56d9a86a8961",
+    "tenantId": "d17f5873-f56c-41e1-8100-788594de67f8",
+    "principalId": "64fc6517-6e4b-47fa-8ae3-18250e2e55f6",
+    "otherTenantId": "10c65143-9a77-4fc2-b4ac-3d855fad007d",
+    "templateId": "ca0c3abf-acc1-4162-9b2c-4147274a1318",
+    "versionId": "e3667767-c804-45d2-a3ae-4a5dbdf45d5d",
+    "bindingId": "8a63567d-ce8f-459d-91ff-40b0edaa19b6"
+  },
+  "results": [
+    {
+      "path": "upload",
+      "scenario": "clean",
+      "passed": true,
+      "id": "a235bfee-7ff5-44c4-b1b9-4f0a674d1b10",
+      "recoveredSameRequest": false
+    },
+    {
+      "path": "upload",
+      "scenario": "eicar",
+      "passed": true,
+      "id": "721da50b-63b9-440f-9e72-c6720dff00ed",
+      "recoveredSameRequest": false
+    },
+    {
+      "path": "upload",
+      "scenario": "outage",
+      "passed": true,
+      "id": "7da6ec80-7e7c-45f4-9e3d-cc13fed8bd49",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "upload",
+      "scenario": "scan-outage",
+      "passed": true,
+      "id": "f26916f8-f5b8-46f4-9b51-73148abcf9ad",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "upload",
+      "scenario": "stale",
+      "passed": true,
+      "id": "9151974d-74f3-4394-b218-0c2b5f43c954",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "render",
+      "scenario": "clean",
+      "passed": true,
+      "id": "ed26466d-dbf6-422b-94c8-6d4f705fbc70",
+      "recoveredSameRequest": false
+    },
+    {
+      "path": "render",
+      "scenario": "eicar",
+      "id": "5afe5c3c-1d17-4415-84e4-13212c7a6132",
+      "passed": false,
+      "failure": "Missing expected rejection.",
+      "persistedState": {
+        "status": "active",
+        "is_virus_scanned": true,
+        "storage_key": "generated/neon/d17f5873-f56c-41e1-8100-788594de67f8/qualification/15fdd298-317f-410e-9c48-d23a92d70270/5afe5c3c-1d17-4415-84e4-13212c7a6132/qualification-15fdd298-317f-410e-9c48-d23a92d70270.pdf",
+        "sha256": "36b2823d3639ace25ddc5949e90f1a4564bd465a5c8d84847c4ed7ddc85d6ded"
+      }
+    },
+    {
+      "path": "render",
+      "scenario": "outage",
+      "passed": true,
+      "id": "9be6a473-5062-4f02-b39c-02df9b263309",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "render",
+      "scenario": "scan-outage",
+      "passed": true,
+      "id": "e41bf59c-a0d5-4241-9188-f3729b932fe3",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "render",
+      "scenario": "stale",
+      "passed": true,
+      "id": "5c76456e-ed1e-4663-8def-f1d33df14e51",
+      "recoveredSameRequest": true
+    }
+  ],
+  "passed": false,
+  "startedAt": "2026-09-11T21:10:28.697Z",
+  "databaseRole": {
+    "role": "athyper_runtime",
+    "superuser": false,
+    "bypass_rls": false
+  },
+  "initialHealth": {
+    "status": "healthy",
+    "signature": {
+      "fresh": true,
+      "version": "28119",
+      "builtAt": "2026-09-10T06:24:09.000Z",
+      "ageMs": 139579708
+    }
+  },
+  "bucket": "athyper-documents",
+  "renderingEndpoint": "http://docrender:3000",
+  "objectStorageEndpoint": "http://objectstorage:9000",
+  "failure": "Infrastructure qualification has failing scenarios; see evidence",
+  "cleanup": {
+    "removedObjects": 18,
+    "retainedDatabaseEvidence": true,
+    "errors": []
+  },
+  "finishedAt": "2026-09-11T21:10:30.901Z"
+}

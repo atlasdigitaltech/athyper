@@ -1,0 +1,28 @@
+{
+  "$schema": "athyper.business-partner-r6-fixture/1",
+  "scenarios": [
+    { "id": "BP-SUP-005", "authority": "mesh_network_account_and_relationship", "status": "local_verified_target_e2e_required" },
+    { "id": "BP-SUP-007", "authority": "mesh_registration_exchange_policy", "status": "local_verified_target_e2e_required" }
+  ],
+  "branches": {
+    "networkAccount": ["selected", "context_required"],
+    "relationship": ["request", "accept", "reject", "cancel", "suspend", "reactivate", "terminate"],
+    "capability": ["request", "accept", "reject", "suspend", "end"],
+    "registrationExchange": ["issue", "accept", "reject", "cancel", "expire"],
+    "delivery": ["applied", "duplicate", "stale", "quarantined", "replay"],
+    "accountLink": ["request", "approve", "reject"],
+    "bankDisclosure": ["request", "approve", "reject", "revoke"]
+  },
+  "invariants": {
+    "actingAccountComesFromVerifiedContext": true,
+    "registrationAcceptCreatesNeonMasterData": false,
+    "relationshipCommandsRetainEvidence": true,
+    "exchangePinsContractAndTokenHashes": true,
+    "profilePayloadIsRecipientSafe": true,
+    "bankPayloadIsMaskedRetrievalOnly": true,
+    "quarantineRetainsEnvelope": true,
+    "acknowledgementIsImmutableRecipientProcessingEvidence": true,
+    "targetEnvironmentEvidenceRetained": false,
+    "externalSelfRegistrationPolicyAdapterAvailable": true
+  }
+}

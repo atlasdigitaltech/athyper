@@ -1,9 +1,5 @@
 ALTER TABLE document.attachment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.attachment_quota_usage ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.attachment_quota_usage FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.attachment_quota_reservation ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.attachment_quota_reservation FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_folder ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_folder FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_link ENABLE ROW LEVEL SECURITY;
@@ -30,12 +26,6 @@ ALTER TABLE document.multipart_upload ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.multipart_upload FORCE ROW LEVEL SECURITY;
 ALTER TABLE snapshot.content_item_version ENABLE ROW LEVEL SECURITY;
 ALTER TABLE snapshot.content_item_version FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.content_item_access_grant ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.content_item_access_grant FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.content_quota_usage ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.content_quota_usage FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.content_quota_reservation ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.content_quota_reservation FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_access ON document.attachment
     FOR ALL
@@ -43,10 +33,6 @@ CREATE POLICY tenant_access ON document.attachment
     WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY seed_write ON document.attachment
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
-CREATE POLICY tenant_access ON document.attachment_quota_usage FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
-CREATE POLICY seed_write ON document.attachment_quota_usage FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
-CREATE POLICY tenant_access ON document.attachment_quota_reservation FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
-CREATE POLICY seed_write ON document.attachment_quota_reservation FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
 CREATE POLICY tenant_access ON document.attachment_folder
     FOR ALL
@@ -282,6 +268,71 @@ BEGIN
 END;
 $$;
 
+-- supplier_registration_invitation compatibility is provided by its
+-- security-invoker view over this forced-RLS generalized authority.
+ALTER TABLE document.business_partner_invitation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.business_partner_invitation FORCE ROW LEVEL SECURITY;
+ALTER TABLE document.business_partner_invitation_recovery ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.business_partner_invitation_recovery FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON document.business_partner_invitation FOR ALL USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY tenant_access ON document.business_partner_invitation_recovery FOR ALL USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.business_partner_invitation FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+CREATE POLICY seed_write ON document.business_partner_invitation_recovery FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+
+ALTER TABLE document.business_partner_request ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.business_partner_request FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON document.business_partner_request
+    FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.business_partner_request
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+ALTER TABLE document.business_partner_request_evidence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.business_partner_request_evidence FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.business_partner_request_evidence
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.business_partner_request_evidence
+    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.business_partner_request_evidence
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+ALTER TABLE document.business_partner_request_validation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.business_partner_request_validation FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.business_partner_request_validation
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.business_partner_request_validation
+    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.business_partner_request_validation
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+DO $$
+DECLARE
+    v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'business_partner_request_address',
+        'business_partner_request_contact_person',
+        'business_partner_request_contact_channel',
+        'business_partner_request_identifier',
+        'business_partner_request_tax_registration',
+        'business_partner_request_classification',
+        'business_partner_request_certification',
+        'business_partner_request_materialization_item'
+    ]
+    LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY', v_table);
+        EXECUTE format(
+            'CREATE POLICY tenant_access ON document.%I '
+            'USING (tenant_id = shared.current_tenant_id()) '
+            'WITH CHECK (tenant_id = shared.current_tenant_id())',
+            v_table
+        );
+    END LOOP;
+END;
+$$;
+
 DO $$
 DECLARE
     v_table text;
@@ -495,7 +546,7 @@ DECLARE v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
         'shift_assignment','time_punch','attendance_day','attendance_adjustment_request','compensation_change',
-        'employee_tax_declaration','employee_tax_declaration_line','leave_request','leave_balance_entry','people_request',
+        'employee_tax_declaration','employee_tax_declaration_line','leave_request','leave_balance_entry','people_request','workforce_request','workforce_request_validation',
         'hr_case','onboarding_case','offboarding_case','payroll_period','payroll_run','payroll_run_employee',
         'payroll_result','payroll_result_line'
     ] LOOP
@@ -507,7 +558,7 @@ BEGIN
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
         FOREACH v_table IN ARRAY ARRAY[
             'shift_assignment','time_punch','attendance_day','attendance_adjustment_request','compensation_change',
-            'employee_tax_declaration','employee_tax_declaration_line','leave_request','leave_balance_entry','people_request',
+            'employee_tax_declaration','employee_tax_declaration_line','leave_request','leave_balance_entry','people_request','workforce_request','workforce_request_validation',
             'hr_case','onboarding_case','offboarding_case','payroll_period','payroll_run','payroll_run_employee',
             'payroll_result','payroll_result_line'
         ] LOOP EXECUTE format('CREATE POLICY admin_access ON document.%I FOR ALL TO athyperadmin USING(true) WITH CHECK(true)',v_table); END LOOP;
@@ -678,6 +729,70 @@ BEGIN
     END IF;
 END;
 $$;
-CREATE POLICY tenant_access ON document.content_item_access_grant FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
-CREATE POLICY tenant_access ON document.content_quota_usage FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
-CREATE POLICY tenant_access ON document.content_quota_reservation FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
+ALTER TABLE document.mesh_business_partner_match ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.mesh_business_partner_match FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.mesh_business_partner_match FOR SELECT USING (tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.mesh_business_partner_match FOR INSERT WITH CHECK (tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.mesh_business_partner_match FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+ALTER TABLE document.mesh_business_partner_acceptance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.mesh_business_partner_acceptance FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.mesh_business_partner_acceptance FOR SELECT USING (tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.mesh_business_partner_acceptance FOR INSERT WITH CHECK (tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.mesh_business_partner_acceptance FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+ALTER TABLE document.mesh_business_partner_acceptance_event ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.mesh_business_partner_acceptance_event FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.mesh_business_partner_acceptance_event FOR SELECT USING (tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.mesh_business_partner_acceptance_event FOR INSERT WITH CHECK (tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.mesh_business_partner_acceptance_event FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+ALTER TABLE document.business_partner_bank_verification ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.business_partner_bank_verification FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON document.business_partner_bank_verification USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.business_partner_bank_verification FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+ALTER TABLE document.business_partner_duplicate_resolution ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.business_partner_duplicate_resolution FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON document.business_partner_duplicate_resolution USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.business_partner_duplicate_resolution FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+ALTER TABLE document.supplier_activation_evidence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.supplier_activation_evidence FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON document.supplier_activation_evidence USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.supplier_activation_evidence FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+DO $$
+DECLARE v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'workforce_requisition','workforce_requisition_supplier','external_candidate_submission','external_candidate_evaluation',
+        'contingent_work_order','contingent_work_order_revision','statement_of_work','statement_of_work_revision','statement_of_work_item',
+        'worker_engagement','worker_operational_placement','worker_compliance_item','engagement_onboarding_case',
+        'external_time_sheet','external_time_entry','external_expense_sheet','external_expense_item',
+        'external_service_entry','external_service_entry_line','external_workforce_invoice_allocation',
+        'service_sheet_source_allocation'
+    ] LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('CREATE POLICY tenant_access ON document.%I FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id())', v_table);
+        EXECUTE format('CREATE POLICY seed_write ON document.%I FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true)', v_table);
+    END LOOP;
+END;
+$$;
+ALTER TABLE document.workforce_iam_projection ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.workforce_iam_projection FORCE ROW LEVEL SECURITY;
+CREATE POLICY workforce_iam_projection_tenant
+    ON document.workforce_iam_projection
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+ALTER TABLE document.mesh_profile_change_resolution ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.mesh_profile_change_resolution FORCE ROW LEVEL SECURITY;
+ALTER TABLE document.mesh_profile_change_case ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.mesh_profile_change_case FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_access ON document.mesh_profile_change_resolution
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_access ON document.mesh_profile_change_case
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY owner_access ON document.mesh_profile_change_resolution
+    TO CURRENT_USER USING (true) WITH CHECK (true);
+CREATE POLICY owner_access ON document.mesh_profile_change_case
+    TO CURRENT_USER USING (true) WITH CHECK (true);

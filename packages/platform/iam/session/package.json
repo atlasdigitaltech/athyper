@@ -1,7 +1,23 @@
 {
-  "name": "@athyper/platform-iam-session", "version": "0.0.0", "private": true, "type": "module",
-  "main": "./src/index.ts", "types": "./src/index.ts", "sideEffects": false,
-  "exports": { ".": "./src/index.ts" }, "scripts": { "typecheck": "tsc --noEmit" },
-  "dependencies": { "@athyper/contract-platform-auth-session": "workspace:*" },
-  "devDependencies": { "@athyper/tsconfig": "workspace:*", "typescript": "^6.0.3" }
+  "name": "@athyper/platform-iam-session",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@athyper/contract-platform-auth-session": "workspace:*",
+    "@athyper/platform-temporal": "workspace:*"
+  },
+  "devDependencies": {
+    "@athyper/tsconfig": "workspace:*",
+    "typescript": "^6.0.3"
+  }
 }

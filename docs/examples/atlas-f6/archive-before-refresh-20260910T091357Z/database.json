@@ -1,0 +1,70 @@
+{
+  "observedAt": "2026-09-10T07:05:58.928Z",
+  "images": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "athyper-runtime-server:f6-persona-20260910",
+      "digest": "sha256:134c54a06b958caf97e553e904d275d4ed782f450bac5184d714bccfbdb857e5",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "digest": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "digest": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "digest": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "checks": [
+    "deployed owner-only source/revision/chunk writes, permission substitution and tenant isolation; transaction rolled back",
+    "qualified tenant BP release 18 and compiled hash unchanged"
+  ],
+  "bindings": {
+    "neon": {
+      "status": "active",
+      "entityId": "f004c70a-5de7-5ed8-ae34-68d083f92627",
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "aiEnabled": true,
+      "releaseId": "126721f6-a2e5-45e2-91bf-0d6a1b660c56",
+      "releaseNo": 18,
+      "compiledHash": "700e00716fd05a782102a3666406f72929769ed11536c318e1dd3243baf894e4",
+      "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic"
+    },
+    "mesh": {
+      "status": "active",
+      "entityId": "253c9d44-311d-49ec-8f60-9d61527ceacc",
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "aiEnabled": true,
+      "releaseId": "0c4fcf5f-6ea4-491f-81fe-672c1b921afd",
+      "releaseNo": 1,
+      "compiledHash": "5020f5cf8bee69c96a8d45d6df2bab1062c6ba5671efcfe239fd0cd7f5a03383",
+      "publicationKey": "metadata.entity.network_relationship.tenant.44444444-4444-4444-8444-444444444444"
+    }
+  },
+  "secondEntityReady": true,
+  "canonicalStatementSha256": "78e4f1c8a23e6bf0618479949af0d016e1ecc493f8cecd65682230322c2d7efa",
+  "passed": true
+}

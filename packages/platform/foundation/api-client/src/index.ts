@@ -4,10 +4,13 @@ export { parseApiProblem } from "@athyper/contract-platform-api";
 export * from "./bootstrap";
 export * from "./work-context";
 export * from "./operating-organization";
+export * from "./network-account";
+export * from "./localization";
+export * from "./entity-list";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type RequestClass = "interactive" | "background" | "upload" | "download" | "stream";
-export type TransportFailureKind = "authentication" | "authorization" | "validation" | "conflict" | "rate-limit" | "dependency" | "network" | "abort" | "timeout" | "parse";
+export type TransportFailureKind = "authentication" | "authorization" | "not-found" | "validation" | "conflict" | "rate-limit" | "dependency" | "network" | "abort" | "timeout" | "parse";
 export type ResponseParser<T> = (value: unknown) => T;
 
 export interface Operation<TResponse, TBody = never> {
@@ -69,9 +72,10 @@ export interface HttpClientOptions {
   readonly onDiagnostic?: (diagnostic: TransportDiagnostic) => void;
 }
 
+export type QueryScalar = string | number | boolean;
 export interface RequestOptions<TBody = unknown> {
   readonly params?: Readonly<Record<string, string | number>>;
-  readonly query?: Readonly<Record<string, string | number | boolean | null | undefined>>;
+  readonly query?: Readonly<Record<string, QueryScalar | readonly QueryScalar[] | null | undefined>>;
   readonly body?: TBody | BodyInit;
   readonly headers?: HeadersInit;
   readonly signal?: AbortSignal;
@@ -176,7 +180,11 @@ function relayUrl(prefix: string, path: string, query?: RequestOptions["query"])
   if (!relative) throw new TypeError("API client operation path cannot be empty");
   const url = `${prefix.replace(/\/$/, "")}/${relative}`;
   assertRelayPath(url); const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(query ?? {})) if (value !== undefined && value !== null) params.append(key, String(value));
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (value === undefined || value === null) continue;
+    if (Array.isArray(value)) for (const item of value) params.append(key, String(item));
+    else params.append(key, String(value));
+  }
   return params.size ? `${url}?${params}` : url;
 }
 function assertRelayPath(path: string): void { if (!(path === "/api/relay" || path.startsWith("/api/relay/")) || path.includes("\\") || path.split("/").includes("..")) throw new TypeError("Browser transport must use a same-origin /api/relay path"); }
@@ -193,6 +201,10 @@ async function responseError(response: Response): Promise<ApiTransportError> {
   if ((response.headers.get("content-type") ?? "").toLowerCase().includes("application/problem+json")) { try { problem = parseApiProblem(await response.json()); } catch { /* keep body redacted */ } }
   return transport(statusKind(response.status), problem?.detail ?? problem?.title ?? `Request failed with status ${response.status}`, response.status, problem, problem?.requestId ?? requestId, problem?.correlationId ?? correlationId, response.headers.get("retry-after") ?? undefined);
 }
-function statusKind(status: number): TransportFailureKind { if (status === 401) return "authentication"; if (status === 403) return "authorization"; if ([400, 404, 422, 428].includes(status)) return "validation"; if ([409, 412, 423].includes(status)) return "conflict"; if (status === 429) return "rate-limit"; return status >= 500 ? "dependency" : "network"; }
+function statusKind(status: number): TransportFailureKind { if (status === 401) return "authentication"; if (status === 403) return "authorization"; if (status === 404) return "not-found"; if ([400, 422, 428].includes(status)) return "validation"; if ([409, 412, 423].includes(status)) return "conflict"; if (status === 429) return "rate-limit"; return status >= 500 ? "dependency" : "network"; }
 function classifyCaught(cause: unknown, timedOut: boolean, aborted: boolean): ApiTransportError { if (cause instanceof ApiTransportError) return cause; if (timedOut) return transport("timeout", "Request timed out", 0, undefined, undefined, undefined, undefined, cause); if (aborted || (cause instanceof DOMException && cause.name === "AbortError")) return transport("abort", "Request was cancelled", 0, undefined, undefined, undefined, undefined, cause); return transport("network", "Network request failed", 0, undefined, undefined, undefined, undefined, cause); }
 function transport(kind: TransportFailureKind, message: string, status = 0, problem?: ApiProblem, requestId?: string, correlationId?: string, retryAfter?: string, cause?: unknown): ApiTransportError { return new ApiTransportError(kind, message, status, problem, requestId, correlationId, retryAfter, cause === undefined ? undefined : { cause }); }
+
+export { uploadSignedObject } from "./signed-upload";
+
+export * from "./reference-history";

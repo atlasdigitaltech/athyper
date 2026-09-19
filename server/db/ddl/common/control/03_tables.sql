@@ -722,7 +722,7 @@ CREATE TABLE control.subscription_plan_usage_limit (
     CONSTRAINT subscription_plan_usage_limit_dimension_chk
         CHECK (dimension_code = '*' OR dimension_code ~ '^[a-z][a-z0-9_]{1,62}$'),
     CONSTRAINT subscription_plan_usage_limit_value_chk
-        CHECK (limit_value IS NULL OR limit_value > 0),
+        CHECK (limit_value IS NULL OR limit_value >= 0),
     CONSTRAINT subscription_plan_usage_limit_warn_chk
         CHECK (warn_at_pct BETWEEN 1 AND 100),
     CONSTRAINT subscription_plan_usage_limit_status_pair_chk
@@ -732,6 +732,8 @@ CREATE TABLE control.subscription_plan_usage_limit (
 );
 
 CREATE TABLE control.tenant_usage_limit_override (
+    subscription_plan_id uuid,
+    version integer NOT NULL DEFAULT 1 CHECK (version > 0),
     id              uuid                NOT NULL DEFAULT shared.uuidv7(),
     tenant_id       uuid                NOT NULL,
     usage_metric_id uuid                NOT NULL,
@@ -753,7 +755,7 @@ CREATE TABLE control.tenant_usage_limit_override (
     CONSTRAINT tenant_usage_limit_override_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT tenant_usage_limit_override_dimension_chk
         CHECK (dimension_code = '*' OR dimension_code ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT tenant_usage_limit_override_value_chk CHECK (limit_value > 0),
+    CONSTRAINT tenant_usage_limit_override_value_chk CHECK (limit_value >= 0),
     CONSTRAINT tenant_usage_limit_override_reason_chk CHECK (btrim(reason) <> ''),
     CONSTRAINT tenant_usage_limit_override_effective_range_chk
         CHECK (effective_until IS NULL OR effective_until > effective_from),
@@ -767,6 +769,8 @@ COMMENT ON TABLE control.usage_metric_catalog IS
   'Platform-controlled catalog of usage measurements. Admin authors the catalog and publishes it unchanged to Neon and Mesh.';
 COMMENT ON TABLE control.subscription_plan_usage_limit IS
   'Plane-local subscription-plan entitlement. dimension_code = ''*'' is the fallback for a dimensioned metric; limit_value NULL means unlimited.';
+COMMENT ON COLUMN control.tenant_usage_limit_override.subscription_plan_id IS
+    'Required for API-managed overrides. NULL preserves legacy exceptions whose original plan is unknown; they remain enforced but cannot be edited through this API.';
 COMMENT ON TABLE control.tenant_usage_limit_override IS
   'Approved, time-bounded commercial exception to a plan usage limit. It cannot express unlimited access; assign an appropriate subscription plan instead.';
 
@@ -782,6 +786,9 @@ CREATE TABLE control.feature_flag_catalog (
     flag_kind         text                NOT NULL DEFAULT 'release_gate',
     default_enabled   boolean             NOT NULL DEFAULT false,
     rollout_pct       smallint,
+    cohort_strategy   text                NOT NULL DEFAULT 'principal_fnv1a_v2'
+        CONSTRAINT feature_flag_catalog_cohort_strategy_chk CHECK (cohort_strategy IN ('tenant_sha256_v1', 'principal_fnv1a_v2')),
+    cohort_revision   integer             NOT NULL DEFAULT 1 CHECK (cohort_revision > 0),
     effective_from    timestamptz         NOT NULL DEFAULT now(),
     effective_until   timestamptz,
     status            shared.ref_status_d NOT NULL DEFAULT 'active',
@@ -815,6 +822,7 @@ CREATE TABLE control.feature_flag_catalog (
 );
 
 CREATE TABLE control.feature_flag_override (
+    version integer NOT NULL DEFAULT 1 CHECK(version>0),
     id                uuid                NOT NULL DEFAULT shared.uuidv7(),
     tenant_id         uuid                NOT NULL,
     feature_flag_id   uuid                NOT NULL,
@@ -843,6 +851,7 @@ CREATE TABLE control.feature_flag_override (
 );
 
 CREATE TABLE control.parameter_definition (
+    revision            integer             NOT NULL DEFAULT 1 CHECK (revision > 0),
     id                  uuid                NOT NULL DEFAULT shared.uuidv7(),
     code                text                NOT NULL,
     name                text                NOT NULL,
@@ -898,6 +907,7 @@ CREATE TABLE control.parameter_definition (
 );
 
 CREATE TABLE control.tenant_parameter_value (
+    version                 integer             NOT NULL DEFAULT 1 CHECK (version > 0),
     id                      uuid                NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid                NOT NULL,
     parameter_definition_id uuid                NOT NULL,
@@ -1417,3 +1427,157 @@ COMMENT ON TABLE control.rounding_context IS
     'Sparse dispatch: (tenant, company?, currency?, slot?) → rounding_rule. '
     'NULL dimensions act as wildcards. Most-specific match wins. '
     'Falls back to shared.currency.minor_units when no row matches.';
+
+-- Plane-owned UI catalog qualification. Locale identity and regional
+-- formatting remain authoritative in shared.language/shared.locale.
+CREATE TABLE control.ui_locale_catalog (
+    locale_code                text        NOT NULL,
+    format_locale_code         text        NOT NULL,
+    rollout_wave               smallint    NOT NULL,
+    status                     text        NOT NULL DEFAULT 'draft',
+    coverage_pct               smallint    NOT NULL DEFAULT 0,
+    linguistic_review_passed   boolean     NOT NULL DEFAULT false,
+    layout_review_passed       boolean     NOT NULL DEFAULT false,
+    automated_tests_passed     boolean     NOT NULL DEFAULT false,
+    qualified                  boolean GENERATED ALWAYS AS (
+        status = 'qualified'
+        AND coverage_pct = 100
+        AND linguistic_review_passed
+        AND layout_review_passed
+        AND automated_tests_passed
+    ) STORED,
+    review_evidence            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    created_at                 timestamptz NOT NULL DEFAULT now(),
+    created_by                 uuid        NOT NULL,
+    updated_at                 timestamptz,
+    updated_by                 uuid,
+
+    CONSTRAINT ui_locale_catalog_pkey PRIMARY KEY (locale_code),
+    CONSTRAINT ui_locale_catalog_locale_fk
+        FOREIGN KEY (locale_code) REFERENCES shared.locale(code),
+    CONSTRAINT ui_locale_catalog_format_locale_fk
+        FOREIGN KEY (format_locale_code) REFERENCES shared.locale(code),
+    CONSTRAINT ui_locale_catalog_wave_chk CHECK (rollout_wave BETWEEN 0 AND 3),
+    CONSTRAINT ui_locale_catalog_status_chk
+        CHECK (status IN ('draft', 'translating', 'review', 'qualified', 'retired')),
+    CONSTRAINT ui_locale_catalog_coverage_chk CHECK (coverage_pct BETWEEN 0 AND 100),
+    CONSTRAINT ui_locale_catalog_evidence_chk CHECK (jsonb_typeof(review_evidence) = 'object'),
+    CONSTRAINT ui_locale_catalog_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+-- Tenant activation is kept in master because it is tenant policy, while its
+-- locale FK guarantees that only a catalog registered in this plane can be used.
+CREATE TABLE master.tenant_locale_activation (
+    tenant_id       uuid        NOT NULL,
+    locale_code     text        NOT NULL,
+    enabled         boolean     NOT NULL DEFAULT false,
+    is_default      boolean     NOT NULL DEFAULT false,
+    is_fallback     boolean     NOT NULL DEFAULT false,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    created_by      uuid        NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT tenant_locale_activation_pkey PRIMARY KEY (tenant_id, locale_code),
+    CONSTRAINT tenant_locale_activation_tenant_fk
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE,
+    CONSTRAINT tenant_locale_activation_catalog_fk
+        FOREIGN KEY (locale_code) REFERENCES control.ui_locale_catalog(locale_code),
+    CONSTRAINT tenant_locale_activation_default_enabled_chk
+        CHECK (NOT is_default OR enabled),
+    CONSTRAINT tenant_locale_activation_fallback_enabled_chk
+        CHECK (NOT is_fallback OR enabled),
+    CONSTRAINT tenant_locale_activation_english_fallback_chk
+        CHECK (NOT is_fallback OR locale_code = 'en'),
+    CONSTRAINT tenant_locale_activation_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE control.ui_locale_catalog IS
+    'Plane-local qualification and review evidence for each platform UI catalog; locale identity is owned by shared.locale.';
+COMMENT ON TABLE master.tenant_locale_activation IS
+    'Tenant activation, default, and emergency fallback selection for plane-qualified UI catalogs.';
+
+-- Tenant module exceptions never mutate the shared subscription plan.
+CREATE TABLE control.tenant_module_entitlement_override (
+    id uuid NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id uuid NOT NULL,
+    subscription_plan_id uuid NOT NULL,
+    module_id uuid NOT NULL,
+    version integer NOT NULL DEFAULT 1 CHECK (version > 0),
+    reason text NOT NULL CHECK (btrim(reason) <> ''),
+    effective_from timestamptz NOT NULL,
+    effective_until timestamptz,
+    status shared.ref_status_d NOT NULL DEFAULT 'active',
+    created_at timestamptz NOT NULL DEFAULT now(),
+    created_by uuid NOT NULL,
+    updated_at timestamptz,
+    updated_by uuid,
+    status_changed_at timestamptz,
+    status_changed_by uuid,
+    CONSTRAINT tenant_module_entitlement_override_pkey PRIMARY KEY (id),
+    CONSTRAINT tenant_module_entitlement_override_tenant_uq UNIQUE (tenant_id, id),
+    CONSTRAINT tenant_module_entitlement_override_range_chk
+        CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT tenant_module_entitlement_override_audit_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL)),
+    CONSTRAINT tenant_module_entitlement_override_status_chk
+        CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL))
+);
+
+COMMENT ON COLUMN control.subscription_plan_usage_limit.limit_value IS
+    'Nonnegative count/bytes quota. Zero permits no capacity; NULL means unlimited.';
+COMMENT ON COLUMN control.tenant_usage_limit_override.limit_value IS
+    'Nonnegative count/bytes exception. Zero permits no capacity; unlimited is available only through a plan NULL limit.';
+
+-- Immutable scoped binding, compiled against existing policy and profile publication owners.
+CREATE TABLE control.process_selection_publication (
+    id uuid PRIMARY KEY, tenant_id uuid NOT NULL,
+    plane_key text NOT NULL CHECK (plane_key IN ('neon','studio','mesh')),
+    process_family text NOT NULL, operating_organization_id uuid NOT NULL, company_code_id uuid,
+    policy_definition_id uuid NOT NULL REFERENCES control.policy_definition(id),
+    policy_version integer NOT NULL CHECK (policy_version>0),
+    policy_hash text NOT NULL CHECK (policy_hash ~ '^[a-f0-9]{64}$'),
+    publication jsonb NOT NULL CHECK (jsonb_typeof(publication)='object'),
+    effective_from timestamptz NOT NULL, effective_until timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CHECK (effective_until IS NULL OR effective_until>effective_from),
+    CHECK ((publication->>'schema'='athyper.process-selection-publication/1'
+      AND publication->'scope'->>'tenantId'=tenant_id::text
+      AND publication->'scope'->>'planeKey'=plane_key
+      AND publication->'scope'->>'processFamily'=process_family
+      AND publication->'scope'->>'operatingOrganizationId'=operating_organization_id::text
+      AND (publication->'scope'->>'companyCodeId') IS NOT DISTINCT FROM company_code_id::text
+      AND publication->'policy'->>'id'=policy_definition_id::text
+      AND publication->'policy'->>'definitionId'=policy_definition_id::text
+      AND (publication->'policy'->>'version')::integer=policy_version
+      AND publication->'policy'->>'hash'=policy_hash) IS TRUE)
+);
+
+-- Immutable publication records for process-only artifacts, authored by their domain owners.
+-- Policies, cycles, workflow releases and rendered templates retain their existing owners.
+CREATE TABLE control.process_selection_catalog_revision (
+    id uuid PRIMARY KEY, tenant_id uuid NOT NULL,
+    plane_key text NOT NULL CHECK (plane_key IN ('neon','studio','mesh')),
+    process_family text NOT NULL, operating_organization_id uuid NOT NULL, company_code_id uuid,
+    kind text NOT NULL CHECK (kind IN ('profile','manifest','projection','recipient_policy','reviewer_policy','fact_schema','minimum_control')),
+    version integer NOT NULL CHECK (version>0),
+    content_hash text NOT NULL CHECK (content_hash ~ '^[a-f0-9]{64}$'),
+    definition jsonb NOT NULL CHECK (jsonb_typeof(definition)='object'),
+    effective_from timestamptz NOT NULL, effective_until timestamptz,
+    published_at timestamptz NOT NULL DEFAULT now(), published_by uuid NOT NULL,
+    CHECK (effective_until IS NULL OR effective_until>effective_from)
+);
+
+-- Current activation policy is independent of the submitted routing requirement.
+CREATE TABLE control.supplier_activation_policy (
+ id uuid PRIMARY KEY DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+ operating_organization_id uuid NOT NULL, company_code_id uuid,
+ version integer NOT NULL CHECK(version>0), operation_code text NOT NULL CHECK(operation_code IN('purchasing','payment')),
+ rationale text NOT NULL CHECK(length(btrim(rationale))>0),
+ effective_from timestamptz NOT NULL, effective_until timestamptz,
+ published_by uuid NOT NULL, published_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE(tenant_id,id), UNIQUE NULLS NOT DISTINCT(tenant_id,operating_organization_id,company_code_id,version),
+ CHECK(effective_until IS NULL OR effective_until>effective_from)
+);

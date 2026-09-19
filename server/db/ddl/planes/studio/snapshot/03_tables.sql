@@ -95,6 +95,45 @@ CREATE TABLE snapshot.content_item_version (
 COMMENT ON TABLE snapshot.content_item_version IS
   'Immutable content body snapshot. UPDATE and DELETE are rejected by trigger.';
 
+CREATE TABLE snapshot.business_partner_definition_revision (
+    id uuid NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id uuid NOT NULL,
+    bundle_code text NOT NULL,
+    semantic_version text NOT NULL,
+    bundle_schema_version text NOT NULL DEFAULT '1.0.0',
+    bundle_json jsonb NOT NULL,
+    bundle_hash text NOT NULL,
+    target_planes text[] NOT NULL,
+    idempotency_key text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    created_by uuid NOT NULL,
+    CONSTRAINT business_partner_definition_revision_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_definition_revision_tenant_id_uq UNIQUE (tenant_id,id),
+    CONSTRAINT business_partner_definition_revision_version_uq UNIQUE (tenant_id,bundle_code,semantic_version),
+    CONSTRAINT business_partner_definition_revision_idempotency_uq UNIQUE (tenant_id,idempotency_key),
+    CONSTRAINT business_partner_definition_revision_code_chk CHECK (bundle_code ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT business_partner_definition_revision_semver_chk CHECK (semantic_version ~ '^[0-9]+\.[0-9]+\.[0-9]+([+-][A-Za-z0-9.-]+)?$'),
+    CONSTRAINT business_partner_definition_revision_schema_chk CHECK (bundle_schema_version ~ '^[0-9]+\.[0-9]+\.[0-9]+$'),
+    CONSTRAINT business_partner_definition_revision_hash_chk CHECK (bundle_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT business_partner_definition_revision_bundle_chk CHECK (
+      jsonb_typeof(bundle_json)='object'
+      AND bundle_json->>'schema'='athyper.business-partner-definition-bundle.v1'
+      AND bundle_json->>'bundleCode'=bundle_code
+      AND bundle_json->>'semanticVersion'=semantic_version
+      AND bundle_json ?& ARRAY['requestSchemas','fieldPolicies','validationDeclarations','duplicateRules','formDescriptors','viewDescriptors','mappingContracts','workflowDefinitions','evidencePolicies','readinessGates','reasonCodeCatalog','meshSafeSchemas','compatibilityRules','sourceContractHashes']
+      AND bundle_json->'requestSchemas' ?& ARRAY['supplier.new','supplier.add','supplier.qualify','supplier.company','supplier.bank','customer.new','customer.add','customer.credit','customer.company','workforce.new','workforce.add','workforce.change','workforce.offboard']
+      AND bundle_json->'mappingContracts' ?& ARRAY['internal','portal','mesh','import','api']
+      AND bundle_json->'workflowDefinitions' ?& ARRAY['supplier','customer','workforce']
+    ),
+    CONSTRAINT business_partner_definition_revision_targets_chk CHECK (
+      cardinality(target_planes)>0 AND target_planes <@ ARRAY['studio','neon','mesh']::text[]
+    ),
+    CONSTRAINT business_partner_definition_revision_idempotency_chk CHECK (btrim(idempotency_key)<>'')
+);
+
+COMMENT ON TABLE snapshot.business_partner_definition_revision IS
+  'Immutable STUDIO-authored schemas, mappings, UI descriptors, and workflow definitions. Contains no partner instance or approval data.';
+
 CREATE TABLE snapshot.compiled_artifact (
     id                   uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id            uuid        NOT NULL,
@@ -411,3 +450,39 @@ CREATE TABLE snapshot.entity_release_artifact (
 
 COMMENT ON TABLE snapshot.entity_release_artifact IS
   'Immutable Studio/Neon/Mesh artifact compiled from one normalized Meta Entity release. Supports both global package releases and tenant-owned releases without overloading business-record snapshots.';
+
+-- Immutable case schemas approved by the separated Business Partner publication roles.
+CREATE TABLE snapshot.business_partner_case_contract_revision (
+    id uuid PRIMARY KEY,
+    tenant_id uuid NOT NULL,
+    entity_id uuid NOT NULL,
+    publication_key text NOT NULL,
+    previous_contract_id uuid,
+    previous_contract_hash text CHECK (previous_contract_hash ~ '^[a-f0-9]{64}$'),
+    previous_release_no bigint NOT NULL CHECK (previous_release_no >= 0),
+    CHECK ((previous_contract_id IS NULL AND previous_contract_hash IS NULL AND previous_release_no = 0) OR (previous_contract_id IS NOT NULL AND previous_contract_hash IS NOT NULL AND previous_release_no > 0)),
+    contract_json jsonb NOT NULL CHECK (
+        jsonb_typeof(contract_json) = 'object'
+        AND pg_column_size(contract_json) <= 262144
+    ),
+    contract_hash text NOT NULL CHECK (contract_hash ~ '^[a-f0-9]{64}$'),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 8 AND 180),
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    created_by uuid NOT NULL,
+    UNIQUE (tenant_id, id),
+    UNIQUE (tenant_id, idempotency_key)
+);
+
+-- Saved draft comparison history
+CREATE TABLE snapshot.entity_draft_save (
+ change_set_id uuid NOT NULL REFERENCES metadata.entity_change_set(id),
+ lock_version bigint NOT NULL CHECK (lock_version >= 0),
+ tenant_id uuid,
+ graph jsonb NOT NULL CHECK (jsonb_typeof(graph) = 'object'),
+ graph_hash text NOT NULL,
+ captured_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ captured_by uuid NOT NULL,
+ capture_kind text NOT NULL CHECK (capture_kind IN ('saved', 'previous')),
+ PRIMARY KEY (change_set_id, lock_version),
+ FOREIGN KEY (tenant_id, change_set_id) REFERENCES metadata.entity_change_set(tenant_id, id)
+);

@@ -8,7 +8,7 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "server/**"
-      - "scripts/policy/verify-docker-toolchain.mjs"
+      - "tooling/scripts/policy/verify-docker-toolchain.mjs"
       - ".github/workflows/container-maintenance.yml"
   workflow_dispatch:
     inputs:

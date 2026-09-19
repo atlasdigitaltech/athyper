@@ -1,4 +1,99 @@
-import{readFileSync}from"node:fs";import{resolve}from"node:path";import{describe,expect,it,vi}from"vitest";import{createWorkflowSlaDiscoveryHandler,createWorkflowSlaSweepHandler,DISCOVER_WORKFLOW_SLA_JOB,SWEEP_WORKFLOW_SLA_JOB,WORKFLOW_MAINTENANCE_QUEUE}from"../workflow-jobs.js";
-const planeKey="neon"as const,principalId="00000000-0000-0000-0000-000000000000",tenantId="11111111-1111-4111-8111-111111111111";
-describe("workflow SLA jobs",()=>{it("discovers due tenants and publishes deterministic tenant jobs",async()=>{const enqueue=vi.fn().mockResolvedValue("job"),handler=createWorkflowSlaDiscoveryHandler({catalog:{listDueTenants:vi.fn().mockResolvedValue([tenantId])},jobs:{enqueue},now:()=>new Date("2026-08-12T08:05:30Z")});await expect(handler.handle(job(DISCOVER_WORKFLOW_SLA_JOB,{planeKey,principalId}),context())).resolves.toEqual({status:"completed",output:{tenants:1,discoveredAt:"2026-08-12T08:05:30.000Z"}});expect(enqueue).toHaveBeenCalledWith(WORKFLOW_MAINTENANCE_QUEUE,SWEEP_WORKFLOW_SLA_JOB,{planeKey,tenantId,principalId,limit:100},expect.objectContaining({jobId:`workflow-sla-neon-${tenantId}-29775365`,execution:{planeKey,scope:"tenant",tenantId,principalId}}));});it("runs one tenant sweep and exposes counters",async()=>{const sweep=vi.fn().mockResolvedValue({inspected:2,breached:1,escalated:1,skipped:0}),handler=createWorkflowSlaSweepHandler({sweep});await expect(handler.handle(job(SWEEP_WORKFLOW_SLA_JOB,{planeKey,tenantId,principalId}),context())).resolves.toEqual({status:"completed",output:{inspected:2,breached:1,escalated:1,skipped:0}});});it("owns a governed recurring schedule and a bounded RLS-safe discovery function",()=>{const root=resolve(process.cwd(),"../../../db/ddl/common"),schedule=readFileSync(resolve(root,"control/12_cron_schedule_reference_seed.sql"),"utf8"),functions=readFileSync(resolve(root,"document/07_functions.sql"),"utf8"),grants=readFileSync(resolve(root,"document/11_grants.sql"),"utf8");expect(schedule).toContain("'workflow-sla-discovery'");expect(schedule).toContain("'workflow.sla.discover', '* * * * *'");expect(functions).toContain("SECURITY DEFINER");expect(functions).toContain("fn_workflow_sla_due_tenants");expect(grants).toContain("REVOKE ALL ON FUNCTION document.fn_workflow_sla_due_tenants");});});
-function job<Name extends string,Payload extends object>(name:Name,data:Payload){return{id:"job",name,queue:WORKFLOW_MAINTENANCE_QUEUE,data,attempt:1,maxAttempts:3,enqueuedAt:"2026-08-12T08:05:30Z"};}function context(){return{signal:new AbortController().signal,attempt:1,reportProgress:vi.fn()};}
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it, vi } from "vitest";
+import {
+  createWorkflowSlaDiscoveryHandler,
+  createWorkflowSlaSweepHandler,
+  DISCOVER_WORKFLOW_SLA_JOB,
+  SWEEP_WORKFLOW_SLA_JOB,
+  WORKFLOW_MAINTENANCE_QUEUE,
+} from "../workflow-jobs.js";
+const planeKey = "neon" as const,
+  principalId = "00000000-0000-0000-0000-000000000000",
+  tenantId = "11111111-1111-4111-8111-111111111111";
+describe("workflow SLA jobs", () => {
+  it("discovers due tenants and publishes deterministic tenant jobs", async () => {
+    const enqueue = vi.fn().mockResolvedValue("job"),
+      handler = createWorkflowSlaDiscoveryHandler({
+        catalog: { listDueTenants: vi.fn().mockResolvedValue([tenantId]) },
+        jobs: { enqueue },
+        now: () => new Date("2026-08-12T08:05:30Z"),
+      });
+    await expect(
+      handler.handle(
+        job(DISCOVER_WORKFLOW_SLA_JOB, { planeKey, principalId }),
+        context(),
+      ),
+    ).resolves.toEqual({
+      status: "completed",
+      output: { tenants: 1, discoveredAt: "2026-08-12T08:05:30.000Z" },
+    });
+    expect(enqueue).toHaveBeenCalledWith(
+      WORKFLOW_MAINTENANCE_QUEUE,
+      SWEEP_WORKFLOW_SLA_JOB,
+      { planeKey, tenantId, principalId, limit: 100 },
+      expect.objectContaining({
+        jobId: `workflow-sla-neon-${tenantId}-29775365`,
+        execution: { planeKey, scope: "tenant", tenantId, principalId },
+      }),
+    );
+  });
+  it("runs one tenant sweep and exposes counters", async () => {
+    const sweep = vi.fn().mockResolvedValue({
+        inspected: 2,
+        breached: 1,
+        escalated: 1,
+        skipped: 0,
+      }),
+      handler = createWorkflowSlaSweepHandler({ sweep });
+    await expect(
+      handler.handle(
+        job(SWEEP_WORKFLOW_SLA_JOB, { planeKey, tenantId, principalId }),
+        context(),
+      ),
+    ).resolves.toEqual({
+      status: "completed",
+      output: { inspected: 2, breached: 1, escalated: 1, skipped: 0 },
+    });
+  });
+  it("owns a governed recurring schedule and a bounded RLS-safe discovery function", () => {
+    const root = resolve(process.cwd(), "../../../db/ddl/common"),
+      schedule = readFileSync(
+        resolve(root, "control/12_cron_schedule_reference_seed.sql"),
+        "utf8",
+      ),
+      functions = readFileSync(
+        resolve(root, "document/07_functions.sql"),
+        "utf8",
+      ),
+      grants = readFileSync(resolve(root, "document/11_grants.sql"), "utf8");
+    expect(schedule).toContain("'workflow-sla-discovery'");
+    expect(schedule).toContain("'workflow.sla.discover', '* * * * *'");
+    expect(functions).toContain("SECURITY DEFINER");
+    expect(functions).toContain("fn_workflow_sla_due_tenants");
+    expect(grants).toContain(
+      "REVOKE ALL ON FUNCTION document.fn_workflow_sla_due_tenants",
+    );
+  });
+});
+function job<Name extends string, Payload extends object>(
+  name: Name,
+  data: Payload,
+) {
+  return {
+    id: "job",
+    name,
+    queue: WORKFLOW_MAINTENANCE_QUEUE,
+    data,
+    attempt: 1,
+    maxAttempts: 3,
+    enqueuedAt: "2026-08-12T08:05:30Z",
+  };
+}
+function context() {
+  return {
+    signal: new AbortController().signal,
+    attempt: 1,
+    reportProgress: vi.fn(),
+  };
+}

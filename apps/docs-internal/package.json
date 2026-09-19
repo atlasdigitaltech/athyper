@@ -1,0 +1,24 @@
+{
+  "name": "@athyper/docs-internal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ../../tooling/scripts/docs/stage-content.mjs --target internal && astro dev",
+    "prebuild": "node ../../tooling/scripts/docs/stage-content.mjs --target internal",
+    "build": "astro build",
+    "postbuild": "node ../../tooling/scripts/docs/verify-output.mjs --target internal",
+    "build:placeholder": "node ../../tooling/scripts/docs/stage-content.mjs --target internal --empty && astro build && node ../../tooling/scripts/docs/verify-output.mjs --target internal",
+    "preview": "astro preview",
+    "typecheck": "astro check",
+    "lint": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.1",
+    "astro": "^7.3.2"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "typescript": "^6.0.3"
+  }
+}

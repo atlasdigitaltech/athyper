@@ -38,10 +38,13 @@ export interface JobEnvelope<
   readonly queue: string;
   readonly data: Payload;
   readonly attempt: number;
+  /** Total permitted attempts for this execution, including admitted manual retries. */
   readonly maxAttempts: number;
   readonly enqueuedAt: string;
   readonly correlationId?: string;
   readonly idempotencyKey?: string;
+  /** Durable execution identity, qualified by queue independently of handler idempotency. */
+  readonly executionKey?: string;
   readonly execution?: JobExecutionCoordinate;
   readonly subject?: JobSubject;
   readonly payloadSchema?: JobPayloadSchema;
@@ -59,8 +62,8 @@ export interface EnqueueOptions {
   readonly execution?: JobExecutionCoordinate;
   readonly subject?: JobSubject;
   readonly payloadSchema?: JobPayloadSchema;
-  readonly removeOnComplete?: boolean | number;
-  readonly removeOnFail?: boolean | number;
+  readonly removeOnComplete?: boolean | number | { readonly age: number; readonly count: number };
+  readonly removeOnFail?: boolean | number | { readonly age: number; readonly count: number };
 }
 
 export interface JobExecutionContext {

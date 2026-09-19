@@ -3,7 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./business-context": "./src/business-context.ts",
+    "./answer": "./src/answer.ts",
+    "./insights": "./src/insights.ts",
+    "./feedback": "./src/feedback.ts",
+    "./intent": "./src/intent.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
@@ -13,7 +20,8 @@
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-metadata": "workspace:*",
     "@athyper/server-contract-records": "workspace:*",
-    "@athyper/server-foundation": "workspace:*"
+    "@athyper/server-foundation": "workspace:*",
+    "@athyper/contract-platform-ai": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

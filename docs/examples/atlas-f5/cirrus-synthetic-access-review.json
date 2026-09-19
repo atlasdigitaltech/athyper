@@ -1,0 +1,61 @@
+{
+  "environment": "dev",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+  "principalCode": "catl.admin",
+  "businessPartnerId": "f7688c3d-8c92-5651-a469-da3f4f786375",
+  "businessPartnerCode": "CATL-BP-001",
+  "reservedAttachmentId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+  "status": "prepared for native authorization publication; not applied",
+  "permissions": [
+    {
+      "permissionId": "f6af45b7-f806-5665-9627-6bce00f23b45",
+      "canonicalCode": "neon.collaboration.attachment.create",
+      "product": "neon",
+      "domain": "collaboration",
+      "entity": "attachment",
+      "operation": "create",
+      "permissionKind": "entity_operation",
+      "riskTier": "medium",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "lifecycle": "proposed",
+      "definitionSha256": "784a51429e40c1fb2ceb3cd0db9f51d8a2e3f26f0636094733bac698b1c1971f"
+    },
+    {
+      "permissionId": "c0f93896-6f21-5a13-ad73-abaa3f1606da",
+      "canonicalCode": "neon.collaboration.attachment.read",
+      "product": "neon",
+      "domain": "collaboration",
+      "entity": "attachment",
+      "operation": "read",
+      "permissionKind": "entity_operation",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "lifecycle": "proposed",
+      "definitionSha256": "68867fad4c377e0647c01ff67220b31c9f313e503dfc09d757130739295a4334"
+    }
+  ],
+  "proposedAssignment": {
+    "scopeKind": "resource",
+    "targetId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+    "propagation": "exact",
+    "members": [
+      "catl.admin"
+    ]
+  },
+  "existingParentAccess": "Verified via authenticated BP 360 summary HTTP 200",
+  "requiredBeforeApply": [
+    "Authenticated Studio authoring session",
+    "Reviewed native permission and BP Meta Entity publication",
+    "Qualified local knowledge/index/ingestion composition and deployment"
+  ],
+  "liveChanges": [],
+  "studioSession": "Verified authenticated catl.admin in CirrusAtlantic, 2026-09-10",
+  "deploymentBlockers": [
+    "API has no publication signing-key configuration; Meta Entity authoring registration is skipped",
+    "API bootstrap supplies no authorizationManagement adapters; native management routes are absent",
+    "Local Atlas still lacks deployed knowledge-index and ingestion composition"
+  ]
+}

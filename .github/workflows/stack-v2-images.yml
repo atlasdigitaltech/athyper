@@ -1,0 +1,345 @@
+name: Stack v2 container images
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: ImageSet channel metadata; publication remains immutable
+        required: true
+        default: dev
+        type: choice
+        options: [dev, candidate]
+      confirm_publish:
+        description: Confirm publication to GHCR
+        required: true
+        default: false
+        type: boolean
+
+concurrency:
+  group: stack-v2-images-${{ github.ref }}-${{ inputs.channel }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  infrastructure-scan:
+    needs: authorize
+    uses: ./.github/workflows/infrastructure-maintenance.yml
+
+  openapi-policy:
+    uses: ./.github/workflows/openapi-policy.yml
+
+  authorize:
+    name: Confirm publication
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require explicit confirmation
+        env:
+          CONFIRM_PUBLISH: ${{ inputs.confirm_publish }}
+        run: |
+          if [[ "$CONFIRM_PUBLISH" != "true" ]]; then
+            echo "Set confirm_publish=true to authorize GHCR writes."
+            exit 1
+          fi
+
+  publish:
+    name: Build, scan, publish / ${{ matrix.id }}
+    needs: [authorize, openapi-policy, infrastructure-scan]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: neon-web
+            image: ghcr.io/atlasdigitaltech/athyper-neon-web
+            context: .
+            dockerfile: apps/Dockerfile
+            build_args: |
+              APP_PACKAGE=@athyper/neon
+              APP_NAME=neon
+          - id: mesh-web
+            image: ghcr.io/atlasdigitaltech/athyper-mesh-web
+            context: .
+            dockerfile: apps/Dockerfile
+            build_args: |
+              APP_PACKAGE=@athyper/mesh
+              APP_NAME=mesh
+          - id: studio-web
+            image: ghcr.io/atlasdigitaltech/athyper-studio-web
+            context: .
+            dockerfile: apps/Dockerfile
+            build_args: |
+              APP_PACKAGE=@athyper/studio
+              APP_NAME=studio
+          - id: runtime-server
+            image: ghcr.io/atlasdigitaltech/athyper-runtime-server
+            context: .
+            dockerfile: server/Dockerfile.prod
+            build_args: ""
+          - id: postgres
+            image: ghcr.io/atlasdigitaltech/athyper-postgres
+            context: deploy/config/postgres
+            dockerfile: deploy/config/postgres/Dockerfile
+            build_args: ""
+          - id: redis
+            image: ghcr.io/atlasdigitaltech/athyper-valkey
+            context: deploy/config/redis
+            dockerfile: deploy/config/redis/Dockerfile
+            build_args: ""
+          - id: pgbouncer
+            image: ghcr.io/atlasdigitaltech/athyper-pgbouncer
+            context: deploy/config/pgbouncer
+            dockerfile: deploy/config/pgbouncer/Dockerfile
+            build_args: ""
+          - id: traefik
+            image: ghcr.io/atlasdigitaltech/athyper-traefik
+            context: deploy/config/traefik
+            dockerfile: deploy/config/traefik/Dockerfile
+            build_args: ""
+          - id: meilisearch
+            image: ghcr.io/atlasdigitaltech/athyper-meilisearch
+            context: deploy/config/meilisearch
+            dockerfile: deploy/config/meilisearch/Dockerfile
+            build_args: ""
+          - id: gotenberg
+            image: ghcr.io/atlasdigitaltech/athyper-gotenberg
+            context: deploy/config/gotenberg
+            dockerfile: deploy/config/gotenberg/Dockerfile
+            build_args: ""
+          - id: tika
+            image: ghcr.io/atlasdigitaltech/athyper-tika
+            context: deploy/config/tika
+            dockerfile: deploy/config/tika/Dockerfile
+            build_args: ""
+          - id: seaweedfs
+            image: ghcr.io/atlasdigitaltech/athyper-seaweedfs
+            context: deploy/config/seaweedfs
+            dockerfile: deploy/config/seaweedfs/Dockerfile
+            build_args: ""
+          - id: s3-tools
+            image: ghcr.io/atlasdigitaltech/athyper-s3-tools
+            context: deploy/config/s3-tools
+            dockerfile: deploy/config/s3-tools/Dockerfile
+            build_args: ""
+          - id: virusscan
+            image: ghcr.io/atlasdigitaltech/athyper-clamav
+            context: deploy/config/virusscan
+            dockerfile: deploy/config/virusscan/Dockerfile
+            build_args: ""
+          - id: searchcore-key-init
+            image: ghcr.io/atlasdigitaltech/athyper-searchcore-key-init
+            context: deploy/config/searchcore-key-init
+            dockerfile: deploy/config/searchcore-key-init/Dockerfile
+            build_args: ""
+          - id: iam
+            image: ghcr.io/atlasdigitaltech/athyper-keycloak
+            context: deploy/config/iam
+            dockerfile: deploy/config/iam/Dockerfile
+            build_args: ""
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Generate OCI metadata
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ${{ matrix.image }}
+          tags: |
+            type=sha,prefix=sha-,format=long
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build local scan candidate
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          build-args: ${{ matrix.build_args }}
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: athyper-scan:${{ github.run_id }}-${{ matrix.id }}
+          cache-from: type=gha,scope=stack-v2-${{ matrix.id }}
+          cache-to: type=gha,mode=max,scope=stack-v2-${{ matrix.id }}
+
+      - name: Scan local image
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          image-ref: athyper-scan:${{ github.run_id }}-${{ matrix.id }}
+          format: json
+          output: trivy-${{ matrix.id }}.json
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"
+
+      - name: Preserve scan evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: scan-${{ matrix.id }}-${{ github.sha }}
+          path: trivy-${{ matrix.id }}.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce vulnerability gate
+        env:
+          REPORT: trivy-${{ matrix.id }}.json
+        run: |
+          count="$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH" or .Severity == "CRITICAL")] | length' "$REPORT")"
+          echo "Fixed HIGH/CRITICAL findings: $count"
+          test "$count" -eq 0
+
+      - name: Log in to GHCR after scan passes
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish image with BuildKit SBOM and provenance
+        id: publish
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          build-args: ${{ matrix.build_args }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=stack-v2-${{ matrix.id }}
+          provenance: mode=max
+          sbom: true
+
+      # A second BuildKit export may differ from the loaded scan candidate.
+      # Only the actual registry digest can qualify the final ImageSet.
+      - name: Scan exact published digest
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          image-ref: ${{ matrix.image }}@${{ steps.publish.outputs.digest }}
+          format: json
+          output: trivy-published-${{ matrix.id }}.json
+          scanners: vuln
+          timeout: 20m
+          exit-code: "0"
+
+      - name: Enforce published digest gate
+        run: node deploy/compose/scripts/gate-infrastructure-scan.mjs trivy-published-${{ matrix.id }}.json
+
+      - name: Preserve published digest scan
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: published-scan-${{ matrix.id }}-${{ github.sha }}
+          path: trivy-published-${{ matrix.id }}.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Create GitHub build provenance attestation
+        # Private organization plans may not expose the repository-attestation
+        # API. BuildKit registry provenance and SBOM above remain mandatory.
+        continue-on-error: true
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        with:
+          subject-name: ${{ matrix.image }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
+      - name: Record immutable image result
+        env:
+          IMAGE_ID: ${{ matrix.id }}
+          IMAGE_NAME: ${{ matrix.image }}
+          IMAGE_DIGEST: ${{ steps.publish.outputs.digest }}
+          SOURCE_REVISION: ${{ github.sha }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          jq -n \
+            --arg id "$IMAGE_ID" \
+            --arg image "$IMAGE_NAME" \
+            --arg digest "$IMAGE_DIGEST" \
+            --arg revision "$SOURCE_REVISION" \
+            --arg channel "$CHANNEL" \
+            '{id:$id,reference:($image+"@"+$digest),sourceRevision:$revision,channel:$channel}' \
+            > image-${IMAGE_ID}.json
+          cat image-${IMAGE_ID}.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload immutable image result
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: digest-${{ matrix.id }}-${{ github.sha }}
+          path: image-${{ matrix.id }}.json
+          if-no-files-found: error
+          retention-days: 90
+
+  manifest:
+    name: Assemble immutable image set
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Record scanned upstream image pins
+        env:
+          SOURCE_REVISION: ${{ github.sha }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          jq -c '.include[]' deploy/compose/scripts/upstream-release-images.json | while read -r image; do
+            id="$(jq -r .id <<< "$image")"
+            jq --arg revision "$SOURCE_REVISION" --arg channel "$CHANNEL" '. + {sourceRevision:$revision,channel:$channel}' <<< "$image" > "image-$id.json"
+          done
+
+      - name: Download image results
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: digest-*-${{ github.sha }}
+          merge-multiple: true
+
+      - name: Assemble digest manifest
+        env:
+          SOURCE_REVISION: ${{ github.sha }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          jq -e -s --arg revision "$SOURCE_REVISION" '
+            (map(.id) | sort) == (["iam","mesh-web","neon-web","studio-web","runtime-server","postgres","redis","pgbouncer","traefik","meilisearch","gotenberg","tika","seaweedfs","s3-tools","virusscan","searchcore-key-init","nginx","mailpit"] | sort)
+            and all(.[]; .sourceRevision == $revision and (.reference | test("^[a-zA-Z0-9._/:+-]+@sha256:[a-f0-9]{64}$")))
+          ' image-*.json
+          jq -s \
+            --arg revision "$SOURCE_REVISION" \
+            --arg channel "$CHANNEL" \
+            '{
+              apiVersion:"athyper.io/v1alpha1",
+              kind:"ImageSet",
+              metadata:{
+                id:($channel+"-"+($revision[0:12])),
+                channel:(if $channel == "dev" then "development" else "candidate" end)
+              },
+              spec:{
+                sourceRevision:$revision,
+                images:(sort_by(.id) | map({id,reference}))
+              }
+            }' \
+            image-*.json > published-image-set.json
+          jq . published-image-set.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload digest manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: stack-v2-image-set-${{ github.sha }}
+          path: published-image-set.json
+          if-no-files-found: error
+          retention-days: 90

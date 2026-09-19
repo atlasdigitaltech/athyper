@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "proposalRevision": "af245aecf93f0b164911ea00f46c61521bd1ebb6f46ab1bb6ce70a8704ad5b59",
+  "source": "conversation user: go ahead and fix 29 missing catalog definitions and invalid enter transition",
+  "actor": "conversation_user",
+  "namedAccountImpersonated": false,
+  "catalogDefinitionsOnly": true,
+  "grantChangesAuthorized": false,
+  "activationAuthorized": false
+}

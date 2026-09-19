@@ -56,6 +56,7 @@ CREATE TABLE master.tenant_profile (
     id              uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id       uuid        NOT NULL,
     country_code    character(2),
+    logo_asset_ref  text,
     locale_code     text,
     timezone_code   text,
     language_code   text,
@@ -63,6 +64,10 @@ CREATE TABLE master.tenant_profile (
     number_format   text,
     week_start      smallint,
     weekend_days    smallint[],
+    enabled_locale_codes text[] NOT NULL DEFAULT ARRAY['en']::text[],
+    default_locale_code text NOT NULL DEFAULT 'en',
+    fallback_locale_code text NOT NULL DEFAULT 'en',
+    locale_catalog_governance jsonb NOT NULL DEFAULT '{}'::jsonb,
     metadata        jsonb       NOT NULL DEFAULT '{}'::jsonb,
     created_at      timestamptz NOT NULL DEFAULT now(),
     created_by      uuid        NOT NULL,
@@ -71,6 +76,15 @@ CREATE TABLE master.tenant_profile (
 
     CONSTRAINT tenant_profile_pkey PRIMARY KEY (id),
     CONSTRAINT tenant_profile_tenant_uq UNIQUE (tenant_id),
+    CONSTRAINT tenant_profile_locale_policy_chk CHECK (
+        cardinality(enabled_locale_codes) BETWEEN 1 AND 8
+        AND enabled_locale_codes <@ ARRAY['en','ar','ms','zh-Hans','hi','ta','fr','de']::text[]
+        AND 'en' = ANY(enabled_locale_codes)
+        AND default_locale_code = ANY(enabled_locale_codes)
+        AND fallback_locale_code = 'en'
+    ),
+    CONSTRAINT tenant_profile_locale_catalog_governance_chk
+        CHECK (jsonb_typeof(locale_catalog_governance) = 'object'),
     CONSTRAINT tenant_profile_date_format_nonempty
         CHECK (
             date_format IS NULL
@@ -80,6 +94,16 @@ CREATE TABLE master.tenant_profile (
         CHECK (
             number_format IS NULL
             OR (btrim(number_format) <> '' AND length(number_format) <= 64)
+        ),
+    CONSTRAINT tenant_profile_logo_asset_ref_chk
+        CHECK (
+            logo_asset_ref IS NULL
+            OR (
+                btrim(logo_asset_ref) = logo_asset_ref
+                AND length(logo_asset_ref) BETWEEN 2 AND 1024
+                AND logo_asset_ref ~ '^/[A-Za-z0-9][A-Za-z0-9_./-]*$'
+                AND logo_asset_ref !~ '(^|/)\.\.(/|$)'
+            )
         ),
     CONSTRAINT tenant_profile_week_start_chk
         CHECK (week_start IS NULL OR week_start BETWEEN 0 AND 6),
@@ -102,6 +126,9 @@ COMMENT ON TABLE master.tenant_profile IS
 
 COMMENT ON COLUMN master.tenant_profile.country_code IS
   'Default operating and presentation country; not legal-entity or tax authority.';
+
+COMMENT ON COLUMN master.tenant_profile.logo_asset_ref IS
+  'Optional same-origin managed logo path for tenant presentation. External URLs and traversal are prohibited.';
 
 COMMENT ON COLUMN master.tenant_profile.weekend_days IS
   'Tenant calendar default only. Formal working calendars remain capability-owned.';
@@ -247,18 +274,43 @@ CREATE TABLE master.address (
     id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id           uuid        NOT NULL,
     address_type        text,
+    address_kind        text        NOT NULL DEFAULT 'street',
+    street_name         text,
+    house_number        text,
+    house_number_suffix text,
+    building_name       text,
+    floor               text,
+    room                text,
+    entrance            text,
+    unit                text,
     line1               text,
     line2               text,
     line3               text,
     city                text,
+    dependent_locality  text,
     region              text,
+    state_region_code   text,
     postal_code         text,
-    country_code        character(2),
+    po_box              text,
+    po_box_postal_code  text,
+    po_box_city         text,
+    delivery_service_type text,
+    delivery_service_number text,
+    country_code        character(2) NOT NULL,
+    timezone_code       text,
     latitude            numeric(9,6),
     longitude           numeric(9,6),
     normalized_hash     char(64)    NOT NULL,
+    normalization_version text       NOT NULL DEFAULT 'v1',
+    formatted_address   text,
+    format_version      text       NOT NULL DEFAULT 'v1',
+    validation_status   text       NOT NULL DEFAULT 'unverified',
+    validation_provider text,
+    validation_confidence numeric(5,2),
+    validated_at        timestamptz,
+    current_validation_event_id uuid,
     metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
-    status              text        NOT NULL DEFAULT 'active',
+    status              text        NOT NULL DEFAULT 'draft',
     is_active           boolean     GENERATED ALWAYS AS (status = 'active') STORED,
     status_changed_at   timestamptz,
     status_changed_by   uuid,
@@ -271,11 +323,18 @@ CREATE TABLE master.address (
     CONSTRAINT address_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT address_type_nonempty_chk
         CHECK (address_type IS NULL OR btrim(address_type) <> ''),
+    CONSTRAINT address_kind_nonempty_chk
+        CHECK (address_kind IS NULL OR btrim(address_kind) <> ''),
+    CONSTRAINT address_kind_chk
+        CHECK (
+            address_kind IN ('street', 'po_box', 'rural', 'military', 'other')
+        ),
     CONSTRAINT address_text_nonempty_chk
         CHECK (
             (line1 IS NULL OR btrim(line1) <> '')
             AND (line2 IS NULL OR btrim(line2) <> '')
             AND (line3 IS NULL OR btrim(line3) <> '')
+            AND (dependent_locality IS NULL OR btrim(dependent_locality) <> '')
             AND (city IS NULL OR btrim(city) <> '')
             AND (region IS NULL OR btrim(region) <> '')
             AND (postal_code IS NULL OR btrim(postal_code) <> '')
@@ -290,18 +349,30 @@ CREATE TABLE master.address (
         ),
     CONSTRAINT address_country_code_chk
         CHECK (country_code IS NULL OR country_code::text ~ '^[A-Z]{2}$'),
+    CONSTRAINT address_state_region_code_chk
+        CHECK (state_region_code IS NULL OR state_region_code ~ '^[A-Z]{2}-[A-Z0-9]{1,6}$'),
     CONSTRAINT address_latitude_chk
         CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
     CONSTRAINT address_longitude_chk
         CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180),
-    CONSTRAINT address_coordinates_pair_chk
+    CONSTRAINT address_coordinates_consistency_chk
         CHECK ((latitude IS NULL) = (longitude IS NULL)),
     CONSTRAINT address_normalized_hash_chk
         CHECK (normalized_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT address_normalization_version_chk
+        CHECK (normalization_version ~ '^[a-z0-9][a-z0-9._-]{0,31}$'),
+    CONSTRAINT address_po_box_chk
+        CHECK (address_kind <> 'po_box' OR po_box IS NOT NULL),
+    CONSTRAINT address_validation_status_chk
+        CHECK (validation_status IN ('unverified', 'pending', 'valid', 'valid_with_correction', 'invalid', 'overridden')),
+    CONSTRAINT address_validation_confidence_chk
+        CHECK (validation_confidence IS NULL OR validation_confidence BETWEEN 0 AND 100),
+    CONSTRAINT address_format_version_chk
+        CHECK (format_version ~ '^[a-zA-Z0-9][a-zA-Z0-9._-]{0,31}$'),
     CONSTRAINT address_metadata_object_chk
         CHECK (jsonb_typeof(metadata) = 'object'),
     CONSTRAINT address_status_chk
-        CHECK (status IN ('active', 'deprecated')),
+        CHECK (status IN ('draft', 'active', 'retired', 'merged')),
     CONSTRAINT address_status_audit_pair_chk
         CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
     CONSTRAINT address_audit_pair_chk
@@ -319,6 +390,10 @@ CREATE TABLE master.address_link (
     address_id          uuid        NOT NULL,
     purpose             text        NOT NULL DEFAULT 'default',
     role_qualifier      text,
+    usage_status        text        NOT NULL DEFAULT 'active',
+    usage_denied_reason_code text,
+    usage_denied_at     timestamptz,
+    usage_denied_by     uuid,
     attention_line      text,
     is_primary          boolean     NOT NULL DEFAULT false,
     effective_from      date        NOT NULL DEFAULT CURRENT_DATE,
@@ -335,6 +410,23 @@ CREATE TABLE master.address_link (
         CHECK (purpose ~ '^[a-z][a-z0-9_]{1,62}$'),
     CONSTRAINT address_link_role_qualifier_chk
         CHECK (role_qualifier IS NULL OR btrim(role_qualifier) <> ''),
+    CONSTRAINT address_link_usage_status_chk
+        CHECK (usage_status IN ('active', 'suspended', 'prohibited', 'cancelled')),
+    CONSTRAINT address_link_usage_denied_reason_chk
+        CHECK (
+            (usage_status = 'active' AND usage_denied_reason_code IS NULL)
+            OR usage_status IN ('suspended', 'prohibited', 'cancelled')
+        ),
+    CONSTRAINT address_link_usage_denied_at_chk
+        CHECK (
+            (usage_status = 'active' AND usage_denied_at IS NULL)
+            OR usage_status IN ('suspended', 'prohibited', 'cancelled')
+        ),
+    CONSTRAINT address_link_usage_denied_by_chk
+        CHECK (
+            (usage_status = 'active' AND usage_denied_by IS NULL)
+            OR usage_status IN ('suspended', 'prohibited', 'cancelled')
+        ),
     CONSTRAINT address_link_attention_line_chk
         CHECK (attention_line IS NULL OR btrim(attention_line) <> ''),
     CONSTRAINT address_link_effective_range_chk
@@ -347,6 +439,55 @@ CREATE TABLE master.address_link (
 
 COMMENT ON TABLE master.address_link IS
   'Tenant-safe polymorphic owner-to-address link with purpose, addressee, and temporal primary selection.';
+
+CREATE TABLE master.address_event (
+    id                   uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id            uuid        NOT NULL,
+    event_type           text        NOT NULL,
+    subject_address_id   uuid        NOT NULL,
+    related_address_id   uuid,
+    correlation_id       uuid,
+    evidence_event_id    uuid,
+    provider             text,
+    provider_reference   text,
+    result_status        text,
+    confidence           numeric(5,2),
+    reason_code          text,
+    evidence_hash        char(64),
+    payload              jsonb,
+    effective_at         timestamptz,
+    occurred_at          timestamptz NOT NULL DEFAULT now(),
+    created_at           timestamptz NOT NULL DEFAULT now(),
+    created_by           uuid        NOT NULL,
+
+    CONSTRAINT address_event_pkey PRIMARY KEY (id),
+    CONSTRAINT address_event_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT address_event_type_chk CHECK (event_type IN (
+        'VALIDATION_RECORDED', 'GEOCODE_RECORDED', 'STANDARDIZATION_PROPOSED',
+        'CORRECTION_ACCEPTED', 'CORRECTION_REJECTED', 'POSTAL_OVERRIDE_ACCEPTED',
+        'MANUALLY_VERIFIED', 'MOVED', 'CORRECTED', 'MERGED', 'RETIRED'
+    )),
+    CONSTRAINT address_event_confidence_chk CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 100),
+    CONSTRAINT address_event_evidence_hash_chk CHECK (evidence_hash IS NULL OR evidence_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT address_event_payload_chk CHECK (payload IS NULL OR jsonb_typeof(payload) IN ('object', 'array')),
+    CONSTRAINT address_event_direction_chk CHECK (
+        (event_type IN ('VALIDATION_RECORDED', 'GEOCODE_RECORDED', 'STANDARDIZATION_PROPOSED', 'CORRECTION_ACCEPTED', 'CORRECTION_REJECTED', 'POSTAL_OVERRIDE_ACCEPTED', 'MANUALLY_VERIFIED', 'RETIRED') AND related_address_id IS NULL)
+        OR (event_type IN ('MOVED', 'CORRECTED', 'MERGED') AND related_address_id IS NOT NULL AND subject_address_id IS DISTINCT FROM related_address_id)
+    ),
+    CONSTRAINT address_event_transition_effective_chk CHECK (
+        event_type NOT IN ('MOVED', 'CORRECTED', 'MERGED') OR effective_at IS NOT NULL
+    ),
+    CONSTRAINT address_event_validation_fields_chk CHECK (
+        event_type NOT IN ('VALIDATION_RECORDED', 'GEOCODE_RECORDED')
+        OR (provider IS NOT NULL AND result_status IS NOT NULL)
+    ),
+    CONSTRAINT address_event_override_reason_chk CHECK (
+        event_type <> 'POSTAL_OVERRIDE_ACCEPTED' OR reason_code IS NOT NULL
+    )
+);
+
+COMMENT ON TABLE master.address_event IS
+  'Append-only cold-path audit ledger for address validation, geocoding, overrides, corrections, moves, merges, and retirement.';
 
 CREATE TABLE master.contact_link (
     id                  uuid        NOT NULL DEFAULT shared.uuidv7(),

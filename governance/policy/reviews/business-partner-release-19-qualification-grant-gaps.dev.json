@@ -1,0 +1,272 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_release_19_qualification_grant_gap_proposal",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "candidatePrincipalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+  "candidateAccount": "catl.admin",
+  "purpose": "Review-only inventory of exact missing dedicated permissions for positive-path qualification; this is not a grant assignment.",
+  "permissions": [
+    {
+      "operation": "enter",
+      "permissionCode": "neon.relationship.bp_target.enter",
+      "permissionId": "01a087c3-4587-7c32-a0fe-d9b3aece9d6b",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "discover",
+      "permissionCode": "neon.relationship.bp_target.discover",
+      "permissionId": "01a087c3-4587-7155-a3ba-feaf6f486941",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "read",
+      "permissionCode": "neon.relationship.bp_target.read",
+      "permissionId": "01a087c3-4587-7561-9a76-1e59ed7d1479",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "navigate_manage",
+      "permissionCode": "neon.relationship.bp_target.navigate_manage",
+      "permissionId": "01a087c3-4587-70d4-af36-ba069c3708df",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "navigate_overview",
+      "permissionCode": "neon.relationship.bp_target.navigate_overview",
+      "permissionId": "01a087c3-4587-7c47-8632-805562a66672",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "export",
+      "permissionCode": "neon.relationship.bp_target.export",
+      "permissionId": "01a087c3-4587-7c85-8beb-e83e9872f598",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "configure_company",
+      "permissionCode": "neon.relationship.bp_target.configure_company",
+      "permissionId": "01a087c3-4587-7c7b-a163-2d103a6d8308",
+      "catalogScopeKinds": [
+        "company_code",
+        "operating_organization"
+      ],
+      "targetResolver": "organization-company.record.v1"
+    },
+    {
+      "operation": "import",
+      "permissionCode": "neon.relationship.bp_target.import",
+      "permissionId": "01a087c3-4587-7f94-9891-95324d5ab6fa",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "identity_read",
+      "permissionCode": "neon.relationship.bp_target.identity_read",
+      "permissionId": "01a087c3-4588-7421-9af1-3f4c985a6e20",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "contacts_read",
+      "permissionCode": "neon.relationship.bp_target.contacts_read",
+      "permissionId": "01a087c3-4588-7a4f-8d97-66b7d2655584",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "addresses_read",
+      "permissionCode": "neon.relationship.bp_target.addresses_read",
+      "permissionId": "01a087c3-4588-76aa-a777-ad2986f91b59",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "identifier_read",
+      "permissionCode": "neon.relationship.bp_target.identifier_read",
+      "permissionId": "01a087c3-4588-7daa-ab18-605306cb8a08",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "tax_read",
+      "permissionCode": "neon.relationship.bp_target.tax_read",
+      "permissionId": "01a087c3-4588-77bb-8df7-75e58a75ee0c",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "bank_read",
+      "permissionCode": "neon.relationship.bp_target.bank_read",
+      "permissionId": "01a087c3-4588-77e4-a994-b35dc3fea945",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "qualification_read",
+      "permissionCode": "neon.relationship.bp_target.qualification_read",
+      "permissionId": "01a087c3-4588-7ea5-bfbc-f28f149fdab6",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "certificate_read",
+      "permissionCode": "neon.relationship.bp_target.certificate_read",
+      "permissionId": "01a087c3-4588-7305-b380-34827b1f9f94",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "credit_read",
+      "permissionCode": "neon.relationship.bp_target.credit_read",
+      "permissionId": "01a087c3-4588-70d7-ae4d-c5c802ba7e55",
+      "catalogScopeKinds": [
+        "company_code",
+        "operating_organization"
+      ],
+      "targetResolver": "organization-company.record.v1"
+    },
+    {
+      "operation": "requests_read",
+      "permissionCode": "neon.relationship.bp_target.requests_read",
+      "permissionId": "01a087c3-4588-75fb-b824-80fd38f42f35",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "activity_read",
+      "permissionCode": "neon.relationship.bp_target.activity_read",
+      "permissionId": "01a087c3-4588-7f88-aea8-6dc143fd4a36",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "network_read",
+      "permissionCode": "neon.relationship.bp_target.network_read",
+      "permissionId": "01a087c3-4588-77da-82f6-4a524a8264ae",
+      "catalogScopeKinds": [
+        "company_code",
+        "operating_organization"
+      ],
+      "targetResolver": "organization-company.record.v1"
+    },
+    {
+      "operation": "comments_read",
+      "permissionCode": "neon.relationship.bp_target.comments_read",
+      "permissionId": "01a087c3-4588-73a8-88ce-6a88856e286a",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "attachments_read",
+      "permissionCode": "neon.relationship.bp_target.attachments_read",
+      "permissionId": "01a087c3-4588-7efb-bb31-8ed923a79d78",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "bank_reveal",
+      "permissionCode": "neon.relationship.bp_target.bank_reveal",
+      "permissionId": "01a087c3-4588-74ae-b8d6-8f0375bf08db",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "tax_reveal",
+      "permissionCode": "neon.relationship.bp_target.tax_reveal",
+      "permissionId": "01a087c3-4588-7628-950c-453004741a6c",
+      "catalogScopeKinds": [
+        "tenant"
+      ],
+      "targetResolver": "tenant.record.v1"
+    },
+    {
+      "operation": "qualification_company",
+      "permissionCode": "neon.relationship.bp_target.qualification_company",
+      "permissionId": "01a087c3-4588-7e2c-b733-05a4cc73e21d",
+      "catalogScopeKinds": [
+        "company_code",
+        "operating_organization"
+      ],
+      "targetResolver": "organization-company.record.v1"
+    },
+    {
+      "operation": "supplier_company_read",
+      "permissionCode": "neon.relationship.bp_target.supplier_company_read",
+      "permissionId": "01a087c3-4588-7a41-bf0d-a858fddc9886",
+      "catalogScopeKinds": [
+        "company_code",
+        "operating_organization"
+      ],
+      "targetResolver": "organization-company.record.v1"
+    },
+    {
+      "operation": "customer_company_read",
+      "permissionCode": "neon.relationship.bp_target.customer_company_read",
+      "permissionId": "01a087c3-4588-7d8c-a09b-feabb6769f7f",
+      "catalogScopeKinds": [
+        "company_code",
+        "operating_organization"
+      ],
+      "targetResolver": "organization-company.record.v1"
+    }
+  ],
+  "grantDiffApplied": [],
+  "proposedEnvironment": "isolated qualification deployment, subject to explicit environment and grant review",
+  "conditions": [
+    "No automatic global steward mapping.",
+    "No grants to the active DEV tenant without separate exact approval.",
+    "Requester/approver/application separation remains enforced.",
+    "Positive tests need approved scope targets and effective dates; neither is inferred here."
+  ],
+  "grantMigrationReady": false,
+  "grantsChanged": false,
+  "activationAuthorized": false
+}

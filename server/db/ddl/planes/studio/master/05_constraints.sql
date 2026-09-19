@@ -85,6 +85,28 @@ ALTER TABLE master.address
     REFERENCES shared.country (code)
     ON DELETE RESTRICT;
 
+ALTER TABLE master.address
+    ADD CONSTRAINT address_current_validation_event_fk
+    FOREIGN KEY (tenant_id, current_validation_event_id)
+    REFERENCES master.address_event (tenant_id, id)
+    ON DELETE RESTRICT;
+
+ALTER TABLE master.address_event
+    ADD CONSTRAINT address_event_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT,
+    ADD CONSTRAINT address_event_subject_address_fk
+    FOREIGN KEY (tenant_id, subject_address_id)
+    REFERENCES master.address (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT address_event_related_address_fk
+    FOREIGN KEY (tenant_id, related_address_id)
+    REFERENCES master.address (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT address_event_evidence_event_fk
+    FOREIGN KEY (tenant_id, evidence_event_id)
+    REFERENCES master.address_event (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT address_event_created_by_fk
+    FOREIGN KEY (tenant_id, created_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
 ALTER TABLE master.address_link
     ADD CONSTRAINT address_link_tenant_fk
     FOREIGN KEY (tenant_id)
@@ -103,10 +125,9 @@ ALTER TABLE master.address_link
     REFERENCES master.address (tenant_id, id)
     ON DELETE RESTRICT;
 
-ALTER TABLE master.address_link
-    ADD CONSTRAINT address_link_owner_purpose_address_uq
-    UNIQUE NULLS NOT DISTINCT
-    (tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id);
+CREATE UNIQUE INDEX address_link_owner_purpose_address_uq
+    ON master.address_link (tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id)
+    NULLS NOT DISTINCT WHERE usage_status <> 'cancelled';
 
 ALTER TABLE master.address_link
     ADD CONSTRAINT address_link_one_primary_excl
@@ -122,7 +143,7 @@ ALTER TABLE master.address_link
             '[)'
         ) WITH &&
     )
-    WHERE (is_primary);
+    WHERE (is_primary AND usage_status <> 'cancelled');
 
 ALTER TABLE master.contact_link
     ADD CONSTRAINT contact_link_tenant_fk

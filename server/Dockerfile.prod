@@ -4,13 +4,13 @@
 # Build context: repository root
 # =============================================================================
 
-FROM node:24-alpine AS base
+FROM node:24.19.0-alpine3.23@sha256:244cc2b53f46f9e876304391d17682b0ddae9ac33491f4857e25e35a36ba7995 AS base
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 WORKDIR /repo
 
 FROM base AS pruner
 COPY . .
-RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
+RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharing=locked \
     pnpm config set store-dir /pnpm/store && \
     pnpm dlx turbo@2.9.6 prune "@athyper/server-platform-host" "@athyper/server-db" --docker
 
@@ -18,32 +18,79 @@ FROM base AS installer
 COPY --from=pruner /repo/out/json/ ./
 COPY --from=pruner /repo/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY server/tsconfig.json ./server/tsconfig.json
-RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
+RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharing=locked \
     pnpm config set store-dir /pnpm/store && \
     pnpm install --frozen-lockfile
 
 FROM base AS builder
 COPY --from=installer /repo/ ./
 COPY --from=pruner /repo/out/full/ ./
+COPY tooling/tools/scripts/prepare-server-runtime-packages.mjs /tmp/prepare-server-runtime-packages.mjs
+
+# Tests are qualified separately; test-only helpers must not enter production
+# package compilation or the deployed runtime graph. This affects the build copy only.
+RUN find server packages -type d -name __tests__ -prune -exec rm -rf '{}' '+'
 
 # Build workspace dependencies first, then the host
+RUN pnpm --filter "@athyper/platform-i18n" run build
+RUN pnpm --filter "@athyper/platform-temporal" run build
+RUN pnpm --filter "@athyper/contract-platform-entity-runtime" run build
+RUN pnpm --filter "@athyper/contract-platform-entity-list" run build
+RUN pnpm --filter "@athyper/contract-athyper-onboarding" run build
+RUN pnpm --filter "@athyper/contract-platform-dashboard" run build
+RUN pnpm --filter "@athyper/contract-platform-ai" run build
+# Generate every plane's types from the committed Prisma schemas. A clean
+# candidate must not depend on ignored files left by a developer's local pull.
+RUN pnpm --filter "@athyper/server-db" run codegen
+RUN find server -name '*.tsbuildinfo' -delete
 RUN pnpm --filter "@athyper/server-platform-host^..." --if-present run build
 RUN pnpm --filter "@athyper/server-platform-host" run build
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/server/packages
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/platform/foundation/i18n
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/platform/foundation/temporal
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/entity-list
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/entity-runtime
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/athyper/onboarding
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/dashboard
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/ai
 
+# Cache registry metadata as well as package tarballs: legacy deployment
+# re-resolves metadata, and failed build layers otherwise discard successful fetches.
 # Deploy the production dependency graph
-RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
+RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharing=locked \
+    --mount=type=cache,id=athyper-server-pnpm-metadata-v1,target=/root/.cache/pnpm,sharing=locked \
     pnpm config set store-dir /pnpm/store && \
+    pnpm config set network-concurrency 4 && \
+    pnpm config set fetch-timeout 120000 && \
+    pnpm config set prefer-offline true && \
     pnpm --filter "@athyper/server-platform-host" --prod deploy --legacy /runtime && \
-    pnpm --filter "@athyper/server-db" --prod deploy --legacy /db-runtime
+    pnpm --filter "@athyper/server-db" --prod deploy --legacy /db-runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/server/packages /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/platform/foundation/i18n /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/platform/foundation/temporal /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/entity-list /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/entity-runtime /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/athyper/onboarding /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/dashboard /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/ai /runtime
 
-FROM node:24-alpine AS runtime
+# Exercise the emitted dependency graph before an image can replace a running API.
+RUN cd /runtime && node --input-type=module -e \
+    "await import('@athyper/server-service-master-data'); await import('@athyper/server-service-publication'); await import('./dist/processes/api/index.js'); await import('./dist/processes/worker/index.js')"
 
-RUN apk add --no-cache postgresql-client wget
+FROM node:24.19.0-alpine3.23@sha256:244cc2b53f46f9e876304391d17682b0ddae9ac33491f4857e25e35a36ba7995 AS runtime
+
+RUN apk upgrade --no-cache libcrypto3 libssl3 \
+ && apk add --no-cache postgresql-client wget \
+ && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/pnpm /usr/local/bin/pnpx
 
 ENV NODE_ENV=production
 WORKDIR /app/server
 
 COPY --from=builder --chown=node:node /runtime/ ./
+COPY --from=builder --chown=node:node /repo/server/db/migrations /app/migrations
+COPY --from=builder --chown=node:node /repo/server/db/runtime/run-forward-migrations.sh /app/bin/run-forward-migrations.sh
 
 USER node
 EXPOSE 4000

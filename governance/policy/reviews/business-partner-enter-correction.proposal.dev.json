@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "decision": {
+    "kind": "remove_nonexistent_legacy_enter_source",
+    "operation": "enter",
+    "removedSource": "neon.relationship.business_partner.enter",
+    "retainedTarget": "neon.relationship.bp_target.enter",
+    "reason": "Original reviewed operation packet explicitly has existingId null and no source catalog scopes",
+    "preservesOtherTransitions": true,
+    "targetGrantRequired": true,
+    "noLegacyFallback": true
+  },
+  "reviewRevision": "96a49bccd7163846dcc00fddbb6bedb32da01629be81e51e391ba624687f297b",
+  "replacesUnactivatedReleaseId": "1b1c3f09-ea2b-4c38-82ac-14fff1d7e3e0",
+  "sourceProposalRevision": "8c09c5f30249a382d43349e6cd06465c332c2c5c05e21a34f95bbda26a42e72b",
+  "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic.enter-correction",
+  "publicationStrategy": "Fresh empty-target replacement key; prior published sequence stays immutable and unactivated",
+  "graphHash": "549e48d926e56310c9e35cc8daf5fe93c6080bbe084f0289f559a6ee5bb60464",
+  "nativeContractHash": "5f3b0641cdcd104b8a15295f358280b412f958f4bd64cd42792be66d042b0409",
+  "descriptorHash": "3af10ba5c01c7de5f270e5d18b12c2f058b3e768278236d65c974c50410dcb00",
+  "includedOperations": [
+    "activity_read",
+    "add_role",
+    "addresses_read",
+    "amend_partner",
+    "assign_organization",
+    "attachments_read",
+    "bank_read",
+    "bank_reveal",
+    "case_create",
+    "case_decide",
+    "case_materialize",
+    "case_read",
+    "case_submit",
+    "case_update",
+    "case_validate",
+    "certificate_read",
+    "change_bank",
+    "comments_read",
+    "configure_company",
+    "contacts_read",
+    "credit_read",
+    "customer_company_read",
+    "discover",
+    "enter",
+    "export",
+    "identifier_read",
+    "identity_read",
+    "import",
+    "lifecycle",
+    "navigate_manage",
+    "navigate_overview",
+    "navigate_review",
+    "network_read",
+    "qualification",
+    "qualification_company",
+    "qualification_read",
+    "read",
+    "request_supplier",
+    "requests_read",
+    "supplier_company_read",
+    "tax_read",
+    "tax_reveal"
+  ],
+  "deferredOperations": [
+    "address_sensitive_read",
+    "certification",
+    "contact_sensitive_read",
+    "create",
+    "person_read",
+    "person_sensitive_read",
+    "section_propose_change",
+    "update",
+    "workforce_read"
+  ],
+  "validation": {
+    "deterministic": true,
+    "contractHash": "5f3b0641cdcd104b8a15295f358280b412f958f4bd64cd42792be66d042b0409",
+    "issues": []
+  },
+  "nativeTests": {
+    "contractHash": "5f3b0641cdcd104b8a15295f358280b412f958f4bd64cd42792be66d042b0409",
+    "passed": true,
+    "results": [
+      {
+        "key": "atlas_preserved",
+        "passed": true
+      },
+      {
+        "key": "reset_runtime_payload_exact",
+        "passed": true
+      },
+      {
+        "key": "v2_runtime_exact",
+        "passed": true
+      }
+    ]
+  },
+  "sourceCatalogRegression": {
+    "correctedPasses": true,
+    "originalRejected": true
+  },
+  "freshIndependentReviewRequired": true,
+  "published": false,
+  "grantsChanged": false,
+  "activationAuthorized": false,
+  "proposalRevision": "18a0e7588915ff3809c4d4bbb23a4277ec12a93b8df5f5f5179f60c3806213d9"
+}

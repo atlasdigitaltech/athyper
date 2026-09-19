@@ -1,0 +1,9 @@
+{
+  "schema": "athyper.entity-runtime-descriptor/2.0", "contractStatus": "proposed_for_review", "planeKey": "neon", "entityCode": "business_partner_banking", "descriptorKind": "protected_child_collection",
+  "aggregate": { "key": "business_partner", "rootEntityCode": "business_partner" }, "ownership": { "ownerEntityCode": "business_partner", "ownerIdSource": "bank_account_link.entity_id", "entityTypes": ["business_partner", "supplier", "customer"], "cardinality": "one_to_many" },
+  "storage": { "sourceObjects": ["master.bank_account_link", "master.bank_account", "master.bank_account_usage", "master.bank_account_company_usage"], "tenantField": "tenant_id" },
+  "fields": [{ "key": "accountHolder", "type": "string" }, { "key": "accountNumber", "type": "secret_string", "maskOnRead": true }, { "key": "bankCountry", "type": "country" }, { "key": "usage", "type": "collection" }, { "key": "verificationStatus", "type": "enum", "readOnly": true }, { "key": "remittanceEligible", "type": "boolean", "readOnly": true }],
+  "businessContext": { "scopeKind": "company_optional", "requiredCoordinatesForUsage": ["legalEntityId", "companyCodeId"], "requiredCapability": "finance" },
+  "operations": [{ "key": "read_summary", "permission": "neon.business_partner.bank.read", "scope": "tenant" }, { "key": "reveal", "permission": "neon.business_partner.bank.reveal", "scope": "company" }, { "key": "manage", "permission": "neon.business_partner.bank.update", "scope": "company" }],
+  "handlers": { "read": "neon.business_partner.bank.read.v1", "write": "neon.business_partner.bank.write.v1", "reveal": "neon.business_partner.bank.reveal.v1" }, "presentation": { "section": "Banking", "component": "bank-account-summary.v1", "sensitive": true }, "serverPolicies": ["protected_value_redaction", "just_in_time_reveal", "verification", "company_usage_eligibility", "remittance_selection", "audit"]
+}

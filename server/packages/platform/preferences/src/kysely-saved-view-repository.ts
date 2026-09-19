@@ -7,9 +7,15 @@ type Row = Record<string, unknown>;
 
 export function createKyselySavedViewRepository(transactions: PlaneTransactionCoordinator<Tx>): SavedViewRepository {
   return {
+    async getSharedDefault(scope,entityCode,surfaceCode) {
+      return transactions.run(scope.planeKey,scope,async tx=>(await sql<{view_id:string}>`SELECT view_id FROM master.saved_view_default WHERE tenant_id=${scope.tenantId}::uuid AND entity_code=${entityCode} AND surface_code=${surfaceCode}`.execute(tx)).rows[0]?.view_id);
+    },
+    async setSharedDefault(scope,entityCode,surfaceCode,id) {
+      await transactions.run(scope.planeKey,scope,async tx=>{await sql`INSERT INTO master.saved_view_default(tenant_id,entity_code,surface_code,view_id,created_by,updated_by) VALUES(${scope.tenantId}::uuid,${entityCode},${surfaceCode},${id},${scope.principalId}::uuid,${scope.principalId}::uuid) ON CONFLICT(tenant_id,entity_code,surface_code) DO UPDATE SET view_id=EXCLUDED.view_id,updated_at=now(),updated_by=EXCLUDED.updated_by`.execute(tx);});
+    },
     async list(query) {
       return transactions.run(query.planeKey, query, async (transaction) => (await sql<Row>`
-        SELECT id, tenant_id, owner_principal_id, scope, surface_code, entity_code,
+        SELECT id, tenant_id, owner_principal_id, created_by, scope, surface_code, entity_code,
                code, name, description, state_json, metadata, status, xmin::text::bigint version
           FROM master.saved_view
          WHERE tenant_id = ${query.tenantId}::uuid
@@ -23,7 +29,7 @@ export function createKyselySavedViewRepository(transactions: PlaneTransactionCo
     async get(query) {
       return transactions.run(query.planeKey, query, async (transaction) => {
         const row = (await sql<Row>`
-          SELECT id, tenant_id, owner_principal_id, scope, surface_code, entity_code,
+          SELECT id, tenant_id, owner_principal_id, created_by, scope, surface_code, entity_code,
                  code, name, description, state_json, metadata, status, xmin::text::bigint version
             FROM master.saved_view
            WHERE tenant_id = ${query.tenantId}::uuid AND id = ${query.id}::uuid
@@ -33,16 +39,19 @@ export function createKyselySavedViewRepository(transactions: PlaneTransactionCo
         return row ? map(row) : undefined;
       });
     },
-    async create(planeKey, view) { await writeView(transactions, planeKey, view, false); },
-    async replace(planeKey, view, expectedVersion) {
-      return transactions.run(planeKey, actor(view), async (transaction) => {
+    async create(planeKey, view) { return writeView(transactions, planeKey, view, false); },
+    async replace(planeKey, view, expectedVersion, writer) {
+      const context=writer??actor(view);
+      return transactions.run(planeKey, context, async (transaction) => {
+        await sharedWrite(transaction,writer?.sharedWrite);
         const row = (await sql<{ version: number }>`
           UPDATE master.saved_view
              SET name = ${view.name}, description = ${view.description ?? null},
                  state_json = ${JSON.stringify(view.state)}::jsonb,
-                 updated_at = now(), updated_by = ${view.ownerPrincipalId!}::uuid
+                 updated_at = now(), updated_by = ${context.principalId}::uuid
            WHERE tenant_id = ${view.tenantId}::uuid AND id = ${view.id}::uuid
-             AND owner_principal_id = ${view.ownerPrincipalId!}::uuid AND scope = 'personal'
+             AND ((scope = 'personal' AND owner_principal_id = ${(view.ownerPrincipalId ?? view.createdBy)!}::uuid)
+               OR (scope = 'shared' AND ${writer?.sharedWrite??false}))
              AND status = 'active' AND xmin::text::bigint = ${expectedVersion}
        RETURNING xmin::text::bigint version
         `.execute(transaction)).rows[0];
@@ -50,23 +59,42 @@ export function createKyselySavedViewRepository(transactions: PlaneTransactionCo
       });
     },
     async archive(scope, id) {
-      return transactions.run(scope.planeKey, scope, async (transaction) => ((await sql`
+      return transactions.run(scope.planeKey, scope, async (transaction) => {await sharedWrite(transaction,scope.sharedWrite);return ((await sql`
         UPDATE master.saved_view SET status = 'archived', status_changed_at = now(),
                status_changed_by = ${scope.principalId}::uuid, updated_at = now(), updated_by = ${scope.principalId}::uuid
          WHERE tenant_id = ${scope.tenantId}::uuid AND id = ${id}::uuid AND status = 'active'
-           AND scope <> 'system' AND (owner_principal_id = ${scope.principalId}::uuid OR scope = 'shared')
-      `.execute(transaction)).numAffectedRows ?? 0n) > 0n);
+           AND scope <> 'system' AND (owner_principal_id = ${scope.principalId}::uuid OR (scope = 'shared' AND (${scope.sharedWrite??false} OR created_by = ${scope.principalId}::uuid)))
+      `.execute(transaction)).numAffectedRows ?? 0n) > 0n;});
     },
     async setScope(scope, id, nextScope) {
-      return transactions.run(scope.planeKey, scope, async (transaction) => ((await sql`
+      return transactions.run(scope.planeKey, scope, async (transaction) => {await sharedWrite(transaction,scope.sharedWrite);return ((await sql`
         UPDATE master.saved_view SET scope = ${nextScope}::master.saved_view_scope_d,
                owner_principal_id = ${nextScope === "personal" ? scope.principalId : null}::uuid,
                updated_at = now(), updated_by = ${scope.principalId}::uuid
          WHERE tenant_id = ${scope.tenantId}::uuid AND id = ${id}::uuid AND status = 'active'
-           AND scope <> 'system' AND (owner_principal_id = ${scope.principalId}::uuid OR scope = 'shared')
-      `.execute(transaction)).numAffectedRows ?? 0n) > 0n);
+           AND scope <> 'system' AND (owner_principal_id = ${scope.principalId}::uuid OR (scope = 'shared' AND (${scope.sharedWrite??false} OR created_by = ${scope.principalId}::uuid)))
+      `.execute(transaction)).numAffectedRows ?? 0n) > 0n;});
     },
-    async clone(scope, _source, clone) { await writeView(transactions, scope.planeKey, clone, true); },
+    async clone(scope, _source, clone) { return writeView(transactions, scope.planeKey, clone, true); },
+    async updateFlag(scope, id, flag, enabled) {
+      return transactions.run(scope.planeKey, scope, async (transaction) => {
+        const result = await sql<{ enabled: boolean }>`
+          INSERT INTO master.principal_ui_preference
+            (tenant_id, principal_id, preference_code, surface_code, preference_value, created_by)
+          VALUES (${scope.tenantId}::uuid, ${scope.principalId}::uuid, ${`saved_view.${flag}`},
+            'saved_views', jsonb_build_object('viewIds', ${JSON.stringify(enabled === false ? [] : [id])}::jsonb), ${scope.principalId}::uuid)
+          ON CONFLICT ON CONSTRAINT principal_ui_preference_natural_uq DO UPDATE
+          SET preference_value = jsonb_build_object('viewIds',
+            CASE WHEN COALESCE(${enabled ?? null}::boolean, NOT (
+              COALESCE(master.principal_ui_preference.preference_value->'viewIds', master.principal_ui_preference.preference_value) ? ${id}))
+            THEN (COALESCE(master.principal_ui_preference.preference_value->'viewIds', master.principal_ui_preference.preference_value) - ${id}) || jsonb_build_array(${id}::text)
+            ELSE COALESCE(master.principal_ui_preference.preference_value->'viewIds', master.principal_ui_preference.preference_value) - ${id} END),
+            updated_at = now(), updated_by = EXCLUDED.principal_id
+          RETURNING (preference_value->'viewIds') ? ${id} AS enabled
+        `.execute(transaction);
+        return result.rows[0]!;
+      });
+    },
     async getPreference(scope, code, surfaceCode) {
       return transactions.run(scope.planeKey, scope, async (transaction) => (await sql<{ preference_value: unknown }>`
         SELECT preference_value FROM master.principal_ui_preference
@@ -83,6 +111,14 @@ export function createKyselySavedViewRepository(transactions: PlaneTransactionCo
           SET preference_value = EXCLUDED.preference_value, updated_at = now(), updated_by = EXCLUDED.principal_id
       `.execute(transaction); });
     },
+    async clearDefaultIfMatches(scope, entityCode, id) {
+      await transactions.run(scope.planeKey, scope, async (transaction) => { await sql`
+        DELETE FROM master.principal_ui_preference
+         WHERE tenant_id = ${scope.tenantId}::uuid AND principal_id = ${scope.principalId}::uuid
+           AND preference_code = 'saved_view.default' AND surface_code = ${entityCode}
+           AND preference_value->>'viewId' = ${id}
+      `.execute(transaction); });
+    },
     async clearPreference(scope, code, surfaceCode) {
       await transactions.run(scope.planeKey, scope, async (transaction) => { await sql`
         DELETE FROM master.principal_ui_preference
@@ -93,20 +129,27 @@ export function createKyselySavedViewRepository(transactions: PlaneTransactionCo
   };
 }
 
-async function writeView(transactions: PlaneTransactionCoordinator<Tx>, planeKey: "studio" | "neon" | "mesh", view: SavedView, clone: boolean): Promise<void> {
-  await transactions.run(planeKey, actor(view), async (transaction) => { await sql`
+async function writeView(transactions: PlaneTransactionCoordinator<Tx>, planeKey: "studio" | "neon" | "mesh", view: SavedView, clone: boolean): Promise<SavedView> {
+  return transactions.run(planeKey, actor(view), async (transaction) => {
+    const metadata = { ...view.metadata, ...(clone ? { cloned: true } : {}) };
+    const result = await sql<{ version: number }>`
     INSERT INTO master.saved_view
       (id, tenant_id, owner_principal_id, scope, surface_code, entity_code, code, name,
        description, state_json, metadata, status, created_by)
     VALUES (${view.id}::uuid, ${view.tenantId}::uuid, ${view.ownerPrincipalId ?? null}::uuid,
       ${view.scope}::master.saved_view_scope_d, ${view.surfaceCode}, ${view.entityCode}, ${view.code},
       ${view.name}, ${view.description ?? null}, ${JSON.stringify(view.state)}::jsonb,
-      ${JSON.stringify({ ...view.metadata, ...(clone ? { cloned: true } : {}) })}::jsonb,
-      'active', ${view.ownerPrincipalId!}::uuid)
-  `.execute(transaction); });
+      ${JSON.stringify(metadata)}::jsonb,
+      'active', ${(view.ownerPrincipalId ?? view.createdBy)!}::uuid)
+    RETURNING xmin::text::bigint version
+  `.execute(transaction);
+    return { ...view, metadata, version: Number(result.rows[0]!.version) };
+  });
 }
-function actor(view: SavedView) { return { tenantId: view.tenantId, principalId: view.ownerPrincipalId! }; }
+function actor(view: SavedView) { return { tenantId: view.tenantId, principalId: (view.ownerPrincipalId ?? view.createdBy)! }; }
 function map(row: Row): SavedView {
-  return { id: String(row["id"]), tenantId: String(row["tenant_id"]), ...(row["owner_principal_id"] ? { ownerPrincipalId: String(row["owner_principal_id"]) } : {}), scope: row["scope"] as SavedView["scope"], surfaceCode: String(row["surface_code"]), entityCode: String(row["entity_code"]), code: String(row["code"]), name: String(row["name"]), ...(row["description"] ? { description: String(row["description"]) } : {}), state: object(row["state_json"]), metadata: object(row["metadata"]), status: row["status"] as SavedView["status"], version: Number(row["version"]) };
+  return { id: String(row["id"]), tenantId: String(row["tenant_id"]), ...(row["owner_principal_id"] ? { ownerPrincipalId: String(row["owner_principal_id"]) } : {}), createdBy: String(row["created_by"]), scope: row["scope"] as SavedView["scope"], surfaceCode: String(row["surface_code"]), entityCode: String(row["entity_code"]), code: String(row["code"]), name: String(row["name"]), ...(row["description"] ? { description: String(row["description"]) } : {}), state: object(row["state_json"]), metadata: object(row["metadata"]), status: row["status"] as SavedView["status"], version: Number(row["version"]) };
 }
 function object(value: unknown): Record<string, unknown> { if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>; return typeof value === "string" ? JSON.parse(value) as Record<string, unknown> : {}; }
+
+async function sharedWrite(tx:Tx,allowed?:boolean){await sql`SELECT set_config('app.saved_view_shared_write',${allowed?"true":"false"},true)`.execute(tx);}

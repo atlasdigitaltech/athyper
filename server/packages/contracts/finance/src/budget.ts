@@ -1,29 +1,205 @@
-import type { FinanceActor, FinanceCommand, FinancePage, FinancePageRequest } from "./commands.js";
+import type {
+  FinanceActor,
+  FinanceCommand,
+  FinancePage,
+  FinancePageRequest,
+} from "./commands.js";
 import type { FinanceCoordinates, FinanceDecimal } from "./foundation.js";
 import type { FinanceCommandResult } from "./results.js";
 
-export type BudgetTransactionType = "allocate" | "reserve" | "release" | "consume" | "adjust" | "reverse";
+export type BudgetTransactionType =
+  "allocate" | "reserve" | "release" | "consume" | "adjust" | "reverse";
 export type BudgetDirection = "debit" | "credit";
-export interface BudgetCoordinate { readonly budgetAllocationId: string; readonly fiscalYear: number; readonly periodNumber: number; }
-export interface BudgetState { readonly openingAmount: FinanceDecimal; readonly reservedAmount: FinanceDecimal; readonly consumedAmount: FinanceDecimal; readonly releasedAmount: FinanceDecimal; readonly adjustedAmount: FinanceDecimal; readonly availableAmount: FinanceDecimal; }
-export interface BudgetTransaction extends BudgetCoordinate { readonly id: string; readonly budgetProfileId: string; readonly projectId: string; readonly projectWbsId: string; readonly transactionType: BudgetTransactionType; readonly direction: BudgetDirection; readonly amount: FinanceDecimal; readonly currencyCode: string; readonly effectiveDate: string; readonly sourceDocumentType: string; readonly sourceDocumentId: string; readonly idempotencyKey: string; readonly previousState: BudgetState; readonly resultingState: BudgetState; readonly reversalOfTransactionId?: string; readonly reason?: string; readonly performedAt: string; readonly performedBy: string; readonly metadata: Readonly<Record<string, unknown>>; }
-export interface BudgetBalance extends BudgetCoordinate, BudgetState { readonly id: string; readonly versionNumber: number; }
-export type BudgetMutationPayload = Omit<BudgetTransaction, "id" | "idempotencyKey" | "previousState" | "resultingState" | "performedAt" | "performedBy" | "metadata" | "reversalOfTransactionId"> & Readonly<Record<string, unknown>> & { readonly postingCoordinates: FinanceCoordinates; readonly reversalOfTransactionId?: string; readonly reason?: string; readonly metadata?: Readonly<Record<string, unknown>>; };
+export interface BudgetCoordinate {
+  readonly budgetAllocationId: string;
+  readonly fiscalYear: number;
+  readonly periodNumber: number;
+}
+export interface BudgetState {
+  readonly openingAmount: FinanceDecimal;
+  readonly reservedAmount: FinanceDecimal;
+  readonly consumedAmount: FinanceDecimal;
+  readonly releasedAmount: FinanceDecimal;
+  readonly adjustedAmount: FinanceDecimal;
+  readonly availableAmount: FinanceDecimal;
+}
+export interface BudgetTransaction extends BudgetCoordinate {
+  readonly id: string;
+  readonly budgetProfileId: string;
+  readonly projectId: string;
+  readonly projectWbsId: string;
+  readonly transactionType: BudgetTransactionType;
+  readonly direction: BudgetDirection;
+  readonly amount: FinanceDecimal;
+  readonly currencyCode: string;
+  readonly effectiveDate: string;
+  readonly sourceDocumentType: string;
+  readonly sourceDocumentId: string;
+  readonly idempotencyKey: string;
+  readonly previousState: BudgetState;
+  readonly resultingState: BudgetState;
+  readonly reversalOfTransactionId?: string;
+  readonly reason?: string;
+  readonly performedAt: string;
+  readonly performedBy: string;
+  readonly metadata: Readonly<Record<string, unknown>>;
+}
+export interface BudgetBalance extends BudgetCoordinate, BudgetState {
+  readonly id: string;
+  readonly versionNumber: number;
+}
+export type BudgetMutationPayload = Omit<
+  BudgetTransaction,
+  | "id"
+  | "idempotencyKey"
+  | "previousState"
+  | "resultingState"
+  | "performedAt"
+  | "performedBy"
+  | "metadata"
+  | "reversalOfTransactionId"
+> &
+  Readonly<Record<string, unknown>> & {
+    readonly postingCoordinates: FinanceCoordinates;
+    readonly reversalOfTransactionId?: string;
+    readonly reason?: string;
+    readonly metadata?: Readonly<Record<string, unknown>>;
+  };
 export type BudgetMutationCommand = FinanceCommand<BudgetMutationPayload>;
 export interface BudgetRepository<Transaction = unknown> {
-  getBalance(actor: FinanceActor, coordinate: BudgetCoordinate, transaction: Transaction): Promise<BudgetBalance | undefined>;
-  getOrCreateBalanceForUpdate(actor: FinanceActor, coordinate: BudgetCoordinate, transaction: Transaction): Promise<BudgetBalance>;
-  getTransaction(actor: FinanceActor, transactionId: string, transaction: Transaction): Promise<BudgetTransaction | undefined>;
-  findReversal(actor: FinanceActor, originalTransactionId: string, transaction: Transaction): Promise<BudgetTransaction | undefined>;
-  append(command: BudgetMutationCommand, transaction: Transaction, states: { readonly previous: BudgetState; readonly resulting: BudgetState }): Promise<BudgetTransaction>;
-  compareAndSwapBalance(actor: FinanceActor, balance: BudgetBalance, expectedVersion: number, transaction: Transaction): Promise<BudgetBalance | undefined>;
-  listTransactions(actor: FinanceActor, coordinate: BudgetCoordinate, transaction?: Transaction): Promise<readonly BudgetTransaction[]>;
+  getBalance(
+    actor: FinanceActor,
+    coordinate: BudgetCoordinate,
+    transaction: Transaction,
+  ): Promise<BudgetBalance | undefined>;
+  getOrCreateBalanceForUpdate(
+    actor: FinanceActor,
+    coordinate: BudgetCoordinate,
+    transaction: Transaction,
+  ): Promise<BudgetBalance>;
+  getTransaction(
+    actor: FinanceActor,
+    transactionId: string,
+    transaction: Transaction,
+  ): Promise<BudgetTransaction | undefined>;
+  findReversal(
+    actor: FinanceActor,
+    originalTransactionId: string,
+    transaction: Transaction,
+  ): Promise<BudgetTransaction | undefined>;
+  append(
+    command: BudgetMutationCommand,
+    transaction: Transaction,
+    states: { readonly previous: BudgetState; readonly resulting: BudgetState },
+  ): Promise<BudgetTransaction>;
+  compareAndSwapBalance(
+    actor: FinanceActor,
+    balance: BudgetBalance,
+    expectedVersion: number,
+    transaction: Transaction,
+  ): Promise<BudgetBalance | undefined>;
+  listTransactions(
+    actor: FinanceActor,
+    coordinate: BudgetCoordinate,
+    transaction?: Transaction,
+  ): Promise<readonly BudgetTransaction[]>;
 }
-export interface BudgetService { mutate(command: BudgetMutationCommand): Promise<FinanceCommandResult<{ readonly transaction: BudgetTransaction; readonly balance: BudgetBalance }>>; rebuild(actor: FinanceActor, coordinate: BudgetCoordinate): Promise<BudgetState>; }
-export interface BudgetReconciliation { readonly coordinate: BudgetCoordinate; readonly stored: BudgetState; readonly rebuilt: BudgetState; readonly matches: boolean; readonly storedVersion: number; }
+export interface BudgetService {
+  mutate(command: BudgetMutationCommand): Promise<
+    FinanceCommandResult<{
+      readonly transaction: BudgetTransaction;
+      readonly balance: BudgetBalance;
+    }>
+  >;
+  rebuild(
+    actor: FinanceActor,
+    coordinate: BudgetCoordinate,
+  ): Promise<BudgetState>;
+}
+export interface BudgetReconciliation {
+  readonly coordinate: BudgetCoordinate;
+  readonly stored: BudgetState;
+  readonly rebuilt: BudgetState;
+  readonly matches: boolean;
+  readonly storedVersion: number;
+}
 
-export type PlanningRunStatus = "pending" | "running" | "completed" | "approved" | "failed" | "cancelled";
-export interface PlanningRun { readonly id: string; readonly planningModelId: string; readonly planningScenarioId: string; readonly retryOfRunId?: string; readonly companyCodeId: string; readonly ledgerBookId: string; readonly modelVersionNumber: number; readonly inputHash: string; readonly status: PlanningRunStatus; readonly metadata: Readonly<Record<string, unknown>>; readonly startedAt?: string; readonly completedAt?: string; readonly approvedAt?: string; readonly approvedBy?: string; readonly errorMessage?: string; }
-export interface PlanningOutput { readonly id: string; readonly planningRunId: string; readonly planningModelId: string; readonly planningDriverId?: string; readonly ledgerBookId: string; readonly glAccountId?: string; readonly costCenterId?: string; readonly profitCenterId?: string; readonly projectId?: string; readonly projectWbsId?: string; readonly fiscalYear: number; readonly periodNumber: number; readonly currencyCode: string; readonly plannedAmount: FinanceDecimal; readonly baselineAmount?: FinanceDecimal; readonly driverValues: Readonly<Record<string, unknown>>; readonly metadata: Readonly<Record<string, unknown>>; }
-export interface PlanningOutputQuery extends FinancePageRequest { readonly planningRunId: string; readonly planningDriverId?: string; readonly ledgerBookId?: string; readonly glAccountId?: string; readonly costCenterId?: string; readonly profitCenterId?: string; readonly projectId?: string; readonly projectWbsId?: string; readonly fiscalYear?: number; readonly periodNumber?: number; }
-export interface PlanningRepository<Transaction = unknown> { createRun(actor: FinanceActor, run: PlanningRun, transaction: Transaction): Promise<{readonly run:PlanningRun;readonly replayed:boolean}>; getRun(actor:FinanceActor,runId:string,transaction?:Transaction):Promise<PlanningRun|undefined>; transitionRun(actor: FinanceActor, runId: string, expected: PlanningRunStatus, target: PlanningRunStatus, evidence?: { readonly errorMessage?: string }, transaction?: Transaction): Promise<PlanningRun | undefined>; appendOutput(actor: FinanceActor, output: PlanningOutput, transaction: Transaction): Promise<{ readonly output: PlanningOutput; readonly replayed: boolean }>; listOutput(actor: FinanceActor, input: PlanningOutputQuery): Promise<FinancePage<PlanningOutput>>; }
+export type PlanningRunStatus =
+  "pending" | "running" | "completed" | "approved" | "failed" | "cancelled";
+export interface PlanningRun {
+  readonly id: string;
+  readonly planningModelId: string;
+  readonly planningScenarioId: string;
+  readonly retryOfRunId?: string;
+  readonly companyCodeId: string;
+  readonly ledgerBookId: string;
+  readonly modelVersionNumber: number;
+  readonly inputHash: string;
+  readonly status: PlanningRunStatus;
+  readonly metadata: Readonly<Record<string, unknown>>;
+  readonly startedAt?: string;
+  readonly completedAt?: string;
+  readonly approvedAt?: string;
+  readonly approvedBy?: string;
+  readonly errorMessage?: string;
+}
+export interface PlanningOutput {
+  readonly id: string;
+  readonly planningRunId: string;
+  readonly planningModelId: string;
+  readonly planningDriverId?: string;
+  readonly ledgerBookId: string;
+  readonly glAccountId?: string;
+  readonly costCenterId?: string;
+  readonly profitCenterId?: string;
+  readonly projectId?: string;
+  readonly projectWbsId?: string;
+  readonly fiscalYear: number;
+  readonly periodNumber: number;
+  readonly currencyCode: string;
+  readonly plannedAmount: FinanceDecimal;
+  readonly baselineAmount?: FinanceDecimal;
+  readonly driverValues: Readonly<Record<string, unknown>>;
+  readonly metadata: Readonly<Record<string, unknown>>;
+}
+export interface PlanningOutputQuery extends FinancePageRequest {
+  readonly planningRunId: string;
+  readonly planningDriverId?: string;
+  readonly ledgerBookId?: string;
+  readonly glAccountId?: string;
+  readonly costCenterId?: string;
+  readonly profitCenterId?: string;
+  readonly projectId?: string;
+  readonly projectWbsId?: string;
+  readonly fiscalYear?: number;
+  readonly periodNumber?: number;
+}
+export interface PlanningRepository<Transaction = unknown> {
+  createRun(
+    actor: FinanceActor,
+    run: PlanningRun,
+    transaction: Transaction,
+  ): Promise<{ readonly run: PlanningRun; readonly replayed: boolean }>;
+  getRun(
+    actor: FinanceActor,
+    runId: string,
+    transaction?: Transaction,
+  ): Promise<PlanningRun | undefined>;
+  transitionRun(
+    actor: FinanceActor,
+    runId: string,
+    expected: PlanningRunStatus,
+    target: PlanningRunStatus,
+    evidence?: { readonly errorMessage?: string },
+    transaction?: Transaction,
+  ): Promise<PlanningRun | undefined>;
+  appendOutput(
+    actor: FinanceActor,
+    output: PlanningOutput,
+    transaction: Transaction,
+  ): Promise<{ readonly output: PlanningOutput; readonly replayed: boolean }>;
+  listOutput(
+    actor: FinanceActor,
+    input: PlanningOutputQuery,
+  ): Promise<FinancePage<PlanningOutput>>;
+}

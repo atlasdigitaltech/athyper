@@ -9,7 +9,7 @@
 -- seed-natural-key: control.subscription_plan_module(subscription_plan_id,module_id)
 -- seed-cross-file-ids: true
 -- seed-id-strategy: deterministic-uuid:athyper-wave2-plan-module-v2
--- seed-expected-row-count: exact:57
+-- seed-expected-row-count: exact:75
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
 -- seed-assertion: expected-count
@@ -36,7 +36,16 @@ ON CONFLICT (subscription_plan_id,module_id) DO UPDATE SET
 WHERE (control.subscription_plan_module.entitlement_mode,control.subscription_plan_module.metadata,control.subscription_plan_module.status)
   IS DISTINCT FROM (excluded.entitlement_mode,excluded.metadata,excluded.status);
 
+UPDATE control.subscription_plan_module entitlement
+SET status='deprecated',updated_at=now(),updated_by='00000000-0000-0000-0000-000000000000'::uuid
+WHERE entitlement.status='active'
+  AND entitlement.metadata #>> '{_seed,pack}'='mesh.subscription-plan-modules'
+  AND NOT EXISTS (
+    SELECT 1 FROM control.module module
+    WHERE module.id=entitlement.module_id AND module.status='active'
+  );
+
 DO $assertions$ BEGIN
-  IF (SELECT count(*) FROM control.subscription_plan_module WHERE status='active') <> 57 THEN
+  IF (SELECT count(*) FROM control.subscription_plan_module WHERE status='active') <> 75 THEN
     RAISE EXCEPTION 'mesh plan-module count mismatch'; END IF;
 END $assertions$;

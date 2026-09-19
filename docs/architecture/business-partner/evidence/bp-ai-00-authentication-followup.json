@@ -1,0 +1,36 @@
+{
+  "schema": "bp-ai-authentication-followup/1",
+  "capturedAt": "2026-09-08T15:23:04.439639+00:00",
+  "browser": {
+    "status": "operational",
+    "method": "Existing local shared-library bundle supplied through LD_LIBRARY_PATH",
+    "dependencyDirectory": "/tmp/athyper-playwright-libs/extracted/usr/lib/x86_64-linux-gnu",
+    "verified": "Playwright Chromium launched and rendered the normal NEON/IAM login flow",
+    "systemPackagesChanged": false
+  },
+  "sessionProbes": [
+    {
+      "stateFile": "tests/e2e/.auth/neon.json",
+      "sessionHttpStatus": 200,
+      "sessionState": "anonymous"
+    },
+    {
+      "stateFile": "tests/e2e/.auth/neon-owner.json",
+      "sessionHttpStatus": 200,
+      "sessionState": "anonymous"
+    }
+  ],
+  "normalLogin": {
+    "account": "catl.admin",
+    "status": "rejected",
+    "message": "Invalid username or password.",
+    "credentialsDisclosed": false,
+    "passwordReset": false,
+    "permissionChanges": false
+  },
+  "authenticatedAtlasBenchmark": {
+    "status": "blocked",
+    "reason": "Current test credential or fresh authenticated storage state required"
+  },
+  "phaseExit": "pending"
+}

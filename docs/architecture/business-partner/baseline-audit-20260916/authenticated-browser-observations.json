@@ -1,0 +1,659 @@
+[
+  {
+    "plane": "neon",
+    "width": 1440,
+    "route": "/mdg/business-partner/new",
+    "responses": [
+      {
+        "path": "/api/relay/workflow/inbox",
+        "status": 403
+      },
+      {
+        "path": "/api/relay/notifications/stream",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/notifications/inbox",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/neon/operating-organizations",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/neon/work-contexts",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/atlas/experience",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/entity-runtime/business_partner/application-descriptor",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/entity-runtime/business_partner/application-descriptor",
+        "status": 200
+      }
+    ],
+    "metrics": {
+      "title": "New Business Partner request - Neon",
+      "overflow": false,
+      "headings": [
+        "New business partner request",
+        "Choose a role"
+      ],
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "class": "a-management-navigation__step",
+          "text": "1Partner",
+          "height": "44px",
+          "fontSize": "14px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "10px 14px",
+          "border": "0px none rgb(35, 75, 132)",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-management-navigation__step",
+          "text": "2Details",
+          "height": "44px",
+          "fontSize": "14px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "10px 14px",
+          "border": "0px none rgb(91, 101, 120)",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-management-navigation__step",
+          "text": "3Review & submit",
+          "height": "44px",
+          "fontSize": "14px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "10px 14px",
+          "border": "0px none rgb(91, 101, 120)",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "INPUT",
+          "class": "",
+          "text": null,
+          "height": "13px",
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "padding": "0px",
+          "border": "0px none rgb(0, 0, 0)",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "INPUT",
+          "class": "",
+          "text": null,
+          "height": "13px",
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "padding": "0px",
+          "border": "0px none rgb(0, 0, 0)",
+          "borderRadius": "0px"
+        }
+      ]
+    }
+  },
+  {
+    "plane": "neon",
+    "width": 768,
+    "route": "/mdg/business-partner/new",
+    "responses": [
+      {
+        "path": "/api/relay/workflow/inbox",
+        "status": 403
+      },
+      {
+        "path": "/api/relay/notifications/stream",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/notifications/inbox",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/neon/operating-organizations",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/neon/work-contexts",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/atlas/experience",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/entity-runtime/business_partner/application-descriptor",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/entity-runtime/business_partner/application-descriptor",
+        "status": 200
+      }
+    ],
+    "metrics": {
+      "title": "New Business Partner request - Neon",
+      "overflow": false,
+      "headings": [
+        "New business partner request",
+        "Choose a role"
+      ],
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "class": "a-management-navigation__step",
+          "text": "1Partner",
+          "height": "44px",
+          "fontSize": "14px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "10px 14px",
+          "border": "0px none rgb(35, 75, 132)",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-management-navigation__step",
+          "text": "2Details",
+          "height": "44px",
+          "fontSize": "14px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "10px 14px",
+          "border": "0px none rgb(91, 101, 120)",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-management-navigation__step",
+          "text": "3Review & submit",
+          "height": "44px",
+          "fontSize": "14px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "10px 14px",
+          "border": "0px none rgb(91, 101, 120)",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "INPUT",
+          "class": "",
+          "text": null,
+          "height": "13px",
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "padding": "0px",
+          "border": "0px none rgb(0, 0, 0)",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "INPUT",
+          "class": "",
+          "text": null,
+          "height": "13px",
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "padding": "0px",
+          "border": "0px none rgb(0, 0, 0)",
+          "borderRadius": "0px"
+        }
+      ]
+    }
+  },
+  {
+    "plane": "neon",
+    "width": 390,
+    "route": "/mdg/business-partner/new",
+    "responses": [
+      {
+        "path": "/api/relay/workflow/inbox",
+        "status": 403
+      },
+      {
+        "path": "/api/relay/notifications/stream",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/notifications/inbox",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/neon/operating-organizations",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/neon/work-contexts",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/atlas/experience",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/entity-runtime/business_partner/application-descriptor",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/entity-runtime/business_partner/application-descriptor",
+        "status": 200
+      }
+    ],
+    "metrics": {
+      "title": "New Business Partner request - Neon",
+      "overflow": false,
+      "headings": [
+        "New business partner request",
+        "Choose a role"
+      ],
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "class": "a-management-navigation__step",
+          "text": "1Partner",
+          "height": "44px",
+          "fontSize": "14px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "10px 14px",
+          "border": "0px none rgb(35, 75, 132)",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-management-navigation__step",
+          "text": "2Details",
+          "height": "44px",
+          "fontSize": "14px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "10px 14px",
+          "border": "0px none rgb(91, 101, 120)",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-management-navigation__step",
+          "text": "3Review & submit",
+          "height": "44px",
+          "fontSize": "14px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "10px 14px",
+          "border": "0px none rgb(91, 101, 120)",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "INPUT",
+          "class": "",
+          "text": null,
+          "height": "13px",
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "padding": "0px",
+          "border": "0px none rgb(0, 0, 0)",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "INPUT",
+          "class": "",
+          "text": null,
+          "height": "13px",
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "padding": "0px",
+          "border": "0px none rgb(0, 0, 0)",
+          "borderRadius": "0px"
+        }
+      ]
+    }
+  },
+  {
+    "plane": "studio",
+    "width": 1440,
+    "route": "/mdg/business-partner/model?inspect=release%3Ac2cc6900-26c1-47ca-8dfc-1d488000950c",
+    "responses": [
+      {
+        "path": "/api/relay/workflow/inbox",
+        "status": 403
+      },
+      {
+        "path": "/api/relay/notifications/stream",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/atlas/experience",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/meta-entity-authoring/change-sets",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/notifications/inbox",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/meta-entity-authoring/inspection/releases",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/meta-entity-authoring/inspection/releases/c2cc6900-26c1-47ca-8dfc-1d488000950c",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/meta-entity-authoring/inspection/releases/c2cc6900-26c1-47ca-8dfc-1d488000950c/activation",
+        "status": 403
+      }
+    ],
+    "metrics": {
+      "title": "Business Partner Data Model - Studio",
+      "overflow": false,
+      "headings": [
+        "Configuration workbench",
+        "Data Model"
+      ],
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "class": "a-button a-button--secondary",
+          "text": "Refresh stored data",
+          "height": "40px",
+          "fontSize": "16px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "8px 12px",
+          "border": "1px solid rgb(213, 220, 231)",
+          "borderRadius": "10px"
+        },
+        {
+          "tag": "SELECT",
+          "class": "",
+          "text": null,
+          "height": "37.7812px",
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "padding": "10.4px 48px 10.4px 10.4px",
+          "border": "1px solid rgb(213, 222, 235)",
+          "borderRadius": "8px"
+        },
+        {
+          "tag": "INPUT",
+          "class": "",
+          "text": null,
+          "height": "37.7812px",
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "padding": "10.4px",
+          "border": "1px solid rgb(213, 222, 235)",
+          "borderRadius": "8px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-button a-button--secondary",
+          "text": "Load stored bundle",
+          "height": "40px",
+          "fontSize": "16px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "8px 12px",
+          "border": "1px solid rgb(213, 220, 231)",
+          "borderRadius": "10px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-button a-button--secondary",
+          "text": "Open or create working draft",
+          "height": "40px",
+          "fontSize": "16px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "8px 12px",
+          "border": "1px solid rgb(213, 220, 231)",
+          "borderRadius": "10px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-button a-button--secondary",
+          "text": "Check target activation",
+          "height": "40px",
+          "fontSize": "16px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "8px 12px",
+          "border": "1px solid rgb(213, 220, 231)",
+          "borderRadius": "10px"
+        }
+      ]
+    }
+  },
+  {
+    "plane": "studio",
+    "width": 768,
+    "route": "/mdg/business-partner/model?inspect=release%3Ac2cc6900-26c1-47ca-8dfc-1d488000950c",
+    "responses": [
+      {
+        "path": "/api/relay/workflow/inbox",
+        "status": 403
+      },
+      {
+        "path": "/api/relay/notifications/stream",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/atlas/experience",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/meta-entity-authoring/change-sets",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/notifications/inbox",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/meta-entity-authoring/inspection/releases",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/meta-entity-authoring/inspection/releases/c2cc6900-26c1-47ca-8dfc-1d488000950c",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/meta-entity-authoring/inspection/releases/c2cc6900-26c1-47ca-8dfc-1d488000950c/activation",
+        "status": 403
+      }
+    ],
+    "metrics": {
+      "title": "Business Partner Data Model - Studio",
+      "overflow": false,
+      "headings": [
+        "Configuration workbench",
+        "Data Model"
+      ],
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "class": "a-button a-button--secondary",
+          "text": "Refresh stored data",
+          "height": "40px",
+          "fontSize": "16px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "8px 12px",
+          "border": "1px solid rgb(213, 220, 231)",
+          "borderRadius": "10px"
+        },
+        {
+          "tag": "SELECT",
+          "class": "",
+          "text": null,
+          "height": "37.7812px",
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "padding": "10.4px 48px 10.4px 10.4px",
+          "border": "1px solid rgb(213, 222, 235)",
+          "borderRadius": "8px"
+        },
+        {
+          "tag": "INPUT",
+          "class": "",
+          "text": null,
+          "height": "37.7812px",
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "padding": "10.4px",
+          "border": "1px solid rgb(213, 222, 235)",
+          "borderRadius": "8px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-button a-button--secondary",
+          "text": "Load stored bundle",
+          "height": "40px",
+          "fontSize": "16px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "8px 12px",
+          "border": "1px solid rgb(213, 220, 231)",
+          "borderRadius": "10px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-button a-button--secondary",
+          "text": "Open or create working draft",
+          "height": "40px",
+          "fontSize": "16px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "8px 12px",
+          "border": "1px solid rgb(213, 220, 231)",
+          "borderRadius": "10px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-button a-button--secondary",
+          "text": "Check target activation",
+          "height": "40px",
+          "fontSize": "16px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "8px 12px",
+          "border": "1px solid rgb(213, 220, 231)",
+          "borderRadius": "10px"
+        }
+      ]
+    }
+  },
+  {
+    "plane": "studio",
+    "width": 390,
+    "route": "/mdg/business-partner/model?inspect=release%3Ac2cc6900-26c1-47ca-8dfc-1d488000950c",
+    "responses": [
+      {
+        "path": "/api/relay/workflow/inbox",
+        "status": 403
+      },
+      {
+        "path": "/api/relay/notifications/stream",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/atlas/experience",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/meta-entity-authoring/change-sets",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/notifications/inbox",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/meta-entity-authoring/inspection/releases",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/meta-entity-authoring/inspection/releases/c2cc6900-26c1-47ca-8dfc-1d488000950c",
+        "status": 200
+      },
+      {
+        "path": "/api/relay/meta-entity-authoring/inspection/releases/c2cc6900-26c1-47ca-8dfc-1d488000950c/activation",
+        "status": 403
+      }
+    ],
+    "metrics": {
+      "title": "Business Partner Data Model - Studio",
+      "overflow": false,
+      "headings": [
+        "Configuration workbench",
+        "Data Model"
+      ],
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "class": "a-button a-button--secondary",
+          "text": "Refresh stored data",
+          "height": "40px",
+          "fontSize": "16px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "8px 12px",
+          "border": "1px solid rgb(213, 220, 231)",
+          "borderRadius": "10px"
+        },
+        {
+          "tag": "SELECT",
+          "class": "",
+          "text": null,
+          "height": "37.7812px",
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "padding": "10.4px 48px 10.4px 10.4px",
+          "border": "1px solid rgb(213, 222, 235)",
+          "borderRadius": "8px"
+        },
+        {
+          "tag": "INPUT",
+          "class": "",
+          "text": null,
+          "height": "37.7812px",
+          "fontSize": "13.3333px",
+          "fontFamily": "Arial",
+          "padding": "10.4px",
+          "border": "1px solid rgb(213, 222, 235)",
+          "borderRadius": "8px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-button a-button--secondary",
+          "text": "Load stored bundle",
+          "height": "40px",
+          "fontSize": "16px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "8px 12px",
+          "border": "1px solid rgb(213, 220, 231)",
+          "borderRadius": "10px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-button a-button--secondary",
+          "text": "Open or create working draft",
+          "height": "60px",
+          "fontSize": "16px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "8px 12px",
+          "border": "1px solid rgb(213, 220, 231)",
+          "borderRadius": "10px"
+        },
+        {
+          "tag": "BUTTON",
+          "class": "a-button a-button--secondary",
+          "text": "Check target activation",
+          "height": "40px",
+          "fontSize": "16px",
+          "fontFamily": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+          "padding": "8px 12px",
+          "border": "1px solid rgb(213, 220, 231)",
+          "borderRadius": "10px"
+        }
+      ]
+    }
+  }
+]

@@ -1,1 +1,1446 @@
-﻿export {};
+import {
+  parseAtlasIntent,
+  type AtlasIntentV1,
+} from "@athyper/contract-platform-ai/intent";
+import {
+  parseAtlasResponseFeedback,
+  type AtlasResponseFeedbackV1,
+} from "@athyper/contract-platform-ai/feedback";
+export type { AtlasResponseFeedbackV1 } from "@athyper/contract-platform-ai/feedback";
+import {
+  parseAtlasInsightResult,
+  type AtlasInsightResult,
+  parseAtlasAnswerEnvelope,
+  type AtlasAnswerEnvelope,
+} from "@athyper/contract-platform-ai/answer";
+export {
+  parseAtlasInsightResult,
+  parseAtlasAnswerEnvelope,
+  type AtlasAnswerEnvelope,
+  type AtlasAnswerAuthority,
+} from "@athyper/contract-platform-ai/answer";
+import {
+  parseAtlasBusinessContext,
+  type AtlasBusinessContextV1,
+} from "@athyper/contract-platform-ai/business-context";
+export {
+  parseAtlasBusinessContext,
+  type AtlasBusinessContextV1,
+} from "@athyper/contract-platform-ai/business-context";
+import {
+  createHttpClient,
+  createOperation,
+  encodePathSegment,
+  type HttpClient,
+} from "@athyper/platform-api-client";
+
+export interface AtlasAdmission {
+  readonly chatAllowed: boolean;
+  readonly persistenceAllowed: boolean;
+  readonly readToolsAllowed: boolean;
+  readonly mutationToolsAllowed: boolean;
+  readonly allowedPublicModelIds: readonly string[];
+  readonly allowedDataClasses: readonly string[];
+  readonly policyRevision: string;
+  readonly reasonCode?: string;
+}
+export interface AtlasRecordCitation {
+  readonly entityCode: string;
+  readonly recordId: string;
+  readonly revision: string;
+  readonly descriptorHash: string;
+  readonly toolCode: string;
+}
+export interface AtlasAttachmentCitation {
+  readonly attachmentId: string;
+  readonly fileName: string;
+  readonly contentType: string;
+  readonly sha256: string;
+}
+export type AtlasActionStatus =
+  | "proposed"
+  | "confirmed"
+  | "executing"
+  | "completed"
+  | "denied"
+  | "failed"
+  | "expired"
+  | "cancelled";
+export interface AtlasGovernedAction {
+  readonly proposalId: string;
+  readonly callId: string;
+  readonly toolCode: string;
+  readonly summary: string;
+  readonly access: "read" | "mutation";
+  readonly risk: "low" | "medium" | "high" | "critical";
+  readonly arguments: Readonly<Record<string, unknown>>;
+  readonly confirmationToken: string;
+  readonly affectedEntityType?: string;
+  readonly affectedEntityId?: string;
+  readonly expectedRowVersion?: number;
+  readonly expiresAt?: string;
+  readonly status: AtlasActionStatus;
+}
+export interface AtlasActionAuditEntry {
+  readonly proposalId: string;
+  readonly threadId: string;
+  readonly runId: string;
+  readonly toolCode: string;
+  readonly toolVersion: string;
+  readonly summary: string;
+  readonly access: "read" | "mutation";
+  readonly risk: "low" | "medium" | "high" | "critical";
+  readonly autonomyDecision: "denied" | "suggest" | "assist" | "auto";
+  readonly affectedEntityType?: string;
+  readonly affectedEntityId?: string;
+  readonly expectedRowVersion?: number;
+  readonly policyRevision: string;
+  readonly profileRevision: string;
+  readonly authorizationEpoch: number;
+  readonly confirmationRequired: boolean;
+  readonly status: AtlasActionStatus;
+  readonly createdAt: string;
+  readonly confirmationAt?: string;
+  readonly executingAt?: string;
+  readonly terminalAt?: string;
+  readonly durationMs?: number;
+  readonly terminalErrorClass?: string;
+  readonly businessTransactionId?: string;
+  readonly businessTransactionType?: string;
+  readonly evidenceRefs: readonly Readonly<Record<string, unknown>>[];
+}
+export interface AtlasActionResult {
+  readonly proposalId: string;
+  readonly outcome: "completed" | "denied" | "failed" | "cancelled";
+  readonly replayed?: boolean;
+  readonly commandId?: string;
+  readonly resultRevision?: string;
+}
+export interface AtlasExperienceAccess {
+  readonly permissions?: readonly string[];
+  readonly features?: readonly string[];
+}
+export interface AtlasExperienceWidget {
+  readonly code: string;
+  readonly kind: "recommendations" | "quick-actions" | "workspaces" | "recent";
+  readonly title: string;
+  readonly enabled: boolean;
+  readonly planes: readonly ("neon" | "mesh" | "studio")[];
+  readonly order: number;
+  readonly access?: AtlasExperienceAccess;
+}
+export interface AtlasExperienceSearchSource {
+  readonly code: string;
+  readonly kind: "navigation" | "record" | "knowledge";
+  readonly label: string;
+  readonly enabled: boolean;
+  readonly planes: readonly ("neon" | "mesh" | "studio")[];
+  readonly permissionCode?: string;
+  readonly entityCode?: string;
+  readonly routePrefix?: string;
+}
+export interface AtlasExperiencePrompt {
+  readonly code: string;
+  readonly label: string;
+  readonly prompt: string;
+  readonly enabled: boolean;
+  readonly planes: readonly ("neon" | "mesh" | "studio")[];
+  readonly agentCode: string;
+  readonly access?: AtlasExperienceAccess;
+}
+export interface AtlasExperienceAgent {
+  readonly code: string;
+  readonly name: string;
+  readonly description: string;
+  readonly enabled: boolean;
+  readonly planes: readonly ("neon" | "mesh" | "studio")[];
+  readonly publicModelId: string;
+  readonly dataClass: "public" | "internal" | "confidential" | "restricted";
+  readonly promptRevision: string;
+  readonly toolCodes: readonly string[];
+  readonly access?: AtlasExperienceAccess;
+}
+export interface AtlasExperienceDefinition {
+  readonly schema: "atlas-experience-definition/1";
+  readonly scope: string;
+  readonly widgets: readonly AtlasExperienceWidget[];
+  readonly searchSources: readonly AtlasExperienceSearchSource[];
+  readonly prompts: readonly AtlasExperiencePrompt[];
+  readonly agents: readonly AtlasExperienceAgent[];
+}
+export interface AtlasExperienceProjection extends Omit<
+  AtlasExperienceDefinition,
+  "schema"
+> {
+  readonly schema: "atlas-experience-projection/1";
+  readonly revision: number;
+  readonly contentHash: string;
+}
+export interface AtlasExperienceRelease {
+  readonly releaseId: string;
+  readonly tenantId: string;
+  readonly revision: number;
+  readonly status: "draft" | "published" | "retired";
+  readonly definition: AtlasExperienceDefinition;
+  readonly contentHash: string;
+  readonly createdAt: string;
+  readonly createdBy: string;
+  readonly publishedAt?: string;
+  readonly publishedBy?: string;
+}
+export interface AtlasGroundedAnswer {
+  readonly intent?: AtlasIntentV1;
+  readonly messageId?: string;
+  readonly insights?: readonly AtlasInsightResult[];
+  readonly envelope?: AtlasAnswerEnvelope;
+  readonly text: string;
+  readonly citations: readonly AtlasRecordCitation[];
+  readonly attachmentCitations: readonly AtlasAttachmentCitation[];
+  readonly actions: readonly AtlasGovernedAction[];
+  readonly threadId: string;
+  readonly runId?: string;
+  readonly publicModelId: string;
+}
+export type AtlasThreadStatus = "active" | "archived" | "deleted";
+export interface AtlasThreadSummary {
+  readonly threadId: string;
+  readonly title: string | null;
+  readonly status: AtlasThreadStatus;
+  readonly rowVersion: number;
+  readonly lastMessageSequence: number;
+  readonly retention: {
+    readonly policyId: string;
+    readonly expiresAt: string | null;
+    readonly purgeAfter: string | null;
+    readonly legalHold: boolean;
+  };
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+export interface AtlasConversationMessage {
+  readonly answer?: AtlasGroundedAnswer;
+  readonly messageId: string;
+  readonly threadId: string;
+  readonly sequence: number;
+  readonly role: "system" | "user" | "assistant" | "tool";
+  readonly status: "pending" | "completed" | "failed" | "cancelled";
+  readonly text: string;
+  readonly results: readonly unknown[];
+  readonly runId: string | null;
+  readonly createdAt: string;
+  readonly terminalAt: string | null;
+}
+export interface AtlasThreadPage {
+  readonly items: readonly AtlasThreadSummary[];
+  readonly nextCursor: string | null;
+}
+export interface AtlasMessagePage {
+  readonly items: readonly AtlasConversationMessage[];
+  readonly nextCursor: string | null;
+}
+export type AtlasAnswerProgress =
+  | { readonly kind: "started"; readonly publicModelId: string }
+  | { readonly kind: "text"; readonly text: string }
+  | { readonly kind: "citation"; readonly citation: AtlasRecordCitation }
+  | {
+      readonly kind: "attachment-citation";
+      readonly citation: AtlasAttachmentCitation;
+    }
+  | { readonly kind: "action"; readonly action: AtlasGovernedAction }
+  | { readonly kind: "completed" }
+  | {
+      readonly kind: "failed";
+      readonly code: string;
+      readonly retryable: boolean;
+    };
+export interface AtlasAnswerOptions {
+  readonly signal?: AbortSignal;
+  readonly onProgress?: (progress: AtlasAnswerProgress) => void;
+  readonly agent?: AtlasExperienceAgent;
+  readonly threadId?: string;
+  readonly businessContext?: AtlasBusinessContextV1;
+  readonly attachmentContextId?: string;
+  readonly attachmentIds?: readonly string[];
+}
+export interface AtlasVocabularyCorrection {
+  readonly schemaVersion: 1;
+  readonly candidateId: string;
+  readonly feedbackId: string;
+  readonly locale: "en";
+  readonly phrase: string;
+  readonly capabilityId: "entity_read_record";
+}
+export interface AtlasAnswerClient {
+  proposeVocabulary?(value: AtlasVocabularyCorrection): Promise<void>;
+  feedback?(
+    value: AtlasResponseFeedbackV1,
+    signal?: AbortSignal,
+  ): Promise<void>;
+  admission(signal?: AbortSignal): Promise<AtlasAdmission>;
+  experience(signal?: AbortSignal): Promise<AtlasExperienceProjection | null>;
+  threads(
+    status?: "active" | "archived" | "all",
+    signal?: AbortSignal,
+  ): Promise<AtlasThreadPage>;
+  messages(threadId: string, signal?: AbortSignal): Promise<AtlasMessagePage>;
+  renameThread(
+    thread: Pick<AtlasThreadSummary, "threadId" | "rowVersion">,
+    title: string,
+    signal?: AbortSignal,
+  ): Promise<AtlasThreadSummary>;
+  archiveThread(
+    thread: Pick<AtlasThreadSummary, "threadId" | "rowVersion">,
+    signal?: AbortSignal,
+  ): Promise<AtlasThreadSummary>;
+  answer(
+    question: string,
+    options?: AtlasAnswerOptions,
+  ): Promise<AtlasGroundedAnswer>;
+  confirmAction(
+    action: AtlasGovernedAction,
+    signal?: AbortSignal,
+  ): Promise<AtlasActionResult>;
+  cancelAction(
+    action: Pick<AtlasGovernedAction, "proposalId">,
+    reason?: string,
+    signal?: AbortSignal,
+  ): Promise<AtlasActionResult>;
+  actionHistory(
+    signal?: AbortSignal,
+  ): Promise<readonly AtlasActionAuditEntry[]>;
+}
+export interface AtlasExperienceAdminClient {
+  draft(signal?: AbortSignal): Promise<AtlasExperienceRelease | null>;
+  saveDraft(
+    definition: AtlasExperienceDefinition,
+    expectedRevision?: number,
+    signal?: AbortSignal,
+  ): Promise<AtlasExperienceRelease>;
+  publish(
+    scope: string,
+    expectedRevision: number,
+    signal?: AbortSignal,
+  ): Promise<AtlasExperienceRelease>;
+}
+export interface AtlasAnswerClientOptions {
+  readonly client?: HttpClient;
+  readonly createId?: () => string;
+}
+
+const learningOperation = createOperation<
+  { accepted: boolean },
+  AtlasVocabularyCorrection
+>({
+  method: "POST",
+  path: "/api/atlas/learning-candidates",
+  response: "json",
+  idempotency: "required",
+  parse: (value) => {
+    const v = object(value);
+    if (v.accepted !== true) throw new TypeError("Invalid correction receipt");
+    return { accepted: true };
+  },
+});
+const feedbackOperation = createOperation<
+  { accepted: boolean },
+  AtlasResponseFeedbackV1
+>({
+  method: "POST",
+  path: "/api/atlas/feedback",
+  response: "json",
+  idempotency: "required",
+  parse: (value) => {
+    const v = object(value);
+    if (v.accepted !== true) throw new TypeError("Invalid feedback receipt");
+    return { accepted: true };
+  },
+});
+const admissionOperation = createOperation<AtlasAdmission>({
+  method: "GET",
+  path: "/api/atlas/admission",
+  parse: parseAdmission,
+});
+const experienceOperation = createOperation<AtlasExperienceProjection | null>({
+  method: "GET",
+  path: "/api/atlas/experience",
+  parse: (value) => (value === null ? null : parseExperienceProjection(value)),
+});
+const createThreadOperation = createOperation<
+  { readonly threadId: string },
+  { readonly title: string }
+>({
+  method: "POST",
+  path: "/api/atlas/threads",
+  response: "json",
+  idempotency: "required",
+  parse: parseThread,
+});
+const listThreadsOperation = createOperation<AtlasThreadPage>({
+  method: "GET",
+  path: "/api/atlas/threads",
+  parse: parseThreadPage,
+});
+const listMessagesOperation = createOperation<AtlasMessagePage>({
+  method: "GET",
+  path: ({ threadId }) =>
+    `/api/atlas/threads/${encodePathSegment(threadId!)}/messages`,
+  parse: parseMessagePage,
+});
+const renameThreadOperation = createOperation<
+  AtlasThreadSummary,
+  { readonly title: string; readonly expectedRowVersion: number }
+>({
+  method: "PATCH",
+  path: ({ threadId }) => `/api/atlas/threads/${encodePathSegment(threadId!)}`,
+  response: "json",
+  idempotency: "required",
+  parse: parseThreadSummary,
+});
+const archiveThreadOperation = createOperation<
+  AtlasThreadSummary,
+  { readonly expectedRowVersion: number }
+>({
+  method: "POST",
+  path: ({ threadId }) =>
+    `/api/atlas/threads/${encodePathSegment(threadId!)}/archive`,
+  response: "json",
+  idempotency: "required",
+  parse: parseThreadSummary,
+});
+const runOperation = createOperation<ReadableStream<Uint8Array>, RunBody>({
+  method: "POST",
+  path: ({ threadId }) =>
+    `/api/atlas/threads/${encodePathSegment(threadId!)}/runs`,
+  requestClass: "stream",
+  response: "stream",
+  idempotency: "required",
+});
+const toolRunOperation = createOperation<
+  AtlasActionResult,
+  {
+    readonly arguments: Readonly<Record<string, unknown>>;
+    readonly confirmationToken: string;
+  }
+>({
+  method: "POST",
+  path: ({ proposalId }) =>
+    `/api/atlas/tools/${encodePathSegment(proposalId!)}/run`,
+  response: "json",
+  idempotency: "required",
+  parse: parseActionResult,
+});
+const toolCancelOperation = createOperation<
+  AtlasActionResult,
+  { readonly reason?: string }
+>({
+  method: "POST",
+  path: ({ proposalId }) =>
+    `/api/atlas/tools/${encodePathSegment(proposalId!)}/cancel`,
+  response: "json",
+  idempotency: "required",
+  parse: parseActionResult,
+});
+const toolHistoryOperation = createOperation<readonly AtlasActionAuditEntry[]>({
+  method: "GET",
+  path: "/api/atlas/tools/history",
+  parse: parseActionHistory,
+});
+const experienceDraftOperation = createOperation<AtlasExperienceRelease | null>(
+  {
+    method: "GET",
+    path: "/api/admin/atlas/experience/draft",
+    parse: (value) =>
+      value === null ? null : parseExperienceReleaseWithAccess(value),
+  },
+);
+const experienceSaveOperation = createOperation<
+  AtlasExperienceRelease,
+  AtlasExperienceDefinition & { readonly expectedRevision?: number }
+>({
+  method: "PUT",
+  path: "/api/admin/atlas/experience/draft",
+  response: "json",
+  idempotency: "required",
+  parse: parseExperienceReleaseWithAccess,
+});
+const experiencePublishOperation = createOperation<
+  AtlasExperienceRelease,
+  { readonly scope: string; readonly expectedRevision: number }
+>({
+  method: "POST",
+  path: "/api/admin/atlas/experience/publish",
+  response: "json",
+  idempotency: "required",
+  parse: parseExperienceReleaseWithAccess,
+});
+
+export function createAtlasAnswerClient(
+  options: AtlasAnswerClientOptions = {},
+): AtlasAnswerClient {
+  const client = options.client ?? createHttpClient({ csrfToken: browserCsrf });
+  const createId = options.createId ?? (() => globalThis.crypto.randomUUID());
+  return Object.freeze({
+    proposeVocabulary: async (body: AtlasVocabularyCorrection) => {
+      await client.request(learningOperation, {
+        body,
+        idempotencyKey: `atlas-learning-${body.candidateId}`,
+      });
+    },
+    feedback: async (value: AtlasResponseFeedbackV1, signal?: AbortSignal) => {
+      const body = parseAtlasResponseFeedback(value);
+      await client.request(feedbackOperation, {
+        body,
+        idempotencyKey: `atlas-feedback-${body.feedbackId}`,
+        signal,
+      });
+    },
+    admission: (signal?: AbortSignal) =>
+      client.request(admissionOperation, { signal }),
+    experience: (signal?: AbortSignal) =>
+      client.request(experienceOperation, { signal }),
+    threads: (status = "active", signal?: AbortSignal) =>
+      client.request(listThreadsOperation, {
+        query: { status, limit: 50 },
+        signal,
+      }),
+    messages: async (threadId: string, signal?: AbortSignal) => {
+      const page = await client.request(listMessagesOperation, {
+        params: { threadId },
+        query: { limit: 100 },
+        signal,
+      });
+      return Object.freeze({
+        ...page,
+        items: Object.freeze(
+          [...page.items].sort((left, right) => left.sequence - right.sequence),
+        ),
+      });
+    },
+    renameThread: (
+      thread: Pick<AtlasThreadSummary, "threadId" | "rowVersion">,
+      title: string,
+      signal?: AbortSignal,
+    ) =>
+      client.request(renameThreadOperation, {
+        params: { threadId: thread.threadId },
+        body: {
+          title: title.trim().slice(0, 200),
+          expectedRowVersion: thread.rowVersion,
+        },
+        idempotencyKey: `atlas-rename-${thread.threadId}-${thread.rowVersion}`,
+        signal,
+      }),
+    archiveThread: (
+      thread: Pick<AtlasThreadSummary, "threadId" | "rowVersion">,
+      signal?: AbortSignal,
+    ) =>
+      client.request(archiveThreadOperation, {
+        params: { threadId: thread.threadId },
+        body: { expectedRowVersion: thread.rowVersion },
+        idempotencyKey: `atlas-archive-${thread.threadId}-${thread.rowVersion}`,
+        signal,
+      }),
+    async answer(question: string, answerOptions: AtlasAnswerOptions = {}) {
+      const businessContext =
+        answerOptions.businessContext === undefined
+          ? undefined
+          : parseAtlasBusinessContext(answerOptions.businessContext);
+      const userText = question.trim();
+      if (userText.length < 3 || userText.length > 4_096)
+        throw new AtlasClientError(
+          "QUESTION_INVALID",
+          "Ask Atlas a question between 3 and 4,096 characters.",
+        );
+      const admission = await client.request(admissionOperation, {
+        signal: answerOptions.signal,
+      });
+      if (!admission.chatAllowed || !admission.persistenceAllowed)
+        throw new AtlasClientError(
+          "ATLAS_NOT_ADMITTED",
+          "Atlas answers are not enabled for this account or plane.",
+        );
+      const publicModelId =
+          answerOptions.agent?.publicModelId ??
+          admission.allowedPublicModelIds[0],
+        dataClass =
+          answerOptions.agent?.dataClass ??
+          preferredDataClass(admission.allowedDataClasses);
+      if (!publicModelId || !dataClass)
+        throw new AtlasClientError(
+          "ATLAS_MODE_UNAVAILABLE",
+          "No admitted Atlas answer mode is available.",
+        );
+      if (
+        !admission.allowedPublicModelIds.includes(publicModelId) ||
+        !admission.allowedDataClasses.includes(dataClass)
+      )
+        throw new AtlasClientError(
+          "ATLAS_AGENT_NOT_ADMITTED",
+          "The selected Atlas agent is not admitted for this account or plane.",
+        );
+      const requestId = createId();
+      const thread = answerOptions.threadId
+        ? { threadId: answerOptions.threadId }
+        : await client.request(createThreadOperation, {
+            body: { title: userText.slice(0, 120) },
+            idempotencyKey: `atlas-thread-${requestId}`,
+            signal: answerOptions.signal,
+          });
+      const hasAttachments = Boolean(
+        answerOptions.attachmentContextId ||
+        answerOptions.attachmentIds?.length,
+      );
+      if (
+        hasAttachments &&
+        (!answerOptions.attachmentContextId ||
+          !answerOptions.attachmentIds?.length ||
+          answerOptions.attachmentIds.length > 5)
+      )
+        throw new AtlasClientError(
+          "ATTACHMENT_CONTEXT_INVALID",
+          "Atlas attachment context is incomplete.",
+        );
+      const stream = await client.request(runOperation, {
+        params: { threadId: thread.threadId },
+        body: {
+          clientRequestId: requestId,
+          publicModelId,
+          dataClass,
+          userText,
+          catalogPolicyRevision: admission.policyRevision,
+          ...(answerOptions.agent
+            ? { agentCode: answerOptions.agent.code }
+            : {}),
+          ...(businessContext ? { businessContext } : {}),
+          ...(hasAttachments
+            ? {
+                attachmentContextId: answerOptions.attachmentContextId,
+                attachmentIds: answerOptions.attachmentIds,
+              }
+            : {}),
+        },
+        idempotencyKey: `atlas-run-${requestId}`,
+        signal: answerOptions.signal,
+        timeoutMs: 120_000,
+      });
+      return consumeAnswerStream(
+        stream,
+        thread.threadId,
+        publicModelId,
+        answerOptions.onProgress,
+        answerOptions.signal,
+        businessContext?.generationId,
+      );
+    },
+    confirmAction: (action: AtlasGovernedAction, signal?: AbortSignal) =>
+      client.request(toolRunOperation, {
+        params: { proposalId: action.proposalId },
+        body: {
+          arguments: action.arguments,
+          confirmationToken: action.confirmationToken,
+        },
+        idempotencyKey: `atlas-confirm-${action.proposalId}`,
+        signal,
+      }),
+    cancelAction: (
+      action: Pick<AtlasGovernedAction, "proposalId">,
+      reason?: string,
+      signal?: AbortSignal,
+    ) =>
+      client.request(toolCancelOperation, {
+        params: { proposalId: action.proposalId },
+        body: {
+          ...(reason?.trim() ? { reason: reason.trim().slice(0, 500) } : {}),
+        },
+        idempotencyKey: `atlas-cancel-${action.proposalId}`,
+        signal,
+      }),
+    actionHistory: (signal?: AbortSignal) =>
+      client.request(toolHistoryOperation, { query: { limit: 50 }, signal }),
+  });
+}
+
+export function createAtlasExperienceAdminClient(
+  options: AtlasAnswerClientOptions = {},
+): AtlasExperienceAdminClient {
+  const client = options.client ?? createHttpClient({ csrfToken: browserCsrf }),
+    createId = options.createId ?? (() => globalThis.crypto.randomUUID());
+  return Object.freeze({
+    draft: (signal?: AbortSignal) =>
+      client.request(experienceDraftOperation, { signal }),
+    saveDraft: (
+      definition: AtlasExperienceDefinition,
+      expectedRevision?: number,
+      signal?: AbortSignal,
+    ) =>
+      client.request(experienceSaveOperation, {
+        body: {
+          ...definition,
+          ...(expectedRevision === undefined ? {} : { expectedRevision }),
+        },
+        idempotencyKey: `atlas-experience-draft-${createId()}`,
+        signal,
+      }),
+    publish: (scope: string, expectedRevision: number, signal?: AbortSignal) =>
+      client.request(experiencePublishOperation, {
+        body: { scope, expectedRevision },
+        idempotencyKey: `atlas-experience-publish-${scope}-${expectedRevision}`,
+        signal,
+      }),
+  });
+}
+
+interface RunBody {
+  readonly clientRequestId: string;
+  readonly publicModelId: string;
+  readonly dataClass: string;
+  readonly userText: string;
+  readonly catalogPolicyRevision: string;
+  readonly agentCode?: string;
+  readonly businessContext?: AtlasBusinessContextV1;
+  readonly attachmentContextId?: string;
+  readonly attachmentIds?: readonly string[];
+}
+interface Envelope {
+  readonly contextGenerationId?: string;
+  readonly protocol: "atlas.sse/1";
+  readonly runId: string;
+  readonly threadId: string;
+  readonly event: Readonly<Record<string, unknown>> & { readonly type: string };
+}
+
+async function consumeAnswerStream(
+  stream: ReadableStream<Uint8Array>,
+  threadId: string,
+  publicModelId: string,
+  onProgress?: (progress: AtlasAnswerProgress) => void,
+  signal?: AbortSignal,
+  contextGenerationId?: string,
+): Promise<AtlasGroundedAnswer> {
+  const reader = stream.getReader(),
+    decoder = new TextDecoder();
+  let completed = false;
+  let buffer = "",
+    answerText = "",
+    runId: string | undefined,
+    messageId: string | undefined,
+    intent: AtlasIntentV1 | undefined;
+  const insights: AtlasInsightResult[] = [];
+  const citations: AtlasRecordCitation[] = [],
+    attachmentCitations: AtlasAttachmentCitation[] = [],
+    actions: AtlasGovernedAction[] = [];
+  try {
+    while (true) {
+      if (signal?.aborted)
+        throw new DOMException("Atlas answer cancelled", "AbortError");
+      const chunk = await reader.read();
+      buffer += decoder.decode(chunk.value, { stream: !chunk.done });
+      const frames = buffer.split(/\r?\n\r?\n/);
+      buffer = frames.pop() ?? "";
+      for (const frame of frames) {
+        const envelope = parseFrame(frame);
+        if (!envelope) continue;
+        if (
+          contextGenerationId &&
+          envelope.contextGenerationId !== contextGenerationId
+        )
+          throw new AtlasClientError(
+            "ATLAS_CONTEXT_MISMATCH",
+            "Atlas returned a response for a different page context.",
+          );
+        runId = envelope.runId;
+        if (envelope.event.type === "run.started")
+          onProgress?.({
+            kind: "started",
+            publicModelId: textValue(
+              envelope.event.publicModelId,
+              "publicModelId",
+            ),
+          });
+        else if (envelope.event.type === "intent.resolved") {
+          intent = parseAtlasIntent(envelope.event.intent);
+        } else if (envelope.event.type === "message.delta") {
+          const delta = streamText(envelope.event.text);
+          answerText += delta;
+          onProgress?.({ kind: "text", text: delta });
+        } else if (envelope.event.type === "source.cited") {
+          const citation = parseCitation(envelope.event);
+          if (!citations.some((item) => sameCitation(item, citation))) {
+            citations.push(citation);
+            onProgress?.({ kind: "citation", citation });
+          }
+        } else if (envelope.event.type === "insight.cited") {
+          insights.push(parseAtlasInsightResult(envelope.event.insight));
+        } else if (envelope.event.type === "attachment.cited") {
+          const citation = parseAttachmentCitation(envelope.event);
+          if (
+            !attachmentCitations.some(
+              (item) => item.attachmentId === citation.attachmentId,
+            )
+          ) {
+            attachmentCitations.push(citation);
+            onProgress?.({ kind: "attachment-citation", citation });
+          }
+        } else if (
+          envelope.event.type === "tool.previewed" &&
+          envelope.event.confirmationRequired === true
+        ) {
+          const action = parseGovernedAction(envelope.event);
+          if (!actions.some((item) => item.proposalId === action.proposalId)) {
+            actions.push(action);
+            onProgress?.({ kind: "action", action });
+          }
+        } else if (envelope.event.type === "run.failed") {
+          const code = textValue(envelope.event.code, "code"),
+            retryable = envelope.event.retryable === true;
+          onProgress?.({ kind: "failed", code, retryable });
+          throw new AtlasClientError(
+            code,
+            "Atlas could not complete this answer.",
+            retryable,
+          );
+        } else if (envelope.event.type === "run.cancelled")
+          throw new DOMException("Atlas answer cancelled", "AbortError");
+        else if (envelope.event.type === "run.completed") {
+          messageId =
+            typeof envelope.event.messageId === "string"
+              ? envelope.event.messageId
+              : undefined;
+          completed = true;
+          onProgress?.({ kind: "completed" });
+        }
+      }
+      if (chunk.done) break;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  if (!completed)
+    throw new AtlasClientError(
+      "INCOMPLETE_ANSWER",
+      "Atlas response was interrupted. Try again.",
+    );
+  if (!answerText.trim() && !actions.length)
+    throw new AtlasClientError(
+      "EMPTY_ANSWER",
+      "Atlas completed without an answer or governed action preview.",
+    );
+  const envelope = parseAtlasAnswerEnvelope(
+    {
+      schemaVersion: 1,
+      kind: "explanation",
+      summary: answerText.trim()
+        ? answerText
+        : "Review the proposed action below.",
+      findingIds: [],
+      evidenceIds: [
+        ...citations.map((_, index) => `record:${index}`),
+        ...attachmentCitations.map((_, index) => `attachment:${index}`),
+      ],
+    },
+    {
+      evidenceIds: [
+        ...citations.map((_, index) => `record:${index}`),
+        ...attachmentCitations.map((_, index) => `attachment:${index}`),
+      ],
+      actionIds: actions.map((action) => action.proposalId),
+    },
+  );
+  return Object.freeze({
+    ...(intent ? { intent } : {}),
+    insights: Object.freeze(insights),
+    envelope,
+    text: answerText,
+    citations: Object.freeze(citations),
+    attachmentCitations: Object.freeze(attachmentCitations),
+    actions: Object.freeze(actions),
+    threadId,
+    ...(runId ? { runId } : {}),
+    ...(messageId ? { messageId } : {}),
+    publicModelId,
+  });
+}
+
+export class AtlasClientError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+    readonly retryable = false,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = "AtlasClientError";
+  }
+}
+function parseAdmission(value: unknown): AtlasAdmission {
+  const item = object(value);
+  if (item.schema !== "atlas-plane-admission/1")
+    throw new TypeError("Unsupported Atlas admission contract");
+  return Object.freeze({
+    chatAllowed: item.chatAllowed === true,
+    persistenceAllowed: item.persistenceAllowed === true,
+    readToolsAllowed: item.readToolsAllowed === true,
+    mutationToolsAllowed: item.mutationToolsAllowed === true,
+    allowedPublicModelIds: strings(item.allowedPublicModelIds),
+    allowedDataClasses: strings(item.allowedDataClasses),
+    policyRevision: textValue(item.policyRevision, "policyRevision"),
+    ...(typeof item.reasonCode === "string"
+      ? { reasonCode: item.reasonCode }
+      : {}),
+  });
+}
+function parseThread(value: unknown): { readonly threadId: string } {
+  const item = object(value);
+  return Object.freeze({ threadId: textValue(item.threadId, "threadId") });
+}
+function parseThreadSummary(value: unknown): AtlasThreadSummary {
+  const item = object(value),
+    retention = object(item.retention);
+  return Object.freeze({
+    threadId: textValue(item.threadId, "threadId"),
+    title: typeof item.title === "string" ? item.title : null,
+    status: enumValue(
+      item.status,
+      ["active", "archived", "deleted"] as const,
+      "thread status",
+    ),
+    rowVersion: integer(item.rowVersion, "rowVersion"),
+    lastMessageSequence: integer(
+      item.lastMessageSequence,
+      "lastMessageSequence",
+    ),
+    retention: Object.freeze({
+      policyId: textValue(retention.policyId, "retention policy"),
+      expiresAt:
+        typeof retention.expiresAt === "string" ? retention.expiresAt : null,
+      purgeAfter:
+        typeof retention.purgeAfter === "string" ? retention.purgeAfter : null,
+      legalHold: retention.legalHold === true,
+    }),
+    createdAt: textValue(item.createdAt, "createdAt"),
+    updatedAt: textValue(item.updatedAt, "updatedAt"),
+  });
+}
+function parseThreadPage(value: unknown): AtlasThreadPage {
+  const item = object(value);
+  return Object.freeze({
+    items: Object.freeze(array(item.items).map(parseThreadSummary)),
+    nextCursor: typeof item.nextCursor === "string" ? item.nextCursor : null,
+  });
+}
+function parseMessagePage(value: unknown): AtlasMessagePage {
+  const item = object(value);
+  return Object.freeze({
+    items: Object.freeze(
+      array(item.items).map((candidate) => {
+        const message = object(candidate),
+          blocks = array(message.content).map(object);
+        const text = blocks
+          .flatMap((block) =>
+            block.type === "text" && typeof block.text === "string"
+              ? [block.text]
+              : [],
+          )
+          .join("");
+        const citations: AtlasRecordCitation[] = [],
+          insights: AtlasInsightResult[] = [];
+        for (const block of blocks) {
+          if (block.type === "text" && block.citations !== undefined)
+            for (const item of array(block.citations)) {
+              const citation = parseCitation(object(item));
+              if (!citations.some((current) => sameCitation(current, citation)))
+                citations.push(citation);
+            }
+          if (block.type !== "tool_result" || block.isError === true) continue;
+          // Only server-persisted metadata is authority; never infer sources from generated text or result fields.
+          if (block.sources !== undefined)
+            for (const coordinate of array(block.sources)) {
+              const citation = parseCitation({
+                coordinate,
+                toolCode: block.toolName,
+              });
+              if (!citations.some((current) => sameCitation(current, citation)))
+                citations.push(citation);
+            }
+          if (
+            block.result &&
+            typeof block.result === "object" &&
+            "insight" in block.result &&
+            block.result.insight
+          )
+            insights.push(parseAtlasInsightResult(block.result.insight));
+        }
+        const threadId = textValue(message.threadId, "threadId");
+        const answer: AtlasGroundedAnswer | undefined =
+          message.role === "assistant" &&
+          message.status === "completed" &&
+          (citations.length || insights.length)
+            ? {
+                text,
+                citations: Object.freeze(citations),
+                insights: Object.freeze(insights),
+                attachmentCitations: [],
+                actions: [],
+                threadId,
+                publicModelId: "",
+                envelope: parseAtlasAnswerEnvelope(
+                  {
+                    schemaVersion: 1,
+                    kind: "explanation",
+                    summary: text.trim() ? text : "Authorized assessment",
+                    findingIds: [],
+                    evidenceIds: citations.map((_, i) => `record:${i}`),
+                  },
+                  {
+                    evidenceIds: citations.map((_, i) => `record:${i}`),
+                    actionIds: [],
+                  },
+                ),
+              }
+            : undefined;
+        return Object.freeze({
+          ...(answer ? { answer } : {}),
+          messageId: textValue(message.messageId, "messageId"),
+          threadId,
+          sequence: integer(message.sequence, "sequence"),
+          role: enumValue(
+            message.role,
+            ["system", "user", "assistant", "tool"] as const,
+            "message role",
+          ),
+          status: enumValue(
+            message.status,
+            ["pending", "completed", "failed", "cancelled"] as const,
+            "message status",
+          ),
+          text,
+          results: Object.freeze(
+            blocks.flatMap((block) =>
+              block.type === "tool_result" && "result" in block
+                ? [block.result]
+                : [],
+            ),
+          ),
+          runId: typeof message.runId === "string" ? message.runId : null,
+          createdAt: textValue(message.createdAt, "createdAt"),
+          terminalAt:
+            typeof message.terminalAt === "string" ? message.terminalAt : null,
+        });
+      }),
+    ),
+    nextCursor: typeof item.nextCursor === "string" ? item.nextCursor : null,
+  });
+}
+
+function parseFrame(frame: string): Envelope | undefined {
+  const data = frame
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trimStart())
+    .join("\n");
+  if (!data) return undefined;
+  const value = object(JSON.parse(data)),
+    event = object(value.event);
+  if (value.protocol !== "atlas.sse/1")
+    throw new TypeError("Unsupported Atlas stream protocol");
+  return {
+    ...(typeof value.contextGenerationId === "string"
+      ? { contextGenerationId: value.contextGenerationId }
+      : {}),
+    protocol: "atlas.sse/1",
+    runId: textValue(value.runId, "runId"),
+    threadId: textValue(value.threadId, "threadId"),
+    event: { ...event, type: textValue(event.type, "event.type") },
+  };
+}
+function parseCitation(
+  event: Readonly<Record<string, unknown>>,
+): AtlasRecordCitation {
+  const coordinate = object(event.coordinate);
+  return Object.freeze({
+    entityCode: textValue(coordinate.entityCode, "entityCode"),
+    recordId: textValue(coordinate.recordId, "recordId"),
+    revision: textValue(coordinate.revision, "revision"),
+    descriptorHash: textValue(coordinate.descriptorHash, "descriptorHash"),
+    toolCode: textValue(event.toolCode, "toolCode"),
+  });
+}
+function parseAttachmentCitation(
+  event: Readonly<Record<string, unknown>>,
+): AtlasAttachmentCitation {
+  return Object.freeze({
+    attachmentId: textValue(event.attachmentId, "attachmentId"),
+    fileName: textValue(event.fileName, "fileName"),
+    contentType: textValue(event.contentType, "contentType"),
+    sha256: textValue(event.sha256, "sha256"),
+  });
+}
+function parseGovernedAction(
+  event: Readonly<Record<string, unknown>>,
+): AtlasGovernedAction {
+  const argumentsValue = object(event.arguments),
+    access = enumValue(event.access, ["read", "mutation"] as const, "access"),
+    risk = enumValue(
+      event.risk,
+      ["low", "medium", "high", "critical"] as const,
+      "risk",
+    );
+  return Object.freeze({
+    proposalId: textValue(event.proposalId, "proposalId"),
+    callId: textValue(event.callId, "callId"),
+    toolCode: textValue(event.toolCode, "toolCode"),
+    summary: textValue(event.summary, "summary"),
+    access,
+    risk,
+    arguments: Object.freeze({ ...argumentsValue }),
+    confirmationToken: textValue(event.confirmationToken, "confirmationToken"),
+    ...(typeof event.affectedEntityType === "string"
+      ? { affectedEntityType: event.affectedEntityType }
+      : {}),
+    ...(typeof event.affectedEntityId === "string"
+      ? { affectedEntityId: event.affectedEntityId }
+      : {}),
+    ...(Number.isSafeInteger(event.expectedRowVersion)
+      ? { expectedRowVersion: Number(event.expectedRowVersion) }
+      : {}),
+    ...(typeof event.expiresAt === "string"
+      ? { expiresAt: event.expiresAt }
+      : {}),
+    status: "proposed",
+  });
+}
+function parseActionResult(value: unknown): AtlasActionResult {
+  const item = object(value),
+    outcome = enumValue(
+      item.outcome,
+      ["completed", "denied", "failed", "cancelled"] as const,
+      "outcome",
+    );
+  return Object.freeze({
+    proposalId: textValue(item.proposalId, "proposalId"),
+    outcome,
+    ...(item.replayed === true ? { replayed: true } : {}),
+    ...(typeof item.commandId === "string"
+      ? { commandId: item.commandId }
+      : {}),
+    ...(typeof item.resultRevision === "string"
+      ? { resultRevision: item.resultRevision }
+      : {}),
+  });
+}
+function parseActionHistory(value: unknown): readonly AtlasActionAuditEntry[] {
+  const body = object(value);
+  if (!Array.isArray(body.items))
+    throw new TypeError("Atlas action history items must be an array");
+  return Object.freeze(
+    body.items.map((candidate) => {
+      const item = object(candidate),
+        evidenceRefs = Array.isArray(item.evidenceRefs)
+          ? item.evidenceRefs.map(object)
+          : [];
+      return Object.freeze({
+        proposalId: textValue(item.proposalId, "proposalId"),
+        threadId: textValue(item.threadId, "threadId"),
+        runId: textValue(item.runId, "runId"),
+        toolCode: textValue(item.toolCode, "toolCode"),
+        toolVersion: textValue(item.toolVersion, "toolVersion"),
+        summary: textValue(item.summary, "summary"),
+        access: enumValue(item.access, ["read", "mutation"] as const, "access"),
+        risk: enumValue(
+          item.risk,
+          ["low", "medium", "high", "critical"] as const,
+          "risk",
+        ),
+        autonomyDecision: enumValue(
+          item.autonomyDecision,
+          ["denied", "suggest", "assist", "auto"] as const,
+          "autonomyDecision",
+        ),
+        ...(typeof item.affectedEntityType === "string"
+          ? { affectedEntityType: item.affectedEntityType }
+          : {}),
+        ...(typeof item.affectedEntityId === "string"
+          ? { affectedEntityId: item.affectedEntityId }
+          : {}),
+        ...(Number.isSafeInteger(item.expectedRowVersion)
+          ? { expectedRowVersion: Number(item.expectedRowVersion) }
+          : {}),
+        policyRevision: textValue(item.policyRevision, "policyRevision"),
+        profileRevision: textValue(item.profileRevision, "profileRevision"),
+        authorizationEpoch: integer(
+          item.authorizationEpoch,
+          "authorizationEpoch",
+        ),
+        confirmationRequired: item.confirmationRequired === true,
+        status: enumValue(
+          item.status,
+          [
+            "proposed",
+            "confirmed",
+            "executing",
+            "completed",
+            "denied",
+            "failed",
+            "expired",
+            "cancelled",
+          ] as const,
+          "status",
+        ),
+        createdAt: textValue(item.createdAt, "createdAt"),
+        ...(typeof item.confirmationAt === "string"
+          ? { confirmationAt: item.confirmationAt }
+          : {}),
+        ...(typeof item.executingAt === "string"
+          ? { executingAt: item.executingAt }
+          : {}),
+        ...(typeof item.terminalAt === "string"
+          ? { terminalAt: item.terminalAt }
+          : {}),
+        ...(Number.isSafeInteger(item.durationMs)
+          ? { durationMs: Number(item.durationMs) }
+          : {}),
+        ...(typeof item.terminalErrorClass === "string"
+          ? { terminalErrorClass: item.terminalErrorClass }
+          : {}),
+        ...(typeof item.businessTransactionId === "string"
+          ? { businessTransactionId: item.businessTransactionId }
+          : {}),
+        ...(typeof item.businessTransactionType === "string"
+          ? { businessTransactionType: item.businessTransactionType }
+          : {}),
+        evidenceRefs: Object.freeze(evidenceRefs),
+      });
+    }),
+  );
+}
+function parseExperienceProjection(value: unknown): AtlasExperienceProjection {
+  const item = object(value),
+    definition = parseExperienceDefinition({
+      ...item,
+      schema: "atlas-experience-definition/1",
+    });
+  return Object.freeze({
+    ...definition,
+    schema: "atlas-experience-projection/1",
+    revision: integer(item.revision, "experience revision"),
+    contentHash: textValue(item.contentHash, "experience content hash"),
+  });
+}
+function parseExperienceRelease(value: unknown): AtlasExperienceRelease {
+  const item = object(value);
+  return Object.freeze({
+    releaseId: textValue(item.releaseId, "releaseId"),
+    tenantId: textValue(item.tenantId, "tenantId"),
+    revision: integer(item.revision, "revision"),
+    status: enumValue(
+      item.status,
+      ["draft", "published", "retired"] as const,
+      "status",
+    ),
+    definition: parseExperienceDefinition(item.definition),
+    contentHash: textValue(item.contentHash, "contentHash"),
+    createdAt: textValue(item.createdAt, "createdAt"),
+    createdBy: textValue(item.createdBy, "createdBy"),
+    ...(typeof item.publishedAt === "string"
+      ? { publishedAt: item.publishedAt }
+      : {}),
+    ...(typeof item.publishedBy === "string"
+      ? { publishedBy: item.publishedBy }
+      : {}),
+  });
+}
+function parseExperienceReleaseWithAccess(
+  value: unknown,
+): AtlasExperienceRelease {
+  const parsed = parseExperienceRelease(value),
+    raw = object(object(value).definition);
+  return Object.freeze({
+    ...parsed,
+    definition: Object.freeze({
+      ...parsed.definition,
+      widgets: preserveAccess(parsed.definition.widgets, raw.widgets),
+      prompts: preserveAccess(parsed.definition.prompts, raw.prompts),
+      agents: preserveAccess(parsed.definition.agents, raw.agents),
+    }),
+  });
+}
+function preserveAccess<T extends object>(
+  parsed: readonly T[],
+  raw: unknown,
+): readonly T[] {
+  const source = array(raw);
+  return Object.freeze(
+    parsed.map((item, index) => {
+      const candidate = object(source[index]),
+        accessValue = candidate.access;
+      if (accessValue === undefined) return item;
+      const access = object(accessValue),
+        permissions =
+          access.permissions === undefined
+            ? undefined
+            : strings(access.permissions),
+        features =
+          access.features === undefined ? undefined : strings(access.features);
+      return Object.freeze({
+        ...item,
+        access: Object.freeze({
+          ...(permissions ? { permissions } : {}),
+          ...(features ? { features } : {}),
+        }),
+      });
+    }),
+  );
+}
+function parseExperienceDefinition(value: unknown): AtlasExperienceDefinition {
+  const item = object(value);
+  if (item.schema !== "atlas-experience-definition/1")
+    throw new TypeError("Unsupported Atlas experience definition");
+  return Object.freeze({
+    schema: "atlas-experience-definition/1",
+    scope: textValue(item.scope, "scope"),
+    widgets: array(item.widgets).map((candidate) => {
+      const v = object(candidate);
+      return Object.freeze({
+        code: textValue(v.code, "widget code"),
+        kind: enumValue(
+          v.kind,
+          ["recommendations", "quick-actions", "workspaces", "recent"] as const,
+          "widget kind",
+        ),
+        title: textValue(v.title, "widget title"),
+        enabled: v.enabled === true,
+        planes: parsePlanes(v.planes),
+        order: integer(v.order, "widget order"),
+      });
+    }),
+    searchSources: array(item.searchSources).map((candidate) => {
+      const v = object(candidate);
+      return Object.freeze({
+        code: textValue(v.code, "source code"),
+        kind: enumValue(
+          v.kind,
+          ["navigation", "record", "knowledge"] as const,
+          "source kind",
+        ),
+        label: textValue(v.label, "source label"),
+        enabled: v.enabled === true,
+        planes: parsePlanes(v.planes),
+        ...(typeof v.permissionCode === "string"
+          ? { permissionCode: v.permissionCode }
+          : {}),
+        ...(typeof v.entityCode === "string"
+          ? { entityCode: v.entityCode }
+          : {}),
+        ...(typeof v.routePrefix === "string"
+          ? { routePrefix: v.routePrefix }
+          : {}),
+      });
+    }),
+    prompts: array(item.prompts).map((candidate) => {
+      const v = object(candidate);
+      return Object.freeze({
+        code: textValue(v.code, "prompt code"),
+        label: textValue(v.label, "prompt label"),
+        prompt: textValue(v.prompt, "prompt"),
+        enabled: v.enabled === true,
+        planes: parsePlanes(v.planes),
+        agentCode: textValue(v.agentCode, "agent code"),
+      });
+    }),
+    agents: array(item.agents).map((candidate) => {
+      const v = object(candidate);
+      return Object.freeze({
+        code: textValue(v.code, "agent code"),
+        name: textValue(v.name, "agent name"),
+        description: textValue(v.description, "agent description"),
+        enabled: v.enabled === true,
+        planes: parsePlanes(v.planes),
+        publicModelId: textValue(v.publicModelId, "public model id"),
+        dataClass: enumValue(
+          v.dataClass,
+          ["public", "internal", "confidential", "restricted"] as const,
+          "data class",
+        ),
+        promptRevision: textValue(v.promptRevision, "prompt revision"),
+        toolCodes: strings(v.toolCodes),
+      });
+    }),
+  });
+}
+function parsePlanes(value: unknown): readonly ("neon" | "mesh" | "studio")[] {
+  return array(value).map((item) =>
+    enumValue(item, ["neon", "mesh", "studio"] as const, "plane"),
+  );
+}
+function array(value: unknown): readonly unknown[] {
+  if (!Array.isArray(value))
+    throw new TypeError("Atlas value must be an array");
+  return value;
+}
+function preferredDataClass(values: readonly string[]): string | undefined {
+  return ["internal", "confidential", "public", "synthetic"].find((value) =>
+    values.includes(value),
+  );
+}
+function sameCitation(
+  left: AtlasRecordCitation,
+  right: AtlasRecordCitation,
+): boolean {
+  return (
+    left.entityCode === right.entityCode &&
+    left.recordId === right.recordId &&
+    left.revision === right.revision
+  );
+}
+function object(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new TypeError("Atlas response must be an object");
+  return value as Record<string, unknown>;
+}
+function strings(value: unknown): readonly string[] {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string"))
+    throw new TypeError("Atlas list must contain strings");
+  return Object.freeze([...value]);
+}
+function textValue(value: unknown, label: string): string {
+  if (typeof value !== "string" || !value.trim())
+    throw new TypeError(`Atlas ${label} must be a non-empty string`);
+  return value;
+}
+function integer(value: unknown, label: string): number {
+  if (!Number.isSafeInteger(value) || Number(value) < 0)
+    throw new TypeError(`Atlas ${label} must be a non-negative integer`);
+  return Number(value);
+}
+function enumValue<const Values extends readonly string[]>(
+  value: unknown,
+  values: Values,
+  label: string,
+): Values[number] {
+  if (typeof value !== "string" || !values.includes(value as Values[number]))
+    throw new TypeError(`Atlas ${label} is invalid`);
+  return value as Values[number];
+}
+function browserCsrf(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const values = document.cookie.split(";").map((part) => part.trim());
+  return (
+    values
+      .find((part) => part.startsWith("__Host-athyper-csrf="))
+      ?.split("=")
+      .slice(1)
+      .join("=") ??
+    values
+      .find((part) => part.startsWith("athyper-csrf="))
+      ?.split("=")
+      .slice(1)
+      .join("=")
+  );
+}
+
+// Token boundaries may contain only spaces, newlines, or an empty string.
+function streamText(value: unknown): string {
+  if (typeof value !== "string")
+    throw new TypeError("Atlas text delta must be a string");
+  return value;
+}

@@ -56,7 +56,12 @@ describe("Metadata plus Records host vertical", () => {
     const persistence = createInMemoryRecordPersistence();
     const metadata: MetadataReader = { getEntityDescriptor: async (_coordinate, entityCode) => entityCode === descriptor.entityCode ? descriptor : null };
     const events: OutboxEventInput[] = [];
+    const observedPermissions = new Set<string>();
     registerServices(container, {
+      entityAuthorizationShadow: {
+        observe: async (request) => { observedPermissions.add(request.permissionCode); },
+        unavailable: () => { throw new Error("Unexpected shadow failure"); },
+      },
       metadata,
       repository: persistence.repository as never,
       transactions: persistence.transactions as never,
@@ -81,6 +86,7 @@ describe("Metadata plus Records host vertical", () => {
     expect(deletedResponse.status).toBe(200);
     expect(events.map((event) => event.eventType)).toEqual(["records.record.created", "records.record.patched", "records.record.transitioned", "records.record.deleted"]);
     expect(audit.events.filter((event) => event.eventCode.startsWith("records.record."))).toHaveLength(4);
+    expect([...observedPermissions]).toEqual(expect.arrayContaining(permissions));
   });
 
   it("rolls back authenticated state, outbox, audit, and idempotency when audit persistence fails", async () => {

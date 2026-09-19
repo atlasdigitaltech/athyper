@@ -1,0 +1,11 @@
+import {readFileSync,writeFileSync,existsSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {hash} from './entity-authorization/named-role-review.mjs';
+import {recommendNamedRoles,recordBatchApproval} from './entity-authorization/named-role-recommendations.mjs';
+const [mode,inventoryPath,inputPath,outputPath,evidencePath]=process.argv.slice(2);
+if(!['recommend','record-approval'].includes(mode)||!outputPath)throw Error('Usage: recommend-business-partner-roles.mjs <recommend|record-approval> <inventory> <input packet> <new output packet> [approval evidence]');
+if(new Set([inventoryPath,inputPath,outputPath,...(evidencePath?[evidencePath]:[])].map(p=>resolve(p))).size!==(evidencePath?4:3)||existsSync(outputPath))throw Error('Use a new output revision; existing evidence is never overwritten');
+const source=readFileSync(inventoryPath),inventory=JSON.parse(source),packet=JSON.parse(readFileSync(inputPath));
+const result=mode==='recommend'?recommendNamedRoles(inventory,packet,hash(source),{from:'2026-09-11T00:00:00Z',until:'2026-12-10T00:00:00Z'}):recordBatchApproval(inventory,packet,hash(source),JSON.parse(readFileSync(evidencePath)));
+writeFileSync(outputPath,JSON.stringify(result,null,2)+'\n');
+console.log(JSON.stringify({outputPath,rows:result.items.length,batches:result.batches.length,recordedApprovalBatches:result.approvalBatches.length,grantChanges:0}));

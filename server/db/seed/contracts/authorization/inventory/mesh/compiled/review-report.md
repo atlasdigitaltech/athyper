@@ -4,9 +4,9 @@ Status: inventory-only and non-enforcing. This artifact creates no permissions, 
 
 ## Coverage
 
-- Physical business-data tables: 78 (28 master, 24 document, 26 mesh)
-- Reviewed network-topology tables: 8
-- Pending business review: 70
+- Physical business-data tables: 70 (29 master, 9 document, 32 mesh)
+- Reviewed network-topology tables: 9
+- Pending business review: 61
 - Proposed operations: 18
 - Proposed lifecycles: 2
 - Studio-to-Mesh provisionable resources: 1
@@ -17,7 +17,7 @@ Status: inventory-only and non-enforcing. This artifact creates no permissions, 
 
 | Classification | Tables |
 | --- | ---: |
-| aggregate_child | 4 |
+| aggregate_child | 5 |
 | aggregate_root | 2 |
 | immutable_evidence | 1 |
 | sensitive_overlay | 1 |
@@ -29,6 +29,7 @@ Status: inventory-only and non-enforcing. This artifact creates no permissions, 
 | mesh.network_account | aggregate_root | mesh.network_account | @athyper/server-plane-mesh | network_account |
 | mesh.network_account_commodity_capability | aggregate_child | mesh.network_account | @athyper/server-plane-mesh | network_account |
 | mesh.network_account_identifier | aggregate_child | mesh.network_account | @athyper/server-plane-mesh | network_account |
+| mesh.network_account_industry_classification | aggregate_child | mesh.network_account | @athyper/server-plane-mesh | network_account |
 | mesh.network_account_profile | aggregate_child | mesh.network_account | @athyper/server-plane-mesh | network_account |
 | mesh.network_account_reference | aggregate_child | mesh.network_account | @athyper/server-plane-mesh | network_account |
 | mesh.network_account_tax_registration | sensitive_overlay | mesh.network_account | @athyper/server-plane-mesh | network_account |
@@ -100,35 +101,21 @@ Required before enforcement:
 ## Static RLS findings
 
 - Reviewed tables with participant FOR ALL mutation policy: mesh.network_relationship
-- Reviewed tables with CURRENT_USER broad-write policy: mesh.network_account, mesh.network_account_commodity_capability, mesh.network_account_identifier, mesh.network_account_profile, mesh.network_account_reference, mesh.network_account_tax_registration, mesh.network_lifecycle_event, mesh.network_relationship
+- Reviewed tables with CURRENT_USER broad-write policy: mesh.network_account, mesh.network_account_commodity_capability, mesh.network_account_identifier, mesh.network_account_industry_classification, mesh.network_account_profile, mesh.network_account_reference, mesh.network_account_tax_registration, mesh.network_lifecycle_event, mesh.network_relationship
 
 ## Pending tables
 
-- document.attachment
-- document.attachment_derivative
-- document.attachment_folder
-- document.attachment_legal_hold
-- document.attachment_legal_hold_event
-- document.attachment_link
-- document.attachment_quota_reservation
-- document.attachment_quota_usage
-- document.attachment_series
-- document.comment
-- document.comment_draft
-- document.comment_feed_cursor
-- document.comment_mention
-- document.comment_reaction
-- document.content_item
-- document.content_item_access_grant
-- document.content_item_link
-- document.content_quota_reservation
-- document.content_quota_usage
 - document.conversation
 - document.conversation_participant
+- document.entity_case
+- document.entity_case_command_evidence
+- document.entity_case_materialization
+- document.entity_case_validation
 - document.multipart_upload
 - document.multipart_upload_part
 - document.work_item
 - master.address
+- master.address_event
 - master.address_link
 - master.brand_profile
 - master.contact_email
@@ -158,8 +145,10 @@ Required before enforcement:
 - master.workspace
 - mesh.bank_account
 - mesh.bank_account_disclosure
+- mesh.bank_account_disclosure_event
 - mesh.bank_account_link
-- mesh.bank_party
+- mesh.bank_provisional_reference
+- mesh.business_partner_delivery_acknowledgement
 - mesh.catalog
 - mesh.catalog_audience
 - mesh.catalog_availability
@@ -171,11 +160,14 @@ Required before enforcement:
 - mesh.certification
 - mesh.certification_type
 - mesh.document_acknowledgement
+- mesh.document_business_status_projection
 - mesh.document_envelope
 - mesh.document_event
 - mesh.document_payload
+- mesh.network_account_profile_publication
+- mesh.network_account_profile_publication_event
 
 ## Release conclusion
 
-Blocked: 70 tables still require business classification and 3 implementation/RLS qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
+Blocked: 61 tables still require business classification and 3 implementation/RLS qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
 

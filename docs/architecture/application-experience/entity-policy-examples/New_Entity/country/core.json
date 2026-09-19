@@ -1,0 +1,94 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "country/core",
+  "entityCode": "country",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "primaryObject": "shared.country",
+    "sourceObjects": [
+      "shared.country"
+    ],
+    "idField": "code",
+    "tenantField": null,
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "code",
+      "binding": {
+        "sourceObject": "shared.country",
+        "column": "code"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.shared.country.code",
+        "defaultText": "Code"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "character(2)",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "name",
+      "binding": {
+        "sourceObject": "shared.country",
+        "column": "name"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.shared.country.name",
+        "defaultText": "Name"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "shared_reference"
+  },
+  "referencePicker": {
+    "valueField": "code",
+    "labelField": "name",
+    "displayFormat": "{name} ({code})",
+    "allowedTokens": [
+      "name",
+      "code"
+    ],
+    "load": "bounded_lookup"
+  },
+  "dependencies": [],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "artifactHash": "sha256:7906041b22e45fdef0d996f4f4e28a1a06174808a61f5367f2d584ecd74dcac3"
+}

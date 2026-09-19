@@ -24,8 +24,8 @@ if (process.env["NODE_ENV"] !== "production") {
 }
 
 const MODES = {
-  api:       () => import("./processes/api/index.js"),
-  worker:    () => import("./processes/worker/index.js"),
+  api: () => import("./processes/api/index.js"),
+  worker: () => import("./processes/worker/index.js"),
   scheduler: () => import("./processes/scheduler/index.js"),
 } as const;
 
@@ -51,5 +51,12 @@ await start().catch((err: unknown) => {
     err instanceof Error ? err.message : String(err),
     err instanceof Error ? (err.stack ?? "") : "",
   );
+  if (err instanceof AggregateError) {
+    for (const cause of err.errors)
+      console.error(
+        "[fatal] initialization_cause",
+        cause instanceof Error ? cause.message : String(cause),
+      );
+  }
   void flushErrorCollector().finally(() => process.exit(1));
 });

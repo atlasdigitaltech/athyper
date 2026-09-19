@@ -1,0 +1,303 @@
+{
+  "contractSchema": "athyper.meta-entity-contract/2.1",
+  "entity": {
+    "entityCode": "business_partner",
+    "entityClass": "configuration",
+    "ownershipModel": "overlay"
+  },
+  "runtimeProfiles": [
+    {
+      "id": "273ab21b-52e5-4d98-8988-5ffc538e2e75",
+      "profileKey": "default",
+      "backingKind": "virtual",
+      "apiExposure": "catalog_only",
+      "readMode": "none",
+      "writeMode": "none"
+    }
+  ],
+  "fields": [
+    {
+      "id": "d9b4283e-7212-45de-83d2-7b928fc9e32b",
+      "fieldKey": "id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "id"
+    },
+    {
+      "id": "525030c6-cbb5-4534-80e3-ed0fd94ffd08",
+      "fieldKey": "code",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "code"
+    },
+    {
+      "id": "f006dd76-518d-4523-8279-9129016d26db",
+      "fieldKey": "display_name",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "display_name"
+    },
+    {
+      "id": "b4c429da-1b8d-4d79-8a56-5560e133030a",
+      "fieldKey": "status",
+      "dataType": "enum",
+      "typeConfig": {
+        "kind": "enum",
+        "domain_code": "master.business_partner_status_d"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "status"
+    },
+    {
+      "id": "de0f5981-f214-4e0b-84d4-6ae9b0b9fc86",
+      "fieldKey": "partner_category",
+      "dataType": "enum",
+      "typeConfig": {
+        "kind": "enum",
+        "domain_code": "master.business_partner_category_d"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "partner_category"
+    },
+    {
+      "id": "7b9d8f2e-5fb9-4bc9-8eba-a7d30b76fe27",
+      "fieldKey": "registration_country_code",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "registration_country_code"
+    },
+    {
+      "id": "2abd154b-e74b-4892-8deb-a29550b7f97c",
+      "fieldKey": "updated_at",
+      "dataType": "datetime",
+      "typeConfig": {
+        "kind": "datetime"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "updated_at"
+    },
+    {
+      "id": "232a14ab-fdcc-4e0d-8b32-4134e7a6a521",
+      "fieldKey": "name",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "name"
+    },
+    {
+      "id": "ef312376-d376-4dd7-8a2f-b9b92fc6c7f0",
+      "fieldKey": "legal_name",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "legal_name"
+    },
+    {
+      "id": "12d0144e-3e49-4ac2-87da-d14e58311569",
+      "fieldKey": "is_active",
+      "dataType": "boolean",
+      "typeConfig": {
+        "kind": "boolean"
+      },
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "storagePath": "is_active"
+    }
+  ],
+  "operations": [
+    {
+      "id": "88043f69-5c3a-40b6-825e-7ebe006800ab",
+      "operationKey": "read",
+      "operationKind": "read",
+      "label": "Read imported Business Partner",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "auditEventCode": "metadata.entity.read"
+    }
+  ],
+  "searchProfiles": [
+    {
+      "id": "f7389c2c-efad-4981-8b18-f8857663d8e6",
+      "searchKey": "default",
+      "searchKind": "keyword",
+      "minimumQueryLength": 2,
+      "isDefault": true
+    }
+  ],
+  "searchFields": [
+    {
+      "id": "30c2b628-eaea-4c6f-8455-da0a177886eb",
+      "entitySearchProfileId": "f7389c2c-efad-4981-8b18-f8857663d8e6",
+      "entityFieldId": "525030c6-cbb5-4534-80e3-ed0fd94ffd08",
+      "position": 1,
+      "matchMode": "contains"
+    },
+    {
+      "id": "3a564b95-e886-40fe-853d-72aa98e03c6b",
+      "entitySearchProfileId": "f7389c2c-efad-4981-8b18-f8857663d8e6",
+      "entityFieldId": "f006dd76-518d-4523-8279-9129016d26db",
+      "position": 2,
+      "matchMode": "contains"
+    },
+    {
+      "id": "98bb85a9-97d6-420f-8c18-66633f2ae49d",
+      "entitySearchProfileId": "f7389c2c-efad-4981-8b18-f8857663d8e6",
+      "entityFieldId": "232a14ab-fdcc-4e0d-8b32-4134e7a6a521",
+      "position": 3,
+      "matchMode": "contains"
+    },
+    {
+      "id": "de1c9850-c2bc-4893-8b45-7b1b65699fa6",
+      "entitySearchProfileId": "f7389c2c-efad-4981-8b18-f8857663d8e6",
+      "entityFieldId": "ef312376-d376-4dd7-8a2f-b9b92fc6c7f0",
+      "position": 4,
+      "matchMode": "contains"
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "772f1342-f65f-4fec-808c-1c66e5be271a",
+      "surfaceKey": "atlas_baseline_ai",
+      "surfaceKind": "detail",
+      "title": "AI enablement for imported Business Partner baseline",
+      "description": "AI-only derivative. Preserve imported Neon contract, descriptor, entity identity and publication key. This authoring graph is the review carrier; runtime storage and operations come from the immutable baseline.",
+      "layoutKind": "stack",
+      "layoutConfig": {
+        "ai": {
+          "schemaVersion": 1,
+          "enabled": true,
+          "aliases": [
+            "Business partner",
+            "Supplier",
+            "Customer"
+          ],
+          "description": "Saved Business Partner identity and authorized owner sections",
+          "summaryFieldKeys": [
+            "code",
+            "display_name",
+            "status",
+            "partner_category"
+          ],
+          "searchFieldKeys": [
+            "code",
+            "display_name"
+          ],
+          "relationshipKeys": [],
+          "contextKinds": [
+            "record",
+            "manage"
+          ],
+          "insightProviders": [
+            {
+              "id": "entity_read_record",
+              "version": 1
+            },
+            {
+              "id": "bp_read_summary",
+              "version": 1
+            },
+            {
+              "id": "bp_read_contacts",
+              "version": 1
+            },
+            {
+              "id": "bp_read_addresses",
+              "version": 1
+            },
+            {
+              "id": "bp_read_brief",
+              "version": 1
+            },
+            {
+              "id": "bp_explain_readiness",
+              "version": 1
+            },
+            {
+              "id": "bp_check_eligibility",
+              "version": 1
+            },
+            {
+              "id": "bp_explain_case_validation",
+              "version": 1
+            },
+            {
+              "id": "bp_explain_case_diff",
+              "version": 1
+            },
+            {
+              "id": "bp_read_list_insights",
+              "version": 1
+            }
+          ],
+          "actions": [
+            {
+              "id": "open_record",
+              "version": 1,
+              "operationKey": "read"
+            }
+          ],
+          "presentationProfiles": [
+            {
+              "id": "record_brief",
+              "version": 1
+            },
+            {
+              "id": "list_brief",
+              "version": 1
+            }
+          ]
+        },
+        "baselineImport": {
+          "id": "5ca0968a-f81f-42b4-8333-dd54c1b02cbb",
+          "contentHash": "6b2379f486f15c74cda7294691d2bde263aa3d29736e0053edf43faffba97ee2",
+          "sourceEntityId": "f004c70a-5de7-5ed8-ae34-68d083f92627",
+          "descriptorHash": "700e00716fd05a782102a3666406f72929769ed11536c318e1dd3243baf894e4"
+        }
+      }
+    }
+  ],
+  "tests": [
+    {
+      "key": "imported_source_bound",
+      "assertion": "path_equals",
+      "path": "surfaces.0.layoutConfig.baselineImport.contentHash",
+      "expected": "6b2379f486f15c74cda7294691d2bde263aa3d29736e0053edf43faffba97ee2"
+    },
+    {
+      "key": "reviewed_ai_enabled",
+      "assertion": "path_equals",
+      "path": "surfaces.0.layoutConfig.ai.enabled",
+      "expected": true
+    },
+    {
+      "key": "read_permission_preserved",
+      "assertion": "path_equals",
+      "path": "operations.0.permissionCode",
+      "expected": "neon.relationship.business_partner.read"
+    }
+  ]
+}

@@ -62,8 +62,13 @@ ON control.business_partner_qualification
 FOR EACH ROW
 EXECUTE FUNCTION control.trg_validate_business_partner_control_lookup();
 
+CREATE TRIGGER trg_business_partner_qualification_15_role_pair
+BEFORE INSERT OR UPDATE OF tenant_id,business_partner_id,partner_role,role_id
+ON control.business_partner_qualification
+FOR EACH ROW EXECUTE FUNCTION control.trg_validate_qualification_role_pair();
+
 CREATE TRIGGER trg_business_partner_qualification_20_scope
-BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, partner_role,
+BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, partner_role, role_id,
     operating_organization_id, company_code_id, commodity_capability_id,
     risk_assessment_id
 ON control.business_partner_qualification
@@ -79,6 +84,73 @@ EXECUTE FUNCTION control.trg_guard_business_partner_qualification();
 CREATE TRIGGER trg_business_partner_qualification_40_updated
 BEFORE UPDATE ON control.business_partner_qualification
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_business_partner_qualification_35_mutation_authority
+BEFORE UPDATE OF decision ON control.business_partner_qualification
+FOR EACH ROW EXECUTE FUNCTION control.trg_enforce_business_partner_mutation_authority();
+
+CREATE TRIGGER trg_supplier_preference_designation_10_scope
+BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, supplier_id,
+    operating_organization_id, company_code_id, commodity_category_id,
+    effective_from, effective_until
+ON control.supplier_preference_designation
+FOR EACH ROW EXECUTE FUNCTION control.trg_validate_business_partner_control_scope();
+
+CREATE TRIGGER trg_supplier_preference_designation_20_guard
+BEFORE INSERT OR UPDATE ON control.supplier_preference_designation
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_supplier_preference_designation();
+
+CREATE TRIGGER trg_supplier_preference_designation_30_updated
+BEFORE UPDATE ON control.supplier_preference_designation
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_supplier_preference_designation_25_mutation_authority
+BEFORE UPDATE OF status ON control.supplier_preference_designation
+FOR EACH ROW EXECUTE FUNCTION control.trg_enforce_business_partner_mutation_authority();
+
+CREATE TRIGGER trg_customer_account_designation_10_scope
+BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, customer_id,
+    operating_organization_id, company_code_id, effective_from, effective_until
+ON control.customer_account_designation
+FOR EACH ROW EXECUTE FUNCTION control.trg_validate_customer_account_designation_scope();
+
+CREATE TRIGGER trg_customer_account_designation_20_guard
+BEFORE INSERT OR UPDATE ON control.customer_account_designation
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_customer_account_designation();
+
+CREATE TRIGGER trg_customer_account_designation_30_updated
+BEFORE UPDATE ON control.customer_account_designation
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_customer_account_designation_25_mutation_authority
+BEFORE UPDATE OF status ON control.customer_account_designation
+FOR EACH ROW EXECUTE FUNCTION control.trg_enforce_business_partner_mutation_authority();
+
+CREATE TRIGGER trg_customer_credit_review_10_scope
+BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, customer_id,
+    operating_organization_id, company_code_id, effective_from, effective_until
+ON control.customer_credit_review
+FOR EACH ROW EXECUTE FUNCTION control.trg_validate_customer_credit_review_scope();
+
+CREATE TRIGGER trg_customer_credit_review_20_guard
+BEFORE INSERT OR UPDATE ON control.customer_credit_review
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_customer_credit_review();
+
+CREATE TRIGGER trg_customer_credit_review_30_updated
+BEFORE UPDATE ON control.customer_credit_review
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_customer_credit_review_25_mutation_authority
+BEFORE UPDATE OF decision ON control.customer_credit_review
+FOR EACH ROW EXECUTE FUNCTION control.trg_enforce_business_partner_mutation_authority();
+
+CREATE TRIGGER trg_business_partner_mutation_evidence_payload
+BEFORE INSERT ON control.business_partner_mutation_evidence
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_business_partner_mutation_evidence_payload();
+
+CREATE TRIGGER trg_business_partner_mutation_evidence_immutable
+BEFORE UPDATE OR DELETE ON control.business_partner_mutation_evidence
+FOR EACH ROW EXECUTE FUNCTION control.trg_reject_business_partner_mutation_evidence_change();
 
 CREATE TRIGGER trg_business_partner_block_10_operation_lookup
 BEFORE INSERT OR UPDATE OF operation_code
@@ -546,3 +618,50 @@ EXECUTE FUNCTION control.trg_guard_company_fiscal_calendar_assignment();
 CREATE TRIGGER trg_company_fiscal_calendar_assignment_90_updated
 BEFORE UPDATE ON control.company_fiscal_calendar_assignment
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_mesh_bp_profile_inbox_immutable
+BEFORE UPDATE OR DELETE ON control.mesh_business_partner_profile_inbox
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_business_partner_profile_evidence();
+CREATE TRIGGER trg_customer_lifecycle_event_immutable
+BEFORE UPDATE OR DELETE ON control.customer_lifecycle_event
+FOR EACH ROW EXECUTE FUNCTION control.trg_reject_customer_lifecycle_event_mutation();
+CREATE TRIGGER trg_customer_lifecycle_event_s5_evidence
+AFTER INSERT ON control.customer_lifecycle_event
+FOR EACH ROW EXECUTE FUNCTION control.trg_record_customer_lifecycle_mutation();
+CREATE TRIGGER trg_mesh_bp_profile_attempt_immutable
+BEFORE UPDATE OR DELETE ON control.mesh_business_partner_profile_processing_attempt
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_business_partner_profile_evidence();
+CREATE TRIGGER trg_mesh_workforce_claim_inbox_immutable
+BEFORE UPDATE OR DELETE ON control.mesh_workforce_claim_inbox
+FOR EACH ROW EXECUTE FUNCTION control.trg_reject_mesh_workforce_claim_evidence_mutation();
+CREATE TRIGGER trg_mesh_workforce_claim_attempt_immutable
+BEFORE UPDATE OR DELETE ON control.mesh_workforce_claim_processing_attempt
+FOR EACH ROW EXECUTE FUNCTION control.trg_reject_mesh_workforce_claim_evidence_mutation();
+CREATE TRIGGER trg_mesh_bp_profile_projection_guard
+BEFORE UPDATE OR DELETE ON control.mesh_business_partner_profile_projection
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_business_partner_profile_projection();
+CREATE TRIGGER trg_mesh_bp_account_link_guard BEFORE UPDATE OR DELETE ON control.mesh_business_partner_account_link FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_business_partner_account_link();
+CREATE TRIGGER trg_mesh_bp_account_link_updated BEFORE UPDATE ON control.mesh_business_partner_account_link FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_mesh_bank_disclosure_inbox_immutable BEFORE UPDATE OR DELETE ON control.mesh_bank_account_disclosure_inbox FOR EACH ROW EXECUTE FUNCTION control.trg_reject_mesh_bank_disclosure_inbox_mutation();
+CREATE TRIGGER trg_mesh_bank_account_projection_guard BEFORE UPDATE OR DELETE ON control.mesh_bank_account_projection FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_bank_account_projection();
+CREATE TRIGGER trg_business_partner_decision_scope_validate
+BEFORE INSERT OR UPDATE ON control.business_partner_decision_scope
+FOR EACH ROW EXECUTE FUNCTION control.trg_validate_decision_scope();
+
+CREATE TRIGGER trg_business_partner_qualification_scope_rows
+AFTER INSERT ON control.business_partner_qualification
+FOR EACH ROW EXECUTE FUNCTION control.trg_materialize_legacy_decision_scope();
+CREATE TRIGGER trg_supplier_preference_scope_rows
+AFTER INSERT ON control.supplier_preference_designation
+FOR EACH ROW EXECUTE FUNCTION control.trg_materialize_legacy_decision_scope();
+CREATE TRIGGER trg_customer_designation_scope_rows
+AFTER INSERT ON control.customer_account_designation
+FOR EACH ROW EXECUTE FUNCTION control.trg_materialize_legacy_decision_scope();
+CREATE TRIGGER trg_customer_credit_review_scope_rows
+AFTER INSERT ON control.customer_credit_review
+FOR EACH ROW EXECUTE FUNCTION control.trg_materialize_legacy_decision_scope();
+
+DROP TRIGGER IF EXISTS trg_business_partner_decision_scope_preference_guard ON control.business_partner_decision_scope;
+CREATE TRIGGER trg_business_partner_decision_scope_preference_guard
+BEFORE INSERT OR UPDATE OR DELETE ON control.business_partner_decision_scope
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_supplier_preference_scope();

@@ -61,6 +61,59 @@ COMMENT ON TABLE snapshot.template_version IS
 COMMENT ON COLUMN snapshot.template_version.checksum IS
   'Lowercase SHA-256 checksum of the canonical content payload.';
 
+CREATE TABLE snapshot.network_account_profile_publication (
+    id                       uuid        NOT NULL DEFAULT shared.uuidv7(),
+    owner_tenant_id          uuid        NOT NULL,
+    owner_account_id         uuid        NOT NULL,
+    recipient_tenant_id      uuid        NOT NULL,
+    recipient_account_id     uuid        NOT NULL,
+    network_relationship_id  uuid        NOT NULL,
+    schema_code              text        NOT NULL,
+    schema_version           integer     NOT NULL,
+    field_set_code           text        NOT NULL,
+    payload_json             jsonb       NOT NULL,
+    payload_hash             text        NOT NULL,
+    captured_at              timestamptz NOT NULL DEFAULT clock_timestamp(),
+    captured_by              uuid        NOT NULL,
+
+    CONSTRAINT network_account_profile_publication_snapshot_pkey PRIMARY KEY (id),
+    CONSTRAINT network_account_profile_publication_snapshot_owner_id_uq UNIQUE (owner_tenant_id, id),
+    CONSTRAINT network_account_profile_publication_snapshot_participants_chk CHECK (owner_tenant_id <> recipient_tenant_id AND owner_account_id <> recipient_account_id),
+    CONSTRAINT network_account_profile_publication_snapshot_schema_chk CHECK (schema_code = 'mesh.business_partner_profile' AND schema_version >= 1 AND field_set_code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
+    CONSTRAINT network_account_profile_publication_snapshot_payload_chk CHECK (jsonb_typeof(payload_json) = 'object' AND pg_column_size(payload_json) <= 262144),
+    CONSTRAINT network_account_profile_publication_snapshot_safe_chk CHECK (lower(payload_json::text) !~ '"(bank|iban|swift|bic|routing|account.?number|tax|registration.?number|metadata|capabilities|contact|email|phone|address|identifier)[^"]*"[[:space:]]*:'),
+    CONSTRAINT network_account_profile_publication_snapshot_hash_chk CHECK (payload_hash ~ '^[a-f0-9]{64}$')
+);
+
+COMMENT ON TABLE snapshot.network_account_profile_publication IS
+  'Immutable, recipient-specific and bank-free MESH Business Partner profile snapshot. Mutation is rejected; withdrawal is a separate lifecycle event.';
+
+CREATE TABLE snapshot.bank_account_disclosure (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    owner_tenant_id       uuid        NOT NULL,
+    recipient_tenant_id   uuid        NOT NULL,
+    disclosure_id         uuid        NOT NULL,
+    disclosure_version    integer     NOT NULL,
+    schema_code           text        NOT NULL DEFAULT 'mesh.bank_account_disclosure',
+    schema_version        integer     NOT NULL DEFAULT 1,
+    field_set_code        text        NOT NULL DEFAULT 'masked_retrieval_v1',
+    payload_json          jsonb       NOT NULL,
+    payload_hash          text        NOT NULL,
+    captured_at           timestamptz NOT NULL DEFAULT clock_timestamp(),
+    captured_by           uuid        NOT NULL,
+    CONSTRAINT bank_account_disclosure_snapshot_pkey PRIMARY KEY(id),
+    CONSTRAINT bank_account_disclosure_snapshot_owner_id_uq UNIQUE(owner_tenant_id,id),
+    CONSTRAINT bank_account_disclosure_snapshot_version_uq UNIQUE(owner_tenant_id,disclosure_id,disclosure_version),
+    CONSTRAINT bank_account_disclosure_snapshot_version_chk CHECK(disclosure_version>=1 AND schema_version=1),
+    CONSTRAINT bank_account_disclosure_snapshot_field_chk CHECK(field_set_code='masked_retrieval_v1'),
+    CONSTRAINT bank_account_disclosure_snapshot_payload_chk CHECK(jsonb_typeof(payload_json)='object' AND pg_column_size(payload_json)<=32768),
+    CONSTRAINT bank_account_disclosure_snapshot_safe_chk CHECK(lower(payload_json::text) !~ '"(account.?id.?value|account.?number|iban|routing.?number|raw.?account)[^"]*"[[:space:]]*:'),
+    CONSTRAINT bank_account_disclosure_snapshot_hash_chk CHECK(payload_hash ~ '^[a-f0-9]{64}$')
+);
+
+COMMENT ON TABLE snapshot.bank_account_disclosure IS
+  'Immutable recipient-specific masked bank disclosure. Raw account identifiers are prohibited; secure retrieval is separately authorized and short-lived.';
+
 CREATE TABLE snapshot.content_item_version (
     id              uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id       uuid        NOT NULL,

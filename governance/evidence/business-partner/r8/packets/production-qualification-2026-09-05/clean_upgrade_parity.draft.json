@@ -1,0 +1,17 @@
+{
+  "schema": "athyper.business-partner-r8-evidence-artifact/1",
+  "gate": "clean_upgrade_parity",
+  "result": "pending",
+  "environment": "production",
+  "targetRef": null,
+  "sourceRevision": null,
+  "startedAt": null,
+  "completedAt": null,
+  "evidence": {
+    "driftCount": null,
+    "cleanDatabaseRef": null,
+    "upgradeDatabaseRef": null,
+    "supportedUpgradeBaselineRef": null,
+    "catalogReport": null
+  }
+}

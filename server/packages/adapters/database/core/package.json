@@ -16,12 +16,12 @@
   },
   "dependencies": {
     "@athyper/server-foundation": "workspace:*",
-    "kysely": "^0.28.16",
-    "pg": "^8.13.0"
+    "kysely": "^0.28.17",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
-    "@types/pg": "^8.11.10",
+    "@types/pg": "^8.20.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   }

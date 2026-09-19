@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-09-04",
+  "controls": [
+    {
+      "control": "raw_bank_identifier_storage",
+      "status": "landed",
+      "owner": "MESH Payments Security",
+      "evidence": "Canonical authority stores only an opaque token, tenant-bound keyed fingerprint, last four and key version. The supported-upgrade migration encrypts a populated legacy row using an injected ephemeral key, verifies round-trip conversion and drops account_id_value in the same transaction.",
+      "exitGate": "Clean and populated supported-upgrade paths contain no clear identifier column; the migration fails closed without a sufficiently strong injected key."
+    },
+    {
+      "control": "masked_projection_and_leakage",
+      "status": "landed",
+      "owner": "MESH Data Protection",
+      "evidence": "Disclosure snapshots remain masked and live probes scan snapshot, outbox, audit and command evidence for the historical raw marker after retrieval and rotation.",
+      "exitGate": "Both certification reports contain a passing ordinary-evidence leakage-negative probe."
+    },
+    {
+      "control": "purpose_bound_retrieval",
+      "status": "landed",
+      "owner": "MESH Payments Security",
+      "evidence": "A SECURITY DEFINER retrieval command requires the dedicated NOLOGIN broker role, exact recipient, active governed purpose, active disclosure, current version and an active payments capability. Immutable evidence and an audit event are committed atomically.",
+      "exitGate": "Authorized replay, ordinary-runtime denial, cross-tenant denial and revoked disclosure probes pass."
+    },
+    {
+      "control": "key_rotation",
+      "status": "landed",
+      "owner": "Platform Security",
+      "evidence": "The rotation command requires a monotonically incremented key version, records token hashes only, replaces the old token atomically and rejects direct mutation. No old token is retained outside immutable hash evidence.",
+      "exitGate": "Rotation, exact replay, stale/direct mutation and crypto-shredding probes pass."
+    },
+    {
+      "control": "bounded_account_json",
+      "status": "landed",
+      "owner": "MESH Profiles",
+      "evidence": "Network-account capabilities and metadata pin contract names, versions and hashes and enforce top-level allowlists. Profile, commodity, bank and link metadata are size-bounded and allowlisted.",
+      "exitGate": "Clean/upgrade construction and unknown-key rejection pass."
+    },
+    {
+      "control": "structured_profile_address_urls",
+      "status": "landed",
+      "owner": "MESH Profiles",
+      "evidence": "Typed tenant/account profile addresses replace address blobs. HTTPS validation rejects credentials, control/space/backslash characters, IP-style and hostless URLs.",
+      "exitGate": "Structured address persistence and unsafe credential URL rejection pass."
+    },
+    {
+      "control": "bank_disclosure_purpose_catalog",
+      "status": "landed",
+      "owner": "MESH Payments Governance",
+      "evidence": "Settlement and refund directions, required payments capability and retrieval TTL are governed by a reference-safe active catalog used by bank links, disclosures and retrieval.",
+      "exitGate": "Hard-coded trigger branching is replaced and purpose references use restrictive FKs."
+    },
+    {
+      "control": "canonical_party_reconciliation",
+      "status": "landed",
+      "owner": "Party Stewardship",
+      "evidence": "Conflicting correlation claims open immutable, command-owned cases; opening does not overwrite the account or grant access, and acceptance requires a different maker/checker before an optimistic atomic update.",
+      "exitGate": "No-first-writer, maker-checker and atomic accepted resolution probes pass."
+    },
+    {
+      "control": "live_security_certification",
+      "status": "landed",
+      "owner": "MESH Security",
+      "evidence": "Clean and populated supported-upgrade PostgreSQL 16.13 reports each pass 12 retrieval, revocation, rotation, leakage, URL/JSON, address, correlation and cross-tenant probes.",
+      "exitGate": "Both disposable paths pass and remove all fixtures and migration secrets."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "recordedAt": "2026-09-13T08:33:57.558950+00:00",
+  "method": "Static source scan of all SQL files, then detailed review of relevant CREATE/ALTER/DROP statements, constraints and runtime consumers; not a live-schema verification. Source declarations are not effective table counts.",
+  "sqlFiles": 435,
+  "createTableDeclarations": 754,
+  "relevantCreateDeclarations": 142,
+  "indexedSourceBytes": 44525491,
+  "retiredRequestTables": "NEON document/11_grants.sql drops document.business_partner_request and request extension/evidence tables; use document.entity_case."
+}

@@ -13,3 +13,15 @@ BEGIN
     END IF;
 END;
 $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+  REVOKE INSERT,UPDATE,DELETE ON governance.cycle_subject FROM athyperapp;
+END IF; END $$;
+
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+  REVOKE UPDATE,DELETE ON governance.process_selection_evidence FROM athyperapp;
+END IF; END $$;
+
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+ REVOKE UPDATE,DELETE ON governance.process_attempt,governance.process_document_job FROM athyperapp;
+END IF; END $$;
+GRANT EXECUTE ON FUNCTION governance.evaluate_cycle_completion(uuid,uuid) TO athyperapp,athyperadmin;

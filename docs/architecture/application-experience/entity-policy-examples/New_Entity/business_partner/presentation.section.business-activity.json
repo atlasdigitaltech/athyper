@@ -1,0 +1,80 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.business-activity",
+  "entityCode": "business_partner",
+  "plane": "neon",
+  "sectionKey": "business-activity",
+  "rendererKey": "platform.related-collection.v1",
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.business-activity.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/business-activity"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "business_partner/core.json",
+  "fieldBindings": [
+    {
+      "fieldKey": "code"
+    },
+    {
+      "fieldKey": "name"
+    },
+    {
+      "fieldKey": "registration_country_code"
+    },
+    {
+      "fieldKey": "partner_category"
+    },
+    {
+      "fieldKey": "ownership_class"
+    },
+    {
+      "fieldKey": "legal_form"
+    },
+    {
+      "fieldKey": "incorporation_date"
+    },
+    {
+      "fieldKey": "website_url"
+    },
+    {
+      "fieldKey": "description"
+    },
+    {
+      "fieldKey": "status"
+    },
+    {
+      "fieldKey": "record_version"
+    }
+  ],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [
+    "business_partner/core"
+  ],
+  "artifactHash": "sha256:9134a1ee567dd93859b001351a5d94986bbea94f396532a76ef440f00b9b617b"
+}

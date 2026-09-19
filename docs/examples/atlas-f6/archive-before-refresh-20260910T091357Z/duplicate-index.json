@@ -1,0 +1,210 @@
+{
+  "snapshot": "~/.athyper/backups/docs-cleanup/20260914T041147Z/docs-before-cleanup.tar.gz",
+  "files": [
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/cross-process-inference-qualification-cold-queue-timeout.json",
+      "sha256": "77ad4d4aed01161a499f340c38ed294818db182f73c3aab782e2cc3042751157",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/cross-process-inference-qualification-cold-queue-timeout.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/cross-process-inference-qualification-first.json",
+      "sha256": "1205fe0f92d899a5838f6b7d0670d24643043102e83e1ec9dedaeb793226fe52",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/cross-process-inference-qualification-first.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/cross-process-inference-qualification.json",
+      "sha256": "9c720fbf7d570db8a2aab05e63fcc0f7c1b64138833108b198df943cc5cc0b5a",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/cross-process-inference-qualification.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/distributed-admission-qualification.json",
+      "sha256": "45188655ca57baf8429e5ce3fe1d33ec98055313b5f24c316239aea3a58ea65c",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/distributed-admission-qualification.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/distributed-inference-build.json",
+      "sha256": "c58495b9eb78074e5cae6215a886bc0e5ef74668b5be31efdafc1fc02b21cd9e",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/distributed-inference-build.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/distributed-inference-deployment.json",
+      "sha256": "b59a91be5bfc7f43c7bc0235400a72707c91e0da7b9e6b21b0a10ee43780a906",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/distributed-inference-deployment.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/findings.json",
+      "sha256": "7c479c593a27ffe87783f2cb5f3910fcb3d073b57d4bbbee2b9a3f24e515af54",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/findings.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-eviction-corrected.json",
+      "sha256": "3b35b4a6cdeb434b7b34ed99186e3a0cfe8edd6c5909ee63a1bbd294988265bd",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-eviction-corrected.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-eviction-historical.json",
+      "sha256": "812250a790343a2930e5330e18891528f64488d2214ac2fc2b940dc57fada237",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-eviction-historical.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-original-incident-investigation.json",
+      "sha256": "cb9b7597365358f1ce208b383f8f8f52e94f7a5dd7fa363ba97130cb0ca27af3",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-original-incident-investigation.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-reliability-api-first.json",
+      "sha256": "75ed7c6abbf5107744bcf794d6c7eddf27d834b554b024705052c1b22acb4100",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-reliability-api-first.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-reliability-api.json",
+      "sha256": "0628ffc80553ec6645446f8bef8e6c545eccb0f5ff666864dae053f9586c3bb5",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-reliability-api.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-reliability-application-first.json",
+      "sha256": "6b92134bb7953537ac67264985f7e9e93b5841905c572868e820306e322bac86",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-reliability-application-first.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-reliability-application.json",
+      "sha256": "ce7ea4e7359f5d57085c8521adef2f9887409eeb8557f88d7117e130821ef56a",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-reliability-application.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-reliability-assessment-first.json",
+      "sha256": "afe90ff37d8eb964043f1bb2e232ec8157cbe8166d79258012d92541fe792360",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-reliability-assessment-first.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-reliability-assessment.json",
+      "sha256": "d4fe1b5042e8ad1c7cbd85ce83f65374702da01a8d12e75c14b642d487f50791",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-reliability-assessment.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-reliability-auth-gate.json",
+      "sha256": "c89c1d26903c1e464802d355388b592097cd353764f6121ab575aa9fdc450086",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-reliability-auth-gate.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-reliability-grounded.json",
+      "sha256": "6a90270558a28dc134de52f3fa91cf39604b2f71a6890b0a3fe1565795e5ab52",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-reliability-grounded.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-reliability-status.json",
+      "sha256": "76387cb799b24c25130866e800b70740a495dfc8b0069f0edb7fb61d014ea13c",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-reliability-status.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/inference-reliability-tests.json",
+      "sha256": "4a34219112a362ec468fc1d8bd10799532e97546d550f1a0fc4c932594cfc1cf",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/inference-reliability-tests.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-authenticated-publication.json",
+      "sha256": "2c1bd7e2edda784f8f09bc99323c64847c025f5b04a6cb25dab090aa2ccc0e93",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-authenticated-publication.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-baseline-adoption.applied.json",
+      "sha256": "7ee3b354a19388c0160b2e3f7f557f5769da688a9926ab61ed12db1bb424121a",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-baseline-adoption.applied.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-baseline-adoption.dry-run.json",
+      "sha256": "dcb2a28c27bc4efe450a56306ed36a8413ad2fda69698b50f907bfaf7a80667b",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-baseline-adoption.dry-run.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-baseline-import.json",
+      "sha256": "51d1afa7894ce623248aa875481a68ea814f93fcec11388834590deac625f2be",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-baseline-import.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-baseline-native-graph.json",
+      "sha256": "b5d1e52d2bb338e8f25f92b44b13e951385aa8e3a4dcb61ea35102e9de36c78f",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-baseline-native-graph.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-baseline-reconciliation.verified.json",
+      "sha256": "a54e661db3a22bcca5830b0b3657b9b52f93fe531adf1fa88d3f77da0b5a033a",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-baseline-reconciliation.verified.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-baseline-revocation.dry-run.json",
+      "sha256": "6a94eb904b4d24fb24dc7aef22a71280191cbc328da61e60b04a44653c443f09",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-baseline-revocation.dry-run.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-fork-activation-qualification.json",
+      "sha256": "5447d4051d9645f17dbf8ca3d285ac69eb6d4943b07daaf9ac41b3fcc330f3aa",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-fork-activation-qualification.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-fork-api.json",
+      "sha256": "a07c79ee294447e0cb21621952e048c5373b1d8a923c279765af0322b905ad4a",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-fork-api.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-fork-schema.applied.json",
+      "sha256": "126de276ace9efb6cc4cea222f573398ff5f82a4b7093f336e1cd91901abf5b2",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-fork-schema.applied.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-fork-schema.dry-run.json",
+      "sha256": "d5331c8249b062534f8587ace9caac1fd8483e94194165be939a1fca2eab05f6",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-fork-schema.dry-run.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-native-draft.json",
+      "sha256": "24e717ea0a282ff0ab3221105adc3ebcd4275b9bb3c1f5a96603f0014cac41fb",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-native-draft.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-pilot-scope.json",
+      "sha256": "459b4d8625584bec306eae39bcf70105baa63a55df537341770b0daae992c231",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-pilot-scope.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-publication-preflight.json",
+      "sha256": "c1802c88d7faf0efe511ca725f1b6d5f1163fd2b9cbcc25227c53665dbdbcd17",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-publication-preflight.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/mesh-publication.verified.json",
+      "sha256": "7fee549993007fabea52a4699b02fb15cf59323be03a38f452d3b5a178ce758f",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/mesh-publication.verified.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/model-neon-first-elevated-attempt.json",
+      "sha256": "aa0d8fcbe90e14b43348175a8babbbf482304534ff354b97208429fab704a8c4",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/model-neon-first-elevated-attempt.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/persona-api.json",
+      "sha256": "7b01fff82f28c08ca76a655cce42850deba1a855c7253be971ae83cd01f34113",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/persona-api.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/persona-schema.applied.json",
+      "sha256": "7b97d8be53a8662ffbdf2c9015533df38eaf01101970294df3abd51544a797db",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/persona-schema.applied.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/persona-schema.dry-run.json",
+      "sha256": "50de370cdf50e527d54f28bd633a741074df7aa7327ba4b3c22a9df657588392",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/persona-schema.dry-run.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/pilot-status-closed-20260910.json",
+      "sha256": "2e628273f21d816987e0aebad9ae5f30ff7e686277cb328e6692d5465ced0a36",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/pilot-status-closed-20260910.json"
+    },
+    {
+      "originalPath": "docs/examples/atlas-f6/archive-before-refresh-20260910T091357Z/retrieval-http-disconnect-qualification.json",
+      "sha256": "0242400ba908e57fc2750d5a878ebc9c2b3eea9b8cda3988083e3d96af7db339",
+      "matchingCopyAtCleanup": "docs/examples/atlas-f6/retrieval-http-disconnect-qualification.json"
+    }
+  ]
+}

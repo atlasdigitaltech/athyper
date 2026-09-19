@@ -1,0 +1,27 @@
+{
+  "mode": "Isolated real-component fixture; no backend or business writes",
+  "viewports": [
+    {
+      "name": "desktop",
+      "overflow": false
+    },
+    {
+      "name": "tablet",
+      "overflow": false
+    },
+    {
+      "name": "mobile",
+      "overflow": false
+    },
+    {
+      "name": "zoom-200",
+      "overflow": false
+    }
+  ],
+  "violations": [],
+  "errors": [],
+  "requests": [
+    "GET https://fixture.test/"
+  ],
+  "linkedFocus": true
+}

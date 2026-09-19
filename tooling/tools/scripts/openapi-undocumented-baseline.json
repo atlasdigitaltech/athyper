@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 2,
+  "grandfatheredAtCommit": "7cd0dd9a",
+  "exceptions": [
+    {
+      "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
+      "owner": "server/packages/planes/studio/meta-entity-authoring",
+      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
+      "expiresOn": "2026-10-06",
+      "reason": "Legacy raw Express adapter retained during contract-route migration; tracked as OpenAPI debt and not treated as documented.",
+      "operations": [
+        "POST /api/meta-entity-authoring/change-sets",
+        "POST /api/meta-entity-authoring/change-sets/:id/approve",
+        "POST /api/meta-entity-authoring/change-sets/:id/publish",
+        "POST /api/meta-entity-authoring/change-sets/:id/submit",
+        "POST /api/meta-entity-authoring/change-sets/:id/test",
+        "POST /api/meta-entity-authoring/change-sets/:id/validate",
+        "POST /api/meta-entity-authoring/releases/:id/activate",
+        "POST /api/meta-entity-authoring/releases/:id/rollback",
+        "PUT /api/meta-entity-authoring/change-sets/:id/graph"
+      ]
+    },
+    {
+      "source": "server/packages/planes/studio/onboarding/src/routes.ts",
+      "owner": "server/packages/planes/studio/onboarding",
+      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
+      "expiresOn": "2026-10-06",
+      "reason": "New conditional adapter; its durable repository and transport composition must stabilize before publishing the external schema.",
+      "operations": [
+        "POST /api/studio/onboarding/cases",
+        "POST /api/studio/onboarding/cases/:caseId/actions/:action",
+        "POST /api/studio/onboarding/cases/:caseId/reconcile",
+        "POST /api/studio/onboarding/cases/:caseId/work-items/:workItemId/resolve"
+      ]
+    },
+    {
+      "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
+      "owner": "server/packages/platform/collaboration",
+      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
+      "expiresOn": "2026-10-06",
+      "reason": "Collaboration route contracts are awaiting response-schema extraction from the legacy client compatibility suite.",
+      "operations": [
+        "DELETE /api/collab/comments/:id",
+        "DELETE /api/collab/comments/:id/reactions/:code",
+        "DELETE /api/collab/drafts",
+        "PATCH /api/collab/comments/:id",
+        "POST /api/collab/comments",
+        "POST /api/collab/comments/:id/flag",
+        "POST /api/collab/comments/:id/reactions",
+        "POST /api/collab/comments/:id/replies",
+        "POST /api/collab/comments/mark-all-read",
+        "POST /api/collab/drafts"
+      ]
+    },
+    {
+      "source": "server/packages/platform/notifications/src/notification-routes.ts",
+      "owner": "server/packages/platform/notifications",
+      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
+      "expiresOn": "2026-10-06",
+      "reason": "Legacy raw Express adapter retained during contract-route migration; tracked as OpenAPI debt and not treated as documented.",
+      "operations": [
+        "DELETE /api/notifications/push-subscriptions/:id",
+        "GET /api/notifications/deliveries/:id/timeline",
+        "GET /api/notifications/inbox",
+        "GET /api/notifications/preferences",
+        "GET /api/notifications/stream",
+        "GET /api/operations/notifications/deliveries/:id/timeline",
+        "PATCH /api/notifications/preferences",
+        "POST /api/notifications/:id/read",
+        "POST /api/notifications/preferences/preview",
+        "POST /api/notifications/push-subscriptions",
+        "POST /api/operations/notifications/deliveries/:id/replay"
+      ]
+    },
+    {
+      "source": "server/packages/platform/preferences/src/saved-view-routes.ts",
+      "owner": "server/packages/platform/preferences",
+      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
+      "expiresOn": "2026-10-06",
+      "reason": "Saved-view aliases and legacy actions require compatibility-schema consolidation before one public OpenAPI contract is emitted.",
+      "operations": [
+        "DELETE /api/me/saved-views/:viewId/:action",
+        "DELETE /api/platform/preferences/saved-views/:id",
+        "DELETE /api/platform/preferences/saved-views/:id/actions/:action",
+        "DELETE /api/platform/saved-views/:entity/:viewId",
+        "DELETE /api/platform/saved-views/:entity/default",
+        "GET /api/me/saved-views",
+        "GET /api/platform/preferences/saved-views",
+        "GET /api/platform/saved-views/:entity",
+        "PATCH /api/me/saved-views/:viewId/:action",
+        "PATCH /api/platform/preferences/saved-views/:id/actions/:action",
+        "PATCH /api/platform/saved-views/:entity/:viewId",
+        "PATCH /api/platform/saved-views/:entity/:viewId/default",
+        "POST /api/me/saved-views/:viewId/clone",
+        "POST /api/platform/preferences/saved-views",
+        "POST /api/platform/preferences/saved-views/:id/clone",
+        "POST /api/platform/saved-views",
+        "POST /api/platform/saved-views/:entity",
+        "PUT /api/platform/preferences/saved-views/:id"
+      ]
+    },
+    {
+      "source": "server/packages/platform/search/src/document-search-routes.ts",
+      "owner": "server/packages/platform/search",
+      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
+      "expiresOn": "2026-10-06",
+      "reason": "Legacy raw Express adapter retained during contract-route migration; tracked as OpenAPI debt and not treated as documented.",
+      "operations": ["GET /api/search/documents"]
+    },
+    {
+      "source": "server/packages/platform/workflow/src/workflow-routes.ts",
+      "owner": "server/packages/platform/workflow",
+      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
+      "expiresOn": "2026-10-06",
+      "reason": "Legacy raw Express adapter retained during contract-route migration; tracked as OpenAPI debt and not treated as documented.",
+      "operations": [
+        "GET /api/workflow/inbox",
+        "GET /api/workflow/requests/:id/context",
+        "POST /api/workflow/items/:id/actions/:action",
+        "POST /api/workflow/work-items",
+        "POST /api/workflow/work-items/:workItemId/cancel",
+        "POST /api/workflow/work-items/:workItemId/claim",
+        "POST /api/workflow/work-items/:workItemId/complete"
+      ]
+    },
+    {
+      "source": "server/packages/services/attachments/src/attachment-routes.ts",
+      "owner": "server/packages/services/attachments",
+      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
+      "expiresOn": "2026-10-06",
+      "reason": "Attachment routes remain raw while binary and content-scoped upload schemas are consolidated.",
+      "operations": [
+        "DELETE /api/attachments/:attachmentId",
+        "GET /api/attachments/:attachmentId/status",
+        "POST /api/attachments/:attachmentId/download",
+        "POST /api/attachments/:attachmentId/finalize",
+        "POST /api/attachments/stage",
+        "POST /api/content/items/:id/attachments/:attachmentId/versions"
+      ]
+    },
+    {
+      "source": "server/packages/services/content/src/content-routes.ts",
+      "owner": "server/packages/services/content",
+      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
+      "expiresOn": "2026-10-06",
+      "reason": "Content ACL/grant compatibility and content-scoped attachment response schemas remain under contract qualification.",
+      "operations": [
+        "DELETE /api/content/items/:id/acl/:grantId",
+        "DELETE /api/content/items/:id/attachments/:attachmentId",
+        "DELETE /api/content/items/:id/links/:linkId",
+        "GET /api/content/items",
+        "GET /api/content/items/:id",
+        "GET /api/content/items/:id/acl",
+        "GET /api/content/items/:id/attachments",
+        "GET /api/content/items/:id/attachments/:attachmentId/versions",
+        "GET /api/content/items/:id/links",
+        "GET /api/content/items/:id/versions",
+        "GET /api/content/items/:id/versions/:versionId",
+        "GET /api/content/quota",
+        "GET /api/content/search",
+        "PATCH /api/content/items/:id",
+        "POST /api/content/items",
+        "POST /api/content/items/:id/acl",
+        "POST /api/content/items/:id/archive",
+        "POST /api/content/items/:id/attachments",
+        "POST /api/content/items/:id/links",
+        "POST /api/content/items/:id/publish",
+        "POST /api/content/items/:id/reindex",
+        "POST /api/content/items/:id/submit",
+        "POST /api/content/items/:id/versions",
+        "POST /api/content/items/:id/versions/:versionId/restore"
+      ]
+    },
+    {
+      "source": "server/packages/services/documents/src/document-routes.ts",
+      "owner": "server/packages/services/documents",
+      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
+      "expiresOn": "2026-10-06",
+      "reason": "Legacy raw Express adapter retained during contract-route migration; tracked as OpenAPI debt and not treated as documented.",
+      "operations": [
+        "POST /api/documents/:documentId/download",
+        "POST /api/documents/render"
+      ]
+    },
+    {
+      "source": "server/packages/services/integration/src/integration-routes.ts",
+      "owner": "server/packages/services/integration",
+      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
+      "expiresOn": "2026-10-06",
+      "reason": "Integration management and signed webhook schemas require external-secret redaction and legacy compatibility qualification.",
+      "operations": [
+        "GET /api/integration/connections/:id",
+        "GET /api/integration/connector-types",
+        "GET /api/integration/connector-types/:id",
+        "GET /api/integration/deliveries/:id",
+        "GET /api/integration/endpoints/:id",
+        "POST /api/integration/connections/:id/test",
+        "POST /api/integration/deliveries/:id/replay",
+        "POST /api/integration/endpoints/:id/deliveries",
+        "POST /api/webhooks/:subscriptionId"
+      ]
+    },
+    {
+      "source": "server/packages/services/master-data/src/master-data-routes.ts",
+      "owner": "server/packages/services/master-data",
+      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
+      "expiresOn": "2026-10-06",
+      "reason": "Master-data adapter is deployment-disabled until its plane repository and evidence verifier are composed.",
+      "operations": [
+        "GET /api/master/owners/:entityCode/:ownerTypeId/:ownerId/profile",
+        "PATCH /api/master/contacts/:contactId/verification",
+        "POST /api/master/addresses/:addressLinkId/deactivate",
+        "POST /api/master/contacts/:contactId/deactivate",
+        "POST /api/master/owners/:entityCode/:ownerTypeId/:ownerId/addresses",
+        "POST /api/master/owners/:entityCode/:ownerTypeId/:ownerId/contacts"
+      ]
+    }
+  ]
+}

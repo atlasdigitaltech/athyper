@@ -1,0 +1,58 @@
+{
+  "$schema": "athyper.business-partner-r3-qualification/1",
+  "asOf": "2026-09-05",
+  "slice": "R3 Invited Supplier",
+  "scenarios": ["BP-SUP-004", "BP-SUP-006"],
+  "implementationStatus": "local_verified",
+  "productionQualification": "blocked",
+  "productionQualified": false,
+  "commands": [
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data test",
+      "result": "passed",
+      "tests": 102,
+      "files": 16
+    },
+    {
+      "command": "pnpm --filter @athyper/server-plane-neon test",
+      "result": "passed",
+      "tests": 28,
+      "files": 8
+    },
+    {
+      "command": "pnpm --filter @athyper/product-neon-business-partner test",
+      "result": "passed",
+      "tests": 62,
+      "files": 13
+    },
+    {
+      "command": "pnpm test:plane-contracts",
+      "result": "passed",
+      "tests": 163
+    },
+    {
+      "command": "pnpm test:e2e:bp-r3",
+      "result": "environment_required",
+      "tests": 2,
+      "optionalSkip": false
+    },
+    { "command": "pnpm --dir server/db db:foundation:plan", "result": "passed" }
+  ],
+  "evidence": [
+    "packages/contracts/platform/fixtures/business-partner-r3-invited-supplier.v1.json",
+    "tests/contracts/business-partner-r3-contracts.test.ts",
+    "server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts",
+    "server/packages/services/master-data/src/__tests__/business-partner-invitation-service.test.ts",
+    "server/packages/planes/neon/src/business-partner-profile-projection.test.ts",
+    "packages/planes/neon/business-partner/src/applicant-experience.test.ts",
+    "packages/planes/neon/business-partner/src/mesh-proposal-experience.test.ts",
+    "tests/e2e/business-partner/bp-r3.fixture.ts",
+    "tests/e2e/business-partner/bp-r3.spec.ts",
+    "tooling/scripts/verification/preflight-business-partner-environment.mjs",
+    "tooling/scripts/verification/run-playwright-with-linux-deps.sh",
+    "server/db/ddl/planes/neon/document/07_functions.sql"
+  ],
+  "environmentBlockers": [
+    "A reachable resettable NEON/MESH environment, fresh invitation, delivered profile snapshot and four distinct actor credentials are required."
+  ]
+}

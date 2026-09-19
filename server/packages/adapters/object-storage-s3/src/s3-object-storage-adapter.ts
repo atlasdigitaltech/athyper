@@ -1,3 +1,4 @@
+import { fromIni } from "@aws-sdk/credential-provider-ini";
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
@@ -11,7 +12,11 @@ import {
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import type { ObjectPutOptions, ObjectStorage } from "@athyper/server-contract-object-storage";
+import type {
+  ObjectGetStreamOptions,
+  ObjectPutOptions,
+  ObjectStorage,
+} from "@athyper/server-contract-object-storage";
 import type { Logger } from "@athyper/server-foundation/observability";
 import { randomUUID } from "node:crypto";
 import { Readable, Transform } from "node:stream";
@@ -20,6 +25,8 @@ export interface S3ObjectStorageAdapterConfig {
   readonly region: string;
   readonly bucket: string;
   readonly endpoint?: string;
+  readonly publicEndpoint?: string;
+  readonly credentialProfile?: string;
   readonly accessKeyId?: string;
   readonly secretAccessKey?: string;
   readonly forcePathStyle?: boolean;
@@ -67,7 +74,7 @@ export interface S3ObjectStorageAdapter extends ObjectStorage {
     options?: PutStreamOptions,
   ): Promise<{ etag?: string }>;
   get(key: string): Promise<Buffer>;
-  getStream(key: string): Promise<Readable>;
+  getStream(key: string, options?: ObjectGetStreamOptions): Promise<Readable>;
   delete(key: string): Promise<void>;
   deleteMany(keys: readonly string[]): Promise<void>;
   exists(key: string): Promise<boolean>;
@@ -78,6 +85,7 @@ export interface S3ObjectStorageAdapter extends ObjectStorage {
   createUploadUrl(key: string, expirySeconds?: number): Promise<string>;
   health(): Promise<ObjectStorageHealth>;
   validateAccess(): Promise<void>;
+  validateReadAccess(sentinelKey: string): Promise<void>;
   close(): void;
 }
 
@@ -94,17 +102,31 @@ export function createS3ObjectStorageAdapter(
     ...(resolved.credentials ? { credentials: resolved.credentials } : {}),
     forcePathStyle: resolved.forcePathStyle,
   });
-  return new S3ObjectStorageRuntime(client, resolved);
+  // Presigning has no upload body; do not sign a checksum of an empty body.
+  // Normal SDK uploads keep their default checksum protection.
+  const signingClient = new S3Client({
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    region: resolved.region,
+    ...((resolved.publicEndpoint ?? resolved.endpoint)
+      ? { endpoint: resolved.publicEndpoint ?? resolved.endpoint }
+      : {}),
+    ...(resolved.credentials ? { credentials: resolved.credentials } : {}),
+    forcePathStyle: resolved.forcePathStyle,
+  });
+  return new S3ObjectStorageRuntime(client, resolved, signingClient);
 }
 
 interface ResolvedConfig {
   readonly region: string;
   readonly bucket: string;
   readonly endpoint?: string;
-  readonly credentials?: {
-    readonly accessKeyId: string;
-    readonly secretAccessKey: string;
-  };
+  readonly publicEndpoint?: string;
+  readonly credentials?:
+    | {
+        readonly accessKeyId: string;
+        readonly secretAccessKey: string;
+      }
+    | ReturnType<typeof fromIni>;
   readonly forcePathStyle: boolean;
   readonly multipartPartSizeBytes: number;
   readonly multipartQueueSize: number;
@@ -119,6 +141,7 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
   constructor(
     private readonly client: S3Client,
     private readonly config: ResolvedConfig,
+    private readonly signingClient: S3Client = client,
   ) {}
 
   async put(
@@ -127,7 +150,8 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
     options: PutObjectOptions = {},
   ): Promise<void> {
     const normalizedKey = requireObjectKey(key);
-    const size = typeof body === "string" ? Buffer.byteLength(body) : body.byteLength;
+    const size =
+      typeof body === "string" ? Buffer.byteLength(body) : body.byteLength;
     this.#assertUploadSize(size);
     await this.#operation("s3_put_failed", { key: normalizedKey }, async () => {
       await this.client.send(
@@ -148,17 +172,20 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
     options: PutObjectOptions = {},
   ): Promise<boolean> {
     const normalizedKey = requireObjectKey(key);
-    const size = typeof body === "string" ? Buffer.byteLength(body) : body.byteLength;
+    const size =
+      typeof body === "string" ? Buffer.byteLength(body) : body.byteLength;
     this.#assertUploadSize(size);
     try {
-      await this.client.send(new PutObjectCommand({
-        Bucket: this.config.bucket,
-        Key: normalizedKey,
-        Body: body,
-        IfNoneMatch: "*",
-        ...(options.contentType ? { ContentType: options.contentType } : {}),
-        ...(options.metadata ? { Metadata: { ...options.metadata } } : {}),
-      }));
+      await this.client.send(
+        new PutObjectCommand({
+          Bucket: this.config.bucket,
+          Key: normalizedKey,
+          Body: body,
+          IfNoneMatch: "*",
+          ...(options.contentType ? { ContentType: options.contentType } : {}),
+          ...(options.metadata ? { Metadata: { ...options.metadata } } : {}),
+        }),
+      );
       return true;
     } catch (error) {
       if (isPreconditionFailed(error)) return false;
@@ -176,7 +203,8 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
     if (options.contentLength !== undefined) {
       this.#assertUploadSize(options.contentLength);
     }
-    const partSize = options.partSizeBytes ?? this.config.multipartPartSizeBytes;
+    const partSize =
+      options.partSizeBytes ?? this.config.multipartPartSizeBytes;
     if (!Number.isInteger(partSize) || partSize < MIN_MULTIPART_PART_SIZE) {
       throw new TypeError("S3 multipart part size must be at least 5 MiB");
     }
@@ -192,7 +220,9 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
             Bucket: this.config.bucket,
             Key: normalizedKey,
             Body: body,
-            ...(options.contentType ? { ContentType: options.contentType } : {}),
+            ...(options.contentType
+              ? { ContentType: options.contentType }
+              : {}),
             ...(options.contentLength !== undefined
               ? { ContentLength: options.contentLength }
               : {}),
@@ -226,26 +256,70 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
     return Buffer.concat(chunks);
   }
 
-  async getStream(key: string): Promise<Readable> {
-    const response = await this.#getObject(key, "s3_get_stream_failed");
-    if (!response.Body || typeof (response.Body as { pipe?: unknown }).pipe !== "function") {
-      throw new Error(`S3 object body is not a Node.js readable stream: ${key}`);
+  async getStream(
+    key: string,
+    options: ObjectGetStreamOptions = {},
+  ): Promise<Readable> {
+    const response = await this.#getObject(
+      key,
+      "s3_get_stream_failed",
+      options.signal,
+    );
+    if (
+      !response.Body ||
+      typeof (response.Body as { pipe?: unknown }).pipe !== "function"
+    ) {
+      throw new Error(
+        `S3 object body is not a Node.js readable stream: ${key}`,
+      );
     }
-    return response.Body as Readable;
+    const stream = response.Body as Readable;
+    // A stream with zero "error" listeners throws its error as an uncaught exception the instant
+    // one occurs, rather than surfacing it to whoever eventually reads it. The caller may cancel
+    // before ever attaching its own consumer (e.g. immediately after this call resolves, before
+    // iterating) — so establish handling now, before any destroy() below can fire one. This is a
+    // safety net, not a sink: Node delivers an "error" event to every listener, so a real
+    // consumer's own handling (for-await-of, .on("error"), etc.) still runs and still sees it.
+    stream.on("error", () => undefined);
+    // `abortSignal` on the SDK call covers the request/response lifecycle, but once a signal
+    // fires mid-read there is no guarantee the caller's iteration ever unwinds far enough to
+    // close this stream on its own (see the malware scanner's own iterator-cleanup notes) —
+    // destroy it directly, and with an Error so consumers see a failure, not a truncated EOF
+    // that could be mistaken for a complete, clean read.
+    if (options.signal) {
+      const onAbort = () => stream.destroy(toAbortError(options.signal!, key));
+      if (options.signal.aborted) onAbort();
+      else options.signal.addEventListener("abort", onAbort, { once: true });
+      stream.once("close", () =>
+        options.signal!.removeEventListener("abort", onAbort),
+      );
+    }
+    return stream;
   }
 
   async delete(key: string): Promise<void> {
     const normalizedKey = requireObjectKey(key);
-    await this.#operation("s3_delete_failed", { key: normalizedKey }, async () => {
-      await this.client.send(
-        new DeleteObjectCommand({ Bucket: this.config.bucket, Key: normalizedKey }),
-      );
-    });
+    await this.#operation(
+      "s3_delete_failed",
+      { key: normalizedKey },
+      async () => {
+        await this.client.send(
+          new DeleteObjectCommand({
+            Bucket: this.config.bucket,
+            Key: normalizedKey,
+          }),
+        );
+      },
+    );
   }
 
   async deleteMany(keys: readonly string[]): Promise<void> {
     const normalized = keys.map(requireObjectKey);
-    for (let offset = 0; offset < normalized.length; offset += DELETE_BATCH_SIZE) {
+    for (
+      let offset = 0;
+      offset < normalized.length;
+      offset += DELETE_BATCH_SIZE
+    ) {
       const batch = normalized.slice(offset, offset + DELETE_BATCH_SIZE);
       const response = await this.#operation(
         "s3_delete_many_failed",
@@ -254,7 +328,10 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
           this.client.send(
             new DeleteObjectsCommand({
               Bucket: this.config.bucket,
-              Delete: { Objects: batch.map((key) => ({ Key: key })), Quiet: true },
+              Delete: {
+                Objects: batch.map((key) => ({ Key: key })),
+                Quiet: true,
+              },
             }),
           ),
       );
@@ -270,7 +347,10 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
     const normalizedKey = requireObjectKey(key);
     try {
       await this.client.send(
-        new HeadObjectCommand({ Bucket: this.config.bucket, Key: normalizedKey }),
+        new HeadObjectCommand({
+          Bucket: this.config.bucket,
+          Key: normalizedKey,
+        }),
       );
       return true;
     } catch (error) {
@@ -284,17 +364,16 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
     const objects: ObjectMetadata[] = [];
     let continuationToken: string | undefined;
     do {
-      const response = await this.#operation(
-        "s3_list_failed",
-        { prefix },
-        () =>
-          this.client.send(
-            new ListObjectsV2Command({
-              Bucket: this.config.bucket,
-              ...(prefix ? { Prefix: prefix } : {}),
-              ...(continuationToken ? { ContinuationToken: continuationToken } : {}),
-            }),
-          ),
+      const response = await this.#operation("s3_list_failed", { prefix }, () =>
+        this.client.send(
+          new ListObjectsV2Command({
+            Bucket: this.config.bucket,
+            ...(prefix ? { Prefix: prefix } : {}),
+            ...(continuationToken
+              ? { ContinuationToken: continuationToken }
+              : {}),
+          }),
+        ),
       );
       for (const object of response.Contents ?? []) {
         if (!object.Key) continue;
@@ -305,9 +384,13 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
           ...(object.ETag ? { etag: object.ETag } : {}),
         });
       }
-      const next = response.IsTruncated ? response.NextContinuationToken : undefined;
+      const next = response.IsTruncated
+        ? response.NextContinuationToken
+        : undefined;
       if (response.IsTruncated && !next) {
-        throw new Error("S3 returned a truncated listing without a continuation token");
+        throw new Error(
+          "S3 returned a truncated listing without a continuation token",
+        );
       }
       continuationToken = next;
     } while (continuationToken);
@@ -321,14 +404,19 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
       { key: normalizedKey },
       async () => {
         const response = await this.client.send(
-          new HeadObjectCommand({ Bucket: this.config.bucket, Key: normalizedKey }),
+          new HeadObjectCommand({
+            Bucket: this.config.bucket,
+            Key: normalizedKey,
+          }),
         );
         return {
           key: normalizedKey,
           size: response.ContentLength ?? 0,
           lastModified: response.LastModified ?? new Date(0),
           ...(response.ETag ? { etag: response.ETag } : {}),
-          ...(response.ContentType ? { contentType: response.ContentType } : {}),
+          ...(response.ContentType
+            ? { contentType: response.ContentType }
+            : {}),
         };
       },
     );
@@ -357,21 +445,29 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
 
   createDownloadUrl(key: string, expirySeconds?: number): Promise<string> {
     return this.#sign(
-      new GetObjectCommand({ Bucket: this.config.bucket, Key: requireObjectKey(key) }),
+      new GetObjectCommand({
+        Bucket: this.config.bucket,
+        Key: requireObjectKey(key),
+      }),
       expirySeconds,
     );
   }
 
   createUploadUrl(key: string, expirySeconds?: number): Promise<string> {
     return this.#sign(
-      new PutObjectCommand({ Bucket: this.config.bucket, Key: requireObjectKey(key) }),
+      new PutObjectCommand({
+        Bucket: this.config.bucket,
+        Key: requireObjectKey(key),
+      }),
       expirySeconds,
     );
   }
 
   async health(): Promise<ObjectStorageHealth> {
     try {
-      await this.client.send(new HeadBucketCommand({ Bucket: this.config.bucket }));
+      await this.client.send(
+        new HeadBucketCommand({ Bucket: this.config.bucket }),
+      );
       return { healthy: true };
     } catch (error) {
       return {
@@ -383,7 +479,9 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
 
   async validateAccess(): Promise<void> {
     const sentinelKey = `_athyper/probes/${randomUUID()}`;
-    await this.client.send(new HeadBucketCommand({ Bucket: this.config.bucket }));
+    await this.client.send(
+      new HeadBucketCommand({ Bucket: this.config.bucket }),
+    );
     await this.client.send(
       new PutObjectCommand({
         Bucket: this.config.bucket,
@@ -394,7 +492,10 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
     );
     try {
       await this.client.send(
-        new DeleteObjectCommand({ Bucket: this.config.bucket, Key: sentinelKey }),
+        new DeleteObjectCommand({
+          Bucket: this.config.bucket,
+          Key: sentinelKey,
+        }),
       );
     } catch (error) {
       this.config.logger?.warn("s3_access_probe_cleanup_failed", {
@@ -407,17 +508,32 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
     }
   }
 
+  async validateReadAccess(sentinelKey: string): Promise<void> {
+    const normalizedKey = requireObjectKey(sentinelKey);
+    await this.client.send(
+      new HeadBucketCommand({ Bucket: this.config.bucket }),
+    );
+    await this.client.send(
+      new GetObjectCommand({ Bucket: this.config.bucket, Key: normalizedKey }),
+    );
+  }
+
   close(): void {
     if (this.#closed) return;
     this.#closed = true;
     this.client.destroy();
+    if (this.signingClient !== this.client) this.signingClient.destroy();
   }
 
-  #getObject(key: string, event: string) {
+  #getObject(key: string, event: string, signal?: AbortSignal) {
     const normalizedKey = requireObjectKey(key);
     return this.#operation(event, { key: normalizedKey }, () =>
       this.client.send(
-        new GetObjectCommand({ Bucket: this.config.bucket, Key: normalizedKey }),
+        new GetObjectCommand({
+          Bucket: this.config.bucket,
+          Key: normalizedKey,
+        }),
+        signal ? { abortSignal: signal } : undefined,
       ),
     );
   }
@@ -428,9 +544,11 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
   ): Promise<string> {
     const expiresIn = expirySeconds ?? this.config.presignedTtlSeconds;
     if (!Number.isInteger(expiresIn) || expiresIn <= 0 || expiresIn > 604_800) {
-      throw new TypeError("S3 presigned URL expiry must be between 1 and 604800 seconds");
+      throw new TypeError(
+        "S3 presigned URL expiry must be between 1 and 604800 seconds",
+      );
     }
-    return getSignedUrl(this.client, command, { expiresIn });
+    return getSignedUrl(this.signingClient, command, { expiresIn });
   }
 
   #assertUploadSize(size: number): void {
@@ -476,13 +594,20 @@ function boundedUploadStream(
   let total = 0;
   const counter = new Transform({
     transform(chunk: Buffer | Uint8Array | string, encoding, callback) {
-      const size = typeof chunk === "string" ? Buffer.byteLength(chunk, encoding) : chunk.byteLength;
+      const size =
+        typeof chunk === "string"
+          ? Buffer.byteLength(chunk, encoding)
+          : chunk.byteLength;
       total += size;
       if (total > maxBytes) {
-        callback(Object.assign(
-          new RangeError(`Upload exceeds configured maximum size of ${maxBytes} bytes`),
-          { code: UPLOAD_LIMIT_CODE },
-        ));
+        callback(
+          Object.assign(
+            new RangeError(
+              `Upload exceeds configured maximum size of ${maxBytes} bytes`,
+            ),
+            { code: UPLOAD_LIMIT_CODE },
+          ),
+        );
         return;
       }
       callback(null, chunk);
@@ -494,7 +619,11 @@ function boundedUploadStream(
 }
 
 function isUploadLimitError(error: unknown): boolean {
-  return Boolean(error && typeof error === "object" && Reflect.get(error, "code") === UPLOAD_LIMIT_CODE);
+  return Boolean(
+    error &&
+    typeof error === "object" &&
+    Reflect.get(error, "code") === UPLOAD_LIMIT_CODE,
+  );
 }
 
 function validateConfig(config: S3ObjectStorageAdapterConfig): ResolvedConfig {
@@ -515,11 +644,31 @@ function validateConfig(config: S3ObjectStorageAdapterConfig): ResolvedConfig {
       throw new TypeError("S3 endpoint must use HTTP or HTTPS");
     }
   }
+  const publicEndpoint = config.publicEndpoint?.trim() || undefined;
+  if (publicEndpoint) {
+    let url: URL;
+    try {
+      url = new URL(publicEndpoint);
+    } catch {
+      throw new TypeError("S3 public endpoint is invalid");
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      throw new TypeError("S3 public endpoint must use HTTP or HTTPS");
+    }
+  }
 
   const hasAccessKey = Boolean(config.accessKeyId?.trim());
   const hasSecretKey = Boolean(config.secretAccessKey?.trim());
   if (hasAccessKey !== hasSecretKey) {
-    throw new TypeError("S3 access key and secret key must be configured together");
+    throw new TypeError(
+      "S3 access key and secret key must be configured together",
+    );
+  }
+
+  if (config.credentialProfile && hasAccessKey) {
+    throw new TypeError(
+      "S3 credential profile and static credentials are mutually exclusive",
+    );
   }
 
   const multipartPartSizeMb = config.multipartPartSizeMb ?? 5;
@@ -547,6 +696,7 @@ function validateConfig(config: S3ObjectStorageAdapterConfig): ResolvedConfig {
     region,
     bucket,
     ...(endpoint ? { endpoint } : {}),
+    ...(publicEndpoint ? { publicEndpoint } : {}),
     ...(hasAccessKey && hasSecretKey
       ? {
           credentials: {
@@ -554,6 +704,9 @@ function validateConfig(config: S3ObjectStorageAdapterConfig): ResolvedConfig {
             secretAccessKey: config.secretAccessKey!.trim(),
           },
         }
+      : {}),
+    ...(config.credentialProfile
+      ? { credentials: fromIni({ profile: config.credentialProfile }) }
       : {}),
     forcePathStyle: config.forcePathStyle ?? Boolean(endpoint),
     multipartPartSizeBytes: multipartPartSizeMb * 1024 * 1024,
@@ -573,6 +726,12 @@ function requireObjectKey(key: string): string {
   return normalized;
 }
 
+function toAbortError(signal: AbortSignal, key: string): Error {
+  return signal.reason instanceof Error
+    ? signal.reason
+    : new Error(`S3 stream for ${key} was aborted`);
+}
+
 function isNotFound(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const name = Reflect.get(error, "name");
@@ -588,8 +747,9 @@ function isPreconditionFailed(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const name = Reflect.get(error, "name");
   const metadata = Reflect.get(error, "$metadata");
-  const status = metadata && typeof metadata === "object"
-    ? Reflect.get(metadata, "httpStatusCode")
-    : undefined;
+  const status =
+    metadata && typeof metadata === "object"
+      ? Reflect.get(metadata, "httpStatusCode")
+      : undefined;
   return name === "PreconditionFailed" || status === 412;
 }

@@ -1,5 +1,6 @@
+import { jobRetention } from "./job-retention.js";
 import { createHash } from "node:crypto";
-import { Queue, Worker, type JobsOptions, type Processor } from "bullmq";
+import { Queue, UnrecoverableError, Worker, type JobsOptions, type Processor } from "bullmq";
 import type {
   EnqueueOptions,
   JobEnvelope,
@@ -19,6 +20,8 @@ import {
   createBullMqConnectionOptions,
   type BullMqConnectionOptions,
 } from "./bullmq-connection.js";
+
+import { createRedisJobCancellationTransport, type JobCancellationTransport } from "./job-cancellation.js";
 
 const RESOURCE_NAME = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
@@ -72,6 +75,8 @@ export interface BullMqJobRuntimeOptions extends BullMqJobRuntimeFactories {
   readonly concurrency?: number;
   readonly defaultJobOptions?: EnqueueOptions;
   readonly lifecycle?: JobExecutionLifecycle;
+  /** Inject a transport for tests, or explicitly disable cross-process cancellation. */
+  readonly cancellationTransport?: JobCancellationTransport | false;
 }
 
 export interface JobRuntime extends JobPublisher, JobHandlerRegistry, JobTransportControl {
@@ -103,7 +108,15 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
   const queues = new Map<string, BullMqQueueLike>();
   const workers = new Map<string, BullMqWorkerLike>();
   const shutdown = new AbortController();
-  const activeJobs = new Map<string, AbortController>();
+  const cancellation = options.cancellationTransport === false ? undefined
+    : options.cancellationTransport ?? createRedisJobCancellationTransport(options.redisUrl);
+  const activeJobs = new Map<string, { abort: AbortController; attempt: number; result: Promise<boolean> }>();
+  const cancelActive = async (queue: string, jobId: string, attempt?: number): Promise<boolean> => {
+    const active = activeJobs.get(handlerKey(queue, jobId));
+    if (!active || (attempt !== undefined && attempt !== active.attempt)) return false;
+    active.abort.abort(new JobExecutionError("Job cancellation requested", "JOB_CANCELLED", "cancelled"));
+    return active.result;
+  };
   let started = false;
   let closed = false;
 
@@ -162,7 +175,9 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
         name,
         data,
         maxAttempts: effectiveOptions.maxAttempts ?? 1,
-        executionKey: effectiveOptions.enqueueKey ?? resolvedJobId ?? job.id,
+        // Match the worker envelope: semantic enqueue keys are transport inputs,
+        // while queue plus resolved job ID identifies the durable execution.
+        executionKey: `${queue}:${resolvedJobId ?? job.id}`,
         ...(effectiveOptions.execution ? { execution: effectiveOptions.execution } : {}),
         ...(effectiveOptions.subject ? { subject: effectiveOptions.subject } : {}),
         ...(effectiveOptions.payloadSchema ? { payloadSchema: effectiveOptions.payloadSchema } : {}),
@@ -174,15 +189,23 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
     async cancel(queue, jobId) {
       assertOpen(closed);
       validateName("queue", queue);
-      const active = activeJobs.get(handlerKey(queue, jobId));
-      if (active) {
-        active.abort(new JobExecutionError("Job cancellation requested", "JOB_CANCELLED", "cancelled"));
-        return true;
-      }
+      if (activeJobs.has(handlerKey(queue, jobId))) return cancelActive(queue, jobId);
       const target = await queueFor(queue).getJob?.(jobId);
       if (!target) return false;
-      await target.remove();
-      return true;
+      const requestActive = () => cancellation?.request(queue, jobId, (target.attemptsMade ?? 0) + 1) ?? Promise.resolve(false);
+      const state = await target.getState?.();
+      if (state === "active") return requestActive();
+      if (!state || !["waiting", "delayed", "prioritized"].includes(state)) return false;
+      try {
+        await target.remove();
+        return true;
+      } catch (error) {
+        // A queued job can become active between the state read and removal.
+        const current = await target.getState?.();
+        if (current === "active") return requestActive();
+        if (current === "unknown" || current === "completed" || current === "failed") return false;
+        throw error;
+      }
     },
 
     async retry(queue, jobId) {
@@ -190,8 +213,15 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
       validateName("queue", queue);
       const target = await queueFor(queue).getJob?.(jobId);
       if (!target) return false;
-      await target.retry("failed");
-      return true;
+      if (target.getState && await target.getState() !== "failed") return false;
+      try {
+        await target.retry("failed");
+        return true;
+      } catch (error) {
+        // Another operator or worker may have moved the job since the state read.
+        if (target.getState && await target.getState() !== "failed") return false;
+        throw error;
+      }
     },
 
     async listDeadLetters(queue, input = {}) {
@@ -232,6 +262,7 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
     async start() {
       assertOpen(closed);
       if (started) return;
+      await cancellation?.listen(cancelActive);
       started = true;
       const queueNames = new Set([...handlers.keys()].map((key) => key.slice(0, key.indexOf("\0"))));
       for (const queue of queueNames) {
@@ -244,9 +275,13 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
             id: job.id ?? `${queue}:${job.name}:unknown`,
             name: job.name,
             queue,
+            executionKey: `${queue}:${job.opts.jobId ?? job.id ?? `${queue}:${job.name}:unknown`}`,
             data: stored.data,
             attempt: job.attemptsMade + 1,
-            maxAttempts: job.opts.attempts ?? 1,
+            // BullMQ manual retry preserves attemptsMade and admits one more run
+            // after exhaustion. Keep that cumulative attempt valid in durable
+            // evidence without resetting history or granting automatic retries.
+            maxAttempts: Math.max(job.opts.attempts ?? 1, job.attemptsMade + 1),
             enqueuedAt: new Date(job.timestamp).toISOString(),
             ...(job.opts.jobId ? { idempotencyKey: job.opts.jobId } : {}),
             ...(stored.execution ? { execution: stored.execution } : {}),
@@ -258,7 +293,9 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
           };
           const jobAbort = new AbortController();
           const activeKey = handlerKey(queue, envelope.id);
-          activeJobs.set(activeKey, jobAbort);
+          let acknowledge!: (accepted: boolean) => void;
+          const cancellationResult = new Promise<boolean>((resolve) => { acknowledge = resolve; });
+          activeJobs.set(activeKey, { abort: jobAbort, attempt: envelope.attempt, result: cancellationResult });
           const abortForShutdown = () => jobAbort.abort(shutdown.signal.reason);
           shutdown.signal.addEventListener("abort", abortForShutdown, { once: true });
           const timeout = stored.timeoutMs === undefined
@@ -289,7 +326,12 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
                   await options.lifecycle?.completed(envelope, result);
                   return result;
                 } catch (error) {
-                  await options.lifecycle?.failed(envelope, classifyFailure(error, envelope));
+                  const failure = classifyFailure(error, envelope);
+                  await options.lifecycle?.failed(envelope, failure);
+                  if (failure.disposition === "cancelled") acknowledge(true);
+                  if ((failure.disposition === "permanent" || failure.disposition === "cancelled") && !(error instanceof UnrecoverableError)) {
+                    throw new UnrecoverableError(failure.message);
+                  }
                   throw error;
                 }
               },
@@ -297,6 +339,7 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
           } finally {
             if (timeout !== undefined) clearTimeout(timeout);
             shutdown.signal.removeEventListener("abort", abortForShutdown);
+            acknowledge(false);
             activeJobs.delete(activeKey);
           }
         };
@@ -309,6 +352,7 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
       closed = true;
       shutdown.abort();
       await Promise.all([...workers.values()].map((worker) => worker.close()));
+      await cancellation?.close();
       await Promise.all([...queues.values()].map((queue) => queue.close()));
       workers.clear();
       queues.clear();
@@ -336,8 +380,7 @@ function toBullMqOptions(options: EnqueueOptions, resolvedJobId = options.jobId)
           },
         }
       : {}),
-    ...(options.removeOnComplete !== undefined ? { removeOnComplete: options.removeOnComplete } : {}),
-    ...(options.removeOnFail !== undefined ? { removeOnFail: options.removeOnFail } : {}),
+    ...jobRetention(options),
   };
 }
 
@@ -358,13 +401,12 @@ function validateEnqueueKey(value: string): void {
 }
 
 function replayableOptions(options: JobsOptions | undefined): JobsOptions {
-  if (!options) return {};
+  if (!options) return jobRetention();
   return {
     ...(options.attempts !== undefined ? { attempts: options.attempts } : {}),
     ...(options.priority !== undefined ? { priority: options.priority } : {}),
     ...(options.backoff !== undefined ? { backoff: options.backoff } : {}),
-    ...(options.removeOnComplete !== undefined ? { removeOnComplete: options.removeOnComplete } : {}),
-    ...(options.removeOnFail !== undefined ? { removeOnFail: options.removeOnFail } : {}),
+    ...jobRetention(options),
   };
 }
 
@@ -466,10 +508,15 @@ function classifyFailure(error: unknown, job: JobEnvelope): JobExecutionFailure 
       ...(error.detail ? { detail: error.detail } : {}),
     };
   }
+  const governed = error && typeof error === "object" && !Array.isArray(error)
+    ? error as Readonly<Record<string, unknown>>
+    : undefined;
   const message = error instanceof Error ? error.message : "Unknown job execution failure";
   return {
-    disposition: job.attempt < job.maxAttempts ? "retryable" : "permanent",
-    code: "JOB_EXECUTION_FAILED",
+    disposition: governed?.["retryable"] === false
+      ? "permanent"
+      : job.attempt < job.maxAttempts ? "retryable" : "permanent",
+    code: typeof governed?.["code"] === "string" ? governed["code"] : "JOB_EXECUTION_FAILED",
     message,
   };
 }

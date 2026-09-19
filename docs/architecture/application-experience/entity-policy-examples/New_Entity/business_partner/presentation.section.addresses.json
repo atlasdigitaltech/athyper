@@ -1,0 +1,97 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.addresses",
+  "entityCode": "address_link",
+  "plane": "neon",
+  "sectionKey": "addresses",
+  "rendererKey": "platform.postal-address.v1",
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.addresses.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/addresses"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "address_link/core.json",
+  "fieldBindings": [
+    {
+      "fieldKey": "owner_type_id"
+    },
+    {
+      "fieldKey": "owner_id"
+    },
+    {
+      "fieldKey": "address_id"
+    },
+    {
+      "fieldKey": "purpose"
+    },
+    {
+      "fieldKey": "is_primary"
+    },
+    {
+      "fieldKey": "effective_from"
+    },
+    {
+      "fieldKey": "effective_until"
+    }
+  ],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner_address.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "targetCoreRef": "address/core.json",
+  "linkFields": [
+    "purpose",
+    "is_primary",
+    "effective_from",
+    "effective_until"
+  ],
+  "dependencies": [
+    "address/core",
+    "address_link/core"
+  ],
+  "targetFieldBindings": [
+    {
+      "fieldKey": "line1"
+    },
+    {
+      "fieldKey": "line2"
+    },
+    {
+      "fieldKey": "city"
+    },
+    {
+      "fieldKey": "postal_code"
+    },
+    {
+      "fieldKey": "country_code"
+    },
+    {
+      "fieldKey": "validation_status"
+    }
+  ],
+  "relationKey": "business_partner.addresses",
+  "artifactHash": "sha256:6345508afd3890ac4c2c18f0a013ba056744081b1ca5d7872ff6e090ad8c7c25"
+}

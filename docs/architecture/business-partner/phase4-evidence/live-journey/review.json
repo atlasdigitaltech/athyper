@@ -1,0 +1,16 @@
+{
+  "draftId": "be767e01-f36d-434f-91f3-67bff689a367",
+  "baseRevision": 59,
+  "savedRevision": 60,
+  "contractHash": "ac740ab3451f4ebffcc53d22c8a31438c33238f9291e393100d4761076b5f5e7",
+  "change": {
+    "surfaceKey": "intake_partner",
+    "fieldKey": "requested_role",
+    "bindingId": "dd030024-3640-5185-874f-445546fc0027",
+    "before": "Requested role",
+    "after": "Requested business role"
+  },
+  "unrelatedConfigurationPreserved": true,
+  "storageNormalization": "Only unchanged contract test array order changed on save",
+  "publicationScope": "Entire existing working configuration plus this label; not a delta against published release 2"
+}

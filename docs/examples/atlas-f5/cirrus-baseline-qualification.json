@@ -1,0 +1,9 @@
+{
+  "schema": "atlas-baseline-qualification/1",
+  "observedAt": "2026-09-10T02:40:00.250Z",
+  "committed": false,
+  "checks": [
+    "studio:immutable,tenant-isolated,operator-only,revocable",
+    "neon:current-baseline-accepted,stale-baseline-rejected"
+  ]
+}

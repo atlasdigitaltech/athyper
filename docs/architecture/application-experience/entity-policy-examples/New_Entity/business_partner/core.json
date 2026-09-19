@@ -1,0 +1,681 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "business_partner/core",
+  "entityCode": "business_partner",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "sourceObjects": [
+      "master.business_partner"
+    ],
+    "primaryObject": "master.business_partner",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false,
+    "versionField": "record_version"
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner.id",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "code",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "code"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner.code",
+        "defaultText": "Code"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "server_numbering",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "name",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "name"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner.name",
+        "defaultText": "Name"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "registration_country_code",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "registration_country_code"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner.registration_country_code",
+        "defaultText": "Registration Country Code"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "referenceConfig": {
+        "targetEntityCode": "country",
+        "valueField": "code"
+      },
+      "storageType": "IS",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "partner_category",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "partner_category"
+      },
+      "dataType": "domain",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner.partner_category",
+        "defaultText": "Partner Category"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "master.business_partner_category_d",
+      "domainCode": "master.business_partner_category_d",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "ownership_class",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "ownership_class"
+      },
+      "dataType": "domain",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner.ownership_class",
+        "defaultText": "Ownership Class"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "master.business_partner_ownership_d",
+      "domainCode": "master.business_partner_ownership_d",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "legal_form",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "legal_form"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner.legal_form",
+        "defaultText": "Legal Form"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "IS",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "incorporation_date",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "incorporation_date"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner.incorporation_date",
+        "defaultText": "Incorporation Date"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "date",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "website_url",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "website_url"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner.website_url",
+        "defaultText": "Website Url"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "IS",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "description",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "description"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner.description",
+        "defaultText": "Description"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "status",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "status"
+      },
+      "dataType": "domain",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner.status",
+        "defaultText": "Status"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "master.business_partner_status_d",
+      "domainCode": "master.business_partner_status_d",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "record_version",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "record_version"
+      },
+      "dataType": "integer",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner.record_version",
+        "defaultText": "Record Version"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "bigint",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "tenant",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only",
+    "legalEntityOwnership": "not_applicable",
+    "companyOwnership": "not_applicable",
+    "operatingOrganizationOwnership": "not_applicable"
+  },
+  "relations": [
+    {
+      "relationKey": "business_partner.contact_person",
+      "targetEntityCode": "contact_person",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.contact_person.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.business_partner_identifier",
+      "targetEntityCode": "business_partner_identifier",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.business_partner_identifier.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.business_partner_tax_registration",
+      "targetEntityCode": "business_partner_tax_registration",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.business_partner_tax_registration.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.business_partner_banking",
+      "targetEntityCode": "business_partner_banking",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.business_partner_banking.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.supplier",
+      "targetEntityCode": "supplier",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.supplier.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.customer",
+      "targetEntityCode": "customer",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.customer.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.business_partner_operating_organization_assignment",
+      "targetEntityCode": "business_partner_operating_organization_assignment",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.business_partner_operating_organization_assignment.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.supplier_company_profile",
+      "targetEntityCode": "supplier_company_profile",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.supplier_company_profile.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.customer_company_profile",
+      "targetEntityCode": "customer_company_profile",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.customer_company_profile.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.business_partner_qualification",
+      "targetEntityCode": "business_partner_qualification",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.business_partner_qualification.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.certification",
+      "targetEntityCode": "certification",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.certification.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.business_partner_governance_relation",
+      "targetEntityCode": "business_partner_governance_relation",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.business_partner_governance_relation.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.business_partner_commodity_capability",
+      "targetEntityCode": "business_partner_commodity_capability",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.business_partner_commodity_capability.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.business_partner_industry_classification",
+      "targetEntityCode": "business_partner_industry_classification",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.business_partner_industry_classification.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.workforce",
+      "targetEntityCode": "workforce",
+      "binding": {
+        "kind": "registered_handler",
+        "handlerKey": "neon.bp.relation.workforce.v1",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false,
+      "pagination": {
+        "defaultLimit": 25,
+        "maxLimit": 100
+      }
+    },
+    {
+      "relationKey": "business_partner.addresses",
+      "targetEntityCode": "address_link",
+      "binding": {
+        "kind": "owner_link",
+        "linkEntityCode": "address_link",
+        "targetEntityCode": "address",
+        "ownerEntityCode": "business_partner",
+        "tenantEqualityRequired": true
+      },
+      "load": "lazy",
+      "defaultInclude": false
+    }
+  ],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": true,
+      "serviceKey": "platform.comments.v1",
+      "load": "lazy"
+    },
+    "attachments": {
+      "enabled": true,
+      "serviceKey": "platform.attachments.v1",
+      "ownerEntityCode": "business_partner",
+      "load": "lazy",
+      "includeInAggregateData": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    },
+    "lifecycle": {
+      "enabled": true
+    },
+    "numbering": {
+      "enabled": true
+    },
+    "print": {
+      "enabled": true,
+      "serviceKey": "platform.document-render.v1"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "editRuntime": {
+    "tier": "generic",
+    "allowed": [
+      "generic",
+      "full_override"
+    ],
+    "fullOverrideRequiresArchitectureReview": true,
+    "slotAdapterDeferredUntilGenericQA": true
+  },
+  "dependencies": [
+    "address_link/core",
+    "business_partner_banking/core",
+    "business_partner_commodity_capability/core",
+    "business_partner_governance_relation/core",
+    "business_partner_identifier/core",
+    "business_partner_industry_classification/core",
+    "business_partner_operating_organization_assignment/core",
+    "business_partner_qualification/core",
+    "business_partner_tax_registration/core",
+    "certification/core",
+    "contact_person/core",
+    "country/core",
+    "customer/core",
+    "customer_company_profile/core",
+    "supplier/core",
+    "supplier_company_profile/core",
+    "workforce/core"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "artifactHash": "sha256:cf7f99970239176fe0a8c0d12673ccf9741fbe8a9b2f349cd36ad82af9ede0ca"
+}

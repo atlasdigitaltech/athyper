@@ -12,17 +12,15 @@ CREATE INDEX attachment_expiry_idx
 CREATE INDEX attachment_processing_idx
     ON document.attachment (tenant_id, text_extraction_status, created_at)
     WHERE text_extraction_status IN ('pending', 'failed');
-CREATE INDEX attachment_quota_reservation_expiry_idx ON document.attachment_quota_reservation (tenant_id, expires_at) WHERE status='reserved';
-CREATE INDEX attachment_quota_reservation_resource_idx ON document.attachment_quota_reservation (tenant_id, resource_id);
-
 CREATE INDEX attachment_folder_owner_idx
     ON document.attachment_folder
     (tenant_id, entity_type, entity_id, parent_id, display_order);
 CREATE INDEX attachment_link_owner_idx
     ON document.attachment_link
     (tenant_id, entity_type, entity_id, display_order);
-CREATE INDEX attachment_link_attachment_idx
-    ON document.attachment_link (tenant_id, attachment_id);
+CREATE INDEX attachment_link_pinned_attachment_idx
+    ON document.attachment_link (tenant_id, pinned_attachment_id)
+    WHERE pinned_attachment_id IS NOT NULL;
 CREATE INDEX attachment_link_folder_idx
     ON document.attachment_link (tenant_id, folder_id)
     WHERE folder_id IS NOT NULL;
@@ -57,9 +55,6 @@ CREATE INDEX content_item_link_target_idx
 CREATE INDEX content_item_version_item_idx
     ON snapshot.content_item_version
     (tenant_id, content_item_id, version DESC);
-CREATE INDEX content_item_acl_subject_idx ON document.content_item_access_grant(tenant_id,subject_type,subject_id,content_item_id);
-CREATE INDEX content_quota_reservation_expiry_idx ON document.content_quota_reservation(tenant_id,expires_at) WHERE status='reserved';
-
 CREATE INDEX conversation_owner_idx
     ON document.conversation (tenant_id, entity_type, entity_id)
     WHERE entity_type IS NOT NULL;
@@ -608,6 +603,16 @@ CREATE INDEX leave_balance_employee_idx ON document.leave_balance_entry(tenant_i
 CREATE INDEX leave_balance_source_idx ON document.leave_balance_entry(tenant_id,source_entity_type,source_entity_id) WHERE source_entity_id IS NOT NULL;
 CREATE INDEX people_request_employee_idx ON document.people_request(tenant_id,employee_id,status);
 CREATE INDEX people_request_workflow_idx ON document.people_request(tenant_id,workflow_request_id) WHERE workflow_request_id IS NOT NULL;
+CREATE INDEX workforce_request_queue_idx ON document.workforce_request(tenant_id,status,created_at,id);
+CREATE INDEX workforce_request_person_idx ON document.workforce_request(tenant_id,target_person_id,status) WHERE target_person_id IS NOT NULL;
+CREATE INDEX workforce_request_employment_idx ON document.workforce_request(tenant_id,target_employment_id,status) WHERE target_employment_id IS NOT NULL;
+CREATE INDEX workforce_request_scope_idx ON document.workforce_request(tenant_id,legal_entity_id,company_code_id,org_unit_id,status);
+CREATE INDEX workforce_request_workflow_idx ON document.workforce_request(tenant_id,workflow_request_id) WHERE workflow_request_id IS NOT NULL;
+CREATE INDEX workforce_request_validation_request_idx ON document.workforce_request_validation(tenant_id,request_id,evaluated_at DESC,evaluation_id);
+CREATE UNIQUE INDEX workforce_request_open_target_kind_uq
+    ON document.workforce_request(tenant_id,target_person_id,request_kind)
+    WHERE target_person_id IS NOT NULL
+      AND status IN ('draft','validating','validation_failed','pending_approval','returned','approved','applying','failed');
 CREATE INDEX hr_case_employee_idx ON document.hr_case(tenant_id,employee_id,status) WHERE employee_id IS NOT NULL;
 CREATE INDEX hr_case_assignee_idx ON document.hr_case(tenant_id,assigned_to,status) WHERE assigned_to IS NOT NULL;
 CREATE INDEX onboarding_case_person_idx ON document.onboarding_case(tenant_id,person_id,status);
@@ -786,8 +791,7 @@ CREATE INDEX attachment_series_id_idx
 
 -- attachment_link: series lookup
 CREATE INDEX attachment_link_series_idx
-    ON document.attachment_link (tenant_id, attachment_series_id)
-    WHERE attachment_series_id IS NOT NULL;
+    ON document.attachment_link (tenant_id, attachment_series_id);
 
 -- attachment_legal_hold indexes
 CREATE INDEX attachment_legal_hold_series_active_idx
@@ -812,6 +816,9 @@ CREATE INDEX attachment_derivative_ready_idx
 CREATE INDEX attachment_derivative_pending_idx
     ON document.attachment_derivative (created_at)
     WHERE status IN ('pending', 'failed') AND attempt_count < 5;
+CREATE INDEX attachment_derivative_scan_pending_idx
+    ON document.attachment_derivative (tenant_id, id)
+    WHERE status = 'ready' AND scanned_at IS NULL;
 
 -- multipart_upload_part indexes
 CREATE INDEX multipart_upload_part_upload_idx
@@ -821,3 +828,114 @@ CREATE INDEX multipart_upload_part_upload_idx
 CREATE INDEX multipart_upload_series_idx
     ON document.multipart_upload (tenant_id, attachment_series_id)
     WHERE attachment_series_id IS NOT NULL;
+
+CREATE INDEX business_partner_invitation_status_idx ON document.business_partner_invitation(tenant_id,status,expires_at);
+CREATE INDEX business_partner_invitation_journey_scope_idx ON document.business_partner_invitation(tenant_id,journey_kind,scope_kind,created_at DESC);
+CREATE UNIQUE INDEX business_partner_invitation_request_uq ON document.business_partner_invitation(tenant_id,business_partner_request_id) WHERE business_partner_request_id IS NOT NULL;
+CREATE UNIQUE INDEX business_partner_invitation_entity_case_uq ON document.business_partner_invitation(tenant_id,entity_case_id) WHERE entity_case_id IS NOT NULL;
+
+CREATE INDEX business_partner_request_status_idx
+    ON document.business_partner_request (tenant_id, status, created_at DESC);
+CREATE INDEX business_partner_request_target_idx
+    ON document.business_partner_request (tenant_id, target_business_partner_id, created_at DESC)
+    WHERE target_business_partner_id IS NOT NULL;
+CREATE INDEX business_partner_request_materialized_partner_idx
+    ON document.business_partner_request (tenant_id, materialized_business_partner_id, created_at DESC, id DESC)
+    WHERE materialized_business_partner_id IS NOT NULL;
+CREATE UNIQUE INDEX business_partner_request_open_role_extension_uq
+    ON document.business_partner_request (tenant_id, target_business_partner_id, requested_role)
+    WHERE request_kind IN ('add_supplier', 'add_customer', 'add_workforce')
+      AND status IN ('draft', 'validating', 'validation_failed', 'pending_approval', 'returned', 'approved', 'applying', 'failed');
+CREATE UNIQUE INDEX business_partner_request_open_org_assignment_uq
+    ON document.business_partner_request
+       (tenant_id, target_business_partner_id, requested_role, operating_organization_id)
+    WHERE request_kind = 'assign_organization'
+      AND status IN ('draft', 'validating', 'validation_failed', 'pending_approval', 'returned', 'approved', 'applying', 'failed');
+CREATE UNIQUE INDEX business_partner_request_open_company_configuration_uq
+    ON document.business_partner_request
+       (tenant_id, target_business_partner_id, requested_role, operating_organization_id, company_code_id)
+    WHERE request_kind = 'configure_company'
+      AND status IN ('draft', 'validating', 'validation_failed', 'pending_approval', 'returned', 'approved', 'applying', 'failed');
+CREATE INDEX business_partner_request_workflow_idx
+    ON document.business_partner_request (tenant_id, workflow_request_id)
+    WHERE workflow_request_id IS NOT NULL;
+CREATE UNIQUE INDEX business_partner_request_invitation_uq
+    ON document.business_partner_request (tenant_id, invitation_id)
+    WHERE invitation_id IS NOT NULL;
+CREATE UNIQUE INDEX business_partner_request_application_key_uq
+    ON document.business_partner_request (tenant_id, application_idempotency_key)
+    WHERE application_idempotency_key IS NOT NULL;
+CREATE INDEX business_partner_request_org_idx
+    ON document.business_partner_request (tenant_id, operating_organization_id, status, created_at DESC)
+    WHERE operating_organization_id IS NOT NULL;
+CREATE INDEX business_partner_request_company_idx
+    ON document.business_partner_request (tenant_id, company_code_id, status, created_at DESC)
+    WHERE company_code_id IS NOT NULL;
+CREATE INDEX business_partner_request_source_idx
+    ON document.business_partner_request
+       (tenant_id, source_system_code, source_entity_code, source_entity_id, source_version DESC)
+    WHERE source_system_code IS NOT NULL;
+CREATE UNIQUE INDEX business_partner_request_one_open_source_version_uq
+    ON document.business_partner_request
+       (tenant_id, source_system_code, source_entity_code, source_entity_id, source_version, request_kind)
+    WHERE source_system_code IS NOT NULL
+      AND status NOT IN ('rejected', 'cancelled', 'superseded', 'applied');
+CREATE INDEX business_partner_request_evidence_request_idx
+    ON document.business_partner_request_evidence (tenant_id, request_id, created_at);
+CREATE INDEX business_partner_request_validation_request_idx
+    ON document.business_partner_request_validation
+       (tenant_id, request_id, evaluation_id, severity, outcome);
+CREATE INDEX business_partner_request_address_request_idx
+    ON document.business_partner_request_address (tenant_id, request_id);
+CREATE INDEX business_partner_request_contact_person_request_idx
+    ON document.business_partner_request_contact_person (tenant_id, request_id);
+CREATE INDEX business_partner_request_contact_channel_request_idx
+    ON document.business_partner_request_contact_channel (tenant_id, request_id);
+CREATE INDEX business_partner_request_identifier_request_idx
+    ON document.business_partner_request_identifier (tenant_id, request_id);
+CREATE INDEX business_partner_request_tax_registration_request_idx
+    ON document.business_partner_request_tax_registration (tenant_id, request_id);
+CREATE INDEX business_partner_request_classification_request_idx
+    ON document.business_partner_request_classification (tenant_id, request_id);
+CREATE INDEX business_partner_request_certification_request_idx
+    ON document.business_partner_request_certification (tenant_id, request_id);
+CREATE INDEX business_partner_request_materialization_item_request_idx
+    ON document.business_partner_request_materialization_item (tenant_id, request_id);
+CREATE INDEX mesh_business_partner_match_snapshot_idx ON document.mesh_business_partner_match (tenant_id, snapshot_id, created_at DESC);
+CREATE INDEX mesh_business_partner_match_org_idx ON document.mesh_business_partner_match (tenant_id, operating_organization_id, created_at DESC);
+CREATE INDEX mesh_business_partner_match_candidate_idx ON document.mesh_business_partner_match (tenant_id, candidate_business_partner_id, created_at DESC) WHERE candidate_business_partner_id IS NOT NULL;
+CREATE INDEX mesh_business_partner_acceptance_match_idx ON document.mesh_business_partner_acceptance (tenant_id, match_id, created_at DESC);
+CREATE UNIQUE INDEX mesh_business_partner_acceptance_event_request_global_uq ON document.mesh_business_partner_acceptance_event (tenant_id, business_partner_request_id) WHERE business_partner_request_id IS NOT NULL;
+CREATE UNIQUE INDEX business_partner_bank_verification_open_uq ON document.business_partner_bank_verification(tenant_id,bank_projection_id,supplier_company_profile_id) WHERE status IN('pending_verification','verified');
+CREATE INDEX business_partner_bank_verification_profile_idx ON document.business_partner_bank_verification(tenant_id,supplier_company_profile_id,status,created_at DESC);
+CREATE INDEX business_partner_bank_verification_partner_idx ON document.business_partner_bank_verification(tenant_id,business_partner_id,company_code_id,status,created_at DESC);
+CREATE INDEX supplier_activation_evidence_partner_idx ON document.supplier_activation_evidence(tenant_id,business_partner_id,activated_at DESC);
+CREATE INDEX workforce_requisition_status_idx ON document.workforce_requisition (tenant_id, company_code_id, status, expected_start_date);
+CREATE INDEX workforce_requisition_supplier_supplier_idx ON document.workforce_requisition_supplier (tenant_id, supplier_id, status, response_due_at);
+CREATE INDEX external_candidate_submission_review_idx ON document.external_candidate_submission (tenant_id, workforce_requisition_id, status, submitted_at);
+CREATE INDEX external_candidate_submission_person_idx ON document.external_candidate_submission (tenant_id, person_id) WHERE person_id IS NOT NULL;
+CREATE INDEX contingent_work_order_status_idx ON document.contingent_work_order (tenant_id, company_code_id, supplier_id, status);
+CREATE INDEX contingent_work_order_revision_effective_idx ON document.contingent_work_order_revision (tenant_id, work_order_id, status, start_date, end_date);
+CREATE UNIQUE INDEX contingent_work_order_revision_one_effective_uq ON document.contingent_work_order_revision (tenant_id, work_order_id) WHERE status = 'effective';
+CREATE INDEX statement_of_work_status_idx ON document.statement_of_work (tenant_id, company_code_id, supplier_id, status);
+CREATE INDEX statement_of_work_revision_effective_idx ON document.statement_of_work_revision (tenant_id, statement_of_work_id, status, start_date, end_date);
+CREATE UNIQUE INDEX statement_of_work_revision_one_effective_uq ON document.statement_of_work_revision (tenant_id, statement_of_work_id) WHERE status = 'effective';
+CREATE INDEX worker_engagement_worker_idx ON document.worker_engagement (tenant_id, external_worker_id, status, start_date, end_date);
+CREATE INDEX worker_engagement_supplier_idx ON document.worker_engagement (tenant_id, supplier_id, company_code_id, status);
+CREATE INDEX worker_operational_placement_effective_idx ON document.worker_operational_placement (tenant_id, worker_engagement_id, effective_from, effective_until) WHERE status = 'active';
+CREATE UNIQUE INDEX worker_operational_placement_primary_open_uq ON document.worker_operational_placement (tenant_id, worker_engagement_id) WHERE is_primary AND effective_until IS NULL AND status = 'active';
+CREATE INDEX worker_compliance_item_readiness_idx ON document.worker_compliance_item (tenant_id, worker_engagement_id, required_before, decision, valid_until);
+CREATE INDEX external_time_sheet_approval_idx ON document.external_time_sheet (tenant_id, status, period_end, worker_engagement_id);
+CREATE INDEX external_time_sheet_source_inbox_idx ON document.external_time_sheet (tenant_id, source_inbox_id) WHERE source_inbox_id IS NOT NULL;
+CREATE INDEX external_expense_sheet_approval_idx ON document.external_expense_sheet (tenant_id, status, period_end, worker_engagement_id);
+CREATE INDEX external_expense_sheet_source_inbox_idx ON document.external_expense_sheet (tenant_id, source_inbox_id) WHERE source_inbox_id IS NOT NULL;
+CREATE INDEX external_service_entry_approval_idx ON document.external_service_entry (tenant_id, company_code_id, supplier_id, status, service_period_end);
+CREATE INDEX external_workforce_invoice_allocation_source_idx ON document.external_workforce_invoice_allocation (tenant_id, service_entry_line_id, allocation_kind);
+CREATE INDEX service_sheet_source_allocation_line_idx ON document.service_sheet_source_allocation (tenant_id, service_sheet_line_id, allocation_kind);
+CREATE INDEX service_sheet_source_allocation_time_idx ON document.service_sheet_source_allocation (tenant_id, external_time_sheet_id, allocation_kind) WHERE external_time_sheet_id IS NOT NULL;
+CREATE INDEX service_sheet_source_allocation_expense_idx ON document.service_sheet_source_allocation (tenant_id, external_expense_sheet_id, allocation_kind) WHERE external_expense_sheet_id IS NOT NULL;
+CREATE INDEX service_sheet_source_allocation_sow_idx ON document.service_sheet_source_allocation (tenant_id, statement_of_work_item_id, allocation_kind) WHERE statement_of_work_item_id IS NOT NULL;
+CREATE UNIQUE INDEX service_sheet_source_allocation_reversal_once_uq ON document.service_sheet_source_allocation (tenant_id, reverses_allocation_id) WHERE reverses_allocation_id IS NOT NULL;
+
+CREATE UNIQUE INDEX supplier_task_attempt_execution_uq ON document.workflow_request(tenant_id,entity_id,(metadata->'process'->>'attemptId')) WHERE entity_type='cycle_task' AND metadata->'process' IS NOT NULL;
+CREATE UNIQUE INDEX supplier_task_vote_key_uq ON document.work_item(tenant_id,(outcome->>'idempotencyKey')) WHERE payload->>'attemptId' IS NOT NULL AND outcome->>'idempotencyKey' IS NOT NULL;

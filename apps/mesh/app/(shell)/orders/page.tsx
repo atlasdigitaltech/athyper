@@ -1,1 +1,0 @@
-export default function OrdersPage() { return <section aria-labelledby="page-title"><p>Partner Collaboration</p><h1 id="page-title">Order Intake</h1><p>Order exchange capabilities will arrive through governed vertical slices.</p></section>; }

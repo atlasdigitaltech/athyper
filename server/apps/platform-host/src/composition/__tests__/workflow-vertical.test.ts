@@ -27,7 +27,7 @@ describe("Workflow host vertical", () => {
     const container = createContainer();
     const config = loadConfig();
     registerPlatform(container, { ...config, env: "production", iam: { ...config.iam, defaultRealmKey: "athyper", claimContextMode: "on" } }, { tokenVerifier: { verify: async () => token }, resolveIdentityContext: async () => ({ tenantId: ids.tenant, principalId: ids.principal, authEpoch: 1 }), auditSink: audit });
-    registerServices(container, { metadata, workflowRepository: persistence.repository as never, transactions: persistence.transactions as never, outbox: { append: async (event) => { events.push(event); } } });
+    registerServices(container, { metadata, workflowRepository: persistence.repository as never, workflowCommandExecutions: persistence.commandExecutions as never, transactions: persistence.transactions as never, outbox: { append: async (event) => { events.push(event); } } });
     const app = createHttpApplication({ configure(application) { for (const register of container.platform.httpRegistrars) register(application); } });
     const baseUrl = await listen(app);
     const headers = { authorization: "Bearer signed-token", "x-plane": "studio", "content-type": "application/json" };
@@ -37,6 +37,11 @@ describe("Workflow host vertical", () => {
     await expect(inboxResponse.json()).resolves.toMatchObject({ data: [{ id: ids.item, status: "open" }] });
     expect((await fetch(`${baseUrl}/api/workflow/work-items/${ids.item}/claim`, { method: "POST", headers, body: "{}" })).status).toBe(200);
     expect((await fetch(`${baseUrl}/api/workflow/work-items/${ids.item}/complete`, { method: "POST", headers, body: JSON.stringify({ outcome: { decision: "approved" } }) })).status).toBe(200);
+    const actionHeaders = { ...headers, "idempotency-key": "claim-again" };
+    // A stale keyed command remains a conflict when retried and emits no events.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      expect((await fetch(`${baseUrl}/api/workflow/items/${ids.item}/actions/claim`, { method: "POST", headers: actionHeaders, body: JSON.stringify({ currentRowVersion: 1 }) })).status).toBe(409);
+    }
     expect(events.map((event) => event.eventType)).toEqual(["workflow.work_item.created", "workflow.work_item.claimed", "workflow.work_item.completed"]);
     expect(audit.events.filter((event) => event.eventCode.startsWith("workflow.work_item."))).toHaveLength(3);
   });

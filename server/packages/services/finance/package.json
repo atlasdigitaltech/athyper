@@ -11,11 +11,16 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run"
   },
-  "dependencies": { "@athyper/server-contract-finance": "workspace:*", "kysely": "^0.28.16" },
+  "dependencies": {
+    "@athyper/platform-temporal": "workspace:*",
+    "@athyper/server-contract-finance": "workspace:*",
+    "kysely": "^0.28.17",
+    "@athyper/server-foundation": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^25.6.0",
-    "@types/pg": "^8.15.5",
-    "pg": "^8.16.3",
+    "@types/pg": "^8.20.0",
+    "pg": "^8.20.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   }

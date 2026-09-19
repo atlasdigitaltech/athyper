@@ -1,0 +1,98 @@
+{
+  "recordedAt": "2026-09-05T05:10:51.535925+00:00",
+  "scope": "Local development R4 native change-case materialization upgrade",
+  "status": "native_materializer_deployed_and_sql_verified",
+  "productionQualified": false,
+  "fullR4JourneyComplete": false,
+  "nativeState": {
+    "database": "athyper_neon",
+    "function": "master.command_materialize_business_partner_change_case(uuid,uuid,bigint,text,uuid,uuid)",
+    "contracts": [
+      {
+        "tenantId": "00000000-0000-0000-0000-000000000000",
+        "releaseNo": 1,
+        "entityCode": "master.business_partner",
+        "supportsR4": false,
+        "contractHash": "4d93214277ec5de49238973688899d363feaaa0fb57a7bb82f1bd865316e8cec"
+      },
+      {
+        "tenantId": "11111111-1111-4111-8111-111111111111",
+        "releaseNo": 1,
+        "entityCode": "master.business_partner",
+        "supportsR4": false,
+        "contractHash": "4d93214277ec5de49238973688899d363feaaa0fb57a7bb82f1bd865316e8cec"
+      },
+      {
+        "tenantId": "22222222-2222-4222-8222-222222222222",
+        "releaseNo": 1,
+        "entityCode": "master.business_partner",
+        "supportsR4": false,
+        "contractHash": "4d93214277ec5de49238973688899d363feaaa0fb57a7bb82f1bd865316e8cec"
+      },
+      {
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "releaseNo": 1,
+        "entityCode": "master.business_partner",
+        "supportsR4": false,
+        "contractHash": "4d93214277ec5de49238973688899d363feaaa0fb57a7bb82f1bd865316e8cec"
+      }
+    ],
+    "migrations": [
+      {
+        "name": "20260905_neon_mesh_profile_change.sql",
+        "sha256": "178cc4e54097100ea18a265291a1d6ceb29cb37f606c9f7ec36cd8d1bcdf0c5b",
+        "status": "applied",
+        "completedAt": "2026-09-05T05:09:13.18264+00:00"
+      },
+      {
+        "name": "20260905_neon_business_partner_change_case.sql",
+        "sha256": "7879c67a51b0c8431edc6b0f126d680162e9bcc03562e7889f9a7d1705272546",
+        "status": "applied",
+        "completedAt": "2026-09-05T05:09:13.24756+00:00"
+      }
+    ]
+  },
+  "changes": [
+    "Added manifest-tracked forward migration for existing R4 change materializer",
+    "Applied prerequisite case lifecycle migration fixing ambiguous cycle_run status",
+    "Updated integration proof to require current-snapshot validation and independent approval"
+  ],
+  "validation": {
+    "sql": {
+      "file": "server/db/scripts/tests/integration/business-partner-r4-change-case.sql",
+      "exitCode": 0,
+      "fixturesRolledBack": true,
+      "operations": [
+        "change_bank -> pending independent verification; no remittance switch",
+        "deactivate -> inactive",
+        "reactivate -> active",
+        "archive -> archived"
+      ],
+      "rejections": [
+        "unvalidated submission",
+        "maker self approval",
+        "unapproved materialization",
+        "stale case version",
+        "stale partner version",
+        "revoked bank projection",
+        "actor mismatch",
+        "idempotency conflict",
+        "terminal archived transition",
+        "direct case mutation"
+      ],
+      "atomicity": "Injected outbox failure rolls back bank/lifecycle authority, materialization, command evidence and case version",
+      "replay": "Same result snapshot/outbox with one materialization and lineage"
+    },
+    "caseServiceAndViewTests": 33,
+    "bankLinkageTests": 4,
+    "contractAndProvisioningTests": 5,
+    "forwardMigrationMatchesCanonicalFunction": true,
+    "migrationLedgerChecksumsMatch": true
+  },
+  "remaining": [
+    "Publish and activate the v2 metadata.entity.master_business_partner case contract with R4 payload fields; existing onboarding 2.1.1 release does not replace it",
+    "Create fresh cases pinned to the updated contract and qualify through authenticated UI/API",
+    "Complete independent bank verification and remittance reconciliation before claiming the bank journey complete",
+    "Complete remaining supplier controls acceptance criteria before marking all of R4 complete"
+  ]
+}

@@ -1,0 +1,23 @@
+import { readFileSync } from "node:fs";
+import { build } from "esbuild";
+import { test, expect } from "@playwright/test";
+const styles = ["packages/platform/foundation/theme/src/styles.css", "packages/platform/foundation/ui/src/styles.css", "packages/platform/entity/runtime/list-view/src/styles.css"].map(p => readFileSync(p, "utf8").replace(/@import[^;]+;/g, "")).join("\n");
+const script = build({stdin:{resolveDir:process.cwd(),loader:"tsx",contents:`import React,{useState} from 'react';import{createRoot}from'react-dom/client';import{FilterValueEditor,FilterChoiceLoader}from'./packages/platform/entity/runtime/list-view/src/filter-editor';function App(){const[options,setOptions]=useState(),[value,setValue]=useState('');return <FilterChoiceLoader.Provider value={async()=>{window.loads=(window.loads||0)+1;await new Promise(r=>setTimeout(r,30));setOptions(Array.from({length:247},(_,i)=>({value:'C'+i,label:'Country '+i})));}}><div className="a-entity-list__quick-filters"><div className="a-entity-list__filter-list a-entity-list__filter-list--quick"><div className="a-entity-list__filter-header"><span>Field</span><span>Operator</span><span>Value</span></div><div className="a-entity-list__filter-row" id="country"><strong>Country</strong><select aria-label="Country operator"><option>Equals</option></select><FilterValueEditor field={{key:'country',label:'Country',valueKind:'reference',filterOperators:['eq'],filterOptions:options}} operator="eq" value={value} onChange={setValue}/></div><div className="a-entity-list__filter-row" id="neighbor"><strong>Updated</strong><select aria-label="Updated operator"><option>Relative period</option></select><input/></div></div></div></FilterChoiceLoader.Provider>}createRoot(document.getElementById('root')).render(<App/>);`},bundle:true,write:false,format:"iife",platform:"browser",jsx:"automatic"});
+for (const width of [900, 430]) test(`country dropdown stays out of grid flow at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:900});
+ await page.setContent(`<style>${styles}body{padding:24px}</style><div id="root"></div>`);
+ await page.addScriptTag({content:(await script).outputFiles[0]!.text});
+ const before=await page.locator('#neighbor').boundingBox();
+ expect(await page.evaluate(()=>(window as any).loads??0)).toBe(0);
+ await page.getByRole('combobox', {name:'Value for Country filter'}).click();
+ await expect(page.getByRole('listbox').getByRole('option')).toHaveCount(247);
+ expect(await page.evaluate(()=>(window as any).loads)).toBe(1);
+ expect(await page.locator('#neighbor').boundingBox()).toEqual(before);
+ await page.getByRole('combobox', {name:'Search by name or code…'}).fill('Country 24');
+ await page.getByRole('listbox').getByRole('option').filter({hasText:'Country 24'}).first().click();
+ await expect(page.getByRole('listbox')).toHaveCount(0);
+ await page.getByRole('combobox', {name:'Value for Country filter'}).click();
+ expect(await page.evaluate(()=>(window as any).loads)).toBe(1);
+ await page.getByRole('combobox', {name:'Value for Country filter'}).press('Escape');
+ await expect(page.getByRole('listbox')).toHaveCount(0);
+});

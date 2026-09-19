@@ -1,0 +1,19 @@
+{
+  "schema": "bp-ai-04-registration-fix/1",
+  "capturedAt": "2026-09-09T02:50:35.003372+00:00",
+  "cause": "Atlas registry constructed before BP insight owner",
+  "beforeImage": "sha256:d5db8f8d9f85800c3b19d1ad7847af31a8f0be3a1a0f30f6db198715f6cd2c7b",
+  "afterImage": "sha256:b2a469ec37fc2d6ebf7bd3c75fd6a3935acebfd4c22c507514ccefda36452e6b",
+  "health": "healthy",
+  "changedServices": [
+    "api"
+  ],
+  "change": "Move Atlas composition after Records and master-data owners",
+  "tests": {
+    "focusedHostTests": 15,
+    "hostBuild": "passed",
+    "hostTypecheck": "passed"
+  },
+  "browserQualification": "blocked: saved sessions are anonymous after normal refresh",
+  "liveModelPassed": false
+}

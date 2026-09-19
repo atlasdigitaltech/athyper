@@ -1,0 +1,125 @@
+{
+  "schema": "athyper.development-signed-publication-and-activation-receipts/1",
+  "observedAt": "2026-09-05T04:56:33.050Z",
+  "environment": "dev",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "revisionId": "4849ea52-4e91-4c09-b06a-22e511362050",
+  "release": {
+    "id": "e0abaddf-5319-4393-a0a9-a30a9507d4ac",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "publicationKey": "studio.business_partner.definition.business_partner.onboarding",
+    "releaseNo": 1,
+    "releaseKind": "publish",
+    "status": "published",
+    "createdAt": "2026-09-05T04:43:24.108Z",
+    "approvedAt": "2026-09-05T04:43:24.118Z",
+    "publishedAt": "2026-09-05T04:56:05.526Z"
+  },
+  "consumers": [
+    {
+      "plane": "mesh",
+      "deployment": {
+        "deploymentId": "01a06fe8-fccb-76f6-bcf7-9582956d78eb",
+        "deploymentStatus": "activated",
+        "targetPlane": "mesh",
+        "targetEnvironment": "local",
+        "targetInstance": "*",
+        "publicationKey": "studio.business_partner.definition.business_partner.onboarding",
+        "sourceReleaseId": "e0abaddf-5319-4393-a0a9-a30a9507d4ac",
+        "sourceReleaseNo": 1,
+        "artifactUri": "s3://athyper-documents/publication/v1/studio.business_partner.definition.business_partner.onboarding/releases/1-e0abaddf-5319-4393-a0a9-a30a9507d4ac/mesh/business-partner-definition-bundle-5f3a2a68986cdfd845be6fbba90cdce3223bd1f442a4aa01244412fbaf868d45.json",
+        "artifactHash": "5f3a2a68986cdfd845be6fbba90cdce3223bd1f442a4aa01244412fbaf868d45",
+        "signatureAlgorithm": "Ed25519",
+        "signingKeyId": "athyper-dev-publication-ed25519-20260905",
+        "signature": "hHLbguHQHY6cVAC176k13xWyOtAxSVW4MfoCGR9L1mabufszkijD8npMoclwkkKBQHCOxGTDhYh/ScJeHs6HCw=="
+      },
+      "verification": {
+        "signatureVerified": true,
+        "manifestValid": true,
+        "runtimeCompatible": true,
+        "targetPlane": "mesh",
+        "definitionBundleHash": "886a2b67521b4bb5ee2d54680a9aa237ac452855e9774a89e31bc75c49dc56cc",
+        "definitionBundleSchemaVersion": "1.0.0",
+        "signatureAlgorithm": "Ed25519",
+        "signingKeyId": "athyper-dev-publication-ed25519-20260905"
+      },
+      "active": {
+        "id": "55189ffd-3380-4b50-9ab1-dee4e432296e",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "revisionId": "4849ea52-4e91-4c09-b06a-22e511362050",
+        "releaseId": "e0abaddf-5319-4393-a0a9-a30a9507d4ac",
+        "releaseNo": 1,
+        "bundleCode": "business_partner.onboarding",
+        "semanticVersion": "2.1.1",
+        "bundleHash": "886a2b67521b4bb5ee2d54680a9aa237ac452855e9774a89e31bc75c49dc56cc",
+        "sourceBundleHash": "9f8de2e01d609634245993853acd46c0b2817c9098d9e32d6e3c508910d65cd5"
+      },
+      "acknowledgements": [
+        {
+          "id": "01a06fea-cbdf-770a-8b7c-58543e6fa3e9",
+          "deployment_id": "01a06fe8-fccb-76f6-bcf7-9582956d78eb",
+          "target_instance": "*",
+          "active_release_hash": "5f3a2a68986cdfd845be6fbba90cdce3223bd1f442a4aa01244412fbaf868d45",
+          "local_applied_release_id": "01a06fea-cbca-7ec0-b02d-3435d90ef2bd",
+          "acknowledged_at": "2026-09-05T04:54:13.726Z",
+          "evidence": {
+            "sourceReleaseNo": 1
+          }
+        }
+      ]
+    },
+    {
+      "plane": "neon",
+      "deployment": {
+        "deploymentId": "01a06fe8-fccb-74ec-ab0f-f89b54110de9",
+        "deploymentStatus": "activated",
+        "targetPlane": "neon",
+        "targetEnvironment": "local",
+        "targetInstance": "*",
+        "publicationKey": "studio.business_partner.definition.business_partner.onboarding",
+        "sourceReleaseId": "e0abaddf-5319-4393-a0a9-a30a9507d4ac",
+        "sourceReleaseNo": 1,
+        "artifactUri": "s3://athyper-documents/publication/v1/studio.business_partner.definition.business_partner.onboarding/releases/1-e0abaddf-5319-4393-a0a9-a30a9507d4ac/neon/business-partner-definition-bundle-6e94c995178ae575680ad1979b62ee3eb42a6c9b39fc9671e90c95a94e5dfe48.json",
+        "artifactHash": "6e94c995178ae575680ad1979b62ee3eb42a6c9b39fc9671e90c95a94e5dfe48",
+        "signatureAlgorithm": "Ed25519",
+        "signingKeyId": "athyper-dev-publication-ed25519-20260905",
+        "signature": "MBzoS/GA+jcQE9o4+qM7e0zZSJZoyiykXTUXkK7PF3NKwQtEWt/Tbb7krZqPn0c6YWzxBlRgB6eYyD1kuGRaDw=="
+      },
+      "verification": {
+        "signatureVerified": true,
+        "manifestValid": true,
+        "runtimeCompatible": true,
+        "targetPlane": "neon",
+        "definitionBundleHash": "9f8de2e01d609634245993853acd46c0b2817c9098d9e32d6e3c508910d65cd5",
+        "definitionBundleSchemaVersion": "1.0.0",
+        "signatureAlgorithm": "Ed25519",
+        "signingKeyId": "athyper-dev-publication-ed25519-20260905"
+      },
+      "active": {
+        "id": "39061caa-f346-47c2-a698-1f1ffc3c3068",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "revisionId": "4849ea52-4e91-4c09-b06a-22e511362050",
+        "releaseId": "e0abaddf-5319-4393-a0a9-a30a9507d4ac",
+        "releaseNo": 1,
+        "bundleCode": "business_partner.onboarding",
+        "semanticVersion": "2.1.1",
+        "bundleHash": "9f8de2e01d609634245993853acd46c0b2817c9098d9e32d6e3c508910d65cd5",
+        "sourceBundleHash": "9f8de2e01d609634245993853acd46c0b2817c9098d9e32d6e3c508910d65cd5"
+      },
+      "acknowledgements": [
+        {
+          "id": "01a06fea-cbdd-79b9-9bd1-3e34937c81b6",
+          "deployment_id": "01a06fe8-fccb-74ec-ab0f-f89b54110de9",
+          "target_instance": "*",
+          "active_release_hash": "6e94c995178ae575680ad1979b62ee3eb42a6c9b39fc9671e90c95a94e5dfe48",
+          "local_applied_release_id": "01a06fea-cbca-7a0b-97ca-12e0d34c1181",
+          "acknowledged_at": "2026-09-05T04:54:13.724Z",
+          "evidence": {
+            "sourceReleaseNo": 1
+          }
+        }
+      ]
+    }
+  ],
+  "productionQualified": false
+}

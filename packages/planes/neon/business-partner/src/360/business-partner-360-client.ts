@@ -1,0 +1,204 @@
+import { parseRelatedPresentations } from "@athyper/contract-platform-entity-runtime";
+import {
+  createOperation,
+  encodePathSegment,
+  type HttpClient,
+} from "@athyper/platform-api-client";
+export interface CompletenessRequirement {
+  readonly label?: string;
+  readonly code: string;
+  readonly fieldCode: string;
+  readonly sectionCode: string;
+  readonly state: "satisfied" | "restricted_satisfied" | "missing";
+  readonly action?: Readonly<{
+    code: string;
+    label: string;
+    href: string;
+    authority: string;
+    requestKind?: string;
+    permission: string;
+  }>;
+}
+export type RoleLens = "all" | "supplier" | "customer";
+export type SectionState =
+  "ready" | "empty" | "partial" | "stale" | "unavailable";
+export interface Summary {
+  readonly collaboration?: Readonly<{ canComment: boolean }>;
+  readonly directoryScope?:
+    "tenant" | "organization" | "company" | "organization_company";
+  readonly recordHeader?: import("@athyper/contract-platform-entity-runtime").EntityRecordHeaderV1;
+  readonly schemaVersion: 1;
+  readonly asOf: string;
+  readonly generatedAt: string;
+  readonly businessPartnerVersion: number;
+  readonly scope: Readonly<{
+    businessPartnerId: string;
+    operatingOrganizationId?: string;
+    companyCodeId?: string;
+    legalEntityId?: string;
+    roleLens?: RoleLens;
+    asOf: string;
+  }>;
+  readonly identity: Readonly<{
+    id: string;
+    code: string;
+    category: "organization";
+    name: string;
+    lifecycleStatus: string;
+  }>;
+  readonly roles: readonly Readonly<{
+    id: string;
+    code: "supplier" | "customer";
+    roleCode?: string;
+    status: string;
+  }>[];
+  readonly primaryAddress?: Readonly<{
+    lines?: readonly string[];
+    id: string;
+    primary?: boolean;
+    purpose: string;
+    line1?: string;
+    locality?: string;
+    region?: string;
+    postalCode?: string;
+    countryCode: string;
+    verified: boolean;
+  }>;
+  readonly primaryContact?: Readonly<{
+    id: string;
+    primary?: boolean;
+    purpose?: string;
+    displayName?: string;
+    email?: string;
+    phone?: string;
+    verified: boolean;
+  }>;
+  readonly identifiers: readonly Readonly<{
+    id: string;
+    schemeCode: string;
+    maskedValue: string;
+    verified: boolean;
+  }>[];
+  readonly openWork: Readonly<{
+    activeRequestCount?: number;
+    returnedRequestCount?: number;
+  }>;
+  readonly recentActivity: readonly Readonly<{
+    id: string;
+    occurredAt: string;
+    eventCode: string;
+    title: string;
+  }>[];
+  readonly sections: readonly Readonly<{
+    code: string;
+    authorization: "granted" | "restricted";
+    state: SectionState;
+    count?: number;
+    href?: string;
+    reasonCode?: string;
+    redactionClass?: string;
+  }>[];
+  readonly provenance: readonly Readonly<{
+    plane: string;
+    service: string;
+    sourceObject: string;
+    observedAt: string;
+  }>[];
+}
+export interface SummaryQuery {
+  readonly tenantId: string;
+  readonly principalId: string;
+  readonly businessPartnerId: string;
+  readonly operatingOrganizationId?: string;
+  readonly companyCodeId?: string;
+  readonly legalEntityId?: string;
+  readonly roleLens: RoleLens;
+  readonly asOf?: string;
+  readonly authEpoch: number;
+}
+const operation = createOperation<Summary>({
+  method: "GET",
+  path: ({ businessPartnerId }) =>
+    `/api/neon/business-partners/${encodePathSegment(businessPartnerId)}/360/summary`,
+  parse: parse,
+});
+export function createBusinessPartner360Client(http: HttpClient) {
+  return Object.freeze({
+    summary: (query: SummaryQuery, signal?: AbortSignal) =>
+      http.request(operation, {
+        params: { businessPartnerId: query.businessPartnerId },
+        query: {
+          ...(query.operatingOrganizationId
+            ? { operatingOrganizationId: query.operatingOrganizationId }
+            : {}),
+          ...(query.companyCodeId
+            ? { companyCodeId: query.companyCodeId }
+            : {}),
+          ...(query.legalEntityId
+            ? { legalEntityId: query.legalEntityId }
+            : {}),
+          roleLens: query.roleLens,
+          ...(query.asOf ? { asOf: query.asOf } : {}),
+          permissionEpoch: query.authEpoch,
+        },
+        signal,
+      }),
+  });
+}
+export function summaryQueryKey(query: SummaryQuery) {
+  return [
+    "business-partner-360",
+    query.tenantId,
+    query.principalId,
+    query.businessPartnerId,
+    "summary",
+    query.roleLens,
+    query.operatingOrganizationId ?? "-",
+    query.companyCodeId ?? "-",
+    query.legalEntityId ?? "-",
+    query.asOf ?? "current",
+    query.authEpoch,
+  ] as const;
+}
+function parse(value: unknown): Summary {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new TypeError("Business Partner 360 summary must be an object");
+  const serialized = JSON.stringify(value);
+  if (new TextEncoder().encode(serialized).byteLength > 75 * 1024)
+    throw new TypeError(
+      "Business Partner 360 summary exceeds its response budget",
+    );
+  if (
+    /"(?:dateOfBirth|nationalIdentifier|nationalId|passportNumber|personSensitive|compensation|bankAccountNumber)"\s*:/i.test(
+      serialized,
+    )
+  )
+    throw new TypeError(
+      "Business Partner 360 bootstrap contains a restricted field",
+    );
+  const body = value as Record<string, unknown>;
+  if (
+    body["schemaVersion"] !== 1 ||
+    !Array.isArray(body["sections"]) ||
+    !Array.isArray(body["roles"])
+  )
+    throw new TypeError("Business Partner 360 summary contract is invalid");
+  const header = body["recordHeader"] as Record<string, unknown> | undefined;
+  if (header?.["related"] !== undefined)
+    parseRelatedPresentations(header["related"]);
+  return Object.freeze(value as Summary);
+}
+export interface Summary {
+  readonly completeness: Readonly<{
+    status:
+      "complete" | "incomplete" | "not_applicable" | "definition_unavailable";
+    percent: number;
+    requiredCount: number;
+    completeCount: number;
+    restrictedCount: number;
+    required: readonly CompletenessRequirement[];
+    recommended: readonly CompletenessRequirement[];
+    readOnly: boolean;
+    fingerprint: string;
+  }>;
+}

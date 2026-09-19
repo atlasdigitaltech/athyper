@@ -1,0 +1,148 @@
+{
+  "schema": "athyper.master-data.local-test-selection.v1",
+  "environment": "local",
+  "deploymentTarget": "athyper-dev",
+  "planes": [
+    "neon"
+  ],
+  "ownerTypes": [
+    "business_partner"
+  ],
+  "channels": [
+    "email"
+  ],
+  "primaryTenant": {
+    "code": "cirrusatlantic",
+    "id": "44444444-4444-4444-8444-444444444444"
+  },
+  "negativeTestTenant": {
+    "code": "athyper",
+    "id": "11111111-1111-4111-8111-111111111111"
+  },
+  "dataPolicy": "dedicated_synthetic_test_records_only",
+  "decisionStatus": "scope_confirmed",
+  "qualificationStatus": "database_inventory_checked_acceptance_pending",
+  "verificationTrustReference": null,
+  "intendedVerificationTrustTenantIds": [
+    "44444444-4444-4444-8444-444444444444"
+  ],
+  "evidence": {
+    "database": "athyper_neon",
+    "container": "athyper-dev-db-1",
+    "method": "read_only_database_queries",
+    "checkedDate": "2026-09-07",
+    "tenantStatus": "both_active",
+    "businessPartnerOwnerTypeStatus": "active",
+    "primary": {
+      "activePrincipals": 7,
+      "activePrincipalIdentityBindings": 6,
+      "businessPartnerRecords": 119
+    },
+    "negative": {
+      "activePrincipals": 142,
+      "activePrincipalIdentityBindings": 141,
+      "businessPartnerRecords": 46
+    },
+    "actorRoleInspection": {
+      "method": "read-only current direct group role assignments in authz; not full effective permission evaluation",
+      "adminFinding": "Both admin users have testing-admin roles including tenant scope",
+      "ownerFinding": "catl.owner has business-partner approver/checker roles; athyper.owner currently has direct context-reader roles only",
+      "qualifiedForRouteAcceptance": false
+    }
+  },
+  "pending": [
+    "Confirm authenticated Neon access and effective route permissions for the four selected actors; define denial expectations from actual scope rather than username",
+    "Create dedicated synthetic contact/address test fixtures without modifying existing demo records",
+    "Complete canonical IAM mapping and trusted owner scope resolution",
+    "Run authenticated cross-tenant and same-tenant cross-owner denial tests",
+    "Canonical authorization for the five sensitive routes is published, deployed and browser-qualified locally; other environments remain unqualified"
+  ],
+  "stagingQualified": false,
+  "notes": [
+    "This is a local tenant selection record, not input to the staging prerequisite checker or an enforcement mechanism.",
+    "Athyper is used only as a separate tenant fixture; use no platform-wide privileged actor for isolation acceptance.",
+    "No trust configuration, grants or application data were changed by this selection."
+  ],
+  "testActors": [
+    {
+      "tenantCode": "cirrusatlantic",
+      "username": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "principalStatus": "active",
+      "identityBindingStatus": "active",
+      "selectedPurpose": "primary tenant admin scenarios"
+    },
+    {
+      "tenantCode": "cirrusatlantic",
+      "username": "catl.owner",
+      "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+      "principalStatus": "active",
+      "identityBindingStatus": "active",
+      "selectedPurpose": "primary tenant owner scenarios"
+    },
+    {
+      "tenantCode": "athyper",
+      "username": "athyper.admin",
+      "principalId": "d4250b08-6e5e-5887-b4e1-6f3eb31d7c8c",
+      "principalStatus": "active",
+      "identityBindingStatus": "active",
+      "selectedPurpose": "negative tenant admin scenarios"
+    },
+    {
+      "tenantCode": "athyper",
+      "username": "athyper.owner",
+      "principalId": "71667bf5-941b-5f6d-aab0-355e39c0bbde",
+      "principalStatus": "active",
+      "identityBindingStatus": "active",
+      "selectedPurpose": "negative tenant owner scenarios"
+    }
+  ],
+  "localChallengeImplementation": {
+    "status": "enabled_and_browser_qualified",
+    "databaseSupport": "provisioned_in_local_neon",
+    "signerSecrets": "provisioned_owner_only",
+    "trustScope": "cirrusatlantic_neon_only",
+    "runbook": "docs/runbooks/local-contact-verification.md",
+    "liveAcceptance": "passed_for_selected_users",
+    "permissionInventory": {
+      "master.contact.verify": "absent",
+      "master.contact.pii.write": "absent"
+    },
+    "checkedDate": "2026-09-07",
+    "canonicalPermission": "neon.relationship.business_partner.verify_contact",
+    "evidenceReference": "docs/runbooks/master-data-launch/local-verification-acceptance-20260907.json",
+    "delivery": "durable_notification_queue_with_encrypted_link"
+  },
+  "masterDataSensitiveAuthorization": {
+    "status": "published_deployed_browser_qualified_local",
+    "checkedDate": "2026-09-07",
+    "publicationEvidence": "docs/runbooks/master-data-launch/local-master-authority-publication-20260907.json",
+    "acceptanceEvidence": "docs/runbooks/master-data-launch/local-master-authority-acceptance-20260907.json",
+    "runbook": "docs/runbooks/master-data-canonical-authorization.md"
+  },
+  "sixRouteAcceptance": {
+    "status": "passed_local",
+    "evidenceReference": "docs/runbooks/master-data-launch/local-six-route-acceptance-20260907.json",
+    "checks": 65,
+    "directPatchVerification": "passed_with_local_signed_provider_fixture",
+    "unauthorizedActor": "catl.finance",
+    "permissionsChanged": false,
+    "runbook": "docs/runbooks/master-data-six-route-acceptance.md"
+  },
+  "operationalMaintenance": {
+    "status": "configured_deployed_browser_qualified_local",
+    "runbook": "docs/runbooks/local-master-data-operations.md",
+    "persistentProfile": true,
+    "timer": "athyper-local-master-data.timer",
+    "retentionDays": 7,
+    "signingRotation": "isolated_key_tests_passed_live_key_unchanged",
+    "externalPaging": false,
+    "otherEnvironmentsQualified": false,
+    "evidenceReference": "docs/runbooks/master-data-launch/local-operations-acceptance-20260907.json"
+  },
+  "addressLinkCancellation": {
+    "status": "implemented_migrated_deployed_browser_qualified_local",
+    "evidenceReference": "docs/runbooks/master-data-launch/local-address-cancellation-acceptance-20260907.json",
+    "runbook": "docs/runbooks/local-address-cancellation.md"
+  }
+}

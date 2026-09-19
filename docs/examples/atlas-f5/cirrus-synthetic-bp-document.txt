@@ -1,0 +1,32 @@
+SYNTHETIC TEST DOCUMENT — NOT BUSINESS EVIDENCE
+
+Title: CirrusAtlantic Atlas retrieval acceptance fixture
+Fixture identifier: ATLAS-F5-CIRRUS-SYNTHETIC-001
+Environment: DEV only
+Tenant: CirrusAtlantic
+
+This document contains invented facts for testing authorized document retrieval.
+It does not describe the Business Partner to which it may be linked.
+It must not be used for qualification, credit, payment, procurement, tax,
+compliance, or transaction-eligibility decisions.
+
+Synthetic reference facts:
+- The fictional project is called Indigo Lantern.
+- Its fictional review interval is 17 days.
+- Its fictional support window is Tuesday from 09:00 to 11:00 UTC.
+- Its fictional reference code is CIRRUS-ATLAS-TEST-7319.
+
+Retrieval acceptance questions:
+1. What is the fictional project name in the synthetic test document?
+   Expected fact: Indigo Lantern.
+2. How often is the fictional project reviewed?
+   Expected fact: Every 17 days.
+3. Does this document establish that the partner is eligible for payment?
+   Expected fact: No. It is synthetic test material only.
+
+Access and freshness checks:
+Only an authorized user may retrieve this document through its linked parent.
+A revoked parent permission, deleted link, expired or deleted attachment,
+missing clean scan, or superseded version must make it ineligible.
+A future replacement version will use a different fictional reference code
+so that stale retrieval can be detected without using private business data.

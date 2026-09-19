@@ -13,7 +13,14 @@ services:
       retries: 30
   redis:
     image: redis:7.4-alpine
-    command: ["redis-server", "--requirepass", "iam_live_test_only", "--aclfile", "/usr/local/etc/redis/users.acl"]
+    command:
+      [
+        "redis-server",
+        "--requirepass",
+        "iam_live_test_only",
+        "--aclfile",
+        "/usr/local/etc/redis/users.acl",
+      ]
     volumes:
       - ./redis-users.acl:/usr/local/etc/redis/users.acl:ro
     healthcheck:
@@ -22,15 +29,25 @@ services:
       timeout: 3s
       retries: 30
   keycloak:
-    image: quay.io/keycloak/keycloak:26.3
+    image: quay.io/keycloak/keycloak:26.7.2@sha256:831330513f55695572286e521f94fcd3c7e285250ed5b848090265a33192f669
     command: ["start-dev", "--health-enabled=true", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: iam_live_test_only
+      STUDIO_PUBLIC_WEB_URL: http://studio.iam-live.test
+      NEON_PUBLIC_WEB_URL: http://neon.iam-live.test
+      MESH_PUBLIC_WEB_URL: http://mesh.iam-live.test
     volumes:
-      - ../../stack/config/iam/realm-athyper.json:/opt/keycloak/data/import/realm-athyper.json:ro
+      - ../../deploy/config/iam/realm-athyper.json:/opt/keycloak/data/import/realm-athyper.json:ro
+  keycloak-health:
+    image: busybox:1.37
+    command: ["sh", "-c", "exec sleep 3600"]
+    depends_on:
+      keycloak:
+        condition: service_started
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\r\nhost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '200 OK' <&3"]
+      test:
+        ["CMD", "wget", "-q", "--spider", "http://keycloak:9000/health/ready"]
       interval: 5s
       timeout: 5s
       retries: 60

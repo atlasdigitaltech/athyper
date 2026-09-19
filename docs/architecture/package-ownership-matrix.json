@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12T07:47:15.223Z",
+  "generatedAt": "2026-09-04T12:49:35.886Z",
   "categoryValues": [
     "Shared contract",
     "Shared platform",
@@ -10,16 +10,15 @@
     "Deprecated"
   ],
   "counts": {
-    "Shared contract": 26,
-    "Shared platform": 36,
+    "Shared contract": 27,
+    "Shared platform": 40,
     "Shared domain": 0,
-    "Product-specific": 19,
-    "Application composition": 6,
-    "Server-only": 99,
-    "Deprecated": 27
+    "Product-specific": 9,
+    "Application composition": 12,
+    "Server-only": 98,
+    "Deprecated": 0
   },
   "frontendSpine": {
-    "$schema": "./frontend-spine-packages.schema.json",
     "version": 1,
     "packages": [
       {
@@ -28,8 +27,8 @@
         "owner": "Neon",
         "classification": "Application composition",
         "dependencyBudget": {
-          "runtime": 10,
-          "workspace": 7
+          "runtime": 26,
+          "workspace": 22
         }
       },
       {
@@ -38,8 +37,8 @@
         "owner": "Mesh",
         "classification": "Application composition",
         "dependencyBudget": {
-          "runtime": 10,
-          "workspace": 7
+          "runtime": 22,
+          "workspace": 18
         }
       },
       {
@@ -48,8 +47,8 @@
         "owner": "Studio",
         "classification": "Application composition",
         "dependencyBudget": {
-          "runtime": 10,
-          "workspace": 7
+          "runtime": 21,
+          "workspace": 17
         }
       },
       {
@@ -83,6 +82,16 @@
         }
       },
       {
+        "path": "packages/contracts/platform/entity-runtime",
+        "name": "@athyper/contract-platform-entity-runtime",
+        "owner": "Contract Platform",
+        "classification": "Shared contract",
+        "dependencyBudget": {
+          "runtime": 0,
+          "workspace": 0
+        }
+      },
+      {
         "path": "packages/contracts/platform/navigation",
         "name": "@athyper/contract-platform-navigation",
         "owner": "Contract Platform",
@@ -98,8 +107,28 @@
         "owner": "Shared Platform",
         "classification": "Shared platform",
         "dependencyBudget": {
-          "runtime": 4,
-          "workspace": 4
+          "runtime": 7,
+          "workspace": 7
+        }
+      },
+      {
+        "path": "packages/platform/ai/agent-runtime",
+        "name": "@athyper/platform-ai-agent-runtime",
+        "owner": "Shared Platform",
+        "classification": "Shared platform",
+        "dependencyBudget": {
+          "runtime": 1,
+          "workspace": 1
+        }
+      },
+      {
+        "path": "packages/platform/ai/agent-ui",
+        "name": "@athyper/platform-ai-agent-ui",
+        "owner": "Shared Platform",
+        "classification": "Shared platform",
+        "dependencyBudget": {
+          "runtime": 2,
+          "workspace": 1
         }
       },
       {
@@ -149,7 +178,7 @@
         "classification": "Shared platform",
         "dependencyBudget": {
           "runtime": 2,
-          "workspace": 1
+          "workspace": 2
         }
       },
       {
@@ -159,7 +188,7 @@
         "classification": "Shared platform",
         "dependencyBudget": {
           "runtime": 2,
-          "workspace": 0
+          "workspace": 1
         }
       },
       {
@@ -170,6 +199,16 @@
         "dependencyBudget": {
           "runtime": 20,
           "workspace": 3
+        }
+      },
+      {
+        "path": "packages/platform/entity/runtime/workflow-ui",
+        "name": "@athyper/platform-entity-workflow-ui",
+        "owner": "UI Platform",
+        "classification": "Shared platform",
+        "dependencyBudget": {
+          "runtime": 0,
+          "workspace": 0
         }
       },
       {
@@ -199,7 +238,7 @@
         "classification": "Shared platform",
         "dependencyBudget": {
           "runtime": 4,
-          "workspace": 3
+          "workspace": 4
         }
       },
       {
@@ -238,8 +277,8 @@
         "owner": "UI Platform",
         "classification": "Shared platform",
         "dependencyBudget": {
-          "runtime": 5,
-          "workspace": 4
+          "runtime": 7,
+          "workspace": 6
         }
       },
       {
@@ -253,13 +292,13 @@
         }
       },
       {
-        "path": "packages/planes/neon/app",
-        "name": "@athyper/product-neon-app",
+        "path": "packages/planes/neon/business-partner",
+        "name": "@athyper/product-neon-business-partner",
         "owner": "Neon",
         "classification": "Product-specific",
         "dependencyBudget": {
-          "runtime": 1,
-          "workspace": 0
+          "runtime": 5,
+          "workspace": 5
         }
       },
       {
@@ -278,18 +317,18 @@
         "owner": "Neon",
         "classification": "Product-specific",
         "dependencyBudget": {
-          "runtime": 2,
-          "workspace": 3
+          "runtime": 7,
+          "workspace": 7
         }
       },
       {
-        "path": "packages/planes/mesh/app",
-        "name": "@athyper/product-mesh-app",
+        "path": "packages/planes/mesh/business-partner",
+        "name": "@athyper/product-mesh-business-partner",
         "owner": "Mesh",
         "classification": "Product-specific",
         "dependencyBudget": {
-          "runtime": 1,
-          "workspace": 0
+          "runtime": 6,
+          "workspace": 6
         }
       },
       {
@@ -298,17 +337,17 @@
         "owner": "Mesh",
         "classification": "Product-specific",
         "dependencyBudget": {
-          "runtime": 2,
-          "workspace": 3
+          "runtime": 6,
+          "workspace": 6
         }
       },
       {
-        "path": "packages/planes/studio/app",
-        "name": "@athyper/product-studio-app",
+        "path": "packages/planes/studio/business-partner",
+        "name": "@athyper/product-studio-business-partner",
         "owner": "Studio",
         "classification": "Product-specific",
         "dependencyBudget": {
-          "runtime": 1,
+          "runtime": 0,
           "workspace": 0
         }
       },
@@ -318,532 +357,13 @@
         "owner": "Studio",
         "classification": "Product-specific",
         "dependencyBudget": {
-          "runtime": 2,
-          "workspace": 3
+          "runtime": 5,
+          "workspace": 5
         }
       }
     ]
   },
   "rows": [
-    {
-      "packageName": "@athyper/runtime-server",
-      "physicalPath": ".codex-phase6-deploy/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/adapter-auth",
-      "physicalPath": ".codex-phase6-deploy/packages/adapters/auth/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/adapters/auth/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/adapter-db",
-      "physicalPath": ".codex-phase6-deploy/packages/adapters/db/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/adapters/db/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/adapter-memory-cache",
-      "physicalPath": ".codex-phase6-deploy/packages/adapters/memory-cache/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/adapters/memory-cache/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/adapter-object-storage",
-      "physicalPath": ".codex-phase6-deploy/packages/adapters/object-storage/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/foundation/package.json",
-        ".codex-phase6-deploy/packages/runtime/package.json",
-        ".codex-phase6-deploy/packages/services/audit/package.json",
-        ".codex-phase6-deploy/packages/services/content/package.json",
-        ".codex-phase6-deploy/packages/services/documents/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/adapters/object-storage/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/adapter-telemetry",
-      "physicalPath": ".codex-phase6-deploy/packages/adapters/telemetry/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/metadata/package.json",
-        ".codex-phase6-deploy/packages/services/records/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/adapters/telemetry/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/server-foundation",
-      "physicalPath": ".codex-phase6-deploy/packages/foundation/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/audit/package.json",
-        ".codex-phase6-deploy/packages/services/content/package.json",
-        ".codex-phase6-deploy/packages/services/doc-services/package.json",
-        ".codex-phase6-deploy/packages/services/integration/package.json",
-        "server/apps/platform-host/package.json",
-        "server/packages/adapters/auth-keycloak/package.json",
-        "server/packages/adapters/cache-redis/package.json",
-        "server/packages/adapters/communications/package.json",
-        "server/packages/adapters/database/athyper-postgres/package.json",
-        "server/packages/adapters/database/core/package.json",
-        "server/packages/adapters/database/mesh-postgres/package.json",
-        "server/packages/adapters/database/neon-postgres/package.json",
-        "server/packages/adapters/integration-http/package.json",
-        "server/packages/adapters/object-storage-s3/package.json",
-        "server/packages/adapters/telemetry-otel/package.json",
-        "server/packages/contracts/ai/package.json",
-        "server/packages/contracts/auth/package.json",
-        "server/packages/contracts/documents/package.json",
-        "server/packages/contracts/jobs/package.json",
-        "server/packages/contracts/master-data/package.json",
-        "server/packages/contracts/metadata/package.json",
-        "server/packages/contracts/notifications/package.json",
-        "server/packages/contracts/numbering/package.json",
-        "server/packages/contracts/policy/package.json",
-        "server/packages/contracts/records/package.json",
-        "server/packages/contracts/rendering/package.json",
-        "server/packages/contracts/telemetry/package.json",
-        "server/packages/contracts/workflow/package.json",
-        "server/packages/planes/studio/onboarding/package.json",
-        "server/packages/platform/ai/package.json",
-        "server/packages/platform/collaboration/package.json",
-        "server/packages/platform/control-admin/package.json",
-        "server/packages/platform/experience/package.json",
-        "server/packages/platform/governance/package.json",
-        "server/packages/platform/iam/package.json",
-        "server/packages/platform/metadata/package.json",
-        "server/packages/platform/notifications/package.json",
-        "server/packages/platform/policy/package.json",
-        "server/packages/platform/preferences/package.json",
-        "server/packages/platform/workflow/package.json",
-        "server/packages/runtime/http/package.json",
-        "server/packages/runtime/jobs/package.json",
-        "server/packages/services/attachments/package.json",
-        "server/packages/services/content/package.json",
-        "server/packages/services/document-derivatives/package.json",
-        "server/packages/services/document-processing/package.json",
-        "server/packages/services/documents/package.json",
-        "server/packages/services/jobs/package.json",
-        "server/packages/services/master-data/package.json",
-        "server/packages/services/numbering/package.json",
-        "server/packages/services/publication/package.json",
-        "server/packages/services/records/package.json"
-      ],
-      "intendedOwner": "Runtime Server",
-      "runtimePlane": "Server plane",
-      "deploymentTargets": "server",
-      "duplicateStatus": "Duplicate name (2 physical manifests); inactive/retired",
-      "proposedFinalLocation": "server/packages/foundation/package.json",
-      "migrationStatus": "Retired duplicate; remove after canonical verification",
-      "classification": "Server-only",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/server-runtime",
-      "physicalPath": ".codex-phase6-deploy/packages/runtime/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/runtime/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-ai",
-      "physicalPath": ".codex-phase6-deploy/packages/services/ai/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/business/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/ai/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-audit",
-      "physicalPath": ".codex-phase6-deploy/packages/services/audit/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/audit/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-business",
-      "physicalPath": ".codex-phase6-deploy/packages/services/business/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/finance/package.json",
-        ".codex-phase6-deploy/packages/services/records/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/business/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-collab",
-      "physicalPath": ".codex-phase6-deploy/packages/services/collab/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/collab/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-content",
-      "physicalPath": ".codex-phase6-deploy/packages/services/content/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/content/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-doc-services",
-      "physicalPath": ".codex-phase6-deploy/packages/services/doc-services/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/doc-services/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-documents",
-      "physicalPath": ".codex-phase6-deploy/packages/services/documents/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/content/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/documents/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-finance",
-      "physicalPath": ".codex-phase6-deploy/packages/services/finance/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/platform/package.json",
-        ".codex-phase6-deploy/packages/services/records/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/finance/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-iam",
-      "physicalPath": ".codex-phase6-deploy/packages/services/iam/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/ai/package.json",
-        ".codex-phase6-deploy/packages/services/audit/package.json",
-        ".codex-phase6-deploy/packages/services/documents/package.json",
-        ".codex-phase6-deploy/packages/services/finance/package.json",
-        ".codex-phase6-deploy/packages/services/integration/package.json",
-        ".codex-phase6-deploy/packages/services/jobs/package.json",
-        ".codex-phase6-deploy/packages/services/metadata/package.json",
-        ".codex-phase6-deploy/packages/services/platform/package.json",
-        ".codex-phase6-deploy/packages/services/records/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/iam/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-integration",
-      "physicalPath": ".codex-phase6-deploy/packages/services/integration/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/jobs/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/integration/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-jobs",
-      "physicalPath": ".codex-phase6-deploy/packages/services/jobs/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/documents/package.json",
-        ".codex-phase6-deploy/packages/services/platform/package.json",
-        ".codex-phase6-deploy/packages/services/search/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/jobs/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-master",
-      "physicalPath": ".codex-phase6-deploy/packages/services/master/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/master/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-metadata",
-      "physicalPath": ".codex-phase6-deploy/packages/services/metadata/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/records/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/metadata/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-platform",
-      "physicalPath": ".codex-phase6-deploy/packages/services/platform/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/records/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/platform/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-policy",
-      "physicalPath": ".codex-phase6-deploy/packages/services/policy/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/finance/package.json",
-        ".codex-phase6-deploy/packages/services/records/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/policy/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-records",
-      "physicalPath": ".codex-phase6-deploy/packages/services/records/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/records/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-search",
-      "physicalPath": ".codex-phase6-deploy/packages/services/search/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/search/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-shared",
-      "physicalPath": ".codex-phase6-deploy/packages/services/shared/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/ai/package.json",
-        ".codex-phase6-deploy/packages/services/audit/package.json",
-        ".codex-phase6-deploy/packages/services/business/package.json",
-        ".codex-phase6-deploy/packages/services/collab/package.json",
-        ".codex-phase6-deploy/packages/services/content/package.json",
-        ".codex-phase6-deploy/packages/services/doc-services/package.json",
-        ".codex-phase6-deploy/packages/services/documents/package.json",
-        ".codex-phase6-deploy/packages/services/finance/package.json",
-        ".codex-phase6-deploy/packages/services/iam/package.json",
-        ".codex-phase6-deploy/packages/services/integration/package.json",
-        ".codex-phase6-deploy/packages/services/jobs/package.json",
-        ".codex-phase6-deploy/packages/services/master/package.json",
-        ".codex-phase6-deploy/packages/services/metadata/package.json",
-        ".codex-phase6-deploy/packages/services/platform/package.json",
-        ".codex-phase6-deploy/packages/services/policy/package.json",
-        ".codex-phase6-deploy/packages/services/records/package.json",
-        ".codex-phase6-deploy/packages/services/search/package.json",
-        ".codex-phase6-deploy/packages/services/workflow/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/shared/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/svc-workflow",
-      "physicalPath": ".codex-phase6-deploy/packages/services/workflow/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/finance/package.json",
-        ".codex-phase6-deploy/packages/services/jobs/package.json",
-        ".codex-phase6-deploy/packages/services/metadata/package.json",
-        ".codex-phase6-deploy/packages/services/policy/package.json",
-        ".codex-phase6-deploy/packages/services/records/package.json"
-      ],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/services/workflow/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
-    {
-      "packageName": "@athyper/test-utils",
-      "physicalPath": ".codex-phase6-deploy/packages/test-utils/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Retirement",
-      "runtimePlane": "Legacy plane",
-      "deploymentTargets": "none (retirement)",
-      "duplicateStatus": "Not discovered by pnpm workspace",
-      "proposedFinalLocation": ".codex-phase6-deploy/packages/test-utils/package.json",
-      "migrationStatus": "Scheduled for deletion after consumer retirement",
-      "classification": "Deprecated",
-      "workspaceActive": false
-    },
     {
       "packageName": "apps/mesh/.next/package.json",
       "physicalPath": "apps/mesh/.next/package.json",
@@ -858,15 +378,41 @@
       "workspaceActive": false
     },
     {
+      "packageName": "apps/mesh/.next/standalone/apps/mesh/.next/package.json",
+      "physicalPath": "apps/mesh/.next/standalone/apps/mesh/.next/package.json",
+      "currentConsumers": [],
+      "intendedOwner": "Mesh",
+      "runtimePlane": "mesh application plane",
+      "deploymentTargets": "mesh",
+      "duplicateStatus": "Not discovered by pnpm workspace",
+      "proposedFinalLocation": "apps/mesh/.next/standalone/apps/mesh/.next/package.json",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Application composition",
+      "workspaceActive": false
+    },
+    {
+      "packageName": "@athyper/mesh",
+      "physicalPath": "apps/mesh/.next/standalone/apps/mesh/package.json",
+      "currentConsumers": [],
+      "intendedOwner": "Mesh",
+      "runtimePlane": "mesh application plane",
+      "deploymentTargets": "mesh",
+      "duplicateStatus": "Duplicate name (2 physical manifests); inactive/retired",
+      "proposedFinalLocation": "apps/mesh/package.json",
+      "migrationStatus": "Retired duplicate; remove after canonical verification",
+      "classification": "Application composition",
+      "workspaceActive": false
+    },
+    {
       "packageName": "@athyper/mesh",
       "physicalPath": "apps/mesh/package.json",
       "currentConsumers": [],
       "intendedOwner": "Mesh",
       "runtimePlane": "mesh application plane",
       "deploymentTargets": "mesh",
-      "duplicateStatus": "Unique active package",
+      "duplicateStatus": "Duplicate name (2 physical manifests); active candidate",
       "proposedFinalLocation": "apps/mesh/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "migrationStatus": "Canonical candidate; consolidate duplicate package names",
       "classification": "Application composition",
       "workspaceActive": true
     },
@@ -884,15 +430,41 @@
       "workspaceActive": false
     },
     {
+      "packageName": "apps/neon/.next/standalone/apps/neon/.next/package.json",
+      "physicalPath": "apps/neon/.next/standalone/apps/neon/.next/package.json",
+      "currentConsumers": [],
+      "intendedOwner": "Neon",
+      "runtimePlane": "neon application plane",
+      "deploymentTargets": "neon",
+      "duplicateStatus": "Not discovered by pnpm workspace",
+      "proposedFinalLocation": "apps/neon/.next/standalone/apps/neon/.next/package.json",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Application composition",
+      "workspaceActive": false
+    },
+    {
+      "packageName": "@athyper/neon",
+      "physicalPath": "apps/neon/.next/standalone/apps/neon/package.json",
+      "currentConsumers": [],
+      "intendedOwner": "Neon",
+      "runtimePlane": "neon application plane",
+      "deploymentTargets": "neon",
+      "duplicateStatus": "Duplicate name (2 physical manifests); inactive/retired",
+      "proposedFinalLocation": "apps/neon/package.json",
+      "migrationStatus": "Retired duplicate; remove after canonical verification",
+      "classification": "Application composition",
+      "workspaceActive": false
+    },
+    {
       "packageName": "@athyper/neon",
       "physicalPath": "apps/neon/package.json",
       "currentConsumers": [],
       "intendedOwner": "Neon",
       "runtimePlane": "neon application plane",
       "deploymentTargets": "neon",
-      "duplicateStatus": "Unique active package",
+      "duplicateStatus": "Duplicate name (2 physical manifests); active candidate",
       "proposedFinalLocation": "apps/neon/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "migrationStatus": "Canonical candidate; consolidate duplicate package names",
       "classification": "Application composition",
       "workspaceActive": true
     },
@@ -910,16 +482,55 @@
       "workspaceActive": false
     },
     {
+      "packageName": "apps/studio/.next/standalone/apps/studio/.next/package.json",
+      "physicalPath": "apps/studio/.next/standalone/apps/studio/.next/package.json",
+      "currentConsumers": [],
+      "intendedOwner": "Studio",
+      "runtimePlane": "studio application plane",
+      "deploymentTargets": "studio",
+      "duplicateStatus": "Not discovered by pnpm workspace",
+      "proposedFinalLocation": "apps/studio/.next/standalone/apps/studio/.next/package.json",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Application composition",
+      "workspaceActive": false
+    },
+    {
+      "packageName": "@athyper/studio",
+      "physicalPath": "apps/studio/.next/standalone/apps/studio/package.json",
+      "currentConsumers": [],
+      "intendedOwner": "Studio",
+      "runtimePlane": "studio application plane",
+      "deploymentTargets": "studio",
+      "duplicateStatus": "Duplicate name (2 physical manifests); inactive/retired",
+      "proposedFinalLocation": "apps/studio/package.json",
+      "migrationStatus": "Retired duplicate; remove after canonical verification",
+      "classification": "Application composition",
+      "workspaceActive": false
+    },
+    {
       "packageName": "@athyper/studio",
       "physicalPath": "apps/studio/package.json",
       "currentConsumers": [],
       "intendedOwner": "Studio",
       "runtimePlane": "studio application plane",
       "deploymentTargets": "studio",
-      "duplicateStatus": "Unique active package",
+      "duplicateStatus": "Duplicate name (2 physical manifests); active candidate",
       "proposedFinalLocation": "apps/studio/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "migrationStatus": "Canonical candidate; consolidate duplicate package names",
       "classification": "Application composition",
+      "workspaceActive": true
+    },
+    {
+      "packageName": "@athyper/stackctl",
+      "physicalPath": "deploy/stackctl/package.json",
+      "currentConsumers": [],
+      "intendedOwner": "Build Platform",
+      "runtimePlane": "Build plane",
+      "deploymentTargets": "CI/build",
+      "duplicateStatus": "Unique active package",
+      "proposedFinalLocation": "deploy/stackctl/package.json",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Shared platform",
       "workspaceActive": true
     },
     {
@@ -1236,7 +847,17 @@
     {
       "packageName": "@athyper/contract-platform-dashboard",
       "physicalPath": "packages/contracts/platform/dashboard/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
+        "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
+        "apps/studio/package.json",
+        "packages/platform/foundation/api-client/package.json",
+        "packages/platform/shell/dashboard/package.json",
+        "server/packages/platform/experience/package.json"
+      ],
       "intendedOwner": "Contract Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1247,9 +868,32 @@
       "workspaceActive": true
     },
     {
+      "packageName": "@athyper/contract-platform-entity-list",
+      "physicalPath": "packages/contracts/platform/entity-list/package.json",
+      "currentConsumers": [
+        "packages/planes/mesh/business-partner/package.json",
+        "packages/planes/neon/list-view/package.json",
+        "packages/platform/entity/runtime/list-view/package.json",
+        "packages/platform/foundation/api-client/package.json",
+        "server/packages/services/records/package.json"
+      ],
+      "intendedOwner": "Contract Platform",
+      "runtimePlane": "Build plane",
+      "deploymentTargets": "neon, studio, mesh, server as consumed",
+      "duplicateStatus": "Unique active package",
+      "proposedFinalLocation": "packages/contracts/platform/entity-list/package.json",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Shared contract",
+      "workspaceActive": true
+    },
+    {
       "packageName": "@athyper/contract-platform-entity-runtime",
       "physicalPath": "packages/contracts/platform/entity-runtime/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "packages/platform/entity/runtime/descriptor-client/package.json",
+        "packages/platform/entity/runtime/form-detail/package.json",
+        "server/packages/services/records/package.json"
+      ],
       "intendedOwner": "Contract Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1263,7 +907,15 @@
       "packageName": "@athyper/contract-platform-navigation",
       "physicalPath": "packages/contracts/platform/navigation/package.json",
       "currentConsumers": [
-        "packages/platform/foundation/api-client/package.json"
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
+        "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
+        "apps/studio/package.json",
+        "packages/planes/neon/navigation/package.json",
+        "packages/platform/foundation/api-client/package.json",
+        "packages/platform/shell/dashboard/package.json"
       ],
       "intendedOwner": "Contract Platform",
       "runtimePlane": "Build plane",
@@ -1288,42 +940,17 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/product-mesh-app",
-      "physicalPath": "packages/planes/mesh/app/package.json",
+      "packageName": "@athyper/product-mesh-business-partner",
+      "physicalPath": "packages/planes/mesh/business-partner/package.json",
       "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
         "apps/mesh/package.json"
       ],
       "intendedOwner": "Mesh",
       "runtimePlane": "mesh application plane",
       "deploymentTargets": "mesh",
       "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/mesh/app/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Product-specific",
-      "workspaceActive": true
-    },
-    {
-      "packageName": "@athyper/product-mesh-dashboard",
-      "physicalPath": "packages/planes/mesh/dashboard/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Mesh",
-      "runtimePlane": "mesh application plane",
-      "deploymentTargets": "mesh",
-      "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/mesh/dashboard/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Product-specific",
-      "workspaceActive": true
-    },
-    {
-      "packageName": "@athyper/product-mesh-exchange",
-      "physicalPath": "packages/planes/mesh/exchange/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Mesh",
-      "runtimePlane": "mesh application plane",
-      "deploymentTargets": "mesh",
-      "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/mesh/exchange/package.json",
+      "proposedFinalLocation": "packages/planes/mesh/business-partner/package.json",
       "migrationStatus": "Inventory complete; no move in Phase 1",
       "classification": "Product-specific",
       "workspaceActive": true
@@ -1331,7 +958,11 @@
     {
       "packageName": "@athyper/product-mesh-shell",
       "physicalPath": "packages/planes/mesh/shell/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
+        "apps/mesh/package.json",
+        "packages/planes/mesh/business-partner/package.json"
+      ],
       "intendedOwner": "Mesh",
       "runtimePlane": "mesh application plane",
       "deploymentTargets": "mesh",
@@ -1342,107 +973,33 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/product-neon-app",
-      "physicalPath": "packages/planes/neon/app/package.json",
+      "packageName": "@athyper/product-neon-business-partner",
+      "physicalPath": "packages/planes/neon/business-partner/package.json",
       "currentConsumers": [
+        "apps/neon/.next/standalone/apps/neon/package.json",
         "apps/neon/package.json"
       ],
       "intendedOwner": "Neon",
       "runtimePlane": "neon application plane",
       "deploymentTargets": "neon",
       "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/neon/app/package.json",
+      "proposedFinalLocation": "packages/planes/neon/business-partner/package.json",
       "migrationStatus": "Inventory complete; no move in Phase 1",
       "classification": "Product-specific",
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/product-neon-dashboard",
-      "physicalPath": "packages/planes/neon/dashboard/package.json",
-      "currentConsumers": [],
+      "packageName": "@athyper/product-neon-list-view",
+      "physicalPath": "packages/planes/neon/list-view/package.json",
+      "currentConsumers": [
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json"
+      ],
       "intendedOwner": "Neon",
       "runtimePlane": "neon application plane",
       "deploymentTargets": "neon",
       "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/neon/dashboard/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Product-specific",
-      "workspaceActive": true
-    },
-    {
-      "packageName": "@athyper/product-neon-finance",
-      "physicalPath": "packages/planes/neon/modules/finance/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Neon",
-      "runtimePlane": "neon application plane",
-      "deploymentTargets": "neon",
-      "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/neon/modules/finance/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Product-specific",
-      "workspaceActive": true
-    },
-    {
-      "packageName": "@athyper/product-neon-inventory",
-      "physicalPath": "packages/planes/neon/modules/inventory/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Neon",
-      "runtimePlane": "neon application plane",
-      "deploymentTargets": "neon",
-      "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/neon/modules/inventory/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Product-specific",
-      "workspaceActive": true
-    },
-    {
-      "packageName": "@athyper/product-neon-people",
-      "physicalPath": "packages/planes/neon/modules/people/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Neon",
-      "runtimePlane": "neon application plane",
-      "deploymentTargets": "neon",
-      "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/neon/modules/people/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Product-specific",
-      "workspaceActive": true
-    },
-    {
-      "packageName": "@athyper/product-neon-procurement",
-      "physicalPath": "packages/planes/neon/modules/procurement/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Neon",
-      "runtimePlane": "neon application plane",
-      "deploymentTargets": "neon",
-      "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/neon/modules/procurement/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Product-specific",
-      "workspaceActive": true
-    },
-    {
-      "packageName": "@athyper/product-neon-projects",
-      "physicalPath": "packages/planes/neon/modules/projects/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Neon",
-      "runtimePlane": "neon application plane",
-      "deploymentTargets": "neon",
-      "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/neon/modules/projects/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Product-specific",
-      "workspaceActive": true
-    },
-    {
-      "packageName": "@athyper/product-neon-sales",
-      "physicalPath": "packages/planes/neon/modules/sales/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Neon",
-      "runtimePlane": "neon application plane",
-      "deploymentTargets": "neon",
-      "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/neon/modules/sales/package.json",
+      "proposedFinalLocation": "packages/planes/neon/list-view/package.json",
       "migrationStatus": "Inventory complete; no move in Phase 1",
       "classification": "Product-specific",
       "workspaceActive": true
@@ -1450,7 +1007,9 @@
     {
       "packageName": "@athyper/product-neon-navigation",
       "physicalPath": "packages/planes/neon/navigation/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "packages/planes/neon/shell/package.json"
+      ],
       "intendedOwner": "Neon",
       "runtimePlane": "neon application plane",
       "deploymentTargets": "neon",
@@ -1463,7 +1022,13 @@
     {
       "packageName": "@athyper/product-neon-shell",
       "physicalPath": "packages/planes/neon/shell/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json",
+        "packages/planes/neon/business-partner/package.json",
+        "packages/planes/neon/list-view/package.json",
+        "packages/planes/neon/workforce/package.json"
+      ],
       "intendedOwner": "Neon",
       "runtimePlane": "neon application plane",
       "deploymentTargets": "neon",
@@ -1474,29 +1039,33 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/product-studio-app",
-      "physicalPath": "packages/planes/studio/app/package.json",
+      "packageName": "@athyper/product-neon-workforce",
+      "physicalPath": "packages/planes/neon/workforce/package.json",
       "currentConsumers": [
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json"
+      ],
+      "intendedOwner": "Neon",
+      "runtimePlane": "neon application plane",
+      "deploymentTargets": "neon",
+      "duplicateStatus": "Unique active package",
+      "proposedFinalLocation": "packages/planes/neon/workforce/package.json",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Product-specific",
+      "workspaceActive": true
+    },
+    {
+      "packageName": "@athyper/product-studio-business-partner",
+      "physicalPath": "packages/planes/studio/business-partner/package.json",
+      "currentConsumers": [
+        "apps/studio/.next/standalone/apps/studio/package.json",
         "apps/studio/package.json"
       ],
       "intendedOwner": "Studio",
       "runtimePlane": "studio application plane",
       "deploymentTargets": "studio",
       "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/studio/app/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Product-specific",
-      "workspaceActive": true
-    },
-    {
-      "packageName": "@athyper/product-studio-dashboard",
-      "physicalPath": "packages/planes/studio/dashboard/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Studio",
-      "runtimePlane": "studio application plane",
-      "deploymentTargets": "studio",
-      "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/studio/dashboard/package.json",
+      "proposedFinalLocation": "packages/planes/studio/business-partner/package.json",
       "migrationStatus": "Inventory complete; no move in Phase 1",
       "classification": "Product-specific",
       "workspaceActive": true
@@ -1504,7 +1073,10 @@
     {
       "packageName": "@athyper/product-studio-shell",
       "physicalPath": "packages/planes/studio/shell/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "apps/studio/.next/standalone/apps/studio/package.json",
+        "apps/studio/package.json"
+      ],
       "intendedOwner": "Studio",
       "runtimePlane": "studio application plane",
       "deploymentTargets": "studio",
@@ -1515,36 +1087,10 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/product-studio-studio-runtime",
-      "physicalPath": "packages/planes/studio/studio/runtime/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Studio",
-      "runtimePlane": "studio application plane",
-      "deploymentTargets": "studio",
-      "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/studio/studio/runtime/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Product-specific",
-      "workspaceActive": true
-    },
-    {
-      "packageName": "@athyper/product-studio-studio-ui",
-      "physicalPath": "packages/planes/studio/studio/ui/package.json",
-      "currentConsumers": [],
-      "intendedOwner": "Studio",
-      "runtimePlane": "studio application plane",
-      "deploymentTargets": "studio",
-      "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/planes/studio/studio/ui/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Product-specific",
-      "workspaceActive": true
-    },
-    {
       "packageName": "@athyper/platform-ai-agent-runtime",
       "physicalPath": "packages/platform/ai/agent-runtime/package.json",
       "currentConsumers": [
-        ".codex-phase6-deploy/packages/services/ai/package.json"
+        "packages/platform/ai/agent-ui/package.json"
       ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
@@ -1558,7 +1104,9 @@
     {
       "packageName": "@athyper/platform-ai-agent-ui",
       "physicalPath": "packages/platform/ai/agent-ui/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "packages/platform/shell/shell/package.json"
+      ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1571,7 +1119,9 @@
     {
       "packageName": "@athyper/platform-communications-collaboration-ui",
       "physicalPath": "packages/platform/communications/collaboration-ui/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "packages/platform/shell/shell/package.json"
+      ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1584,7 +1134,15 @@
     {
       "packageName": "@athyper/platform-communications-notifications-client",
       "physicalPath": "packages/platform/communications/notifications-client/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
+        "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
+        "apps/studio/package.json",
+        "packages/platform/shell/activity-center-data/package.json"
+      ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1636,12 +1194,50 @@
     {
       "packageName": "@athyper/platform-entity-descriptor-client",
       "physicalPath": "packages/platform/entity/runtime/descriptor-client/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "packages/platform/entity/runtime/form-detail/package.json"
+      ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
       "duplicateStatus": "Unique active package",
       "proposedFinalLocation": "packages/platform/entity/runtime/descriptor-client/package.json",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Shared platform",
+      "workspaceActive": true
+    },
+    {
+      "packageName": "@athyper/platform-entity-form-detail",
+      "physicalPath": "packages/platform/entity/runtime/form-detail/package.json",
+      "currentConsumers": [
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json"
+      ],
+      "intendedOwner": "Shared Platform",
+      "runtimePlane": "Build plane",
+      "deploymentTargets": "neon, studio, mesh, server as consumed",
+      "duplicateStatus": "Unique active package",
+      "proposedFinalLocation": "packages/platform/entity/runtime/form-detail/package.json",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Shared platform",
+      "workspaceActive": true
+    },
+    {
+      "packageName": "@athyper/platform-entity-list-view",
+      "physicalPath": "packages/platform/entity/runtime/list-view/package.json",
+      "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
+        "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json",
+        "packages/planes/mesh/business-partner/package.json",
+        "packages/planes/neon/list-view/package.json"
+      ],
+      "intendedOwner": "Shared Platform",
+      "runtimePlane": "Build plane",
+      "deploymentTargets": "neon, studio, mesh, server as consumed",
+      "duplicateStatus": "Unique active package",
+      "proposedFinalLocation": "packages/platform/entity/runtime/list-view/package.json",
       "migrationStatus": "Inventory complete; no move in Phase 1",
       "classification": "Shared platform",
       "workspaceActive": true
@@ -1663,11 +1259,26 @@
       "packageName": "@athyper/platform-api-client",
       "physicalPath": "packages/platform/foundation/api-client/package.json",
       "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
         "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
         "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
         "apps/studio/package.json",
+        "packages/planes/mesh/shell/package.json",
+        "packages/planes/neon/business-partner/package.json",
+        "packages/planes/neon/shell/package.json",
+        "packages/planes/neon/workforce/package.json",
+        "packages/planes/studio/shell/package.json",
+        "packages/platform/ai/agent-runtime/package.json",
+        "packages/platform/communications/notifications-client/package.json",
+        "packages/platform/entity/runtime/descriptor-client/package.json",
+        "packages/platform/entity/runtime/list-view/package.json",
         "packages/platform/foundation/query/package.json",
-        "packages/platform/shell/app-foundation/package.json"
+        "packages/platform/shell/activity-center-data/package.json",
+        "packages/platform/shell/app-foundation/package.json",
+        "packages/platform/shell/dashboard/package.json",
+        "packages/platform/shell/work-inbox/package.json"
       ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
@@ -1681,7 +1292,10 @@
     {
       "packageName": "@athyper/platform-brand",
       "physicalPath": "packages/platform/foundation/brand/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "packages/platform/foundation/theme/package.json",
+        "packages/platform/iam/identity-gate/package.json"
+      ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1694,9 +1308,7 @@
     {
       "packageName": "@athyper/platform-core",
       "physicalPath": "packages/platform/foundation/core/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/packages/adapters/telemetry/package.json"
-      ],
+      "currentConsumers": [],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1709,7 +1321,20 @@
     {
       "packageName": "@athyper/platform-i18n",
       "physicalPath": "packages/platform/foundation/i18n/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
+        "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
+        "apps/studio/package.json",
+        "packages/planes/mesh/shell/package.json",
+        "packages/planes/neon/shell/package.json",
+        "packages/planes/studio/shell/package.json",
+        "packages/platform/foundation/api-client/package.json",
+        "packages/platform/shell/shell/package.json",
+        "server/packages/platform/experience/package.json"
+      ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1722,7 +1347,24 @@
     {
       "packageName": "@athyper/platform-icons",
       "physicalPath": "packages/platform/foundation/icons/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
+        "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
+        "apps/studio/package.json",
+        "packages/planes/mesh/business-partner/package.json",
+        "packages/planes/mesh/shell/package.json",
+        "packages/planes/neon/shell/package.json",
+        "packages/platform/entity/runtime/list-view/package.json",
+        "packages/platform/foundation/surface-kit/package.json",
+        "packages/platform/foundation/ui/package.json",
+        "packages/platform/iam/identity-gate/package.json",
+        "packages/platform/shell/activity-center-data/package.json",
+        "packages/platform/shell/dashboard/package.json",
+        "packages/platform/shell/shell/package.json"
+      ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1736,8 +1378,11 @@
       "packageName": "@athyper/platform-query",
       "physicalPath": "packages/platform/foundation/query/package.json",
       "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
         "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
         "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
         "apps/studio/package.json",
         "packages/platform/shell/app-foundation/package.json"
       ],
@@ -1754,6 +1399,9 @@
       "packageName": "@athyper/platform-surface-kit",
       "physicalPath": "packages/platform/foundation/surface-kit/package.json",
       "currentConsumers": [
+        "packages/planes/neon/business-partner/package.json",
+        "packages/planes/neon/workforce/package.json",
+        "packages/platform/iam/identity-gate/package.json",
         "packages/platform/shell/app-foundation/package.json"
       ],
       "intendedOwner": "Shared Platform",
@@ -1768,10 +1416,7 @@
     {
       "packageName": "@athyper/platform-temporal",
       "physicalPath": "packages/platform/foundation/temporal/package.json",
-      "currentConsumers": [
-        ".codex-phase6-deploy/packages/services/records/package.json",
-        ".codex-phase6-deploy/packages/services/shared/package.json"
-      ],
+      "currentConsumers": [],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1785,8 +1430,11 @@
       "packageName": "@athyper/platform-theme",
       "physicalPath": "packages/platform/foundation/theme/package.json",
       "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
         "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
         "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
         "apps/studio/package.json",
         "packages/platform/foundation/ui/package.json"
       ],
@@ -1803,8 +1451,16 @@
       "packageName": "@athyper/platform-ui",
       "physicalPath": "packages/platform/foundation/ui/package.json",
       "currentConsumers": [
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json",
+        "packages/planes/neon/business-partner/package.json",
+        "packages/planes/neon/workforce/package.json",
+        "packages/platform/entity/runtime/form-detail/package.json",
+        "packages/platform/entity/runtime/list-view/package.json",
         "packages/platform/foundation/surface-kit/package.json",
-        "packages/platform/shell/app-foundation/package.json"
+        "packages/platform/iam/identity-gate/package.json",
+        "packages/platform/shell/app-foundation/package.json",
+        "packages/platform/shell/shell/package.json"
       ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
@@ -1819,8 +1475,11 @@
       "packageName": "@athyper/platform-gateway-bff-relay",
       "physicalPath": "packages/platform/gateway/bff-relay/package.json",
       "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
         "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
         "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
         "apps/studio/package.json"
       ],
       "intendedOwner": "Shared Platform",
@@ -1836,8 +1495,11 @@
       "packageName": "@athyper/platform-iam-auth-bff",
       "physicalPath": "packages/platform/iam/auth-bff/package.json",
       "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
         "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
         "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
         "apps/studio/package.json"
       ],
       "intendedOwner": "Shared Platform",
@@ -1852,7 +1514,14 @@
     {
       "packageName": "@athyper/platform-iam-identity-gate",
       "physicalPath": "packages/platform/iam/identity-gate/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
+        "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
+        "apps/studio/package.json"
+      ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1894,12 +1563,47 @@
       "workspaceActive": true
     },
     {
+      "packageName": "@athyper/platform-shell-activity-center-data",
+      "physicalPath": "packages/platform/shell/activity-center-data/package.json",
+      "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
+        "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
+        "apps/studio/package.json",
+        "packages/planes/mesh/shell/package.json",
+        "packages/planes/neon/shell/package.json",
+        "packages/planes/studio/shell/package.json"
+      ],
+      "intendedOwner": "Shared Platform",
+      "runtimePlane": "Build plane",
+      "deploymentTargets": "neon, studio, mesh, server as consumed",
+      "duplicateStatus": "Unique active package",
+      "proposedFinalLocation": "packages/platform/shell/activity-center-data/package.json",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Shared platform",
+      "workspaceActive": true
+    },
+    {
       "packageName": "@athyper/platform-shell-app-foundation",
       "physicalPath": "packages/platform/shell/app-foundation/package.json",
       "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
         "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
         "apps/neon/package.json",
-        "apps/studio/package.json"
+        "apps/studio/.next/standalone/apps/studio/package.json",
+        "apps/studio/package.json",
+        "packages/planes/mesh/business-partner/package.json",
+        "packages/planes/mesh/shell/package.json",
+        "packages/planes/neon/business-partner/package.json",
+        "packages/planes/neon/list-view/package.json",
+        "packages/planes/neon/shell/package.json",
+        "packages/planes/neon/workforce/package.json",
+        "packages/planes/studio/shell/package.json",
+        "packages/platform/entity/runtime/form-detail/package.json",
+        "packages/platform/shell/activity-center-data/package.json"
       ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
@@ -1926,7 +1630,14 @@
     {
       "packageName": "@athyper/platform-shell-dashboard",
       "physicalPath": "packages/platform/shell/dashboard/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
+        "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
+        "apps/studio/package.json"
+      ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1978,7 +1689,10 @@
     {
       "packageName": "@athyper/platform-shell-runtime",
       "physicalPath": "packages/platform/shell/shell-runtime/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "packages/platform/shell/app-foundation/package.json",
+        "packages/platform/shell/shell/package.json"
+      ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -1991,7 +1705,22 @@
     {
       "packageName": "@athyper/platform-shell",
       "physicalPath": "packages/platform/shell/shell/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
+        "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
+        "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
+        "apps/studio/package.json",
+        "packages/planes/mesh/business-partner/package.json",
+        "packages/planes/mesh/shell/package.json",
+        "packages/planes/neon/navigation/package.json",
+        "packages/planes/neon/shell/package.json",
+        "packages/planes/studio/shell/package.json",
+        "packages/platform/entity/runtime/form-detail/package.json",
+        "packages/platform/entity/runtime/list-view/package.json",
+        "packages/platform/shell/activity-center-data/package.json"
+      ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -2004,7 +1733,9 @@
     {
       "packageName": "@athyper/platform-shell-work-inbox",
       "physicalPath": "packages/platform/shell/work-inbox/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "packages/platform/shell/activity-center-data/package.json"
+      ],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",
@@ -2404,6 +2135,7 @@
       "physicalPath": "server/packages/contracts/audit/package.json",
       "currentConsumers": [
         "server/apps/platform-host/package.json",
+        "server/packages/planes/mesh/package.json",
         "server/packages/platform/audit/package.json",
         "server/packages/platform/collaboration/package.json",
         "server/packages/platform/governance/package.json",
@@ -2445,6 +2177,7 @@
         "server/packages/contracts/records/package.json",
         "server/packages/contracts/search/package.json",
         "server/packages/contracts/workflow/package.json",
+        "server/packages/planes/mesh/package.json",
         "server/packages/planes/neon/package.json",
         "server/packages/planes/studio/meta-entity-authoring/package.json",
         "server/packages/planes/studio/onboarding/package.json",
@@ -2586,6 +2319,7 @@
       "physicalPath": "server/packages/contracts/events/package.json",
       "currentConsumers": [
         "server/apps/platform-host/package.json",
+        "server/packages/planes/mesh/package.json",
         "server/packages/platform/collaboration/package.json",
         "server/packages/platform/governance/package.json",
         "server/packages/platform/iam/package.json",
@@ -2663,11 +2397,13 @@
       "currentConsumers": [
         "server/apps/platform-host/package.json",
         "server/packages/adapters/telemetry-otel/package.json",
+        "server/packages/planes/mesh/package.json",
         "server/packages/planes/neon/package.json",
         "server/packages/planes/studio/meta-entity-authoring/package.json",
         "server/packages/planes/studio/onboarding/package.json",
         "server/packages/platform/ai/package.json",
         "server/packages/platform/governance/package.json",
+        "server/packages/platform/iam/package.json",
         "server/packages/platform/jobs/package.json",
         "server/packages/platform/notifications/package.json",
         "server/packages/platform/workflow/package.json",
@@ -2678,6 +2414,7 @@
         "server/packages/services/document-processing/package.json",
         "server/packages/services/integration/package.json",
         "server/packages/services/jobs/package.json",
+        "server/packages/services/master-data/package.json",
         "server/packages/services/publication/package.json",
         "server/packages/services/records/package.json"
       ],
@@ -2698,7 +2435,8 @@
         "server/packages/adapters/malware-clamav/package.json",
         "server/packages/contracts/documents/package.json",
         "server/packages/services/attachments/package.json",
-        "server/packages/services/documents/package.json"
+        "server/packages/services/documents/package.json",
+        "server/packages/services/records/package.json"
       ],
       "intendedOwner": "Runtime Server",
       "runtimePlane": "Server plane",
@@ -2713,6 +2451,8 @@
       "packageName": "@athyper/server-contract-master-data",
       "physicalPath": "server/packages/contracts/master-data/package.json",
       "currentConsumers": [
+        "server/apps/platform-host/package.json",
+        "server/packages/planes/neon/package.json",
         "server/packages/services/master-data/package.json"
       ],
       "intendedOwner": "Runtime Server",
@@ -2729,7 +2469,8 @@
       "physicalPath": "server/packages/contracts/meta-entity-authoring/package.json",
       "currentConsumers": [
         "server/packages/adapters/publication-signing/package.json",
-        "server/packages/planes/studio/meta-entity-authoring/package.json"
+        "server/packages/planes/studio/meta-entity-authoring/package.json",
+        "server/packages/planes/studio/package.json"
       ],
       "intendedOwner": "Runtime Server",
       "runtimePlane": "Server plane",
@@ -2749,6 +2490,9 @@
         "server/packages/contracts/meta-entity-authoring/package.json",
         "server/packages/contracts/records/package.json",
         "server/packages/contracts/workflow/package.json",
+        "server/packages/planes/neon/package.json",
+        "server/packages/planes/studio/meta-entity-authoring/package.json",
+        "server/packages/planes/studio/package.json",
         "server/packages/platform/ai/package.json",
         "server/packages/platform/metadata/package.json",
         "server/packages/platform/workflow/package.json",
@@ -2864,6 +2608,9 @@
       "currentConsumers": [
         "server/apps/platform-host/package.json",
         "server/packages/contracts/ai/package.json",
+        "server/packages/planes/mesh/package.json",
+        "server/packages/planes/neon/package.json",
+        "server/packages/planes/studio/package.json",
         "server/packages/platform/ai/package.json",
         "server/packages/services/records/package.json"
       ],
@@ -2922,7 +2669,9 @@
       "currentConsumers": [
         "server/apps/platform-host/package.json",
         "server/packages/adapters/publication-signing/package.json",
-        "server/packages/adapters/secretstore-infisical/package.json"
+        "server/packages/adapters/secretstore-infisical/package.json",
+        "server/packages/platform/iam/package.json",
+        "server/packages/services/master-data/package.json"
       ],
       "intendedOwner": "Runtime Server",
       "runtimePlane": "Server plane",
@@ -2966,11 +2715,6 @@
       "packageName": "@athyper/server-foundation",
       "physicalPath": "server/packages/foundation/package.json",
       "currentConsumers": [
-        ".codex-phase6-deploy/package.json",
-        ".codex-phase6-deploy/packages/services/audit/package.json",
-        ".codex-phase6-deploy/packages/services/content/package.json",
-        ".codex-phase6-deploy/packages/services/doc-services/package.json",
-        ".codex-phase6-deploy/packages/services/integration/package.json",
         "server/apps/platform-host/package.json",
         "server/packages/adapters/auth-keycloak/package.json",
         "server/packages/adapters/cache-redis/package.json",
@@ -3023,9 +2767,9 @@
       "intendedOwner": "Runtime Server",
       "runtimePlane": "Server plane",
       "deploymentTargets": "server",
-      "duplicateStatus": "Duplicate name (2 physical manifests); active candidate",
+      "duplicateStatus": "Unique active package",
       "proposedFinalLocation": "server/packages/foundation/package.json",
-      "migrationStatus": "Canonical candidate; consolidate duplicate package names",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
       "classification": "Server-only",
       "workspaceActive": true
     },
@@ -3415,6 +3159,7 @@
       "physicalPath": "server/packages/runtime/http/package.json",
       "currentConsumers": [
         "server/apps/platform-host/package.json",
+        "server/packages/planes/mesh/package.json",
         "server/packages/planes/neon/package.json",
         "server/packages/platform/ai/package.json",
         "server/packages/platform/control-admin/package.json",
@@ -3422,6 +3167,7 @@
         "server/packages/platform/governance/package.json",
         "server/packages/platform/iam/package.json",
         "server/packages/platform/jobs/package.json",
+        "server/packages/platform/notifications/package.json",
         "server/packages/services/publication/package.json",
         "server/packages/services/records/package.json"
       ],
@@ -3589,7 +3335,10 @@
     {
       "packageName": "@athyper/server-service-master-data",
       "physicalPath": "server/packages/services/master-data/package.json",
-      "currentConsumers": [],
+      "currentConsumers": [
+        "server/apps/platform-host/package.json",
+        "server/db/package.json"
+      ],
       "intendedOwner": "Runtime Server",
       "runtimePlane": "Server plane",
       "deploymentTargets": "server",
@@ -3680,37 +3429,35 @@
       "packageName": "@athyper/config",
       "physicalPath": "tooling/config/package.json",
       "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
         "apps/mesh/package.json",
+        "apps/neon/.next/standalone/apps/neon/package.json",
         "apps/neon/package.json",
+        "apps/studio/.next/standalone/apps/studio/package.json",
         "apps/studio/package.json",
-        "packages/planes/mesh/app/package.json",
-        "packages/planes/mesh/dashboard/package.json",
-        "packages/planes/mesh/exchange/package.json",
+        "packages/planes/mesh/business-partner/package.json",
         "packages/planes/mesh/shell/package.json",
-        "packages/planes/neon/app/package.json",
-        "packages/planes/neon/dashboard/package.json",
-        "packages/planes/neon/modules/finance/package.json",
-        "packages/planes/neon/modules/inventory/package.json",
-        "packages/planes/neon/modules/people/package.json",
-        "packages/planes/neon/modules/procurement/package.json",
-        "packages/planes/neon/modules/projects/package.json",
-        "packages/planes/neon/modules/sales/package.json",
+        "packages/planes/neon/business-partner/package.json",
+        "packages/planes/neon/list-view/package.json",
         "packages/planes/neon/navigation/package.json",
         "packages/planes/neon/shell/package.json",
-        "packages/planes/studio/app/package.json",
-        "packages/planes/studio/dashboard/package.json",
+        "packages/planes/neon/workforce/package.json",
+        "packages/planes/studio/business-partner/package.json",
         "packages/planes/studio/shell/package.json",
-        "packages/planes/studio/studio/ui/package.json",
         "packages/platform/ai/agent-ui/package.json",
         "packages/platform/communications/collaboration-ui/package.json",
         "packages/platform/entity/runtime/content-ui/package.json",
+        "packages/platform/entity/runtime/form-detail/package.json",
+        "packages/platform/entity/runtime/list-view/package.json",
         "packages/platform/entity/runtime/workflow-ui/package.json",
         "packages/platform/foundation/api-client/package.json",
+        "packages/platform/foundation/i18n/package.json",
         "packages/platform/foundation/icons/package.json",
         "packages/platform/foundation/query/package.json",
         "packages/platform/foundation/surface-kit/package.json",
         "packages/platform/foundation/theme/package.json",
         "packages/platform/foundation/ui/package.json",
+        "packages/platform/shell/activity-center-data/package.json",
         "packages/platform/shell/app-foundation/package.json",
         "packages/platform/shell/content-hub/package.json",
         "packages/platform/shell/dashboard/package.json",
@@ -3734,32 +3481,6 @@
       "packageName": "@athyper/tsconfig",
       "physicalPath": "tooling/tsconfig/package.json",
       "currentConsumers": [
-        ".codex-phase6-deploy/packages/adapters/auth/package.json",
-        ".codex-phase6-deploy/packages/adapters/memory-cache/package.json",
-        ".codex-phase6-deploy/packages/adapters/object-storage/package.json",
-        ".codex-phase6-deploy/packages/adapters/telemetry/package.json",
-        ".codex-phase6-deploy/packages/foundation/package.json",
-        ".codex-phase6-deploy/packages/runtime/package.json",
-        ".codex-phase6-deploy/packages/services/ai/package.json",
-        ".codex-phase6-deploy/packages/services/audit/package.json",
-        ".codex-phase6-deploy/packages/services/business/package.json",
-        ".codex-phase6-deploy/packages/services/collab/package.json",
-        ".codex-phase6-deploy/packages/services/content/package.json",
-        ".codex-phase6-deploy/packages/services/doc-services/package.json",
-        ".codex-phase6-deploy/packages/services/documents/package.json",
-        ".codex-phase6-deploy/packages/services/finance/package.json",
-        ".codex-phase6-deploy/packages/services/iam/package.json",
-        ".codex-phase6-deploy/packages/services/integration/package.json",
-        ".codex-phase6-deploy/packages/services/jobs/package.json",
-        ".codex-phase6-deploy/packages/services/master/package.json",
-        ".codex-phase6-deploy/packages/services/metadata/package.json",
-        ".codex-phase6-deploy/packages/services/platform/package.json",
-        ".codex-phase6-deploy/packages/services/policy/package.json",
-        ".codex-phase6-deploy/packages/services/records/package.json",
-        ".codex-phase6-deploy/packages/services/search/package.json",
-        ".codex-phase6-deploy/packages/services/shared/package.json",
-        ".codex-phase6-deploy/packages/services/workflow/package.json",
-        ".codex-phase6-deploy/packages/test-utils/package.json",
         "packages/contracts/athyper/metadata/package.json",
         "packages/contracts/athyper/onboarding/package.json",
         "packages/contracts/athyper/platform-catalog/package.json",
@@ -3783,10 +3504,10 @@
         "packages/contracts/platform/auth-session/package.json",
         "packages/contracts/platform/authorization/package.json",
         "packages/contracts/platform/dashboard/package.json",
+        "packages/contracts/platform/entity-list/package.json",
         "packages/contracts/platform/entity-runtime/package.json",
         "packages/contracts/platform/navigation/package.json",
         "packages/contracts/platform/numbering/package.json",
-        "packages/planes/studio/studio/runtime/package.json",
         "packages/platform/ai/agent-runtime/package.json",
         "packages/platform/communications/notifications-client/package.json",
         "packages/platform/entity/authoring/metadata-client/package.json",
@@ -3794,7 +3515,6 @@
         "packages/platform/entity/runtime/descriptor-client/package.json",
         "packages/platform/foundation/brand/package.json",
         "packages/platform/foundation/core/package.json",
-        "packages/platform/foundation/i18n/package.json",
         "packages/platform/foundation/temporal/package.json",
         "packages/platform/gateway/bff-relay/package.json",
         "packages/platform/iam/auth-bff/package.json",

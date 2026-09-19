@@ -1,0 +1,38 @@
+[
+  {
+    "account": "catl.admin",
+    "refresh": 200,
+    "activationStatus": 200,
+    "activation": {
+      "releaseId": "c2cc6900-26c1-47ca-8dfc-1d488000950c",
+      "contractHash": "db478b02c0bee24234d4fc3c99b2c8f02988a9ed1da5d0cc8aa74f701f1ea296",
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic.enter-correction",
+      "observedAt": "2026-09-15T22:59:02.400Z",
+      "targets": [
+        {
+          "plane": "neon",
+          "state": "not_active"
+        }
+      ]
+    }
+  },
+  {
+    "account": "catl.owner",
+    "refresh": 200,
+    "activationStatus": 200,
+    "activation": {
+      "releaseId": "c2cc6900-26c1-47ca-8dfc-1d488000950c",
+      "contractHash": "db478b02c0bee24234d4fc3c99b2c8f02988a9ed1da5d0cc8aa74f701f1ea296",
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic.enter-correction",
+      "observedAt": "2026-09-15T22:59:02.522Z",
+      "targets": [
+        {
+          "plane": "neon",
+          "state": "not_active"
+        }
+      ]
+    }
+  }
+]

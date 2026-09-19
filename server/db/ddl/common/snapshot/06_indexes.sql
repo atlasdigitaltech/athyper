@@ -34,3 +34,5 @@ CREATE INDEX entity_snapshot_identity_retention_idx
     ON snapshot.entity_snapshot_identity (
         tenant_id, retention_class, captured_at
     );
+CREATE INDEX entity_case_snapshot_lineage_case_idx ON snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,created_at);
+CREATE INDEX entity_case_snapshot_lineage_target_idx ON snapshot.entity_case_snapshot_lineage(tenant_id,target_authority_type,target_authority_id) WHERE target_authority_id IS NOT NULL;

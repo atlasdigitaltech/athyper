@@ -1,0 +1,73 @@
+{
+  "schema": "bp-ai-baseline-fixtures/1",
+  "kind": "synthetic-contract-fixtures",
+  "persistedBusinessRecords": false,
+  "note": "Scenario inputs for subsequent tool/UI evaluation. These are not runtime schemas, live grants, or evidence of feature implementation.",
+  "fixtures": [
+    {
+      "id": "BP-AI-F01",
+      "intent": "Summarize this partner",
+      "page": "record",
+      "authorizedFacts": { "code": "DEMO-BP-001", "partnerCategory": "organization", "status": "draft", "readiness": "not_evaluated" },
+      "expected": { "status": "draft", "readiness": "not_evaluated", "actions": ["open_record"] },
+      "forbiddenClaims": ["ready for purchasing", "missing bank details", "submitted"]
+    },
+    {
+      "id": "BP-AI-F02",
+      "intent": "Can we purchase from this supplier?",
+      "page": "record",
+      "authorizedFacts": { "status": "active", "supplierRole": true, "transactionScopeSelected": false },
+      "expected": { "nextStep": "select_authorized_transaction_scope", "eligibility": "not_evaluated" },
+      "forbiddenClaims": ["active implies eligible", "infer company from list filter"]
+    },
+    {
+      "id": "BP-AI-F03",
+      "intent": "What information is missing?",
+      "page": "record",
+      "authorizedFacts": { "address": null, "addressRequirement": "required" },
+      "projectionOmissions": ["bank", "tax"],
+      "expected": { "missing": ["address"] },
+      "forbiddenClaims": ["bank missing", "tax missing", "hidden evidence count"]
+    },
+    {
+      "id": "BP-AI-F04",
+      "intent": "Which selected partners need attention?",
+      "page": "manage",
+      "authorizedFacts": { "target": "selection", "selectedCount": 3, "evaluatedCount": 3, "distinctAffectedPartners": 2, "missingInformationCount": 2, "validationFailureCount": 1, "overlapCount": 1 },
+      "expected": { "affectedPartners": 2, "coverage": "complete", "issueCountsOverlap": true },
+      "forbiddenClaims": ["three affected partners", "all directory records evaluated"]
+    },
+    {
+      "id": "BP-AI-F05",
+      "intent": "What should I do next?",
+      "page": "record",
+      "authorizedFacts": { "readiness": "definition_unavailable", "dirty": true },
+      "expected": { "assessment": "saved_data_only", "readiness": "unavailable" },
+      "forbiddenClaims": ["no issues", "zero percent ready", "unsaved changes validated"]
+    },
+    {
+      "id": "BP-AI-F06",
+      "intent": "Show the partner I just opened",
+      "page": "record",
+      "events": ["start_generation_A", "navigate_B", "late_result_A"],
+      "expected": { "currentContext": "B", "discardEvents": ["late_result_A"] },
+      "forbiddenClaims": ["A evidence describes B"]
+    },
+    {
+      "id": "BP-AI-F07",
+      "intent": "Show those details again",
+      "page": "record",
+      "events": ["authorized_answer", "permission_revoked", "history_replay"],
+      "expected": { "affectedMessage": "withheld", "cachedEvidence": "reauthorize" },
+      "forbiddenClaims": ["old authorization is sufficient"]
+    },
+    {
+      "id": "BP-AI-F08",
+      "intent": "Submit it",
+      "page": "record",
+      "authorizedFacts": { "validatedCases": 2 },
+      "expected": { "nextStep": "select_case", "execution": "none" },
+      "forbiddenClaims": ["invent case ID", "auto confirm", "submitted"]
+    }
+  ]
+}

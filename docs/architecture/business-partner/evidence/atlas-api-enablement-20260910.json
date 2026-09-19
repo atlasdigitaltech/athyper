@@ -1,0 +1,53 @@
+{
+  "schema": "athyper.atlas-api-enablement/1",
+  "observedAt": "2026-09-09T20:20:57.497Z",
+  "environment": "dev",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "baseImage": "sha256:0dd72c20dce41ef1c0ed78ffb67c7504b46096ad21cd218c28d34ba2a0ac3f9b",
+  "deployedImage": "sha256:9cd6223c55c4a341e72852169d816c48d3879a9d3e2415dee9d34b8f8ce9da39",
+  "deployedImageTag": "athyper-runtime-server:atlas-api-enablement-20260910-r2",
+  "healthy": true,
+  "restartCount": 0,
+  "authoringEnabled": true,
+  "authorizationManagementRoutesEnabled": true,
+  "authorizationManagementMutationsEnabled": false,
+  "checks": [
+    {
+      "path": "/readyz",
+      "status": 200
+    },
+    {
+      "path": "/api/control-admin/authorization",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "path": "/api/meta-entity-authoring/change-sets",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    }
+  ],
+  "signing": {
+    "tlsVerified": true,
+    "keyResolution": true,
+    "signVerify": true
+  },
+  "validation": {
+    "focusedTestsPassed": 59,
+    "hostTypecheckPassed": true,
+    "composeValidationPassed": true,
+    "moduleImportsPassed": true
+  },
+  "userVerification": {
+    "principal": "catl.admin",
+    "studioSession": "anonymous_after_refresh",
+    "reauthenticationRequired": true
+  },
+  "changes": {
+    "metadataPublished": false,
+    "permissionsPublished": false,
+    "syntheticDocumentUploaded": false,
+    "retrievalEnabled": false
+  },
+  "rollbackRetained": true
+}

@@ -13,13 +13,15 @@
       "default": "./src/browser-denied.ts"
     }
   },
-  "scripts": { "typecheck": "tsc --noEmit" },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@athyper/platform-iam-session": "workspace:*",
     "ioredis": "^5.9.2"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
+    "@types/node": "^25.6.0",
     "@athyper/tsconfig": "workspace:*",
     "typescript": "^6.0.3"
   }

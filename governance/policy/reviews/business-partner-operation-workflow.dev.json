@@ -1,0 +1,3144 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_operation_decision_packet",
+  "source": {
+    "path": "governance/policy/reviews/business-partner-operation-reviews.dev.json",
+    "sha256": "b2b561f7944633141671630b2caaa98729b0e16670f2bca9d9a85418f886a26e",
+    "base": {
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "planeKey": "neon",
+      "entityCode": "business_partner",
+      "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic",
+      "appliedReleaseId": "01a08532-31a1-7493-8953-ca4528dda3de",
+      "headVersion": 17,
+      "releaseId": "42213535-3b6c-4c11-8877-1fe2b5142a42",
+      "releaseNo": 17,
+      "compiledHash": "671ec9e727e3b368c96df71df78c7ea5a23ddaedbc4cf0477c1191ec6e44f7f7",
+      "contractHash": "20a93ecbf375c5b65c3724c15e21fba690b5837d7517bb6c46d39b4cad9584ab",
+      "eligibleHeadsHash": "a358d053e03c836c23251be16944e8521e70385234922928e996b829a0a746fe"
+    },
+    "candidateHash": "12203b304945675c8697105ff94319b41c2e1dbdbba4aa42cc225be479aa3900"
+  },
+  "nominationSha256": "e25db84f547efe3ca50e64054effcee5d2f84a011452d689f5ba87d12addd6bb",
+  "reviewers": [
+    {
+      "id": "catl.owner",
+      "name": "catl.owner",
+      "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+      "homeTenantId": "44444444-4444-4444-8444-444444444444",
+      "domains": [
+        "business",
+        "security"
+      ],
+      "authorityReference": "conversation:user-explicit-authorization:catl.owner-and-catl.admin:operation-semantics-permission-scope:business-security"
+    },
+    {
+      "id": "catl.admin",
+      "name": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "homeTenantId": "44444444-4444-4444-8444-444444444444",
+      "domains": [
+        "business",
+        "security"
+      ],
+      "authorityReference": "conversation:user-explicit-authorization:catl.owner-and-catl.admin:operation-semantics-permission-scope:business-security"
+    }
+  ],
+  "reviewSubjects": [
+    "operation_semantics",
+    "permission_proposals",
+    "scope_proposals"
+  ],
+  "rows": [
+    {
+      "operation": "enter",
+      "proposalSha256": "0554688dd63b108c396d6720c826d972dee5f37a095fc6d090eb6fc1ef82ce59",
+      "proposal": {
+        "operation": "enter",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.enter",
+          "existingId": null,
+          "existingCatalogScopes": [],
+          "proposedCode": "neon.relationship.bp_target.enter",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "application",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "collection",
+        "effect": "read",
+        "requiresParentRead": false,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "discover",
+      "proposalSha256": "02e3f444102cc1e5d2e40b0f0ad8c3f6d0bfa79223cb0398972d8499b5c5d817",
+      "proposal": {
+        "operation": "discover",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.read",
+          "existingId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.discover",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "directory",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "collection",
+        "effect": "read",
+        "requiresParentRead": false,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "read",
+      "proposalSha256": "cba0249d009c920aa09e9154e739fe7266e29041ab035efbf6890fd02cb3f995",
+      "proposal": {
+        "operation": "read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.read",
+          "existingId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "record",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": false,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "navigate_manage",
+      "proposalSha256": "6d9b6decc34e78e644ca7fdcf65cc1c94ba95efb5788c2d74d9cb936fd141e22",
+      "proposal": {
+        "operation": "navigate_manage",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.read",
+          "existingId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.navigate_manage",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "directory",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "collection",
+        "effect": "read",
+        "requiresParentRead": false,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "navigate_overview",
+      "proposalSha256": "7bba276033e64e1646dabeb11fc87e8321615565f06234dcabf5e400b05a7fe4",
+      "proposal": {
+        "operation": "navigate_overview",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.read",
+          "existingId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.navigate_overview",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "directory",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "collection",
+        "effect": "read",
+        "requiresParentRead": false,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "export",
+      "proposalSha256": "9326147021ff807e0431c08bc5617e407e70cd3bb7e1b4ba87dc68d5d320020d",
+      "proposal": {
+        "operation": "export",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.read",
+          "existingId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.export",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "export",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "transfer",
+          "requirements": [
+            "Reauthorize import/export start, worker execution and result retrieval.",
+            "Import read permission is a gateway only; per-mutation permissions are still required.",
+            "Target integration and export field projection require qualification."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "collection",
+        "effect": "read",
+        "requiresParentRead": false,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "navigate_review",
+      "proposalSha256": "ad67658b1a7ebced088dfd9ef0a46dfd5993c17afa8937d06d4d07deecf4ba53",
+      "proposal": {
+        "operation": "navigate_review",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.read",
+          "existingId": "01a06b47-1ff4-7c24-af0c-dd46ae7e8573",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.read",
+          "proposedId": "01a06b47-1ff4-7c24-af0c-dd46ae7e8573",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_read",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "collection",
+        "effect": "read",
+        "requiresParentRead": false,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "request_supplier",
+      "proposalSha256": "35780e0524a4fe40e7c5f0291599d5a341cd93ee6433d5e3366f78e7502041bc",
+      "proposal": {
+        "operation": "request_supplier",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.create",
+          "existingId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.create",
+          "proposedId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_create",
+          "variant": "new_partner (requestedRole=supplier)"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "add_role",
+      "proposalSha256": "9148fc2ffc22efafec7a8b7bafaddcd629f7eb079ef6bc141018fb536323a952",
+      "proposal": {
+        "operation": "add_role",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.create",
+          "existingId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.create",
+          "proposedId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_create",
+          "variant": "add_supplier | add_customer (selected role)"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": true,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "amend_partner",
+      "proposalSha256": "a1016505a76b189d500b73a40ae725da90ac0a4759198943de8a45ee5be23465",
+      "proposal": {
+        "operation": "amend_partner",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.create",
+          "existingId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.create",
+          "proposedId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_create",
+          "variant": "amend_partner"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": true,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "assign_organization",
+      "proposalSha256": "53677add163ee9745b2daea762135b988031ed3bfa61f9e5820980ef1fff8b13",
+      "proposal": {
+        "operation": "assign_organization",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.create",
+          "existingId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.create",
+          "proposedId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_create",
+          "variant": "assign_organization"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": true,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "configure_company",
+      "proposalSha256": "5a436208c25378a6d960056e27041ae0aac3cdb03125b05ffad4fb3d2b06ef11",
+      "proposal": {
+        "operation": "configure_company",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.create",
+          "existingId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.configure_company",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization-company.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization-company.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            },
+            {
+              "scopeKind": "company_code",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization-company.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_create",
+          "variant": "configure_company"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "change_bank",
+      "proposalSha256": "f1b7aa1950c714792dfaf37be5a2616daad273993fd00608e3b0ec2b9952a884",
+      "proposal": {
+        "operation": "change_bank",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.create",
+          "existingId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.create",
+          "proposedId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_create",
+          "variant": "change_bank"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": true,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "lifecycle",
+      "proposalSha256": "772f304621887363e4e07cc5de90182e36e41b199323b736eefa3593a643e11e",
+      "proposal": {
+        "operation": "lifecycle",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.create",
+          "existingId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.create",
+          "proposedId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_create",
+          "variant": "activate_supplier | deactivate | reactivate | archive (selected transition)"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": true,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "certification",
+      "proposalSha256": "277a4f991d3940d18f234213927fc6352e8cc8f2f9271be9eb9be50716709834",
+      "proposal": {
+        "operation": "certification",
+        "disposition": "defer",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.create",
+          "existingId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.create",
+          "proposedId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_create",
+          "variant": "unresolved case kind"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": true,
+        "rationale": "Exclude this operation from the target release until its dedicated semantics and implementation are qualified. Existing grants remain intact; legacy enforcement remains until separately approved activation.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Remove executable binding and dependent references together; prove target API unavailable without compatibility fallback."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "import",
+      "proposalSha256": "b886afa832c9baa8bd818619fa8dc3306381ad97d8f93909595553a793df84e4",
+      "proposal": {
+        "operation": "import",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.read",
+          "existingId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.import",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "import",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "transfer",
+          "requirements": [
+            "Reauthorize import/export start, worker execution and result retrieval.",
+            "Import read permission is a gateway only; per-mutation permissions are still required.",
+            "Target integration and export field projection require qualification."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "identity_read",
+      "proposalSha256": "d0e0f2cd5dc2da39ccc447b6838be29eb4d14a4984771a2d4767333bb9840dbe",
+      "proposal": {
+        "operation": "identity_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_identity.read",
+          "existingId": "9c8b720c-1b8b-5099-90ed-21dcdb1636c1",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.identity_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "identity"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "contacts_read",
+      "proposalSha256": "0aab88da4526fb2749faa489cd6bf41068da4dc858164c6f1b369420b94e3eb9",
+      "proposal": {
+        "operation": "contacts_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_contact.read",
+          "existingId": "5ea10c61-2c69-529c-9427-729aa161472e",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.contacts_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "contacts"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "addresses_read",
+      "proposalSha256": "28ec4ced6a19a46bd80851b1df5ac6e58e2b71f5293bbc47d514428a390db7f4",
+      "proposal": {
+        "operation": "addresses_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_address.read",
+          "existingId": "a266c702-0dbc-56ed-91b4-e3105a265b24",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.addresses_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "addresses"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "identifier_read",
+      "proposalSha256": "b5647f5f65cb1bebe01f08485cacef349fc17df97098b489807664ed5c5b6727",
+      "proposal": {
+        "operation": "identifier_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_identifier.read_masked",
+          "existingId": "f138c881-9748-52f4-a836-596913b9f1de",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.identifier_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "identifiers-tax"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "tax_read",
+      "proposalSha256": "5da8784e84b314eb3fc5991661c4736d46e7ab650e74440ad884f609fe9b042c",
+      "proposal": {
+        "operation": "tax_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_tax.read_masked",
+          "existingId": "e240234c-755a-503b-b3b4-991109ccc7e1",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.tax_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "identifiers-tax"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "bank_read",
+      "proposalSha256": "26e120dd4d98dfcc8c3ffa83e672d58bdcf70d3beebeb8e4ac2f53b8d0564b8e",
+      "proposal": {
+        "operation": "bank_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_bank.read_masked",
+          "existingId": "86bf91e7-dac1-56ee-a07c-4171f7d81545",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.bank_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "banking"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "qualification_read",
+      "proposalSha256": "5c1a6665ec4a4654e114370acd51225906480e2249903aec8aa90f42d8ea3850",
+      "proposal": {
+        "operation": "qualification_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_qualification.read",
+          "existingId": "52e76b02-d2f1-53ff-a04b-f7bbb586cec3",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.qualification_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "qualifications-certificates"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "certificate_read",
+      "proposalSha256": "0d6fc71b68894b721550d1a5c11c9b18fca971227e0086fa66f0de812ed2bbab",
+      "proposal": {
+        "operation": "certificate_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_certificate.read",
+          "existingId": "c0d8a00f-4f20-53b7-9478-b8e83748ff1c",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.certificate_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "qualifications-certificates"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "credit_read",
+      "proposalSha256": "7f0f507c539eaeaccfe01442984038f5d2464f88ca89c43eeee0eb327ca42102",
+      "proposal": {
+        "operation": "credit_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_credit.read",
+          "existingId": "34cca4e2-4d41-5ea6-b3ba-cd055a21e4a1",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.credit_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization-company.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization-company.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            },
+            {
+              "scopeKind": "company_code",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization-company.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "credit"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "requests_read",
+      "proposalSha256": "bf497271c96e5f1a5a75cc8ea9fc4f4d0a3d64a2fafaa39e62c28f32af88b447",
+      "proposal": {
+        "operation": "requests_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.read",
+          "existingId": "01a06b47-1ff4-7c24-af0c-dd46ae7e8573",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.requests_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "requests"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "activity_read",
+      "proposalSha256": "bd35273f50ed334ec6846ce2b14310efa99ee976c8490c54e6f9c3d894cc4a0f",
+      "proposal": {
+        "operation": "activity_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_activity.read",
+          "existingId": "a130132e-8dc4-5341-9906-4e009078a79b",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.activity_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "activity"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "network_read",
+      "proposalSha256": "a0da4bc917f6f4356f96072b7af2f61f0d4a17894d9c38b00510a0a1c434beb9",
+      "proposal": {
+        "operation": "network_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_network.read",
+          "existingId": "97926e41-0da8-5ca2-89f0-2269c0ff188f",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.network_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization-company.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization-company.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            },
+            {
+              "scopeKind": "company_code",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization-company.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "network"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "comments_read",
+      "proposalSha256": "26f6d48328b44e4d85a749ddb2d53d2716dca8ec8d8d7b25ecef369467016779",
+      "proposal": {
+        "operation": "comments_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "collaboration.comment.read",
+          "existingId": null,
+          "existingCatalogScopes": [],
+          "proposedCode": "neon.relationship.bp_target.comments_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "comments"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "attachments_read",
+      "proposalSha256": "ecba0c99947eded022acfbeb44347f2a5d34f18e5b579afa8995482467ab12c8",
+      "proposal": {
+        "operation": "attachments_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "document.attachment.read",
+          "existingId": null,
+          "existingCatalogScopes": [],
+          "proposedCode": "neon.relationship.bp_target.attachments_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "attachments"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "bank_reveal",
+      "proposalSha256": "f7094891f34c925059442cfe99461254903c81b2ae17c277c83426ae38ce029b",
+      "proposal": {
+        "operation": "bank_reveal",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_bank.reveal",
+          "existingId": "e776180b-06f3-5b7b-8210-2d455eca6de6",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.bank_reveal",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "bank_reveal",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "reveal",
+          "requirements": [
+            "Reauthorize the protected child value and parent.",
+            "Require purpose, unexpired purpose binding, reveal replay protection and audit; honor MFA decision."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "existing",
+        "effect": "reveal",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "tax_reveal",
+      "proposalSha256": "dee47f7e22852e214a94328ebdfbb4ab37a845d209b92f98a4e5ddeb7f67ba51",
+      "proposal": {
+        "operation": "tax_reveal",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_tax.reveal",
+          "existingId": "815dfed2-3b83-5ddb-a219-b06ece8e03ed",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.tax_reveal",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "tax_reveal",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "reveal",
+          "requirements": [
+            "Reauthorize the protected child value and parent.",
+            "Require purpose, unexpired purpose binding, reveal replay protection and audit; honor MFA decision."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "existing",
+        "effect": "reveal",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "person_read",
+      "proposalSha256": "fa98fe85367c48cfe4c84fbabb130fbb1f894561c4bff6361f9a25833d23834d",
+      "proposal": {
+        "operation": "person_read",
+        "disposition": "defer",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_person.read",
+          "existingId": "012c7296-cd18-5d46-99f5-ad1bf080e2a7",
+          "existingCatalogScopes": [
+            "legal_entity",
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.business_partner_person.read",
+          "proposedId": "012c7296-cd18-5d46-99f5-ad1bf080e2a7",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "summary",
+          "variant": "person_read"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Exclude this operation from the target release until its dedicated semantics and implementation are qualified. Existing grants remain intact; legacy enforcement remains until separately approved activation.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Remove executable binding and dependent references together; prove target API unavailable without compatibility fallback."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "person_sensitive_read",
+      "proposalSha256": "514d1001f025d581de83a9bf9388a0390cfb6805b53839aa458d9f690418caef",
+      "proposal": {
+        "operation": "person_sensitive_read",
+        "disposition": "defer",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_person_sensitive.read",
+          "existingId": "2d750c0f-eb7b-5516-bf35-72fc496835d2",
+          "existingCatalogScopes": [
+            "legal_entity",
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.business_partner_person_sensitive.read",
+          "proposedId": "2d750c0f-eb7b-5516-bf35-72fc496835d2",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "summary",
+          "variant": "person_sensitive_read"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Exclude this operation from the target release until its dedicated semantics and implementation are qualified. Existing grants remain intact; legacy enforcement remains until separately approved activation.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Remove executable binding and dependent references together; prove target API unavailable without compatibility fallback."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "workforce_read",
+      "proposalSha256": "41d8276d9d6ca2359348d31c40a80c7f26df2abbc95c35fc8df022a866cebb28",
+      "proposal": {
+        "operation": "workforce_read",
+        "disposition": "defer",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_workforce.read",
+          "existingId": "d6382cc9-7f33-5ab4-8329-182843a0ec48",
+          "existingCatalogScopes": [
+            "legal_entity",
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.business_partner_workforce.read",
+          "proposedId": "d6382cc9-7f33-5ab4-8329-182843a0ec48",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "summary",
+          "variant": "workforce_read"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Exclude this operation from the target release until its dedicated semantics and implementation are qualified. Existing grants remain intact; legacy enforcement remains until separately approved activation.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Remove executable binding and dependent references together; prove target API unavailable without compatibility fallback."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "contact_sensitive_read",
+      "proposalSha256": "94247ffc045d7b83396cdeb671a27e4928f258be5a4bbff9c144f41b552f564d",
+      "proposal": {
+        "operation": "contact_sensitive_read",
+        "disposition": "defer",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.read_contact_sensitive",
+          "existingId": "e648ebd2-30e5-5876-a9b7-f60816c161e5",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.business_partner.read_contact_sensitive",
+          "proposedId": "e648ebd2-30e5-5876-a9b7-f60816c161e5",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "summary",
+          "variant": "contact_sensitive_read"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Exclude this operation from the target release until its dedicated semantics and implementation are qualified. Existing grants remain intact; legacy enforcement remains until separately approved activation.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Remove executable binding and dependent references together; prove target API unavailable without compatibility fallback."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "address_sensitive_read",
+      "proposalSha256": "b5a22c0c673dc39bd31a8c50d583eb47f042bbec30e84381590905c0f6efe02a",
+      "proposal": {
+        "operation": "address_sensitive_read",
+        "disposition": "defer",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.read_address_sensitive",
+          "existingId": "6859023e-eb9f-5b02-86c9-61193ca41359",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.business_partner.read_address_sensitive",
+          "proposedId": "6859023e-eb9f-5b02-86c9-61193ca41359",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "summary",
+          "variant": "address_sensitive_read"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Exclude this operation from the target release until its dedicated semantics and implementation are qualified. Existing grants remain intact; legacy enforcement remains until separately approved activation.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Remove executable binding and dependent references together; prove target API unavailable without compatibility fallback."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "case_create",
+      "proposalSha256": "62122b7e77df7c39c78504ce30e76a2015de53ddbf913f81ee9d059eac2bf597",
+      "proposal": {
+        "operation": "case_create",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.create",
+          "existingId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.create",
+          "proposedId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_create",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "case_read",
+      "proposalSha256": "33032bba616acf3c157792a5ab724c9396e9a348e18b30db763544bad3615a67",
+      "proposal": {
+        "operation": "case_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.read",
+          "existingId": "01a06b47-1ff4-7c24-af0c-dd46ae7e8573",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.read",
+          "proposedId": "01a06b47-1ff4-7c24-af0c-dd46ae7e8573",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_read",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "collection",
+        "effect": "read",
+        "requiresParentRead": false,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "case_update",
+      "proposalSha256": "1209a9c7fb7762c053f72eaef537fb375c29d573c9edd39ccefd9498b2ee4884",
+      "proposal": {
+        "operation": "case_update",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.update",
+          "existingId": "01a06b47-1ff4-72e2-afd1-7de290a59160",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.update",
+          "proposedId": "01a06b47-1ff4-72e2-afd1-7de290a59160",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_update",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "case_validate",
+      "proposalSha256": "1761030428aac538d0cc21d77b5aaa011b21c4946654fc2d38cf4430a3861e82",
+      "proposal": {
+        "operation": "case_validate",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.validate",
+          "existingId": "01a06b47-1ff4-74a5-b28a-3a6bf46bfacf",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.validate",
+          "proposedId": "01a06b47-1ff4-74a5-b28a-3a6bf46bfacf",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_validate",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "case_submit",
+      "proposalSha256": "24a46cb3bdfe778ab76e215a923497a75ec111737649efab609fd6515d9bd389",
+      "proposal": {
+        "operation": "case_submit",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.submit",
+          "existingId": "01a06b47-1ff4-7c24-bbf8-80b7ae5acaee",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.submit",
+          "proposedId": "01a06b47-1ff4-7c24-bbf8-80b7ae5acaee",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_submit",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "case_decide",
+      "proposalSha256": "343050e8b1b37d6e68942f6ee09394c4d5dea195192a904b8d3b454f43a0b41f",
+      "proposal": {
+        "operation": "case_decide",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.decide",
+          "existingId": "01a06b47-1ff4-7c66-98fe-a01ec8dcb473",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.decide",
+          "proposedId": "01a06b47-1ff4-7c66-98fe-a01ec8dcb473",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_decide",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "case_materialize",
+      "proposalSha256": "2d9b1ab48053291cd42a52313f8fae4114ac7ea5a0b5b8ca6bfe547a7abacdab",
+      "proposal": {
+        "operation": "case_materialize",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.entity_case.materialize",
+          "existingId": "01a06b47-1ff4-7188-8eb4-1020830dc44b",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.entity_case.materialize",
+          "proposedId": "01a06b47-1ff4-7188-8eb4-1020830dc44b",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_materialize",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "section_propose_change",
+      "proposalSha256": "dd2156eaab15ee87fe787ea25028c3d51023eb007efd0b82ff8b697603e6ee3e",
+      "proposal": {
+        "operation": "section_propose_change",
+        "disposition": "defer",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner_amend.create",
+          "existingId": "cc01536c-d18c-504f-8d9a-0a1779ef219d",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.business_partner_amend.create",
+          "proposedId": "cc01536c-d18c-504f-8d9a-0a1779ef219d",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "case_create",
+          "variant": "amend_partner"
+        },
+        "workflow": {
+          "key": "case",
+          "requirements": [
+            "Resolve the verified local case schema and workflow by request kind.",
+            "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+            "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": true,
+        "rationale": "Exclude this operation from the target release until its dedicated semantics and implementation are qualified. Existing grants remain intact; legacy enforcement remains until separately approved activation.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Remove executable binding and dependent references together; prove target API unavailable without compatibility fallback."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "create",
+      "proposalSha256": "636c41ce085ac654a713593c76db7fde0e19daba0d329de6c773252945201f0f",
+      "proposal": {
+        "operation": "create",
+        "disposition": "defer",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.create",
+          "existingId": "a04f7edb-c487-5fb8-9a61-1f532f233860",
+          "existingCatalogScopes": [
+            "legal_entity",
+            "operating_organization",
+            "tenant"
+          ],
+          "proposedCode": "neon.relationship.business_partner.create",
+          "proposedId": "a04f7edb-c487-5fb8-9a61-1f532f233860",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "create",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "direct_mutation",
+          "requirements": [
+            "Retain candidate direct create/update mapping only; steward versus governed-request semantics need review.",
+            "Fresh record/field authorization, expected version, idempotency and audit/outbox required."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "Exclude this operation from the target release until its dedicated semantics and implementation are qualified. Existing grants remain intact; legacy enforcement remains until separately approved activation.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Remove executable binding and dependent references together; prove target API unavailable without compatibility fallback."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "update",
+      "proposalSha256": "ade67ece5cff51eecec1da28c94c6c697625d48d27e20d9135430b9ac37dbb87",
+      "proposal": {
+        "operation": "update",
+        "disposition": "defer",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.update",
+          "existingId": "991c3e90-f8c6-57d9-a0ad-21b8d3c396a6",
+          "existingCatalogScopes": [
+            "legal_entity",
+            "operating_organization",
+            "tenant"
+          ],
+          "proposedCode": "neon.relationship.business_partner.update",
+          "proposedId": "991c3e90-f8c6-57d9-a0ad-21b8d3c396a6",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "tenant.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "tenant",
+              "coordinateSource": "tenant_context",
+              "resolverKey": null,
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "update",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "direct_mutation",
+          "requirements": [
+            "Retain candidate direct create/update mapping only; steward versus governed-request semantics need review.",
+            "Fresh record/field authorization, expected version, idempotency and audit/outbox required."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "existing",
+        "effect": "write",
+        "requiresParentRead": true,
+        "rationale": "Exclude this operation from the target release until its dedicated semantics and implementation are qualified. Existing grants remain intact; legacy enforcement remains until separately approved activation.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Remove executable binding and dependent references together; prove target API unavailable without compatibility fallback."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "qualification",
+      "proposalSha256": "d8d340437107bfcbb85d09855e4b87b27bcd6c4bc8fe9027016d0ec5c886e1bc",
+      "proposal": {
+        "operation": "qualification",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.supplier.qualification.admin",
+          "existingId": "4cbdf98c-826e-55aa-bbc2-ef9de66b531b",
+          "existingCatalogScopes": [
+            "legal_entity",
+            "operating_organization",
+            "tenant"
+          ],
+          "proposedCode": "neon.supplier.qualification.admin",
+          "proposedId": "4cbdf98c-826e-55aa-bbc2-ef9de66b531b",
+          "catalogAction": "retain_catalog_entry",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "qualification",
+          "variant": "default"
+        },
+        "workflow": {
+          "key": "qualification",
+          "requirements": [
+            "Retain existing qualification state, organization/company compatibility, maker/checker and audit checks.",
+            "Creation and decision require separate execution qualification."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "Retain the exact existing permission and scope with the specified owning-service workflow.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "qualification_company",
+      "proposalSha256": "aa36e7adc9ffe1a90ca6eef01acece0ae37d3f31c014545645dbb5f0a4e140b1",
+      "proposal": {
+        "operation": "qualification_company",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.supplier.qualification.admin",
+          "existingId": "4cbdf98c-826e-55aa-bbc2-ef9de66b531b",
+          "existingCatalogScopes": [
+            "legal_entity",
+            "operating_organization",
+            "tenant"
+          ],
+          "proposedCode": "neon.relationship.bp_target.qualification_company",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization-company.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization-company.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            },
+            {
+              "scopeKind": "company_code",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization-company.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "qualification",
+          "variant": "organization-company"
+        },
+        "workflow": {
+          "key": "qualification",
+          "requirements": [
+            "Retain existing qualification state, organization/company compatibility, maker/checker and audit checks.",
+            "Creation and decision require separate execution qualification."
+          ],
+          "requiresPreflight": true
+        },
+        "target": "proposed",
+        "effect": "write",
+        "requiresParentRead": false,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "supplier_company_read",
+      "proposalSha256": "d4ab48088849a22dd1d3dca78ec8bb2d0ff2fc452c139e0c821886119199010d",
+      "proposal": {
+        "operation": "supplier_company_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.read",
+          "existingId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.supplier_company_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization-company.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization-company.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            },
+            {
+              "scopeKind": "company_code",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization-company.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "supplier-company"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    },
+    {
+      "operation": "customer_company_read",
+      "proposalSha256": "95e2ce2b79a244821b21ae7cae331e2acede9dd317ad0b3bb1293b245cdd4c22",
+      "proposal": {
+        "operation": "customer_company_read",
+        "disposition": "include",
+        "permission": {
+          "existingCode": "neon.relationship.business_partner.read",
+          "existingId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+          "existingCatalogScopes": [
+            "operating_organization"
+          ],
+          "proposedCode": "neon.relationship.bp_target.customer_company_read",
+          "proposedId": null,
+          "catalogAction": "create_dedicated_permission",
+          "grantAssignments": []
+        },
+        "scope": {
+          "resolver": "organization-company.record.v1",
+          "bindings": [
+            {
+              "scopeKind": "operating_organization",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization-company.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            },
+            {
+              "scopeKind": "company_code",
+              "coordinateSource": "relation_resolver",
+              "resolverKey": "organization-company.record.v1",
+              "coordinateKey": null,
+              "missingValueBehavior": "deny"
+            }
+          ]
+        },
+        "handler": {
+          "key": "section",
+          "variant": "customer-company"
+        },
+        "workflow": {
+          "key": "read",
+          "requirements": [
+            "Fresh authorization and authorized projection; no workflow execution."
+          ],
+          "requiresPreflight": false
+        },
+        "target": "existing",
+        "effect": "read",
+        "requiresParentRead": true,
+        "rationale": "Introduce a separate target capability at the exact required scope. Keep the existing capability and all of its grants unchanged. The new capability receives no grants from this proposal.",
+        "conditions": {
+          "mfa": "required_for_review_and_existing_high_risk_runtime_operations",
+          "separationOfDuties": "Maker/approver and approver/applier checks remain mandatory for governed commands.",
+          "revocations": "Current denies and revocations take precedence.",
+          "effectiveDates": "Catalog proposal has no grant-effective dates; any future assignment requires separately approved dates.",
+          "activationAuthorized": false
+        },
+        "remainingEngineering": [
+          "Register and qualify exact callable handler, stored ownership resolver and workflow preflight.",
+          "Provide authenticated regression evidence against the selected release."
+        ],
+        "regressionEvidence": [],
+        "nativeCompilationEligible": false
+      }
+    }
+  ],
+  "grantChanges": [],
+  "activationAuthorized": false,
+  "packetRevision": "23a4203d695989429bd7b1c3adbeca108400d742683c050dda35b061f8538382"
+}

@@ -1,0 +1,122 @@
+/*
+ * Restyles Starlight's default palette with the Atlas Modern brand tokens
+ * already defined in packages/platform/foundation/theme (COLOR_TOKENS,
+ * FOUNDATION_TOKENS.typography) and packages/platform/foundation/brand
+ * (ATLAS_MODERN_BRAND). No layout or component changes — only the CSS
+ * custom properties Starlight itself reads. Keep this file's values in
+ * sync with that source of truth if it changes; there is no automated
+ * link between them since this site doesn't import the theme package.
+ *
+ * Identical copy lives at apps/docs-internal/src/styles/atlas-theme.css —
+ * duplicated rather than shared as a workspace package, since it's a
+ * single small CSS file with no logic.
+ */
+@layer starlight.base {
+  :root {
+    /* Atlas Modern — dark (Starlight's un-attributed root is its dark set).
+       Deliberate hexes, not a heavy color-mix-with-white: mixing brand
+       #234b84 more than ~35% toward white desaturates it into a pale
+       lavender-gray that no longer reads as "blue" against a dark ground —
+       these keep the brand hue (~215°) recognizable at every brightness. */
+    --sl-color-accent-low: color-mix(in srgb, #234b84 24%, black);
+    --sl-color-accent: #5b86c9;
+    --sl-color-accent-high: #93b3e6;
+
+    --sl-color-white: #e8edf5;
+    --sl-color-gray-1: #cbd3e0;
+    --sl-color-gray-2: #a8b3c7;
+    --sl-color-gray-3: #7f8ba3;
+    --sl-color-gray-4: #52627a;
+    --sl-color-gray-5: #33425a;
+    --sl-color-gray-6: #17243a;
+    --sl-color-black: #0b1220;
+
+    --sl-color-text: var(--sl-color-gray-2);
+    --sl-color-text-accent: var(--sl-color-accent-high);
+    --sl-color-bg: var(--sl-color-black);
+    --sl-color-bg-nav: #111b2e;
+    --sl-color-bg-sidebar: #111b2e;
+    --sl-color-bg-inline-code: #1d2a40;
+    --sl-color-bg-accent: var(--sl-color-accent-high);
+    --sl-color-hairline-light: var(--sl-color-gray-5);
+    --sl-color-hairline: var(--sl-color-gray-6);
+    --sl-color-hairline-shade: var(--sl-color-black);
+
+    --sl-font: 'Geist', 'Inter', var(--sl-font-system);
+  }
+
+  :root[data-theme='light'] {
+    /* Atlas Modern — light */
+    --sl-color-accent-low: color-mix(in srgb, #234b84 8%, white);
+    --sl-color-accent: #234b84;
+    --sl-color-accent-high: color-mix(in srgb, #234b84 82%, black);
+
+    --sl-color-white: #172033;
+    --sl-color-gray-1: #2a3548;
+    --sl-color-gray-2: #5b6578;
+    --sl-color-gray-3: #7c8698;
+    --sl-color-gray-4: #aab4c5;
+    --sl-color-gray-5: #d5dce7;
+    --sl-color-gray-6: #eef2f7;
+    --sl-color-gray-7: #f8fafc;
+    --sl-color-black: #ffffff;
+
+    --sl-color-text-accent: var(--sl-color-accent);
+    --sl-color-bg: #f8fafc;
+    --sl-color-bg-nav: #f8fafc;
+    --sl-color-bg-inline-code: var(--sl-color-gray-6);
+    --sl-color-bg-accent: var(--sl-color-accent);
+    --sl-color-hairline-light: var(--sl-color-gray-6);
+    --sl-color-hairline-shade: var(--sl-color-gray-6);
+  }
+}
+
+/*
+ * Persistent dark-navy sidebar, matching the product shell's rail
+ * (packages/platform/shell/shell/src/styles.css .athyper-shell__rail):
+ * a `linear-gradient(165deg, story-start, story-end)` from the brand
+ * color, always present regardless of the site's own light/dark toggle.
+ *
+ * Unlike the app (whose rail uses one fixed gradient everywhere), this
+ * gradient IS tuned per site-theme: sitting next to a near-black dark-mode
+ * content area, the app's brighter gradient read as a mismatched "brighter
+ * blue patch" rather than part of one dark theme. Dark mode gets a more
+ * muted version (mixed further toward black); light mode keeps the
+ * brighter original, which reads fine against a white content area.
+ *
+ * Deliberately outside any @layer so it wins over Starlight's own
+ * `@layer starlight.core` sidebar rules regardless of load order.
+ */
+.sidebar-pane {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, #234b84 14%, black),
+    color-mix(in srgb, #234b84 38%, black)
+  );
+  border-inline-end: none;
+
+  /* Re-scope the tokens Starlight's sidebar markup reads (see
+     @astrojs/starlight SidebarSublist.astro) so link text stays legible
+     on the fixed-dark background regardless of the page's own theme. */
+  --sl-color-gray-2: color-mix(in srgb, white 78%, transparent);
+  --sl-color-white: #ffffff;
+  --sl-color-hairline-light: color-mix(in srgb, white 14%, transparent);
+}
+
+:root[data-theme='light'] .sidebar-pane {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, #234b84 24%, black),
+    color-mix(in srgb, #234b84 64%, black)
+  );
+}
+
+.sidebar-pane a[aria-current='page'] {
+  background: color-mix(in srgb, white 16%, transparent);
+  color: #ffffff;
+  box-shadow: inset 3px 0 0 color-mix(in srgb, #234b84 38%, white);
+}
+
+.sidebar-pane .large {
+  color: #ffffff;
+}

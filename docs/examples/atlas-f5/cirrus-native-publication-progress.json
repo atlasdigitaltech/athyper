@@ -1,0 +1,77 @@
+{
+  "observedAt": "2026-09-10T03:21:06.757Z",
+  "environment": "dev",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "sessions": {
+    "author": {
+      "user": "catl.admin",
+      "path": "tests/e2e/.auth/dev/studio/catl.admin.json",
+      "verified": true
+    },
+    "reviewer": {
+      "user": "catl.owner",
+      "path": "tests/e2e/.auth/dev/studio/catl.owner.json",
+      "verified": true
+    }
+  },
+  "authoringFix": {
+    "issue": "Unscoped repository queries caused RLS to hide the entity during change-set creation.",
+    "change": "Use authenticated tenant transactions for every repository method; reuse the transaction in nested repository work.",
+    "testsPassed": 29,
+    "hostTypecheckPassed": true,
+    "liveDraftCreateStatus": 201,
+    "image": "athyper-runtime-server:atlas-authoring-scope-20260910",
+    "healthy": true
+  },
+  "draftId": "28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb",
+  "baseline": {
+    "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic",
+    "releaseId": "42213535-3b6c-4c11-8877-1fe2b5142a42",
+    "releaseNo": 17
+  },
+  "studioLineage": {
+    "nativeReleaseNo": 1,
+    "runtimeReleaseNo": 18,
+    "releaseId": "126721f6-a2e5-45e2-91bf-0d6a1b660c56",
+    "draftStatus": "published",
+    "baselineImportId": "5ca0968a-f81f-42b4-8333-dd54c1b02cbb"
+  },
+  "remaining": {
+    "status": "application_bridge_round_trip_complete",
+    "retrievalFollowup": "Attachment ingestion and retrieval admission are separate follow-up work."
+  },
+  "published": true,
+  "activated": true,
+  "documentUploaded": false,
+  "baselineAdoption": {
+    "status": "imported_with_explicit_provenance",
+    "importId": "5ca0968a-f81f-42b4-8333-dd54c1b02cbb",
+    "receipt": "cirrus-baseline-adoption.applied.json",
+    "historicalStudioReleasesFabricated": false,
+    "runtimeSourceReleaseNo": 17,
+    "nativeBridgeImplementation": "deployed_and_authenticated_round_trip_verified",
+    "initialAiPlan": "cirrus-initial-ai-publication-plan.json",
+    "remaining": []
+  },
+  "previousObservation": {
+    "observedAt": "2026-09-10T02:09:31.488Z",
+    "studioLineage": {
+      "sourcePublicationReleaseRows": 0,
+      "sourceEntityRows": 0,
+      "selectedEntityReleaseRows": 0,
+      "draftStatus": "draft"
+    },
+    "remaining": {
+      "status": "native_publication_lineage_not_reconciled",
+      "explanation": "The active Neon-local BP projection has no corresponding Studio entity or publication release. The new native draft targets a different Studio entity. A tenant-scoped import/publication bridge is required before publishing this AI-only derivative.",
+      "requiredPreservation": [
+        "Keep the existing tenant publication key.",
+        "Preserve all baseline storage, fields, operations, directory scope and presentation settings.",
+        "Bind the AI delta to the source hash and reject a changed baseline.",
+        "Produce native signed snapshot and publication-link artifacts with monotonic release numbering.",
+        "Obtain separate authenticated catl.owner review before dispatch."
+      ]
+    }
+  },
+  "verificationReceipt": "cirrus-baseline-roundtrip.verified.json"
+}

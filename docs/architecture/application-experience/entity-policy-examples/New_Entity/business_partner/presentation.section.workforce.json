@@ -1,0 +1,64 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.workforce",
+  "entityCode": "workforce",
+  "plane": "neon",
+  "sectionKey": "workforce",
+  "rendererKey": "platform.related-collection.v1",
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.workforce.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/workforce"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "workforce/core.json",
+  "fieldBindings": [
+    {
+      "fieldKey": "employee_number"
+    },
+    {
+      "fieldKey": "display_name"
+    },
+    {
+      "fieldKey": "employment_type"
+    },
+    {
+      "fieldKey": "company_code_id"
+    },
+    {
+      "fieldKey": "status"
+    }
+  ],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner_workforce.read",
+    "fieldPermissions": [
+      "neon.relationship.business_partner_person.read"
+    ],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [
+    "workforce/core"
+  ],
+  "artifactHash": "sha256:98ef5a3ec36c52585d09721fe8f2513d02f7fee92666f9dab8ffb121f64ed732"
+}

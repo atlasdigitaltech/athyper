@@ -1,0 +1,38 @@
+{
+  "name": "@athyper/platform-iam-governance-review",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./authenticated-role-review": {
+      "types": "./src/authenticated-role-review.d.mts",
+      "node": "./src/authenticated-role-review.mjs",
+      "browser": "./src/browser-denied.mjs",
+      "default": "./src/browser-denied.mjs"
+    },
+    "./authenticated-operation-review": {
+      "types": "./src/authenticated-operation-review.d.mts",
+      "node": "./src/authenticated-operation-review.mjs",
+      "browser": "./src/browser-denied.mjs",
+      "default": "./src/browser-denied.mjs"
+    },
+    "./named-role-review": {
+      "node": "./src/named-role-review.mjs",
+      "browser": "./src/browser-denied.mjs",
+      "default": "./src/browser-denied.mjs"
+    },
+    "./named-role-approval-workflow": {
+      "node": "./src/named-role-approval-workflow.mjs",
+      "browser": "./src/browser-denied.mjs",
+      "default": "./src/browser-denied.mjs"
+    },
+    "./named-role-recommendations": {
+      "node": "./src/named-role-recommendations.mjs",
+      "browser": "./src/browser-denied.mjs",
+      "default": "./src/browser-denied.mjs"
+    }
+  },
+  "devDependencies": {
+    "@athyper/platform-iam-auth-bff": "workspace:*"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "@athyper/platform-entity-form-detail",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@athyper/contract-platform-entity-runtime": "workspace:*",
+    "@athyper/platform-entity-descriptor-client": "workspace:*",
+    "@athyper/platform-shell": "workspace:*",
+    "@athyper/platform-shell-app-foundation": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
+    "@athyper/platform-icons": "workspace:*",
+    "@athyper/platform-i18n": "workspace:*",
+    "@athyper/platform-entity-list-view": "workspace:*",
+    "@athyper/platform-api-client": "workspace:*",
+    "@athyper/contract-platform-entity-list": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.5"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@types/react": "^19.2.14",
+    "react": "^19.2.5",
+    "typescript": "^6.0.3"
+  }
+}

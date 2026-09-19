@@ -2,8 +2,24 @@ import type { FinanceActor } from "./commands.js";
 
 export type FinanceDecimal = string;
 export type BookPeriodStatus = "future" | "open" | "soft_close" | "hard_close";
-export type RoundingMethod = "ROUND_HALF_UP" | "ROUND_HALF_EVEN" | "ROUND_DOWN" | "ROUND_UP";
-export type RoundingSlot = "UNIT_PRICE" | "LINE_DISCOUNT" | "LINE_NET" | "LINE_TAX" | "LINE_GROSS" | "DOCUMENT_SUBTOTAL" | "DOCUMENT_TAX" | "DOCUMENT_TOTAL" | "EXCHANGE_RATE" | "WITHHOLDING_TAX" | "UNIT_QUANTITY" | "LINE_QUANTITY" | "WEIGHT" | "VOLUME" | "PERCENTAGE";
+export type FinanceRoundingMethod =
+  "ROUND_HALF_UP" | "ROUND_HALF_EVEN" | "ROUND_DOWN" | "ROUND_UP";
+export type RoundingSlot =
+  | "UNIT_PRICE"
+  | "LINE_DISCOUNT"
+  | "LINE_NET"
+  | "LINE_TAX"
+  | "LINE_GROSS"
+  | "DOCUMENT_SUBTOTAL"
+  | "DOCUMENT_TAX"
+  | "DOCUMENT_TOTAL"
+  | "EXCHANGE_RATE"
+  | "WITHHOLDING_TAX"
+  | "UNIT_QUANTITY"
+  | "LINE_QUANTITY"
+  | "WEIGHT"
+  | "VOLUME"
+  | "PERCENTAGE";
 
 export interface FinanceCoordinates {
   readonly companyCodeId: string;
@@ -27,7 +43,7 @@ export interface RoundingRuleCandidate {
   readonly slot?: RoundingSlot;
   readonly ruleId: string;
   readonly ruleCode: string;
-  readonly method: RoundingMethod;
+  readonly method: FinanceRoundingMethod;
   readonly precisionDigits?: number;
   readonly roundingIncrement?: FinanceDecimal;
   readonly revision: string;
@@ -44,7 +60,7 @@ export interface CurrencyRoundingDefaults {
 
 export interface RoundingEvidence {
   readonly source: "rule" | "currency_default";
-  readonly method: RoundingMethod;
+  readonly method: FinanceRoundingMethod;
   readonly precisionDigits: number;
   readonly roundingIncrement: FinanceDecimal;
   readonly specificity: number;
@@ -115,7 +131,16 @@ export interface PostingAdmission {
   readonly evidenceHash: string;
 }
 
-export type PeriodAdmission = Pick<PostingAdmission, "book" | "period" | "currency">;
+export type PeriodAdmission = Pick<
+  PostingAdmission,
+  "book" | "period" | "currency"
+>;
 export interface FinancePeriodAdmissionGuard {
-  assertPeriodOpen(actor: FinanceActor, coordinates: FinanceCoordinates): Promise<PeriodAdmission>;
+  assertPeriodOpen(
+    actor: FinanceActor,
+    coordinates: FinanceCoordinates,
+  ): Promise<PeriodAdmission>;
 }
+
+/** Compatibility alias; the domain-specific declaration is canonical. */
+export type { FinanceRoundingMethod as RoundingMethod };

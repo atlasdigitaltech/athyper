@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_reset_temporary_studio_authoring_grant_proposal",
+  "status": "review_required",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "planeKey": "studio",
+  "purpose": "Author, independently review and publish the reset BP successor and company-owned BP setup-request pilot. Native authenticated review and all release gates remain mandatory.",
+  "effectiveFrom": "2026-09-11T09:00:00Z",
+  "effectiveUntil": "2026-09-11T13:00:00Z",
+  "scopeKind": "tenant",
+  "scopeTargetId": "44444444-4444-4444-8444-444444444444",
+  "propagation": "exact",
+  "assignments": [
+    {
+      "account": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "permissions": [
+        "metadata.entity.author",
+        "metadata.entity.validate",
+        "metadata.entity.test",
+        "metadata.entity.submit",
+        "metadata.entity.publish"
+      ]
+    },
+    {
+      "account": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "permissions": [
+        "metadata.entity.review"
+      ]
+    }
+  ],
+  "conditions": {
+    "mfa": "existing catalog MFA requirements retained for every operation",
+    "separationOfDuties": "Existing native author/submitter versus reviewer separation and persisted approval checks remain required",
+    "permissionDefinitionsChanged": false,
+    "bpPermissionsChanged": false,
+    "activationPermissionsIncluded": false,
+    "sharedDevEnforcementChanged": false,
+    "grantApplication": "requires explicit proposal approval and current authority dry run",
+    "cleanup": "Revoke these new assignments after work completes or by expiry; never restore historical revoked assignments."
+  },
+  "scopeLimitation": "Tenant-exact Studio authoring authority applies across native metadata because draft creation does not enforce a BP-only scope. Execution is restricted to BP successor and company pilot; this operational restriction is not an IAM-enforced entity boundary.",
+  "approvals": [],
+  "applied": false,
+  "catalogInstallationEvidence": "governance/policy/reports/business-partner-reset-catalog.installation.dev.json",
+  "historicalAssignmentsRestored": false,
+  "proposalRevision": "e75d4ffc805c48c81615eca22c3ab066dadf400d829256de9629ae7638535128"
+}

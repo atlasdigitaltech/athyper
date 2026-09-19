@@ -8,3 +8,9 @@ CREATE INDEX trustiam_identity_provisioning_attempt_lease_idx ON trustiam.identi
 CREATE UNIQUE INDEX trustiam_projection_reconciliation_attempt_open_uq ON trustiam.projection_reconciliation_attempt(authority_tenant_id,projection_id) WHERE status IN ('claimed','running','retrying');
 CREATE INDEX trustiam_projection_reconciliation_attempt_claim_idx ON trustiam.projection_reconciliation_attempt(status,next_attempt_at,lease_expires_at) WHERE status IN ('claimed','running','retrying');
 CREATE INDEX trustiam_projection_reconciliation_attempt_dead_letter_idx ON trustiam.projection_reconciliation_attempt(authority_tenant_id,terminal_at DESC) WHERE status='dead_letter';
+CREATE INDEX trustiam_identity_projection_reconcile_idx ON trustiam.identity_projection(reconciliation_status,updated_at,created_at) WHERE reconciliation_status IN('pending','drifted','failed');
+CREATE UNIQUE INDEX trustiam_identity_saga_attempt_open_uq ON trustiam.identity_saga_attempt(authority_tenant_id,identity_projection_id) WHERE status IN('claimed','running');
+CREATE INDEX trustiam_identity_saga_attempt_claim_idx ON trustiam.identity_saga_attempt(status,next_attempt_at,lease_expires_at) WHERE status IN('claimed','running','failed');
+CREATE INDEX trustiam_identity_saga_attempt_dead_letter_idx ON trustiam.identity_saga_attempt(authority_tenant_id,terminal_at DESC) WHERE status='dead_letter';
+CREATE INDEX trustiam_provider_identity_callback_pending_idx ON trustiam.provider_identity_callback_inbox(received_at) WHERE disposition='received';
+CREATE INDEX trustiam_provider_identity_callback_sequence_idx ON trustiam.provider_identity_callback_inbox(authority_tenant_id,identity_projection_id,provider_sequence DESC);

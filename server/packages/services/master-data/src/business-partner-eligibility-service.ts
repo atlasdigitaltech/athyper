@@ -1,0 +1,2021 @@
+import { parseInstant } from "@athyper/platform-temporal";
+import { createHash } from "node:crypto";
+import type { AuditRecorder } from "@athyper/server-contract-audit";
+import type {
+  Authorizer,
+  VerifiedRequestContext,
+} from "@athyper/server-contract-auth";
+import type { OutboxWriter } from "@athyper/server-contract-events";
+import {
+  businessPartnerQualificationPermissions,
+  customerOnboardingPermissions,
+  type BusinessPartnerEligibilityRepository,
+  type BusinessPartnerEligibilityService,
+  type BusinessPartnerEligibilityTransactionCoordinator,
+  type BusinessPartnerQualification,
+  type CreateBusinessPartnerQualificationCommand,
+  type CreateCustomerCreditReviewCommand,
+  type CreateCustomerDesignationCommand,
+  type CreateSupplierPreferenceCommand,
+  type CustomerCreditReview,
+  type CustomerAccountDesignation,
+  type DecideBusinessPartnerQualificationCommand,
+  type DecideCustomerCreditReviewCommand,
+  type DecideCustomerDesignationCommand,
+  type DecideSupplierPreferenceCommand,
+  type RevokeSupplierPreferenceCommand,
+  type SupplierPreferenceDesignation,
+} from "@athyper/server-contract-master-data";
+import { MasterDataError } from "./errors.js";
+
+export function createBusinessPartnerEligibilityService<Transaction>(options: {
+  readonly authorizer: Authorizer;
+  readonly repository: BusinessPartnerEligibilityRepository<Transaction>;
+  readonly transactions: BusinessPartnerEligibilityTransactionCoordinator<Transaction>;
+  readonly audit: AuditRecorder<Transaction>;
+  readonly outbox: OutboxWriter<Transaction>;
+  readonly onboardingCycles?: Pick<import("./business-partner-onboarding-cycle.js").BusinessPartnerOnboardingCycleCoordinator<Transaction>,"advanceForBusinessPartner">;
+}): BusinessPartnerEligibilityService {
+  return {
+    async preflightQualification(query) {
+      assertContext(query.context);
+      if (query.historical) return "workflow_blocked";
+      if (!query.businessPartnerId || !query.operatingOrganizationId || !options.repository.qualificationTargetReady)
+        return "not_applicable";
+      return options.transactions.run("neon", actor(query.context), async transaction =>
+        await options.repository.qualificationTargetReady!({tenantId: query.context.tenantId,
+          businessPartnerId: query.businessPartnerId, operatingOrganizationId: query.operatingOrganizationId,
+          ...(query.companyCodeId ? {companyCodeId: query.companyCodeId} : {})}, transaction)
+          ? "allowed" : "not_applicable");
+    },
+    async resolve(query) {
+      assertContext(query.context);
+      validateDate(query.businessDate, "businessDate");
+      validateCode(query.operationCode, "operationCode");
+      await authorize(
+        options.authorizer,
+        query.context,
+        businessPartnerQualificationPermissions.read,
+        scope(query.operatingOrganizationId, query.companyCodeId),
+      );
+      return options.transactions.run(
+        "neon",
+        actor(query.context),
+        async (transaction) => {
+          const decision = await options.repository.resolve(
+            {
+              tenantId: query.context.tenantId,
+              businessPartnerId: query.businessPartnerId,
+              role: query.role,
+              operatingOrganizationId: query.operatingOrganizationId,
+              ...(query.companyCodeId
+                ? { companyCodeId: query.companyCodeId }
+                : {}),
+              ...(query.commodityCategoryId
+                ? { commodityCategoryId: query.commodityCategoryId }
+                : {}),
+              operationCode: query.operationCode,
+              businessDate: query.businessDate,
+            },
+            transaction,
+          );
+          if (!decision)
+            throw new MasterDataError(
+              404,
+              "BUSINESS_PARTNER_NOT_FOUND",
+              "Business Partner was not found",
+            );
+          return {
+            ...decision,
+            decisionFingerprint: hash({
+              tenantId: query.context.tenantId,
+              ...decision,
+            }),
+          };
+        },
+      );
+    },
+    async activateSupplier(command) {
+      assertContext(command.context);
+      key(command.idempotencyKey);
+      validateDate(command.businessDate, "businessDate");
+      const commandFingerprint = hash({
+        businessPartnerId: command.businessPartnerId,
+        operatingOrganizationId: command.operatingOrganizationId,
+        companyCodeId: command.companyCodeId,
+        commodityCategoryId: command.commodityCategoryId,
+        businessDate: command.businessDate,
+        requirePaymentReadiness: command.requirePaymentReadiness ?? true,
+      });
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          const existing =
+            await options.repository.findSupplierActivationByIdempotencyKey(
+              command.context.tenantId,
+              command.idempotencyKey,
+              transaction,
+            );
+          if (existing) {
+            if (existing.commandFingerprint !== commandFingerprint)
+              throw new MasterDataError(
+                409,
+                "SUPPLIER_ACTIVATION_IDEMPOTENCY_CONFLICT",
+                "Idempotency key was reused with different activation scope",
+              );
+            return { activation: existing, replayed: true };
+          }
+          const operationCode =
+              command.requirePaymentReadiness === false
+                ? "purchasing"
+                : "payment",
+            raw = await options.repository.resolve(
+              {
+                tenantId: command.context.tenantId,
+                businessPartnerId: command.businessPartnerId,
+                role: "supplier",
+                operatingOrganizationId: command.operatingOrganizationId,
+                ...(command.companyCodeId
+                  ? { companyCodeId: command.companyCodeId }
+                  : {}),
+                ...(command.commodityCategoryId
+                  ? { commodityCategoryId: command.commodityCategoryId }
+                  : {}),
+                operationCode,
+                businessDate: command.businessDate,
+              },
+              transaction,
+            );
+          if (!raw)
+            throw new MasterDataError(
+              404,
+              "BUSINESS_PARTNER_NOT_FOUND",
+              "Business Partner was not found",
+            );
+          const activationReasons = raw.reasons.filter(
+              (reason) => reason.code !== "ROLE_INACTIVE",
+            ),
+            activationDecision = {
+              ...raw,
+              eligible: !activationReasons.some(
+                (reason) => reason.severity === "blocking",
+              ),
+              reasons: activationReasons,
+            },
+            readiness = {
+              ...activationDecision,
+              decisionFingerprint: hash({
+                tenantId: command.context.tenantId,
+                ...activationDecision,
+              }),
+            };
+          if (!readiness.eligible)
+            throw new MasterDataError(
+              409,
+              "SUPPLIER_ACTIVATION_READINESS_FAILED",
+              `Supplier activation is blocked: ${readiness.reasons
+                .filter((reason) => reason.severity === "blocking")
+                .map((reason) => reason.code)
+                .join(",")}`,
+            );
+          await options.onboardingCycles?.advanceForBusinessPartner({tenantId:command.context.tenantId,principalId:command.context.principalId,businessPartnerId:command.businessPartnerId,eventCode:"business_partner.supplier.readiness.completed",metadata:{operatingOrganizationId:command.operatingOrganizationId,...(command.companyCodeId?{companyCodeId:command.companyCodeId}:{}),readinessFingerprint:readiness.decisionFingerprint}},transaction);
+          await authorize(
+            options.authorizer,
+            command.context,
+            businessPartnerQualificationPermissions.activateSupplier,
+            {
+              ...scope(command.operatingOrganizationId, command.companyCodeId),
+              businessPartnerId: command.businessPartnerId,
+              readinessEvidencePinned: true,
+              readinessFingerprint: readiness.decisionFingerprint,
+              eligible: true,
+              externalApplicant: false,
+              requiresElevatedAssurance: true,
+            },
+          );
+          const activation = await options.repository.activateSupplier(
+            {
+              tenantId: command.context.tenantId,
+              businessPartnerId: command.businessPartnerId,
+              operatingOrganizationId: command.operatingOrganizationId,
+              ...(command.companyCodeId
+                ? { companyCodeId: command.companyCodeId }
+                : {}),
+              businessDate: command.businessDate,
+              idempotencyKey: command.idempotencyKey,
+              activatedBy: command.context.principalId,
+              readiness,
+              commandFingerprint,
+            },
+            transaction,
+          );
+          if (!activation)
+            throw new MasterDataError(
+              409,
+              "SUPPLIER_ACTIVATION_STATE_CONFLICT",
+              "Supplier must be onboarding, suspended, or inactive when activation is applied",
+            );
+          await activationEffects(
+            options,
+            command.context,
+            transaction,
+            activation,
+          );
+          await options.onboardingCycles?.advanceForBusinessPartner({tenantId:command.context.tenantId,principalId:command.context.principalId,businessPartnerId:command.businessPartnerId,eventCode:"business_partner.supplier.activated",metadata:{activationEvidenceId:activation.id,readinessFingerprint:activation.readinessFingerprint}},transaction);
+          return { activation, replayed: false };
+        },
+      );
+    },
+    async createQualification(command) {
+      assertContext(command.context);
+      validateCreate(command);
+      await authorize(
+        options.authorizer,
+        command.context,
+        businessPartnerQualificationPermissions.manage,
+        {
+          ...scope(command.operatingOrganizationId, command.companyCodeId),
+          businessPartnerId: command.businessPartnerId,
+          actionCode: command.companyCodeId ? "qualification_company" : "qualification",
+          qualificationControl: true,
+          makerCheckerEnforced: true,
+        },
+      );
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          const existing =
+            await options.repository.findQualificationByIdempotencyKey(
+              command.context.tenantId,
+              command.idempotencyKey,
+              transaction,
+            );
+          if (existing) {
+            if (
+              qualificationFingerprint(existing) !== createFingerprint(command)
+            )
+              throw new MasterDataError(
+                409,
+                "BUSINESS_PARTNER_QUALIFICATION_IDEMPOTENCY_CONFLICT",
+                "Idempotency key was reused with different qualification content",
+              );
+            return { qualification: existing, replayed: true };
+          }
+          const qualification = await options.repository.createQualification(
+            {
+              tenantId: command.context.tenantId,
+              idempotencyKey: command.idempotencyKey,
+              businessPartnerId: command.businessPartnerId,
+              partnerRole: command.partnerRole,
+              operatingOrganizationId: command.operatingOrganizationId,
+              ...(command.companyCodeId
+                ? { companyCodeId: command.companyCodeId }
+                : {}),
+              ...(command.commodityCapabilityId
+                ? { commodityCapabilityId: command.commodityCapabilityId }
+                : {}),
+              qualificationTypeCode: command.qualificationTypeCode,
+              ...(command.riskAssessmentId
+                ? { riskAssessmentId: command.riskAssessmentId }
+                : {}),
+              ...(command.effectiveFrom
+                ? { effectiveFrom: command.effectiveFrom }
+                : {}),
+              ...(command.effectiveUntil
+                ? { effectiveUntil: command.effectiveUntil }
+                : {}),
+              ...(command.nextReviewAt
+                ? { nextReviewAt: command.nextReviewAt }
+                : {}),
+              createdBy: command.context.principalId,
+            },
+            transaction,
+          );
+          await effects(
+            options,
+            command.context,
+            transaction,
+            "business_partner.qualification.created",
+            qualification,
+          );
+          return { qualification, replayed: false };
+        },
+      );
+    },
+    async decideQualification(command) {
+      assertContext(command.context);
+      validateDecision(command);
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          const current = await options.repository.getQualification(
+            command.context.tenantId,
+            command.qualificationId,
+            transaction,
+          );
+          if (!current)
+            throw new MasterDataError(
+              404,
+              "BUSINESS_PARTNER_QUALIFICATION_NOT_FOUND",
+              "Qualification was not found",
+            );
+          if (current.createdBy === command.context.principalId)
+            throw new MasterDataError(
+              403,
+              "BUSINESS_PARTNER_QUALIFICATION_SELF_APPROVAL_FORBIDDEN",
+              "The qualification creator cannot decide their own qualification",
+            );
+          await authorize(
+            options.authorizer,
+            command.context,
+            businessPartnerQualificationPermissions.manage,
+            {
+              ...scope(current.operatingOrganizationId, current.companyCodeId),
+              businessPartnerId: current.businessPartnerId,
+              qualificationId: current.id,
+              // Existing child decisions cannot use proposed-resource creation
+              // authority. Until explicitly bound, target enforcement denies.
+              actionCode: "qualification_decide",
+              qualificationControl: true,
+              makerCheckerEnforced: true,
+              createdBy: current.createdBy,
+            },
+          );
+          const fingerprint = hash({
+            qualificationId: current.id,
+            expectedVersion: command.expectedVersion,
+            decision: command.decision,
+            reason: command.reason,
+            decidedBy: command.context.principalId,
+            qualification: qualificationFingerprint(current),
+          });
+          const result = await options.repository.decideQualification(
+            {
+              tenantId: command.context.tenantId,
+              qualificationId: command.qualificationId,
+              expectedVersion: command.expectedVersion,
+              decision: command.decision,
+              reason: command.reason,
+              idempotencyKey: command.idempotencyKey,
+              decidedBy: command.context.principalId,
+              decisionFingerprint: fingerprint,
+            },
+            transaction,
+          );
+          if (!result)
+            throw new MasterDataError(
+              409,
+              "BUSINESS_PARTNER_QUALIFICATION_DECISION_CONFLICT",
+              "Qualification version, decision state, or idempotency evidence changed",
+            );
+          if (!result.replayed)
+            await effects(
+              options,
+              command.context,
+              transaction,
+              `business_partner.qualification.${command.decision}`,
+              result.qualification,
+            );
+          if (!result.replayed) await options.onboardingCycles?.advanceForBusinessPartner({tenantId:command.context.tenantId,principalId:command.context.principalId,businessPartnerId:result.qualification.businessPartnerId,eventCode:`business_partner.qualification.${command.decision}`,metadata:{qualificationId:result.qualification.id,operatingOrganizationId:result.qualification.operatingOrganizationId,companyCodeId:result.qualification.companyCodeId}},transaction);
+          return result;
+        },
+      );
+    },
+    async createPreference(command) {
+      assertContext(command.context);
+      validatePreferenceCreate(command);
+      await authorize(
+        options.authorizer,
+        command.context,
+        businessPartnerQualificationPermissions.managePreference,
+        {
+          ...scope(command.operatingOrganizationId, command.companyCodeId),
+          preferenceControl: true,
+          makerCheckerEnforced: true,
+        },
+      );
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          const existing =
+            await options.repository.findPreferenceByIdempotencyKey(
+              command.context.tenantId,
+              command.idempotencyKey,
+              transaction,
+            );
+          if (existing) {
+            if (
+              preferenceFingerprint(existing) !==
+              preferenceCreateFingerprint(command)
+            )
+              throw new MasterDataError(
+                409,
+                "SUPPLIER_PREFERENCE_IDEMPOTENCY_CONFLICT",
+                "Idempotency key was reused with different preference content",
+              );
+            return { preference: existing, replayed: true };
+          }
+          let preference;
+          try {
+            preference = await options.repository.createPreference(
+              {
+                tenantId: command.context.tenantId,
+                idempotencyKey: command.idempotencyKey,
+                businessPartnerId: command.businessPartnerId,
+                supplierId: command.supplierId,
+                operatingOrganizationId: command.operatingOrganizationId,
+                ...(command.companyCodeId
+                  ? { companyCodeId: command.companyCodeId }
+                  : {}),
+                ...(command.commodityCategoryId
+                  ? { commodityCategoryId: command.commodityCategoryId }
+                  : {}),
+                effectiveFrom: command.effectiveFrom,
+                ...(command.effectiveUntil
+                  ? { effectiveUntil: command.effectiveUntil }
+                  : {}),
+                rationale: command.rationale,
+                createdBy: command.context.principalId,
+              },
+              transaction,
+            );
+          } catch (error) {
+            if (["23503", "23514"].includes(databaseCode(error) ?? ""))
+              throw new MasterDataError(
+                409,
+                "SUPPLIER_PREFERENCE_SCOPE_INVALID",
+                "Supplier, organization, company, commodity, or effective-range evidence does not cover the requested preference scope",
+              );
+            throw error;
+          }
+          await preferenceEffects(
+            options,
+            command.context,
+            transaction,
+            "business_partner.preference.created",
+            preference,
+          );
+          return { preference, replayed: false };
+        },
+      );
+    },
+    async decidePreference(command) {
+      assertContext(command.context);
+      validatePreferenceDecision(command);
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          const today = new Date().toISOString().slice(0, 10),
+            current = await options.repository.getPreference(
+              command.context.tenantId,
+              command.preferenceId,
+              today,
+              transaction,
+            );
+          if (!current)
+            throw new MasterDataError(
+              404,
+              "SUPPLIER_PREFERENCE_NOT_FOUND",
+              "Supplier preference was not found",
+            );
+          if (current.createdBy === command.context.principalId)
+            throw new MasterDataError(
+              403,
+              "SUPPLIER_PREFERENCE_SELF_APPROVAL_FORBIDDEN",
+              "The preference creator cannot decide their own designation",
+            );
+          await authorize(
+            options.authorizer,
+            command.context,
+            businessPartnerQualificationPermissions.managePreference,
+            {
+              ...scope(current.operatingOrganizationId, current.companyCodeId),
+              preferenceControl: true,
+              makerCheckerEnforced: true,
+              createdBy: current.createdBy,
+            },
+          );
+          if (command.decision === "approved") {
+            const readiness = await options.repository.resolve(
+              {
+                tenantId: command.context.tenantId,
+                businessPartnerId: current.businessPartnerId,
+                role: "supplier",
+                operatingOrganizationId: current.operatingOrganizationId,
+                ...(current.companyCodeId
+                  ? { companyCodeId: current.companyCodeId }
+                  : {}),
+                ...(current.commodityCategoryId
+                  ? { commodityCategoryId: current.commodityCategoryId }
+                  : {}),
+                operationCode: "purchasing",
+                businessDate: current.effectiveFrom,
+              },
+              transaction,
+            );
+            if (!readiness || !readiness.eligible)
+              throw new MasterDataError(
+                409,
+                "SUPPLIER_PREFERENCE_READINESS_FAILED",
+                `Supplier is not eligible at effective start: ${
+                  readiness?.reasons
+                    .filter((item) => item.severity === "blocking")
+                    .map((item) => item.code)
+                    .join(",") || "PARTNER_NOT_FOUND"
+                }`,
+              );
+          }
+          const fingerprint = hash({
+            preferenceId: current.id,
+            expectedVersion: command.expectedVersion,
+            decision: command.decision,
+            reason: command.reason,
+            decidedBy: command.context.principalId,
+            preference: preferenceFingerprint(current),
+          });
+          let result;
+          try {
+            result = await options.repository.decidePreference(
+              {
+                tenantId: command.context.tenantId,
+                preferenceId: command.preferenceId,
+                expectedVersion: command.expectedVersion,
+                decision: command.decision,
+                reason: command.reason,
+                idempotencyKey: command.idempotencyKey,
+                decidedBy: command.context.principalId,
+                decisionFingerprint: fingerprint,
+              },
+              transaction,
+            );
+          } catch (error) {
+            if (databaseCode(error) === "23P01")
+              throw new MasterDataError(
+                409,
+                "SUPPLIER_PREFERENCE_SCOPE_CONFLICT",
+                "An overlapping approved preference exists for this supplier and scope",
+              );
+            throw error;
+          }
+          if (!result)
+            throw new MasterDataError(
+              409,
+              "SUPPLIER_PREFERENCE_DECISION_CONFLICT",
+              "Preference version, decision state, or idempotency evidence changed",
+            );
+          if (!result.replayed)
+            await preferenceEffects(
+              options,
+              command.context,
+              transaction,
+              `business_partner.preference.${command.decision}`,
+              result.preference,
+            );
+          return result;
+        },
+      );
+    },
+    async revokePreference(command) {
+      assertContext(command.context);
+      validatePreferenceRevoke(command);
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          const today = new Date().toISOString().slice(0, 10),
+            current = await options.repository.getPreference(
+              command.context.tenantId,
+              command.preferenceId,
+              today,
+              transaction,
+            );
+          if (!current)
+            throw new MasterDataError(
+              404,
+              "SUPPLIER_PREFERENCE_NOT_FOUND",
+              "Supplier preference was not found",
+            );
+          await authorize(
+            options.authorizer,
+            command.context,
+            businessPartnerQualificationPermissions.managePreference,
+            {
+              ...scope(current.operatingOrganizationId, current.companyCodeId),
+              preferenceControl: true,
+              makerCheckerEnforced: true,
+            },
+          );
+          const fingerprint = hash({
+              preferenceId: current.id,
+              expectedVersion: command.expectedVersion,
+              reason: command.reason,
+              revokedBy: command.context.principalId,
+              preference: preferenceFingerprint(current),
+            }),
+            result = await options.repository.revokePreference(
+              {
+                tenantId: command.context.tenantId,
+                preferenceId: command.preferenceId,
+                expectedVersion: command.expectedVersion,
+                reason: command.reason,
+                idempotencyKey: command.idempotencyKey,
+                revokedBy: command.context.principalId,
+                revocationFingerprint: fingerprint,
+              },
+              transaction,
+            );
+          if (!result)
+            throw new MasterDataError(
+              409,
+              "SUPPLIER_PREFERENCE_REVOCATION_CONFLICT",
+              "Preference version, state, or idempotency evidence changed",
+            );
+          if (!result.replayed)
+            await preferenceEffects(
+              options,
+              command.context,
+              transaction,
+              "business_partner.preference.revoked",
+              result.preference,
+            );
+          return result;
+        },
+      );
+    },
+    async listPreferences(query) {
+      assertContext(query.context);
+      validateDate(query.businessDate, "businessDate");
+      await authorize(
+        options.authorizer,
+        query.context,
+        businessPartnerQualificationPermissions.read,
+        scope(query.operatingOrganizationId, query.companyCodeId),
+      );
+      return options.transactions.run(
+        "neon",
+        actor(query.context),
+        (transaction) =>
+          options.repository.listPreferences(
+            {
+              tenantId: query.context.tenantId,
+              businessPartnerId: query.businessPartnerId,
+              operatingOrganizationId: query.operatingOrganizationId,
+              ...(query.companyCodeId
+                ? { companyCodeId: query.companyCodeId }
+                : {}),
+              ...(query.commodityCategoryId
+                ? { commodityCategoryId: query.commodityCategoryId }
+                : {}),
+              businessDate: query.businessDate,
+            },
+            transaction,
+          ),
+      );
+    },
+    async expireQualifications(input) {
+      validateDate(input.businessDate, "businessDate");
+      const limit = input.limit ?? 500;
+      if (
+        !input.tenantId ||
+        !input.actorId ||
+        !Number.isSafeInteger(limit) ||
+        limit < 1 ||
+        limit > 5000
+      )
+        throw invalid(
+          "Qualification expiry requires tenant, actor, and limit from 1 to 5000",
+        );
+      return options.transactions.run(
+        "neon",
+        { tenantId: input.tenantId, principalId: input.actorId },
+        async (transaction) => {
+          const expired = await options.repository.expireQualifications(
+            {
+              tenantId: input.tenantId,
+              actorId: input.actorId,
+              businessDate: input.businessDate,
+              limit,
+            },
+            transaction,
+          );
+          for (const qualification of expired)
+            await effects(
+              options,
+              systemContext(input.tenantId, input.actorId),
+              transaction,
+              "business_partner.qualification.expired",
+              qualification,
+            );
+          return expired;
+        },
+      );
+    },
+    async reevaluateSupplierActivations(input) {
+      validateDate(input.businessDate, "businessDate");
+      if (!input.tenantId || !input.actorId || input.scopes.length > 5000)
+        throw invalid(
+          "Activation reevaluation requires tenant, actor, and at most 5000 scopes",
+        );
+      return options.transactions.run(
+        "neon",
+        { tenantId: input.tenantId, principalId: input.actorId },
+        async (transaction) => {
+          const decisions = [];
+          for (const item of input.scopes) {
+            const raw = await options.repository.resolve(
+              {
+                tenantId: input.tenantId,
+                businessPartnerId: item.businessPartnerId,
+                role: "supplier",
+                operatingOrganizationId: item.operatingOrganizationId,
+                ...(item.companyCodeId
+                  ? { companyCodeId: item.companyCodeId }
+                  : {}),
+                ...(item.commodityCategoryId
+                  ? { commodityCategoryId: item.commodityCategoryId }
+                  : {}),
+                operationCode:
+                  item.requirePaymentReadiness === false
+                    ? "purchasing"
+                    : "payment",
+                businessDate: input.businessDate,
+              },
+              transaction,
+            );
+            if (!raw) continue;
+            const decision = {
+              ...raw,
+              decisionFingerprint: hash({ tenantId: input.tenantId, ...raw }),
+            };
+            decisions.push(decision);
+            if (!decision.eligible)
+              await reevaluationEffects(
+                options,
+                systemContext(input.tenantId, input.actorId),
+                transaction,
+                decision,
+              );
+          }
+          return decisions;
+        },
+      );
+    },
+    async createCustomerDesignation(command) {
+      assertContext(command.context);
+      validateDesignationCreate(command);
+      await authorize(
+        options.authorizer,
+        command.context,
+        customerOnboardingPermissions.designationCreate,
+        {
+          ...scope(command.operatingOrganizationId, command.companyCodeId),
+          designationControl: true,
+          makerCheckerEnforced: true,
+        },
+      );
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          const existing =
+            await options.repository.findCustomerDesignationByIdempotencyKey(
+              command.context.tenantId,
+              command.idempotencyKey,
+              transaction,
+            );
+          if (existing) {
+            if (
+              designationFingerprint(existing) !==
+              designationCreateFingerprint(command)
+            )
+              throw new MasterDataError(
+                409,
+                "CUSTOMER_DESIGNATION_IDEMPOTENCY_CONFLICT",
+                "Idempotency key was reused with different designation content",
+              );
+            return { designation: existing, replayed: true };
+          }
+          const designation =
+            await options.repository.createCustomerDesignation(
+              {
+                tenantId: command.context.tenantId,
+                createdBy: command.context.principalId,
+                idempotencyKey: command.idempotencyKey,
+                businessPartnerId: command.businessPartnerId,
+                customerId: command.customerId,
+                operatingOrganizationId: command.operatingOrganizationId,
+                ...(command.companyCodeId
+                  ? { companyCodeId: command.companyCodeId }
+                  : {}),
+                ...(command.countryCode
+                  ? { countryCode: command.countryCode }
+                  : {}),
+                ...(command.channelCode
+                  ? { channelCode: command.channelCode }
+                  : {}),
+                designationType: command.designationType,
+                ...(command.priorityTier === undefined
+                  ? {}
+                  : { priorityTier: command.priorityTier }),
+                effectiveFrom: command.effectiveFrom,
+                ...(command.effectiveUntil
+                  ? { effectiveUntil: command.effectiveUntil }
+                  : {}),
+                rationale: command.rationale,
+              },
+              transaction,
+            );
+          await designationEffects(
+            options,
+            command.context,
+            transaction,
+            "business_partner.customer.designation.created",
+            designation,
+          );
+          return { designation, replayed: false };
+        },
+      );
+    },
+    async decideCustomerDesignation(command) {
+      assertContext(command.context);
+      validateDesignationDecision(command);
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          const current = await options.repository.getCustomerDesignation(
+            command.context.tenantId,
+            command.designationId,
+            transaction,
+          );
+          if (!current)
+            throw new MasterDataError(
+              404,
+              "CUSTOMER_DESIGNATION_NOT_FOUND",
+              "Customer designation was not found",
+            );
+          if (current.createdBy === command.context.principalId)
+            throw new MasterDataError(
+              403,
+              "CUSTOMER_DESIGNATION_SELF_APPROVAL_FORBIDDEN",
+              "The designation creator cannot decide their own designation",
+            );
+          await authorize(
+            options.authorizer,
+            command.context,
+            customerOnboardingPermissions.designationDecide,
+            {
+              ...scope(current.operatingOrganizationId, current.companyCodeId),
+              designationControl: true,
+              makerCheckerEnforced: true,
+              createdBy: current.createdBy,
+            },
+          );
+          const decisionFingerprint = hash({
+            designation: current,
+            expectedVersion: command.expectedVersion,
+            decision: command.decision,
+            reason: command.reason,
+            decidedBy: command.context.principalId,
+          });
+          const result = await options.repository.decideCustomerDesignation(
+            {
+              tenantId: command.context.tenantId,
+              decidedBy: command.context.principalId,
+              decisionFingerprint,
+              designationId: command.designationId,
+              expectedVersion: command.expectedVersion,
+              decision: command.decision,
+              reason: command.reason,
+              idempotencyKey: command.idempotencyKey,
+            },
+            transaction,
+          );
+          if (!result)
+            throw new MasterDataError(
+              409,
+              "CUSTOMER_DESIGNATION_DECISION_CONFLICT",
+              "Designation version, state, or decision evidence changed",
+            );
+          if (!result.replayed)
+            await designationEffects(
+              options,
+              command.context,
+              transaction,
+              `business_partner.customer.designation.${command.decision}`,
+              result.designation,
+            );
+          return result;
+        },
+      );
+    },
+    async listCustomerDesignations(query) {
+      assertContext(query.context);
+      await authorize(
+        options.authorizer,
+        query.context,
+        customerOnboardingPermissions.designationRead,
+        scope(query.operatingOrganizationId, query.companyCodeId),
+      );
+      return options.transactions.run(
+        "neon",
+        actor(query.context),
+        (transaction) =>
+          options.repository.listCustomerDesignations(
+            {
+              tenantId: query.context.tenantId,
+              businessPartnerId: query.businessPartnerId,
+              operatingOrganizationId: query.operatingOrganizationId,
+              ...(query.companyCodeId
+                ? { companyCodeId: query.companyCodeId }
+                : {}),
+            },
+            transaction,
+          ),
+      );
+    },
+    async createCustomerCreditReview(command) {
+      assertContext(command.context);
+      validateCreditCreate(command);
+      await authorize(
+        options.authorizer,
+        command.context,
+        customerOnboardingPermissions.creditCreate,
+        {
+          ...scope(command.operatingOrganizationId, command.companyCodeId),
+          customerId: command.customerId,
+          creditControl: true,
+          makerCheckerEnforced: true,
+        },
+      );
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          const existing =
+            await options.repository.findCustomerCreditReviewByIdempotencyKey(
+              command.context.tenantId,
+              command.idempotencyKey,
+              transaction,
+            );
+          if (existing) {
+            if (
+              creditFingerprint(existing) !== creditCreateFingerprint(command)
+            )
+              throw new MasterDataError(
+                409,
+                "CUSTOMER_CREDIT_IDEMPOTENCY_CONFLICT",
+                "Idempotency key was reused with different credit review content",
+              );
+            return { review: existing, replayed: true };
+          }
+          let review;
+          try {
+            review = await options.repository.createCustomerCreditReview(
+              {
+                tenantId: command.context.tenantId,
+                idempotencyKey: command.idempotencyKey,
+                businessPartnerId: command.businessPartnerId,
+                customerId: command.customerId,
+                operatingOrganizationId: command.operatingOrganizationId,
+                companyCodeId: command.companyCodeId,
+                reviewTypeCode: command.reviewTypeCode,
+                ...(command.requestedCreditLimit === undefined
+                  ? {}
+                  : {
+                      requestedCreditLimit: command.requestedCreditLimit,
+                      requestedCurrencyCode: command.requestedCurrencyCode!,
+                    }),
+                ...(command.riskClassCode
+                  ? { riskClassCode: command.riskClassCode }
+                  : {}),
+                ...(command.effectiveFrom
+                  ? { effectiveFrom: command.effectiveFrom }
+                  : {}),
+                ...(command.effectiveUntil
+                  ? { effectiveUntil: command.effectiveUntil }
+                  : {}),
+                createdBy: command.context.principalId,
+              },
+              transaction,
+            );
+          } catch (error) {
+            if (
+              databaseCode(error) === "CUSTOMER_CREDIT_SCOPE_INVALID" ||
+              (error instanceof Error &&
+                error.message === "CUSTOMER_CREDIT_SCOPE_INVALID")
+            )
+              throw new MasterDataError(
+                409,
+                "CUSTOMER_CREDIT_SCOPE_INVALID",
+                "Customer, sales organization, and company scope must be active and mutually compatible",
+              );
+            throw error;
+          }
+          await customerEffects(
+            options,
+            command.context,
+            transaction,
+            "business_partner.customer.credit.created",
+            review,
+          );
+          return { review, replayed: false };
+        },
+      );
+    },
+    async decideCustomerCreditReview(command) {
+      assertContext(command.context);
+      validateCreditDecision(command);
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          const current = await options.repository.getCustomerCreditReview(
+            command.context.tenantId,
+            command.reviewId,
+            transaction,
+          );
+          if (!current)
+            throw new MasterDataError(
+              404,
+              "CUSTOMER_CREDIT_REVIEW_NOT_FOUND",
+              "Customer credit review was not found",
+            );
+          if (current.createdBy === command.context.principalId)
+            throw new MasterDataError(
+              403,
+              "CUSTOMER_CREDIT_SELF_APPROVAL_FORBIDDEN",
+              "The credit review creator cannot decide their own review",
+            );
+          await authorize(
+            options.authorizer,
+            command.context,
+            customerOnboardingPermissions.creditDecide,
+            {
+              ...scope(current.operatingOrganizationId, current.companyCodeId),
+              customerId: current.customerId,
+              creditControl: true,
+              makerCheckerEnforced: true,
+              createdBy: current.createdBy,
+            },
+          );
+          const fingerprint = hash({
+              reviewId: current.id,
+              expectedVersion: command.expectedVersion,
+              decision: command.decision,
+              reason: command.reason,
+              approvedCreditLimit: command.approvedCreditLimit,
+              approvedCurrencyCode: command.approvedCurrencyCode,
+              conditions: command.conditions ?? [],
+              decidedBy: command.context.principalId,
+              review: creditFingerprint(current),
+            }),
+            result = await options.repository.decideCustomerCreditReview(
+              {
+                tenantId: command.context.tenantId,
+                reviewId: command.reviewId,
+                expectedVersion: command.expectedVersion,
+                decision: command.decision,
+                reason: command.reason,
+                ...(command.approvedCreditLimit === undefined
+                  ? {}
+                  : {
+                      approvedCreditLimit: command.approvedCreditLimit,
+                      approvedCurrencyCode: command.approvedCurrencyCode!,
+                    }),
+                ...(command.conditions
+                  ? { conditions: command.conditions }
+                  : {}),
+                idempotencyKey: command.idempotencyKey,
+                decidedBy: command.context.principalId,
+                decisionFingerprint: fingerprint,
+              },
+              transaction,
+            );
+          if (!result)
+            throw new MasterDataError(
+              409,
+              "CUSTOMER_CREDIT_DECISION_CONFLICT",
+              "Credit review version, decision state, overlapping effective outcome, or idempotency evidence changed",
+            );
+          if (!result.replayed)
+            await customerEffects(
+              options,
+              command.context,
+              transaction,
+              `business_partner.customer.credit.${command.decision}`,
+              result.review,
+            );
+          return result;
+        },
+      );
+    },
+    async listCustomerCreditReviews(query) {
+      assertContext(query.context);
+      await authorize(
+        options.authorizer,
+        query.context,
+        customerOnboardingPermissions.creditRead,
+        scope(query.operatingOrganizationId, query.companyCodeId),
+      );
+      return options.transactions.run(
+        "neon",
+        actor(query.context),
+        (transaction) =>
+          options.repository.listCustomerCreditReviews(
+            {
+              tenantId: query.context.tenantId,
+              businessPartnerId: query.businessPartnerId,
+              operatingOrganizationId: query.operatingOrganizationId,
+              companyCodeId: query.companyCodeId,
+            },
+            transaction,
+          ),
+      );
+    },
+    async transitionCustomer(command) {
+      assertContext(command.context);
+      key(command.idempotencyKey);
+      version(command.expectedVersion);
+      validateDate(command.businessDate, "businessDate");
+      if (!/^[A-Z][A-Z0-9_.-]{2,126}$/.test(command.reasonCode))
+        throw customerInvalid("reasonCode is invalid");
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          let readiness;
+          if (
+            command.action === "activate" ||
+            command.action === "reactivate"
+          ) {
+            const raw = await options.repository.resolve(
+              {
+                tenantId: command.context.tenantId,
+                businessPartnerId: command.businessPartnerId,
+                role: "customer",
+                operatingOrganizationId: command.operatingOrganizationId,
+                companyCodeId: command.companyCodeId,
+                operationCode: "activation",
+                businessDate: command.businessDate,
+              },
+              transaction,
+            );
+            if (!raw)
+              throw new MasterDataError(
+                404,
+                "BUSINESS_PARTNER_NOT_FOUND",
+                "Business Partner was not found",
+              );
+            readiness = {
+              ...raw,
+              decisionFingerprint: hash({
+                tenantId: command.context.tenantId,
+                ...raw,
+              }),
+            };
+            if (!readiness.eligible)
+              throw new MasterDataError(
+                409,
+                "CUSTOMER_ACTIVATION_READINESS_FAILED",
+                `Customer ${command.action} is blocked: ${readiness.reasons
+                  .filter((reason) => reason.severity === "blocking")
+                  .map((reason) => reason.code)
+                  .join(",")}`,
+              );
+          }
+          const permission = customerOnboardingPermissions[command.action];
+          await authorize(options.authorizer, command.context, permission, {
+            ...scope(command.operatingOrganizationId, command.companyCodeId),
+            customerId: command.customerId,
+            expectedVersion: command.expectedVersion,
+            readinessEvidencePinned: Boolean(readiness),
+            readinessFingerprint: readiness?.decisionFingerprint,
+            makerCheckerEnforced: true,
+            externalApplicant: false,
+          });
+          try {
+            const result = await options.repository.transitionCustomer(
+              {
+                tenantId: command.context.tenantId,
+                businessPartnerId: command.businessPartnerId,
+                customerId: command.customerId,
+                operatingOrganizationId: command.operatingOrganizationId,
+                companyCodeId: command.companyCodeId,
+                action: command.action,
+                expectedVersion: command.expectedVersion,
+                reasonCode: command.reasonCode,
+                idempotencyKey: command.idempotencyKey,
+                businessDate: command.businessDate,
+                actorId: command.context.principalId,
+                ...(readiness ? { readiness } : {}),
+              },
+              transaction,
+            );
+            if (!result)
+              throw new MasterDataError(
+                500,
+                "CUSTOMER_LIFECYCLE_EMPTY_RESULT",
+                "Customer lifecycle command returned no outcome",
+              );
+            if (!result.replayed)
+              await customerLifecycleEffects(
+                options,
+                command.context,
+                transaction,
+                command.action,
+                result,
+              );
+            return result;
+          } catch (error) {
+            const code = databaseCode(error);
+            if (code === "P0002")
+              throw new MasterDataError(
+                404,
+                "CUSTOMER_NOT_FOUND",
+                "Customer was not found",
+              );
+            if (code === "42501")
+              throw new MasterDataError(
+                403,
+                "CUSTOMER_WRONG_TENANT",
+                "Customer is outside the authenticated tenant or Business Partner",
+              );
+            if (code === "40001")
+              throw new MasterDataError(
+                409,
+                "CUSTOMER_LIFECYCLE_STALE_VERSION",
+                "Customer record version is stale",
+              );
+            if (code === "55000")
+              throw new MasterDataError(
+                409,
+                "CUSTOMER_LIFECYCLE_INVALID_TRANSITION",
+                "Customer state does not permit the requested transition",
+              );
+            throw error;
+          }
+        },
+      );
+    },
+  };
+}
+
+function assertContext(context: VerifiedRequestContext) {
+  if (context.planeKey !== "neon")
+    throw new MasterDataError(
+      400,
+      "BUSINESS_PARTNER_QUALIFICATION_NEON_REQUIRED",
+      "Qualification executes only in NEON",
+    );
+}
+function actor(context: VerifiedRequestContext) {
+  return {
+    tenantId: context.tenantId,
+    principalId: context.principalId,
+    requestId: context.requestId,
+    correlationId: context.correlationId,
+  };
+}
+function scope(operatingOrganizationId?: string, companyCodeId?: string) {
+  return {
+    ...(operatingOrganizationId ? { operatingOrganizationId } : {}),
+    ...(companyCodeId ? { companyCodeId } : {}),
+  };
+}
+async function authorize(
+  authorizer: Authorizer,
+  context: VerifiedRequestContext,
+  permissionCode: string,
+  resource: Readonly<Record<string, unknown>>,
+) {
+  const decision = await authorizer.authorize({
+    context,
+    permissionCode,
+    resource,
+    ...(permissionCode === businessPartnerQualificationPermissions.manage ? { observation: { entityCode: "business_partner", surface: "command" as const, phase: "execute" as const } } : {}),
+  });
+  if (!decision.allowed)
+    throw new MasterDataError(
+      403,
+      "FORBIDDEN",
+      `Permission denied: ${permissionCode}`,
+    );
+}
+function validateCreate(command: CreateBusinessPartnerQualificationCommand) {
+  key(command.idempotencyKey);
+  validateCode(command.qualificationTypeCode, "qualificationTypeCode");
+  for (const [name, value] of [
+    ["effectiveFrom", command.effectiveFrom],
+    ["effectiveUntil", command.effectiveUntil],
+    ["nextReviewAt", command.nextReviewAt],
+  ] as const)
+    if (value) validateDate(value, name);
+  if (
+    command.effectiveFrom &&
+    command.effectiveUntil &&
+    command.effectiveUntil <= command.effectiveFrom
+  )
+    throw invalid("effectiveUntil must be after effectiveFrom");
+}
+function validateDecision(command: DecideBusinessPartnerQualificationCommand) {
+  if (
+    !Number.isSafeInteger(command.expectedVersion) ||
+    command.expectedVersion < 1
+  )
+    throw invalid("expectedVersion must be positive");
+  key(command.idempotencyKey);
+  if (!command.reason.trim() || command.reason.length > 4000)
+    throw invalid("reason must contain 1 to 4000 characters");
+}
+function key(value: string) {
+  if (value.trim() !== value || value.length < 8 || value.length > 200)
+    throw invalid("idempotencyKey must contain 8 to 200 trimmed characters");
+}
+function validateCode(value: string, name: string) {
+  if (!/^[a-z][a-z0-9_.-]{1,62}$/.test(value))
+    throw invalid(`${name} is invalid`);
+}
+function validateDate(value: string, name: string) {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+    Number.isNaN(parseInstant(`${value}T00:00:00Z`))
+  )
+    throw invalid(`${name} must be YYYY-MM-DD`);
+}
+function invalid(message: string) {
+  return new MasterDataError(
+    400,
+    "BUSINESS_PARTNER_QUALIFICATION_INVALID",
+    message,
+  );
+}
+function validatePreferenceCreate(command: CreateSupplierPreferenceCommand) {
+  key(command.idempotencyKey);
+  validateDate(command.effectiveFrom, "effectiveFrom");
+  if (command.effectiveUntil) {
+    validateDate(command.effectiveUntil, "effectiveUntil");
+    if (command.effectiveUntil <= command.effectiveFrom)
+      throw preferenceInvalid("effectiveUntil must be after effectiveFrom");
+  }
+  boundedReason(command.rationale, "rationale");
+}
+function validatePreferenceDecision(command: DecideSupplierPreferenceCommand) {
+  version(command.expectedVersion);
+  key(command.idempotencyKey);
+  boundedReason(command.reason, "reason");
+}
+function validatePreferenceRevoke(command: RevokeSupplierPreferenceCommand) {
+  version(command.expectedVersion);
+  key(command.idempotencyKey);
+  boundedReason(command.reason, "reason");
+}
+function version(value: number) {
+  if (!Number.isSafeInteger(value) || value < 1)
+    throw preferenceInvalid("expectedVersion must be positive");
+}
+function boundedReason(value: string, name: string) {
+  if (value.trim() !== value || value.length < 1 || value.length > 4000)
+    throw preferenceInvalid(
+      `${name} must contain 1 to 4000 trimmed characters`,
+    );
+}
+function preferenceInvalid(message: string) {
+  return new MasterDataError(400, "SUPPLIER_PREFERENCE_INVALID", message);
+}
+function creation(command: CreateBusinessPartnerQualificationCommand) {
+  return {
+    businessPartnerId: command.businessPartnerId,
+    partnerRole: command.partnerRole,
+    operatingOrganizationId: command.operatingOrganizationId,
+    companyCodeId: command.companyCodeId,
+    commodityCapabilityId: command.commodityCapabilityId,
+    qualificationTypeCode: command.qualificationTypeCode,
+    riskAssessmentId: command.riskAssessmentId,
+    effectiveFrom: command.effectiveFrom,
+    effectiveUntil: command.effectiveUntil,
+    nextReviewAt: command.nextReviewAt,
+  };
+}
+function createFingerprint(command: CreateBusinessPartnerQualificationCommand) {
+  return hash(creation(command));
+}
+function qualificationFingerprint(value: BusinessPartnerQualification) {
+  return hash({
+    businessPartnerId: value.businessPartnerId,
+    partnerRole: value.partnerRole,
+    operatingOrganizationId: value.operatingOrganizationId,
+    companyCodeId: value.companyCodeId,
+    commodityCapabilityId: value.commodityCapabilityId,
+    qualificationTypeCode: value.qualificationTypeCode,
+    riskAssessmentId: value.riskAssessmentId,
+    effectiveFrom: value.effectiveFrom,
+    effectiveUntil: value.effectiveUntil,
+    nextReviewAt: value.nextReviewAt,
+  });
+}
+function stable(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+  return `{${Object.entries(value as Record<string, unknown>)
+    .filter(([, item]) => item !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${JSON.stringify(k)}:${stable(v)}`)
+    .join(",")}}`;
+}
+function hash(value: unknown) {
+  return createHash("sha256").update(stable(value)).digest("hex");
+}
+function preferenceCreation(
+  value: CreateSupplierPreferenceCommand | SupplierPreferenceDesignation,
+) {
+  return {
+    businessPartnerId: value.businessPartnerId,
+    supplierId: value.supplierId,
+    operatingOrganizationId: value.operatingOrganizationId,
+    companyCodeId: value.companyCodeId,
+    commodityCategoryId: value.commodityCategoryId,
+    effectiveFrom: value.effectiveFrom,
+    effectiveUntil: value.effectiveUntil,
+    rationale: value.rationale,
+  };
+}
+function preferenceCreateFingerprint(value: CreateSupplierPreferenceCommand) {
+  return hash(preferenceCreation(value));
+}
+function preferenceFingerprint(value: SupplierPreferenceDesignation) {
+  return hash(preferenceCreation(value));
+}
+function databaseCode(error: unknown) {
+  return error && typeof error === "object" && "code" in error
+    ? String((error as { code: unknown }).code)
+    : undefined;
+}
+function validateCreditCreate(command: CreateCustomerCreditReviewCommand) {
+  key(command.idempotencyKey);
+  validateCode(command.reviewTypeCode, "reviewTypeCode");
+  if (
+    command.requestedCreditLimit !== undefined &&
+    (!Number.isFinite(command.requestedCreditLimit) ||
+      command.requestedCreditLimit < 0 ||
+      !command.requestedCurrencyCode)
+  )
+    throw customerInvalid(
+      "A non-negative requestedCreditLimit requires requestedCurrencyCode",
+    );
+  if (
+    command.requestedCurrencyCode &&
+    !/^[A-Z]{3}$/.test(command.requestedCurrencyCode)
+  )
+    throw customerInvalid(
+      "requestedCurrencyCode must be ISO alpha-3 uppercase",
+    );
+  for (const [name, value] of [
+    ["effectiveFrom", command.effectiveFrom],
+    ["effectiveUntil", command.effectiveUntil],
+  ] as const)
+    if (value) validateDate(value, name);
+  if (
+    command.effectiveFrom &&
+    command.effectiveUntil &&
+    command.effectiveUntil <= command.effectiveFrom
+  )
+    throw customerInvalid("effectiveUntil must be after effectiveFrom");
+}
+function validateDesignationCreate(command: CreateCustomerDesignationCommand) {
+  key(command.idempotencyKey);
+  boundedReason(command.rationale, "rationale");
+  validateDate(command.effectiveFrom, "effectiveFrom");
+  if (command.effectiveUntil) {
+    validateDate(command.effectiveUntil, "effectiveUntil");
+    if (command.effectiveUntil <= command.effectiveFrom)
+      throw customerInvalid("effectiveUntil must be after effectiveFrom");
+  }
+  if (
+    command.priorityTier !== undefined &&
+    (!Number.isSafeInteger(command.priorityTier) ||
+      command.priorityTier < 1 ||
+      command.priorityTier > 5)
+  )
+    throw customerInvalid("priorityTier must be from 1 to 5");
+  if (command.countryCode && !/^[A-Z]{2}$/.test(command.countryCode))
+    throw customerInvalid("countryCode must be ISO alpha-2 uppercase");
+  if (command.channelCode && !/^[a-z0-9][a-z0-9._-]{0,63}$/.test(command.channelCode))
+    throw customerInvalid("channelCode must be a normalized channel identifier");
+}
+function validateDesignationDecision(
+  command: DecideCustomerDesignationCommand,
+) {
+  version(command.expectedVersion);
+  key(command.idempotencyKey);
+  boundedReason(command.reason, "reason");
+}
+function validateCreditDecision(command: DecideCustomerCreditReviewCommand) {
+  version(command.expectedVersion);
+  key(command.idempotencyKey);
+  boundedReason(command.reason, "reason");
+  if (
+    command.approvedCreditLimit !== undefined &&
+    (!["approved", "conditional"].includes(command.decision) ||
+      !Number.isFinite(command.approvedCreditLimit) ||
+      command.approvedCreditLimit < 0 ||
+      !command.approvedCurrencyCode)
+  )
+    throw customerInvalid(
+      "A non-negative approvedCreditLimit requires an approved or conditional decision and approvedCurrencyCode",
+    );
+  if (
+    command.approvedCurrencyCode &&
+    !/^[A-Z]{3}$/.test(command.approvedCurrencyCode)
+  )
+    throw customerInvalid("approvedCurrencyCode must be ISO alpha-3 uppercase");
+  if ((command.conditions?.length ?? 0) > 100)
+    throw customerInvalid("conditions cannot exceed 100 items");
+}
+function customerInvalid(message: string) {
+  return new MasterDataError(400, "CUSTOMER_ONBOARDING_INVALID", message);
+}
+function creditCoordinates(
+  value: CreateCustomerCreditReviewCommand | CustomerCreditReview,
+) {
+  return {
+    businessPartnerId: value.businessPartnerId,
+    customerId: value.customerId,
+    operatingOrganizationId: value.operatingOrganizationId,
+    companyCodeId: value.companyCodeId,
+    reviewTypeCode: value.reviewTypeCode,
+    requestedCreditLimit: value.requestedCreditLimit,
+    requestedCurrencyCode: value.requestedCurrencyCode,
+    riskClassCode: value.riskClassCode,
+    effectiveFrom: value.effectiveFrom,
+    effectiveUntil: value.effectiveUntil,
+  };
+}
+function designationCoordinates(
+  value: CreateCustomerDesignationCommand | CustomerAccountDesignation,
+) {
+  return {
+    businessPartnerId: value.businessPartnerId,
+    customerId: value.customerId,
+    operatingOrganizationId: value.operatingOrganizationId,
+    companyCodeId: value.companyCodeId,
+    countryCode: value.countryCode,
+    channelCode: value.channelCode,
+    designationType: value.designationType,
+    priorityTier: value.priorityTier,
+    effectiveFrom: value.effectiveFrom,
+    effectiveUntil: value.effectiveUntil,
+    rationale: value.rationale,
+  };
+}
+function designationCreateFingerprint(value: CreateCustomerDesignationCommand) {
+  return hash(designationCoordinates(value));
+}
+function designationFingerprint(value: CustomerAccountDesignation) {
+  return hash(designationCoordinates(value));
+}
+function creditCreateFingerprint(value: CreateCustomerCreditReviewCommand) {
+  return hash(creditCoordinates(value));
+}
+function creditFingerprint(value: CustomerCreditReview) {
+  return hash(creditCoordinates(value));
+}
+function systemContext(
+  tenantId: string,
+  principalId: string,
+): VerifiedRequestContext {
+  return {
+    tenantId,
+    principalId,
+    planeKey: "neon",
+    requestId: `supplier-readiness-maintenance:${tenantId}`,
+    assurance: "elevated",
+  } as VerifiedRequestContext;
+}
+async function effects<Transaction>(
+  options: {
+    readonly audit: AuditRecorder<Transaction>;
+    readonly outbox: OutboxWriter<Transaction>;
+  },
+  context: VerifiedRequestContext,
+  transaction: Transaction,
+  eventCode: string,
+  qualification: BusinessPartnerQualification,
+) {
+  await options.outbox.append(
+    {
+      tenantId: context.tenantId,
+      topic: "business-partner-qualification",
+      eventType: eventCode,
+      entityType: "business_partner_qualification",
+      entityId: qualification.id,
+      actorId: context.principalId,
+      correlationId: context.correlationId,
+      payload: {
+        qualificationId: qualification.id,
+        businessPartnerId: qualification.businessPartnerId,
+        partnerRole: qualification.partnerRole,
+        operatingOrganizationId: qualification.operatingOrganizationId,
+        companyCodeId: qualification.companyCodeId,
+        decision: qualification.decision,
+        rowVersion: qualification.rowVersion,
+      },
+    },
+    transaction,
+  );
+  await options.audit.record(
+    {
+      eventCode,
+      action: eventCode.endsWith("created")
+        ? "create"
+        : eventCode.endsWith("approved")
+          ? "approve"
+          : eventCode.endsWith("rejected")
+            ? "reject"
+            : "update",
+      outcome: "success",
+      actor: { kind: "user", principalId: context.principalId },
+      tenantId: context.tenantId,
+      entityType: "business_partner_qualification",
+      entityId: qualification.id,
+      requestId: context.requestId,
+      ...(context.correlationId
+        ? { correlationId: context.correlationId }
+        : {}),
+      metadata: {
+        businessPartnerId: qualification.businessPartnerId,
+        partnerRole: qualification.partnerRole,
+        decision: qualification.decision,
+        rowVersion: qualification.rowVersion,
+      },
+    },
+    transaction,
+  );
+}
+async function preferenceEffects<Transaction>(
+  options: {
+    readonly audit: AuditRecorder<Transaction>;
+    readonly outbox: OutboxWriter<Transaction>;
+  },
+  context: VerifiedRequestContext,
+  transaction: Transaction,
+  eventCode: string,
+  preference: SupplierPreferenceDesignation,
+) {
+  const action = eventCode.endsWith("created")
+    ? "create"
+    : eventCode.endsWith("approved")
+      ? "approve"
+      : eventCode.endsWith("rejected")
+        ? "reject"
+        : "revoke";
+  await options.outbox.append(
+    {
+      tenantId: context.tenantId,
+      topic: "supplier-preference",
+      eventType: eventCode,
+      entityType: "supplier_preference_designation",
+      entityId: preference.id,
+      actorId: context.principalId,
+      correlationId: context.correlationId,
+      payload: {
+        preferenceId: preference.id,
+        businessPartnerId: preference.businessPartnerId,
+        supplierId: preference.supplierId,
+        operatingOrganizationId: preference.operatingOrganizationId,
+        companyCodeId: preference.companyCodeId,
+        commodityCategoryId: preference.commodityCategoryId,
+        effectiveFrom: preference.effectiveFrom,
+        effectiveUntil: preference.effectiveUntil,
+        status: preference.status,
+        rowVersion: preference.rowVersion,
+      },
+    },
+    transaction,
+  );
+  await options.audit.record(
+    {
+      eventCode,
+      action,
+      outcome: "success",
+      actor: { kind: "user", principalId: context.principalId },
+      tenantId: context.tenantId,
+      entityType: "supplier_preference_designation",
+      entityId: preference.id,
+      requestId: context.requestId,
+      ...(context.correlationId
+        ? { correlationId: context.correlationId }
+        : {}),
+      metadata: {
+        businessPartnerId: preference.businessPartnerId,
+        supplierId: preference.supplierId,
+        operatingOrganizationId: preference.operatingOrganizationId,
+        status: preference.status,
+        rowVersion: preference.rowVersion,
+      },
+    },
+    transaction,
+  );
+}
+async function activationEffects<Transaction>(
+  options: {
+    readonly audit: AuditRecorder<Transaction>;
+    readonly outbox: OutboxWriter<Transaction>;
+  },
+  context: VerifiedRequestContext,
+  transaction: Transaction,
+  activation: import("@athyper/server-contract-master-data").SupplierActivationEvidence,
+) {
+  const eventCode = "business_partner.supplier.activated";
+  await options.outbox.append(
+    {
+      tenantId: context.tenantId,
+      topic: "supplier-readiness",
+      eventType: eventCode,
+      entityType: "supplier",
+      entityId: activation.supplierId,
+      actorId: context.principalId,
+      correlationId: context.correlationId,
+      payload: {
+        activationEvidenceId: activation.id,
+        businessPartnerId: activation.businessPartnerId,
+        supplierId: activation.supplierId,
+        operatingOrganizationId: activation.operatingOrganizationId,
+        companyCodeId: activation.companyCodeId,
+        priorStatus: activation.priorStatus,
+        resultingStatus: activation.resultingStatus,
+        readinessFingerprint: activation.readinessFingerprint,
+        reasonCodes: activation.readiness.reasons.map((reason) => reason.code),
+      },
+    },
+    transaction,
+  );
+  await options.audit.record(
+    {
+      eventCode,
+      action: "activate",
+      outcome: "success",
+      actor: { kind: "user", principalId: context.principalId },
+      tenantId: context.tenantId,
+      entityType: "supplier",
+      entityId: activation.supplierId,
+      requestId: context.requestId,
+      ...(context.correlationId
+        ? { correlationId: context.correlationId }
+        : {}),
+      metadata: {
+        activationEvidenceId: activation.id,
+        businessPartnerId: activation.businessPartnerId,
+        readinessFingerprint: activation.readinessFingerprint,
+      },
+    },
+    transaction,
+  );
+}
+async function reevaluationEffects<Transaction>(
+  options: {
+    readonly audit: AuditRecorder<Transaction>;
+    readonly outbox: OutboxWriter<Transaction>;
+  },
+  context: VerifiedRequestContext,
+  transaction: Transaction,
+  decision: import("@athyper/server-contract-master-data").PartnerEligibilityDecision,
+) {
+  const eventCode = "business_partner.supplier.activation_reevaluation_failed";
+  await options.outbox.append(
+    {
+      tenantId: context.tenantId,
+      topic: "supplier-readiness",
+      eventType: eventCode,
+      entityType: "supplier",
+      entityId: decision.businessPartnerId,
+      actorId: context.principalId,
+      payload: {
+        businessPartnerId: decision.businessPartnerId,
+        operatingOrganizationId: decision.operatingOrganizationId,
+        companyCodeId: decision.companyCodeId,
+        operationCode: decision.operationCode,
+        businessDate: decision.businessDate,
+        readinessFingerprint: decision.decisionFingerprint,
+        reasonCodes: decision.reasons
+          .filter((reason) => reason.severity === "blocking")
+          .map((reason) => reason.code),
+      },
+    },
+    transaction,
+  );
+  await options.audit.record(
+    {
+      eventCode,
+      action: "evaluate",
+      outcome: "failure",
+      actor: { kind: "system", principalId: context.principalId },
+      tenantId: context.tenantId,
+      entityType: "supplier",
+      entityId: decision.businessPartnerId,
+      requestId: context.requestId,
+      metadata: {
+        readinessFingerprint: decision.decisionFingerprint,
+        reasonCodes: decision.reasons.map((reason) => reason.code),
+      },
+    },
+    transaction,
+  );
+}
+async function designationEffects<Transaction>(
+  options: {
+    readonly audit: AuditRecorder<Transaction>;
+    readonly outbox: OutboxWriter<Transaction>;
+  },
+  context: VerifiedRequestContext,
+  transaction: Transaction,
+  eventCode: string,
+  designation: CustomerAccountDesignation,
+) {
+  const payload = {
+    designationId: designation.id,
+    businessPartnerId: designation.businessPartnerId,
+    customerId: designation.customerId,
+    operatingOrganizationId: designation.operatingOrganizationId,
+    companyCodeId: designation.companyCodeId,
+    designationType: designation.designationType,
+    status: designation.status,
+    rowVersion: designation.rowVersion,
+  };
+  await options.outbox.append(
+    {
+      tenantId: context.tenantId,
+      topic: "customer-designation",
+      eventType: eventCode,
+      entityType: "customer_account_designation",
+      entityId: designation.id,
+      actorId: context.principalId,
+      correlationId: context.correlationId,
+      payload,
+    },
+    transaction,
+  );
+  await options.audit.record(
+    {
+      eventCode,
+      action: eventCode.endsWith("created")
+        ? "create"
+        : eventCode.endsWith("rejected")
+          ? "reject"
+          : eventCode.endsWith("revoked")
+            ? "revoke"
+            : "approve",
+      outcome: "success",
+      actor: { kind: "user", principalId: context.principalId },
+      tenantId: context.tenantId,
+      entityType: "customer_account_designation",
+      entityId: designation.id,
+      requestId: context.requestId,
+      metadata: payload,
+    },
+    transaction,
+  );
+}
+async function customerEffects<Transaction>(
+  options: {
+    readonly audit: AuditRecorder<Transaction>;
+    readonly outbox: OutboxWriter<Transaction>;
+  },
+  context: VerifiedRequestContext,
+  transaction: Transaction,
+  eventCode: string,
+  review: CustomerCreditReview,
+) {
+  await options.outbox.append(
+    {
+      tenantId: context.tenantId,
+      topic: "customer-credit",
+      eventType: eventCode,
+      entityType: "customer_credit_review",
+      entityId: review.id,
+      actorId: context.principalId,
+      correlationId: context.correlationId,
+      payload: {
+        reviewId: review.id,
+        businessPartnerId: review.businessPartnerId,
+        customerId: review.customerId,
+        operatingOrganizationId: review.operatingOrganizationId,
+        companyCodeId: review.companyCodeId,
+        decision: review.decision,
+        rowVersion: review.rowVersion,
+      },
+    },
+    transaction,
+  );
+  await options.audit.record(
+    {
+      eventCode,
+      action: eventCode.endsWith("created")
+        ? "create"
+        : eventCode.endsWith("rejected")
+          ? "reject"
+          : "approve",
+      outcome: "success",
+      actor: { kind: "user", principalId: context.principalId },
+      tenantId: context.tenantId,
+      entityType: "customer_credit_review",
+      entityId: review.id,
+      requestId: context.requestId,
+      metadata: {
+        customerId: review.customerId,
+        decision: review.decision,
+        rowVersion: review.rowVersion,
+      },
+    },
+    transaction,
+  );
+}
+async function customerLifecycleEffects<Transaction>(
+  options: {
+    readonly audit: AuditRecorder<Transaction>;
+    readonly outbox: OutboxWriter<Transaction>;
+  },
+  context: VerifiedRequestContext,
+  transaction: Transaction,
+  action: string,
+  result: import("@athyper/server-contract-master-data").CustomerLifecycleResult,
+) {
+  const suffix: Record<string, string> = {
+    activate: "activated",
+    suspend: "suspended",
+    reactivate: "reactivated",
+    deactivate: "deactivated",
+    archive: "archived",
+  };
+  const eventCode = `business_partner.customer.${suffix[action] ?? action}`;
+  await options.outbox.append(
+    {
+      tenantId: context.tenantId,
+      topic: "customer-lifecycle",
+      eventType: eventCode,
+      entityType: "customer",
+      entityId: result.customerId,
+      actorId: context.principalId,
+      correlationId: context.correlationId,
+      payload: {
+        recipient_principal_ids: [context.principalId],
+        customerId: result.customerId,
+        status: result.status,
+        resultingVersion: result.resultingVersion,
+        lifecycleEventId: result.eventId,
+        readinessFingerprint: result.readiness?.decisionFingerprint,
+        reasonCodes:
+          result.readiness?.reasons.map((reason) => reason.code) ?? [],
+      },
+    },
+    transaction,
+  );
+  await options.outbox.append(
+    {
+      tenantId: context.tenantId,
+      topic: "iam-projection",
+      eventType: "customer.portal_iam_projection.requested",
+      eventKey: `customer-portal:${result.eventId}`,
+      entityType: "customer",
+      entityId: result.customerId,
+      aggregateType: "customer",
+      aggregateId: result.customerId,
+      actorId: context.principalId,
+      correlationId: context.correlationId,
+      payload: {
+        customerId: result.customerId,
+        desiredState:
+          action === "activate" || action === "reactivate"
+            ? "active"
+            : "inactive",
+        sourceLifecycleEventId: result.eventId,
+        portalCapability: "customer",
+      },
+    },
+    transaction,
+  );
+  await options.audit.record(
+    {
+      eventCode,
+      action,
+      outcome: "success",
+      actor: { kind: "user", principalId: context.principalId },
+      tenantId: context.tenantId,
+      entityType: "customer",
+      entityId: result.customerId,
+      requestId: context.requestId,
+      metadata: {
+        status: result.status,
+        resultingVersion: result.resultingVersion,
+        lifecycleEventId: result.eventId,
+        readinessFingerprint: result.readiness?.decisionFingerprint,
+      },
+    },
+    transaction,
+  );
+}

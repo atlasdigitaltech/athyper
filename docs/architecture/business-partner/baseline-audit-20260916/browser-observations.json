@@ -1,0 +1,46 @@
+[
+  {
+    "plane": "neon",
+    "width": 1440,
+    "route": "/mdg/business-partner/new",
+    "state": "anonymous",
+    "failures": [],
+    "metrics": {
+      "overflow": false,
+      "controls": []
+    }
+  },
+  {
+    "plane": "neon",
+    "width": 390,
+    "route": "/mdg/business-partner/new",
+    "state": "anonymous",
+    "failures": [],
+    "metrics": {
+      "overflow": false,
+      "controls": []
+    }
+  },
+  {
+    "plane": "studio",
+    "width": 1440,
+    "route": "/mdg/business-partner/model",
+    "state": "anonymous",
+    "failures": [],
+    "metrics": {
+      "overflow": false,
+      "controls": []
+    }
+  },
+  {
+    "plane": "studio",
+    "width": 390,
+    "route": "/mdg/business-partner/model",
+    "state": "anonymous",
+    "failures": [],
+    "metrics": {
+      "overflow": false,
+      "controls": []
+    }
+  }
+]

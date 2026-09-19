@@ -1,0 +1,110 @@
+{
+  "recordedAt": "2026-09-05T06:16:06.704980+00:00",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "scope": "CirrusAtlantic local development R4 contract and qualification preparation",
+  "status": "case_contract_activated_browser_and_bank_qualification_pending",
+  "complete": false,
+  "productionQualified": false,
+  "reviewPacket": "cirrusatlantic-r4-case-contract-review-scoped.json",
+  "supersededReviewPacket": "cirrusatlantic-r4-case-contract-review.json",
+  "candidateHash": "c4871460634f294fbf62ce817e3c38fb1182ca0c495a3cabb0210f9c14dfc75e",
+  "compatibility": {
+    "classification": "properties_added_and_required_fields_relaxed",
+    "noLongerRequired": [
+      "requestedRole"
+    ],
+    "addedProperties": [
+      "bankProjectionId",
+      "dependencies",
+      "expectedBankSnapshotId",
+      "expectedBusinessPartnerVersion",
+      "priorBankLinkId",
+      "priorStatus",
+      "reasonCode",
+      "supplierCompanyProfileId"
+    ],
+    "existingPropertiesUnchanged": true,
+    "existingCaseSnapshotsRemainPinned": true
+  },
+  "deployedRepair": {
+    "migrationReceipt": {
+      "migration_name": "20260905_neon_entity_case_payload_validation.sql",
+      "sha256": "51bd756c28c59c47a87c22e1f4144ff7c65054a6d992179ed59e127155588449",
+      "status": "applied",
+      "runner_id": "20260905T052138Z-19760",
+      "started_at": "2026-09-05T05:21:38.653764+00:00",
+      "completed_at": "2026-09-05T05:21:38.691871+00:00",
+      "failure_message": null
+    },
+    "behavior": [
+      "Reject invalid enum values",
+      "Enforce declared scalar length and numeric bounds",
+      "Reject missing contracts",
+      "Retain precise unknown-property and type-mismatch findings"
+    ]
+  },
+  "tests": {
+    "nativeValidatorChecks": 16,
+    "r4NativeMaterializationMatrix": "passed in rolled-back fixtures with repaired validator",
+    "scopedCandidateSchemaChecks": 7,
+    "existingCutoverAndProvisioningTests": 6,
+    "reviewGeneratorChecks": "determinism, no fabricated release/signature/activation, reject wrong tenant and incompatible schemas"
+  },
+  "nativeApprovalReceipt": {
+    "releaseId": "24fa02e7-23f3-453d-87ec-4dfb507dc879",
+    "approvedBy": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+    "receiptFile": "cirrusatlantic-r4-case-contract-native-receipts.json"
+  },
+  "signedCaseContractRelease": {
+    "artifactId": "cea89ff9-8f05-48c7-84f8-173a7b2529a7",
+    "receiptFile": "cirrusatlantic-r4-case-contract-native-receipts.json"
+  },
+  "caseContractActivationReceipt": {
+    "releaseNo": 2,
+    "status": "published",
+    "receiptFile": "cirrusatlantic-r4-case-contract-native-receipts.json"
+  },
+  "browserQualificationReceipt": null,
+  "bankVerificationReceipt": null,
+  "remittanceReconciliationReceipt": null,
+  "sessionFileInventory": {
+    "studio.json": {
+      "cookieCount": 0,
+      "originCount": 0
+    },
+    "mesh.json": {
+      "cookieCount": 0,
+      "originCount": 0
+    },
+    "storage-state.json": {
+      "cookieCount": 0,
+      "originCount": 0
+    },
+    "neon.json": {
+      "cookieCount": 0,
+      "originCount": 0
+    }
+  },
+  "bankReadiness": {
+    "bankProjections": 0,
+    "activeAccountLinks": 0,
+    "bankVerifications": 0,
+    "verifiedBankAccounts": 1,
+    "supplierCompanyProfiles": 1
+  },
+  "blockers": [
+    {
+      "code": "BANK_DISCLOSURE_FIXTURE_MISSING",
+      "detail": "CirrusAtlantic has no active MESH account link or received bank disclosure projection. Establish through native reviewed linkage/disclosure before creating a bank-change case."
+    }
+  ],
+  "updatedAt": "2026-09-05T05:54:34.015313+00:00",
+  "implementationReceipt": "cirrusatlantic-r4-native-path-implementation.json",
+  "executionMode": "manual_browser",
+  "remaining": [
+    "Manual author/save and independent owner review/approval",
+    "Verify real signing/deployment/consumer activation receipts for the returned release",
+    "Establish CirrusAtlantic MESH account link and bank disclosure fixture",
+    "Manual authenticated case and bank verification/application qualification"
+  ]
+}

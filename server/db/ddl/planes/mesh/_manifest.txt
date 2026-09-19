@@ -37,10 +37,13 @@ planes/mesh/control/02_domains.sql
 planes/mesh/mesh/02_domains.sql
 planes/mesh/document/02_domains.sql
 common/shared/03_tables.sql
+common/shared/03_bank_directory.sql
+common/shared/04_bank_directory_views.sql
 common/master/03_platform_tables.sql
 planes/mesh/master/03_tables.sql
 common/snapshot/03_tables.sql
 common/audit/03_tables.sql
+common/document/03_foundation_tables.sql
 planes/mesh/document/03_tables.sql
 planes/mesh/snapshot/03_tables.sql
 planes/mesh/control/03_tables.sql
@@ -96,6 +99,7 @@ common/governance/06_indexes.sql
 common/document/06_indexes.sql
 common/ai/06_indexes.sql
 common/shared/07_functions.sql
+common/shared/07_bank_directory.sql
 planes/mesh/control/07_functions.sql
 common/control/07_functions.sql
 common/runtime_meta/07_functions.sql
@@ -185,7 +189,9 @@ common/ai/11_grants.sql
 common/master/12_system_authority_reference_seed.sql
 planes/mesh/master/12_platform_catalog_reference_seed.sql
 planes/mesh/control/12_platform_catalog_reference_seed.sql
+common/authz/14_workflow_permission_reference_seed.sql
 common/shared/12_reference_seed.sql
+common/control/12_ui_locale_catalog_seed.sql
 common/audit/12_reference_seed.sql
 common/control/12_lookup_reference_entrypoint.sql
 common/control/12_notification_reference_seed.sql
@@ -194,8 +200,10 @@ common/control/12_collaboration_lookup_seed.sql
 common/control/12_operational_governance_reference_seed.sql
 common/control/12_banking_reference_seed.sql
 common/control/12_usage_metric_catalog_seed.sql
+common/control/12_parameter_runtime_seed.sql
 common/master/12_contact_person_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql
+common/authz/16_content_record_acl_reference_seed.sql
 planes/mesh/mesh/12_certification_reference_seed.sql
 planes/mesh/control/12_lookup_reference_entrypoint.sql
 planes/mesh/control/12_reference_seed.sql
@@ -203,3 +211,12 @@ planes/mesh/control/12_subscription_plan_reference_seed.sql
 planes/mesh/control/12_subscription_plan_module_reference_seed.sql
 planes/mesh/mesh/12_reference_seed.sql
 planes/mesh/mesh/12_partner_profile_reference_seed.sql
+common/authz/13_management.sql
+common/control/14_admin_integrations.sql
+common/control/15_lookup_reference_governance.sql
+planes/mesh/mesh/15_bank_disclosure_source.sql
+common/master/19_entity_saved_views.sql
+common/control/17_process_task_rule_publication.sql
+common/shared/99_security_definer_hardening.sql
+
+common/master/21_reference_choice_recent.sql

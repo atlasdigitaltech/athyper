@@ -16,488 +16,40 @@
       "packages",
       "server/apps",
       "server/packages",
-      "tools/scripts"
+      "tooling/tools/scripts"
     ],
     "reviewedSlicesContract": "seed/contracts/authorization/inventory/mesh/reviewed-slices.v1.json",
     "studioMeshNetworkBoundary": "seed/contracts/authorization/inventory/mesh/studio-mesh-network-boundary.v1.json",
     "rlsSource": "ddl/planes/mesh/mesh/10_rls.sql"
   },
   "counts": {
-    "tables": 78,
-    "masterTables": 28,
-    "documentTables": 24,
-    "meshTables": 26,
-    "reviewedTables": 8,
-    "pendingReviewTables": 70,
+    "tables": 70,
+    "masterTables": 29,
+    "documentTables": 9,
+    "meshTables": 32,
+    "reviewedTables": 9,
+    "pendingReviewTables": 61,
     "operations": 18,
     "lifecycles": 2,
     "crossPlaneNetworkResources": 1,
     "broadParticipantMutationPolicies": 1,
-    "currentUserBroadWritePolicies": 8,
+    "currentUserBroadWritePolicies": 9,
     "roles": 0,
     "grants": 0
   },
   "tables": [
     {
-      "table": "document.attachment",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": true,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/adapters/search-meilisearch/src/meilisearch-index.ts",
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
-        "../packages/services/attachments/src/attachment-lifecycle.ts",
-        "../packages/services/attachments/src/attachment-routes.ts",
-        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts",
-        "../packages/services/attachments/src/kysely-attachment-repository.ts",
-        "../packages/services/content/src/kysely-content-resources.ts",
-        "../packages/services/document-derivatives/src/document-derivatives.ts",
-        "../packages/services/document-processing/src/kysely-document-processing-repository.ts",
-        "../packages/services/documents/src/document-service.ts",
-        "../packages/services/documents/src/kysely-document-repositories.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/attachments/src/kysely-attachment-repository.ts",
-        "../packages/services/document-processing/src/kysely-document-processing-repository.ts",
-        "../packages/services/documents/src/kysely-document-repositories.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.attachment_derivative",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": true,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/document-derivatives/src/document-derivatives.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/document-derivatives/src/document-derivatives.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.attachment_folder",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.attachment_legal_hold",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/attachments/src/kysely-attachment-repository.ts"
-      ],
-      "writerReferences": [],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.attachment_legal_hold_event",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.attachment_link",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
-        "../packages/services/attachments/src/kysely-attachment-repository.ts",
-        "../packages/services/content/src/kysely-content-resources.ts",
-        "../packages/services/document-processing/src/kysely-document-processing-repository.ts",
-        "../packages/services/documents/src/kysely-document-repositories.ts"
-      ],
-      "writerReferences": [
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
-        "../packages/services/attachments/src/kysely-attachment-repository.ts",
-        "../packages/services/content/src/kysely-content-resources.ts",
-        "../packages/services/documents/src/kysely-document-repositories.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.attachment_quota_reservation",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": true,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.attachment_quota_usage",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.attachment_series",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": true,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/attachments/src/kysely-attachment-repository.ts",
-        "../packages/services/documents/src/kysely-document-repositories.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/attachments/src/kysely-attachment-repository.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.comment",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": true,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../../packages/platform/communications/collaboration-ui/src/attachment-client.ts",
-        "../packages/platform/collaboration/src/collaboration-service.ts",
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
-      ],
-      "writerReferences": [
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.comment_draft",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
-      ],
-      "writerReferences": [
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.comment_feed_cursor",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
-      ],
-      "writerReferences": [
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.comment_mention",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
-      ],
-      "writerReferences": [
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.comment_reaction",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
-      ],
-      "writerReferences": [
-        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.content_item",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": true,
-      "hasVersion": true,
-      "repositoryReferences": [
-        "../packages/services/content/src/content-service.ts",
-        "../packages/services/content/src/kysely-content-acl.ts",
-        "../packages/services/content/src/kysely-content-quota.ts",
-        "../packages/services/content/src/kysely-content-repository.ts",
-        "../packages/services/content/src/kysely-content-resources.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/content/src/kysely-content-repository.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.content_item_access_grant",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/content/src/kysely-content-acl.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/content/src/kysely-content-acl.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.content_item_link",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/content/src/kysely-content-resources.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/content/src/kysely-content-resources.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.content_quota_reservation",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/content/src/kysely-content-quota.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/content/src/kysely-content-quota.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
-      "table": "document.content_quota_usage",
-      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/content/src/kysely-content-quota.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/content/src/kysely-content-quota.ts"
-      ],
-      "reviewStatus": "pending_review",
-      "slice": "mesh_backlog",
-      "businessDomain": null,
-      "classification": "pending_review",
-      "aggregateRoots": [],
-      "writerKind": null,
-      "writerOwner": null,
-      "externallyReadable": null,
-      "externallyWritable": null,
-      "sensitivity": null,
-      "requiredScopeKinds": []
-    },
-    {
       "table": "document.conversation",
       "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/platform/ai/src/kysely-run-repository.ts",
+        "../packages/platform/ai/src/kysely-thread-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/platform/ai/src/kysely-thread-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -515,7 +67,121 @@
       "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/platform/ai/src/kysely-thread-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/platform/ai/src/kysely-thread-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.entity_case",
+      "ddlSource": "ddl/common/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../apps/platform-host/src/monitoring/business-partner-metrics.ts",
+        "../packages/contracts/master-data/src/business-partner-requests.ts",
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/planes/neon/src/business-partner-profile-match.ts",
+        "../packages/services/master-data/src/business-partner-invitation-service.ts",
+        "../packages/services/master-data/src/business-partner-onboarding-cycle.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-explainability.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-invitation-repository.ts",
+        "../packages/services/master-data/src/kysely-governed-internal-business-partner-repository.ts",
+        "../packages/services/publication/src/kysely-publication-authority-work.ts",
+        "../packages/services/records/src/standard-view-relationship-sql.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.entity_case_command_evidence",
+      "ddlSource": "ddl/common/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-explainability.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
+        "../packages/services/records/src/standard-view-relationship-sql.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.entity_case_materialization",
+      "ddlSource": "ddl/common/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-explainability.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.entity_case_validation",
+      "ddlSource": "ddl/common/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -574,11 +240,16 @@
       "hasVersion": true,
       "repositoryReferences": [
         "../packages/platform/workflow/src/kysely-workflow-repository.ts",
-        "../packages/platform/workflow/src/sla-automation.ts"
+        "../packages/platform/workflow/src/sla-automation.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-request-repository.ts",
+        "../packages/services/records/src/standard-view-relationship-sql.ts"
       ],
       "writerReferences": [
         "../packages/platform/workflow/src/kysely-workflow-repository.ts",
-        "../packages/platform/workflow/src/sla-automation.ts"
+        "../packages/platform/workflow/src/sla-automation.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-request-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -598,7 +269,39 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
+        "../../apps/neon/.next/server/chunks/_19kpfdl._.js",
+        "../../apps/neon/.next/server/chunks/ssr/_1jl4jhh._.js",
+        "../../apps/neon/.next/standalone/apps/neon/.next/server/chunks/_19kpfdl._.js",
+        "../../apps/neon/.next/standalone/apps/neon/.next/server/chunks/ssr/_1jl4jhh._.js",
+        "../../apps/neon/lib/relay.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+        "../packages/services/master-data/src/kysely-master-data-repository.ts",
+        "../packages/services/master-data/src/master-data-authority.ts",
         "../packages/services/master-data/src/services.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-master-data-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.address_event",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
@@ -618,8 +321,15 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+        "../packages/services/master-data/src/kysely-master-data-repository.ts",
+        "../packages/services/master-data/src/master-data-authority.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-master-data-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -656,7 +366,9 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -678,9 +390,15 @@
       "repositoryReferences": [
         "../packages/platform/notifications/src/kysely-notification-preferences.ts",
         "../packages/platform/notifications/src/kysely-notification-repositories.ts",
-        "../packages/platform/notifications/src/notification-planner.ts"
+        "../packages/platform/notifications/src/notification-planner.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+        "../packages/services/master-data/src/kysely-master-data-repository.ts",
+        "../packages/services/master-data/src/master-data-authority.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-master-data-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -698,7 +416,11 @@
       "ddlSource": "ddl/common/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/platform/iam/src/customer-portal-delivery.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -717,7 +439,9 @@
       "ddlSource": "ddl/common/master/03_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -736,7 +460,9 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -755,8 +481,13 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -815,14 +546,23 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-platform.ts",
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../apps/platform-host/src/monitoring/business-partner-metrics.ts",
         "../packages/adapters/experience-postgres/src/index.ts",
         "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
+        "../packages/platform/control-admin/scripts/compare-feature-cohorts.ts",
+        "../packages/platform/iam/src/kysely-identity-saga.ts",
         "../packages/platform/iam/src/kysely-permission-resolver.ts",
         "../packages/platform/notifications/src/kysely-notification-preferences.ts",
         "../packages/platform/notifications/src/notification-planner.ts",
-        "../packages/platform/preferences/src/kysely-saved-view-repository.ts"
+        "../packages/platform/notifications/src/outbox-planning.ts",
+        "../packages/platform/preferences/src/kysely-saved-view-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/platform/iam/src/kysely-identity-saga.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -841,9 +581,12 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/adapters/experience-postgres/src/index.ts"
+        "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/platform/iam/src/kysely-identity-saga.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/platform/iam/src/kysely-identity-saga.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -885,7 +628,9 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -930,7 +675,9 @@
       "repositoryReferences": [
         "../packages/adapters/experience-postgres/src/index.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -969,8 +716,12 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/records/src/bookmarks/record-bookmark-service.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/records/src/bookmarks/record-bookmark-service.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -1011,7 +762,9 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/platform/workflow/src/work-item-eligibility-sql.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -1030,7 +783,9 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/platform/workflow/src/work-item-eligibility-sql.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -1093,7 +848,9 @@
       "hasVersion": false,
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-platform.ts",
+        "../apps/platform-host/src/monitoring/business-partner-metrics.ts",
         "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/platform/control-admin/scripts/compare-feature-cohorts.ts",
         "../packages/platform/iam/src/kysely-permission-resolver.ts"
       ],
       "writerReferences": [],
@@ -1117,7 +874,9 @@
       "repositoryReferences": [
         "../packages/adapters/experience-postgres/src/index.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -1173,7 +932,13 @@
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts",
+        "../packages/planes/mesh/src/business-partner-delivery.ts",
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-network.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -1192,8 +957,38 @@
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-network.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.bank_account_disclosure_event",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -1226,7 +1021,7 @@
       "requiredScopeKinds": []
     },
     {
-      "table": "mesh.bank_party",
+      "table": "mesh.bank_provisional_reference",
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
@@ -1245,11 +1040,42 @@
       "requiredScopeKinds": []
     },
     {
+      "table": "mesh.business_partner_delivery_acknowledgement",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-delivery.ts",
+        "../packages/planes/mesh/src/business-partner-network-exchange.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/mesh/src/business-partner-delivery.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
       "table": "mesh.catalog",
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../../apps/mesh/.next/server/chunks/ssr/packages_03kbset._.js",
+        "../../apps/mesh/.next/standalone/apps/mesh/.next/server/chunks/ssr/packages_03kbset._.js",
+        "../../apps/mesh/.next/static/chunks/0os3fal7qa-0g.js",
+        "../../packages/planes/mesh/shell/src/navigation.ts",
+        "../packages/services/attachments/src/attachment-routes.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -1454,6 +1280,25 @@
       "requiredScopeKinds": []
     },
     {
+      "table": "mesh.document_business_status_projection",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
       "table": "mesh.document_envelope",
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
@@ -1516,7 +1361,11 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
-        "../apps/platform-host/src/composition/register-platform.ts"
+        "../apps/platform-host/src/composition/register-platform.ts",
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/planes/mesh/src/business-partner-network-exchange.ts",
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
@@ -1541,7 +1390,9 @@
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
       "slice": "network_topology",
@@ -1585,11 +1436,40 @@
       "notes": "Mutated through explicit network-account identifier operations, never generic child CRUD."
     },
     {
+      "table": "mesh.network_account_industry_classification",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "reviewed",
+      "slice": "network_topology",
+      "businessDomain": "network",
+      "classification": "aggregate_child",
+      "aggregateRoots": [
+        "mesh.network_account"
+      ],
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-plane-mesh",
+      "externallyReadable": true,
+      "externallyWritable": false,
+      "sensitivity": "standard",
+      "requiredScopeKinds": [
+        "network_account"
+      ],
+      "notes": "Industry sector assignments remain distinct from catalog and trade-role commodity capabilities."
+    },
+    {
       "table": "mesh.network_account_profile",
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
       "slice": "network_topology",
@@ -1609,11 +1489,61 @@
       "notes": "Mutated only through the network-account configure-profile operation."
     },
     {
+      "table": "mesh.network_account_profile_publication",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.network_account_profile_publication_event",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
       "table": "mesh.network_account_reference",
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
       "slice": "network_topology",
@@ -1687,8 +1617,17 @@
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/contracts/records/src/ports.ts",
+        "../packages/planes/mesh/src/business-partner-network-exchange.ts",
+        "../packages/planes/mesh/src/network-relationship-import.ts",
+        "../packages/planes/mesh/src/record-collection-scope.ts",
+        "../packages/services/records/src/in-memory-record-repository.ts",
+        "../packages/services/records/src/kysely-record-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/mesh/src/network-relationship-import.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "network_topology",
       "businessDomain": "network",
@@ -2482,6 +2421,7 @@
       "mesh.network_account",
       "mesh.network_account_commodity_capability",
       "mesh.network_account_identifier",
+      "mesh.network_account_industry_classification",
       "mesh.network_account_profile",
       "mesh.network_account_reference",
       "mesh.network_account_tax_registration",
@@ -2490,34 +2430,20 @@
     ]
   },
   "releaseBlockers": [
-    "CURRENT_USER broad-write RLS on reviewed tables: mesh.network_account, mesh.network_account_commodity_capability, mesh.network_account_identifier, mesh.network_account_profile, mesh.network_account_reference, mesh.network_account_tax_registration, mesh.network_lifecycle_event, mesh.network_relationship",
+    "CURRENT_USER broad-write RLS on reviewed tables: mesh.network_account, mesh.network_account_commodity_capability, mesh.network_account_identifier, mesh.network_account_industry_classification, mesh.network_account_profile, mesh.network_account_reference, mesh.network_account_tax_registration, mesh.network_lifecycle_event, mesh.network_relationship",
     "broad participant FOR ALL mutation RLS: mesh.network_relationship",
     "cross-plane applier not implemented: @athyper/server-plane-mesh",
-    "pending table review: document.attachment",
-    "pending table review: document.attachment_derivative",
-    "pending table review: document.attachment_folder",
-    "pending table review: document.attachment_legal_hold",
-    "pending table review: document.attachment_legal_hold_event",
-    "pending table review: document.attachment_link",
-    "pending table review: document.attachment_quota_reservation",
-    "pending table review: document.attachment_quota_usage",
-    "pending table review: document.attachment_series",
-    "pending table review: document.comment",
-    "pending table review: document.comment_draft",
-    "pending table review: document.comment_feed_cursor",
-    "pending table review: document.comment_mention",
-    "pending table review: document.comment_reaction",
-    "pending table review: document.content_item",
-    "pending table review: document.content_item_access_grant",
-    "pending table review: document.content_item_link",
-    "pending table review: document.content_quota_reservation",
-    "pending table review: document.content_quota_usage",
     "pending table review: document.conversation",
     "pending table review: document.conversation_participant",
+    "pending table review: document.entity_case",
+    "pending table review: document.entity_case_command_evidence",
+    "pending table review: document.entity_case_materialization",
+    "pending table review: document.entity_case_validation",
     "pending table review: document.multipart_upload",
     "pending table review: document.multipart_upload_part",
     "pending table review: document.work_item",
     "pending table review: master.address",
+    "pending table review: master.address_event",
     "pending table review: master.address_link",
     "pending table review: master.brand_profile",
     "pending table review: master.contact_email",
@@ -2547,8 +2473,10 @@
     "pending table review: master.workspace",
     "pending table review: mesh.bank_account",
     "pending table review: mesh.bank_account_disclosure",
+    "pending table review: mesh.bank_account_disclosure_event",
     "pending table review: mesh.bank_account_link",
-    "pending table review: mesh.bank_party",
+    "pending table review: mesh.bank_provisional_reference",
+    "pending table review: mesh.business_partner_delivery_acknowledgement",
     "pending table review: mesh.catalog",
     "pending table review: mesh.catalog_audience",
     "pending table review: mesh.catalog_availability",
@@ -2560,9 +2488,12 @@
     "pending table review: mesh.certification",
     "pending table review: mesh.certification_type",
     "pending table review: mesh.document_acknowledgement",
+    "pending table review: mesh.document_business_status_projection",
     "pending table review: mesh.document_envelope",
     "pending table review: mesh.document_event",
-    "pending table review: mesh.document_payload"
+    "pending table review: mesh.document_payload",
+    "pending table review: mesh.network_account_profile_publication",
+    "pending table review: mesh.network_account_profile_publication_event"
   ],
-  "sha256": "c21255c1435608c4d146afe5c352989a46578b22bf73bed24ac2b99ff4475429"
+  "sha256": "421e2b163de0d7450fc55fa767e4de24a8b795e962823a2f40a97ac81a3601c8"
 }

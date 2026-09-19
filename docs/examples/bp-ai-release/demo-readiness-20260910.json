@@ -1,0 +1,46 @@
+{
+  "schema": "atlas-demo-readiness/1",
+  "capturedAt": "2026-09-10T10:49:47.539684+00:00",
+  "scope": "DEV Cirrus catl.admin BP overview demo; broader release qualification paused",
+  "deployment": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:e7633de6f8318cf06df17e1f936bdbb53d97c13e3b47f8d5922e12c619b15285",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:e7633de6f8318cf06df17e1f936bdbb53d97c13e3b47f8d5922e12c619b15285",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "sha256:5d183158c16c62a9ae445145338578ec79e0a1c80473d1307cbbd2eeddd2bc6d",
+      "health": "healthy"
+    }
+  ],
+  "checks": {
+    "focusedRecoveryAndRoutingTests": 6,
+    "ownerSelectionRegressionTests": 42,
+    "shellTypecheck": true,
+    "aiTypecheck": true,
+    "neonProductionBuild": true,
+    "browserOverview": {
+      "httpStatus": 200,
+      "completed": true,
+      "recordCitations": 1,
+      "failed": false
+    },
+    "regularChromeRecovery": "User reported that verification prompt disappeared; Chrome not remotely attached"
+  },
+  "retainedObservations": [
+    "First browser probe timed out before run response.",
+    "Next probe completed using attachment evidence instead of record evidence.",
+    "Suppressing attachment retrieval alone still produced a model response without record citations.",
+    "Final deployed metadata summary selection completed with one record citation."
+  ],
+  "limits": [
+    "MFA expiry remains enforced; use Verify identity in the same browser when needed.",
+    "This is a scoped demo check, not overall BP-AI release qualification."
+  ]
+}

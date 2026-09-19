@@ -1,0 +1,104 @@
+/** Read-only exact release evidence. Does not approve, sign or dispatch anything. */
+import { readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { baselineJsonHash as hash } from "../../../server/packages/planes/studio/meta-entity-authoring/src/baseline-publication.js";
+import {
+  parseEntityAuthorizationProfile,
+  parseEntityAuthorizationRuntime,
+} from "../../../server/packages/contracts/metadata/src/index.js";
+const id = "c2cc6900-26c1-47ca-8dfc-1d488000950c";
+const query = (database: string, sql: string) => {
+  const out = execFileSync(
+    "docker",
+    [
+      "exec",
+      "-i",
+      "athyper-dev-db-1",
+      "psql",
+      "-X",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-U",
+      "postgres",
+      "-d",
+      database,
+      "-At",
+    ],
+    {
+      input: `BEGIN READ ONLY; SET LOCAL app.current_tenant_id='44444444-4444-4444-8444-444444444444'; ${sql} ROLLBACK;`,
+      encoding: "utf8",
+    },
+  );
+  const rows = out
+    .split("\n")
+    .filter((l) => l.startsWith("{") || l.startsWith("["));
+  if (rows.length !== 1) throw Error("Expected one evidence capture");
+  return JSON.parse(rows[0]!);
+};
+const source = query(
+  "athyper_studio",
+  `SELECT to_jsonb(s)-'contract_signature' FROM publication.fn_runtime_restoration_compilation_source('${id}') s;`,
+);
+const durable = query(
+  "athyper_studio",
+  `SELECT jsonb_build_object('changeSetId',cs.id,'changeSetStatus',cs.status,'approvedBy',cs.approved_by,'publishedBy',er.published_by,'nativeSignaturePresent',er.contract_signature IS NOT NULL,'nativeReleaseNo',er.release_no,'publicationReleaseNo',pr.release_no,'publicationStatus',pr.status,'compilationCount',(SELECT count(*) FROM publication.artifact_compilation WHERE publication_release_id=pr.id),'runtimeArtifactCount',(SELECT count(*) FROM publication.artifact WHERE publication_release_id=pr.id),'deploymentCount',(SELECT count(*) FROM publication.deployment d JOIN publication.artifact a ON a.id=d.artifact_id WHERE a.publication_release_id=pr.id)) FROM metadata.entity_release er JOIN metadata.entity_change_set cs ON cs.id=er.change_set_id JOIN publication.release pr ON pr.id=er.id WHERE er.id='${id}';`,
+);
+if (
+  durable.changeSetId !== "3d68c639-df7e-4683-8c26-93b87bab21eb" ||
+  durable.approvedBy !== "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d" ||
+  durable.publishedBy !== "81cd1978-2df5-5c9a-938a-2f8c291aea13" ||
+  !durable.nativeSignaturePresent ||
+  Number(source.release_no) !== 1
+)
+  throw Error("Exact native release identity changed");
+const catalog = query(
+  "athyper_neon",
+  `SELECT jsonb_agg(to_jsonb(p) ORDER BY code) FROM (SELECT p.id,p.canonical_code code,p.permission_kind kind,array_agg(DISTINCT s.scope_kind ORDER BY s.scope_kind) "scopeKinds" FROM authz.permission p JOIN authz.permission_scope_kind s ON s.permission_id=p.id WHERE p.status='published' AND s.status='active' AND p.permission_kind IN ('entity_operation','capability') GROUP BY p.id,p.canonical_code,p.permission_kind) p;`,
+);
+const d = source.compiled_json;
+const profile = parseEntityAuthorizationProfile(d.authorization, {
+  entityCode: source.entity_code,
+  planeKey: source.plane_key,
+  fields: d.fields.map((f: any) => f.key),
+  operations: d.operations,
+});
+const runtime = parseEntityAuthorizationRuntime(
+  d.authorizationRuntime,
+  profile,
+);
+const coordinate = {
+  releaseId: id,
+  releaseNo: 1,
+  tenantId: source.tenant_id,
+  plane: source.plane_key,
+  entityCode: source.entity_code,
+  contractHash: hash(source.contract_json),
+  profileHash: hash(profile),
+  runtimeHash: hash(runtime),
+  catalogHash: hash(catalog),
+  operationKeys: profile.operations.map((o) => o.key).sort(),
+};
+const report = {
+  schemaVersion: 1,
+  kind: "bp_exact_release_capture",
+  capturedAt: new Date().toISOString(),
+  coordinate,
+  durable,
+  source,
+  catalog,
+  readOnly: true,
+  releaseReviewAccepted: false,
+  exactRuntimeArtifactSigned: false,
+  grantsChanged: false,
+  activationAuthorized: false,
+};
+const path =
+  "governance/policy/reports/business-partner-enter-correction-exact-release.dev.json";
+writeFileSync(path, JSON.stringify(report, null, 2) + "\n");
+console.log({
+  path,
+  releaseId: id,
+  releaseNo: 1,
+  operations: coordinate.operationKeys.length,
+  durable,
+});

@@ -1,0 +1,265 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "address/core",
+  "entityCode": "address",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "sourceObjects": [
+      "master.address"
+    ],
+    "primaryObject": "master.address",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.address.id",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "line1",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "line1"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.address.line1",
+        "defaultText": "Line1"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "line2",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "line2"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.address.line2",
+        "defaultText": "Line2"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "city",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "city"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.address.city",
+        "defaultText": "City"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "postal_code",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "postal_code"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.address.postal_code",
+        "defaultText": "Postal Code"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "dynamicFacets": [
+        {
+          "facet": "required",
+          "engine": "jsonlogic.v1",
+          "expression": {
+            "==": [
+              {
+                "var": "record.proposed.country_code"
+              },
+              "US"
+            ]
+          },
+          "evaluationFailure": "reject_write",
+          "serverAuthoritative": true
+        }
+      ],
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "country_code",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "country_code"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.address.country_code",
+        "defaultText": "Country Code"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "referenceConfig": {
+        "targetEntityCode": "country",
+        "valueField": "code"
+      },
+      "storageType": "character(2)",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "validation_status",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "validation_status"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.address.validation_status",
+        "defaultText": "Validation Status"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "tenant",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "dependencies": [
+    "country/core"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "artifactHash": "sha256:d57f105628d61a44ee919139c3abab5d70b641cf56257428fa3a03fda0b9cafd"
+}

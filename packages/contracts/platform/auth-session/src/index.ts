@@ -79,7 +79,20 @@ function object(value: unknown): Record<string, unknown> { if (!value || typeof 
 function text(value: unknown, name: string): string { if (typeof value !== "string" || !value.trim()) throw new TypeError(`${name} must be non-empty`); return value.trim(); }
 function optionalText(value: unknown, name: string): string | undefined { return value === undefined ? undefined : text(value, name); }
 function optionalInteger(value: unknown, name: string): number | undefined { if (value === undefined) return undefined; if (typeof value !== "number" || !Number.isInteger(value) || value < 0) throw new TypeError(`${name} must be a non-negative integer`); return value; }
-function optionalTimestamp(value: unknown, name: string): string | undefined { const result = optionalText(value, name); if (result && !Number.isFinite(Date.parse(result))) throw new TypeError(`${name} must be an ISO timestamp`); return result; }
+function optionalTimestamp(value: unknown, name: string): string | undefined { const result = optionalText(value, name); if (result && !isOffsetTimestamp(result)) throw new TypeError(`${name} must be an ISO timestamp`); return result; }
 function strings(value: unknown, name: string): readonly string[] { if (!Array.isArray(value)) throw new TypeError(`${name} must be an array`); return Object.freeze([...new Set(value.map((item, index) => text(item, `${name}[${index}]`)))]); }
 function oneOf<const T extends readonly string[]>(value: unknown, values: T, name: string): T[number] { if (typeof value !== "string" || !values.includes(value as T[number])) throw new TypeError(`${name} is invalid`); return value as T[number]; }
 function oneOfStrings<const T extends readonly string[]>(value: unknown, values: T, name: string): readonly T[number][] { if (!Array.isArray(value)) throw new TypeError(`${name} must be an array`); return Object.freeze([...new Set(value.map((item, index) => oneOf(item, values, `${name}[${index}]`)))]); }
+
+/** Validate the wire format without importing a runtime clock or date library. */
+function isOffsetTimestamp(value: string): boolean {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(?:Z|[+-](\d{2}):(\d{2}))$/u.exec(value);
+  if (!parts) return false;
+  const [, y, m, d, h, min, sec, oh, om] = parts;
+  const year = Number(y), month = Number(m), day = Number(d);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1]!
+    && Number(h) < 24 && Number(min) < 60 && Number(sec) < 60
+    && (oh === undefined || (Number(oh) < 24 && Number(om) < 60));
+}

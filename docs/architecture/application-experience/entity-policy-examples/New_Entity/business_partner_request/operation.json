@@ -1,0 +1,761 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "operation",
+  "artifactKey": "business_partner_request/operation",
+  "entityCode": "business_partner_request",
+  "plane": "neon",
+  "operations": [
+    {
+      "key": "read",
+      "permissionCode": "neon.business_partner_request.read",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.business_partner_request.read.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "not_applicable"
+    },
+    {
+      "key": "create_draft",
+      "permissionCode": "neon.business_partner_request.create_draft",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.business_partner_request.create_draft.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required"
+    },
+    {
+      "key": "save_draft",
+      "permissionCode": "neon.business_partner_request.save_draft",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.business_partner_request.save_draft.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required"
+    },
+    {
+      "key": "submit",
+      "permissionCode": "neon.business_partner_request.submit",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.business_partner_request.submit.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required"
+    },
+    {
+      "key": "return",
+      "permissionCode": "neon.business_partner_request.return",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.business_partner_request.return.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required"
+    },
+    {
+      "key": "reject",
+      "permissionCode": "neon.business_partner_request.reject",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.business_partner_request.reject.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required"
+    },
+    {
+      "key": "approve",
+      "permissionCode": "neon.business_partner_request.approve",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.business_partner_request.approve.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required"
+    },
+    {
+      "key": "materialize",
+      "permissionCode": "neon.business_partner_request.materialize",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.business_partner_request.materialize.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required"
+    }
+  ],
+  "policyBindings": [
+    {
+      "bindingKey": "supplier.approval",
+      "policyKind": "approval_transition",
+      "operationKey": "submit",
+      "appliesWhen": {
+        "journey": "supplier"
+      },
+      "bindingStage": "precondition",
+      "policyRef": {
+        "entityType": "business_partner_request.supplier.submit",
+        "resolution": "tenant_plane_effective_policy"
+      },
+      "required": true,
+      "missingPolicyBehavior": "block",
+      "unavailablePolicyBehavior": "block",
+      "outcome": "start_workflow",
+      "workflowServiceKey": "platform.workflow.v1"
+    },
+    {
+      "bindingKey": "supplier.evidence.submit",
+      "policyKind": "evidence_requirement",
+      "operationKey": "submit",
+      "appliesWhen": {
+        "journey": "supplier"
+      },
+      "bindingStage": "precondition",
+      "requirements": {
+        "conditional": {
+          "supplier.bank": [
+            "bank_ownership",
+            "verification_method"
+          ],
+          "supplier.qualify": [
+            "qualification_criteria"
+          ]
+        },
+        "required": [
+          "legal_identity",
+          "tax",
+          "representation"
+        ]
+      },
+      "evaluatorKey": "platform.evidence.admission.v1",
+      "onFailure": "block",
+      "checks": [
+        "owner",
+        "scan_clean",
+        "content_hash",
+        "effective_validity",
+        "required_evidence_class"
+      ]
+    },
+    {
+      "bindingKey": "supplier.evidence.materialize",
+      "policyKind": "evidence_requirement",
+      "operationKey": "materialize",
+      "appliesWhen": {
+        "journey": "supplier"
+      },
+      "bindingStage": "precondition",
+      "requirements": {
+        "conditional": {
+          "supplier.bank": [
+            "bank_ownership",
+            "verification_method"
+          ],
+          "supplier.qualify": [
+            "qualification_criteria"
+          ]
+        },
+        "required": [
+          "legal_identity",
+          "tax",
+          "representation"
+        ]
+      },
+      "evaluatorKey": "platform.evidence.admission.v1",
+      "onFailure": "block",
+      "checks": [
+        "owner",
+        "scan_clean",
+        "content_hash",
+        "effective_validity",
+        "required_evidence_class"
+      ]
+    },
+    {
+      "bindingKey": "supplier.readiness",
+      "policyKind": "readiness_requirement",
+      "operationKey": "materialize",
+      "bindingStage": "precondition",
+      "appliesWhen": {
+        "journey": "supplier",
+        "requestKind": "activation_or_readiness_dependent_change"
+      },
+      "factEntityCode": "supplier",
+      "factCodes": [
+        "BUSINESS_PARTNER_ACTIVE",
+        "PROCUREMENT_ASSIGNMENT_EFFECTIVE",
+        "COMPANY_PROFILE_COMPLETE",
+        "QUALIFICATION_CURRENT",
+        "NO_PROHIBITIVE_BLOCK",
+        "BANK_VERIFIED_WHEN_PAYABLE"
+      ],
+      "evaluationState": "proposed_post_materialization",
+      "unknownBehavior": "block",
+      "onFailure": "block"
+    },
+    {
+      "bindingKey": "customer.approval",
+      "policyKind": "approval_transition",
+      "operationKey": "submit",
+      "appliesWhen": {
+        "journey": "customer"
+      },
+      "bindingStage": "precondition",
+      "policyRef": {
+        "entityType": "business_partner_request.customer.submit",
+        "resolution": "tenant_plane_effective_policy"
+      },
+      "required": true,
+      "missingPolicyBehavior": "block",
+      "unavailablePolicyBehavior": "block",
+      "outcome": "start_workflow",
+      "workflowServiceKey": "platform.workflow.v1"
+    },
+    {
+      "bindingKey": "customer.evidence.submit",
+      "policyKind": "evidence_requirement",
+      "operationKey": "submit",
+      "appliesWhen": {
+        "journey": "customer"
+      },
+      "bindingStage": "precondition",
+      "requirements": {
+        "conditional": {
+          "customer.credit": [
+            "credit_evidence"
+          ]
+        },
+        "required": [
+          "legal_identity",
+          "tax_or_consent"
+        ]
+      },
+      "evaluatorKey": "platform.evidence.admission.v1",
+      "onFailure": "block",
+      "checks": [
+        "owner",
+        "scan_clean",
+        "content_hash",
+        "effective_validity",
+        "required_evidence_class"
+      ]
+    },
+    {
+      "bindingKey": "customer.evidence.materialize",
+      "policyKind": "evidence_requirement",
+      "operationKey": "materialize",
+      "appliesWhen": {
+        "journey": "customer"
+      },
+      "bindingStage": "precondition",
+      "requirements": {
+        "conditional": {
+          "customer.credit": [
+            "credit_evidence"
+          ]
+        },
+        "required": [
+          "legal_identity",
+          "tax_or_consent"
+        ]
+      },
+      "evaluatorKey": "platform.evidence.admission.v1",
+      "onFailure": "block",
+      "checks": [
+        "owner",
+        "scan_clean",
+        "content_hash",
+        "effective_validity",
+        "required_evidence_class"
+      ]
+    },
+    {
+      "bindingKey": "customer.readiness",
+      "policyKind": "readiness_requirement",
+      "operationKey": "materialize",
+      "bindingStage": "precondition",
+      "appliesWhen": {
+        "journey": "customer",
+        "requestKind": "activation_or_readiness_dependent_change"
+      },
+      "factEntityCode": "customer",
+      "factCodes": [
+        "BUSINESS_PARTNER_ACTIVE",
+        "SALES_ASSIGNMENT_EFFECTIVE",
+        "COMPANY_PROFILE_COMPLETE",
+        "CREDIT_REVIEW_CURRENT",
+        "NO_PROHIBITIVE_BLOCK"
+      ],
+      "evaluationState": "proposed_post_materialization",
+      "unknownBehavior": "block",
+      "onFailure": "block"
+    },
+    {
+      "bindingKey": "workforce.approval",
+      "policyKind": "approval_transition",
+      "operationKey": "submit",
+      "appliesWhen": {
+        "journey": "workforce"
+      },
+      "bindingStage": "precondition",
+      "policyRef": {
+        "entityType": "business_partner_request.workforce.submit",
+        "resolution": "tenant_plane_effective_policy"
+      },
+      "required": true,
+      "missingPolicyBehavior": "block",
+      "unavailablePolicyBehavior": "block",
+      "outcome": "start_workflow",
+      "workflowServiceKey": "platform.workflow.v1"
+    },
+    {
+      "bindingKey": "workforce.evidence.submit",
+      "policyKind": "evidence_requirement",
+      "operationKey": "submit",
+      "appliesWhen": {
+        "journey": "workforce"
+      },
+      "bindingStage": "precondition",
+      "requirements": {
+        "conditional": {
+          "workforce.new": [
+            "background_policy_result"
+          ],
+          "workforce.offboard": [
+            "resource_checklist"
+          ]
+        },
+        "purposeBound": true,
+        "required": [
+          "consent",
+          "identity",
+          "right_to_work"
+        ]
+      },
+      "evaluatorKey": "platform.evidence.admission.v1",
+      "onFailure": "block",
+      "checks": [
+        "owner",
+        "scan_clean",
+        "content_hash",
+        "effective_validity",
+        "required_evidence_class"
+      ]
+    },
+    {
+      "bindingKey": "workforce.evidence.materialize",
+      "policyKind": "evidence_requirement",
+      "operationKey": "materialize",
+      "appliesWhen": {
+        "journey": "workforce"
+      },
+      "bindingStage": "precondition",
+      "requirements": {
+        "conditional": {
+          "workforce.new": [
+            "background_policy_result"
+          ],
+          "workforce.offboard": [
+            "resource_checklist"
+          ]
+        },
+        "purposeBound": true,
+        "required": [
+          "consent",
+          "identity",
+          "right_to_work"
+        ]
+      },
+      "evaluatorKey": "platform.evidence.admission.v1",
+      "onFailure": "block",
+      "checks": [
+        "owner",
+        "scan_clean",
+        "content_hash",
+        "effective_validity",
+        "required_evidence_class"
+      ]
+    },
+    {
+      "bindingKey": "workforce.readiness",
+      "policyKind": "readiness_requirement",
+      "operationKey": "materialize",
+      "bindingStage": "precondition",
+      "appliesWhen": {
+        "journey": "workforce",
+        "requestKind": "activation_or_readiness_dependent_change"
+      },
+      "factEntityCode": "workforce",
+      "factCodes": [
+        "BUSINESS_PARTNER_ACTIVE",
+        "EMPLOYEE_ACTIVE",
+        "EMPLOYMENT_EFFECTIVE",
+        "PRIMARY_ASSIGNMENT_EFFECTIVE",
+        "ONBOARDING_COMPLETE"
+      ],
+      "evaluationState": "proposed_post_materialization",
+      "unknownBehavior": "block",
+      "onFailure": "block"
+    },
+    {
+      "bindingKey": "governance.approval",
+      "policyKind": "approval_transition",
+      "operationKey": "submit",
+      "appliesWhen": {
+        "journey": "governance"
+      },
+      "bindingStage": "precondition",
+      "policyRef": {
+        "entityType": "business_partner_request.governance.submit",
+        "resolution": "tenant_plane_effective_policy"
+      },
+      "required": true,
+      "missingPolicyBehavior": "block",
+      "unavailablePolicyBehavior": "block",
+      "outcome": "start_workflow",
+      "workflowServiceKey": "platform.workflow.v1"
+    },
+    {
+      "bindingKey": "duplicate.save_draft",
+      "policyKind": "duplicate_detection",
+      "operationKey": "save_draft",
+      "bindingStage": "precondition",
+      "rules": {
+        "organization": {
+          "categoryChange": "forbidden",
+          "match": [
+            "normalizedLegalName+countryCode",
+            "registrationNumber+countryCode",
+            "taxIdentifierHash+countryCode"
+          ],
+          "resolution": "steward_review"
+        },
+        "person": {
+          "categoryChange": "forbidden",
+          "match": [
+            "normalizedName+personalEmailHash",
+            "nationalIdentifierHash+countryCode"
+          ],
+          "resolution": "privacy_bound_steward_review"
+        }
+      },
+      "mode": "advisory",
+      "inputChangeInvalidatesResolution": true,
+      "evaluatorKey": "neon.bp.duplicate.v1",
+      "onEvaluatorError": "block",
+      "databaseUniqueConstraintsStillRequired": true
+    },
+    {
+      "bindingKey": "duplicate.submit",
+      "policyKind": "duplicate_detection",
+      "operationKey": "submit",
+      "bindingStage": "precondition",
+      "rules": {
+        "organization": {
+          "categoryChange": "forbidden",
+          "match": [
+            "normalizedLegalName+countryCode",
+            "registrationNumber+countryCode",
+            "taxIdentifierHash+countryCode"
+          ],
+          "resolution": "steward_review"
+        },
+        "person": {
+          "categoryChange": "forbidden",
+          "match": [
+            "normalizedName+personalEmailHash",
+            "nationalIdentifierHash+countryCode"
+          ],
+          "resolution": "privacy_bound_steward_review"
+        }
+      },
+      "mode": "require_resolution",
+      "inputChangeInvalidatesResolution": true,
+      "evaluatorKey": "neon.bp.duplicate.v1",
+      "onEvaluatorError": "block",
+      "databaseUniqueConstraintsStillRequired": true
+    },
+    {
+      "bindingKey": "duplicate.materialize",
+      "policyKind": "duplicate_detection",
+      "operationKey": "materialize",
+      "bindingStage": "precondition",
+      "rules": {
+        "organization": {
+          "categoryChange": "forbidden",
+          "match": [
+            "normalizedLegalName+countryCode",
+            "registrationNumber+countryCode",
+            "taxIdentifierHash+countryCode"
+          ],
+          "resolution": "steward_review"
+        },
+        "person": {
+          "categoryChange": "forbidden",
+          "match": [
+            "normalizedName+personalEmailHash",
+            "nationalIdentifierHash+countryCode"
+          ],
+          "resolution": "privacy_bound_steward_review"
+        }
+      },
+      "mode": "require_resolution",
+      "inputChangeInvalidatesResolution": true,
+      "evaluatorKey": "neon.bp.duplicate.v1",
+      "onEvaluatorError": "block",
+      "databaseUniqueConstraintsStillRequired": true
+    },
+    {
+      "bindingKey": "decision.sod",
+      "policyKind": "decision_authorization",
+      "operationKey": "approve",
+      "bindingStage": "precondition",
+      "requirements": {
+        "assignedTaskRequired": true,
+        "makerCannotDecide": true,
+        "applicantCannotDecide": true,
+        "elevatedAssuranceRequired": true,
+        "evidenceAndPayloadHashMustMatch": true
+      },
+      "onFailure": "block"
+    }
+  ],
+  "evaluationContract": {
+    "context": [
+      "record.current",
+      "record.proposed",
+      "record.changedPaths",
+      "actor",
+      "businessContext",
+      "evidence",
+      "asOf"
+    ],
+    "combining": "deny_overrides",
+    "missingRequiredPolicy": "block",
+    "unavailablePolicy": "block",
+    "invalidPolicy": "block",
+    "decisionTrace": "server_audit",
+    "dynamicDecisionsCache": "not_shared",
+    "policyRevision": "pin_at_submission_revalidate_security_at_commit"
+  },
+  "concurrency": {
+    "expectedRecordVersionRequired": true,
+    "approvalBoundToPayloadHash": true,
+    "materializationIdempotent": true
+  },
+  "validationDeclarations": [
+    {
+      "appliesTo": "organization",
+      "code": "BP_LEGAL_NAME_REQUIRED",
+      "path": "partner.legalName",
+      "rule": "required",
+      "severity": "error"
+    },
+    {
+      "appliesTo": "organization",
+      "code": "BP_COUNTRY_REQUIRED",
+      "path": "partner.countryCode",
+      "rule": "iso-3166-alpha2",
+      "severity": "error"
+    },
+    {
+      "appliesTo": "person",
+      "code": "BP_PERSON_NAME_REQUIRED",
+      "path": "person.firstName",
+      "rule": "required",
+      "severity": "error"
+    },
+    {
+      "appliesTo": "person",
+      "code": "BP_PERSON_CONSENT_REQUIRED",
+      "path": "person.consent",
+      "rule": "consent-current",
+      "severity": "error"
+    },
+    {
+      "appliesTo": "supplier",
+      "code": "BP_SUPPLIER_SCOPE_REQUIRED",
+      "path": "scope.operatingOrganizationId",
+      "rule": "uuid",
+      "severity": "error"
+    },
+    {
+      "appliesTo": "customer",
+      "code": "BP_CUSTOMER_SCOPE_REQUIRED",
+      "path": "scope.operatingOrganizationId",
+      "rule": "uuid",
+      "severity": "error"
+    },
+    {
+      "appliesTo": "workforce",
+      "code": "BP_WORKFORCE_EMPLOYER_REQUIRED",
+      "path": "scope.legalEntityId",
+      "rule": "uuid",
+      "severity": "error"
+    },
+    {
+      "appliesTo": "workforce",
+      "code": "BP_WORKFORCE_DATE_REQUIRED",
+      "path": "employment.startDate",
+      "rule": "effective-date",
+      "severity": "error"
+    },
+    {
+      "appliesTo": "all",
+      "code": "BP_EVIDENCE_POLICY_REQUIRED",
+      "path": "evidence.references",
+      "rule": "evidence-policy",
+      "severity": "error"
+    },
+    {
+      "appliesTo": "all",
+      "code": "BP_SOURCE_MAPPING_REQUIRED",
+      "path": "source.kind",
+      "rule": "mapping-declared",
+      "severity": "error"
+    }
+  ],
+  "reasonCodeCatalog": {
+    "BP_DEFINITION_INCOMPATIBLE": "Definition is incompatible with the local runtime",
+    "BP_DUPLICATE_REVIEW_REQUIRED": "Duplicate review is required",
+    "BP_EVIDENCE_MISSING": "Required evidence is missing",
+    "BP_SCOPE_INVALID": "Requested scope is invalid",
+    "BP_SLA_ESCALATED": "Workflow SLA was escalated",
+    "BP_SOD_VIOLATION": "Maker/checker separation failed",
+    "BP_VALIDATION_FAILED": "Payload validation failed",
+    "CUSTOMER_NOT_READY": "Customer readiness gates failed",
+    "SUPPLIER_NOT_READY": "Supplier readiness gates failed",
+    "WORKFORCE_NOT_READY": "Workforce readiness gates failed"
+  },
+  "materialization": {
+    "targetEntityCode": "business_partner",
+    "serviceKey": "neon.bp.governed-materialization.v1",
+    "atomicDatabaseEffects": true,
+    "externalEffects": "transactional_outbox",
+    "requires": [
+      "approved_payload_hash",
+      "current_authority",
+      "validated_coordinates",
+      "expected_target_version",
+      "admissible_evidence"
+    ],
+    "snapshotPolicy": "once_per_successful_materialization",
+    "draftsNeverWriteMasterDirectly": true
+  },
+  "lifecycleBinding": {
+    "serviceKey": "platform.workflow.v1",
+    "lifecycleCode": "business_partner_request.governed",
+    "revisionResolution": "pin_on_submit",
+    "stateGraphLocation": "workflow_service",
+    "unknownTransition": "deny"
+  },
+  "lifecycleOperationBindings": [
+    {
+      "operationKey": "submit",
+      "transitionKey": "request.submit"
+    },
+    {
+      "operationKey": "return",
+      "transitionKey": "request.return"
+    },
+    {
+      "operationKey": "reject",
+      "transitionKey": "request.reject"
+    },
+    {
+      "operationKey": "approve",
+      "transitionKey": "request.approve"
+    },
+    {
+      "operationKey": "materialize",
+      "transitionKey": "request.materialize"
+    }
+  ],
+  "dependencies": [
+    "business_partner_request/core",
+    "customer/core",
+    "supplier/core",
+    "workforce/core"
+  ],
+  "consumedBy": [
+    "server_reads",
+    "server_writes"
+  ],
+  "browserProjection": "authorized_action_summary_only",
+  "transactionOrder": [
+    "resolve_pinned_release",
+    "authorize_current_actor",
+    "resolve_persisted_context",
+    "validate_input",
+    "evaluate_preconditions",
+    "compare_record_version",
+    "commit_domain_changes_and_audit",
+    "enqueue_outbox"
+  ],
+  "handlerBindingStatus": "proposed_registry_keys_require_implementation_verification",
+  "policyManifestProjection": {
+    "fields": [
+      "bindingKey",
+      "policyKind",
+      "operationKey",
+      "owningArtifactKey",
+      "owningArtifactHash",
+      "requiredContext",
+      "resolutionStatus"
+    ],
+    "source": "pinned_dependency_set_and_current_authorized_policy_status",
+    "include": [
+      "operation_policy_bindings",
+      "core_mask_constraints",
+      "core_readiness_declarations",
+      "platform_capability_bindings"
+    ],
+    "clientExposure": "redacted_authorized_subset",
+    "independentAuthority": false
+  },
+  "artifactHash": "sha256:85a686c4ecc7b105305f3bdecc25165bdcb44d95c888415f9614a2df8cc2ac00"
+}

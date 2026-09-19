@@ -1,0 +1,176 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import type { HttpClient } from "../../packages/platform/foundation/api-client/src/index";
+import { createAtlasAnswerClient, createAtlasExperienceAdminClient } from "../../packages/platform/ai/agent-runtime/src/index";
+
+test("Atlas answer client streams text and preserves authorized record citations", async () => {
+  const calls: string[] = [];
+  const client = {
+    async request(operation: { readonly method: string; readonly path: string | ((params: Record<string, string | number>) => string) }, options?: { readonly params?: Record<string, string | number> }) {
+      const path = typeof operation.path === "function" ? operation.path(options?.params ?? {}) : operation.path; calls.push(`${operation.method} ${path}`);
+      if (path === "/api/atlas/admission") return { schema: "atlas-plane-admission/1", planeKey: "neon", chatAllowed: true, persistenceAllowed: true, readToolsAllowed: true, mutationToolsAllowed: false, invoiceExtractionAllowed: false, allowedPublicModelIds: ["atlas-fast"], allowedDataClasses: ["internal"], policyRevision: "policy-1" };
+      if (path === "/api/atlas/threads") return { threadId: "thread-1" };
+      return stream([
+        event("run.started", { publicModelId: "atlas-fast" }),
+        event("intent.resolved", {intent: {schemaVersion: 1, kind: "read", strategy: "exact_terms", reason: "matched", capabilityIds: ["business_partner_read"]}}),
+        event("source.cited", { callId: "call-1", toolCode: "business_partner_read", coordinate: { entityCode: "business_partner", recordId: "bp-1", revision: "7", descriptorHash: "descriptor-1" } }),
+        event("message.delta", { messageId: "message-1", text: "Supplier BP-1 is active." }),
+        event("run.completed", { messageId: "message-1", reason: "stop" }),
+      ]);
+    },
+  } as unknown as HttpClient;
+  const progress: string[] = [];
+  const answer = await createAtlasAnswerClient({ client, createId: () => "request-1" }).answer("What is the supplier status?", { onProgress: (item) => progress.push(item.kind) });
+  assert.equal(answer.text, "Supplier BP-1 is active.");
+  assert.equal(answer.messageId, "message-1");
+  assert.equal(answer.intent?.kind, "read");
+  assert.deepEqual(answer.actions, []);
+  assert.deepEqual(answer.citations, [{ entityCode: "business_partner", recordId: "bp-1", revision: "7", descriptorHash: "descriptor-1", toolCode: "business_partner_read" }]);
+  assert.deepEqual(progress, ["started", "citation", "text", "completed"]);
+  assert.deepEqual(calls, ["GET /api/atlas/admission", "POST /api/atlas/threads", "POST /api/atlas/threads/thread-1/runs"]);
+});
+
+test("Atlas governed actions require an exact preview token and expose content-free audit history", async () => {
+  const calls: { readonly path: string; readonly options?: Readonly<Record<string, unknown>> }[] = [];
+  const client = {
+    async request(operation: { readonly method: string; readonly path: string | ((params: Record<string, string | number>) => string) }, options?: Readonly<Record<string, unknown>> & { readonly params?: Record<string, string | number> }) {
+      const path = typeof operation.path === "function" ? operation.path(options?.params ?? {}) : operation.path; calls.push({ path, options });
+      if (path === "/api/atlas/admission") return { schema: "atlas-plane-admission/1", chatAllowed: true, persistenceAllowed: true, readToolsAllowed: true, mutationToolsAllowed: true, allowedPublicModelIds: ["atlas-fast"], allowedDataClasses: ["internal"], policyRevision: "policy-1" };
+      if (path === "/api/atlas/threads") return { threadId: "thread-1" };
+      if (path.endsWith("/runs")) return stream([
+        event("run.started", { publicModelId: "atlas-fast" }),
+        event("tool.previewed", { callId: "call-2", toolCode: "business_partner_update", proposalId: "proposal-1", summary: "Update Business Partner", access: "mutation", risk: "high", confirmationRequired: true, confirmationToken: "one-time-token", arguments: { businessPartnerId: "bp-1", displayName: "Updated Supplier" }, affectedEntityType: "business_partner", affectedEntityId: "10000000-0000-4000-8000-000000000001", expectedRowVersion: 7, expiresAt: "2026-08-29T12:05:00Z" }),
+        event("run.completed", { messageId: "message-2", reason: "tool_call" }),
+      ]);
+      if (path.endsWith("/run")) return { proposalId: "proposal-1", outcome: "completed", commandId: "command-1", resultRevision: "8" };
+      if (path.endsWith("/cancel")) return { proposalId: "proposal-1", outcome: "cancelled" };
+      if (path === "/api/atlas/tools/history") return [{ proposalId: "proposal-1", status: "completed" }];
+      throw new Error(`Unexpected operation ${path}`);
+    },
+  } as unknown as HttpClient;
+  const atlas = createAtlasAnswerClient({ client, createId: () => "request-2" });
+  const answer = await atlas.answer("Update this supplier name");
+  assert.equal(answer.actions.length, 1);
+  assert.deepEqual(answer.actions[0], { proposalId: "proposal-1", callId: "call-2", toolCode: "business_partner_update", summary: "Update Business Partner", access: "mutation", risk: "high", arguments: { businessPartnerId: "bp-1", displayName: "Updated Supplier" }, confirmationToken: "one-time-token", affectedEntityType: "business_partner", affectedEntityId: "10000000-0000-4000-8000-000000000001", expectedRowVersion: 7, expiresAt: "2026-08-29T12:05:00Z", status: "proposed" });
+  assert.equal((await atlas.confirmAction(answer.actions[0]!)).outcome, "completed");
+  assert.equal((await atlas.cancelAction(answer.actions[0]!)).outcome, "cancelled");
+  assert.deepEqual(await atlas.actionHistory(), [{ proposalId: "proposal-1", status: "completed" }]);
+  const confirmation = calls.find((call) => call.path.endsWith("/run"));
+  assert.deepEqual(confirmation?.options?.body, { arguments: { businessPartnerId: "bp-1", displayName: "Updated Supplier" }, confirmationToken: "one-time-token" });
+  assert.equal(confirmation?.options?.idempotencyKey, "atlas-confirm-proposal-1");
+});
+
+test("Atlas submits bounded attachment context and preserves verified attachment citations",async()=>{let runBody:unknown;const client={async request(operation:{readonly path:string|((params:Record<string,string|number>)=>string)},options?:{readonly params?:Record<string,string|number>;readonly body?:unknown}){const path=typeof operation.path==="function"?operation.path(options?.params??{}):operation.path;if(path==="/api/atlas/admission")return{schema:"atlas-plane-admission/1",chatAllowed:true,persistenceAllowed:true,readToolsAllowed:true,mutationToolsAllowed:false,allowedPublicModelIds:["atlas-fast"],allowedDataClasses:["internal"],policyRevision:"policy-1"};if(path==="/api/atlas/threads")return{threadId:"thread-1"};runBody=options?.body;return stream([event("run.started",{publicModelId:"atlas-fast"}),event("attachment.cited",{attachmentId:"10000000-0000-4000-8000-000000000001",fileName:"supplier.pdf",contentType:"application/pdf",sha256:"a".repeat(64)}),event("message.delta",{messageId:"message-1",text:"The document is valid."}),event("run.completed",{messageId:"message-1",reason:"stop"})]);}}as unknown as HttpClient;const answer=await createAtlasAnswerClient({client,createId:()=>"request-attachment"}).answer("Summarize this supplier document",{attachmentContextId:"20000000-0000-4000-8000-000000000002",attachmentIds:["10000000-0000-4000-8000-000000000001"]});assert.deepEqual((runBody as Record<string,unknown>).attachmentIds,["10000000-0000-4000-8000-000000000001"]);assert.equal((runBody as Record<string,unknown>).attachmentContextId,"20000000-0000-4000-8000-000000000002");assert.deepEqual(answer.attachmentCitations,[{attachmentId:"10000000-0000-4000-8000-000000000001",fileName:"supplier.pdf",contentType:"application/pdf",sha256:"a".repeat(64)}]);});
+
+test("Atlas resumes a persisted thread and parses conversation history with structured tool results",async()=>{const calls:string[]=[];const thread={threadId:"10000000-0000-4000-8000-000000000001",tenantId:"tenant-1",planeKey:"neon",ownerPrincipalId:"principal-1",title:"Supplier review",status:"active",participants:[],rowVersion:2,lastMessageSequence:3,retention:{policyId:"thirty-days",expiresAt:"2026-09-29T00:00:00Z",purgeAfter:null,legalHold:false},createdAt:"2026-08-29T00:00:00Z",updatedAt:"2026-08-30T00:00:00Z"};const client={async request(operation:{readonly method:string;readonly path:string|((params:Record<string,string|number>)=>string);readonly parse?:(value:unknown)=>unknown},options?:{readonly params?:Record<string,string|number>}){const path=typeof operation.path==="function"?operation.path(options?.params??{}):operation.path;calls.push(`${operation.method} ${path}`);if(path==="/api/atlas/admission")return{schema:"atlas-plane-admission/1",chatAllowed:true,persistenceAllowed:true,readToolsAllowed:true,mutationToolsAllowed:false,allowedPublicModelIds:["atlas-fast"],allowedDataClasses:["internal"],policyRevision:"policy-1"};if(operation.method==="GET"&&path==="/api/atlas/threads")return operation.parse?.({items:[thread],nextCursor:null});if(path.endsWith("/messages"))return operation.parse?.({items:[{messageId:"20000000-0000-4000-8000-000000000002",threadId:thread.threadId,sequence:3,role:"tool",status:"completed",content:[{type:"tool_result",callId:"call-1",toolName:"supplier_list",result:[{supplier:"SUP-1",status:"Active"}]}],runId:"run-1",parentMessageId:null,createdAt:"2026-08-30T00:00:00Z",terminalAt:"2026-08-30T00:00:01Z"}],nextCursor:null});return stream([event("run.started",{publicModelId:"atlas-fast"}),event("message.delta",{messageId:"message-4",text:"Supplier remains active."}),event("run.completed",{messageId:"message-4",reason:"stop"})]);}}as unknown as HttpClient;const atlas=createAtlasAnswerClient({client,createId:()=>"request-resume"});assert.equal((await atlas.threads()).items[0]?.title,"Supplier review");assert.deepEqual((await atlas.messages(thread.threadId)).items[0]?.results,[[{supplier:"SUP-1",status:"Active"}]]);const answer=await atlas.answer("Check the supplier again",{threadId:thread.threadId});assert.equal(answer.threadId,thread.threadId);assert.equal(calls.filter((item)=>item==="POST /api/atlas/threads").length,0);assert.ok(calls.includes(`POST /api/atlas/threads/${thread.threadId}/runs`));});
+
+test("Studio experience releases configure agents, prompts, sources, and widgets through governed relay operations",async()=>{const calls:{path:string;options?:Readonly<Record<string,unknown>>}[]=[];const definition={schema:"atlas-experience-definition/1",scope:"home",widgets:[{code:"home.recent",kind:"recent",title:"Recent work",enabled:true,planes:["neon"],order:10}],searchSources:[{code:"bp.records",kind:"record",label:"Partners",enabled:true,planes:["neon"],entityCode:"business_partner"}],prompts:[{code:"bp.find",label:"Find partner",prompt:"Find a partner",enabled:true,planes:["neon"],agentCode:"bp-guide"}],agents:[{code:"bp-guide",name:"BP Guide",description:"Grounded partner help",enabled:true,planes:["neon"],publicModelId:"atlas-fast",dataClass:"internal",promptRevision:"prompt-r1",toolCodes:["records_query"]}]};const projection={...definition,schema:"atlas-experience-projection/1",revision:4,contentHash:"a".repeat(64)};const release={releaseId:"release-1",tenantId:"tenant-1",revision:4,status:"draft",definition,contentHash:"a".repeat(64),createdAt:"2026-08-29T00:00:00Z",createdBy:"principal-1"};const client={async request(operation:{readonly path:string;readonly parse?:(value:unknown)=>unknown},options?:Readonly<Record<string,unknown>>){calls.push({path:operation.path,options});const value=operation.path==="/api/atlas/experience"?projection:release;return operation.parse?operation.parse(value):value;}} as unknown as HttpClient;const answer=createAtlasAnswerClient({client});assert.equal((await answer.experience())?.agents[0]?.code,"bp-guide");const admin=createAtlasExperienceAdminClient({client,createId:()=>"request-5"});assert.equal((await admin.saveDraft(definition,4)).revision,4);await admin.publish("home",4);assert.deepEqual(calls.map((item)=>item.path),["/api/atlas/experience","/api/admin/atlas/experience/draft","/api/admin/atlas/experience/publish"]);assert.equal(calls[1]?.options?.idempotencyKey,"atlas-experience-draft-request-5");});
+
+function event(type: string, value: Readonly<Record<string, unknown>>): string { return `event: ${type}\ndata: ${JSON.stringify({ protocol: "atlas.sse/1", sequence: 1, runId: "run-1", threadId: "thread-1", emittedAt: "2026-08-29T00:00:00Z", event: { type, ...value } })}\n\n`; }
+function stream(frames: readonly string[]): ReadableStream<Uint8Array> { const bytes = new TextEncoder().encode(frames.join("")); return new ReadableStream({ start(controller) { controller.enqueue(bytes); controller.close(); } }); }
+
+test("Atlas history renders in chronological sequence without mutating newest-first API pages", async () => {
+  const newestFirst = Object.freeze([{messageId:"answer",sequence:2,role:"assistant"},{messageId:"question",sequence:1,role:"user"}]);
+  const client={async request(){return Object.freeze({items:newestFirst,nextCursor:"older-page"});}} as unknown as HttpClient;
+  const page=await createAtlasAnswerClient({client}).messages("thread-1");
+  assert.deepEqual(page.items.map(item=>item.messageId),["question","answer"]);
+  assert.deepEqual(newestFirst.map(item=>item.messageId),["answer","question"]);
+  assert.equal(page.nextCursor,"older-page");
+});
+
+test("Atlas preserves whitespace token chunks instead of failing a successful answer", async () => {
+  const parts = ["Partner", " ", "summary:", "\n\n", "", "Active", "\t", "record", "\n"];
+  const client = { async request(operation: { path: unknown }) {
+    if (operation.path === "/api/atlas/admission") return {schema:"atlas-plane-admission/1",chatAllowed:true,persistenceAllowed:true,allowedPublicModelIds:["atlas-local"],allowedDataClasses:["internal"],policyRevision:"p1"};
+    if (operation.path === "/api/atlas/threads") return {threadId:"thread-1"};
+    return stream([event("run.started",{publicModelId:"atlas-local"}), ...parts.map(text=>event("message.delta",{text})), event("run.completed",{reason:"stop"})]);
+  }} as unknown as HttpClient;
+  const deltas: string[] = [];
+  const answer = await createAtlasAnswerClient({client}).answer("Summarize the partner", {onProgress(progress){if(progress.kind==="text")deltas.push(progress.text);}});
+  assert.equal(answer.text, parts.join(""));
+  assert.deepEqual(deltas, parts);
+});
+
+test("Atlas transports the business context and rejects mismatched stream generations", async () => {
+  const generationId="10000000-0000-4000-8000-000000000001";
+  const businessContext={schemaVersion:1 as const,kind:"record" as const,entityCode:"business_partner",recordId:generationId,generationId,locale:"en",dirty:false};
+  let received:unknown;
+  let mismatch=false;
+  const client={async request(operation:any,options:any){
+    const path=typeof operation.path==="function"?operation.path(options?.params??{}):operation.path;
+    if(path==="/api/atlas/admission")return{chatAllowed:true,persistenceAllowed:true,allowedPublicModelIds:["atlas-fast"],allowedDataClasses:["internal"],policyRevision:"1"};
+    if(path==="/api/atlas/threads")return{threadId:"thread"};
+    received=options.body.businessContext;
+    return stream([event("message.delta",{text:"scoped"}),event("run.completed",{reason:"stop"})].map(frame=>frame.replace('"protocol":"atlas.sse/1"',`"protocol":"atlas.sse/1","contextGenerationId":"${mismatch?"other":generationId}"`)));
+  }} as HttpClient;
+  const atlas=createAtlasAnswerClient({client});
+  assert.equal((await atlas.answer("Explain",{businessContext})).text,"scoped");assert.deepEqual(received,businessContext);
+  mismatch=true;await assert.rejects(atlas.answer("Explain",{businessContext}),/different page context/);
+});
+
+test("Atlas rejects disconnected streams before accepting the final answer envelope", async () => {
+  const client = { async request(operation: { path: string | ((params: Record<string, string | number>) => string) }, options?: { params?: Record<string, string | number> }) {
+    const path = typeof operation.path === "function" ? operation.path(options?.params ?? {}) : operation.path;
+    if (path === "/api/atlas/admission") return { schema: "atlas-plane-admission/1", chatAllowed: true, persistenceAllowed: true, readToolsAllowed: true, mutationToolsAllowed: false, allowedPublicModelIds: ["atlas-fast"], allowedDataClasses: ["internal"], policyRevision: "1" };
+    if (path === "/api/atlas/threads") return { threadId: "thread-1" };
+    return stream([event("message.delta", { text: "Incomplete answer" })]);
+  } } as unknown as HttpClient;
+  await assert.rejects(createAtlasAnswerClient({ client }).answer("Summarize"), /interrupted/);
+});
+
+test("Atlas carries validated owner coverage and findings independently of generated prose", async () => {
+  const insight = { schemaVersion: 1, scope: { entityCode: "business_partner", fingerprint: "scope-1" }, coverage: { target: "record", state: "partial", evaluatedCount: 1 }, evaluatedAt: "2026-09-09T10:00:00Z", freshness: "current", findings: [], evidence: [], actions: [] };
+  let invalid = false;
+  const client = { async request(operation: { path: string | ((params: Record<string, string | number>) => string) }, options?: { params?: Record<string, string | number> }) {
+    const path = typeof operation.path === "function" ? operation.path(options?.params ?? {}) : operation.path;
+    if (path === "/api/atlas/admission") return { schema: "atlas-plane-admission/1", chatAllowed: true, persistenceAllowed: true, readToolsAllowed: true, mutationToolsAllowed: false, allowedPublicModelIds: ["atlas-fast"], allowedDataClasses: ["internal"], policyRevision: "1" };
+    if (path === "/api/atlas/threads") return { threadId: "thread-1" };
+    return stream([event("insight.cited", { callId: "c1", insight: invalid ? { ...insight, href: "/invented" } : insight }), event("message.delta", { text: "Available assessment" }), event("run.completed", { messageId: "m1", reason: "stop" })]);
+  } } as unknown as HttpClient;
+  const answer = await createAtlasAnswerClient({ client }).answer("Summarize");
+  assert.deepEqual(answer.insights, [insight]);
+  assert.equal(answer.envelope?.kind, "explanation");
+  invalid = true;
+  await assert.rejects(createAtlasAnswerClient({ client }).answer("Summarize"), /Invalid Atlas insight/);
+});
+
+test("Atlas fullscreen history restores only server-persisted source coordinates", async () => {
+  const coordinate = { entityCode: "business_partner", recordId: "bp-1", revision: "7", descriptorHash: "descriptor-1" };
+  let metadata = true, inherited = false;
+  const client = { async request(operation: { parse: (value: unknown) => unknown }) { return operation.parse({ items: [{ messageId: "m1", threadId: "t1", sequence: 2, role: "assistant", status: "completed", content: [{ type: "text", text: "Saved", ...(inherited ? { citations: [{ toolCode: "bp_read_summary", coordinate }] } : {}) }, { type: "text", text: " " }, { type: "text", text: "record summary." }, { type: "tool_result", callId: "c1", toolName: "bp_read_summary", result: { records: [], sources: [coordinate] }, ...(metadata ? { sources: [coordinate] } : {}) }], runId: "r1", createdAt: "2026-09-09T00:00:00Z", terminalAt: "2026-09-09T00:00:01Z" }], nextCursor: null }); } } as unknown as HttpClient;
+  const atlas = createAtlasAnswerClient({ client });
+  const page = await atlas.messages("t1");
+  assert.equal(page.items[0]?.text, "Saved record summary.");
+  assert.equal(page.items[0]?.answer?.envelope?.summary, "Saved record summary.");
+  assert.deepEqual(page.items[0]?.answer?.citations, [{ ...coordinate, toolCode: "bp_read_summary" }]);
+  assert.deepEqual(page.items[0]?.answer?.envelope?.evidenceIds, ["record:0"]);
+  assert.deepEqual(page.items[0]?.answer?.actions, []);
+  metadata = false;
+  assert.equal((await atlas.messages("t1")).items[0]?.answer, undefined);
+  inherited = true;
+  assert.deepEqual((await atlas.messages("t1")).items[0]?.answer?.citations, [{ ...coordinate, toolCode: "bp_read_summary" }]);
+});
+
+
+test("response feedback sends exact response coordinates with stable retry identity and no transcript", async () => {
+ const calls: any[] = [];
+ const client = {request: async (operation: any, options: any) => {calls.push({operation, options}); return {accepted: true};}} as HttpClient;
+ const atlas = createAtlasAnswerClient({client});
+ const feedback = {schemaVersion: 1, feedbackId: "10000000-0000-4000-8000-000000000001", runId: "10000000-0000-4000-8000-000000000002", messageId: "10000000-0000-4000-8000-000000000003", category: "intent", verdict: "wrong"} as const;
+ await atlas.feedback!(feedback); await atlas.feedback!(feedback);
+ assert.equal(calls[0].operation.path, "/api/atlas/feedback");
+ assert.deepEqual(calls[0].options.body, feedback);
+ assert.equal(calls[0].options.idempotencyKey, calls[1].options.idempotencyKey);
+ await assert.rejects(atlas.feedback!({...feedback, prompt: "private"} as never));
+ assert.equal(calls.length, 2);
+});
+
+test("Atlas vocabulary proposals carry only the explicit term and reuse their receipt for delivery retry",async()=>{
+ const calls:any[]=[];
+ const client={request:async(operation:any,options:any)=>{calls.push({path:operation.path,options});return {accepted:true};}} as unknown as HttpClient;
+ const api=createAtlasAnswerClient({client,createId:()=>"unused"});
+ const proposal={schemaVersion:1,candidateId:"00000000-0000-4000-8000-000000000001",feedbackId:"00000000-0000-4000-8000-000000000002",phrase:"company snapshot",locale:"en",capabilityId:"entity_read_record"} as const;
+ await api.proposeVocabulary!(proposal);await api.proposeVocabulary!(proposal);
+ assert.equal(calls[0].path,"/api/atlas/learning-candidates");assert.deepEqual(calls[0].options.body,proposal);assert.equal(calls[0].options.idempotencyKey,calls[1].options.idempotencyKey);
+ assert.equal(JSON.stringify(calls).includes("userText"),false);
+});

@@ -16,6 +16,14 @@ ALTER TABLE event.notification_delivery
     ADD CONSTRAINT notification_delivery_provider_fk FOREIGN KEY (provider_id) REFERENCES control.notification_provider(id),
     ADD CONSTRAINT notification_delivery_outbox_fk FOREIGN KEY (tenant_id, outbox_id) REFERENCES event.outbox(tenant_id, id);
 
+ALTER TABLE event.notification_provider_event
+    ADD CONSTRAINT notification_provider_event_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
+    ADD CONSTRAINT notification_provider_event_delivery_fk FOREIGN KEY (tenant_id,delivery_id) REFERENCES event.notification_delivery(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE event.notification_email_suppression
+    ADD CONSTRAINT notification_email_suppression_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE,
+    ADD CONSTRAINT notification_email_suppression_source_fk FOREIGN KEY (tenant_id,source_provider_event_id) REFERENCES event.notification_provider_event(tenant_id,id) ON DELETE RESTRICT;
+
 ALTER TABLE event.notification_message_attachment
     ADD CONSTRAINT notification_message_attachment_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
     ADD CONSTRAINT notification_message_attachment_message_fk FOREIGN KEY (tenant_id,message_id) REFERENCES event.notification_message(tenant_id,id) ON DELETE CASCADE,
@@ -121,7 +129,7 @@ ALTER TABLE event.notification_delivery
 ALTER TABLE event.invalidation_dead_letter
   ADD CONSTRAINT invalidation_dead_letter_kind_chk CHECK (kind IN ('metadata','authorization')),
   ADD CONSTRAINT invalidation_dead_letter_plane_chk CHECK (plane_key IN ('studio','neon','mesh')),
-  ADD CONSTRAINT invalidation_dead_letter_scope_chk CHECK (scope_key ~ '^[A-Za-z0-9_.:-]{1,256}$'),
+  ADD CONSTRAINT invalidation_dead_letter_scope_chk CHECK (length(scope_key) BETWEEN 1 AND 256 AND scope_key ~ '^[A-Za-z0-9_.:-]+$'),
   ADD CONSTRAINT invalidation_dead_letter_attempt_chk CHECK (attempt_count > 0),
   ADD CONSTRAINT invalidation_dead_letter_payload_object_chk CHECK (jsonb_typeof(sanitized_payload)='object'),
   ADD CONSTRAINT invalidation_dead_letter_payload_size_chk CHECK (octet_length(sanitized_payload::text) <= 4096);

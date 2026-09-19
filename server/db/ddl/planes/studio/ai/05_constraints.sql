@@ -1,5 +1,6 @@
 ﻿-- Generated from the extracted live Atlas AI contract.
--- Regenerate with: node server/db/scripts/catalog/build-common-ai-ddl.mjs
+-- Maintained as canonical foundation DDL; use additive migrations for installed databases.
+-- Supported verification and maintenance: server/db/scripts/README.md (Atlas AI DDL).
 
 ALTER TABLE ONLY "ai"."atlas_support_session"
   ADD CONSTRAINT "atlas_support_session_pkey" PRIMARY KEY (id);
@@ -36,3 +37,9 @@ ALTER TABLE ONLY "ai"."atlas_support_session"
 
 ALTER TABLE ONLY "ai"."atlas_support_session"
   ADD CONSTRAINT "atlas_support_session_shadow_fk" FOREIGN KEY (target_tenant_id, shadow_principal_id) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+
+-- BEGIN ATLAS F4 LEARNING STUDIO
+ALTER TABLE ai.atlas_learning_inbox ADD CONSTRAINT atlas_learning_draft_fk FOREIGN KEY(change_set_id) REFERENCES metadata.entity_change_set(id);
+ALTER TABLE ai.atlas_learning_inbox ADD CONSTRAINT atlas_learning_inbox_coordinate_uq UNIQUE(tenant_id,id,proposal_hash);
+ALTER TABLE ai.atlas_learning_candidate_event ADD CONSTRAINT atlas_learning_event_coordinate_fk FOREIGN KEY(tenant_id,inbox_id,proposal_hash) REFERENCES ai.atlas_learning_inbox(tenant_id,id,proposal_hash) ON DELETE CASCADE;
+-- END ATLAS F4 LEARNING STUDIO

@@ -2,6 +2,7 @@ import type { Application, Request, RequestHandler, Response } from "express";
 import type { Authenticator, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { normalizePlaneKey, runWithRequestContext, type PlaneKey, type PlaneKeyInput } from "@athyper/server-foundation/context";
 import { HttpError, defineRouteContract, registerContractRoute, sendProblem } from "@athyper/server-runtime-http";
+import { ProvisioningValidationError } from "./provisioning.js";
 import type { ProvisioningVertical } from "./provisioning-vertical.js";
 
 const CONTEXT_LOCAL = "verifiedRequestContext";
@@ -22,9 +23,10 @@ export function registerIamRoutes(application: Application, options: IamRouteOpt
   registerContractRoute(application, defineRouteContract({
     method: "get", path: "/api/iam/me", operationId: "iam.getCurrentPrincipal",
     summary: "Get the verified request principal", tags: ["IAM"], authenticated: true, permission: "iam.profile.read",
-    responses: { 200: { description: "Verified principal", body: { type: "object" } }, 401: { description: "Authentication required" }, 403: { description: "Authentication rejected" } },
+    responses: { 200: { description: "Verified principal", body: { type: "object" } }, 401: { description: "Authentication required" }, 403: { description: "Authentication rejected" }, 503: { description: "Authentication authority unavailable" } },
   }), authenticate, (_request, response) => {
     const context = response.locals[CONTEXT_LOCAL] as VerifiedRequestContext;
+    response.setHeader("Cache-Control", "private, no-store");
     response.status(200).json({
       planeKey: context.planeKey,
       realmKey: context.realmKey,
@@ -45,9 +47,9 @@ function registerProvisioningRoute(application: Application, authenticate: Reque
     permission: "iam.provisioning.create",
     request: {
       headers: { type: "object", properties: { "idempotency-key": { type: "string", minLength: 16, maxLength: 128 } } },
-      body: { type: "object", properties: { identifier: { type: "string" }, realmKey: { type: "string" }, planes: { type: "array", items: { type: "string", enum: ["studio", "neon", "mesh"] } } }, required: ["identifier", "planes"] },
+      body: { type: "object", properties: { identifier: { type: "string" }, realmKey: { type: "string" }, planes: { type: "array", minItems: 1, items: { type: "string", enum: ["studio", "neon", "mesh"] } } }, required: ["identifier", "planes"] },
     },
-    responses: { 201: { description: "Provisioning request created", body: { type: "object" } }, 200: { description: "Idempotent replay", body: { type: "object" } }, 400: { description: "Invalid request" }, 401: { description: "Authentication required" }, 403: { description: "Forbidden" }, 409: { description: "Idempotency conflict" }, 428: { description: "Idempotency key required" } },
+    responses: { 201: { description: "Provisioning request created", body: { type: "object" } }, 200: { description: "Idempotent replay", body: { type: "object" } }, 400: { description: "Invalid request" }, 401: { description: "Authentication required" }, 403: { description: "Forbidden" }, 503: { description: "Authentication authority unavailable" }, 409: { description: "Idempotency conflict" }, 428: { description: "Idempotency key required" } },
   }), authenticate, async (request, response, next) => {
     try {
       const value = request.body as { identifier?: unknown; realmKey?: unknown; planes?: unknown };
@@ -55,13 +57,13 @@ function registerProvisioningRoute(application: Application, authenticate: Reque
       const realmKey = typeof value.realmKey === "string" ? value.realmKey : undefined;
       const planes = Array.isArray(value.planes) ? value.planes.filter((item): item is PlaneKey => item === "studio" || item === "neon" || item === "mesh") : [];
       if (!identifier.trim() || planes.length !== (Array.isArray(value.planes) ? value.planes.length : -1)) throw new HttpError(400, "IAM_PROVISIONING_REQUEST_INVALID", "identifier and valid target planes are required");
-      const result = await provisioning.request({ context: readVerifiedRequestContext(response), idempotencyKey: header(request, "idempotency-key"), identifier, planes, ...(realmKey ? { realmKey } : {}) });
+      const result = await provisioning.request({ context: readVerifiedRequestContext(response), idempotencyKey: header(request, "idempotency-key"), identifier, planes, ...(realmKey !== undefined ? { realmKey } : {}) });
       if (result.kind === "Created") { response.status(201).json(result); return; }
       if (result.kind === "Replayed") { response.status(200).json(result); return; }
       if (result.kind === "Forbidden") throw new HttpError(403, "IAM_PROVISIONING_FORBIDDEN", "The verified principal cannot create provisioning requests");
       const status = result.reason === "required" ? 428 : result.reason === "invalid" ? 400 : 409;
       throw new HttpError(status, "IAM_PROVISIONING_IDEMPOTENCY_CONFLICT", `Idempotency key is ${result.reason}`);
-    } catch (error) { next(error instanceof TypeError ? new HttpError(400, "IAM_PROVISIONING_REQUEST_INVALID", error.message) : error); }
+    } catch (error) { next(error instanceof ProvisioningValidationError ? new HttpError(400, "IAM_PROVISIONING_REQUEST_INVALID", error.message) : error); }
   });
 }
 

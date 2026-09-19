@@ -1,0 +1,3 @@
+apiVersion: 1
+deleteDatasources:
+  - { name: Tempo, orgId: 1 }

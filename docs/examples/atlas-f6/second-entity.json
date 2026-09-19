@@ -1,0 +1,145 @@
+{
+  "observedAt": "2026-09-10T09:28:36.710Z",
+  "plane": "mesh",
+  "entityCode": "network_relationship",
+  "images": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "digest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "digest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "digest": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "digest": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "binding": {
+    "aiEnabled": true,
+    "releaseId": "0c4fcf5f-6ea4-491f-81fe-672c1b921afd",
+    "compiledHash": "5020f5cf8bee69c96a8d45d6df2bab1062c6ba5671efcfe239fd0cd7f5a03383"
+  },
+  "eventTypes": [
+    "run.started",
+    "intent.resolved",
+    "tool.previewed",
+    "tool.completed",
+    "source.cited",
+    "message.delta",
+    "run.completed"
+  ],
+  "intents": [
+    {
+      "schemaVersion": 1,
+      "kind": "read",
+      "strategy": "exact_terms",
+      "reason": "matched",
+      "capabilityIds": [
+        "entity_read_record"
+      ]
+    }
+  ],
+  "threadId": "b229d801-9456-4cbe-8cdc-48b480629ec5",
+  "runId": "d3e362bc-985b-4bbe-a58f-9b8d26189a1c",
+  "accountId": "ce109a1e-a602-5bff-988c-f1d7013bf8b3",
+  "recordId": "01a07108-f042-78ac-a61f-ac7979663a69",
+  "policyRevision": "atlas-local-v4:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true",
+  "events": [
+    {
+      "type": "run.started"
+    },
+    {
+      "type": "intent.resolved"
+    },
+    {
+      "type": "tool.previewed"
+    },
+    {
+      "type": "tool.completed"
+    },
+    {
+      "type": "source.cited",
+      "coordinate": {
+        "entityCode": "network_relationship",
+        "recordId": "01a07108-f042-78ac-a61f-ac7979663a69",
+        "revision": "content-sha256:8921999ec30ab321696dcddf60fe15098626146ef67153c5c169c07e2cc01b1b",
+        "descriptorHash": "5020f5cf8bee69c96a8d45d6df2bab1062c6ba5671efcfe239fd0cd7f5a03383"
+      }
+    },
+    {
+      "type": "message.delta"
+    },
+    {
+      "type": "run.completed"
+    }
+  ],
+  "providerCalls": 0,
+  "foreignAccountDenied": true,
+  "crossPersonaHistoryDenied": true,
+  "ownHistoryAvailable": true,
+  "finalImages": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "digest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "digest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "digest": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "digest": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "passed": true
+}

@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { createHash } from "node:crypto";
 import type {
   DocumentArtifactRepository,
@@ -78,7 +79,7 @@ function eligible(candidate: {
   return candidate.isActive
     && candidate.isVirusScanned
     && candidate.status === "active"
-    && (!candidate.expiresAt || Date.parse(candidate.expiresAt) > Date.now());
+    && (!candidate.expiresAt || parseInstant(candidate.expiresAt) > Date.now());
 }
 
 function embedded(

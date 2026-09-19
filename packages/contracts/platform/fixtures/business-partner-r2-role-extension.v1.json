@@ -1,0 +1,42 @@
+{
+  "$schema": "athyper.business-partner-r2-fixture/1",
+  "scenarios": [
+    {
+      "id": "BP-SUP-002",
+      "target": "business_partner_without_commercial_role",
+      "existingRoles": [],
+      "requestedRole": "supplier",
+      "expectedInitialStatus": "onboarding"
+    },
+    {
+      "id": "BP-SUP-003",
+      "target": "customer_only_business_partner",
+      "existingRoles": ["customer"],
+      "requestedRole": "supplier",
+      "expectedInitialStatus": "onboarding"
+    },
+    {
+      "id": "BP-CUS-002",
+      "target": "business_partner_without_commercial_role",
+      "existingRoles": [],
+      "requestedRole": "customer",
+      "expectedInitialStatus": "prospect"
+    },
+    {
+      "id": "BP-CUS-003",
+      "target": "supplier_only_business_partner",
+      "existingRoles": ["supplier"],
+      "requestedRole": "customer",
+      "expectedInitialStatus": "prospect"
+    }
+  ],
+  "invariants": {
+    "reuseTargetBusinessPartnerId": true,
+    "createBusinessPartnerCount": 0,
+    "createRequestedRoleCount": 1,
+    "preserveOppositeRole": true,
+    "preserveOppositeRoleStatus": true,
+    "preserveOppositeRoleDecisions": true,
+    "automaticRoleActivation": false
+  }
+}

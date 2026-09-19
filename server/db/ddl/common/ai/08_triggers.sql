@@ -1,5 +1,6 @@
 -- Generated from the extracted live Atlas AI contract.
--- Regenerate with: node server/db/scripts/catalog/build-common-ai-ddl.mjs
+-- Maintained as canonical foundation DDL; use additive migrations for installed databases.
+-- Supported verification and maintenance: server/db/scripts/README.md (Atlas AI DDL).
 
 -- ============================================================================
 -- control/06_triggers.sql
@@ -78,3 +79,7 @@ FOR EACH ROW EXECUTE FUNCTION ai.trg_guard_atlas_participant_insert();
 CREATE TRIGGER trg_conversation_participant_atlas_mutation_guard
 BEFORE UPDATE ON document.conversation_participant
 FOR EACH ROW EXECUTE FUNCTION ai.trg_guard_atlas_participant_mutation();
+
+CREATE TRIGGER atlas_provider_usage_immutable BEFORE UPDATE ON ai.atlas_provider_usage FOR EACH ROW EXECUTE FUNCTION ai.trg_prevent_mutation();
+
+CREATE TRIGGER atlas_generation_metadata_immutable BEFORE UPDATE ON ai.atlas_run FOR EACH ROW EXECUTE FUNCTION ai.trg_guard_atlas_generation_metadata();

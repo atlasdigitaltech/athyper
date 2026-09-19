@@ -1,0 +1,552 @@
+{
+  "package": "P6",
+  "at": "2026-09-14T14:25:40.005Z",
+  "status": "accepted_local_dev",
+  "scope": "Increment A materialization/activation; Basic, Standard and Enhanced under the published purchasing activation policy",
+  "implementation": [
+    "shared current-attempt and supplier-domain completion evaluation",
+    "scoped case-authorized readiness/completion APIs",
+    "versioned activation-policy applicability and current company-bank acceptance evidence",
+    "governed activation-case materialization and scoped company/bank/activation work links",
+    "expected-version closure, stored replay receipt and one committed completion event",
+    "qualification action coordinates preserve source authorization and distinct child-decision mapping",
+    "canonical audit contract covers supplier activation"
+  ],
+  "qualification": {
+    "unitTests": {
+      "passed": 127,
+      "suites": [
+        "cycle service/repository (26)",
+        "case service/view and eligibility (87)",
+        "BP backend mapping (14)"
+      ]
+    },
+    "database": {
+      "checks": [
+        "basic: approval, materialization, activation and closure remain separate; old attempt work does not block current completed reviews",
+        "standard: approval, materialization, activation and closure remain separate; old attempt work does not block current completed reviews",
+        "enhanced: approval, materialization, activation and closure remain separate; old attempt work does not block current completed reviews",
+        "raw closure cannot bypass case/document/completion evidence",
+        "selected process pin is immutable",
+        "activation policy publications are immutable",
+        "ambiguous current activation policy blocks completion",
+        "current completion evaluation passes real P4 document/activation fixture 576a0e3b-b9e4-4d56-a13b-f0c7e09e5b06; controlled upstream fixture boundary retained",
+        "real app-role closure, exact replay and one outbox event rolled back for 576a0e3b-b9e4-4d56-a13b-f0c7e09e5b06; authorization double is limited to this database fixture",
+        "current completion evaluation passes real P4 document/activation fixture 77677bf0-17df-460f-b463-e899d71246d5; controlled upstream fixture boundary retained",
+        "real app-role closure, exact replay and one outbox event rolled back for 77677bf0-17df-460f-b463-e899d71246d5; authorization double is limited to this database fixture",
+        "current completion evaluation passes real P4 document/activation fixture 6e63aa27-3354-4411-9331-e1ebc0ef0684; controlled upstream fixture boundary retained",
+        "real app-role closure, exact replay and one outbox event rolled back for 6e63aa27-3354-4411-9331-e1ebc0ef0684; authorization double is limited to this database fixture"
+      ],
+      "boundary": "Positive P4 closure fixtures use a database-test authorization port; closure/outbox writes roll back."
+    },
+    "negativeLive": [
+      {
+        "caseId": "33c4ee40-535e-4b4b-b555-95ef8b3c092a",
+        "runId": "6a28aff7-605c-4040-9e81-e3c34617cec5",
+        "readinessStatus": 200,
+        "closureStatus": 409,
+        "closureCode": "GOVERNANCE_CYCLE_NOT_READY",
+        "reasons": [
+          "materialization",
+          "organization_company",
+          "qualification",
+          "risk_blocks",
+          "activation",
+          "activation_confirmation"
+        ]
+      },
+      {
+        "caseId": "e9f9294b-03f1-4761-8b85-b6fe2187324c",
+        "runId": "d70e2ae2-4761-4b42-b9ff-89dab2694f79",
+        "readinessStatus": 200,
+        "closureStatus": 409,
+        "closureCode": "GOVERNANCE_CYCLE_NOT_READY",
+        "reasons": [
+          "materialization",
+          "organization_company",
+          "qualification",
+          "risk_blocks",
+          "activation",
+          "activation_confirmation"
+        ]
+      },
+      {
+        "caseId": "dac7f6a6-faad-4c97-ad87-7b6554742bc2",
+        "runId": "74f7e492-c9b9-437f-80df-81bb87e7860b",
+        "readinessStatus": 200,
+        "closureStatus": 409,
+        "closureCode": "GOVERNANCE_CYCLE_NOT_READY",
+        "reasons": [
+          "materialization",
+          "organization_company",
+          "qualification",
+          "risk_blocks",
+          "activation",
+          "activation_confirmation"
+        ]
+      }
+    ],
+    "profiles": [
+      {
+        "level": "basic",
+        "caseId": "8beef546-8a02-4330-b9bb-e407d169598a",
+        "runId": "3c09b2ea-41a0-4ea4-9c4d-fd54abfe6cba",
+        "activationCaseId": "8a87e806-645f-48bf-9fca-842e7a119b1c",
+        "materialized": true,
+        "qualificationApproved": true,
+        "companyCaseId": "bf2be41d-4c7b-40f9-af35-211a45d380fb",
+        "activationDocument": {
+          "jobId": "33c72539-c970-4c6a-99ea-b957f5662c0a",
+          "result": {
+            "jobId": "33c72539-c970-4c6a-99ea-b957f5662c0a",
+            "sha256": "45dd254dac64ae6b5a89d8117be252391fdaaf59645027197460c6e1b76dbbcb",
+            "status": "ready",
+            "purpose": "activation_confirmation",
+            "template": {
+              "id": "2f3ea2bb-c5e6-5f9d-854c-fd1c71bda729",
+              "hash": "3bfce4f51231fd52c89ba44c10c8629beaab5c48494c794bcb4b0061cae901ad",
+              "locale": "en",
+              "variant": "default",
+              "version": 1,
+              "bindingId": "db7b3fc7-4838-59a3-841c-3b4a5943c0c6",
+              "templateId": "45aedd60-67f5-5d3d-824d-ef2a7c8a73d8"
+            },
+            "scannedAt": "2026-09-14T14:10:34.364Z",
+            "coordinate": {
+              "scope": {
+                "planeKey": "neon",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "processFamily": "supplier_onboarding",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              "caseId": "8beef546-8a02-4330-b9bb-e407d169598a",
+              "manifest": {
+                "id": "eceb732c-a0a1-533e-864a-a83f1e89d4d9",
+                "hash": "9f600223844f7ce0cbb8b8560ac1b0c8953be3918a7cfecbb8a07973b29d8b0a",
+                "version": 1
+              },
+              "attemptId": "13fa5f7b-c699-4f4d-9ca6-11f03ade1e4d",
+              "cycleRunId": "3c09b2ea-41a0-4ea4-9c4d-fd54abfe6cba",
+              "selectionId": "4bb929c7-519f-40cb-bc1f-073483e69dea",
+              "attemptNumber": 1,
+              "submissionSnapshot": {
+                "id": "01a09fb7-b9c2-78c3-800c-84bf6a763732",
+                "hash": "a75dabab204662f6f1c2b32b8ace1ab3b9d8f821907626051914cbed4cf47cae",
+                "version": 3
+              }
+            },
+            "scanStatus": "clean",
+            "attachmentId": "5819030a-696c-40ca-a31b-8ac180606726",
+            "idempotencyKey": "process-document-result:33c72539-c970-4c6a-99ea-b957f5662c0a",
+            "sourceSnapshot": {
+              "id": "01a0a02d-1603-750d-bf29-37ef9ef21fdd",
+              "hash": "c2abcbe327a18f517eba70fee58c099be8cd9e49ac18499860c73779fe96352f",
+              "version": 1
+            },
+            "attachmentVersionId": "5819030a-696c-40ca-a31b-8ac180606726"
+          },
+          "downloadVerified": true,
+          "replayVerified": true
+        },
+        "staleClosureCode": "GOVERNANCE_EXPECTED_VERSION_CONFLICT",
+        "closureReplayVerified": true,
+        "activationReplayVerified": true,
+        "browser": {
+          "url": "https://neon.dev.athyper.test/mdg/business-partner/requests/8beef546-8a02-4330-b9bb-e407d169598a",
+          "readinessStatus": 200,
+          "screenshot": "governance/policy/reports/p6-browser/basic.png"
+        }
+      },
+      {
+        "level": "standard",
+        "caseId": "4131592b-336a-4d10-a87c-b7bb443d3a54",
+        "runId": "1e8673af-46a4-401e-bd22-3956ff9732b8",
+        "activationCaseId": "31e0a6ea-8abf-42d5-9b17-8abfd8037224",
+        "materialized": true,
+        "qualificationApproved": true,
+        "companyCaseId": "6cee560d-6cf1-4123-a0cb-fd44e151a290",
+        "activationDocument": {
+          "jobId": "0fddc2ac-feb0-4700-a148-d50f7ff90cb2",
+          "result": {
+            "jobId": "0fddc2ac-feb0-4700-a148-d50f7ff90cb2",
+            "sha256": "e68ce6ea27938b74897ce73bfe823da99b67ece37fe4f9a75256b6abb8d6cb23",
+            "status": "ready",
+            "purpose": "activation_confirmation",
+            "template": {
+              "id": "2f3ea2bb-c5e6-5f9d-854c-fd1c71bda729",
+              "hash": "3bfce4f51231fd52c89ba44c10c8629beaab5c48494c794bcb4b0061cae901ad",
+              "locale": "en",
+              "variant": "default",
+              "version": 1,
+              "bindingId": "db7b3fc7-4838-59a3-841c-3b4a5943c0c6",
+              "templateId": "45aedd60-67f5-5d3d-824d-ef2a7c8a73d8"
+            },
+            "scannedAt": "2026-09-14T14:10:33.906Z",
+            "coordinate": {
+              "scope": {
+                "planeKey": "neon",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "processFamily": "supplier_onboarding",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              "caseId": "4131592b-336a-4d10-a87c-b7bb443d3a54",
+              "manifest": {
+                "id": "30b9bbc7-7f2c-5ca8-8e15-0a4c81395307",
+                "hash": "ae7111a252153d3d842d56773b7b032bc0192bf0b3523d2f554ad10db0576937",
+                "version": 1
+              },
+              "attemptId": "5f3b00f9-85b3-4db7-a8ee-9af4c54ca2db",
+              "cycleRunId": "1e8673af-46a4-401e-bd22-3956ff9732b8",
+              "selectionId": "77df7c6e-911f-47f7-b279-f57fe4143c7d",
+              "attemptNumber": 1,
+              "submissionSnapshot": {
+                "id": "01a0a02d-9b03-7b4a-927f-225cbb1f9a14",
+                "hash": "31798fcfee9422a0da5150055ac1be88dc86cee65965d65335c05b4eee31ba07",
+                "version": 3
+              }
+            },
+            "scanStatus": "clean",
+            "attachmentId": "4a4cbb13-349d-4ea0-978e-23af4e1a645e",
+            "idempotencyKey": "process-document-result:0fddc2ac-feb0-4700-a148-d50f7ff90cb2",
+            "sourceSnapshot": {
+              "id": "01a0a02d-a3c1-7bf2-a1c2-7ae5b63ca8f3",
+              "hash": "e26b97bc376fbf26647845e9e9029595cee1494e687873f4141a420742ae862c",
+              "version": 1
+            },
+            "attachmentVersionId": "4a4cbb13-349d-4ea0-978e-23af4e1a645e"
+          },
+          "downloadVerified": true,
+          "replayVerified": true
+        },
+        "staleClosureCode": "GOVERNANCE_EXPECTED_VERSION_CONFLICT",
+        "closureReplayVerified": true,
+        "activationReplayVerified": true,
+        "browser": {
+          "url": "https://neon.dev.athyper.test/mdg/business-partner/requests/4131592b-336a-4d10-a87c-b7bb443d3a54",
+          "readinessStatus": 200,
+          "screenshot": "governance/policy/reports/p6-browser/standard.png"
+        }
+      },
+      {
+        "level": "enhanced",
+        "caseId": "d4ee836b-966d-42a6-98d7-02ef68ad33fc",
+        "runId": "845056d5-e18a-4b69-abf2-83d0ccc906b6",
+        "activationCaseId": "ee316093-0b66-4621-b806-8dffce48d903",
+        "materialized": true,
+        "qualificationApproved": true,
+        "companyCaseId": "44ed2973-15ea-4938-90ea-b160ba32fb08",
+        "activationDocument": {
+          "jobId": "cf60351e-9920-47a6-8b94-235f548192ce",
+          "result": {
+            "jobId": "cf60351e-9920-47a6-8b94-235f548192ce",
+            "sha256": "78029b411108fc7fb289dd79af8668951d03fd24b06f8d20ecf1aa300249d33a",
+            "status": "ready",
+            "purpose": "activation_confirmation",
+            "template": {
+              "id": "2f3ea2bb-c5e6-5f9d-854c-fd1c71bda729",
+              "hash": "3bfce4f51231fd52c89ba44c10c8629beaab5c48494c794bcb4b0061cae901ad",
+              "locale": "en",
+              "variant": "default",
+              "version": 1,
+              "bindingId": "db7b3fc7-4838-59a3-841c-3b4a5943c0c6",
+              "templateId": "45aedd60-67f5-5d3d-824d-ef2a7c8a73d8"
+            },
+            "scannedAt": "2026-09-14T14:10:34.707Z",
+            "coordinate": {
+              "scope": {
+                "planeKey": "neon",
+                "tenantId": "44444444-4444-4444-8444-444444444444",
+                "companyCodeId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+                "processFamily": "supplier_onboarding",
+                "operatingOrganizationId": "a478f9c0-8226-5d22-9599-b8fb27a45180"
+              },
+              "caseId": "d4ee836b-966d-42a6-98d7-02ef68ad33fc",
+              "manifest": {
+                "id": "4760bf40-09fa-567d-86c2-4444dcb7deb4",
+                "hash": "85d7efc1fe035231cec461ebea9b669bf8683ff53a5bf2900a73bb7a4167873c",
+                "version": 1
+              },
+              "attemptId": "ec0bf861-e17d-4807-8388-41528caea8bc",
+              "cycleRunId": "845056d5-e18a-4b69-abf2-83d0ccc906b6",
+              "selectionId": "d896ddd3-10b0-4c98-be78-56dbdce90fa5",
+              "attemptNumber": 1,
+              "submissionSnapshot": {
+                "id": "01a0a02d-a567-71f0-ad6e-ff69967d94c2",
+                "hash": "ab3530797f67075b20e9d27d9a012d4f3c2d1c1a7bac51e1293091cb7278ea1b",
+                "version": 3
+              }
+            },
+            "scanStatus": "clean",
+            "attachmentId": "8f5e593b-e046-4204-b0e1-5071f28ce729",
+            "idempotencyKey": "process-document-result:cf60351e-9920-47a6-8b94-235f548192ce",
+            "sourceSnapshot": {
+              "id": "01a0a02d-b317-78ee-a47a-5381020daebb",
+              "hash": "b6977298ed8ef2503f91b8ce74d752eae3adf1bebc1f46f65f3f0418d26a816f",
+              "version": 1
+            },
+            "attachmentVersionId": "8f5e593b-e046-4204-b0e1-5071f28ce729"
+          },
+          "downloadVerified": true,
+          "replayVerified": true
+        },
+        "staleClosureCode": "GOVERNANCE_EXPECTED_VERSION_CONFLICT",
+        "closureReplayVerified": true,
+        "activationReplayVerified": true,
+        "browser": {
+          "url": "https://neon.dev.athyper.test/mdg/business-partner/requests/d4ee836b-966d-42a6-98d7-02ef68ad33fc",
+          "readinessStatus": 200,
+          "screenshot": "governance/policy/reports/p6-browser/enhanced.png"
+        }
+      }
+    ],
+    "companyGuard": {
+      "at": "2026-09-14T14:23:24.633Z",
+      "boundary": "Canonical SQL admission guard, real selected run/policy; payload variants are in memory, no persisted business writes",
+      "checks": [
+        {
+          "name": "Linked purchasing setup permits absent payment fields",
+          "reject": false
+        },
+        {
+          "name": "Unlinked company case retains payment requirements",
+          "reject": true
+        },
+        {
+          "name": "Missing policy retains payment requirements",
+          "reject": true
+        },
+        {
+          "name": "Purchasing currency remains required",
+          "reject": true
+        },
+        {
+          "name": "Purchasing currency must use three letters",
+          "reject": true
+        }
+      ],
+      "passed": true
+    },
+    "payment": {
+      "at": "2026-09-14T14:17:30.059Z",
+      "boundary": "Existing eligibility/readiness owners against real PostgreSQL. Synthetic commercial/bank inputs and lifecycle changes are transaction-local and rolled back; no claim of an external bank verification journey.",
+      "cases": [
+        {
+          "level": "basic",
+          "missingBankBlocked": true,
+          "missingTermsBlocked": true,
+          "verifiedPaymentReady": true,
+          "revokedCompanyAcceptanceBlocked": true,
+          "expiredBankBlocked": true,
+          "unverifiedBankBlocked": true,
+          "safeOperationalEvidence": true,
+          "staleVersionRejected": true,
+          "staleReadinessRejected": true
+        },
+        {
+          "level": "standard",
+          "missingBankBlocked": true,
+          "missingTermsBlocked": true,
+          "verifiedPaymentReady": true,
+          "revokedCompanyAcceptanceBlocked": true,
+          "expiredBankBlocked": true,
+          "unverifiedBankBlocked": true,
+          "safeOperationalEvidence": true,
+          "staleVersionRejected": true,
+          "staleReadinessRejected": true
+        },
+        {
+          "level": "enhanced",
+          "missingBankBlocked": true,
+          "missingTermsBlocked": true,
+          "verifiedPaymentReady": true,
+          "revokedCompanyAcceptanceBlocked": true,
+          "expiredBankBlocked": true,
+          "unverifiedBankBlocked": true,
+          "safeOperationalEvidence": true,
+          "staleVersionRejected": true,
+          "staleReadinessRejected": true
+        }
+      ],
+      "passed": true
+    },
+    "bankLink": {
+      "at": "2026-09-14T14:20:38.606Z",
+      "boundary": "Database command qualification of P6 linkage and completion only. Bank draft inputs reuse P4 scoped case fixtures; all drafts, links, rejection and outbox writes roll back. No Mesh disclosure intake or bank verification API claim.",
+      "cases": [
+        {
+          "level": "basic",
+          "appRole": true,
+          "draftCreated": true,
+          "linkReplayVerified": true,
+          "openBankWorkBlocksClosure": true,
+          "independentlyRejectedBankWorkReleasesGate": true
+        },
+        {
+          "level": "standard",
+          "appRole": true,
+          "draftCreated": true,
+          "linkReplayVerified": true,
+          "openBankWorkBlocksClosure": true,
+          "independentlyRejectedBankWorkReleasesGate": true
+        },
+        {
+          "level": "enhanced",
+          "appRole": true,
+          "draftCreated": true,
+          "linkReplayVerified": true,
+          "openBankWorkBlocksClosure": true,
+          "independentlyRejectedBankWorkReleasesGate": true
+        }
+      ],
+      "passed": true
+    },
+    "bankSource": {
+      "at": "2026-09-14T14:21:36.994Z",
+      "boundary": "Real owning API rejects bank-change creation without a current Mesh source; no source disclosure or bank master outcome is fabricated",
+      "cases": [
+        {
+          "caseId": "8beef546-8a02-4330-b9bb-e407d169598a",
+          "level": "basic",
+          "missingSourceRejected": true
+        },
+        {
+          "caseId": "4131592b-336a-4d10-a87c-b7bb443d3a54",
+          "level": "standard",
+          "missingSourceRejected": true
+        },
+        {
+          "caseId": "d4ee836b-966d-42a6-98d7-02ef68ad33fc",
+          "level": "enhanced",
+          "missingSourceRejected": true
+        }
+      ],
+      "passed": true
+    },
+    "receipts": {
+      "at": "2026-09-14T14:22:32.781Z",
+      "cases": [
+        {
+          "level": "basic",
+          "runId": "3c09b2ea-41a0-4ea4-9c4d-fd54abfe6cba",
+          "status": "completed",
+          "completion_events": 1,
+          "activation_receipts": 1,
+          "company_links": 1,
+          "activation_links": 1
+        },
+        {
+          "level": "standard",
+          "runId": "1e8673af-46a4-401e-bd22-3956ff9732b8",
+          "status": "completed",
+          "completion_events": 1,
+          "activation_receipts": 1,
+          "company_links": 1,
+          "activation_links": 1
+        },
+        {
+          "level": "enhanced",
+          "runId": "845056d5-e18a-4b69-abf2-83d0ccc906b6",
+          "status": "completed",
+          "completion_events": 1,
+          "activation_receipts": 1,
+          "company_links": 1,
+          "activation_links": 1
+        }
+      ],
+      "missingBankSourceCreatedNoCases": true,
+      "bankFixturesRolledBack": true,
+      "passed": true
+    },
+    "riskFixtureBoundary": "Controlled upstream risk assessments only; no synthetic company, qualification or activation result",
+    "access": {
+      "applied": true,
+      "assignments": [
+        {
+          "commandId": "p6-dev-access:admin:assignment",
+          "resourceId": "0383a982-c0f4-46d5-84bf-3fbfcfe4a21a",
+          "version": 1,
+          "replayed": false,
+          "name": "admin",
+          "principal": "cca94907-7519-5871-8e3c-6b11aa545c93",
+          "permissions": [
+            "neon.supplier.qualification.admin",
+            "neon.relationship.business_partner.activate"
+          ],
+          "scope": "bd7f1a62-5c32-5a9b-a984-c5adc3370a24",
+          "propagation": "subtree"
+        },
+        {
+          "commandId": "p6-dev-access:owner:assignment",
+          "resourceId": "53f5fb3d-65ed-4360-b339-2b485d6e809e",
+          "version": 1,
+          "replayed": false,
+          "name": "owner",
+          "principal": "645b6a55-3355-526a-9643-3900425bde47",
+          "permissions": [
+            "neon.supplier.qualification.admin"
+          ],
+          "scope": "bd7f1a62-5c32-5a9b-a984-c5adc3370a24",
+          "propagation": "subtree"
+        },
+        {
+          "commandId": "p6-dev-access:admin-company:assignment",
+          "resourceId": "49b3f94d-8776-4856-9b01-9a87a891f982",
+          "version": 1,
+          "replayed": false,
+          "name": "admin-company",
+          "principal": "cca94907-7519-5871-8e3c-6b11aa545c93",
+          "permissions": [
+            "neon.relationship.bp_target.qualification_company"
+          ],
+          "scope": "01a0953c-dfa1-7cf4-af43-5da91bed7d29",
+          "propagation": "exact"
+        }
+      ],
+      "expiresAt": "2026-09-15T14:04:18.396Z",
+      "revokedAt": "2026-09-14T14:22:33.544Z"
+    },
+    "builds": [
+      "master-data rebuilt after qualification/bank readiness fixes",
+      "host/governance/NEON builds from P6 implementation"
+    ],
+    "storage": {
+      "at": "2026-09-14T14:10:03.375Z",
+      "source": "canonical DDL",
+      "passed": true
+    },
+    "deployments": [
+      {
+        "service": "neon-web",
+        "image": "sha256:dd88449db0f250c13cf7da09093781466e3891579866bba05b0df3b8214c0b49"
+      },
+      {
+        "service": "api",
+        "image": "sha256:0014832ca87946d5f472b730510d006d464646d114ba64b557891204226ab098"
+      },
+      {
+        "service": "worker",
+        "image": "sha256:a68a451367583770ab0a84c516afb6f2f380c95d85b6ffb24771420f53f95d2b"
+      },
+      {
+        "service": "scheduler",
+        "image": "sha256:0da8f1ddc2e7b7f6fa880a0595185960c1c2f4f0a1724f5827f6884ac3177ac9"
+      }
+    ]
+  },
+  "boundaries": [
+    "Fresh supplier, qualification, company and activation decisions/materialization, real activation documents, downloads, closure/replay and browser reads use authenticated owning APIs.",
+    "Risk assessments are declared upstream fixtures.",
+    "Payment readiness uses transaction-local commercial and bank fixtures with real database readiness owners; all writes roll back.",
+    "Bank linkage uses governed draft/validation/submission/rejection/link commands as athyperapp with fixture validation evidence; all writes roll back. The live API missing-Mesh-source denial is separately qualified.",
+    "An external Mesh bank-disclosure and bank-verification API journey is not claimed by these P6 gate tests."
+  ],
+  "excluded": [
+    "P7",
+    "P8 full screen integration",
+    "P9 final Increment A qualification",
+    "Follow-up B",
+    "Follow-up C"
+  ]
+}

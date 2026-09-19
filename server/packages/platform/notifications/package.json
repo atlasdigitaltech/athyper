@@ -13,16 +13,17 @@
   },
   "dependencies": {
     "@athyper/server-contract-auth": "workspace:*",
-    "@athyper/server-contract-jobs": "workspace:*",
     "@athyper/server-contract-documents": "workspace:*",
     "@athyper/server-contract-governance": "workspace:*",
+    "@athyper/server-contract-jobs": "workspace:*",
     "@athyper/server-contract-notifications": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
-    "kysely": "^0.28.16",
-    "express": "^5.0.0"
+    "@athyper/server-runtime-http": "workspace:*",
+    "express": "^5.2.1",
+    "kysely": "^0.28.17"
   },
   "devDependencies": {
-    "@types/express": "^5.0.1",
+    "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"

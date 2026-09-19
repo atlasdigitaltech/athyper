@@ -25,6 +25,8 @@ common/document/02_domains.sql
 common/audit/02_domains.sql
 common/runtime_meta/02_publication_domains.sql
 common/shared/03_tables.sql
+common/shared/03_bank_directory.sql
+common/shared/04_bank_directory_views.sql
 common/audit/03_tables.sql
 common/control/03_tables.sql
 common/runtime_meta/03_tables.sql
@@ -55,6 +57,7 @@ common/document/06_indexes.sql
 common/ai/06_indexes.sql
 common/ops/06_indexes.sql
 common/shared/07_functions.sql
+common/shared/07_bank_directory.sql
 common/audit/07_functions.sql
 common/control/07_functions.sql
 common/runtime_meta/07_publication_functions.sql
@@ -96,8 +99,15 @@ common/document/11_grants.sql
 common/ai/11_grants.sql
 common/ops/11_grants.sql
 common/shared/12_reference_seed.sql
+common/control/12_ui_locale_catalog_seed.sql
 common/audit/12_reference_seed.sql
 common/control/12_collaboration_lookup_seed.sql
 common/control/12_operational_governance_reference_seed.sql
 common/control/12_banking_reference_seed.sql
 common/control/12_usage_metric_catalog_seed.sql
+common/control/12_parameter_runtime_seed.sql
+
+common/authz/13_management.sql
+
+common/control/14_admin_integrations.sql
+common/control/15_lookup_reference_governance.sql

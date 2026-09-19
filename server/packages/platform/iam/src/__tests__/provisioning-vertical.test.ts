@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AuditEvent, AuditRecordInput } from "@athyper/server-contract-audit";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { OutboxEventInput } from "@athyper/server-contract-events";
-import { createProvisioningVertical, type ProvisioningCreateRepository } from "../index.js";
+import { createPermissionAuthorizer, createProvisioningVertical, type ProvisioningCreateRepository } from "../index.js";
 
 const context: VerifiedRequestContext = {
   planeKey: "studio", realmKey: "athyper", tenantId: "10000000-0000-4000-8000-000000000001",
@@ -15,15 +15,15 @@ class MemoryTransaction {
   onCommit(action: () => void): void { this.commitActions.push(action); }
 }
 
-function harness(options: { deny?: boolean; failAudit?: boolean } = {}) {
+function harness(options: { deny?: boolean; failAudit?: boolean; realAuthorizer?: boolean } = {}) {
   const requests = new Map<string, Parameters<ProvisioningCreateRepository<MemoryTransaction>["createOrReplay"]>[0]>();
   const outbox: OutboxEventInput[] = [];
   const audit: AuditEvent[] = [];
-  const authorizer: Authorizer = { authorize: vi.fn(async () => options.deny ? { allowed: false as const, reason: "missing_permission" } : { allowed: true as const }) };
+  const authorizer: Authorizer = options.realAuthorizer ? createPermissionAuthorizer() : { authorize: vi.fn(async () => options.deny ? { allowed: false as const, reason: "missing_permission" } : { allowed: true as const }) };
   const repository: ProvisioningCreateRepository<MemoryTransaction> = {
     async createOrReplay(input, transaction) {
       const existing = [...requests.values()].find((item) => item.tenantId === input.tenantId && (item.idempotencyKey === input.idempotencyKey || item.subjectKey === input.subjectKey));
-      if (existing) return existing.requestFingerprint === input.requestFingerprint ? { kind: "replay", request: existing } : { kind: "conflict" };
+      if (existing) return existing.idempotencyKey === input.idempotencyKey && existing.requestFingerprint === input.requestFingerprint ? { kind: "replay", request: existing } : { kind: "conflict" };
       transaction.onCommit(() => requests.set(input.idempotencyKey, input));
       return { kind: "created", request: input };
     },
@@ -66,6 +66,22 @@ describe("IAM provisioning vertical", () => {
     const test = harness({ failAudit: true });
     await expect(test.service.request(command)).rejects.toThrow("audit unavailable");
     expect(test.requests.size).toBe(0); expect(test.outbox).toHaveLength(0); expect(test.audit).toHaveLength(0);
+  });
+
+  it("rejects non-Studio authority and cross-realm provisioning before writing", async () => {
+    const test = harness();
+    await expect(test.service.request({ ...command, context: { ...context, planeKey: "neon" } })).resolves.toMatchObject({ kind: "Forbidden" });
+    await expect(test.service.request({ ...command, realmKey: "other-realm" })).resolves.toMatchObject({ kind: "Forbidden" });
+    expect(test.run).not.toHaveBeenCalled();
+  });
+
+  it("does not promote workspace-scoped permission into tenant-wide provisioning authority", async () => {
+    const test = harness({ realAuthorizer: true });
+    const scoped = { ...context, permissions: { ...context.permissions, evidence: [{ permissionCode: "iam.provisioning.create", effect: "allow" as const, proof: "role" as const, scopeKind: "workspace" as const, scopeTargetId: "scope-1", targetId: "workspace-1", propagationMode: "exact" as const }] } };
+    await expect(test.service.request({ ...command, context: scoped })).resolves.toMatchObject({ kind: "Forbidden" });
+    expect(test.run).not.toHaveBeenCalled();
+    const tenant = { ...scoped, permissions: { ...scoped.permissions, evidence: scoped.permissions.evidence.map(item => ({ ...item, scopeKind: "tenant" as const, targetId: context.tenantId })) } };
+    await expect(test.service.request({ ...command, context: tenant })).resolves.toMatchObject({ kind: "Created" });
   });
 
   it("denies before opening a transaction", async () => {

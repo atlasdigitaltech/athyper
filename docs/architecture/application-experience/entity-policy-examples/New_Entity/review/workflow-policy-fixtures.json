@@ -1,0 +1,259 @@
+{
+  "documentKind": "workflow_service_review_input",
+  "runtimeArtifact": false,
+  "definitions": {
+    "customer": {
+      "escalation": [
+        "stage_owner",
+        "sales_organization_owner",
+        "data_governance_owner"
+      ],
+      "sod": {
+        "applicantCannotDecide": true,
+        "makerCannotDecide": true,
+        "mfaAtDecision": true
+      },
+      "stages": [
+        {
+          "code": "stewardship",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "name": "Data stewardship",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240
+        },
+        {
+          "code": "compliance_consent",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "name": "Compliance and consent",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "all"
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480
+        },
+        {
+          "code": "sales_owner",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "name": "Sales owner",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240
+        },
+        {
+          "code": "credit_review",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "name": "Credit review",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "percentage",
+            "value": 50
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480
+        }
+      ],
+      "version": "3.0.1"
+    },
+    "governance": {
+      "escalation": [
+        "data_governance_owner"
+      ],
+      "sod": {
+        "makerCannotDecide": true,
+        "mfaAtDecision": true
+      },
+      "stages": [
+        {
+          "code": "dependency_impact_review",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "name": "Dependency impact review",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "all"
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480
+        },
+        {
+          "code": "data_stewardship",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "name": "Data stewardship",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240
+        }
+      ],
+      "version": "3.0.1"
+    },
+    "supplier": {
+      "escalation": [
+        "stage_owner",
+        "operating_organization_owner",
+        "data_governance_owner"
+      ],
+      "sod": {
+        "applicantCannotDecide": true,
+        "makerCannotDecide": true,
+        "mfaAtDecision": true
+      },
+      "stages": [
+        {
+          "code": "stewardship",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "name": "Data stewardship",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240
+        },
+        {
+          "code": "compliance_tax",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "name": "Compliance and tax",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480,
+          "when": {
+            "operator": "not_equals",
+            "path": "ownershipClass",
+            "value": "internal"
+          }
+        },
+        {
+          "code": "procurement_owner",
+          "escalateAtMinutes": 240,
+          "mode": "parallel",
+          "name": "Procurement owner",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "percentage",
+            "value": 25
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240
+        }
+      ],
+      "version": "3.0.1"
+    },
+    "workforce": {
+      "escalation": [
+        "stage_owner",
+        "hr_business_partner",
+        "privacy_officer"
+      ],
+      "sod": {
+        "applicantCannotDecide": true,
+        "makerCannotDecide": true,
+        "mfaAtDecision": true,
+        "restrictedEvidencePurposeRequired": true
+      },
+      "stages": [
+        {
+          "code": "hr_review",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "name": "HR review",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240
+        },
+        {
+          "code": "hiring_manager",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "name": "Hiring manager",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240
+        },
+        {
+          "code": "compliance_privacy",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "name": "Privacy compliance",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "all"
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480
+        }
+      ],
+      "version": "3.0.1"
+    }
+  },
+  "resolutionRules": {
+    "zeroEligibleApprovers": "block",
+    "percentageQuorum": "ceil(percent * pinned_eligible_count / 100)",
+    "minimumApprovals": 1,
+    "timeout": "escalate_never_auto_approve",
+    "assignmentSnapshot": "pin_at_stage_start",
+    "policyBodyAdmission": "workflow_service_validates_before_activation"
+  }
+}

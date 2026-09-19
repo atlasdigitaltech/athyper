@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "kind": "explicit_user_isolated_transfer_grant_approval",
+  "approvedAt": "2026-09-11T02:13:48.847Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "exactMessage": "approved",
+    "channel": "user",
+    "proposalRevision": "280d21697b211092fe33b4030fd3cf6d8b08fba029dfb37438d6817e9ac469e4"
+  },
+  "proposalSha256": "c00fa5111eae149a884cbf34388532e22267d0c8045357d95cfbf6bfb51f6b84",
+  "proposalRevision": "280d21697b211092fe33b4030fd3cf6d8b08fba029dfb37438d6817e9ac469e4",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "runtimeImage": "sha256:718ca6008c0b33d253c61d28182b336e967f477b5d671e5e733375996f2751a4",
+  "effectiveFrom": "2026-09-11T02:15:00Z",
+  "effectiveUntil": "2026-09-11T06:15:00Z",
+  "isolatedGrantsApproved": true,
+  "sharedDevGrantChangesAuthorized": false,
+  "activationAuthorized": false
+}

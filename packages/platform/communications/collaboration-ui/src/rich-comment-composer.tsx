@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { convertClipboard, serializeForClipboard, uploadClipboardImages, type ClipboardImageUploader } from "./clipboard-converter.js";
-import { createAttachmentApiClient } from "./attachment-client.js";
-import { RICH_TEXT_SCHEMA, type RichTextDocument, type RichTextNode } from "./rich-text-types.js";
+import { convertClipboard, serializeForClipboard, uploadClipboardImages, type ClipboardImageUploader } from "./clipboard-converter";
+import { createAttachmentApiClient } from "./attachment-client";
+import { RICH_TEXT_SCHEMA, type RichTextDocument, type RichTextNode } from "./rich-text-types";
 
 export interface RichCommentSubmission {
   readonly entityType: string;

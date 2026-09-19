@@ -1,0 +1,68 @@
+apiVersion: athyper.io/v1alpha1
+kind: WorkloadSetCatalog
+metadata:
+  name: stack-v1-to-v2-workload-placement
+sets:
+  - id: instance-runtime
+    placement: instance
+    activation: preset
+    implementation: composed
+    hostProfiles: [laptop-32, laptop-64, workstation-128]
+    services:
+      [
+        gateway,
+        gateway-outage,
+        db,
+        dbpool-apps,
+        dbpool-session,
+        memorycache,
+        jobqueue,
+        secretstore-cache,
+        objectstorage,
+        objectstorage-init,
+        iam,
+        neon-web,
+        mesh-web,
+        studio-web,
+        api,
+        worker,
+        scheduler,
+        virusscan,
+        docrender,
+        docparser,
+        searchcore,
+        mailtrap,
+      ]
+    rationale: Per-instance application and data plane required for DEV parity and isolated QA/STG execution.
+
+  - id: instance-operator-tools
+    placement: instance
+    activation: explicit-profile
+    implementation: composed
+    hostProfiles: [laptop-32, laptop-64, workstation-128]
+    services: [secretstore, dbconsole, queueconsole, analyticsboard]
+    rationale: Optional stateful or privileged tools remain instance-scoped and loopback-only with explicit activation.
+
+  - id: instance-telemetry-exporter
+    placement: instance
+    activation: explicit-profile
+    implementation: composed
+    hostProfiles: [laptop-32, laptop-64, workstation-128]
+    services: [memorycache-exporter, jobqueue-exporter, secretstore-cache-exporter]
+    rationale: Redis metrics are exported beside each isolated Redis provider and scraped by the shared operations authority.
+
+  - id: shared-observability
+    placement: shared-platform
+    activation: platform-policy
+    implementation: partial
+    hostProfiles: [laptop-64, workstation-128]
+    services: [metrics, logging, tracing, telemetry, logshipper, alertmanager]
+    rationale: A single host observability plane avoids per-instance duplication and requires mandatory instance labels and retention boundaries.
+
+  - id: shared-monitoring
+    placement: shared-platform
+    activation: platform-policy
+    implementation: design-required
+    hostProfiles: [laptop-64, workstation-128]
+    services: [statuswatch, cronwatch, errorcollect]
+    rationale: Availability, dead-man, and error tracking are host operations authorities rather than application-instance dependencies.

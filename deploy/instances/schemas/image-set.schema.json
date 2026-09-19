@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/image-set-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "ImageSet" },
+    "metadata": { "type": "object", "additionalProperties": false, "required": ["id", "channel"], "properties": { "id": { "type": "string" }, "channel": { "enum": ["development", "candidate", "release"] } } },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceRevision", "images"],
+      "properties": {
+        "sourceRevision": { "type": "string", "pattern": "^(working-tree|[a-f0-9]{40})$" },
+        "images": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "reference"],
+            "properties": { "id": { "type": "string" }, "reference": { "type": "string", "minLength": 4 } }
+          }
+        }
+      }
+    }
+  }
+}

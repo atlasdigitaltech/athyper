@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-09-10T04:32:53.090Z",
+  "environment": "dev",
+  "plane": "neon",
+  "migration": "20260910_neon_attachment_knowledge_writer.sql",
+  "sha256": "afb3c11f3bca0323e97340ce2abe17f6038cbe37821bfd24836fc68d203dc915",
+  "applied": false,
+  "runtimeHeadChanged": false
+}

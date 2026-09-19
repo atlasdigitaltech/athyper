@@ -1,0 +1,366 @@
+{
+  "recordedAt": "2026-09-12T06:04:11.231881+00:00",
+  "scope": "DEV/QA only; AWS provisioning and STG/PROD promotion deferred",
+  "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+  "images": [
+    {
+      "id": "postgres",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-postgres@sha256:ab63d06bd46fb70dc46d5e16007b38b19617aee9bb38a9ebe07349f287a5cf77",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "fb852871829d89aa83b438c6b62ed478d2d1f68c191f85e97dfaa7f53d6363c5",
+      "scanCreatedAt": "2026-09-12T13:46:41.097835013+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "redis",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-valkey@sha256:cdb3fb5a25dd016f9a6136ad5c5c85e02a3e1beaf0fe87497399dda5779debe1",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "9ae6edbd816991131d008a5e5c150f22f6c3e36842a74241958461e69c1a5aa4",
+      "scanCreatedAt": "2026-09-12T13:46:51.886181583+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "pgbouncer",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-pgbouncer@sha256:6b399e70894ded09935d725fd9890ba49e9b7482ba0c5cd3bd69e2e4ff8ff2da",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "d5a26da20d9dc7d204680194a2a384f98f7f6fa64b62361be8dcdec90b12f1f5",
+      "scanCreatedAt": "2026-09-12T13:47:00.485066775+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "traefik",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-traefik@sha256:1a56bca771affb30bac34c1ddeaa79653b4967e076d2dc7df7498e2ed156fed3",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "fb7bc086d25b486da6e6860f932f15778423ca20d07f9bbd1bb7f01679a2e5ca",
+      "scanCreatedAt": "2026-09-12T13:47:09.451405358+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "meilisearch",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-meilisearch@sha256:89efe6d69827c2a809baeb4db8ac0b044bac744702623da0a071c62638c05ede",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "a75c62b1635ee63d4e41d76ae6455d932bdc3f0f28a2b090249a87b730334617",
+      "scanCreatedAt": "2026-09-12T13:47:20.885904967+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "gotenberg",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-gotenberg@sha256:6d7d74c8db6e6dee5919334b99dd7582ed1c9b7a986172edf56c8035b4b36208",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "ce70c779f35dbeb440c8a828d46664fba6c63628029fffd21f08bc1b8f70333e",
+      "scanCreatedAt": "2026-09-12T13:47:40.486525505+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "tika",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-tika@sha256:08f4084791b0bab1226f3c68c42ef4970fadb80b66967c9baf6568e331899404",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "82a55264ee4ffc1c9b1e7f6af2f063df7bedde689904bd0c72ce959f6527e73a",
+      "scanCreatedAt": "2026-09-12T13:48:09.833166695+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "seaweedfs",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-seaweedfs@sha256:3a2f6f99a879a527092f2a963e4e39c9edabde104a211879548dbd1f47662104",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "70623e99cf6592b3c5388e3e48b6b9284b5cb7926bffbd59b581cef3b5dff2e0",
+      "scanCreatedAt": "2026-09-12T13:48:18.219917157+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "s3-tools",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-s3-tools@sha256:91224c12cead1d9449a0495709b5c38afd0f264a59fd1fe16513d541bc919624",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "733d2532a3c5b8639ba86c9f6c70da42e0463e5e8942ca73dce0177b9fba9c05",
+      "scanCreatedAt": "2026-09-12T13:50:03.463665655+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "virusscan",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-clamav@sha256:f1058448e622aef0e934c7a9b6c9962e929f040de2d070f3d0d0742a1604101d",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "4b10f300eb1f137648aad10e57185dc510510443dd6cd0dd85d3780d7ac2ded5",
+      "scanCreatedAt": "2026-09-12T13:50:15.057796678+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "searchcore-key-init",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-searchcore-key-init@sha256:6c08b2a1a1f2c823712273ea547858d5f84bc46649c929f54c49cd7939477729",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "398c5b592bd33f53527bafcfefdcd82f1beb881f891ad78f0be5f86d39fe0ad3",
+      "scanCreatedAt": "2026-09-12T13:50:39.739864887+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "iam",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-keycloak@sha256:3925ad2702d2533b867a8f7c91ce817565748237a7c334f0d13a8b9a6391ddfa",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "cd359a3e29ace40446c1791ed6e022396e7bc47351d78577ce412e7f3f851d1e",
+      "scanCreatedAt": "2026-09-12T13:59:34.960670969+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "neon-web",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-neon-web@sha256:216b17d6a6362613922634b54b313dd53621e702731f577290fe95b82610b49e",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "185156ad6ab4ac497993dbcec1e18f47f7f7ec64f3378da89e660d9d54f7c4d5",
+      "scanCreatedAt": "2026-09-12T13:58:23.028846651+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "mesh-web",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-mesh-web@sha256:a1736971112c7c1451fb7327b080deecccfd25213ac1183fe702f1527b01ec33",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "11a8ce71819431e0e13518d464a57d524c861a305d36a9214cbdf8d5ce9d4f0a",
+      "scanCreatedAt": "2026-09-12T13:59:17.275434123+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "studio-web",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-studio-web@sha256:de85742c648317cf6b149755d6d7e8f6ca5cd39576438dfabd3ad0c5915b2260",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "00a5f2c1dbdf2fdb05a4a8d23b4932021af5665da5cb6da0fb8fd933fa9ce09e",
+      "scanCreatedAt": "2026-09-12T14:00:07.638801032+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "runtime-server",
+      "reference": "ghcr.io/atlasdigitaltech/athyper-runtime-server@sha256:19563b098e7a543e8192ae614be4c402011a129413cd028793c2202f15c0b73f",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "4ec6805a3e587efd6a187ce1a1335d920ab002bb1381e87bd00c5f2f233c336f",
+      "scanCreatedAt": "2026-09-12T14:03:02.168676948+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": true
+    },
+    {
+      "id": "nginx",
+      "reference": "nginxinc/nginx-unprivileged:stable-alpine@sha256:442753882674b49ae2c1de83ed67896131c0777f56df5005e356e62bc3f7e7ce",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "41e8144437e2ca86004b34476a392df528987990e148996abd704d6c0b6c6c87",
+      "scanCreatedAt": "2026-09-12T14:03:37.244017535+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": false
+    },
+    {
+      "id": "mailpit",
+      "reference": "axllent/mailpit:v1.31.1@sha256:98b916bd3c8d61f7633a52d3ea2f58d00620cb01ca57ab59edde68c347a95365",
+      "fixableHighCriticalPackageFindings": 0,
+      "scanSha256": "54e7d3a22419324d2f835128b55347f9cdfab8448a642dffdc1fe7722c0055a5",
+      "scanCreatedAt": "2026-09-12T14:03:37.341418015+08:00",
+      "sourceRevision": "f02e10107af4797541f585b3cde89bde13fcbdf7",
+      "builtWithSbomAndProvenance": false
+    }
+  ],
+  "qualification": {
+    "status": "passed",
+    "deployedContainers": 20,
+    "allDeployedDigestsMatch": true,
+    "automatedServices": "passed",
+    "browser": "All four Studio/Neon admin/owner checks passed with Cirrus identity, authenticated contexts and application HTTP 200, and zero browser errors.",
+    "checks": [
+      {
+        "check": "published S3 initializer",
+        "status": "passed",
+        "output": "Storage buckets, policy and sentinel reconciled"
+      },
+      {
+        "check": "published S3 permissions and multipart",
+        "status": "passed",
+        "output": "PASS: application scopes, writer delete denials, presigned URLs, copy, ranges, metadata and multipart uploads"
+      },
+      {
+        "check": "live BullMQ and sessions",
+        "status": "passed",
+        "output": "{\"jobs\":\"passed\",\"sessions\":\"passed\",\"server\":\"8.1.10\"}"
+      },
+      {
+        "check": "compiled S3 adapter and SMTP",
+        "status": "passed",
+        "output": "Actual QA runtime adapter signed upload/read/delete passed\nPatched runtime SMTP delivery to QA Mailpit passed"
+      },
+      {
+        "check": "20 exact published containers healthy",
+        "status": "passed",
+        "output": ""
+      },
+      {
+        "check": "publication provider through trusted TLS",
+        "status": "passed",
+        "result": {
+          "tlsVerified": true,
+          "status": 200
+        }
+      }
+    ],
+    "alerts": {
+      "destination": "redis-alerts@athyper.test",
+      "delivery": "local Mailpit",
+      "firing": "passed",
+      "resolved": "passed"
+    },
+    "originalAuditRegression": [
+      {
+        "plane": "studio",
+        "status": "passed",
+        "recentSystemExecutionCount": 60
+      },
+      {
+        "plane": "neon",
+        "status": "passed",
+        "recentSystemExecutionCount": 19
+      },
+      {
+        "plane": "mesh",
+        "status": "passed",
+        "recentSystemExecutionCount": 63
+      },
+      {
+        "check": "original UUID/regex database error patterns after rollout",
+        "matches": 0
+      }
+    ],
+    "lastBrowserAttempt": {
+      "checkedAt": "2026-09-12T06:22:20.562Z",
+      "results": [
+        {
+          "plane": "studio",
+          "actor": "catl.admin",
+          "status": "passed",
+          "login": "captured authenticated session",
+          "contextsStatus": 200,
+          "applicationPageStatus": 200,
+          "browserErrors": 0
+        },
+        {
+          "plane": "studio",
+          "actor": "catl.owner",
+          "status": "passed",
+          "login": "captured authenticated session",
+          "contextsStatus": 200,
+          "applicationPageStatus": 200,
+          "browserErrors": 0
+        },
+        {
+          "plane": "neon",
+          "actor": "catl.admin",
+          "status": "passed",
+          "login": "captured authenticated session",
+          "contextsStatus": 200,
+          "applicationPageStatus": 200,
+          "browserErrors": 0
+        },
+        {
+          "plane": "neon",
+          "actor": "catl.owner",
+          "status": "passed",
+          "login": "captured authenticated session",
+          "contextsStatus": 200,
+          "applicationPageStatus": 200,
+          "browserErrors": 0
+        }
+      ]
+    },
+    "lastDeploymentCheck": {
+      "checkedAt": "2026-09-12T06:23:20.154952+00:00",
+      "containers": 20,
+      "allPublishedDigestsMatch": true,
+      "allRunning": true,
+      "unhealthy": 0
+    },
+    "browserAttempts": [
+      {
+        "checkedAt": "2026-09-12T06:17:43.092Z",
+        "results": [
+          {
+            "plane": "studio",
+            "actor": "catl.admin",
+            "status": "failed",
+            "error": "page.waitForURL: Timeout 15000ms exceeded."
+          },
+          {
+            "plane": "studio",
+            "actor": "catl.owner",
+            "status": "failed",
+            "error": "page.waitForURL: Timeout 15000ms exceeded."
+          },
+          {
+            "plane": "neon",
+            "actor": "catl.admin",
+            "status": "failed",
+            "error": "page.waitForURL: Timeout 15000ms exceeded."
+          },
+          {
+            "plane": "neon",
+            "actor": "catl.owner",
+            "status": "failed",
+            "error": "page.waitForURL: Timeout 15000ms exceeded."
+          }
+        ]
+      },
+      {
+        "checkedAt": "2026-09-12T06:22:20.562Z",
+        "results": [
+          {
+            "plane": "studio",
+            "actor": "catl.admin",
+            "status": "passed",
+            "login": "captured authenticated session",
+            "contextsStatus": 200,
+            "applicationPageStatus": 200,
+            "browserErrors": 0
+          },
+          {
+            "plane": "studio",
+            "actor": "catl.owner",
+            "status": "passed",
+            "login": "captured authenticated session",
+            "contextsStatus": 200,
+            "applicationPageStatus": 200,
+            "browserErrors": 0
+          },
+          {
+            "plane": "neon",
+            "actor": "catl.admin",
+            "status": "passed",
+            "login": "captured authenticated session",
+            "contextsStatus": 200,
+            "applicationPageStatus": 200,
+            "browserErrors": 0
+          },
+          {
+            "plane": "neon",
+            "actor": "catl.owner",
+            "status": "passed",
+            "login": "captured authenticated session",
+            "contextsStatus": 200,
+            "applicationPageStatus": 200,
+            "browserErrors": 0
+          }
+        ]
+      }
+    ],
+    "qualifiedAt": "2026-09-12T06:23:20.154952+00:00",
+    "scope": "Valkey and complete immutable infrastructure ImageSet QA qualification",
+    "qualificationReceiptSha256": "a1a8259cd6ce155cc3ea65c8471b2314b9d10ac764f83f5b35b3375c60f85cba",
+    "productionApproved": false
+  },
+  "attestations": {
+    "builtImagesVerified": 16,
+    "formats": ["SPDX", "SLSA"]
+  }
+}

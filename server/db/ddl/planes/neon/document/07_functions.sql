@@ -59,7 +59,8 @@ BEGIN
        OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
        OR NEW.entity_type IS DISTINCT FROM OLD.entity_type
        OR NEW.entity_id IS DISTINCT FROM OLD.entity_id
-       OR NEW.attachment_id IS DISTINCT FROM OLD.attachment_id
+       OR NEW.attachment_series_id IS DISTINCT FROM OLD.attachment_series_id
+       OR NEW.pinned_attachment_id IS DISTINCT FROM OLD.pinned_attachment_id
        OR NEW.link_kind IS DISTINCT FROM OLD.link_kind
        OR NEW.created_at IS DISTINCT FROM OLD.created_at
        OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
@@ -493,6 +494,7 @@ BEGIN
         NEW.id IS DISTINCT FROM OLD.id
         OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
         OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.representation_evidence_id IS DISTINCT FROM OLD.representation_evidence_id
         OR NEW.payment_number IS DISTINCT FROM OLD.payment_number
         OR NEW.payment_type IS DISTINCT FROM OLD.payment_type
         OR NEW.payment_direction IS DISTINCT FROM OLD.payment_direction
@@ -621,6 +623,75 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION document.fn_address_snapshot(p_tenant_id uuid, p_address_id uuid)
+RETURNS jsonb
+LANGUAGE sql STABLE
+SET search_path = pg_catalog, document, master
+AS $$
+    SELECT CASE WHEN a.id IS NULL THEN NULL::jsonb ELSE jsonb_strip_nulls(jsonb_build_object(
+        'address_id', a.id, 'address_kind', a.address_kind,
+        'line1', a.line1, 'line2', a.line2, 'line3', a.line3,
+        'dependent_locality', a.dependent_locality, 'city', a.city,
+        'state_region_code', a.state_region_code, 'region', a.region,
+        'postal_code', a.postal_code, 'country_code', a.country_code,
+        'timezone_code', a.timezone_code, 'formatted_address', a.formatted_address,
+        'normalized_hash', a.normalized_hash, 'normalization_version', a.normalization_version
+    )) END
+      FROM master.address a
+     WHERE a.tenant_id = p_tenant_id AND a.id = p_address_id;
+$$;
+
+CREATE OR REPLACE FUNCTION document.fn_build_address_snapshot(
+    p_tenant_id uuid, p_ship_to_address_id uuid, p_bill_to_address_id uuid,
+    p_bill_from_address_id uuid, p_ship_from_address_id uuid, p_remit_to_address_id uuid
+)
+RETURNS jsonb
+LANGUAGE sql STABLE
+SET search_path = pg_catalog, document, master
+AS $$
+    SELECT jsonb_build_object(
+        'ship_to', COALESCE(document.fn_address_snapshot(p_tenant_id, p_ship_to_address_id), '{}'::jsonb),
+        'bill_to', COALESCE(document.fn_address_snapshot(p_tenant_id, p_bill_to_address_id), '{}'::jsonb),
+        'bill_from', COALESCE(document.fn_address_snapshot(p_tenant_id, p_bill_from_address_id), '{}'::jsonb),
+        'ship_from', COALESCE(document.fn_address_snapshot(p_tenant_id, p_ship_from_address_id), '{}'::jsonb),
+        'remit_to', COALESCE(document.fn_address_snapshot(p_tenant_id, p_remit_to_address_id), '{}'::jsonb)
+    );
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_capture_line_address_snapshot()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+DECLARE v_snapshot jsonb; v_actor uuid;
+BEGIN
+    IF TG_OP = 'UPDATE'
+       AND NEW.ship_to_address_id IS NOT DISTINCT FROM OLD.ship_to_address_id
+       AND NEW.bill_to_address_id IS NOT DISTINCT FROM OLD.bill_to_address_id
+       AND NEW.bill_from_address_id IS NOT DISTINCT FROM OLD.bill_from_address_id
+       AND NEW.ship_from_address_id IS NOT DISTINCT FROM OLD.ship_from_address_id
+       AND NEW.remit_to_address_id IS NOT DISTINCT FROM OLD.remit_to_address_id
+       AND (NEW.address_snapshot IS DISTINCT FROM OLD.address_snapshot OR NEW.address_snapshot_hash IS DISTINCT FROM OLD.address_snapshot_hash OR NEW.address_snapshot_captured_at IS DISTINCT FROM OLD.address_snapshot_captured_at OR NEW.address_snapshot_captured_by IS DISTINCT FROM OLD.address_snapshot_captured_by)
+    THEN RAISE EXCEPTION 'Transaction address snapshot is immutable; change the source address reference in a draft document' USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP = 'INSERT'
+       OR NEW.ship_to_address_id IS DISTINCT FROM OLD.ship_to_address_id
+       OR NEW.bill_to_address_id IS DISTINCT FROM OLD.bill_to_address_id
+       OR NEW.bill_from_address_id IS DISTINCT FROM OLD.bill_from_address_id
+       OR NEW.ship_from_address_id IS DISTINCT FROM OLD.ship_from_address_id
+       OR NEW.remit_to_address_id IS DISTINCT FROM OLD.remit_to_address_id
+    THEN
+        v_snapshot := document.fn_build_address_snapshot(NEW.tenant_id, NEW.ship_to_address_id, NEW.bill_to_address_id, NEW.bill_from_address_id, NEW.ship_from_address_id, NEW.remit_to_address_id);
+        v_actor := COALESCE(NULLIF(current_setting('app.current_principal_id', true), '')::uuid, NEW.created_by);
+        NEW.address_snapshot := v_snapshot;
+        NEW.address_snapshot_hash := encode(digest(v_snapshot::text, 'sha256'), 'hex')::char(64);
+        NEW.address_snapshot_captured_at := clock_timestamp();
+        NEW.address_snapshot_captured_by := v_actor;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION document.trg_validate_purchase_invoice_line()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -628,6 +699,8 @@ SET search_path = pg_catalog, document
 AS $$
 DECLARE
     v_parent document.purchase_invoice%ROWTYPE;
+    v_service_line document.service_sheet_line%ROWTYPE;
+    v_service_sheet document.service_sheet%ROWTYPE;
 BEGIN
     IF TG_OP = 'DELETE' THEN
         SELECT * INTO v_parent
@@ -672,6 +745,33 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Invoice commitment line must belong to the header commitment'
             USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.source_entity_type IN ('service_sheet','external_service_entry','document.external_service_entry') THEN
+        RAISE EXCEPTION 'Legacy external service-entry matching is disabled; bind the invoice to document.service_sheet and service_sheet_line'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF NEW.source_entity_type = 'document.service_sheet' THEN
+        IF NEW.source_line_id IS NULL THEN
+            RAISE EXCEPTION 'A service-sheet invoice source requires source_line_id'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        SELECT * INTO v_service_line
+          FROM document.service_sheet_line
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.source_line_id;
+        SELECT * INTO v_service_sheet
+          FROM document.service_sheet
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.source_entity_id;
+        IF v_service_line.id IS NULL OR v_service_sheet.id IS NULL
+           OR v_service_line.service_sheet_id <> v_service_sheet.id
+           OR v_service_sheet.status NOT IN ('accepted','pending_approval','approved','posted')
+           OR v_service_sheet.company_code_id <> v_parent.company_code_id
+           OR v_service_sheet.supplier_id <> v_parent.supplier_id
+           OR v_service_sheet.commitment_id IS DISTINCT FROM v_parent.commitment_id
+           OR v_service_line.currency_code <> NEW.currency_code
+           OR (NEW.commitment_line_id IS NOT NULL AND v_service_line.commitment_line_id <> NEW.commitment_line_id) THEN
+            RAISE EXCEPTION 'Invoice service-sheet source must identify an accepted canonical line for the same company, supplier, commitment and currency'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
     END IF;
     RETURN NEW;
 END;
@@ -2873,6 +2973,152 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION document.fn_workforce_request_payload_has_restricted_key(p_value jsonb)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_key text;
+    v_child jsonb;
+    v_normalized text;
+BEGIN
+    IF jsonb_typeof(p_value) = 'object' THEN
+        FOR v_key, v_child IN SELECT key, value FROM jsonb_each(p_value)
+        LOOP
+            v_normalized := regexp_replace(lower(v_key), '[^a-z0-9]', '', 'g');
+            IF v_normalized IN (
+                'firstname', 'middlename', 'lastname', 'preferredname', 'displayname',
+                'email', 'emailaddress', 'phone', 'phonenumber', 'dateofbirth',
+                'gender', 'maritalstatus', 'nationality', 'nationalid',
+                'nationalidentifier', 'taxidentifier', 'passport', 'passportnumber',
+                'bankaccount', 'iban', 'compensation', 'salary'
+            ) THEN
+                RETURN true;
+            END IF;
+            IF document.fn_workforce_request_payload_has_restricted_key(v_child) THEN
+                RETURN true;
+            END IF;
+        END LOOP;
+    ELSIF jsonb_typeof(p_value) = 'array' THEN
+        FOR v_child IN SELECT value FROM jsonb_array_elements(p_value)
+        LOOP
+            IF document.fn_workforce_request_payload_has_restricted_key(v_child) THEN
+                RETURN true;
+            END IF;
+        END LOOP;
+    END IF;
+    RETURN false;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_workforce_request()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_valid_transition boolean := false;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Workforce requests cannot be deleted; cancel or supersede the request'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+
+    IF document.fn_workforce_request_payload_has_restricted_key(NEW.requested_changes) THEN
+        RAISE EXCEPTION 'Restricted person values belong in protected profile content, not workforce request JSON'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.status <> 'draft'
+           OR NEW.workflow_request_id IS NOT NULL
+           OR NEW.decision_fingerprint IS NOT NULL
+           OR NEW.application_fingerprint IS NOT NULL
+           OR num_nonnulls(
+                NEW.materialized_person_id, NEW.materialized_employee_id,
+                NEW.materialized_employment_id, NEW.materialized_work_assignment_id,
+                NEW.materialized_principal_id, NEW.materialized_onboarding_case_id,
+                NEW.materialization_snapshot_id
+           ) > 0
+           OR NEW.submitted_at IS NOT NULL OR NEW.submitted_by IS NOT NULL
+           OR NEW.approved_at IS NOT NULL OR NEW.approved_by IS NOT NULL
+           OR NEW.applied_at IS NOT NULL OR NEW.applied_by IS NOT NULL THEN
+            RAISE EXCEPTION 'New workforce requests must start as evidence-free drafts'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF (NEW.id, NEW.tenant_id, NEW.request_no, NEW.request_kind, NEW.source_kind,
+        NEW.target_person_id, NEW.target_employee_id, NEW.target_employment_id,
+        NEW.idempotency_key, NEW.created_at, NEW.created_by)
+       IS DISTINCT FROM
+       (OLD.id, OLD.tenant_id, OLD.request_no, OLD.request_kind, OLD.source_kind,
+        OLD.target_person_id, OLD.target_employee_id, OLD.target_employment_id,
+        OLD.idempotency_key, OLD.created_at, OLD.created_by) THEN
+        RAISE EXCEPTION 'Workforce request identity, target, kind, and creation evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.status IN ('applied','rejected','cancelled','superseded') AND NEW IS DISTINCT FROM OLD THEN
+        RAISE EXCEPTION 'Final workforce request evidence is immutable'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    IF OLD.status NOT IN ('draft','validating','validation_failed','returned') AND (
+        NEW.legal_entity_id IS DISTINCT FROM OLD.legal_entity_id
+        OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.org_unit_id IS DISTINCT FROM OLD.org_unit_id
+        OR NEW.position_id IS DISTINCT FROM OLD.position_id
+        OR NEW.protected_profile_content_item_id IS DISTINCT FROM OLD.protected_profile_content_item_id
+        OR NEW.payload_schema_code IS DISTINCT FROM OLD.payload_schema_code
+        OR NEW.payload_schema_version IS DISTINCT FROM OLD.payload_schema_version
+        OR NEW.payload_schema_hash IS DISTINCT FROM OLD.payload_schema_hash
+        OR NEW.requested_changes IS DISTINCT FROM OLD.requested_changes
+        OR NEW.workflow_request_id IS DISTINCT FROM OLD.workflow_request_id
+        OR NEW.decision_fingerprint IS DISTINCT FROM OLD.decision_fingerprint
+    ) THEN
+        RAISE EXCEPTION 'Submitted workforce request scope, payload, workflow, and decision evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.status IS DISTINCT FROM NEW.status THEN
+        v_valid_transition := CASE OLD.status
+            WHEN 'draft' THEN NEW.status IN ('validating','cancelled')
+            WHEN 'validating' THEN NEW.status IN ('draft','validation_failed','pending_approval','cancelled')
+            WHEN 'validation_failed' THEN NEW.status IN ('draft','validating','cancelled')
+            WHEN 'pending_approval' THEN NEW.status IN ('returned','approved','rejected','cancelled')
+            WHEN 'returned' THEN NEW.status IN ('validating','cancelled','superseded')
+            WHEN 'approved' THEN NEW.status = 'applying'
+            WHEN 'applying' THEN NEW.status IN ('applied','failed')
+            WHEN 'failed' THEN NEW.status IN ('applying','superseded')
+            ELSE false
+        END;
+        IF NOT v_valid_transition THEN
+            RAISE EXCEPTION 'Invalid workforce request transition: % -> %', OLD.status, NEW.status
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+
+    IF NEW.status IN ('pending_approval','returned','approved','rejected','applying','applied','failed')
+       AND (NEW.submitted_at IS NULL OR NEW.submitted_by IS NULL
+            OR NEW.workflow_request_id IS NULL OR NEW.decision_fingerprint IS NULL) THEN
+        RAISE EXCEPTION 'Reviewed workforce request requires submission, workflow, and fingerprint evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.status IN ('approved','applying','applied','failed')
+       AND (NEW.approved_at IS NULL OR NEW.approved_by IS NULL) THEN
+        RAISE EXCEPTION 'Approved workforce request requires approval evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    NEW.row_version := OLD.row_version + 1;
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION document.trg_validate_compensation_change()
 RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
 DECLARE v_group master.pay_group%ROWTYPE; v_structure master.pay_structure%ROWTYPE; v_current master.compensation_assignment%ROWTYPE; v_approved master.compensation_assignment%ROWTYPE;
@@ -2894,6 +3140,23 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION document.fn_workforce_request_approvers(p_tenant_id uuid,p_legal_entity_id uuid,p_company_code_id uuid,p_excluded_principal_id uuid)
+RETURNS TABLE(principal_id uuid) LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path=pg_catalog,document,authz,master,shared AS $$
+ SELECT DISTINCT member.principal_id FROM authz.group_member member
+ JOIN master.principal principal ON principal.tenant_id=member.tenant_id AND principal.id=member.principal_id AND principal.status='active'
+ JOIN authz.plane_membership membership ON membership.tenant_id=member.tenant_id AND membership.principal_id=member.principal_id AND membership.status='active' AND membership.effective_from<=now() AND(membership.effective_until IS NULL OR membership.effective_until>now())
+ JOIN authz.group_role grant_row ON grant_row.tenant_id=member.tenant_id AND grant_row.group_id=member.group_id AND grant_row.status='active' AND grant_row.effective_from<=now() AND(grant_row.effective_until IS NULL OR grant_row.effective_until>now())
+ JOIN authz.role role_row ON role_row.tenant_id=grant_row.tenant_id AND role_row.id=grant_row.role_id AND role_row.status='active'
+ JOIN authz.role_permission rp ON rp.tenant_id=role_row.tenant_id AND rp.role_id=role_row.id
+ JOIN authz.permission permission ON permission.id=rp.permission_id AND permission.canonical_code='neon.workforce.request.decide' AND permission.status='published'
+ JOIN authz.scope_target target ON target.tenant_id=grant_row.tenant_id AND target.id=grant_row.scope_target_id AND target.status='active'
+ WHERE p_tenant_id=shared.current_tenant_id() AND member.tenant_id=p_tenant_id AND member.status='active' AND member.effective_from<=now() AND(member.effective_until IS NULL OR member.effective_until>now()) AND member.principal_id IS DISTINCT FROM p_excluded_principal_id
+ AND((target.scope_kind='tenant' AND target.target_id=p_tenant_id) OR(target.scope_kind='legal_entity' AND target.target_id=p_legal_entity_id) OR(p_company_code_id IS NOT NULL AND target.scope_kind='company_code' AND target.target_id=p_company_code_id))
+ ORDER BY member.principal_id LIMIT 200
+$$;
+REVOKE ALL ON FUNCTION document.fn_workforce_request_approvers(uuid,uuid,uuid,uuid) FROM PUBLIC;
 
 CREATE OR REPLACE FUNCTION document.trg_validate_tax_declaration()
 RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
@@ -3674,3 +3937,2032 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION document.fn_business_partner_request_approvers(
+    p_tenant_id uuid,
+    p_operating_organization_id uuid,
+    p_company_code_id uuid,
+    p_excluded_principal_id uuid
+)
+RETURNS TABLE(principal_id uuid)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, document, authz, master, shared
+AS $$
+BEGIN
+    IF p_tenant_id IS DISTINCT FROM shared.current_tenant_id()
+       OR p_operating_organization_id IS NULL
+       OR NOT EXISTS (SELECT 1 FROM master.operating_organization organization WHERE organization.tenant_id=p_tenant_id AND organization.id=p_operating_organization_id)
+       OR (p_company_code_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.company_code company WHERE company.tenant_id=p_tenant_id AND company.id=p_company_code_id)) THEN
+        RAISE EXCEPTION 'Business Partner approver scope is invalid' USING ERRCODE='insufficient_privilege';
+    END IF;
+    RETURN QUERY
+    SELECT DISTINCT member.principal_id
+      FROM authz.group_member member
+      JOIN master.principal principal ON principal.tenant_id=member.tenant_id AND principal.id=member.principal_id AND principal.status='active'
+      JOIN authz.plane_membership membership ON membership.tenant_id=member.tenant_id AND membership.principal_id=member.principal_id AND membership.status='active' AND membership.effective_from<=now() AND (membership.effective_until IS NULL OR membership.effective_until>now())
+      JOIN authz.group_role grant_row ON grant_row.tenant_id=member.tenant_id AND grant_row.group_id=member.group_id AND grant_row.status='active' AND grant_row.effective_from<=now() AND (grant_row.effective_until IS NULL OR grant_row.effective_until>now())
+      JOIN authz.role role_row ON role_row.tenant_id=grant_row.tenant_id AND role_row.id=grant_row.role_id AND role_row.status='active'
+      JOIN authz.role_permission role_permission ON role_permission.tenant_id=role_row.tenant_id AND role_permission.role_id=role_row.id
+      JOIN authz.permission permission ON permission.id=role_permission.permission_id AND permission.canonical_code='neon.relationship.entity_case.decide' AND permission.status='published'
+      JOIN authz.scope_target target ON target.tenant_id=grant_row.tenant_id AND target.id=grant_row.scope_target_id AND target.status='active'
+     WHERE member.tenant_id=p_tenant_id AND member.status='active' AND member.effective_from<=now() AND (member.effective_until IS NULL OR member.effective_until>now())
+       AND member.principal_id IS DISTINCT FROM p_excluded_principal_id
+       AND ((target.scope_kind='tenant' AND target.target_id=p_tenant_id) OR (target.scope_kind='operating_organization' AND target.target_id=p_operating_organization_id) OR (p_company_code_id IS NOT NULL AND target.scope_kind='company_code' AND target.target_id=p_company_code_id))
+       AND NOT EXISTS (SELECT 1 FROM authz.deny_rule deny WHERE deny.tenant_id=member.tenant_id AND deny.permission_id=permission.id AND deny.status='active' AND deny.effective_from<=now() AND (deny.effective_until IS NULL OR deny.effective_until>now()) AND (deny.subject_kind='tenant' OR (deny.subject_kind='principal' AND deny.principal_id=member.principal_id) OR (deny.subject_kind='group' AND deny.group_id=member.group_id)))
+     ORDER BY member.principal_id LIMIT 200;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION document.fn_business_partner_payload_has_restricted_key(
+    p_value jsonb
+)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_key text;
+    v_child jsonb;
+    v_normalized text;
+BEGIN
+    IF jsonb_typeof(p_value) = 'object' THEN
+        FOR v_key, v_child IN SELECT key, value FROM jsonb_each(p_value)
+        LOOP
+            v_normalized := regexp_replace(lower(v_key), '[^a-z0-9]', '', 'g');
+            IF v_normalized IN (
+                'address', 'addresses', 'contact', 'contacts',
+                'contactperson', 'contactpersons', 'contactchannel', 'contactchannels',
+                'identifier', 'identifiers', 'taxregistration', 'taxregistrations',
+                'classification', 'classifications', 'certification', 'certifications',
+                'taxidentifier', 'taxid', 'nationalidentifier', 'nationalid'
+            ) THEN
+                RETURN true;
+            END IF;
+
+            IF document.fn_business_partner_payload_has_restricted_key(v_child) THEN
+                RETURN true;
+            END IF;
+        END LOOP;
+    ELSIF jsonb_typeof(p_value) = 'array' THEN
+        FOR v_child IN SELECT value FROM jsonb_array_elements(p_value)
+        LOOP
+            IF document.fn_business_partner_payload_has_restricted_key(v_child) THEN
+                RETURN true;
+            END IF;
+        END LOOP;
+    END IF;
+
+    RETURN false;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request_payload_boundary()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND NEW.extension_mode IS DISTINCT FROM OLD.extension_mode THEN
+        RAISE EXCEPTION 'Business Partner request extension mode is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF TG_OP = 'UPDATE'
+       AND OLD.status NOT IN ('draft', 'returned', 'validation_failed')
+       AND (
+           NEW.extension_fingerprint IS DISTINCT FROM OLD.extension_fingerprint
+           OR NEW.extension_counts IS DISTINCT FROM OLD.extension_counts
+       ) THEN
+        RAISE EXCEPTION 'Reviewed Business Partner request extension summary is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF document.fn_business_partner_payload_has_restricted_key(NEW.proposed_payload) THEN
+        RAISE EXCEPTION 'Typed identity extensions are not permitted in proposed_payload'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request_extension()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_tenant uuid;
+    v_request uuid;
+BEGIN
+    IF TG_TABLE_NAME = 'business_partner_request_materialization_item' THEN
+        IF TG_OP <> 'INSERT' THEN
+            RAISE EXCEPTION 'Business Partner request materialization evidence is immutable'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    v_tenant := CASE WHEN TG_OP = 'DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END;
+    v_request := CASE WHEN TG_OP = 'DELETE' THEN OLD.request_id ELSE NEW.request_id END;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM document.business_partner_request request
+        WHERE request.tenant_id = v_tenant
+          AND request.id = v_request
+          AND request.extension_mode = 'typed_v1'
+          AND request.status IN ('draft', 'returned', 'validation_failed')
+          AND (TG_OP = 'DELETE' OR request.source_kind = NEW.source_kind)
+    ) THEN
+        RAISE EXCEPTION 'Typed request extensions are editable only before submission'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_valid_transition boolean := false;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Business Partner requests cannot be deleted; cancel or supersede the request'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.status <> 'draft'
+           OR NEW.workflow_request_id IS NOT NULL
+           OR NEW.materialized_business_partner_id IS NOT NULL
+           OR NEW.materialized_supplier_id IS NOT NULL
+           OR NEW.materialized_customer_id IS NOT NULL
+           OR NEW.materialized_person_id IS NOT NULL
+           OR NEW.materialized_employee_id IS NOT NULL
+           OR NEW.materialized_employment_id IS NOT NULL
+           OR NEW.materialized_work_assignment_id IS NOT NULL
+           OR NEW.materialized_principal_id IS NOT NULL
+           OR NEW.materialized_supplier_company_profile_id IS NOT NULL
+           OR NEW.materialized_customer_company_profile_id IS NOT NULL
+           OR NEW.materialized_operating_organization_assignment_id IS NOT NULL
+           OR NEW.materialization_snapshot_id IS NOT NULL
+           OR NEW.application_idempotency_key IS NOT NULL
+           OR NEW.application_fingerprint IS NOT NULL
+           OR NEW.submitted_at IS NOT NULL OR NEW.submitted_by IS NOT NULL
+           OR NEW.approved_at IS NOT NULL OR NEW.approved_by IS NOT NULL
+           OR NEW.applied_at IS NOT NULL OR NEW.applied_by IS NOT NULL THEN
+            RAISE EXCEPTION 'New Business Partner requests must start as evidence-free drafts'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.id IS DISTINCT FROM OLD.id
+       OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.request_no IS DISTINCT FROM OLD.request_no
+       OR NEW.request_kind IS DISTINCT FROM OLD.request_kind
+       OR NEW.source_kind IS DISTINCT FROM OLD.source_kind
+       OR NEW.registration_mode IS DISTINCT FROM OLD.registration_mode
+       OR NEW.invitation_id IS DISTINCT FROM OLD.invitation_id
+       OR NEW.applicant_principal_id IS DISTINCT FROM OLD.applicant_principal_id
+       OR NEW.represented_party_name IS DISTINCT FROM OLD.represented_party_name
+       OR NEW.target_business_partner_id IS DISTINCT FROM OLD.target_business_partner_id
+       OR NEW.source_system_code IS DISTINCT FROM OLD.source_system_code
+       OR NEW.source_entity_code IS DISTINCT FROM OLD.source_entity_code
+       OR NEW.source_entity_id IS DISTINCT FROM OLD.source_entity_id
+       OR NEW.source_entity_code_value IS DISTINCT FROM OLD.source_entity_code_value
+       OR NEW.source_projection_id IS DISTINCT FROM OLD.source_projection_id
+       OR NEW.source_version IS DISTINCT FROM OLD.source_version
+       OR NEW.source_payload_hash IS DISTINCT FROM OLD.source_payload_hash
+       OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at
+       OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
+        RAISE EXCEPTION 'Business Partner request identity, target, kind, and creation evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.workflow_request_id IS NOT NULL
+       AND NEW.workflow_request_id IS DISTINCT FROM OLD.workflow_request_id THEN
+        RAISE EXCEPTION 'Business Partner request workflow binding is immutable once assigned'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.approved_at IS NOT NULL AND (
+        NEW.approved_at IS DISTINCT FROM OLD.approved_at
+        OR NEW.approved_by IS DISTINCT FROM OLD.approved_by
+    ) THEN
+        RAISE EXCEPTION 'Business Partner request approval evidence is immutable once recorded'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.applied_at IS NOT NULL AND (
+        NEW.applied_at IS DISTINCT FROM OLD.applied_at
+        OR NEW.applied_by IS DISTINCT FROM OLD.applied_by
+        OR NEW.materialized_business_partner_id IS DISTINCT FROM OLD.materialized_business_partner_id
+        OR NEW.materialized_supplier_id IS DISTINCT FROM OLD.materialized_supplier_id
+        OR NEW.materialized_customer_id IS DISTINCT FROM OLD.materialized_customer_id
+        OR NEW.materialized_person_id IS DISTINCT FROM OLD.materialized_person_id
+        OR NEW.materialized_employee_id IS DISTINCT FROM OLD.materialized_employee_id
+        OR NEW.materialized_employment_id IS DISTINCT FROM OLD.materialized_employment_id
+        OR NEW.materialized_work_assignment_id IS DISTINCT FROM OLD.materialized_work_assignment_id
+        OR NEW.materialized_principal_id IS DISTINCT FROM OLD.materialized_principal_id
+        OR NEW.materialized_supplier_company_profile_id IS DISTINCT FROM OLD.materialized_supplier_company_profile_id
+        OR NEW.materialized_customer_company_profile_id IS DISTINCT FROM OLD.materialized_customer_company_profile_id
+        OR NEW.materialized_operating_organization_assignment_id IS DISTINCT FROM OLD.materialized_operating_organization_assignment_id
+        OR NEW.materialization_snapshot_id IS DISTINCT FROM OLD.materialization_snapshot_id
+        OR NEW.application_idempotency_key IS DISTINCT FROM OLD.application_idempotency_key
+        OR NEW.application_fingerprint IS DISTINCT FROM OLD.application_fingerprint
+    ) THEN
+        RAISE EXCEPTION 'Business Partner request application evidence is immutable once recorded'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.status NOT IN ('draft', 'validating', 'validation_failed', 'returned') AND (
+        NEW.base_record_version IS DISTINCT FROM OLD.base_record_version
+        OR NEW.base_snapshot_id IS DISTINCT FROM OLD.base_snapshot_id
+        OR NEW.base_payload_hash IS DISTINCT FROM OLD.base_payload_hash
+        OR NEW.requested_role IS DISTINCT FROM OLD.requested_role
+        OR NEW.operating_organization_id IS DISTINCT FROM OLD.operating_organization_id
+        OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.legal_entity_id IS DISTINCT FROM OLD.legal_entity_id
+        OR NEW.org_unit_id IS DISTINCT FROM OLD.org_unit_id
+        OR NEW.position_id IS DISTINCT FROM OLD.position_id
+        OR NEW.payload_schema_code IS DISTINCT FROM OLD.payload_schema_code
+        OR NEW.payload_schema_version IS DISTINCT FROM OLD.payload_schema_version
+        OR NEW.payload_schema_hash IS DISTINCT FROM OLD.payload_schema_hash
+        OR NEW.proposed_payload IS DISTINCT FROM OLD.proposed_payload
+        OR NEW.validation_summary IS DISTINCT FROM OLD.validation_summary
+        OR NEW.duplicate_summary IS DISTINCT FROM OLD.duplicate_summary
+        OR NEW.change_impact IS DISTINCT FROM OLD.change_impact
+        OR NEW.decision_fingerprint IS DISTINCT FROM OLD.decision_fingerprint
+    ) THEN
+        RAISE EXCEPTION 'Submitted Business Partner request review coordinates and payload are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.status = OLD.status THEN
+        RETURN NEW;
+    END IF;
+
+    v_valid_transition := CASE OLD.status
+        WHEN 'draft' THEN NEW.status IN ('validating', 'cancelled')
+        WHEN 'validating' THEN NEW.status IN ('draft', 'validation_failed', 'pending_approval', 'cancelled')
+        WHEN 'validation_failed' THEN NEW.status IN ('draft', 'validating', 'cancelled')
+        WHEN 'pending_approval' THEN NEW.status IN ('returned', 'approved', 'rejected', 'cancelled')
+        WHEN 'returned' THEN NEW.status IN ('validating', 'cancelled', 'superseded')
+        WHEN 'approved' THEN NEW.status = 'applying'
+        WHEN 'applying' THEN NEW.status IN ('applied', 'failed')
+        WHEN 'failed' THEN NEW.status IN ('applying', 'superseded')
+        ELSE false
+    END;
+
+    IF NOT v_valid_transition THEN
+        RAISE EXCEPTION 'Invalid Business Partner request transition: % -> %', OLD.status, NEW.status
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.status IN (
+        'pending_approval', 'returned', 'approved', 'rejected',
+        'applying', 'applied', 'failed'
+    ) AND (
+        NEW.submitted_at IS NULL
+        OR NEW.submitted_by IS NULL
+        OR NEW.workflow_request_id IS NULL
+        OR NEW.decision_fingerprint IS NULL
+    ) THEN
+        RAISE EXCEPTION 'Submitted Business Partner request requires submission, workflow, and fingerprint evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.status IN ('pending_approval', 'returned', 'approved', 'rejected', 'applying', 'applied', 'failed')
+       AND NEW.registration_mode = 'on_behalf'
+       AND NEW.representation_evidence_id IS NULL THEN
+        RAISE EXCEPTION 'Submitted on-behalf registration requires representation evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.status IN ('approved', 'applying', 'applied', 'failed')
+       AND (NEW.approved_at IS NULL OR NEW.approved_by IS NULL) THEN
+        RAISE EXCEPTION 'Approved Business Partner request requires approval evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.status = 'applied' AND (
+        NEW.applied_at IS NULL
+        OR NEW.applied_by IS NULL
+        OR NEW.materialized_business_partner_id IS NULL
+        OR NEW.materialization_snapshot_id IS NULL
+        OR NEW.application_idempotency_key IS NULL
+        OR NEW.application_fingerprint IS NULL
+        OR NEW.application_result_kind IS NULL
+    ) THEN
+        RAISE EXCEPTION 'Applied Business Partner request requires application evidence and materialized partner'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request_registration()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND (
+        NEW.registration_mode, NEW.invitation_id, NEW.applicant_principal_id, NEW.represented_party_name
+    ) IS DISTINCT FROM (
+        OLD.registration_mode, OLD.invitation_id, OLD.applicant_principal_id, OLD.represented_party_name
+    ) THEN
+        RAISE EXCEPTION 'Business Partner registration channel identity is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND OLD.status NOT IN ('draft', 'validating', 'validation_failed', 'returned')
+       AND NEW.representation_evidence_id IS DISTINCT FROM OLD.representation_evidence_id THEN
+        RAISE EXCEPTION 'Submitted Business Partner representation evidence is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.status IN ('pending_approval', 'returned', 'approved', 'rejected', 'applying', 'applied', 'failed')
+       AND NEW.registration_mode = 'on_behalf' AND NEW.representation_evidence_id IS NULL THEN
+        RAISE EXCEPTION 'Submitted on-behalf registration requires representation evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.status IN ('pending_approval', 'returned', 'approved', 'rejected', 'applying', 'applied', 'failed')
+       AND NEW.registration_mode = 'self_service' AND NOT EXISTS (
+           SELECT 1 FROM document.business_partner_invitation invitation
+           WHERE invitation.tenant_id = NEW.tenant_id AND invitation.id = NEW.invitation_id
+             AND invitation.status = 'accepted'
+             AND invitation.journey_kind IN ('supplier','customer','candidate')
+             AND invitation.requested_role = NEW.requested_role
+             AND invitation.business_partner_request_id = NEW.id
+             AND invitation.applicant_principal_id = NEW.applicant_principal_id
+       ) THEN
+        RAISE EXCEPTION 'Submitted self-service registration requires its accepted invitation binding'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_invitation() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Business Partner invitations cannot be deleted' USING ERRCODE='check_violation'; END IF;
+ IF (NEW.id,NEW.tenant_id,NEW.invitation_no,NEW.journey_kind,NEW.registration_mode,NEW.requested_role,NEW.scope_kind,NEW.requested_operating_organization_id,NEW.company_code_id,NEW.legal_entity_id,NEW.org_unit_id,NEW.position_id,NEW.intended_party_name,NEW.invitee_email_hash,NEW.idempotency_key,NEW.created_at,NEW.created_by) IS DISTINCT FROM (OLD.id,OLD.tenant_id,OLD.invitation_no,OLD.journey_kind,OLD.registration_mode,OLD.requested_role,OLD.scope_kind,OLD.requested_operating_organization_id,OLD.company_code_id,OLD.legal_entity_id,OLD.org_unit_id,OLD.position_id,OLD.intended_party_name,OLD.invitee_email_hash,OLD.idempotency_key,OLD.created_at,OLD.created_by) THEN RAISE EXCEPTION 'Invitation journey, authority, scope, recipient, and creation evidence are immutable' USING ERRCODE='check_violation'; END IF;
+ IF OLD.status<>'pending' AND NOT (
+   OLD.status='accepted' AND NEW.status='accepted'
+   AND OLD.applicant_access_revoked_at IS NULL
+   AND NEW.applicant_access_revoked_at IS NOT NULL
+   AND NEW.applicant_access_revoked_by IS NOT NULL
+   AND (to_jsonb(NEW)-ARRAY['applicant_access_revoked_at','applicant_access_revoked_by','row_version','updated_at','updated_by'])
+       = (to_jsonb(OLD)-ARRAY['applicant_access_revoked_at','applicant_access_revoked_by','row_version','updated_at','updated_by'])
+ ) THEN RAISE EXCEPTION 'Terminal Business Partner invitations are immutable except for one applicant-access revocation' USING ERRCODE='check_violation'; END IF;
+ IF NEW.status='accepted' AND NEW.expires_at<=statement_timestamp() THEN RAISE EXCEPTION 'An expired invitation cannot be accepted' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+ IF NEW.status='pending' AND (NEW.token_hash=OLD.token_hash OR NEW.resend_count<>OLD.resend_count+1) AND (NEW.token_hash,NEW.expires_at,NEW.resend_count) IS DISTINCT FROM (OLD.token_hash,OLD.expires_at,OLD.resend_count) THEN RAISE EXCEPTION 'Resend must atomically rotate the token hash' USING ERRCODE='check_violation'; END IF;
+ RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request_evidence()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'Business Partner request evidence cannot be deleted' USING ERRCODE='restrict_violation';
+  END IF;
+  IF (NEW.id, NEW.tenant_id, NEW.request_id, NEW.evidence_kind, NEW.attachment_id,
+      NEW.snapshot_id, NEW.source_reference, NEW.content_hash, NEW.classification_code,
+      NEW.metadata, NEW.created_at, NEW.created_by)
+     IS DISTINCT FROM
+     (OLD.id, OLD.tenant_id, OLD.request_id, OLD.evidence_kind, OLD.attachment_id,
+      OLD.snapshot_id, OLD.source_reference, OLD.content_hash, OLD.classification_code,
+      OLD.metadata, OLD.created_at, OLD.created_by) THEN
+    RAISE EXCEPTION 'Business Partner request evidence identity and payload are immutable' USING ERRCODE='restrict_violation';
+  END IF;
+  IF OLD.verification_status <> 'pending'
+     OR NEW.verification_status NOT IN ('verified','rejected','expired')
+     OR NEW.verified_at IS NULL OR NEW.verified_by IS NULL THEN
+    RAISE EXCEPTION 'Evidence verification permits one pending-to-terminal transition' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_duplicate_resolution() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
+DECLARE v_duplicate master.business_partner%ROWTYPE; v_survivor master.business_partner%ROWTYPE;
+BEGIN
+  IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'Business Partner duplicate resolutions are immutable' USING ERRCODE='restrict_violation'; END IF;
+  SELECT * INTO v_duplicate FROM master.business_partner WHERE tenant_id=NEW.tenant_id AND id=NEW.duplicate_business_partner_id FOR UPDATE;
+  SELECT * INTO v_survivor FROM master.business_partner WHERE tenant_id=NEW.tenant_id AND id=NEW.surviving_business_partner_id FOR UPDATE;
+  IF v_duplicate.id IS NULL OR v_survivor.id IS NULL OR v_duplicate.partner_category<>v_survivor.partner_category OR v_survivor.status='archived' THEN
+    RAISE EXCEPTION 'Duplicate resolution requires two same-category partners and an available survivor' USING ERRCODE='check_violation';
+  END IF;
+  IF v_duplicate.status<>'inactive' THEN RAISE EXCEPTION 'Duplicate must be inactive after dependency review before supersession' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+  IF NEW.resolution_kind IN('merge','rekey') AND COALESCE((NEW.dependency_evidence->>'rekeyComplete')::boolean,false)<>true THEN RAISE EXCEPTION 'Merge and re-key require completed dependency evidence' USING ERRCODE='check_violation'; END IF;
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION document.fn_resolve_business_partner_duplicate(p_tenant_id uuid,p_duplicate_id uuid,p_survivor_id uuid,p_resolution_kind text,p_reason_code text,p_dependency_evidence jsonb,p_rekey_manifest jsonb,p_snapshot_id uuid,p_resolved_by uuid) RETURNS uuid
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,document,master,shared AS $$ DECLARE v_id uuid; BEGIN
+  IF p_tenant_id IS DISTINCT FROM shared.current_tenant_id()
+     OR p_resolved_by IS DISTINCT FROM master.current_principal_id_soft() THEN
+    RAISE EXCEPTION 'Tenant or actor context mismatch' USING ERRCODE='insufficient_privilege';
+  END IF;
+  INSERT INTO document.business_partner_duplicate_resolution(tenant_id,duplicate_business_partner_id,surviving_business_partner_id,resolution_kind,reason_code,dependency_evidence,rekey_manifest,snapshot_id,resolved_by)
+  VALUES(p_tenant_id,p_duplicate_id,p_survivor_id,p_resolution_kind,p_reason_code,p_dependency_evidence,p_rekey_manifest,p_snapshot_id,p_resolved_by) RETURNING id INTO v_id;
+  UPDATE master.business_partner SET status='archived',status_changed_at=now(),status_changed_by=p_resolved_by,updated_by=p_resolved_by WHERE tenant_id=p_tenant_id AND id=p_duplicate_id AND status='inactive';
+  IF NOT FOUND THEN RAISE EXCEPTION 'Duplicate supersession lost its lifecycle precondition' USING ERRCODE='serialization_failure'; END IF;
+  RETURN v_id;
+END $$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_application_result() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$ BEGIN
+  IF TG_OP='INSERT' AND num_nonnulls(NEW.application_result_kind,NEW.application_reason_code,NEW.materialized_bank_verification_id)>0 THEN
+    RAISE EXCEPTION 'New Business Partner requests cannot contain application results' USING ERRCODE='check_violation';
+  END IF;
+  IF TG_OP='UPDATE' AND OLD.applied_at IS NOT NULL AND
+    (NEW.application_result_kind,NEW.application_reason_code,NEW.materialized_bank_verification_id)
+      IS DISTINCT FROM (OLD.application_result_kind,OLD.application_reason_code,OLD.materialized_bank_verification_id) THEN
+    RAISE EXCEPTION 'Business Partner application result is immutable' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_bank_verification() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$ BEGIN
+ IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Business Partner bank verification cannot be deleted' USING ERRCODE='restrict_violation'; END IF;
+ IF TG_OP='UPDATE' AND (NEW.id,NEW.tenant_id,NEW.bank_projection_id,NEW.business_partner_id,NEW.supplier_company_profile_id,NEW.company_code_id,NEW.prior_bank_account_link_id,NEW.expected_account_fingerprint,NEW.idempotency_key,NEW.created_at,NEW.created_by) IS DISTINCT FROM (OLD.id,OLD.tenant_id,OLD.bank_projection_id,OLD.business_partner_id,OLD.supplier_company_profile_id,OLD.company_code_id,OLD.prior_bank_account_link_id,OLD.expected_account_fingerprint,OLD.idempotency_key,OLD.created_at,OLD.created_by) THEN RAISE EXCEPTION 'Business Partner bank verification coordinates are immutable' USING ERRCODE='check_violation'; END IF;
+ IF TG_OP='UPDATE' AND OLD.decision_fingerprint IS NOT NULL AND (NEW.candidate_bank_account_link_id,NEW.verification_method,NEW.verification_evidence,NEW.decision_fingerprint,NEW.verified_at,NEW.verified_by,NEW.rejected_at,NEW.rejected_by,NEW.rejection_reason) IS DISTINCT FROM (OLD.candidate_bank_account_link_id,OLD.verification_method,OLD.verification_evidence,OLD.decision_fingerprint,OLD.verified_at,OLD.verified_by,OLD.rejected_at,OLD.rejected_by,OLD.rejection_reason) THEN RAISE EXCEPTION 'Business Partner bank verification decision evidence is immutable' USING ERRCODE='check_violation'; END IF;
+ IF TG_OP='UPDATE' AND OLD.applied_at IS NOT NULL AND (NEW.application_fingerprint,NEW.applied_at,NEW.applied_by) IS DISTINCT FROM (OLD.application_fingerprint,OLD.applied_at,OLD.applied_by) THEN RAISE EXCEPTION 'Business Partner bank application evidence is immutable' USING ERRCODE='check_violation'; END IF;
+ IF TG_OP='UPDATE' THEN NEW.row_version:=OLD.row_version+1; END IF; RETURN NEW; END $$;
+CREATE OR REPLACE FUNCTION document.trg_guard_supplier_activation_evidence() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$ BEGIN RAISE EXCEPTION 'Supplier activation readiness evidence is immutable'; END $$;
+
+CREATE OR REPLACE FUNCTION document.trg_reject_external_workforce_history_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    RAISE EXCEPTION 'External workforce historical evidence is append-only'
+        USING ERRCODE = 'restrict_violation';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_external_claim_header()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document, control AS $$
+DECLARE
+    v_engagement document.worker_engagement%ROWTYPE;
+    v_inbox_kind text;
+BEGIN
+    SELECT * INTO v_engagement
+      FROM document.worker_engagement
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.worker_engagement_id;
+    IF NOT FOUND OR NEW.period_start < v_engagement.start_date OR NEW.period_end >= v_engagement.end_date THEN
+        RAISE EXCEPTION 'External claim period must be contained by the worker engagement'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    IF NEW.source_inbox_id IS NOT NULL THEN
+        SELECT document_kind INTO v_inbox_kind
+          FROM control.mesh_workforce_claim_inbox
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.source_inbox_id;
+        IF v_inbox_kind IS DISTINCT FROM TG_TABLE_NAME THEN
+            RAISE EXCEPTION 'MESH inbox document kind does not match external claim aggregate'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    IF TG_OP = 'UPDATE' THEN
+        IF (NEW.id,NEW.tenant_id,NEW.created_at,NEW.created_by)
+           IS DISTINCT FROM (OLD.id,OLD.tenant_id,OLD.created_at,OLD.created_by) THEN
+            RAISE EXCEPTION 'External claim identity and creation evidence are immutable'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+        IF OLD.status <> 'draft' AND
+           (NEW.worker_engagement_id,NEW.period_start,NEW.period_end)
+           IS DISTINCT FROM (OLD.worker_engagement_id,OLD.period_start,OLD.period_end) THEN
+            RAISE EXCEPTION 'Submitted external claim engagement and period are immutable'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+        IF NEW.source_inbox_id IS DISTINCT FROM OLD.source_inbox_id THEN
+            RAISE EXCEPTION 'External claim ingress evidence is immutable'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+        IF NEW.status IS DISTINCT FROM OLD.status AND NOT (
+            (OLD.status = 'draft' AND NEW.status IN ('submitted','cancelled')) OR
+            (OLD.status = 'submitted' AND NEW.status IN ('pending_approval','rejected','cancelled')) OR
+            (OLD.status = 'pending_approval' AND NEW.status IN ('approved','rejected','cancelled')) OR
+            (OLD.status = 'rejected' AND NEW.status IN ('draft','cancelled')) OR
+            (OLD.status = 'approved' AND NEW.status = 'reversed')
+        ) THEN
+            RAISE EXCEPTION 'Invalid external claim status transition from % to %', OLD.status, NEW.status
+                USING ERRCODE = 'object_not_in_prerequisite_state';
+        END IF;
+        IF OLD.status IN ('approved','reversed','cancelled') AND (
+            to_jsonb(NEW) - ARRAY['status','status_changed_at','status_changed_by','row_version','updated_at','updated_by']
+        ) IS DISTINCT FROM (
+            to_jsonb(OLD) - ARRAY['status','status_changed_at','status_changed_by','row_version','updated_at','updated_by']
+        ) THEN
+            RAISE EXCEPTION 'Approved or terminal external claim evidence is immutable'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_external_claim_line()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document AS $$
+DECLARE
+    v_parent_id uuid;
+    v_line_date date;
+    v_period_start date;
+    v_period_end date;
+    v_status text;
+BEGIN
+    IF TG_OP = 'UPDATE' AND (
+        NEW.id IS DISTINCT FROM OLD.id OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.line_no IS DISTINCT FROM OLD.line_no OR NEW.created_at IS DISTINCT FROM OLD.created_at
+        OR NEW.created_by IS DISTINCT FROM OLD.created_by
+        OR (TG_TABLE_NAME='external_time_entry' AND NEW.time_sheet_id IS DISTINCT FROM OLD.time_sheet_id)
+        OR (TG_TABLE_NAME='external_expense_item' AND NEW.expense_sheet_id IS DISTINCT FROM OLD.expense_sheet_id)
+    ) THEN
+        RAISE EXCEPTION 'External claim line identity and parent are immutable'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF TG_TABLE_NAME = 'external_time_entry' THEN
+        v_parent_id := CASE WHEN TG_OP = 'DELETE' THEN OLD.time_sheet_id ELSE NEW.time_sheet_id END;
+        v_line_date := CASE WHEN TG_OP = 'DELETE' THEN OLD.work_date ELSE NEW.work_date END;
+        SELECT period_start, period_end, status INTO v_period_start, v_period_end, v_status
+          FROM document.external_time_sheet
+         WHERE tenant_id = CASE WHEN TG_OP = 'DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END
+           AND id = v_parent_id FOR SHARE;
+    ELSE
+        v_parent_id := CASE WHEN TG_OP = 'DELETE' THEN OLD.expense_sheet_id ELSE NEW.expense_sheet_id END;
+        v_line_date := CASE WHEN TG_OP = 'DELETE' THEN OLD.expense_date ELSE NEW.expense_date END;
+        SELECT period_start, period_end, status INTO v_period_start, v_period_end, v_status
+          FROM document.external_expense_sheet
+         WHERE tenant_id = CASE WHEN TG_OP = 'DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END
+           AND id = v_parent_id FOR SHARE;
+    END IF;
+    IF v_status IS NULL THEN
+        RAISE EXCEPTION 'External claim line requires an existing parent'
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    IF v_status NOT IN ('draft','rejected') THEN
+        RAISE EXCEPTION 'External claim lines are mutable only while the parent is draft or rejected'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP <> 'DELETE' AND (v_line_date < v_period_start OR v_line_date > v_period_end) THEN
+        RAISE EXCEPTION 'External claim line date must fall inside the claim period'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_service_sheet_source_allocation()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document AS $$
+DECLARE
+    v_line document.service_sheet_line%ROWTYPE;
+    v_sheet document.service_sheet%ROWTYPE;
+    v_original document.service_sheet_source_allocation%ROWTYPE;
+    v_source_status text;
+    v_supplier_id uuid;
+    v_company_code_id uuid;
+    v_commitment_id uuid;
+    v_period_start date;
+    v_period_end date;
+    v_source_amount numeric(18,4);
+    v_source_quantity numeric(18,4);
+    v_currency_min character(3);
+    v_currency_max character(3);
+    v_source_net numeric(18,4);
+    v_line_net numeric(18,4);
+    v_delta numeric(18,4);
+    v_source_quantity_net numeric(18,4);
+    v_line_quantity_net numeric(18,4);
+    v_quantity_delta numeric(18,4);
+BEGIN
+    SELECT * INTO v_line FROM document.service_sheet_line
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.service_sheet_line_id FOR UPDATE;
+    SELECT * INTO v_sheet FROM document.service_sheet
+     WHERE tenant_id = NEW.tenant_id AND id = v_line.service_sheet_id FOR UPDATE;
+    IF v_line.id IS NULL OR v_sheet.id IS NULL OR v_sheet.status NOT IN ('draft','pending_acceptance','rejected') THEN
+        RAISE EXCEPTION 'External claim allocation requires a mutable canonical service sheet line'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    IF NEW.external_time_sheet_id IS NOT NULL THEN
+        SELECT s.status, e.supplier_id, e.company_code_id, COALESCE(c.commitment_id, w.commitment_id), s.period_start, s.period_end
+          INTO v_source_status, v_supplier_id, v_company_code_id, v_commitment_id, v_period_start, v_period_end
+          FROM document.external_time_sheet s
+          JOIN document.worker_engagement e ON e.tenant_id=s.tenant_id AND e.id=s.worker_engagement_id
+          LEFT JOIN document.contingent_work_order c ON c.tenant_id=e.tenant_id AND c.id=e.contingent_work_order_id
+          LEFT JOIN document.statement_of_work w ON w.tenant_id=e.tenant_id AND w.id=e.statement_of_work_id
+         WHERE s.tenant_id=NEW.tenant_id AND s.id=NEW.external_time_sheet_id FOR UPDATE OF s;
+        SELECT COALESCE(sum(amount),0), COALESCE(sum(hours),0), min(currency_code), max(currency_code)
+          INTO v_source_amount, v_source_quantity, v_currency_min, v_currency_max
+          FROM document.external_time_entry WHERE tenant_id=NEW.tenant_id AND time_sheet_id=NEW.external_time_sheet_id;
+    ELSIF NEW.external_expense_sheet_id IS NOT NULL THEN
+        SELECT s.status, e.supplier_id, e.company_code_id, COALESCE(c.commitment_id, w.commitment_id), s.period_start, s.period_end
+          INTO v_source_status, v_supplier_id, v_company_code_id, v_commitment_id, v_period_start, v_period_end
+          FROM document.external_expense_sheet s
+          JOIN document.worker_engagement e ON e.tenant_id=s.tenant_id AND e.id=s.worker_engagement_id
+          LEFT JOIN document.contingent_work_order c ON c.tenant_id=e.tenant_id AND c.id=e.contingent_work_order_id
+          LEFT JOIN document.statement_of_work w ON w.tenant_id=e.tenant_id AND w.id=e.statement_of_work_id
+         WHERE s.tenant_id=NEW.tenant_id AND s.id=NEW.external_expense_sheet_id FOR UPDATE OF s;
+        SELECT COALESCE(sum(amount),0), NULL::numeric, min(currency_code), max(currency_code)
+          INTO v_source_amount, v_source_quantity, v_currency_min, v_currency_max
+          FROM document.external_expense_item WHERE tenant_id=NEW.tenant_id AND expense_sheet_id=NEW.external_expense_sheet_id;
+    ELSE
+        SELECT i.status, w.supplier_id, w.company_code_id, w.commitment_id, r.start_date, r.end_date,
+               i.amount, i.quantity, r.currency_code, r.currency_code
+          INTO v_source_status, v_supplier_id, v_company_code_id, v_commitment_id, v_period_start, v_period_end,
+               v_source_amount, v_source_quantity, v_currency_min, v_currency_max
+          FROM document.statement_of_work_item i
+          JOIN document.statement_of_work_revision r ON r.tenant_id=i.tenant_id AND r.id=i.statement_of_work_revision_id
+          JOIN document.statement_of_work w ON w.tenant_id=r.tenant_id AND w.id=r.statement_of_work_id
+         WHERE i.tenant_id=NEW.tenant_id AND i.id=NEW.statement_of_work_item_id FOR UPDATE OF i;
+    END IF;
+
+    IF v_source_status IS NULL OR (NEW.allocation_kind='acceptance' AND v_source_status NOT IN ('approved','accepted')) THEN
+        RAISE EXCEPTION 'Only approved external claims or accepted SOW items may be allocated'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF v_supplier_id IS DISTINCT FROM v_sheet.supplier_id
+       OR v_company_code_id IS DISTINCT FROM v_sheet.company_code_id
+       OR v_commitment_id IS DISTINCT FROM v_sheet.commitment_id
+       OR v_currency_min IS DISTINCT FROM v_currency_max
+       OR v_currency_min IS DISTINCT FROM NEW.currency_code
+       OR v_line.currency_code IS DISTINCT FROM NEW.currency_code
+       OR v_sheet.currency_code IS DISTINCT FROM NEW.currency_code
+       OR v_period_start < v_sheet.service_period_from
+       OR v_period_end > v_sheet.service_period_to THEN
+        RAISE EXCEPTION 'External claim, commitment, supplier, company, period and currency must match the service sheet'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    IF NEW.allocation_kind = 'reversal' THEN
+        SELECT * INTO v_original FROM document.service_sheet_source_allocation
+         WHERE tenant_id=NEW.tenant_id AND id=NEW.reverses_allocation_id FOR UPDATE;
+        IF v_original.id IS NULL OR v_original.allocation_kind <> 'acceptance'
+           OR (NEW.service_sheet_line_id,NEW.external_time_sheet_id,NEW.external_expense_sheet_id,NEW.statement_of_work_item_id,NEW.accepted_quantity,NEW.accepted_amount,NEW.currency_code)
+              IS DISTINCT FROM
+              (v_original.service_sheet_line_id,v_original.external_time_sheet_id,v_original.external_expense_sheet_id,v_original.statement_of_work_item_id,v_original.accepted_quantity,v_original.accepted_amount,v_original.currency_code) THEN
+            RAISE EXCEPTION 'Service-sheet allocation reversal must exactly match one original acceptance'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+        v_delta := -NEW.accepted_amount;
+        v_quantity_delta := -COALESCE(NEW.accepted_quantity, 0);
+    ELSE
+        v_delta := NEW.accepted_amount;
+        v_quantity_delta := COALESCE(NEW.accepted_quantity, 0);
+    END IF;
+
+    SELECT COALESCE(sum(CASE WHEN allocation_kind='acceptance' THEN accepted_amount ELSE -accepted_amount END),0)
+      INTO v_source_net FROM document.service_sheet_source_allocation
+     WHERE tenant_id=NEW.tenant_id
+       AND external_time_sheet_id IS NOT DISTINCT FROM NEW.external_time_sheet_id
+       AND external_expense_sheet_id IS NOT DISTINCT FROM NEW.external_expense_sheet_id
+       AND statement_of_work_item_id IS NOT DISTINCT FROM NEW.statement_of_work_item_id;
+    SELECT COALESCE(sum(CASE WHEN allocation_kind='acceptance' THEN accepted_amount ELSE -accepted_amount END),0)
+      INTO v_line_net FROM document.service_sheet_source_allocation
+     WHERE tenant_id=NEW.tenant_id AND service_sheet_line_id=NEW.service_sheet_line_id;
+    SELECT COALESCE(sum(CASE WHEN allocation_kind='acceptance' THEN COALESCE(accepted_quantity,0) ELSE -COALESCE(accepted_quantity,0) END),0)
+      INTO v_source_quantity_net FROM document.service_sheet_source_allocation
+     WHERE tenant_id=NEW.tenant_id
+       AND external_time_sheet_id IS NOT DISTINCT FROM NEW.external_time_sheet_id
+       AND external_expense_sheet_id IS NOT DISTINCT FROM NEW.external_expense_sheet_id
+       AND statement_of_work_item_id IS NOT DISTINCT FROM NEW.statement_of_work_item_id;
+    SELECT COALESCE(sum(CASE WHEN allocation_kind='acceptance' THEN COALESCE(accepted_quantity,0) ELSE -COALESCE(accepted_quantity,0) END),0)
+      INTO v_line_quantity_net FROM document.service_sheet_source_allocation
+     WHERE tenant_id=NEW.tenant_id AND service_sheet_line_id=NEW.service_sheet_line_id;
+    IF v_source_net + v_delta < 0 OR v_source_net + v_delta > v_source_amount
+       OR v_line_net + v_delta < 0 OR v_line_net + v_delta > v_line.net_amount THEN
+        RAISE EXCEPTION 'Service-sheet allocation would over-accept or over-reverse source or line value'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    IF NEW.accepted_quantity IS NOT NULL AND (
+        (v_source_quantity IS NOT NULL AND (v_source_quantity_net + v_quantity_delta < 0 OR v_source_quantity_net + v_quantity_delta > v_source_quantity))
+        OR v_line_quantity_net + v_quantity_delta < 0
+        OR v_line_quantity_net + v_quantity_delta > v_line.quantity
+    ) THEN
+        RAISE EXCEPTION 'Service-sheet allocation would over-accept or over-reverse source or line quantity'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_reject_deprecated_external_acceptance_write()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    RAISE EXCEPTION 'Legacy external service-entry path is read-only; use document.service_sheet and service_sheet_source_allocation'
+        USING ERRCODE = 'object_not_in_prerequisite_state';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_external_candidate_submission()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM document.workforce_requisition_supplier distribution
+        WHERE distribution.tenant_id = NEW.tenant_id
+          AND distribution.id = NEW.requisition_supplier_id
+          AND distribution.workforce_requisition_id = NEW.workforce_requisition_id
+          AND distribution.supplier_id = NEW.supplier_id
+          AND distribution.status IN ('distributed','acknowledged')
+    ) THEN
+        RAISE EXCEPTION 'Candidate submission must use an open distribution for the same requisition and supplier'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_contingent_work_order()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM document.external_candidate_submission submission
+        WHERE submission.tenant_id = NEW.tenant_id
+          AND submission.id = NEW.candidate_submission_id
+          AND submission.supplier_id = NEW.supplier_id
+          AND submission.status = 'selected'
+    ) THEN
+        RAISE EXCEPTION 'Contingent work order requires a selected submission from the same supplier'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_worker_engagement()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document, master AS $$
+DECLARE
+    v_source_matches boolean;
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM master.external_worker worker
+        WHERE worker.tenant_id = NEW.tenant_id AND worker.id = NEW.external_worker_id
+          AND worker.status IN ('prospect','active')
+    ) THEN
+        RAISE EXCEPTION 'Worker engagement requires an available external-worker role'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    IF NEW.contingent_work_order_id IS NOT NULL THEN
+        SELECT EXISTS (
+            SELECT 1 FROM document.contingent_work_order work_order
+            WHERE work_order.tenant_id = NEW.tenant_id AND work_order.id = NEW.contingent_work_order_id
+              AND work_order.supplier_id = NEW.supplier_id
+              AND work_order.company_code_id = NEW.company_code_id
+              AND work_order.legal_entity_id = NEW.legal_entity_id
+              AND work_order.status IN ('pending_supplier_acceptance','active','suspended','completed')
+        ) INTO v_source_matches;
+    ELSE
+        SELECT EXISTS (
+            SELECT 1 FROM document.statement_of_work sow
+            WHERE sow.tenant_id = NEW.tenant_id AND sow.id = NEW.statement_of_work_id
+              AND sow.supplier_id = NEW.supplier_id
+              AND sow.company_code_id = NEW.company_code_id
+              AND sow.legal_entity_id = NEW.legal_entity_id
+              AND sow.status IN ('pending_supplier_acceptance','active','suspended','completed')
+        ) INTO v_source_matches;
+    END IF;
+    IF NOT v_source_matches THEN
+        RAISE EXCEPTION 'Worker engagement supplier, buyer company, legal entity and source contract must agree'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_worker_engagement_iam_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, event
+AS $$
+DECLARE
+    v_command_execution_id uuid;
+BEGIN
+    IF NEW.access_status IS NOT DISTINCT FROM OLD.access_status THEN
+        RETURN NEW;
+    END IF;
+    v_command_execution_id := NULLIF(
+        current_setting('app.worker_engagement_iam_command_execution_id', true), ''
+    )::uuid;
+    IF v_command_execution_id IS NULL OR NOT EXISTS (
+        SELECT 1
+          FROM event.command_execution command
+         WHERE command.id = v_command_execution_id
+           AND command.tenant_id = NEW.tenant_id
+           AND command.command_code = 'workforce.external_worker.iam.project'
+           AND command.status = 'processing'
+    ) THEN
+        RAISE EXCEPTION 'Worker engagement IAM access state is command-owned'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_worker_engagement_lifecycle_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,event AS $$
+DECLARE v_execution_id uuid;
+BEGIN
+ IF NEW.status IS NOT DISTINCT FROM OLD.status THEN RETURN NEW;END IF;
+ v_execution_id:=NULLIF(current_setting('app.worker_engagement_lifecycle_command_execution_id',true),'')::uuid;
+ IF v_execution_id IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution command WHERE command.id=v_execution_id AND command.tenant_id=NEW.tenant_id AND command.actor_principal_id=NULLIF(current_setting('app.current_principal_id',true),'')::uuid AND command.source_service='neon.worker-engagement-lifecycle' AND command.command_code IN('workforce.external_worker.engagement.terminate') AND command.status='processing') THEN
+  RAISE EXCEPTION 'Worker engagement lifecycle state is command-owned' USING ERRCODE='insufficient_privilege';
+ END IF;RETURN NEW;
+END;$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_worker_operational_placement_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,event AS $$
+DECLARE v_execution_id uuid;v_tenant_id uuid;
+BEGIN
+ v_tenant_id:=CASE WHEN TG_OP='DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END;
+ v_execution_id:=NULLIF(current_setting('app.worker_engagement_lifecycle_command_execution_id',true),'')::uuid;
+ IF v_execution_id IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution command WHERE command.id=v_execution_id AND command.tenant_id=v_tenant_id AND command.actor_principal_id=NULLIF(current_setting('app.current_principal_id',true),'')::uuid AND command.source_service='neon.worker-engagement-lifecycle' AND command.command_code IN('workforce.external_worker.placement.activate','workforce.external_worker.engagement.terminate') AND command.status='processing') THEN
+  RAISE EXCEPTION 'Worker operational placement is command-owned' USING ERRCODE='insufficient_privilege';
+ END IF;IF TG_OP='DELETE' THEN RETURN OLD;END IF;RETURN NEW;
+END;$$;
+
+CREATE OR REPLACE FUNCTION document.command_worker_engagement_iam_projection(
+    p_tenant_id uuid,
+    p_worker_engagement_id uuid,
+    p_expected_version bigint,
+    p_idempotency_key text,
+    p_actor_id uuid,
+    p_correlation_id uuid DEFAULT NULL
+) RETURNS TABLE(
+    worker_engagement_id uuid,
+    desired_status text,
+    desired_version bigint,
+    desired_hash text,
+    outbox_id uuid,
+    replayed boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, document, master, event, shared
+AS $$
+DECLARE
+    v_fingerprint text;
+    v_existing event.command_execution%ROWTYPE;
+    v_engagement_status text;
+    v_engagement_version bigint;
+    v_onboarding_status text;
+    v_readiness_evidence jsonb;
+    v_legal_entity_id uuid;
+    v_person_id uuid;
+    v_person_status text;
+    v_worker_status text;
+    v_identifier text;
+    v_display_name text;
+    v_desired_status text;
+    v_access_status text;
+    v_desired_version bigint;
+    v_desired_hash text;
+    v_outbox_id uuid;
+    v_execution_id uuid;
+    v_payload jsonb;
+BEGIN
+    IF current_setting('app.database_plane', true) IS DISTINCT FROM 'neon'
+       OR NULLIF(current_setting('app.current_tenant_id', true), '')::uuid IS DISTINCT FROM p_tenant_id
+       OR NULLIF(current_setting('app.current_principal_id', true), '')::uuid IS DISTINCT FROM p_actor_id THEN
+        RAISE EXCEPTION 'Worker engagement IAM command context does not match plane, tenant and actor'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    IF p_expected_version < 1
+       OR btrim(p_idempotency_key) <> p_idempotency_key
+       OR length(p_idempotency_key) NOT BETWEEN 8 AND 200 THEN
+        RAISE EXCEPTION 'Invalid worker engagement IAM command'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    v_fingerprint := encode(public.digest(convert_to(jsonb_build_object(
+        'tenantId', p_tenant_id,
+        'workerEngagementId', p_worker_engagement_id,
+        'expectedVersion', p_expected_version,
+        'idempotencyKey', p_idempotency_key,
+        'actorId', p_actor_id
+    )::text, 'UTF8'), 'sha256'), 'hex');
+
+    PERFORM pg_advisory_xact_lock(hashtextextended(
+        p_tenant_id::text || ':external-worker-iam:' || p_idempotency_key, 0
+    ));
+    SELECT command.* INTO v_existing
+      FROM event.command_execution command
+     WHERE command.tenant_id = p_tenant_id
+       AND command.command_code = 'workforce.external_worker.iam.project'
+       AND command.idempotency_key = p_idempotency_key;
+    IF FOUND THEN
+        IF v_existing.request_fingerprint::text IS DISTINCT FROM v_fingerprint THEN
+            RAISE EXCEPTION 'Worker engagement IAM idempotency key was reused for another command'
+                USING ERRCODE = 'unique_violation';
+        END IF;
+        IF v_existing.status <> 'succeeded' THEN
+            RAISE EXCEPTION 'Prior worker engagement IAM command is not replayable in status %', v_existing.status
+                USING ERRCODE = 'object_not_in_prerequisite_state';
+        END IF;
+        RETURN QUERY SELECT
+            (v_existing.result_payload->>'workerEngagementId')::uuid,
+            v_existing.result_payload->>'desiredStatus',
+            (v_existing.result_payload->>'desiredVersion')::bigint,
+            v_existing.result_payload->>'desiredHash',
+            (v_existing.result_payload->>'outboxId')::uuid,
+            true;
+        RETURN;
+    END IF;
+
+    PERFORM pg_advisory_xact_lock(hashtextextended(
+        p_tenant_id::text || ':worker-engagement:' || p_worker_engagement_id::text, 0
+    ));
+    SELECT engagement.status::text, engagement.row_version,
+           engagement.onboarding_status, engagement.readiness_evidence,
+           engagement.legal_entity_id,
+           worker.person_id, person.status::text, worker.status::text,
+           lower(btrim(person.primary_email)),
+           COALESCE(NULLIF(btrim(person.display_name), ''),
+                    NULLIF(btrim(person.preferred_name), ''),
+                    btrim(concat_ws(' ', person.first_name, person.last_name)))
+      INTO v_engagement_status, v_engagement_version, v_onboarding_status,
+           v_readiness_evidence, v_legal_entity_id,
+           v_person_id, v_person_status, v_worker_status,
+           v_identifier, v_display_name
+      FROM document.worker_engagement engagement
+      JOIN master.external_worker worker
+        ON worker.tenant_id = engagement.tenant_id
+       AND worker.id = engagement.external_worker_id
+      JOIN master.person person
+        ON person.tenant_id = worker.tenant_id
+       AND person.id = worker.person_id
+     WHERE engagement.tenant_id = p_tenant_id
+       AND engagement.id = p_worker_engagement_id
+     FOR UPDATE OF engagement;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Worker engagement was not found in command tenant'
+            USING ERRCODE = 'no_data_found';
+    END IF;
+    IF v_engagement_version <> p_expected_version THEN
+        RAISE EXCEPTION 'Worker engagement version is stale'
+            USING ERRCODE = 'serialization_failure';
+    END IF;
+    IF v_engagement_status = 'active' THEN
+        IF v_person_status <> 'active' OR v_worker_status <> 'active'
+           OR v_identifier IS NULL OR v_identifier = ''
+           OR v_onboarding_status <> 'completed'
+           OR NOT (v_readiness_evidence @> '{"eligible":true}'::jsonb) THEN
+            RAISE EXCEPTION 'Active worker engagement is not eligible for IAM provisioning'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        v_desired_status := 'active';
+        v_access_status := 'requested';
+    ELSIF v_engagement_status = 'suspended' THEN
+        v_desired_status := 'suspended';
+        v_access_status := 'deprovision_requested';
+    ELSIF v_engagement_status IN ('completed', 'terminated', 'cancelled', 'closed') THEN
+        v_desired_status := 'deprovisioned';
+        v_access_status := 'deprovision_requested';
+    ELSE
+        RAISE EXCEPTION 'Worker engagement lifecycle state % cannot project IAM access', v_engagement_status
+            USING ERRCODE = 'invalid_parameter_value';
+    END IF;
+
+    INSERT INTO event.command_execution(
+        tenant_id, command_code, idempotency_key, request_fingerprint, status,
+        actor_principal_id, source_service, correlation_id, started_at,
+        status_changed_at, status_changed_by, created_by
+    ) VALUES (
+        p_tenant_id, 'workforce.external_worker.iam.project', p_idempotency_key,
+        v_fingerprint, 'processing', p_actor_id, 'neon.worker-engagement-iam',
+        p_correlation_id, clock_timestamp(), clock_timestamp(), p_actor_id, p_actor_id
+    ) RETURNING id INTO v_execution_id;
+
+    PERFORM set_config('app.worker_engagement_iam_command_execution_id', v_execution_id::text, true);
+    UPDATE document.worker_engagement engagement
+       SET access_status = v_access_status,
+           updated_by = p_actor_id
+     WHERE engagement.tenant_id = p_tenant_id
+       AND engagement.id = p_worker_engagement_id
+       AND engagement.row_version = p_expected_version
+    RETURNING engagement.row_version INTO v_desired_version;
+    PERFORM set_config('app.worker_engagement_iam_command_execution_id', '', true);
+    IF v_desired_version IS NULL THEN
+        RAISE EXCEPTION 'Worker engagement version changed during IAM command'
+            USING ERRCODE = 'serialization_failure';
+    END IF;
+
+    v_payload := jsonb_build_object(
+        'schema', 'athyper.trustiam.identity-projection-intent/1',
+        'sourcePlane', 'neon',
+        'sourceTenantId', p_tenant_id,
+        'authorityTenantId', p_tenant_id,
+        'targetTenantId', p_tenant_id,
+        'personId', v_person_id,
+        'identifier', v_identifier,
+        'displayName', v_display_name,
+        'realmKey', 'neon',
+        'organizationId', v_legal_entity_id,
+        'relationship', 'external_worker',
+        'sourceRef', 'worker_engagement:' || p_worker_engagement_id::text,
+        'commandExecutionId', v_execution_id,
+        'desiredVersion', v_desired_version,
+        'desiredStatus', v_desired_status,
+        'applications', jsonb_build_array(jsonb_build_object(
+            'plane', 'neon',
+            'targetTenantId', p_tenant_id,
+            'roles', jsonb_build_array(jsonb_build_object(
+                'roleCode', 'workforce.external_worker',
+                'scopeKind', 'legal_entity',
+                'scopeTargetId', v_legal_entity_id
+            ))
+        ))
+    );
+    v_desired_hash := encode(public.digest(convert_to(v_payload::text, 'UTF8'), 'sha256'), 'hex');
+    v_payload := v_payload || jsonb_build_object('desiredHash', v_desired_hash);
+
+    INSERT INTO event.outbox(
+        tenant_id, topic, event_type, event_key, entity_type, entity_id,
+        aggregate_type, aggregate_id, event_version, actor_id, source,
+        correlation_id, partition_key, payload, created_by
+    ) VALUES (
+        p_tenant_id, 'neon-workforce-iam',
+        'workforce.external_worker.identity_projection.requested',
+        'external-worker-iam:' || p_worker_engagement_id::text || ':v' || v_desired_version::text,
+        'worker_engagement', p_worker_engagement_id,
+        'worker_engagement', p_worker_engagement_id,
+        LEAST(v_desired_version, 2147483647)::integer, p_actor_id,
+        'neon.worker-engagement-iam', p_correlation_id, p_tenant_id::text,
+        v_payload, p_actor_id
+    ) RETURNING id INTO v_outbox_id;
+
+    UPDATE event.command_execution
+       SET status = 'succeeded',
+           result_payload = jsonb_build_object(
+               'workerEngagementId', p_worker_engagement_id,
+               'desiredStatus', v_desired_status,
+               'desiredVersion', v_desired_version,
+               'desiredHash', v_desired_hash,
+               'outboxId', v_outbox_id
+           ),
+           completed_at = clock_timestamp(),
+           status_changed_at = clock_timestamp(),
+           status_changed_by = p_actor_id,
+           updated_by = p_actor_id
+     WHERE id = v_execution_id AND status = 'processing';
+
+    RETURN QUERY SELECT p_worker_engagement_id, v_desired_status,
+                        v_desired_version, v_desired_hash, v_outbox_id, false;
+END;
+$$;
+
+-- R7 guarded product entrypoint. The legacy six-argument function remains an
+-- internal implementation detail and is not executable by application roles.
+CREATE OR REPLACE FUNCTION document.command_worker_engagement_iam_projection(
+    p_tenant_id uuid,
+    p_worker_engagement_id uuid,
+    p_expected_version bigint,
+    p_idempotency_key text,
+    p_actor_id uuid,
+    p_correlation_id uuid,
+    p_policy_evidence jsonb
+) RETURNS TABLE(
+    worker_engagement_id uuid,
+    desired_status text,
+    desired_version bigint,
+    desired_hash text,
+    outbox_id uuid,
+    replayed boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, document, event, shared
+AS $$
+DECLARE
+    v_policy_evidence jsonb;
+    v_existing_policy jsonb;
+    v_result record;
+BEGIN
+    IF p_policy_evidence IS NULL
+       OR jsonb_typeof(p_policy_evidence) <> 'object'
+       OR p_policy_evidence->>'boundary' <> 'iam_project'
+       OR jsonb_typeof(p_policy_evidence->'coordinates') <> 'array'
+       OR jsonb_array_length(p_policy_evidence->'coordinates') <> 2
+       OR (SELECT count(DISTINCT coordinate->>'decisionId')
+             FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate) <> 2
+       OR NOT EXISTS (SELECT 1 FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate WHERE coordinate->>'decisionId'='BP-Q004')
+       OR NOT EXISTS (SELECT 1 FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate WHERE coordinate->>'decisionId'='BP-Q006')
+       OR EXISTS (
+           SELECT 1 FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate
+            WHERE COALESCE(coordinate->>'version','') !~ '^[1-9][0-9]*$'
+               OR COALESCE(coordinate->>'hash','') !~ '^[a-f0-9]{64}$'
+               OR COALESCE(coordinate->>'approvalEvidenceId','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+       ) THEN
+        RAISE EXCEPTION 'Worker engagement IAM requires approved BP-Q004 and BP-Q006 evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    v_policy_evidence := jsonb_build_object(
+        'boundary', 'iam_project',
+        'coordinates', (
+            SELECT jsonb_agg(jsonb_build_object(
+                'decisionId', coordinate->>'decisionId',
+                'version', (coordinate->>'version')::bigint,
+                'hash', coordinate->>'hash',
+                'approvalEvidenceId', coordinate->>'approvalEvidenceId'
+            ) ORDER BY coordinate->>'decisionId')
+              FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate
+        )
+    );
+    PERFORM pg_advisory_xact_lock(hashtextextended(
+        p_tenant_id::text || ':external-worker-iam:' || p_idempotency_key, 0
+    ));
+    SELECT command.result_payload->'policyEvidence' INTO v_existing_policy
+      FROM event.command_execution command
+     WHERE command.tenant_id=p_tenant_id
+       AND command.command_code='workforce.external_worker.iam.project'
+       AND command.idempotency_key=p_idempotency_key;
+    IF FOUND AND v_existing_policy IS DISTINCT FROM v_policy_evidence THEN
+        RAISE EXCEPTION 'Worker engagement IAM idempotency key was reused with different policy evidence'
+            USING ERRCODE = 'unique_violation';
+    END IF;
+    SELECT * INTO v_result
+      FROM document.command_worker_engagement_iam_projection(
+        p_tenant_id,p_worker_engagement_id,p_expected_version,p_idempotency_key,
+        p_actor_id,p_correlation_id
+      );
+    IF NOT v_result.replayed THEN
+        UPDATE event.command_execution command
+           SET result_payload=command.result_payload||jsonb_build_object('policyEvidence',v_policy_evidence),
+               updated_by=p_actor_id
+         WHERE command.tenant_id=p_tenant_id
+           AND command.command_code='workforce.external_worker.iam.project'
+           AND command.idempotency_key=p_idempotency_key;
+        UPDATE event.outbox outbox
+           SET payload=outbox.payload||jsonb_build_object('policyEvidence',v_policy_evidence)
+         WHERE outbox.tenant_id=p_tenant_id AND outbox.id=v_result.outbox_id;
+    END IF;
+    RETURN QUERY SELECT v_result.worker_engagement_id,v_result.desired_status,
+                        v_result.desired_version,v_result.desired_hash,
+                        v_result.outbox_id,v_result.replayed;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.normalize_supplier_workforce_policy_evidence(
+    p_boundary text,
+    p_policy_evidence jsonb
+) RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = pg_catalog
+AS $$
+BEGIN
+    IF p_boundary NOT IN ('placement_change','engagement_end')
+       OR p_policy_evidence IS NULL
+       OR jsonb_typeof(p_policy_evidence) <> 'object'
+       OR p_policy_evidence->>'boundary' <> p_boundary
+       OR jsonb_typeof(p_policy_evidence->'coordinates') <> 'array'
+       OR jsonb_array_length(p_policy_evidence->'coordinates') <> 2
+       OR (SELECT count(DISTINCT coordinate->>'decisionId') FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate) <> 2
+       OR NOT EXISTS (SELECT 1 FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate WHERE coordinate->>'decisionId'='BP-Q004')
+       OR NOT EXISTS (SELECT 1 FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate WHERE coordinate->>'decisionId'='BP-Q006')
+       OR EXISTS (SELECT 1 FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate
+                   WHERE COALESCE(coordinate->>'version','') !~ '^[1-9][0-9]*$'
+                      OR COALESCE(coordinate->>'hash','') !~ '^[a-f0-9]{64}$'
+                      OR COALESCE(coordinate->>'approvalEvidenceId','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$') THEN
+        RAISE EXCEPTION 'Worker engagement lifecycle command requires approved BP-Q004 and BP-Q006 evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN jsonb_build_object('boundary',p_boundary,'coordinates',(
+        SELECT jsonb_agg(jsonb_build_object('decisionId',coordinate->>'decisionId','version',(coordinate->>'version')::bigint,'hash',coordinate->>'hash','approvalEvidenceId',coordinate->>'approvalEvidenceId') ORDER BY coordinate->>'decisionId')
+          FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate
+    ));
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.command_worker_operational_placement_activate(
+    p_tenant_id uuid,p_worker_engagement_id uuid,p_expected_version bigint,
+    p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid,
+    p_effective_from date,p_effective_until date,p_company_code_id uuid,
+    p_position_id uuid,p_org_unit_id uuid,p_manager_employee_id uuid,
+    p_cost_center_id uuid,p_profit_center_id uuid,p_project_id uuid,p_site_id uuid,
+    p_allocation_percent numeric,p_is_primary boolean,p_metadata jsonb,p_policy_evidence jsonb
+) RETURNS TABLE(worker_engagement_id uuid,placement_id uuid,engagement_version bigint,outbox_id uuid,replayed boolean)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,document,event,shared
+AS $$
+DECLARE v_policy jsonb;v_fingerprint text;v_existing event.command_execution%ROWTYPE;v_engagement document.worker_engagement%ROWTYPE;v_placement_id uuid;v_version bigint;v_outbox uuid;v_execution uuid;v_payload jsonb;v_effective_until date;
+BEGIN
+ IF current_setting('app.database_plane',true) IS DISTINCT FROM 'neon' OR NULLIF(current_setting('app.current_tenant_id',true),'')::uuid IS DISTINCT FROM p_tenant_id OR NULLIF(current_setting('app.current_principal_id',true),'')::uuid IS DISTINCT FROM p_actor_id THEN RAISE EXCEPTION 'Placement command context mismatch' USING ERRCODE='insufficient_privilege';END IF;
+ IF p_expected_version<1 OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 180 OR p_effective_until IS NOT NULL AND p_effective_until<=p_effective_from OR p_allocation_percent<=0 OR p_allocation_percent>100 OR jsonb_typeof(p_metadata)<>'object' THEN RAISE EXCEPTION 'Invalid placement activation command' USING ERRCODE='check_violation';END IF;
+ v_policy:=document.normalize_supplier_workforce_policy_evidence('placement_change',p_policy_evidence);
+ v_fingerprint:=encode(public.digest(convert_to(jsonb_build_object('engagement',p_worker_engagement_id,'version',p_expected_version,'from',p_effective_from,'until',p_effective_until,'company',p_company_code_id,'position',p_position_id,'orgUnit',p_org_unit_id,'manager',p_manager_employee_id,'costCenter',p_cost_center_id,'profitCenter',p_profit_center_id,'project',p_project_id,'site',p_site_id,'allocation',p_allocation_percent,'primary',p_is_primary,'metadata',p_metadata,'policy',v_policy)::text,'UTF8'),'sha256'),'hex');
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':placement:'||p_idempotency_key,0));
+ SELECT * INTO v_existing FROM event.command_execution WHERE tenant_id=p_tenant_id AND command_code='workforce.external_worker.placement.activate' AND idempotency_key=p_idempotency_key;
+ IF FOUND THEN
+  IF v_existing.request_fingerprint::text IS DISTINCT FROM v_fingerprint THEN RAISE EXCEPTION 'Placement idempotency key reused' USING ERRCODE='unique_violation';END IF;
+  IF v_existing.status<>'succeeded' THEN RAISE EXCEPTION 'Prior placement command is not replayable' USING ERRCODE='object_not_in_prerequisite_state';END IF;
+  RETURN QUERY SELECT (v_existing.result_payload->>'workerEngagementId')::uuid,(v_existing.result_payload->>'placementId')::uuid,(v_existing.result_payload->>'engagementVersion')::bigint,(v_existing.result_payload->>'outboxId')::uuid,true;RETURN;
+ END IF;
+ SELECT * INTO v_engagement FROM document.worker_engagement WHERE tenant_id=p_tenant_id AND id=p_worker_engagement_id FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Worker engagement not found' USING ERRCODE='no_data_found';END IF;
+ IF v_engagement.row_version<>p_expected_version THEN RAISE EXCEPTION 'Worker engagement version is stale' USING ERRCODE='serialization_failure';END IF;
+ IF v_engagement.status<>'active' OR v_engagement.company_code_id<>p_company_code_id OR p_effective_from<v_engagement.start_date OR p_effective_from>=v_engagement.end_date OR p_effective_until IS NOT NULL AND p_effective_until>v_engagement.end_date THEN RAISE EXCEPTION 'Placement must be within an active engagement and its buyer company/date scope' USING ERRCODE='check_violation';END IF;
+ v_effective_until:=COALESCE(p_effective_until,v_engagement.end_date);
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by) VALUES(p_tenant_id,'workforce.external_worker.placement.activate',p_idempotency_key,v_fingerprint,'processing',p_actor_id,'neon.worker-engagement-lifecycle',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO v_execution;
+ PERFORM set_config('app.worker_engagement_lifecycle_command_execution_id',v_execution::text,true);
+ IF p_is_primary THEN UPDATE document.worker_operational_placement placement SET effective_until=CASE WHEN placement.effective_from<p_effective_from THEN p_effective_from ELSE placement.effective_until END,status='superseded',updated_at=clock_timestamp(),updated_by=p_actor_id WHERE placement.tenant_id=p_tenant_id AND placement.worker_engagement_id=p_worker_engagement_id AND placement.is_primary AND placement.status='active' AND daterange(placement.effective_from,COALESCE(placement.effective_until,'infinity'::date),'[)')&&daterange(p_effective_from,v_effective_until,'[)');END IF;
+ INSERT INTO document.worker_operational_placement(tenant_id,worker_engagement_id,position_id,org_unit_id,manager_employee_id,company_code_id,cost_center_id,profit_center_id,project_id,site_id,allocation_percent,effective_from,effective_until,is_primary,metadata,status,created_by) VALUES(p_tenant_id,p_worker_engagement_id,p_position_id,p_org_unit_id,p_manager_employee_id,p_company_code_id,p_cost_center_id,p_profit_center_id,p_project_id,p_site_id,p_allocation_percent,p_effective_from,v_effective_until,p_is_primary,p_metadata,'active',p_actor_id) RETURNING id INTO v_placement_id;
+ UPDATE document.worker_engagement SET updated_by=p_actor_id WHERE tenant_id=p_tenant_id AND id=p_worker_engagement_id AND row_version=p_expected_version RETURNING row_version INTO v_version;
+ PERFORM set_config('app.worker_engagement_lifecycle_command_execution_id','',true);
+ v_payload:=jsonb_build_object('workerEngagementId',p_worker_engagement_id,'placementId',v_placement_id,'engagementVersion',v_version,'effectiveFrom',p_effective_from,'effectiveUntil',v_effective_until,'policyEvidence',v_policy,'commandExecutionId',v_execution);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(p_tenant_id,'neon-workforce','workforce.external_worker.placement.activated','worker-placement:'||v_placement_id::text,'worker_operational_placement',v_placement_id,'worker_engagement',p_worker_engagement_id,LEAST(v_version,2147483647)::integer,p_actor_id,'neon.worker-engagement-lifecycle',p_correlation_id,p_tenant_id::text,v_payload,p_actor_id) RETURNING id INTO v_outbox;
+ UPDATE event.command_execution SET status='succeeded',result_payload=v_payload||jsonb_build_object('outboxId',v_outbox),completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=v_execution;
+ RETURN QUERY SELECT p_worker_engagement_id,v_placement_id,v_version,v_outbox,false;
+END;$$;
+
+CREATE OR REPLACE FUNCTION document.command_worker_engagement_terminate(
+ p_tenant_id uuid,p_worker_engagement_id uuid,p_expected_version bigint,p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid,p_reason_code text,p_effective_at timestamptz,p_policy_evidence jsonb
+) RETURNS TABLE(worker_engagement_id uuid,engagement_version bigint,iam_outbox_id uuid,iam_desired_hash text,outbox_id uuid,replayed boolean)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,document,event,shared AS $$
+DECLARE v_policy jsonb;v_iam_policy jsonb;v_fingerprint text;v_existing event.command_execution%ROWTYPE;v_engagement document.worker_engagement%ROWTYPE;v_after_version bigint;v_iam record;v_outbox uuid;v_execution uuid;v_payload jsonb;
+BEGIN
+ IF current_setting('app.database_plane',true) IS DISTINCT FROM 'neon' OR NULLIF(current_setting('app.current_tenant_id',true),'')::uuid IS DISTINCT FROM p_tenant_id OR NULLIF(current_setting('app.current_principal_id',true),'')::uuid IS DISTINCT FROM p_actor_id THEN RAISE EXCEPTION 'Engagement termination context mismatch' USING ERRCODE='insufficient_privilege';END IF;
+ IF p_expected_version<1 OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 180 OR p_reason_code!~'^[A-Z][A-Z0-9_.-]{1,126}$' OR p_effective_at IS NULL THEN RAISE EXCEPTION 'Invalid engagement termination command' USING ERRCODE='check_violation';END IF;
+ v_policy:=document.normalize_supplier_workforce_policy_evidence('engagement_end',p_policy_evidence);v_iam_policy:=jsonb_set(v_policy,'{boundary}','"iam_project"'::jsonb);
+ v_fingerprint:=encode(public.digest(convert_to(jsonb_build_object('engagement',p_worker_engagement_id,'version',p_expected_version,'reason',p_reason_code,'effectiveAt',p_effective_at,'policy',v_policy)::text,'UTF8'),'sha256'),'hex');
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':engagement-end:'||p_idempotency_key,0));SELECT * INTO v_existing FROM event.command_execution WHERE tenant_id=p_tenant_id AND command_code='workforce.external_worker.engagement.terminate' AND idempotency_key=p_idempotency_key;
+ IF FOUND THEN IF v_existing.request_fingerprint::text IS DISTINCT FROM v_fingerprint THEN RAISE EXCEPTION 'Termination idempotency key reused' USING ERRCODE='unique_violation';END IF;IF v_existing.status<>'succeeded' THEN RAISE EXCEPTION 'Prior termination command is not replayable' USING ERRCODE='object_not_in_prerequisite_state';END IF;RETURN QUERY SELECT (v_existing.result_payload->>'workerEngagementId')::uuid,(v_existing.result_payload->>'engagementVersion')::bigint,(v_existing.result_payload->>'iamOutboxId')::uuid,v_existing.result_payload->>'iamDesiredHash',(v_existing.result_payload->>'outboxId')::uuid,true;RETURN;END IF;
+ SELECT * INTO v_engagement FROM document.worker_engagement WHERE tenant_id=p_tenant_id AND id=p_worker_engagement_id FOR UPDATE;IF NOT FOUND THEN RAISE EXCEPTION 'Worker engagement not found' USING ERRCODE='no_data_found';END IF;IF v_engagement.row_version<>p_expected_version THEN RAISE EXCEPTION 'Worker engagement version is stale' USING ERRCODE='serialization_failure';END IF;IF v_engagement.status NOT IN('active','suspended') THEN RAISE EXCEPTION 'Only active or suspended engagements may be terminated' USING ERRCODE='invalid_parameter_value';END IF;IF p_effective_at>clock_timestamp()+interval '5 minutes' OR p_effective_at<v_engagement.activated_at THEN RAISE EXCEPTION 'Termination effective time must be current and after activation' USING ERRCODE='check_violation';END IF;
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by) VALUES(p_tenant_id,'workforce.external_worker.engagement.terminate',p_idempotency_key,v_fingerprint,'processing',p_actor_id,'neon.worker-engagement-lifecycle',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO v_execution;
+ PERFORM set_config('app.worker_engagement_lifecycle_command_execution_id',v_execution::text,true);
+ UPDATE document.worker_engagement SET status='terminated',status_changed_at=p_effective_at,status_changed_by=p_actor_id,closed_at=p_effective_at,closed_by=p_actor_id,metadata=metadata||jsonb_build_object('terminationReasonCode',p_reason_code),updated_by=p_actor_id WHERE tenant_id=p_tenant_id AND id=p_worker_engagement_id AND row_version=p_expected_version RETURNING row_version INTO v_after_version;
+ UPDATE document.worker_operational_placement placement SET effective_until=CASE WHEN placement.effective_from<p_effective_at::date THEN LEAST(COALESCE(placement.effective_until,p_effective_at::date),p_effective_at::date) ELSE placement.effective_until END,status='inactive',updated_at=clock_timestamp(),updated_by=p_actor_id WHERE placement.tenant_id=p_tenant_id AND placement.worker_engagement_id=p_worker_engagement_id AND placement.status='active';
+ PERFORM set_config('app.worker_engagement_lifecycle_command_execution_id','',true);
+ SELECT * INTO v_iam FROM document.command_worker_engagement_iam_projection(p_tenant_id,p_worker_engagement_id,v_after_version,p_idempotency_key||':iam',p_actor_id,p_correlation_id,v_iam_policy);
+ v_payload:=jsonb_build_object('workerEngagementId',p_worker_engagement_id,'engagementVersion',v_iam.desired_version,'reasonCode',p_reason_code,'effectiveAt',p_effective_at,'iamOutboxId',v_iam.outbox_id,'iamDesiredHash',v_iam.desired_hash,'policyEvidence',v_policy,'commandExecutionId',v_execution);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(p_tenant_id,'neon-workforce','workforce.external_worker.engagement.terminated','worker-engagement:'||p_worker_engagement_id::text||':v'||v_iam.desired_version::text,'worker_engagement',p_worker_engagement_id,'worker_engagement',p_worker_engagement_id,LEAST(v_iam.desired_version,2147483647)::integer,p_actor_id,'neon.worker-engagement-lifecycle',p_correlation_id,p_tenant_id::text,v_payload,p_actor_id) RETURNING id INTO v_outbox;
+ UPDATE event.command_execution SET status='succeeded',result_payload=v_payload||jsonb_build_object('outboxId',v_outbox),completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=v_execution;
+ RETURN QUERY SELECT p_worker_engagement_id,v_iam.desired_version,v_iam.outbox_id,v_iam.desired_hash,v_outbox,false;
+END;$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_external_revision()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Commercial revisions cannot be deleted' USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF OLD.status IN ('effective','superseded','rejected','cancelled') THEN
+        RAISE EXCEPTION 'Terminal commercial revisions are immutable' USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF OLD.status <> 'draft' AND (
+        to_jsonb(NEW) - ARRAY['status','supplier_accepted_at','supplier_accepted_by','effective_at']
+    ) IS DISTINCT FROM (
+        to_jsonb(OLD) - ARRAY['status','supplier_accepted_at','supplier_accepted_by','effective_at']
+    ) THEN
+        RAISE EXCEPTION 'Approved commercial revision terms and approval evidence are immutable'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_worker_compliance_item()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Worker compliance evidence cannot be deleted' USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF OLD.decision <> 'pending' THEN
+        RAISE EXCEPTION 'Worker compliance decision evidence is immutable' USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF (NEW.id,NEW.tenant_id,NEW.worker_engagement_id,NEW.requirement_code,NEW.requirement_version,NEW.category,NEW.required_before,NEW.created_at,NEW.created_by)
+       IS DISTINCT FROM
+       (OLD.id,OLD.tenant_id,OLD.worker_engagement_id,OLD.requirement_code,OLD.requirement_version,OLD.category,OLD.required_before,OLD.created_at,OLD.created_by) THEN
+        RAISE EXCEPTION 'Worker compliance requirement identity is immutable' USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE OR REPLACE FUNCTION document.command_workforce_iam_projection(
+  p_tenant_id uuid,p_projection_id uuid,p_expected_version bigint,
+  p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid DEFAULT NULL
+) RETURNS TABLE(employment_id uuid,desired_status text,desired_version bigint,desired_hash text,outbox_id uuid,replayed boolean)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,document,master,event,shared
+AS $$
+DECLARE
+  v_fingerprint text;v_existing event.command_execution%ROWTYPE;v_projection document.workforce_iam_projection%ROWTYPE;
+  v_employment_id uuid;v_person_id uuid;v_person_status text;v_employee_status text;v_employment_status text;
+  v_identifier text;v_display_name text;v_status text;v_hash text;v_outbox uuid;v_execution uuid;v_payload jsonb;
+BEGIN
+  IF current_database()<>'athyper_neon' OR current_setting('app.database_plane',true) IS DISTINCT FROM 'neon'
+     OR NULLIF(current_setting('app.current_tenant_id',true),'')::uuid IS DISTINCT FROM p_tenant_id
+     OR NULLIF(current_setting('app.current_principal_id',true),'')::uuid IS DISTINCT FROM p_actor_id THEN
+    RAISE EXCEPTION 'Internal-workforce IAM command context does not match plane, tenant and actor' USING ERRCODE='insufficient_privilege';
+  END IF;
+  IF p_expected_version<1 OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 200 THEN
+    RAISE EXCEPTION 'Invalid internal-workforce IAM command' USING ERRCODE='check_violation';
+  END IF;
+  v_fingerprint:=encode(public.digest(convert_to(jsonb_build_object('tenantId',p_tenant_id,'projectionId',p_projection_id,'expectedVersion',p_expected_version,'idempotencyKey',p_idempotency_key,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':internal-workforce-iam:'||p_idempotency_key,0));
+  SELECT command.* INTO v_existing FROM event.command_execution command WHERE command.tenant_id=p_tenant_id AND command.command_code='workforce.employee.iam.project' AND command.idempotency_key=p_idempotency_key;
+  IF FOUND THEN
+    IF v_existing.request_fingerprint::text IS DISTINCT FROM v_fingerprint THEN RAISE EXCEPTION 'Internal-workforce IAM idempotency key was reused for another command' USING ERRCODE='unique_violation'; END IF;
+    IF v_existing.status<>'succeeded' THEN RAISE EXCEPTION 'Prior internal-workforce IAM command is not replayable in status %',v_existing.status USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    RETURN QUERY SELECT (v_existing.result_payload->>'employmentId')::uuid,v_existing.result_payload->>'desiredStatus',(v_existing.result_payload->>'desiredVersion')::bigint,v_existing.result_payload->>'desiredHash',(v_existing.result_payload->>'outboxId')::uuid,true;
+    RETURN;
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':workforce-iam-projection:'||p_projection_id::text,0));
+  SELECT projection.* INTO v_projection FROM document.workforce_iam_projection projection WHERE projection.tenant_id=p_tenant_id AND projection.id=p_projection_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Internal-workforce IAM projection was not found in command tenant' USING ERRCODE='no_data_found'; END IF;
+  IF v_projection.row_version<>p_expected_version THEN RAISE EXCEPTION 'Internal-workforce IAM projection version is stale' USING ERRCODE='serialization_failure'; END IF;
+  SELECT employment.id,person.id,person.status::text,employee.status::text,employment.employment_status,
+         lower(btrim(COALESCE(NULLIF(person.primary_email,''),NULLIF(employee.email,'')))),
+         COALESCE(NULLIF(btrim(person.display_name),''),NULLIF(btrim(employee.display_name),''),btrim(concat_ws(' ',person.first_name,person.last_name)))
+    INTO v_employment_id,v_person_id,v_person_status,v_employee_status,v_employment_status,v_identifier,v_display_name
+    FROM master.employee employee JOIN master.person person ON person.tenant_id=employee.tenant_id AND person.id=employee.person_id
+    JOIN master.employment employment ON employment.tenant_id=employee.tenant_id AND employment.employee_id=employee.id AND employment.legal_entity_id=v_projection.employer_organization_id
+   WHERE employee.tenant_id=p_tenant_id AND employee.id=v_projection.employee_id
+   ORDER BY employment.is_primary DESC,employment.hire_date DESC,employment.id DESC LIMIT 1 FOR UPDATE OF employment;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Internal-workforce employment was not found for projection' USING ERRCODE='no_data_found'; END IF;
+  IF v_projection.desired_state='member' THEN
+    IF NOT v_projection.requested_principal_creation OR v_person_status<>'active' OR v_employee_status<>'active' OR v_employment_status<>'active' OR v_identifier IS NULL OR v_identifier='' THEN
+      RAISE EXCEPTION 'Internal workforce is not eligible for IAM provisioning' USING ERRCODE='check_violation';
+    END IF;
+    v_status:='active';
+  ELSIF v_projection.desired_state='suspended' THEN v_status:='suspended';
+  ELSE v_status:='deprovisioned'; END IF;
+  INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by)
+  VALUES(p_tenant_id,'workforce.employee.iam.project',p_idempotency_key,v_fingerprint,'processing',p_actor_id,'neon.internal-workforce-iam',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO v_execution;
+  v_payload:=jsonb_build_object('schema','athyper.trustiam.identity-projection-intent/1','sourcePlane','neon','sourceTenantId',p_tenant_id,'authorityTenantId',p_tenant_id,'targetTenantId',p_tenant_id,'personId',v_person_id,'identifier',v_identifier,'displayName',v_display_name,'realmKey','neon','organizationId',v_projection.employer_organization_id,'relationship','employer','sourceRef','employment:'||v_employment_id::text,'commandExecutionId',v_execution,'desiredVersion',v_projection.row_version,'desiredStatus',v_status,'applications',jsonb_build_array(jsonb_build_object('plane','neon','targetTenantId',p_tenant_id,'roles',jsonb_build_array(jsonb_build_object('roleCode','workforce.employee','scopeKind','legal_entity','scopeTargetId',v_projection.employer_organization_id)))));
+  v_hash:=encode(public.digest(convert_to(v_payload::text,'UTF8'),'sha256'),'hex');v_payload:=v_payload||jsonb_build_object('desiredHash',v_hash);
+  INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by)
+  VALUES(p_tenant_id,'neon-workforce-iam','workforce.employee.identity_projection.requested','internal-workforce-iam:'||v_employment_id::text||':v'||v_projection.row_version::text,'employment',v_employment_id,'employment',v_employment_id,LEAST(v_projection.row_version,2147483647)::integer,p_actor_id,'neon.internal-workforce-iam',p_correlation_id,p_tenant_id::text,v_payload,p_actor_id) RETURNING id INTO v_outbox;
+  UPDATE event.command_execution SET status='succeeded',result_payload=jsonb_build_object('employmentId',v_employment_id,'desiredStatus',v_status,'desiredVersion',v_projection.row_version,'desiredHash',v_hash,'outboxId',v_outbox),completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=v_execution AND status='processing';
+  RETURN QUERY SELECT v_employment_id,v_status,v_projection.row_version,v_hash,v_outbox,false;
+END $$;
+
+-- Canonical G6 internal-workforce identity intent.  The employment aggregate is
+-- the source authority; the retained workforce_iam_projection relation is not
+-- consulted or mutated by this command.
+CREATE OR REPLACE FUNCTION document.command_internal_workforce_identity_intent(
+  p_tenant_id uuid,p_employment_id uuid,p_desired_status text,
+  p_create_principal boolean,p_idempotency_key text,p_actor_id uuid,
+  p_correlation_id uuid DEFAULT NULL
+) RETURNS TABLE(employment_id uuid,desired_status text,desired_version bigint,
+  desired_hash text,outbox_id uuid,replayed boolean)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,document,master,event,shared
+AS $$
+DECLARE
+  v_fingerprint text;v_existing event.command_execution%ROWTYPE;
+  v_employment master.employment%ROWTYPE;v_employee master.employee%ROWTYPE;
+  v_person master.person%ROWTYPE;v_version bigint;v_hash text;v_outbox uuid;
+  v_execution uuid;v_payload jsonb;v_identifier text;
+BEGIN
+  IF current_setting('app.database_plane',true) IS DISTINCT FROM 'neon'
+     OR NULLIF(current_setting('app.current_tenant_id',true),'')::uuid IS DISTINCT FROM p_tenant_id
+     OR NULLIF(current_setting('app.current_principal_id',true),'')::uuid IS DISTINCT FROM p_actor_id THEN
+    RAISE EXCEPTION 'Internal-workforce identity intent context does not match plane, tenant and actor' USING ERRCODE='insufficient_privilege';
+  END IF;
+  IF p_desired_status NOT IN('active','suspended','deprovisioned')
+     OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 200 THEN
+    RAISE EXCEPTION 'Invalid internal-workforce identity intent' USING ERRCODE='check_violation';
+  END IF;
+  v_fingerprint:=encode(public.digest(convert_to(jsonb_build_object(
+    'tenantId',p_tenant_id,'employmentId',p_employment_id,'desiredStatus',p_desired_status,
+    'createPrincipal',p_create_principal,'idempotencyKey',p_idempotency_key,'actorId',p_actor_id
+  )::text,'UTF8'),'sha256'),'hex');
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':internal-workforce-identity:'||p_idempotency_key,0));
+  SELECT command.* INTO v_existing FROM event.command_execution command
+   WHERE command.tenant_id=p_tenant_id AND command.command_code='workforce.employee.identity.request'
+     AND command.idempotency_key=p_idempotency_key;
+  IF FOUND THEN
+    IF v_existing.request_fingerprint::text IS DISTINCT FROM v_fingerprint THEN
+      RAISE EXCEPTION 'Internal-workforce identity idempotency key was reused' USING ERRCODE='unique_violation';
+    END IF;
+    IF v_existing.status<>'succeeded' THEN
+      RAISE EXCEPTION 'Prior internal-workforce identity command is not replayable' USING ERRCODE='object_not_in_prerequisite_state';
+    END IF;
+    RETURN QUERY SELECT (v_existing.result_payload->>'employmentId')::uuid,
+      v_existing.result_payload->>'desiredStatus',(v_existing.result_payload->>'desiredVersion')::bigint,
+      v_existing.result_payload->>'desiredHash',(v_existing.result_payload->>'outboxId')::uuid,true;
+    RETURN;
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':internal-workforce-identity:'||p_employment_id::text,0));
+  SELECT value.* INTO v_employment FROM master.employment value
+   WHERE value.tenant_id=p_tenant_id AND value.id=p_employment_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Internal-workforce employment was not found' USING ERRCODE='no_data_found'; END IF;
+  SELECT value.* INTO v_employee FROM master.employee value
+   WHERE value.tenant_id=p_tenant_id AND value.id=v_employment.employee_id;
+  SELECT value.* INTO v_person FROM master.person value
+   WHERE value.tenant_id=p_tenant_id AND value.id=v_employment.person_id;
+  IF v_employee.id IS NULL OR v_person.id IS NULL THEN
+    RAISE EXCEPTION 'Internal-workforce identity authority is incomplete' USING ERRCODE='data_corrupted';
+  END IF;
+  v_identifier:=lower(btrim(COALESCE(NULLIF(v_person.primary_email,''),NULLIF(v_employee.email,''))));
+  IF p_desired_status='active' AND (NOT p_create_principal OR v_person.status<>'active'
+     OR v_employee.status<>'active' OR v_employment.employment_status<>'active'
+     OR v_identifier IS NULL OR v_identifier='') THEN
+    RAISE EXCEPTION 'Internal workforce is not eligible for IAM provisioning' USING ERRCODE='check_violation';
+  END IF;
+  SELECT COALESCE(max((command.result_payload->>'desiredVersion')::bigint),0)+1 INTO v_version
+    FROM event.command_execution command
+   WHERE command.tenant_id=p_tenant_id AND command.command_code='workforce.employee.identity.request'
+     AND command.status='succeeded' AND command.result_payload->>'employmentId'=p_employment_id::text;
+  INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,
+    actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by)
+  VALUES(p_tenant_id,'workforce.employee.identity.request',p_idempotency_key,v_fingerprint,'processing',
+    p_actor_id,'neon.internal-workforce-iam',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id)
+  RETURNING id INTO v_execution;
+  v_payload:=jsonb_build_object('schema','athyper.trustiam.identity-projection-intent/1','sourcePlane','neon',
+    'sourceTenantId',p_tenant_id,'authorityTenantId',p_tenant_id,'targetTenantId',p_tenant_id,
+    'personId',v_person.id,'identifier',v_identifier,
+    'displayName',COALESCE(NULLIF(btrim(v_person.display_name),''),NULLIF(btrim(v_employee.display_name),''),btrim(concat_ws(' ',v_person.first_name,v_person.last_name))),
+    'realmKey','neon','organizationId',v_employment.legal_entity_id,'relationship','employer',
+    'sourceRef','employment:'||v_employment.id::text,'commandExecutionId',v_execution,
+    'desiredVersion',v_version,'desiredStatus',p_desired_status,
+    'applications',jsonb_build_array(jsonb_build_object('plane','neon','targetTenantId',p_tenant_id,
+      'roles',CASE WHEN p_desired_status='deprovisioned' THEN '[]'::jsonb ELSE jsonb_build_array(jsonb_build_object(
+        'roleCode','workforce.employee','scopeKind','legal_entity','scopeTargetId',v_employment.legal_entity_id)) END)));
+  v_hash:=encode(public.digest(convert_to(v_payload::text,'UTF8'),'sha256'),'hex');
+  v_payload:=v_payload||jsonb_build_object('desiredHash',v_hash);
+  INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,
+    event_version,actor_id,source,correlation_id,partition_key,payload,created_by)
+  VALUES(p_tenant_id,'neon-workforce-iam','workforce.employee.identity_projection.requested',
+    'internal-workforce-identity:'||v_employment.id::text||':v'||v_version::text,'employment',v_employment.id,
+    'employment',v_employment.id,LEAST(v_version,2147483647)::integer,p_actor_id,'neon.internal-workforce-iam',
+    p_correlation_id,p_tenant_id::text,v_payload,p_actor_id) RETURNING id INTO v_outbox;
+  UPDATE event.command_execution SET status='succeeded',result_payload=jsonb_build_object(
+    'employmentId',v_employment.id,'desiredStatus',p_desired_status,'desiredVersion',v_version,
+    'desiredHash',v_hash,'outboxId',v_outbox),completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),
+    status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=v_execution AND status='processing';
+  RETURN QUERY SELECT v_employment.id,p_desired_status,v_version,v_hash,v_outbox,false;
+END $$;
+-- Case-native Business Partner runtime. This definition supersedes the generic
+-- lifecycle function with optional external cycle coordinates for local/API use.
+ALTER TABLE document.business_partner_invitation ADD COLUMN IF NOT EXISTS entity_case_id uuid;
+ALTER TABLE document.business_partner_invitation_recovery ADD COLUMN IF NOT EXISTS entity_case_id uuid;
+ALTER TABLE document.mesh_business_partner_acceptance_event ADD COLUMN IF NOT EXISTS entity_case_id uuid;
+
+ALTER TABLE document.business_partner_invitation DROP CONSTRAINT IF EXISTS business_partner_invitation_lifecycle_chk;
+ALTER TABLE document.business_partner_invitation ADD CONSTRAINT business_partner_invitation_lifecycle_chk CHECK(
+ (status='pending' AND applicant_principal_id IS NULL AND entity_case_id IS NULL AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NULL)
+ OR (status='accepted' AND applicant_principal_id IS NOT NULL AND entity_case_id IS NOT NULL AND accepted_at IS NOT NULL AND cancelled_at IS NULL AND superseded_at IS NULL)
+ OR (status='cancelled' AND accepted_at IS NULL AND cancelled_at IS NOT NULL AND superseded_at IS NULL)
+ OR (status='expired' AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NULL)
+ OR (status='superseded' AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NOT NULL));
+ALTER TABLE document.business_partner_invitation DROP CONSTRAINT IF EXISTS business_partner_invitation_entity_case_fk;
+ALTER TABLE document.business_partner_invitation ADD CONSTRAINT business_partner_invitation_entity_case_fk FOREIGN KEY(tenant_id,entity_case_id) REFERENCES document.entity_case(tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE document.business_partner_invitation_recovery DROP CONSTRAINT IF EXISTS business_partner_invitation_recovery_subject_chk;
+ALTER TABLE document.business_partner_invitation_recovery ADD CONSTRAINT business_partner_invitation_recovery_subject_chk CHECK(entity_case_id IS NOT NULL);
+ALTER TABLE document.business_partner_invitation_recovery DROP CONSTRAINT IF EXISTS business_partner_invitation_recovery_entity_case_fk;
+ALTER TABLE document.business_partner_invitation_recovery ADD CONSTRAINT business_partner_invitation_recovery_entity_case_fk FOREIGN KEY(tenant_id,entity_case_id) REFERENCES document.entity_case(tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE document.mesh_business_partner_acceptance_event DROP CONSTRAINT IF EXISTS mesh_business_partner_acceptance_event_kind_chk;
+ALTER TABLE document.mesh_business_partner_acceptance_event DROP CONSTRAINT IF EXISTS mesh_business_partner_acceptance_event_request_chk;
+ALTER TABLE document.mesh_business_partner_acceptance_event DROP CONSTRAINT IF EXISTS mesh_business_partner_acceptance_event_case_chk;
+ALTER TABLE document.mesh_business_partner_acceptance_event ADD CONSTRAINT mesh_business_partner_acceptance_event_kind_chk CHECK(event_kind IN('prepared','case_created'));
+ALTER TABLE document.mesh_business_partner_acceptance_event ADD CONSTRAINT mesh_business_partner_acceptance_event_case_chk CHECK((event_kind='prepared' AND entity_case_id IS NULL AND lifecycle_version=1) OR (event_kind='case_created' AND entity_case_id IS NOT NULL AND lifecycle_version=2));
+ALTER TABLE document.mesh_business_partner_acceptance_event DROP CONSTRAINT IF EXISTS mesh_business_partner_acceptance_event_case_fk;
+ALTER TABLE document.mesh_business_partner_acceptance_event ADD CONSTRAINT mesh_business_partner_acceptance_event_case_fk FOREIGN KEY(tenant_id,entity_case_id) REFERENCES document.entity_case(tenant_id,id) ON DELETE RESTRICT;
+CREATE UNIQUE INDEX IF NOT EXISTS mesh_business_partner_acceptance_event_case_global_uq ON document.mesh_business_partner_acceptance_event(tenant_id,entity_case_id) WHERE entity_case_id IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION document.fn_entity_case_approvers(p_tenant_id uuid,p_operating_organization_id uuid,p_company_code_id uuid,p_excluded_principal_id uuid)
+RETURNS TABLE(principal_id uuid) LANGUAGE sql STABLE SECURITY INVOKER SET search_path=pg_catalog,authz AS $$
+ SELECT DISTINCT member.principal_id FROM authz.group_member member
+ JOIN authz.plane_membership membership ON membership.tenant_id=member.tenant_id AND membership.principal_id=member.principal_id AND membership.status='active' AND membership.effective_from<=now() AND (membership.effective_until IS NULL OR membership.effective_until>now())
+ JOIN authz.group_role grant_row ON grant_row.tenant_id=member.tenant_id AND grant_row.group_id=member.group_id AND grant_row.status='active' AND grant_row.effective_from<=now() AND (grant_row.effective_until IS NULL OR grant_row.effective_until>now())
+ JOIN authz.role role_row ON role_row.tenant_id=grant_row.tenant_id AND role_row.id=grant_row.role_id AND role_row.status='active'
+ JOIN authz.role_permission role_permission ON role_permission.tenant_id=role_row.tenant_id AND role_permission.role_id=role_row.id
+ JOIN authz.permission permission ON permission.id=role_permission.permission_id AND permission.canonical_code='neon.relationship.entity_case.decide' AND permission.status='published'
+ JOIN authz.scope_target target ON target.tenant_id=grant_row.tenant_id AND target.id=grant_row.scope_target_id AND target.status='active'
+ WHERE member.tenant_id=p_tenant_id AND member.status='active' AND member.effective_from<=now() AND (member.effective_until IS NULL OR member.effective_until>now()) AND member.principal_id IS DISTINCT FROM p_excluded_principal_id
+   AND ((target.scope_kind='tenant' AND target.target_id=p_tenant_id) OR (target.scope_kind='operating_organization' AND target.target_id=p_operating_organization_id) OR (p_company_code_id IS NOT NULL AND target.scope_kind='company_code' AND target.target_id=p_company_code_id));
+$$;
+
+CREATE OR REPLACE FUNCTION document.fn_company_setup_case_approvers(p_tenant_id uuid,p_company_code_id uuid,p_excluded_principal_id uuid)
+RETURNS TABLE(principal_id uuid) LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
+ SELECT DISTINCT member.principal_id FROM authz.group_member member
+ JOIN authz.principal_group group_row ON group_row.tenant_id=member.tenant_id AND group_row.id=member.group_id AND group_row.status='active'
+ JOIN authz.plane_membership membership ON membership.tenant_id=member.tenant_id AND membership.principal_id=member.principal_id AND membership.status='active' AND membership.effective_from<=now() AND (membership.effective_until IS NULL OR membership.effective_until>now())
+ JOIN authz.group_role grant_row ON grant_row.tenant_id=member.tenant_id AND grant_row.group_id=member.group_id AND grant_row.status='active' AND grant_row.propagation_mode='exact' AND grant_row.effective_from<=now() AND (grant_row.effective_until IS NULL OR grant_row.effective_until>now())
+ JOIN authz.role role_row ON role_row.tenant_id=grant_row.tenant_id AND role_row.id=grant_row.role_id AND role_row.status='active'
+ JOIN authz.role_permission role_permission ON role_permission.tenant_id=role_row.tenant_id AND role_permission.role_id=role_row.id
+ JOIN authz.permission permission ON permission.id=role_permission.permission_id AND permission.canonical_code='neon.relationship.bp_company_setup_request.decide' AND permission.status='published'
+ JOIN authz.permission_scope_kind scope_kind ON scope_kind.permission_id=permission.id AND scope_kind.scope_kind='company_code' AND scope_kind.propagation_mode='exact' AND scope_kind.status='active'
+ JOIN authz.scope_target target ON target.tenant_id=grant_row.tenant_id AND target.id=grant_row.scope_target_id AND target.status='active'
+ WHERE member.tenant_id=p_tenant_id AND member.status='active' AND member.effective_from<=now() AND (member.effective_until IS NULL OR member.effective_until>now()) AND member.principal_id IS DISTINCT FROM p_excluded_principal_id
+   AND p_tenant_id=shared.current_tenant_id()
+   AND p_excluded_principal_id=master.current_principal_id_soft()
+   AND p_company_code_id IS NOT NULL AND target.scope_kind='company_code' AND target.target_id=p_company_code_id
+   AND EXISTS(SELECT 1 FROM master.principal principal WHERE principal.tenant_id=member.tenant_id AND principal.id=member.principal_id AND principal.status='active')
+   AND NOT EXISTS(SELECT 1 FROM authz.deny_rule deny WHERE deny.tenant_id=member.tenant_id AND deny.permission_id=permission.id AND deny.status='active' AND deny.effective_from<=now() AND (deny.effective_until IS NULL OR deny.effective_until>now()) AND (deny.subject_kind='tenant' OR (deny.subject_kind='principal' AND deny.principal_id=member.principal_id) OR (deny.subject_kind='group' AND EXISTS(SELECT 1 FROM authz.group_member denied_member WHERE denied_member.tenant_id=member.tenant_id AND denied_member.principal_id=member.principal_id AND denied_member.group_id=deny.group_id AND denied_member.status='active' AND denied_member.effective_from<=now() AND (denied_member.effective_until IS NULL OR denied_member.effective_until>now())))))
+   ORDER BY member.principal_id LIMIT 200;
+$$;
+REVOKE ALL ON FUNCTION document.fn_company_setup_case_approvers(uuid,uuid,uuid) FROM PUBLIC;
+DO $grants$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION document.fn_company_setup_case_approvers(uuid,uuid,uuid) TO athyperapp; END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION document.fn_company_setup_case_approvers(uuid,uuid,uuid) TO athyperadmin; END IF;
+END $grants$;
+
+
+CREATE OR REPLACE FUNCTION document.trg_guard_entity_case_mutation() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,event AS $$
+DECLARE execution uuid:=NULLIF(current_setting('app.entity_case_command_execution_id',true),'')::uuid;tenant uuid:=COALESCE(NEW.tenant_id,OLD.tenant_id);
+BEGIN
+ IF execution IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution e WHERE e.id=execution AND e.tenant_id=tenant AND e.command_code IN('entity.case.draft.write','entity.case.validation','entity.case.lifecycle','entity.case.materialize.internal_business_partner','entity.case.materialize.business_partner_role','entity.case.materialize.business_partner_company','entity.case.materialize.business_partner_change','entity.case.materialize.mesh_profile_change','entity.case.materialize.supplier_activation') AND e.status='processing' AND e.actor_principal_id=master.current_principal_id_soft()) THEN RAISE EXCEPTION 'Entity case mutations require the governed command' USING ERRCODE='insufficient_privilege';END IF;RETURN COALESCE(NEW,OLD);
+END $$;
+
+CREATE OR REPLACE FUNCTION document.command_entity_case_validation(
+ p_tenant_id uuid,p_case_id uuid,p_expected_version bigint,p_evaluation_id uuid,
+ p_ruleset_code text,p_ruleset_release text,p_ruleset_hash text,p_findings jsonb,
+ p_validation_summary jsonb,p_duplicate_summary jsonb,p_change_impact jsonb,
+ p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid DEFAULT NULL)
+RETURNS TABLE(entity_case_id uuid,snapshot_id uuid,row_version bigint,status text,replayed boolean,outbox_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,document,snapshot,event,shared,master SET row_security=on AS $$
+DECLARE fingerprint text;prior event.command_execution%ROWTYPE;execution uuid;current document.entity_case%ROWTYPE;payload jsonb;next_snapshot uuid;next_version bigint;outbox uuid;result jsonb;item jsonb;ordinal integer:=0;lineage_hash text;
+BEGIN
+ IF current_database()<>'athyper_neon' OR current_setting('app.database_plane',true)<>'neon' OR shared.current_tenant_id()<>p_tenant_id OR master.current_principal_id_soft() IS DISTINCT FROM p_actor_id THEN RAISE EXCEPTION 'Entity case validation context mismatch' USING ERRCODE='insufficient_privilege';END IF;
+ IF p_expected_version<1 OR jsonb_typeof(p_findings)<>'array' OR jsonb_typeof(p_validation_summary)<>'object' OR jsonb_typeof(p_duplicate_summary)<>'object' OR jsonb_typeof(p_change_impact)<>'object' OR p_ruleset_hash !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Entity case validation arguments are invalid' USING ERRCODE='check_violation';END IF;
+ fingerprint:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,'expectedVersion',p_expected_version,'evaluationId',p_evaluation_id,'ruleset',p_ruleset_code,'rulesetHash',p_ruleset_hash,'findings',p_findings,'validationSummary',p_validation_summary,'duplicateSummary',p_duplicate_summary,'changeImpact',p_change_impact,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case-validation:'||p_idempotency_key,0));
+ SELECT e.* INTO prior FROM event.command_execution e WHERE e.tenant_id=p_tenant_id AND e.command_code='entity.case.validation' AND e.idempotency_key=p_idempotency_key;
+ IF FOUND THEN IF prior.request_fingerprint<>fingerprint THEN RAISE EXCEPTION 'Entity case validation idempotency conflict' USING ERRCODE='unique_violation';END IF;RETURN QUERY SELECT (prior.result_payload->>'caseId')::uuid,(prior.result_payload->>'snapshotId')::uuid,(prior.result_payload->>'rowVersion')::bigint,prior.result_payload->>'status',true,(prior.result_payload->>'outboxId')::uuid;RETURN;END IF;
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by) VALUES(p_tenant_id,'entity.case.validation',p_idempotency_key,fingerprint,'processing',p_actor_id,'neon-business-partner',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO execution;
+ PERFORM set_config('app.entity_case_command_execution_id',execution::text,true);PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case:'||p_case_id::text,0));
+ SELECT c.* INTO current FROM document.entity_case c WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id FOR UPDATE;IF NOT FOUND THEN RAISE EXCEPTION 'Entity case was not found' USING ERRCODE='no_data_found';END IF;
+ IF current.row_version<>p_expected_version THEN RAISE EXCEPTION 'Entity case version is stale' USING ERRCODE='serialization_failure';END IF;
+ IF current.status<>'draft' THEN RAISE EXCEPTION 'Only a draft entity case can be validated' USING ERRCODE='object_not_in_prerequisite_state';END IF;
+ SELECT s.payload_json INTO payload FROM snapshot.entity_snapshot s WHERE s.tenant_id=p_tenant_id AND s.snapshot_id=current.current_snapshot_id;
+ next_version:=current.row_version+1;next_snapshot:=snapshot.fn_capture_entity('document.entity_case',p_case_id,current.case_code,1,current.entity_contract_hash,next_version,'entity.case.validated','version',payload,p_correlation_id,NULL,NULL,NULL,'legal','neon-business-partner');
+ lineage_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,'sourceSnapshotId',current.current_snapshot_id,'targetSnapshotId',next_snapshot,'evaluationId',p_evaluation_id,'version',next_version)::text,'UTF8'),'sha256'),'hex');
+ INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,transformation_code,transformation_version,evidence_hash,created_by) VALUES(p_tenant_id,p_case_id,current.current_snapshot_id,next_snapshot,'validated_from','entity.case.validation','1',lineage_hash,p_actor_id);
+ FOR item IN SELECT value FROM jsonb_array_elements(p_findings) LOOP
+  INSERT INTO document.entity_case_validation(tenant_id,entity_case_id,evaluation_id,ordinal,evaluated_snapshot_id,ruleset_code,ruleset_release,ruleset_hash,finding_code,field_path,severity,message,details,evaluated_by)
+  VALUES(p_tenant_id,p_case_id,p_evaluation_id,ordinal,next_snapshot,p_ruleset_code,p_ruleset_release,p_ruleset_hash,item->>'messageCode',NULLIF(item->>'fieldPath',''),item->>'severity',item->>'messageCode',jsonb_build_object('ruleCode',item->>'ruleCode','outcome',item->>'outcome','evidenceReference',COALESCE(item->'evidenceReference','{}'::jsonb),'validationSummary',p_validation_summary,'duplicateSummary',p_duplicate_summary,'changeImpact',p_change_impact),p_actor_id);ordinal:=ordinal+1;
+ END LOOP;
+ UPDATE document.entity_case SET current_snapshot_id=next_snapshot,row_version=next_version,updated_by=p_actor_id WHERE tenant_id=p_tenant_id AND id=p_case_id;
+ INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,result_code,result_snapshot_id,result_evidence,recorded_by) VALUES(p_tenant_id,p_case_id,'entity.case.validation',p_idempotency_key,fingerprint,p_expected_version,current.row_version,next_version,'draft','draft','accepted',CASE WHEN p_validation_summary->>'outcome'='passed' THEN 'ENTITY_CASE_VALIDATION_PASSED' ELSE 'ENTITY_CASE_VALIDATION_FAILED' END,next_snapshot,jsonb_build_object('evaluationId',p_evaluation_id,'validationSummary',p_validation_summary,'duplicateSummary',p_duplicate_summary,'changeImpact',p_change_impact),p_actor_id);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(p_tenant_id,'governed-entity-case','entity.case.validated','entity-case:'||p_case_id::text||':v'||next_version::text||':'||p_idempotency_key,'document.entity_case',p_case_id,'entity_case',p_case_id,LEAST(next_version,2147483647)::integer,p_actor_id,'neon-business-partner',p_correlation_id,p_tenant_id::text,jsonb_build_object('caseId',p_case_id,'snapshotId',next_snapshot,'rowVersion',next_version,'status','draft','evaluationId',p_evaluation_id,'valid',p_validation_summary->>'outcome'='passed'),p_actor_id) RETURNING id INTO outbox;
+ result:=jsonb_build_object('caseId',p_case_id,'snapshotId',next_snapshot,'rowVersion',next_version,'status','draft','outboxId',outbox);UPDATE event.command_execution SET status='succeeded',result_payload=result,completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=execution;
+ RETURN QUERY SELECT p_case_id,next_snapshot,next_version,'draft',false,outbox;
+END $$;
+
+CREATE OR REPLACE FUNCTION document.command_entity_case_lifecycle(
+ p_tenant_id uuid,p_case_id uuid,p_action text,p_expected_version bigint,p_cycle_run_id uuid,p_cycle_task_id uuid,p_reason text,p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid DEFAULT NULL)
+RETURNS TABLE(entity_case_id uuid,snapshot_id uuid,row_version bigint,status text,replayed boolean,outbox_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,document,snapshot,runtime_meta,event,governance,shared,master SET row_security=on AS $$
+DECLARE fingerprint text;prior event.command_execution%ROWTYPE;execution uuid;current document.entity_case%ROWTYPE;task governance.cycle_task%ROWTYPE;payload jsonb;next_snapshot uuid;next_version bigint;next_status text;outbox uuid;result jsonb;command_code text;lineage_hash text;
+BEGIN
+ IF current_database()<>'athyper_'||current_setting('app.database_plane',true) OR shared.current_tenant_id()<>p_tenant_id OR master.current_principal_id_soft() IS DISTINCT FROM p_actor_id THEN RAISE EXCEPTION 'Entity case lifecycle context mismatch' USING ERRCODE='insufficient_privilege';END IF;
+ IF p_action NOT IN('submit','approve','reject','return','cancel') OR p_expected_version<1 OR (p_action<>'cancel' AND (p_cycle_run_id IS NULL)<>(p_cycle_task_id IS NULL)) OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 200 OR (p_action IN('reject','return','cancel') AND NULLIF(btrim(p_reason),'') IS NULL) OR length(COALESCE(p_reason,''))>2000 THEN RAISE EXCEPTION 'Entity case lifecycle arguments are invalid' USING ERRCODE='check_violation';END IF;
+ command_code:=CASE WHEN p_action='submit' THEN 'entity.case.submit' WHEN p_action='cancel' THEN 'entity.case.cancel' ELSE 'entity.case.decision' END;
+ fingerprint:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,'action',p_action,'expectedVersion',p_expected_version,'cycleRunId',p_cycle_run_id,'cycleTaskId',p_cycle_task_id,'reason',p_reason,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case-lifecycle:'||p_idempotency_key,0));
+ SELECT e.* INTO prior FROM event.command_execution e WHERE e.tenant_id=p_tenant_id AND e.command_code='entity.case.lifecycle' AND e.idempotency_key=p_idempotency_key;
+ IF FOUND THEN IF prior.request_fingerprint<>fingerprint THEN RAISE EXCEPTION 'Entity case lifecycle idempotency conflict' USING ERRCODE='unique_violation';END IF;RETURN QUERY SELECT (prior.result_payload->>'caseId')::uuid,(prior.result_payload->>'snapshotId')::uuid,(prior.result_payload->>'rowVersion')::bigint,prior.result_payload->>'status',true,(prior.result_payload->>'outboxId')::uuid;RETURN;END IF;
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by) VALUES(p_tenant_id,'entity.case.lifecycle',p_idempotency_key,fingerprint,'processing',p_actor_id,'governed-entity-case',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO execution;
+ PERFORM set_config('app.entity_case_command_execution_id',execution::text,true);PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':entity-case:'||p_case_id::text,0));
+ SELECT c.* INTO current FROM document.entity_case c WHERE c.tenant_id=p_tenant_id AND c.id=p_case_id FOR UPDATE;IF NOT FOUND THEN RAISE EXCEPTION 'Entity case was not found' USING ERRCODE='no_data_found';END IF;
+ IF current.row_version<>p_expected_version THEN RAISE EXCEPTION 'Entity case version is stale' USING ERRCODE='serialization_failure';END IF;
+ IF p_cycle_task_id IS NOT NULL THEN SELECT t.* INTO task FROM governance.cycle_task t JOIN governance.cycle_run r ON r.tenant_id=t.tenant_id AND r.id=t.cycle_run_id WHERE t.tenant_id=p_tenant_id AND t.id=p_cycle_task_id AND t.cycle_run_id=p_cycle_run_id FOR UPDATE OF t;IF NOT FOUND THEN RAISE EXCEPTION 'Cycle run and task binding was not found' USING ERRCODE='foreign_key_violation';END IF;END IF;
+ SELECT s.payload_json INTO payload FROM snapshot.entity_snapshot s WHERE s.tenant_id=p_tenant_id AND s.snapshot_id=current.current_snapshot_id;IF NOT FOUND THEN RAISE EXCEPTION 'Current entity case snapshot was not found' USING ERRCODE='data_corrupted';END IF;
+ next_version:=current.row_version+1;
+ IF p_action='submit' THEN
+  IF current.status<>'draft' OR (p_cycle_task_id IS NOT NULL AND task.status NOT IN('pending','ready','in_progress')) THEN RAISE EXCEPTION 'Entity case is not submittable' USING ERRCODE='object_not_in_prerequisite_state';END IF;
+  IF NOT EXISTS(SELECT 1 FROM document.entity_case_validation v WHERE v.tenant_id=p_tenant_id AND v.entity_case_id=p_case_id AND v.evaluated_snapshot_id=current.current_snapshot_id AND v.details->'validationSummary'->>'outcome'='passed') THEN RAISE EXCEPTION 'Entity case requires successful validation of the current snapshot' USING ERRCODE='object_not_in_prerequisite_state';END IF;
+  IF cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c WHERE c.tenant_id=p_tenant_id AND c.id=current.entity_contract_id AND c.entity_contract_hash=current.entity_contract_hash AND c.status IN('published','superseded')),payload))>0 THEN RAISE EXCEPTION 'Entity case submission failed pinned contract validation' USING ERRCODE='check_violation';END IF;
+  next_status:='submitted';
+ ELSIF p_action='cancel' THEN
+  IF current.status NOT IN('draft','submitted','in_review','approved') OR current.result_snapshot_id IS NOT NULL OR current.target_entity_id IS NOT NULL OR NOT EXISTS(SELECT 1 FROM governance.process_attempt a JOIN governance.cycle_run r ON r.tenant_id=a.tenant_id AND r.id=a.cycle_run_id WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id AND a.cycle_run_id=p_cycle_run_id AND r.status='running' AND (current.created_by=p_actor_id OR r.owner_principal_id=p_actor_id)) THEN RAISE EXCEPTION 'PROCESS_CANCEL_FORBIDDEN' USING ERRCODE='insufficient_privilege'; END IF;
+  next_status:='cancelled';
+ ELSE
+  IF current.status NOT IN('submitted','in_review') OR p_actor_id=current.created_by OR (p_cycle_task_id IS NOT NULL AND (task.status NOT IN('in_progress','ready') OR (task.owner_principal_id IS NOT NULL AND task.owner_principal_id<>p_actor_id) OR NOT EXISTS(SELECT 1 FROM governance.cycle_subject s WHERE s.tenant_id=p_tenant_id AND s.cycle_run_id=p_cycle_run_id AND s.cycle_task_id=p_cycle_task_id AND s.entity_case_id=p_case_id AND (s.is_primary OR EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id AND a.cycle_run_id=p_cycle_run_id))))) THEN RAISE EXCEPTION 'Entity case decision violates maker-checker authority' USING ERRCODE='insufficient_privilege';END IF;
+  IF EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id)
+   AND NOT EXISTS(SELECT 1 FROM governance.process_attempt a JOIN governance.process_document_job j ON j.tenant_id=a.tenant_id AND j.attempt_id=a.id
+     JOIN governance.process_selection_evidence e ON e.tenant_id=a.tenant_id AND e.id=a.selection_id
+     JOIN governance.cycle_task t ON t.tenant_id=a.tenant_id AND t.cycle_run_id=a.cycle_run_id AND t.id=p_cycle_task_id
+     WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id AND a.cycle_run_id=p_cycle_run_id
+       AND t.process_attempt_id=a.id AND a.submission_snapshot_id=current.submitted_snapshot_id AND j.purpose='submitted_review_pack' AND j.status='ready'
+       AND EXISTS(SELECT 1 FROM jsonb_array_elements(e.evidence->'executionManifest'->'tasks') binding WHERE binding->>'taskTemplateId'=t.task_template_id::text AND (p_action<>'approve' OR binding->>'outcomeScope'='case_final_decision')))
+  THEN RAISE EXCEPTION 'PROCESS_DECISION_DOCUMENT_GATE_REQUIRED' USING ERRCODE='insufficient_privilege'; END IF;
+  IF p_action='approve' AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id) AND (
+   NOT EXISTS(SELECT 1 FROM document.workflow_request w
+    JOIN governance.process_attempt a ON a.tenant_id=w.tenant_id AND a.id=(w.metadata->'process'->>'attemptId')::uuid
+    WHERE w.tenant_id=p_tenant_id AND w.entity_type='cycle_task' AND w.entity_id=p_cycle_task_id::text AND a.case_id=p_case_id AND a.cycle_run_id=p_cycle_run_id
+     AND w.status='approved' AND w.metadata->'process'->>'outcomeScope'='case_final_decision'
+     AND EXISTS(SELECT 1 FROM document.workflow_stage stage WHERE stage.tenant_id=w.tenant_id AND stage.workflow_request_id=w.id)
+     AND NOT EXISTS(SELECT 1 FROM document.workflow_stage stage WHERE stage.tenant_id=w.tenant_id AND stage.workflow_request_id=w.id AND (stage.status<>'completed' OR stage.outcome<>'approved'
+       OR (SELECT count(DISTINCT i.assignee_principal_id) FROM document.work_item i WHERE i.tenant_id=w.tenant_id AND i.cycle_task_id=p_cycle_task_id AND i.payload->>'workflowStageId'=stage.id::text AND i.status='completed' AND i.outcome->>'decision'='approve' AND i.outcome->>'decidedBy'=i.assignee_principal_id::text AND i.assignee_principal_id<>w.requested_by AND i.assignee_principal_id<>current.created_by)
+         < CASE stage.quorum->>'kind' WHEN 'all' THEN jsonb_array_length(stage.quorum->'eligibilityEvidence'->'candidates') WHEN 'any' THEN 1 WHEN 'count' THEN (stage.quorum->>'value')::integer WHEN 'percentage' THEN ceil(jsonb_array_length(stage.quorum->'eligibilityEvidence'->'candidates')*(stage.quorum->>'value')::numeric/100)::integer ELSE 2147483647 END))))
+  THEN RAISE EXCEPTION 'PROCESS_FINAL_TASK_QUORUM_REQUIRED' USING ERRCODE='insufficient_privilege'; END IF;
+  IF p_action IN('return','reject') AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id) AND NOT EXISTS(
+   SELECT 1 FROM governance.process_attempt a
+   JOIN governance.process_selection_evidence e ON e.tenant_id=a.tenant_id AND e.id=a.selection_id
+   JOIN governance.cycle_task t ON t.tenant_id=a.tenant_id AND t.process_attempt_id=a.id AND t.id=p_cycle_task_id
+   CROSS JOIN LATERAL jsonb_array_elements(e.evidence->'executionManifest'->'tasks') binding
+   WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id AND a.cycle_run_id=p_cycle_run_id
+     AND a.submission_snapshot_id=current.submitted_snapshot_id AND binding->>'taskTemplateId'=t.task_template_id::text
+     AND binding->>'executionKind' IN('review','approval')
+     AND (NOT (binding ? 'caseAuthority') OR (
+       binding->'caseAuthority'->>'schema'='athyper.task-case-authority/1'
+       AND binding->'caseAuthority'->CASE WHEN p_action='return' THEN 'returnForChanges' ELSE 'rejectProposal' END='true'::jsonb)))
+   THEN RAISE EXCEPTION 'PROCESS_TASK_ACTION_FORBIDDEN' USING ERRCODE='insufficient_privilege'; END IF;
+  IF p_action IN('return','reject') AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id) AND NOT EXISTS(
+   SELECT 1 FROM document.work_item i JOIN document.workflow_stage stage ON stage.tenant_id=i.tenant_id AND stage.id=(i.payload->>'workflowStageId')::uuid JOIN governance.process_attempt a ON a.tenant_id=i.tenant_id AND a.id=(i.payload->>'attemptId')::uuid
+   WHERE i.tenant_id=p_tenant_id AND i.cycle_task_id=p_cycle_task_id AND i.source_entity_id=p_case_id AND i.assignee_principal_id=p_actor_id AND i.status='completed' AND i.outcome->>'decision'=p_action AND i.outcome->>'decidedBy'=p_actor_id::text AND i.outcome->>'idempotencyKey'=p_idempotency_key AND stage.status='active' AND a.submission_snapshot_id=current.submitted_snapshot_id
+   AND EXISTS(SELECT 1 FROM document.process_case_reviewers(p_tenant_id,p_case_id,NULL) r WHERE r.principal_id=p_actor_id)) THEN RAISE EXCEPTION 'PROCESS_CURRENT_REVIEWER_REQUIRED' USING ERRCODE='insufficient_privilege'; END IF;
+  IF p_action='approve' AND current.operation_code='amend_partner' THEN
+   PERFORM 1 FROM document.mesh_profile_change_resolution resolution
+    JOIN document.mesh_profile_change_case link ON link.tenant_id=resolution.tenant_id AND link.resolution_id=resolution.id
+    JOIN master.business_partner bp ON bp.tenant_id=resolution.tenant_id AND bp.id=resolution.business_partner_id
+    JOIN control.mesh_business_partner_profile_projection projection ON projection.tenant_id=resolution.tenant_id AND projection.id=resolution.projection_id
+    WHERE link.tenant_id=p_tenant_id AND link.entity_case_id=p_case_id AND bp.status='active'
+     AND bp.record_version=resolution.expected_target_version AND projection.projection_status='active' AND projection.current_snapshot_id=resolution.incoming_snapshot_id
+    FOR SHARE OF bp,projection;
+   IF NOT FOUND THEN RAISE EXCEPTION 'Profile source or target changed before approval' USING ERRCODE='serialization_failure'; END IF;
+  END IF;
+  next_status:=CASE p_action WHEN 'approve' THEN 'approved' WHEN 'reject' THEN 'rejected' ELSE 'draft' END;
+ END IF;
+ next_snapshot:=snapshot.fn_capture_entity('document.entity_case',p_case_id,current.case_code,1,current.entity_contract_hash,next_version,'entity.case.'||p_action,'version',payload,p_correlation_id,NULL,NULL,NULL,'legal','governed-entity-case');
+ lineage_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,'sourceSnapshotId',current.current_snapshot_id,'targetSnapshotId',next_snapshot,'action',p_action,'version',next_version)::text,'UTF8'),'sha256'),'hex');
+ INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,transformation_code,transformation_version,evidence_hash,created_by) VALUES(p_tenant_id,p_case_id,current.current_snapshot_id,next_snapshot,CASE WHEN p_action='submit' THEN 'submitted_from' ELSE 'decided_from' END,'entity.case.'||p_action,'1',lineage_hash,p_actor_id);
+ IF p_cycle_task_id IS NOT NULL AND NOT(p_action IN('return','reject') AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id)) THEN
+  IF p_action='submit' THEN INSERT INTO governance.cycle_subject(tenant_id,cycle_run_id,cycle_task_id,subject_role,entity_case_id,is_primary,created_by) VALUES(p_tenant_id,p_cycle_run_id,p_cycle_task_id,'governed_case',p_case_id,true,p_actor_id) ON CONFLICT DO NOTHING;UPDATE governance.cycle_task SET status='in_progress',started_at=COALESCE(started_at,clock_timestamp()),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_task_id;UPDATE governance.cycle_run run SET status='running',started_at=COALESCE(run.started_at,clock_timestamp()),updated_by=p_actor_id,version=run.version+1 WHERE run.tenant_id=p_tenant_id AND run.id=p_cycle_run_id AND run.status IN('draft','scheduled');
+  ELSIF p_action='return' THEN UPDATE governance.cycle_task SET status='ready',started_at=NULL,completed_at=NULL,completion_evidence=jsonb_build_object('caseId',p_case_id,'decision','return','snapshotId',next_snapshot,'reason',p_reason),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_task_id;
+  ELSE UPDATE governance.cycle_task SET status='completed',completed_at=clock_timestamp(),completion_evidence=jsonb_build_object('caseId',p_case_id,'decision',p_action,'snapshotId',next_snapshot,'reason',p_reason),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_task_id;UPDATE governance.cycle_run SET status='completed',completed_at=clock_timestamp(),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_run_id AND NOT EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.cycle_run_id=p_cycle_run_id);END IF;
+ END IF;
+ IF p_action IN('return','reject','cancel') AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=p_tenant_id AND a.case_id=p_case_id) THEN
+  UPDATE document.work_item i SET status='cancelled',completed_at=clock_timestamp(),row_version=i.row_version+1,updated_by=p_actor_id WHERE i.tenant_id=p_tenant_id AND i.source_entity_id=p_case_id AND i.payload->>'attemptId' IS NOT NULL AND i.status IN('open','claimed');
+  UPDATE document.workflow_stage stage SET status='cancelled',started_at=COALESCE(stage.started_at,clock_timestamp()),completed_at=clock_timestamp(),outcome='cancelled',updated_by=p_actor_id WHERE stage.tenant_id=p_tenant_id AND stage.status IN('pending','active') AND EXISTS(SELECT 1 FROM document.workflow_request w WHERE w.tenant_id=stage.tenant_id AND w.id=stage.workflow_request_id AND w.metadata->'process'->>'caseId'=p_case_id::text);
+  UPDATE document.workflow_request w SET status='cancelled',decision='cancel',decided_by=p_actor_id,decided_at=clock_timestamp(),updated_by=p_actor_id WHERE w.tenant_id=p_tenant_id AND w.metadata->'process'->>'caseId'=p_case_id::text AND w.status NOT IN('approved','rejected','cancelled');
+  UPDATE governance.cycle_task t SET status='cancelled',completed_at=clock_timestamp(),completion_evidence=completion_evidence||jsonb_build_object('closure',jsonb_build_object('action',p_action,'reason',p_reason,'snapshotId',next_snapshot,'actorId',p_actor_id)),version=version+1,updated_by=p_actor_id WHERE t.tenant_id=p_tenant_id AND t.cycle_run_id=p_cycle_run_id AND t.status NOT IN('completed','cancelled');
+  UPDATE governance.process_document_job j SET status='cancelled',claim_token=NULL,lease_expires_at=NULL,updated_at=clock_timestamp() WHERE j.tenant_id=p_tenant_id AND j.case_id=p_case_id AND j.status IN('pending','processing','failed');
+  IF p_action IN('reject','cancel') THEN UPDATE governance.cycle_run SET status='cancelled',completed_at=clock_timestamp(),version=version+1,updated_by=p_actor_id WHERE tenant_id=p_tenant_id AND id=p_cycle_run_id; END IF;
+ END IF;
+ UPDATE document.entity_case SET current_snapshot_id=next_snapshot,submitted_snapshot_id=CASE WHEN p_action='submit' THEN next_snapshot ELSE submitted_snapshot_id END,decision_snapshot_id=CASE WHEN p_action IN('approve','reject') THEN next_snapshot WHEN p_action='return' THEN NULL ELSE decision_snapshot_id END,status=next_status,row_version=next_version,updated_by=p_actor_id WHERE tenant_id=p_tenant_id AND id=p_case_id;
+ INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,result_code,result_snapshot_id,result_evidence,recorded_by) VALUES(p_tenant_id,p_case_id,command_code,p_idempotency_key,fingerprint,p_expected_version,current.row_version,next_version,current.status,next_status,'accepted',CASE p_action WHEN 'submit' THEN 'ENTITY_CASE_SUBMITTED' WHEN 'approve' THEN 'ENTITY_CASE_APPROVED' WHEN 'reject' THEN 'ENTITY_CASE_REJECTED' WHEN 'cancel' THEN 'ENTITY_CASE_CANCELLED' ELSE 'ENTITY_CASE_RETURNED' END,next_snapshot,jsonb_build_object('cycleRunId',p_cycle_run_id,'cycleTaskId',p_cycle_task_id,'reason',p_reason),p_actor_id);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(p_tenant_id,'governed-entity-case','entity.case.'||CASE WHEN p_action='submit' THEN 'submitted' ELSE p_action END,'entity-case:'||p_case_id::text||':v'||next_version::text||':'||p_idempotency_key,'document.entity_case',p_case_id,'entity_case',p_case_id,LEAST(next_version,2147483647)::integer,p_actor_id,'governed-entity-case',p_correlation_id,p_tenant_id::text,jsonb_build_object('caseId',p_case_id,'snapshotId',next_snapshot,'rowVersion',next_version,'status',next_status,'action',p_action,'cycleRunId',p_cycle_run_id,'cycleTaskId',p_cycle_task_id),p_actor_id) RETURNING id INTO outbox;
+ result:=jsonb_build_object('caseId',p_case_id,'snapshotId',next_snapshot,'rowVersion',next_version,'status',CASE WHEN p_action='return' THEN 'returned' ELSE next_status END,'outboxId',outbox);UPDATE event.command_execution SET status='succeeded',result_payload=result,completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=execution;
+ RETURN QUERY SELECT p_case_id,next_snapshot,next_version,CASE WHEN p_action='return' THEN 'returned' ELSE next_status END,false,outbox;
+END $$;
+
+CREATE OR REPLACE FUNCTION document.command_entity_case_attachment(p_tenant_id uuid,p_case_id uuid,p_evidence_kind text,p_attachment_id uuid,p_content_hash text,p_classification_code text,p_actor_id uuid) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,document,shared,master AS $$
+DECLARE current document.entity_case%ROWTYPE;evidence_id uuid:=shared.uuidv7();fingerprint text;
+BEGIN
+ IF current_database()<>'athyper_neon' OR shared.current_tenant_id()<>p_tenant_id OR master.current_principal_id_soft() IS DISTINCT FROM p_actor_id THEN RAISE EXCEPTION 'Entity case attachment context mismatch' USING ERRCODE='insufficient_privilege';END IF;
+ SELECT * INTO current FROM document.entity_case WHERE tenant_id=p_tenant_id AND id=p_case_id AND status='draft';IF NOT FOUND THEN RETURN NULL;END IF;
+ fingerprint:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,'kind',p_evidence_kind,'attachmentId',p_attachment_id,'contentHash',p_content_hash,'classification',p_classification_code)::text,'UTF8'),'sha256'),'hex');
+ INSERT INTO document.entity_case_command_evidence(id,tenant_id,entity_case_id,command_code,idempotency_key,request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,result_code,result_snapshot_id,result_evidence,recorded_by) VALUES(evidence_id,p_tenant_id,p_case_id,'entity.case.attachment','attachment:'||fingerprint,fingerprint,current.row_version,current.row_version,current.row_version,current.status,current.status,'accepted','ENTITY_CASE_ATTACHMENT_RECORDED',current.current_snapshot_id,jsonb_build_object('evidenceKind',p_evidence_kind,'attachmentId',p_attachment_id,'contentHash',p_content_hash,'classificationCode',p_classification_code),p_actor_id) ON CONFLICT(tenant_id,entity_case_id,command_code,idempotency_key) DO NOTHING RETURNING id INTO evidence_id;
+ IF evidence_id IS NULL THEN SELECT id INTO evidence_id FROM document.entity_case_command_evidence WHERE tenant_id=p_tenant_id AND entity_case_id=p_case_id AND command_code='entity.case.attachment' AND idempotency_key='attachment:'||fingerprint;END IF;
+ RETURN evidence_id;
+END $$;
+
+REVOKE ALL ON FUNCTION document.fn_entity_case_approvers(uuid,uuid,uuid,uuid),document.command_entity_case_validation(uuid,uuid,bigint,uuid,text,text,text,jsonb,jsonb,jsonb,jsonb,text,uuid,uuid),document.command_entity_case_lifecycle(uuid,uuid,text,bigint,uuid,uuid,text,text,uuid,uuid),document.command_entity_case_attachment(uuid,uuid,text,uuid,text,text,uuid) FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION document.fn_entity_case_approvers(uuid,uuid,uuid,uuid),document.command_entity_case_validation(uuid,uuid,bigint,uuid,text,text,text,jsonb,jsonb,jsonb,jsonb,text,uuid,uuid),document.command_entity_case_lifecycle(uuid,uuid,text,bigint,uuid,uuid,text,text,uuid,uuid),document.command_entity_case_attachment(uuid,uuid,text,uuid,text,text,uuid) TO athyperapp;END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION document.fn_entity_case_approvers(uuid,uuid,uuid,uuid),document.command_entity_case_validation(uuid,uuid,bigint,uuid,text,text,text,jsonb,jsonb,jsonb,jsonb,text,uuid,uuid),document.command_entity_case_lifecycle(uuid,uuid,text,bigint,uuid,uuid,text,text,uuid,uuid),document.command_entity_case_attachment(uuid,uuid,text,uuid,text,text,uuid) TO athyperadmin;END IF;
+END $$;
+-- BP-WRK-001: publish one approved requisition to an externally verified set
+-- of qualified Supplier/capability coordinates. No candidate, Person,
+-- engagement, placement, or IAM authority is created by this command.
+CREATE OR REPLACE FUNCTION document.command_publish_workforce_requisition(
+    p_tenant_id uuid,
+    p_requisition_id uuid,
+    p_expected_version bigint,
+    p_distributions jsonb,
+    p_idempotency_key text,
+    p_actor_id uuid
+) RETURNS TABLE(requisition_id uuid,status text,row_version bigint,distribution_ids uuid[],outbox_id uuid,replayed boolean)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,document,event,shared
+AS $$
+DECLARE
+    v_requisition document.workforce_requisition%ROWTYPE;
+    v_prior event.command_execution%ROWTYPE;
+    v_execution_id uuid;
+    v_outbox_id uuid;
+    v_distribution_ids uuid[] := ARRAY[]::uuid[];
+    v_distribution jsonb;
+    v_distribution_id uuid;
+    v_fingerprint text;
+BEGIN
+    IF current_database()<>'athyper_neon'
+       OR shared.current_tenant_id() IS DISTINCT FROM p_tenant_id
+       OR NULLIF(current_setting('app.current_principal_id',true),'')::uuid IS DISTINCT FROM p_actor_id THEN
+      RAISE EXCEPTION 'Workforce requisition publication context mismatch' USING ERRCODE='insufficient_privilege';
+    END IF;
+    IF p_expected_version<1 OR jsonb_typeof(p_distributions)<>'array'
+       OR jsonb_array_length(p_distributions) NOT BETWEEN 1 AND 100
+       OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 200 THEN
+      RAISE EXCEPTION 'Invalid workforce requisition publication command' USING ERRCODE='check_violation';
+    END IF;
+    IF EXISTS(SELECT 1 FROM jsonb_array_elements(p_distributions) item
+      WHERE jsonb_typeof(item)<>'object'
+         OR (SELECT count(*) FROM jsonb_object_keys(item))<>6 + CASE WHEN item?'responseDueAt' THEN 1 ELSE 0 END
+         OR NOT(item?'supplierId' AND item?'networkRelationshipId' AND item?'capabilityId' AND item?'qualificationId' AND item?'evidenceHash' AND item?'evaluatedAt')
+         OR item->>'evidenceHash' !~ '^[a-f0-9]{64}$'
+         OR NULLIF(item->>'evaluatedAt','')::timestamptz IS NULL
+         OR (item?'responseDueAt' AND NULLIF(item->>'responseDueAt','')::timestamptz IS NULL)
+    ) OR (SELECT count(DISTINCT item->>'supplierId') FROM jsonb_array_elements(p_distributions) item)<>jsonb_array_length(p_distributions) THEN
+      RAISE EXCEPTION 'Workforce requisition distributions require distinct, complete eligibility proof' USING ERRCODE='check_violation';
+    END IF;
+    v_fingerprint:=encode(public.digest(convert_to(jsonb_build_object('tenantId',p_tenant_id,'requisitionId',p_requisition_id,'expectedVersion',p_expected_version,'distributions',p_distributions,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
+    PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':workforce-requisition-publish:'||p_idempotency_key,0));
+    SELECT command.* INTO v_prior FROM event.command_execution command WHERE command.tenant_id=p_tenant_id AND command.command_code='workforce.requisition.publish' AND command.idempotency_key=p_idempotency_key;
+    IF FOUND THEN
+      IF v_prior.request_fingerprint::text IS DISTINCT FROM v_fingerprint THEN RAISE EXCEPTION 'Workforce requisition publication idempotency conflict' USING ERRCODE='unique_violation'; END IF;
+      RETURN QUERY SELECT (v_prior.result_payload->>'requisitionId')::uuid,v_prior.result_payload->>'status',(v_prior.result_payload->>'rowVersion')::bigint,ARRAY(SELECT jsonb_array_elements_text(v_prior.result_payload->'distributionIds')::uuid),(v_prior.result_payload->>'outboxId')::uuid,true; RETURN;
+    END IF;
+    SELECT * INTO v_requisition FROM document.workforce_requisition WHERE tenant_id=p_tenant_id AND id=p_requisition_id FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'Workforce requisition not found' USING ERRCODE='no_data_found'; END IF;
+    IF v_requisition.row_version<>p_expected_version THEN RAISE EXCEPTION 'Workforce requisition publication version conflict' USING ERRCODE='serialization_failure'; END IF;
+    IF v_requisition.status<>'approved' OR v_requisition.approved_at IS NULL THEN RAISE EXCEPTION 'Only an approved workforce requisition can be published' USING ERRCODE='check_violation'; END IF;
+    INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,actor_principal_id,source_service,started_at,status_changed_at,status_changed_by,created_by)
+    VALUES(p_tenant_id,'workforce.requisition.publish',p_idempotency_key,v_fingerprint,'processing',p_actor_id,'neon-supplier-workforce',clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO v_execution_id;
+    FOR v_distribution IN SELECT value FROM jsonb_array_elements(p_distributions) value LOOP
+      v_distribution_id:=shared.uuidv7();
+      INSERT INTO document.workforce_requisition_supplier(id,tenant_id,workforce_requisition_id,supplier_id,distributed_at,distributed_by,response_due_at,distribution_snapshot,status,created_by)
+      VALUES(v_distribution_id,p_tenant_id,p_requisition_id,(v_distribution->>'supplierId')::uuid,clock_timestamp(),p_actor_id,NULLIF(v_distribution->>'responseDueAt','')::timestamptz,jsonb_build_object('networkRelationshipId',v_distribution->>'networkRelationshipId','capabilityId',v_distribution->>'capabilityId','qualificationId',v_distribution->>'qualificationId','eligibilityEvidenceHash',v_distribution->>'evidenceHash','evaluatedAt',v_distribution->>'evaluatedAt'),'distributed',p_actor_id);
+      v_distribution_ids:=array_append(v_distribution_ids,v_distribution_id);
+    END LOOP;
+    UPDATE document.workforce_requisition SET status='released',status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,row_version=row_version+1,updated_at=clock_timestamp(),updated_by=p_actor_id WHERE tenant_id=p_tenant_id AND id=p_requisition_id RETURNING * INTO v_requisition;
+    INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,partition_key,payload,created_by)
+    VALUES(p_tenant_id,'neon-supplier-workforce','workforce.requisition.published','workforce-requisition:'||p_requisition_id::text||':v'||v_requisition.row_version::text,'document.workforce_requisition',p_requisition_id,'workforce_requisition',p_requisition_id,LEAST(v_requisition.row_version,2147483647)::integer,p_actor_id,'neon-supplier-workforce',p_tenant_id::text,jsonb_build_object('requisitionId',p_requisition_id,'rowVersion',v_requisition.row_version,'status','released','distributionCount',cardinality(v_distribution_ids),'commandExecutionId',v_execution_id),p_actor_id) RETURNING id INTO v_outbox_id;
+    UPDATE event.command_execution SET status='succeeded',result_payload=jsonb_build_object('requisitionId',p_requisition_id,'status','released','rowVersion',v_requisition.row_version,'expectedVersion',p_expected_version,'supplierTargets',(SELECT jsonb_agg(jsonb_strip_nulls(jsonb_build_object('supplierId',item->>'supplierId','responseDueAt',item->>'responseDueAt')) ORDER BY item->>'supplierId') FROM jsonb_array_elements(p_distributions) item),'distributionIds',to_jsonb(v_distribution_ids),'outboxId',v_outbox_id),completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=v_execution_id;
+    RETURN QUERY SELECT p_requisition_id,'released',v_requisition.row_version,v_distribution_ids,v_outbox_id,false;
+END $$;
+
+CREATE FUNCTION document.trg_mesh_profile_resolution_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'Profile resolution evidence is immutable'
+        USING ERRCODE = 'integrity_constraint_violation';
+END
+$$;
+
+-- P3: task executions bind to accepted immutable attempt/manifest coordinates.
+CREATE OR REPLACE FUNCTION document.trg_supplier_task_execution_binding()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+DECLARE binding jsonb; attempt governance.process_attempt%ROWTYPE; task governance.cycle_task%ROWTYPE; evidence jsonb;
+BEGIN
+ IF TG_OP='DELETE' THEN
+  IF OLD.entity_type='cycle_task' AND OLD.metadata->'process' IS NOT NULL THEN RAISE EXCEPTION 'PROCESS_WORKFLOW_EVIDENCE_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+  RETURN OLD;
+ END IF;
+ IF TG_OP='UPDATE' AND OLD.entity_type='cycle_task' AND OLD.metadata->'process' IS NOT NULL AND (NEW.entity_type IS DISTINCT FROM OLD.entity_type OR NEW.metadata->'process' IS DISTINCT FROM OLD.metadata->'process') THEN RAISE EXCEPTION 'PROCESS_WORKFLOW_BINDING_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+ IF NEW.entity_type<>'cycle_task' OR NEW.metadata->'process' IS NULL THEN RETURN NEW; END IF;
+ binding:=NEW.metadata->'process';
+ SELECT a.* INTO attempt FROM governance.process_attempt a WHERE a.tenant_id=NEW.tenant_id AND a.id=(binding->>'attemptId')::uuid;
+ SELECT t.* INTO task FROM governance.cycle_task t WHERE t.tenant_id=NEW.tenant_id AND t.id=NEW.entity_id::uuid;
+ SELECT e.evidence INTO evidence FROM governance.process_selection_evidence e WHERE e.tenant_id=NEW.tenant_id AND e.id=attempt.selection_id;
+ IF attempt.id IS NULL OR task.id IS NULL OR task.cycle_run_id<>attempt.cycle_run_id OR task.process_attempt_id IS DISTINCT FROM attempt.id
+   OR binding->>'caseId' IS DISTINCT FROM attempt.case_id::text OR binding->>'cycleTaskId' IS DISTINCT FROM task.id::text
+   OR (binding-'cycleTaskId'-'taskTemplateId'-'outcomeScope'-'executionKind'-'reviewerPolicy') IS DISTINCT FROM evidence->'coordinate'
+   OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(evidence->'executionManifest'->'tasks') t WHERE t->>'taskTemplateId'=task.task_template_id::text AND t->>'taskTemplateId'=binding->>'taskTemplateId' AND t->>'outcomeScope'=binding->>'outcomeScope' AND t->>'executionKind'=binding->>'executionKind' AND t->'reviewerPolicy'=binding->'reviewerPolicy' AND t->'workflow'->>'code'=NEW.definition_code AND (t->'workflow'->>'version')::integer=NEW.definition_version AND t->'workflow'->>'hash'=NEW.compiled_artifact_hash)
+ THEN RAISE EXCEPTION 'PROCESS_WORKFLOW_BINDING_INVALID' USING ERRCODE='check_violation'; END IF;
+ IF TG_OP='UPDATE' THEN
+   IF OLD.status IN('approved','rejected','cancelled') AND (NEW.status IS DISTINCT FROM OLD.status OR NEW.metadata->'approval' IS DISTINCT FROM OLD.metadata->'approval') THEN RAISE EXCEPTION 'PROCESS_WORKFLOW_HISTORY_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+   IF NEW.entity_id IS DISTINCT FROM OLD.entity_id OR NEW.metadata->'process' IS DISTINCT FROM OLD.metadata->'process' OR NEW.template_snapshot IS DISTINCT FROM OLD.template_snapshot OR NEW.requested_by IS DISTINCT FROM OLD.requested_by THEN RAISE EXCEPTION 'PROCESS_WORKFLOW_BINDING_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+ ELSE
+   IF NOT EXISTS(SELECT 1 FROM document.entity_case c WHERE c.tenant_id=NEW.tenant_id AND c.id=attempt.case_id AND c.status IN('submitted','in_review') AND c.submitted_snapshot_id=attempt.submission_snapshot_id AND attempt.attempt_number=(SELECT max(a.attempt_number) FROM governance.process_attempt a WHERE a.tenant_id=NEW.tenant_id AND a.case_id=attempt.case_id)) OR task.status IN('completed','cancelled') OR NOT EXISTS(SELECT 1 FROM governance.process_document_job j WHERE j.tenant_id=NEW.tenant_id AND j.id=attempt.review_pack_job_id AND j.status='ready') OR EXISTS(SELECT 1 FROM governance.cycle_task_dependency d JOIN governance.cycle_task t ON t.tenant_id=d.tenant_id AND t.id=d.predecessor_task_id WHERE d.tenant_id=NEW.tenant_id AND d.successor_task_id=task.id AND t.status<>'completed') THEN RAISE EXCEPTION 'PROCESS_TASK_PREREQUISITE_NOT_READY' USING ERRCODE='check_violation'; END IF;
+ END IF;
+ RETURN NEW;
+END; $$;
+
+CREATE OR REPLACE FUNCTION document.trg_supplier_task_work_item_binding()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+DECLARE workflow document.workflow_request%ROWTYPE;
+BEGIN
+ IF TG_OP='DELETE' THEN
+  IF OLD.payload->>'attemptId' IS NOT NULL THEN RAISE EXCEPTION 'PROCESS_WORK_ITEM_EVIDENCE_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+  RETURN OLD;
+ END IF;
+ IF TG_OP='UPDATE' AND OLD.payload->>'attemptId' IS NOT NULL AND (NEW.payload-'sla_reminders_sent'-'sla_breach') IS DISTINCT FROM (OLD.payload-'sla_reminders_sent'-'sla_breach') THEN RAISE EXCEPTION 'PROCESS_WORK_ITEM_BINDING_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+ IF NEW.payload->>'attemptId' IS NULL THEN RETURN NEW; END IF;
+ IF TG_OP='UPDATE' AND OLD.status IN('completed','cancelled') AND (NEW.status IS DISTINCT FROM OLD.status OR (OLD.outcome->>'fingerprint' IS NOT NULL AND NEW.outcome IS DISTINCT FROM OLD.outcome)) THEN RAISE EXCEPTION 'PROCESS_WORK_ITEM_HISTORY_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+ SELECT w.* INTO workflow FROM document.workflow_request w WHERE w.tenant_id=NEW.tenant_id AND w.id=(NEW.payload->>'workflowRequestId')::uuid AND w.entity_type='cycle_task' AND w.entity_id=NEW.cycle_task_id::text;
+ IF TG_OP='INSERT' AND (workflow.status IN('approved','rejected','cancelled') OR NOT EXISTS(SELECT 1 FROM document.entity_case c JOIN governance.process_attempt a ON a.tenant_id=c.tenant_id AND a.case_id=c.id WHERE c.tenant_id=NEW.tenant_id AND c.id=NEW.source_entity_id AND c.status IN('submitted','in_review') AND a.id=(NEW.payload->>'attemptId')::uuid AND c.submitted_snapshot_id=a.submission_snapshot_id AND a.attempt_number=(SELECT max(a2.attempt_number) FROM governance.process_attempt a2 WHERE a2.tenant_id=a.tenant_id AND a2.case_id=a.case_id))) THEN RAISE EXCEPTION 'PROCESS_WORK_ITEM_ATTEMPT_STALE' USING ERRCODE='check_violation'; END IF;
+ IF workflow.id IS NULL OR NEW.source_entity_id::text IS DISTINCT FROM workflow.metadata->'process'->>'caseId'
+  OR EXISTS(SELECT 1 FROM jsonb_each((workflow.metadata->'process')-'executionKind') v WHERE NEW.payload->v.key IS DISTINCT FROM v.value)
+  OR NEW.assignee_principal_id=workflow.requested_by
+  OR jsonb_array_length(NEW.payload->'eligibility_evidence'->'candidates') IS DISTINCT FROM 1
+  OR NEW.payload->'eligibility_evidence'->'candidates'->0->>'principalId' IS DISTINCT FROM NEW.assignee_principal_id::text
+  OR NEW.payload->>'action' IS DISTINCT FROM (CASE workflow.metadata->'process'->>'executionKind' WHEN 'review' THEN 'accept_review' ELSE 'approve' END)
+  OR NOT EXISTS(SELECT 1 FROM document.workflow_stage s WHERE s.tenant_id=NEW.tenant_id AND s.id=(NEW.payload->>'workflowStageId')::uuid AND s.workflow_request_id=workflow.id AND EXISTS(SELECT 1 FROM jsonb_array_elements(s.quorum->'eligibilityEvidence'->'candidates') c WHERE c->>'principalId'=NEW.assignee_principal_id::text))
+ THEN RAISE EXCEPTION 'PROCESS_WORK_ITEM_BINDING_INVALID' USING ERRCODE='check_violation'; END IF;
+ IF TG_OP='UPDATE' AND ((NEW.payload-'sla_reminders_sent'-'sla_breach') IS DISTINCT FROM (OLD.payload-'sla_reminders_sent'-'sla_breach') OR NEW.cycle_task_id IS DISTINCT FROM OLD.cycle_task_id OR NEW.assignee_principal_id IS DISTINCT FROM OLD.assignee_principal_id OR NEW.source_entity_id IS DISTINCT FROM OLD.source_entity_id) THEN RAISE EXCEPTION 'PROCESS_WORK_ITEM_BINDING_IMMUTABLE' USING ERRCODE='check_violation'; END IF;
+ RETURN NEW;
+END; $$;
+
+CREATE OR REPLACE FUNCTION document.trg_supplier_task_completion_quorum()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+DECLARE attempt_id uuid; maker_id uuid;
+BEGIN
+ IF NEW.status<>'completed' THEN RETURN NEW; END IF;
+ SELECT a.id,c.created_by INTO attempt_id,maker_id FROM governance.process_attempt a
+ JOIN document.entity_case c ON c.tenant_id=a.tenant_id AND c.id=a.case_id
+ JOIN governance.process_selection_evidence e ON e.tenant_id=a.tenant_id AND e.id=a.selection_id
+ WHERE a.tenant_id=NEW.tenant_id AND a.cycle_run_id=NEW.cycle_run_id AND a.id=NEW.process_attempt_id
+ AND EXISTS(SELECT 1 FROM jsonb_array_elements(e.evidence->'executionManifest'->'tasks') t WHERE t->>'taskTemplateId'=NEW.task_template_id::text AND t->>'executionKind' IN('review','approval'));
+ IF attempt_id IS NULL THEN RETURN NEW; END IF;
+ IF NOT EXISTS(SELECT 1 FROM document.workflow_request w WHERE w.tenant_id=NEW.tenant_id AND w.entity_type='cycle_task' AND w.entity_id=NEW.id::text AND w.metadata->'process'->>'attemptId'=attempt_id::text AND w.status='approved'
+  AND EXISTS(SELECT 1 FROM document.workflow_stage s WHERE s.tenant_id=w.tenant_id AND s.workflow_request_id=w.id)
+  AND NOT EXISTS(SELECT 1 FROM document.workflow_stage s WHERE s.tenant_id=w.tenant_id AND s.workflow_request_id=w.id AND (s.status<>'completed' OR s.outcome<>'approved' OR COALESCE((s.quorum->>'required')::integer,0)<1
+   OR (SELECT count(DISTINCT i.assignee_principal_id) FROM document.work_item i WHERE i.tenant_id=w.tenant_id AND i.cycle_task_id=NEW.id AND i.payload->>'workflowStageId'=s.id::text AND i.status='completed'
+    AND i.outcome->>'decision'=CASE w.metadata->'process'->>'executionKind' WHEN 'review' THEN 'accept_review' ELSE 'approve' END
+    AND i.outcome->>'decidedBy'=i.assignee_principal_id::text AND i.assignee_principal_id<>w.requested_by AND i.assignee_principal_id<>maker_id)<(s.quorum->>'required')::integer)))
+ THEN RAISE EXCEPTION 'PROCESS_TASK_QUORUM_REQUIRED' USING ERRCODE='insufficient_privilege'; END IF;
+ RETURN NEW;
+END; $$;
+
+-- P4: only the owning command can mutate a process document job. Provider I/O occurs outside this transaction.
+CREATE OR REPLACE FUNCTION document.command_process_document_job(p_tenant uuid,p_job uuid,p_action text,p_token uuid,p_result jsonb,p_actor uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE j governance.process_document_job%ROWTYPE; artifact document.attachment%ROWTYPE;
+BEGIN
+ IF p_actor IS NULL OR p_tenant IS NULL OR shared.current_tenant_id() IS DISTINCT FROM p_tenant OR master.current_principal_id_soft() IS DISTINCT FROM p_actor OR current_database()<>'athyper_neon' THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_CONTEXT_INVALID' USING ERRCODE='insufficient_privilege'; END IF;
+ SELECT * INTO j FROM governance.process_document_job WHERE tenant_id=p_tenant AND id=p_job FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_NOT_FOUND'; END IF;
+ IF p_action IN('claim','retry','ready','gate_succeeded') AND NOT EXISTS(SELECT 1 FROM document.entity_case c JOIN governance.process_attempt a ON a.tenant_id=c.tenant_id AND a.case_id=c.id WHERE c.tenant_id=p_tenant AND c.id=j.case_id AND c.status<>'cancelled' AND a.id=j.attempt_id AND a.attempt_number=(SELECT max(a2.attempt_number) FROM governance.process_attempt a2 WHERE a2.tenant_id=a.tenant_id AND a2.case_id=a.case_id) AND (j.purpose<>'submitted_review_pack' OR c.status NOT IN('draft','cancelled')) AND j.intent->'sourceSnapshot'->>'id'=CASE j.purpose WHEN 'submitted_review_pack' THEN c.submitted_snapshot_id::text WHEN 'decision_document' THEN c.decision_snapshot_id::text ELSE c.result_snapshot_id::text END) THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_ATTEMPT_STALE' USING ERRCODE='check_violation'; END IF;
+ IF p_action='claim' THEN
+  IF p_token IS NULL THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_CLAIM_TOKEN_REQUIRED'; END IF;
+  IF j.status='ready' THEN RETURN to_jsonb(j); END IF;
+  IF j.attempt_count>=5 OR (j.status='processing' AND j.lease_expires_at>now()) OR j.status='cancelled' OR (j.status='failed' AND COALESCE((j.result->>'retryable')::boolean,false)=false) THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_NOT_CLAIMABLE'; END IF;
+  UPDATE governance.process_document_job SET status='processing',claim_token=p_token,lease_expires_at=now()+interval '10 minutes',attempt_count=attempt_count+1,last_error=NULL,updated_at=now() WHERE id=p_job RETURNING * INTO j;
+ ELSIF p_action='retry' THEN
+  IF j.status<>'failed' AND NOT(j.status='processing' AND j.lease_expires_at<now()) THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_NOT_RETRYABLE'; END IF;
+  UPDATE governance.process_document_job SET status='pending',attempt_count=0,claim_token=NULL,lease_expires_at=NULL,last_error=NULL,updated_at=now() WHERE id=p_job RETURNING * INTO j;
+ ELSIF p_action IN('ready','failed') THEN
+  IF j.status='ready' AND j.result=p_result THEN RETURN to_jsonb(j); END IF;
+  IF j.status<>'processing' OR j.claim_token IS DISTINCT FROM p_token OR j.lease_expires_at<=now() THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_STALE_LEASE'; END IF;
+  IF p_result->'coordinate' IS DISTINCT FROM j.intent->'coordinate' OR p_result->'sourceSnapshot' IS DISTINCT FROM j.intent->'sourceSnapshot' OR p_result->'template' IS DISTINCT FROM j.intent->'binding'->'template' OR p_result->>'jobId' IS DISTINCT FROM j.id::text OR p_result->>'purpose' IS DISTINCT FROM j.purpose OR p_result->>'status' IS DISTINCT FROM p_action THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_RESULT_BINDING_INVALID'; END IF;
+  IF p_action='ready' THEN
+   SELECT a.* INTO artifact FROM document.attachment a WHERE a.tenant_id=p_tenant AND a.id=(p_result->>'attachmentVersionId')::uuid AND a.id=(p_result->>'attachmentId')::uuid;
+   IF artifact.id IS NULL OR artifact.status<>'active' OR NOT artifact.is_active OR NOT artifact.is_virus_scanned OR artifact.sha256 IS DISTINCT FROM p_result->>'sha256'
+    OR artifact.metadata->'malware_scan'->>'status' IS DISTINCT FROM 'clean'
+    OR p_result->>'scanStatus' IS DISTINCT FROM 'clean' OR p_result->>'scannedAt' IS DISTINCT FROM artifact.metadata->'malware_scan'->>'scanned_at'
+    OR artifact.metadata->'process_document'->>'jobId' IS DISTINCT FROM j.id::text
+    OR artifact.metadata->'process_document'->>'intentHash' IS DISTINCT FROM j.intent_hash
+    OR artifact.metadata->'process_document'->'coordinate' IS DISTINCT FROM j.intent->'coordinate'
+    OR artifact.metadata->'process_document'->'sourceSnapshot' IS DISTINCT FROM j.intent->'sourceSnapshot'
+    OR artifact.metadata->>'template_version_id' IS DISTINCT FROM j.intent->'binding'->'template'->>'id'
+    OR artifact.metadata->>'template_checksum' IS DISTINCT FROM j.intent->'binding'->'template'->>'hash'
+    OR NOT EXISTS(SELECT 1 FROM document.attachment_link l WHERE l.tenant_id=p_tenant AND l.attachment_series_id=artifact.series_id AND l.pinned_attachment_id=artifact.id AND l.entity_type='entity_case' AND l.entity_id=j.case_id::text)
+   THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_ARTIFACT_PROOF_REQUIRED' USING ERRCODE='check_violation'; END IF;
+  END IF;
+  UPDATE governance.process_document_job SET status=p_action,result=p_result,last_error=CASE WHEN p_action='failed' THEN p_result->>'code' ELSE NULL END,claim_token=NULL,lease_expires_at=NULL,updated_at=now() WHERE id=p_job RETURNING * INTO j;
+  INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,actor_id,source,payload,created_by)
+   VALUES(p_tenant,'process-documents','process.document.'||p_action,'process-document-result:'||p_job::text||':'||p_token::text,'process_document_job',p_job,p_actor,'process-documents',jsonb_build_object('jobId',p_job,'coordinate',j.intent->'coordinate','purpose',j.purpose,'status',p_action,'attachmentId',p_result->>'attachmentId','attachmentVersionId',p_result->>'attachmentVersionId'),p_actor);
+ ELSIF p_action IN('gate_succeeded','gate_failed') THEN
+  IF j.status<>'ready' THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_GATE_NOT_READY'; END IF;
+  UPDATE governance.process_document_job SET gate_status=CASE WHEN p_action='gate_succeeded' THEN 'succeeded' ELSE 'failed' END,last_error=p_result->>'code',updated_at=now() WHERE id=p_job RETURNING * INTO j;
+  IF p_action='gate_failed' THEN
+   INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,actor_id,source,payload,created_by)
+   SELECT p_tenant,'process-documents','process.document.gate_failed','process-document-gate-failure:'||p_job::text||':'||(count(*)+1)::text,'process_document_job',p_job,p_actor,'process-documents',jsonb_build_object('jobId',p_job,'coordinate',j.intent->'coordinate','purpose',j.purpose,'failureCount',count(*)+1),p_actor
+   FROM event.outbox WHERE tenant_id=p_tenant AND event_type='process.document.gate_failed' AND entity_id=p_job;
+  END IF;
+ ELSE RAISE EXCEPTION 'PROCESS_DOCUMENT_ACTION_INVALID'; END IF;
+ RETURN to_jsonb(j);
+END; $$;
+REVOKE ALL ON FUNCTION document.command_process_document_job(uuid,uuid,text,uuid,jsonb,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION document.command_process_document_job(uuid,uuid,text,uuid,jsonb,uuid) TO athyperapp,athyperadmin;
+
+CREATE OR REPLACE FUNCTION document.trg_process_document_domain_gates()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+BEGIN
+ IF TG_TABLE_NAME='entity_case' THEN
+  IF NEW.status IN('materializing','materialized') AND OLD.status IS DISTINCT FROM NEW.status AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=NEW.tenant_id AND a.case_id=NEW.id)
+   AND NOT EXISTS(SELECT 1 FROM governance.process_document_job j WHERE j.tenant_id=NEW.tenant_id AND j.case_id=NEW.id AND j.purpose='decision_document' AND j.status='ready' AND j.intent->'sourceSnapshot'->>'id'=NEW.decision_snapshot_id::text)
+  THEN RAISE EXCEPTION 'PROCESS_DECISION_DOCUMENT_NOT_READY' USING ERRCODE='check_violation'; END IF;
+ ELSE
+  IF NEW.status='completed' AND OLD.status IS DISTINCT FROM NEW.status AND EXISTS(SELECT 1 FROM governance.process_attempt a WHERE a.tenant_id=NEW.tenant_id AND a.cycle_run_id=NEW.id)
+   AND NOT EXISTS(SELECT 1 FROM governance.process_document_job j JOIN document.entity_case c ON c.tenant_id=j.tenant_id AND c.id=j.case_id WHERE j.tenant_id=NEW.tenant_id AND j.cycle_run_id=NEW.id AND j.purpose='activation_confirmation' AND j.status='ready' AND j.intent->'sourceSnapshot'->>'id'=c.result_snapshot_id::text)
+  THEN RAISE EXCEPTION 'PROCESS_ACTIVATION_DOCUMENT_NOT_READY' USING ERRCODE='check_violation'; END IF;
+ END IF;
+ RETURN NEW;
+END; $$;
+
+-- Content-free work discovery for the plane-scoped durable document worker. Each case is reauthorized under its stored requester.
+CREATE OR REPLACE FUNCTION document.process_document_candidates()
+RETURNS TABLE(tenant_id uuid,case_id uuid,principal_id uuid,auth_epoch integer) LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog AS $$
+ SELECT DISTINCT c.tenant_id,c.id,c.created_by,p.auth_epoch FROM document.entity_case c
+ JOIN governance.process_attempt a ON a.tenant_id=c.tenant_id AND a.case_id=c.id
+ JOIN master.principal p ON p.tenant_id=c.tenant_id AND p.id=c.created_by AND p.status='active'
+ WHERE current_database()='athyper_neon' AND c.status IN('submitted','in_review','approved','rejected','materializing','materialized') AND a.attempt_number=(SELECT max(a2.attempt_number) FROM governance.process_attempt a2 WHERE a2.tenant_id=a.tenant_id AND a2.case_id=a.case_id) AND (
+  EXISTS(SELECT 1 FROM governance.process_document_job j WHERE j.tenant_id=c.tenant_id AND j.attempt_id=a.id AND (
+   j.status='pending' OR (j.status='processing' AND j.lease_expires_at<now()) OR (j.status='failed' AND j.attempt_count<5 AND (j.result->>'retryable')::boolean=true) OR (j.status='ready' AND j.gate_status<>'succeeded')))
+  OR (c.decision_snapshot_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM governance.process_document_job j WHERE j.tenant_id=c.tenant_id AND j.attempt_id=a.id AND j.purpose='decision_document'))
+  OR (c.result_snapshot_id IS NOT NULL AND EXISTS(SELECT 1 FROM document.supplier_activation_evidence e WHERE e.tenant_id=c.tenant_id AND e.business_partner_id=c.target_entity_id) AND NOT EXISTS(SELECT 1 FROM governance.process_document_job j WHERE j.tenant_id=c.tenant_id AND j.attempt_id=a.id AND j.purpose='activation_confirmation')))
+ ORDER BY c.tenant_id,c.id LIMIT 20;
+$$;
+REVOKE ALL ON FUNCTION document.process_document_candidates() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION document.process_document_candidates() TO athyperapp,athyperadmin;
+
+CREATE OR REPLACE FUNCTION document.trg_process_document_source_binding()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+DECLARE c document.entity_case%ROWTYPE; source_id uuid;
+BEGIN
+ SELECT * INTO c FROM document.entity_case WHERE tenant_id=NEW.tenant_id AND id=NEW.case_id;
+ source_id:=CASE NEW.purpose WHEN 'submitted_review_pack' THEN c.submitted_snapshot_id WHEN 'decision_document' THEN c.decision_snapshot_id ELSE c.result_snapshot_id END;
+ IF source_id IS NULL OR NEW.intent->'sourceSnapshot'->>'id' IS DISTINCT FROM source_id::text
+  OR NOT EXISTS(SELECT 1 FROM snapshot.entity_snapshot_identity s WHERE s.tenant_id=NEW.tenant_id AND s.id=source_id AND s.payload_hash=NEW.intent->'sourceSnapshot'->>'hash' AND s.version_number=(NEW.intent->'sourceSnapshot'->>'version')::integer)
+ THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_SOURCE_BINDING_INVALID' USING ERRCODE='check_violation'; END IF;
+ IF NEW.purpose='activation_confirmation' AND NOT EXISTS(SELECT 1 FROM document.supplier_activation_evidence a WHERE a.tenant_id=NEW.tenant_id AND a.id=(NEW.intent->'activationEvidence'->>'id')::uuid AND a.business_partner_id=c.target_entity_id AND a.readiness_fingerprint=NEW.intent->'activationEvidence'->>'hash' AND a.operating_organization_id=(NEW.intent->'coordinate'->'scope'->>'operatingOrganizationId')::uuid AND a.company_code_id IS NOT DISTINCT FROM (NEW.intent->'coordinate'->'scope'->>'companyCodeId')::uuid)
+ THEN RAISE EXCEPTION 'PROCESS_DOCUMENT_ACTIVATION_BINDING_INVALID' USING ERRCODE='check_violation'; END IF;
+ RETURN NEW;
+END; $$;
+
+-- Tenant/case-scoped directory. RLS hides other principals from ordinary requests;
+-- expose only eligible reviewer identifiers, never IAM rows or grants.
+CREATE OR REPLACE FUNCTION document.process_case_has_contributor(p_tenant uuid,p_case uuid,p_actor uuid)
+RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
+BEGIN
+ IF p_tenant IS DISTINCT FROM shared.current_tenant_id() THEN RAISE EXCEPTION 'PROCESS_CONTRIBUTOR_CONTEXT_INVALID' USING ERRCODE='42501'; END IF;
+ RETURN EXISTS(SELECT 1 FROM document.process_case_contributor WHERE tenant_id=p_tenant AND case_id=p_case AND principal_id=p_actor);
+END $$;
+REVOKE ALL ON FUNCTION document.process_case_has_contributor(uuid,uuid,uuid) FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION document.process_case_reviewers(p_tenant uuid,p_case uuid,p_role text)
+RETURNS TABLE(principal_id uuid) LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
+ WITH accepted AS (
+ SELECT c.created_by,e.evidence,e.evidence->'coordinate'->'scope' scope
+ FROM document.entity_case c JOIN governance.process_attempt a ON a.tenant_id=c.tenant_id AND a.case_id=c.id
+ JOIN governance.process_selection_evidence e ON e.tenant_id=a.tenant_id AND e.id=a.selection_id
+ WHERE c.tenant_id=p_tenant AND c.id=p_case AND p_tenant=shared.current_tenant_id()
+ ORDER BY a.attempt_number DESC LIMIT 1
+ )
+ SELECT DISTINCT m.principal_id FROM accepted a
+ JOIN authz.group_member m ON m.tenant_id=p_tenant AND m.status='active' AND m.effective_from<=now() AND (m.effective_until IS NULL OR m.effective_until>now())
+ JOIN authz.principal_group g ON g.tenant_id=m.tenant_id AND g.id=m.group_id AND g.status='active'
+ JOIN authz.group_role gr ON gr.tenant_id=m.tenant_id AND gr.group_id=m.group_id AND gr.status='active' AND gr.effective_from<=now() AND (gr.effective_until IS NULL OR gr.effective_until>now())
+ JOIN authz.role r ON r.tenant_id=gr.tenant_id AND r.id=gr.role_id AND r.status='active' AND (p_role IS NULL OR r.code=p_role)
+ JOIN authz.scope_target s ON s.tenant_id=gr.tenant_id AND s.id=gr.scope_target_id AND s.status='active'
+ JOIN master.principal p ON p.tenant_id=m.tenant_id AND p.id=m.principal_id AND p.status='active'
+ WHERE m.principal_id<>a.created_by AND m.principal_id<>(a.evidence->>'actorPrincipalId')::uuid
+ AND NOT document.process_case_has_contributor(p_tenant,p_case,m.principal_id)
+ AND ((s.scope_kind='tenant' AND s.target_id=p_tenant) OR (s.scope_kind='operating_organization' AND s.target_id=(a.scope->>'operatingOrganizationId')::uuid) OR (s.scope_kind='company_code' AND s.target_id=(a.scope->>'companyCodeId')::uuid))
+ AND m.principal_id IN(SELECT principal_id FROM document.fn_entity_case_approvers(p_tenant,(a.scope->>'operatingOrganizationId')::uuid,(a.scope->>'companyCodeId')::uuid,(a.evidence->>'actorPrincipalId')::uuid))
+ AND (master.current_principal_id_soft()=a.created_by OR master.current_principal_id_soft() IN(SELECT principal_id FROM document.fn_entity_case_approvers(p_tenant,(a.scope->>'operatingOrganizationId')::uuid,(a.scope->>'companyCodeId')::uuid,(a.evidence->>'actorPrincipalId')::uuid)))
+ AND NOT EXISTS(SELECT 1 FROM authz.deny_rule d JOIN authz.permission permission ON permission.id=d.permission_id AND permission.canonical_code='neon.relationship.entity_case.decide' WHERE d.tenant_id=p_tenant AND d.status='active' AND d.effective_from<=now() AND (d.effective_until IS NULL OR d.effective_until>now()) AND (d.subject_kind='tenant' OR (d.subject_kind='principal' AND d.principal_id=m.principal_id) OR (d.subject_kind='group' AND EXISTS(SELECT 1 FROM authz.group_member denied WHERE denied.tenant_id=p_tenant AND denied.group_id=d.group_id AND denied.principal_id=m.principal_id AND denied.status='active' AND denied.effective_from<=now() AND (denied.effective_until IS NULL OR denied.effective_until>now())))))
+ ORDER BY m.principal_id LIMIT 200;
+$$;
+REVOKE ALL ON FUNCTION document.process_case_reviewers(uuid,uuid,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION document.process_case_reviewers(uuid,uuid,text) TO athyperapp,athyperadmin;
+
+CREATE OR REPLACE FUNCTION document.trg_process_task_subject()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE a governance.process_attempt%ROWTYPE; t governance.cycle_task%ROWTYPE;
+BEGIN
+ IF NEW.entity_type<>'cycle_task' OR NOT(NEW.metadata?'process') THEN RETURN NEW; END IF;
+ IF NEW.tenant_id IS DISTINCT FROM shared.current_tenant_id() OR NEW.created_by IS DISTINCT FROM master.current_principal_id_soft() THEN RAISE EXCEPTION 'Task subject context mismatch' USING ERRCODE='insufficient_privilege'; END IF;
+ SELECT * INTO a FROM governance.process_attempt WHERE tenant_id=NEW.tenant_id AND id=(NEW.metadata->'process'->>'attemptId')::uuid;
+ SELECT * INTO t FROM governance.cycle_task WHERE tenant_id=NEW.tenant_id AND id=NEW.entity_id::uuid AND cycle_run_id=a.cycle_run_id;
+ IF t.id IS NULL THEN RAISE EXCEPTION 'Task subject attempt mismatch' USING ERRCODE='check_violation'; END IF;
+ INSERT INTO governance.cycle_subject(tenant_id,cycle_run_id,cycle_task_id,subject_role,entity_case_id,is_primary,created_by)
+ VALUES(NEW.tenant_id,a.cycle_run_id,t.id,'task_'||t.id::text,a.case_id,false,NEW.created_by);
+ RETURN NEW;
+END;
+$$;
+
+-- Complete the governed activation case after the readiness/lifecycle owner succeeds
+-- in the same transaction. The result must reference that actor's exact activation.
+CREATE OR REPLACE FUNCTION document.command_materialize_supplier_activation_case(
+ p_tenant uuid,p_case uuid,p_expected bigint,p_activation uuid,p_result uuid,p_fingerprint text,p_key text,p_actor uuid,p_correlation uuid DEFAULT NULL)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE c document.entity_case%ROWTYPE; a document.supplier_activation_evidence%ROWTYPE; execution uuid; prior event.command_execution%ROWTYPE; next_version bigint; payload jsonb;
+BEGIN
+ IF current_database()<>'athyper_neon' OR current_setting('app.database_plane',true)<>'neon' OR shared.current_tenant_id() IS DISTINCT FROM p_tenant OR master.current_principal_id_soft() IS DISTINCT FROM p_actor THEN RAISE EXCEPTION 'SUPPLIER_ACTIVATION_CONTEXT_INVALID' USING ERRCODE='42501'; END IF;
+ IF p_fingerprint !~ '^[a-f0-9]{64}$' OR nullif(btrim(p_key),'') IS NULL THEN RAISE EXCEPTION 'SUPPLIER_ACTIVATION_ARGUMENT_INVALID' USING ERRCODE='23514'; END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant::text||':supplier-activation-case:'||p_key,0));
+ SELECT * INTO prior FROM event.command_execution WHERE tenant_id=p_tenant AND command_code='entity.case.materialize.supplier_activation' AND idempotency_key=p_key;
+ IF FOUND THEN IF prior.request_fingerprint<>p_fingerprint OR prior.result_payload->>'caseId'<>p_case::text THEN RAISE EXCEPTION 'SUPPLIER_ACTIVATION_REPLAY_CONFLICT' USING ERRCODE='23505'; END IF; RETURN; END IF;
+ SELECT * INTO c FROM document.entity_case WHERE tenant_id=p_tenant AND id=p_case FOR UPDATE;
+ IF NOT FOUND OR c.operation_code<>'activate_supplier' OR c.status<>'approved' OR c.row_version<>p_expected OR c.decision_snapshot_id IS NULL THEN RAISE EXCEPTION 'SUPPLIER_ACTIVATION_CASE_NOT_APPROVED' USING ERRCODE='23514'; END IF;
+ SELECT payload_json INTO payload FROM snapshot.entity_snapshot WHERE tenant_id=p_tenant AND snapshot_id=c.decision_snapshot_id;
+ SELECT * INTO a FROM document.supplier_activation_evidence WHERE tenant_id=p_tenant AND id=p_activation;
+ IF NOT FOUND OR a.business_partner_id<>c.target_entity_id OR a.operating_organization_id::text IS DISTINCT FROM payload->>'operatingOrganizationId' OR a.company_code_id::text IS DISTINCT FROM payload->>'companyCodeId' OR a.activated_by<>p_actor OR a.idempotency_key<>'activation-case:'||p_case::text THEN RAISE EXCEPTION 'SUPPLIER_ACTIVATION_EVIDENCE_INVALID' USING ERRCODE='23514'; END IF;
+ SELECT payload_json INTO payload FROM snapshot.entity_snapshot WHERE tenant_id=p_tenant AND snapshot_id=p_result;
+ IF payload->'activation'->>'activationEvidenceId' IS DISTINCT FROM p_activation::text OR payload->'activation'->>'readinessFingerprint' IS DISTINCT FROM a.readiness_fingerprint THEN RAISE EXCEPTION 'SUPPLIER_ACTIVATION_RESULT_INVALID' USING ERRCODE='23514'; END IF;
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by) VALUES(p_tenant,'entity.case.materialize.supplier_activation',p_key,p_fingerprint,'processing',p_actor,'neon-business-partner',p_correlation,clock_timestamp(),clock_timestamp(),p_actor,p_actor) RETURNING id INTO execution;
+ PERFORM set_config('app.entity_case_command_execution_id',execution::text,true);
+ next_version:=c.row_version+1;
+ INSERT INTO document.entity_case_materialization(tenant_id,entity_case_id,attempt_no,source_snapshot_id,result_snapshot_id,materializer_code,materializer_version,request_fingerprint,status,result_code,started_at,completed_at,requested_by,completed_by) VALUES(p_tenant,p_case,1,c.decision_snapshot_id,p_result,'neon.supplier_activation','1',p_fingerprint,'succeeded','SUPPLIER_ACTIVATED',now(),now(),p_actor,p_actor);
+ INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by) VALUES(p_tenant,p_case,c.decision_snapshot_id,p_result,'materialized_from','master.business_partner',c.target_entity_id,'neon.supplier_activation','1',p_fingerprint,p_actor);
+ UPDATE document.entity_case SET result_snapshot_id=p_result,status='materialized',row_version=next_version,updated_at=now(),updated_by=p_actor WHERE tenant_id=p_tenant AND id=p_case;
+ INSERT INTO document.entity_case_command_evidence(tenant_id,entity_case_id,command_code,idempotency_key,request_fingerprint,expected_version,before_version,after_version,before_status,after_status,outcome,result_code,result_snapshot_id,result_evidence,recorded_by) VALUES(p_tenant,p_case,'entity.case.materialize',p_key,p_fingerprint,p_expected,c.row_version,next_version,'approved','materialized','accepted','SUPPLIER_ACTIVATED',p_result,jsonb_build_object('activationEvidenceId',a.id,'readinessFingerprint',a.readiness_fingerprint,'businessPartnerId',a.business_partner_id,'supplierId',a.supplier_id),p_actor);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(p_tenant,'governed-entity-case','entity.case.materialized','entity-case:'||p_case::text||':v'||next_version::text||':supplier-activation','document.entity_case',p_case,'entity_case',p_case,next_version,p_actor,'neon-business-partner',p_correlation,p_tenant::text,jsonb_build_object('caseId',p_case,'businessPartnerId',a.business_partner_id,'supplierId',a.supplier_id,'activationEvidenceId',a.id,'resultSnapshotId',p_result,'status','materialized','resultKind','supplier_activated'),p_actor);
+ UPDATE event.command_execution SET status='succeeded',result_payload=jsonb_build_object('caseId',p_case,'resultSnapshotId',p_result),completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor,updated_by=p_actor WHERE id=execution;
+ PERFORM set_config('app.entity_case_command_execution_id','',true);
+END $$;

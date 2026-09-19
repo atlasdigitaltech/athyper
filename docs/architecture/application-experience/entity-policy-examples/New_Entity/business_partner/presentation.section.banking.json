@@ -1,0 +1,59 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.banking",
+  "entityCode": "business_partner_banking",
+  "plane": "neon",
+  "sectionKey": "banking",
+  "rendererKey": "platform.related-collection.v1",
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.banking.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/banking"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "business_partner_banking/core.json",
+  "fieldBindings": [
+    {
+      "fieldKey": "account_holder_name"
+    },
+    {
+      "fieldKey": "account_last4"
+    },
+    {
+      "fieldKey": "currency_code"
+    },
+    {
+      "fieldKey": "is_verified"
+    }
+  ],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner_bank.read_masked",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [
+    "business_partner_banking/core"
+  ],
+  "artifactHash": "sha256:79de633b0e0837b708c9d2f119c4f46067862632a44bdd2fe034f12c1bfaa264"
+}

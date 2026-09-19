@@ -1,4 +1,6 @@
 packages:
+  - "governance/config/governance"
+  - "deploy/stackctl"
   - "apps/*"
   - "packages/domain/*/*"
   - "packages/planes/*"
@@ -84,5 +86,3 @@ packages:
   - "packages/platform/entity/authoring/*"
   - "packages/platform/ai/*"
   - "packages/platform/communications/*"
-  - "packages/planes/neon/modules/*"
-  - "packages/planes/studio/studio/*"

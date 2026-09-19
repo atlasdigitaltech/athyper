@@ -1,0 +1,49 @@
+{
+  "schema": "athyper.business-partner-r6-local-amendment-evidence/1",
+  "asOf": "2026-09-05",
+  "environment": "disposable_local_postgresql_16",
+  "productionQualified": false,
+  "result": "passed",
+  "probe": "R6_AMENDMENT_PROBE_OK",
+  "checks": [
+    "forward migration installation from absent resolution tables",
+    "forward migration existing-table adoption",
+    "immutable field decisions",
+    "independent approval and maker denial",
+    "stale canonical version denied before approval and materialization",
+    "withdrawn incoming source denied",
+    "outbox failure rolls back canonical/evidence changes",
+    "exact materialization replay preserves result snapshot and outbox IDs",
+    "selected source fields applied with identity and Supplier state preserved"
+  ],
+  "artifacts": [
+    {
+      "path": "server/db/migrations/20260905_neon_mesh_profile_change.sql",
+      "sha256": "178cc4e54097100ea18a265291a1d6ceb29cb37f606c9f7ec36cd8d1bcdf0c5b"
+    },
+    {
+      "path": "server/db/scripts/tests/integration/business-partner-r6-amendment.sql",
+      "sha256": "96eb5c8976def36788b02e7df8522ec1faa1c87bc24656e34e345e723ecf2cd6"
+    }
+  ],
+  "limitations": [
+    "Rollback-only native SQL fixture on a disposable clone; no target deployment or full two-tenant browser execution.",
+    "Mandatory target amendment journey discovered only; environment coordinates missing."
+  ],
+  "verification": {
+    "neonTests": 41,
+    "masterDataTests": 131,
+    "neonUiTests": 71,
+    "planeContractTests": 192,
+    "deploymentStructureTests": 18,
+    "preflightTests": 7,
+    "typechecks": [
+      "server-plane-neon",
+      "server-service-master-data",
+      "product-neon-business-partner",
+      "server-platform-host"
+    ],
+    "foundationManifestPlan": "passed",
+    "targetAmendmentDiscovery": 1
+  }
+}

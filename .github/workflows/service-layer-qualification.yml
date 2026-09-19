@@ -8,7 +8,7 @@ on:
       - "server/packages/**/*.postgres.test.ts"
       - "server/packages/test-utils/**"
       - "tooling/config/ddl-service-*"
-      - "tools/scripts/*ddl-service-coverage*"
+      - "tooling/tools/scripts/*ddl-service-coverage*"
       - ".github/workflows/service-layer-qualification.yml"
   push:
     branches: [main]
@@ -17,7 +17,7 @@ on:
       - "server/packages/**/*.postgres.test.ts"
       - "server/packages/test-utils/**"
       - "tooling/config/ddl-service-*"
-      - "tools/scripts/*ddl-service-coverage*"
+      - "tooling/tools/scripts/*ddl-service-coverage*"
       - ".github/workflows/service-layer-qualification.yml"
   schedule:
     - cron: "15 3 * * 1-5"
@@ -63,11 +63,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 24.19.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Reject incomplete qualification configuration

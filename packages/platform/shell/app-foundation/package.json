@@ -6,9 +6,34 @@
   "main": "./src/index.tsx",
   "types": "./src/index.tsx",
   "sideEffects": false,
-  "exports": { ".": "./src/index.tsx", "./server": "./src/server.ts", "./error-taxonomy": "./src/error-taxonomy.ts" },
-  "scripts": { "typecheck": "tsc --noEmit" },
-  "dependencies": { "@athyper/contract-platform-auth-session": "workspace:*", "@athyper/platform-api-client": "workspace:*", "@athyper/platform-query": "workspace:*", "@athyper/platform-shell-runtime": "workspace:*", "@athyper/platform-surface-kit": "workspace:*", "@athyper/platform-ui": "workspace:*" },
-  "peerDependencies": { "react": "^19.2.5" },
-  "devDependencies": { "@athyper/config": "workspace:*", "@types/react": "^19.2.14", "react": "^19.2.5", "typescript": "^6.0.3" }
+  "exports": {
+    ".": "./src/index.tsx",
+    "./server": "./src/server.ts",
+    "./error-taxonomy": "./src/error-taxonomy.ts",
+    "./request-destination": "./src/request-destination.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@athyper/platform-brand": "workspace:*",
+    "@athyper/contract-platform-auth-session": "workspace:*",
+    "@athyper/platform-api-client": "workspace:*",
+    "@athyper/platform-query": "workspace:*",
+    "@athyper/platform-shell-runtime": "workspace:*",
+    "@athyper/platform-surface-kit": "workspace:*",
+    "@athyper/platform-temporal": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
+    "@athyper/platform-iam-session": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.5"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@types/react": "^19.2.14",
+    "react": "^19.2.5",
+    "typescript": "^6.0.3"
+  }
 }

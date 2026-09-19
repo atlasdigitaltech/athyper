@@ -864,6 +864,25 @@ CREATE TABLE metadata.entity_surface_field_binding (
     CONSTRAINT entity_surface_field_binding_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
 
+CREATE TABLE metadata.entity_surface_component_binding (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid,
+    entity_id uuid NOT NULL, change_set_id uuid NOT NULL, entity_surface_id uuid NOT NULL,
+    entity_surface_section_id uuid, component_surface_id uuid NOT NULL,
+    binding_key text NOT NULL, position smallint NOT NULL, cardinality text NOT NULL,
+    contract_slice_pointer text NOT NULL, status metadata.entity_member_status_d NOT NULL DEFAULT 'active',
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT entity_surface_component_binding_pkey PRIMARY KEY(id),
+    CONSTRAINT entity_surface_component_binding_tenant_uq UNIQUE NULLS NOT DISTINCT(tenant_id,id),
+    CONSTRAINT entity_surface_component_binding_key_uq UNIQUE NULLS NOT DISTINCT(tenant_id,entity_surface_id,binding_key),
+    CONSTRAINT entity_surface_component_binding_position_uq UNIQUE NULLS NOT DISTINCT(tenant_id,entity_surface_id,entity_surface_section_id,position),
+    CONSTRAINT entity_surface_component_binding_key_chk CHECK(binding_key ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT entity_surface_component_binding_position_chk CHECK(position>=0),
+    CONSTRAINT entity_surface_component_binding_cardinality_chk CHECK(cardinality IN('one','many')),
+    CONSTRAINT entity_surface_component_binding_pointer_chk CHECK(contract_slice_pointer ~ '^/(?:[^/~]|~[01])+(?:/(?:[^/~]|~[01])+)*$' AND length(contract_slice_pointer)<=512),
+    CONSTRAINT entity_surface_component_binding_no_self_chk CHECK(component_surface_id<>entity_surface_id),
+    CONSTRAINT entity_surface_component_binding_audit_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
+);
+
 CREATE TABLE metadata.entity_operation (
     id                         uuid                           NOT NULL DEFAULT shared.uuidv7(),
     tenant_id                  uuid,

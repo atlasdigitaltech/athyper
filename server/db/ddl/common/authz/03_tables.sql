@@ -565,7 +565,8 @@ CREATE TABLE authz.record_acl (
         CHECK (resource_code ~ '^[a-z][a-z0-9_.-]{1,126}$'),
     CONSTRAINT record_acl_subject_chk
         CHECK (
-            (subject_kind = 'principal' AND principal_id IS NOT NULL AND group_id IS NULL)
+            (subject_kind = 'tenant' AND principal_id IS NULL AND group_id IS NULL)
+            OR (subject_kind = 'principal' AND principal_id IS NOT NULL AND group_id IS NULL)
             OR (subject_kind = 'group' AND group_id IS NOT NULL AND principal_id IS NULL)
         ),
     CONSTRAINT record_acl_reason_chk

@@ -27,7 +27,15 @@ export class KyselyChannelConsentRepository implements ChannelConsentRepository<
         updated_at = now()
       WHERE governance.channel_consent.effective_at < EXCLUDED.effective_at
          OR (governance.channel_consent.effective_at = EXCLUDED.effective_at
-             AND governance.channel_consent.last_event_id = EXCLUDED.last_event_id)
+             AND EXISTS (
+               SELECT 1 FROM event.channel_consent_event incoming
+               JOIN event.channel_consent_event previous
+                 ON previous.tenant_id = incoming.tenant_id
+                AND previous.id = governance.channel_consent.last_event_id
+               WHERE incoming.tenant_id = EXCLUDED.tenant_id
+                 AND incoming.id = EXCLUDED.last_event_id
+                 AND (incoming.created_at, incoming.id) >= (previous.created_at, previous.id)
+             ))
       RETURNING *
     `.execute(transaction);
     const row = result.rows[0] ?? (await this.lookup(input, transaction));

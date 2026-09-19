@@ -1,0 +1,68 @@
+{
+  "observedAt": "2026-09-10T07:25:36.761Z",
+  "phase": "F6",
+  "findings": [
+    {
+      "id": "F6-01",
+      "status": "fixed_and_deployed",
+      "finding": "Local chat/conversation admission omitted live permission-policy checks",
+      "resolution": "Host authorizer now gates local admission, model policy and conversations; policy revision v4; baseline Neon denial verified"
+    },
+    {
+      "id": "F6-02",
+      "status": "fixed_and_tested",
+      "finding": "Invalid DDL-root-relative attachment knowledge entry in Neon foundation manifest",
+      "resolution": "Corrected plane path; disposable Neon, Mesh and Studio foundations and retrieval suites passed"
+    },
+    {
+      "id": "F6-03",
+      "status": "qualified",
+      "finding": "Neon catl.admin currently has baseline assurance",
+      "resolution": "Operator capture verified elevated Neon catl.admin; live persona, pinned-model replay and grounded chat checks passed."
+    },
+    {
+      "id": "F6-04",
+      "status": "fixed_and_qualified",
+      "finding": "Mesh network_relationship lacks an AI-enabled publication",
+      "resolution": "Reviewed Cirrus Mesh release 1 is active; live generic read, foreign-account denial, cross-persona history denial and zero-provider-call summary qualified."
+    },
+    {
+      "id": "F6-05",
+      "status": "guarded",
+      "finding": "API and worker image bindings changed during collection",
+      "resolution": "Gate rejects mixed successful receipts; rollback preparation preserves actual active Compose overrides"
+    },
+    {
+      "id": "F6-06",
+      "status": "fixed_and_qualified",
+      "finding": "Unscoped Mesh get preceded account-scoped Records admission",
+      "resolution": "Mesh admission uses the scoped owner; membership-denial regression and live account checks passed."
+    },
+    {
+      "id": "F6-07",
+      "status": "fixed_and_qualified",
+      "finding": "Local runtime generic tool registration/coordinator deployment missing",
+      "resolution": "Generic entity record registry, coordinator and gateway deployed and live citation verified."
+    },
+    {
+      "id": "F6-08",
+      "status": "fixed_and_qualified",
+      "finding": "F3 guidance schema and repository missing from live deployment",
+      "resolution": "Existing migration applied to all planes; current persistence code deployed and static denied response verified."
+    }
+  ],
+  "tests": {
+    "aiPassed": 364,
+    "aiSkipped": 1,
+    "hostTypecheck": "passed",
+    "pilotGateTestsPassed": 6,
+    "disposableDatabasePlanes": [
+      "neon",
+      "mesh",
+      "studio"
+    ],
+    "aiTypecheck": "passed"
+  },
+  "permissionsChanged": false,
+  "metadataPublished": true
+}

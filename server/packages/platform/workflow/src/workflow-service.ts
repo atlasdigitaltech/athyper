@@ -1,6 +1,9 @@
+import { createHash } from "node:crypto";
+import { decodeInboxCursor } from "./inbox-cursor.js";
+import { parseInstant } from "@athyper/platform-temporal";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { OutboxWriter } from "@athyper/server-contract-events";
+import type { CommandExecutionStore, OutboxWriter } from "@athyper/server-contract-events";
 import type { MetadataReader } from "@athyper/server-contract-metadata";
 import type { PolicyService } from "@athyper/server-contract-policy";
 import type { CreateWorkItemCommand, WorkflowRepository, WorkflowService, WorkItem, WorkItemActionCommand, WorkItemActionResult } from "@athyper/server-contract-workflow";
@@ -20,6 +23,7 @@ export interface WorkflowServiceOptions<Transaction> {
   readonly repository: WorkflowRepository<Transaction>;
   readonly transactions: PlaneTransactionCoordinator<Transaction>;
   readonly policy?: PolicyService<Transaction>;
+  readonly commandExecutions?: CommandExecutionStore<Transaction, WorkItemActionResult>;
 }
 
 export function createWorkflowService<Transaction>(options: WorkflowServiceOptions<Transaction>): WorkflowService {
@@ -33,7 +37,7 @@ export function createWorkflowService<Transaction>(options: WorkflowServiceOptio
         && !descriptor.lifecycle?.transitions.some((transition) => transition.code === command.sourceActionCode)) {
         throw new WorkflowError(422, "SOURCE_ACTION_NOT_PUBLISHED", `Action is not published: ${command.sourceActionCode}`);
       }
-      return inTransaction(options, command.context, async (transaction) => {
+      return inTransaction(options, command.context, (transaction) => withReceipt(options, command, "create", transaction, async () => {
         const policyBindings = (descriptor.policyBindings ?? []).filter((binding) =>
           (!binding.operationCode || binding.operationCode === command.sourceActionCode)
           && ["authorization", "precondition", "validation"].includes(binding.stage));
@@ -53,10 +57,11 @@ export function createWorkflowService<Transaction>(options: WorkflowServiceOptio
         const item = await options.repository.create({ command: evaluatedCommand, descriptor }, transaction);
         await sideEffects(options, command.context, item, "created", transaction, command.idempotencyKey);
         return { kind: "Committed", workItem: item };
-      });
+      }));
     },
     async listInbox(query) {
       if (!await allowed(options.authorizer, query.context, PERMISSIONS.read)) throw new WorkflowError(403, "FORBIDDEN", "Workflow inbox is not permitted");
+      if (query.cursor !== undefined) decodeInboxCursor(query.cursor);
       const limit = query.limit ?? 50;
       if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new WorkflowError(400, "INVALID_LIMIT", "Inbox limit must be between 1 and 100");
       return inTransaction(options, query.context, (transaction) => options.repository.listInbox({ ...query, limit }, transaction));
@@ -67,27 +72,36 @@ export function createWorkflowService<Transaction>(options: WorkflowServiceOptio
     act: (command) => action(options, command, command.action, permissionFor(command.action), true),
     async getRequestContext(context, requestId) {
       if (!await allowed(options.authorizer, context, PERMISSIONS.read)) throw new WorkflowError(403, "FORBIDDEN", "Workflow request context is not permitted");
-      return inTransaction(options, context, (transaction) => options.repository.getRequestContext?.(context.tenantId, requestId, transaction) ?? Promise.resolve(null));
+      if (!options.repository.getRequestContext) throw new WorkflowError(503, "REQUEST_CONTEXT_UNAVAILABLE", "Workflow request context is unavailable");
+      return inTransaction(options, context, (transaction) => options.repository.getRequestContext!(context.tenantId, requestId, transaction));
     },
   };
 }
 
 async function action<Transaction>(options: WorkflowServiceOptions<Transaction>, command: WorkItemActionCommand, actionName: string, permission: string, strict: boolean): Promise<WorkItemActionResult> {
   if (!await allowed(options.authorizer, command.context, permission)) return forbidden(permission);
+  if (!["claim", "complete", "cancel", "approve", "reject"].includes(actionName)) throw new WorkflowError(400, "INVALID_ACTION", "Unsupported workflow action");
+  if ((strict || command.expectedRowVersion !== undefined) && (!Number.isSafeInteger(command.expectedRowVersion) || Number(command.expectedRowVersion) < 1)) throw new WorkflowError(400, "INVALID_ROW_VERSION", "currentRowVersion must be a positive safe integer");
   if (strict && !command.idempotencyKey) throw new WorkflowError(400, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key is required for workflow actions");
-  return inTransaction(options, command.context, async (transaction) => {
+  return inTransaction(options, command.context, (transaction) => withReceipt(options, command, actionName, transaction, async () => {
     const current = await options.repository.get(command.context.tenantId, command.workItemId, transaction);
     if (!current) return { kind: "NotFound", workItemId: command.workItemId };
+    if (current.payload["attemptId"] && current.payload["cycleTaskId"] && actionName !== "claim") throw new WorkflowError(409, "TASK_OWNER_COMMAND_REQUIRED", "Use the task review or approval command for this work item");
     const expected = command.expectedRowVersion ?? current.rowVersion;
     const descriptor = await options.metadata.getEntityDescriptor(command.context, current.sourceEntityCode);
     if (!descriptor) return { kind: "Conflict", reason: "The active workflow revision is unavailable" };
     const revision = current.workflowRevision ?? revisionFromPayload(current.payload);
     if (revision && descriptor.compiledHash !== revision.artifactHash) return { kind: "Conflict", reason: "The work item workflow revision is no longer active" };
-    const policyBindings = (descriptor.policyBindings ?? []).filter((binding) => !binding.operationCode || binding.operationCode === actionName);
+    const policyBindings = (descriptor.policyBindings ?? []).filter((binding) => (!binding.operationCode || binding.operationCode === actionName) && ["authorization", "precondition", "validation"].includes(binding.stage));
     if (policyBindings.length) {
       if (!options.policy) throw new WorkflowError(503, "POLICY_SERVICE_UNAVAILABLE", "Workflow action policy re-evaluation is unavailable");
       const decision = await options.policy.evaluate({ context: command.context, entityType: current.sourceEntityCode, entityId: current.sourceEntityId, facts: { ...current.payload, ...(command.outcome ?? {}), workflow_action: actionName }, policyDefinitionIds: policyBindings.map((binding) => binding.policyDefinitionId), pipelineId: `workflow.work_item.${actionName}` }, transaction);
-      const denials = decision.outcomes.filter((outcome) => outcome.action === "deny");
+      for (const binding of policyBindings) {
+        const evaluated = decision.evaluatedPolicies.find((policy) => policy.id === binding.policyDefinitionId);
+        if (!evaluated || evaluated.versionNo !== binding.policyVersionNo) throw new WorkflowError(503, "POLICY_VERSION_UNAVAILABLE", `Required policy revision is unavailable: ${binding.key}`);
+      }
+      const enforcedIds = new Set(policyBindings.filter((binding) => binding.enforcement === "enforce").map((binding) => binding.policyDefinitionId));
+      const denials = decision.outcomes.filter((outcome) => outcome.action === "deny" && enforcedIds.has(outcome.policyId));
       if (denials.length) return { kind: "PolicyDenied", policyIds: [...new Set(denials.map((denial) => denial.policyId))], ...(denials[0]?.explanation ? { reason: denials[0].explanation } : {}) };
     }
     const item = await options.repository.action(command.context.tenantId, command.workItemId, command.context.principalId, actionName, expected, command.outcome ?? {}, transaction);
@@ -95,7 +109,7 @@ async function action<Transaction>(options: WorkflowServiceOptions<Transaction>,
     const eventAction = actionName === "complete" || actionName === "approve" || actionName === "reject" ? "completed" : actionName === "claim" ? "claimed" : "cancelled";
     await sideEffects(options, command.context, item, eventAction, transaction, command.idempotencyKey);
     return { kind: "Committed", workItem: item };
-  });
+  }));
 }
 
 function permissionFor(action: string): string { return `workflow.work_item.${action}`; }
@@ -103,7 +117,7 @@ function revisionFromPayload(payload: Readonly<Record<string, unknown>>) { const
 
 async function sideEffects<Transaction>(options: WorkflowServiceOptions<Transaction>, context: VerifiedRequestContext, item: WorkItem, eventAction: "created" | "claimed" | "completed" | "cancelled", transaction: Transaction, idempotencyKey?: string): Promise<void> {
   const eventType = `workflow.work_item.${eventAction}`;
-  await options.outbox.append({ tenantId: context.tenantId, topic: "workflow", eventType, ...(idempotencyKey ? { eventKey: idempotencyKey } : {}), entityType: item.sourceEntityCode, entityId: item.sourceEntityId, aggregateType: "workflow.work_item", aggregateId: item.id, actorId: context.principalId, payload: { workItemId: item.id, status: item.status, sourceActionCode: item.sourceActionCode } }, transaction);
+  await options.outbox.append({ tenantId: context.tenantId, topic: "workflow", eventType, ...(idempotencyKey ? { eventKey: createHash("sha256").update(JSON.stringify([context.tenantId, context.principalId, item.id, eventType, idempotencyKey])).digest("hex") } : {}), entityType: item.sourceEntityCode, entityId: item.sourceEntityId, aggregateType: "workflow.work_item", aggregateId: item.id, actorId: context.principalId, payload: { work_item_id: item.id, title: item.title, status: item.status, priority: item.priority, due_at: item.dueAt ?? null, source_action_code: item.sourceActionCode ?? null, entity_type: item.sourceEntityCode, entity_id: item.sourceEntityId, recipient_principal_ids: item.assigneePrincipalId ? [item.assigneePrincipalId] : [] } }, transaction);
   const actionName = eventAction === "created" ? "create" : eventAction === "claimed" ? "claim" : eventAction === "completed" ? "complete" : "cancel";
   await options.audit.record({ eventCode: eventType, action: actionName, outcome: "success", actor: { kind: "user", principalId: context.principalId }, tenantId: context.tenantId, entityType: "workflow.work_item", entityId: item.id, requestId: context.requestId, ...(context.correlationId ? { correlationId: context.correlationId } : {}) }, transaction);
 }
@@ -116,8 +130,8 @@ function validateCreate(command: CreateWorkItemCommand): void {
   for (const [name, value] of [["assigneePrincipalId", command.assigneePrincipalId], ["assigneeTeamId", command.assigneeTeamId]] as const) {
     if (value && !isUuid(value)) throw new WorkflowError(400, "INVALID_ASSIGNMENT", `${name} must be a UUID`);
   }
-  const available = command.availableAt ? Date.parse(command.availableAt) : Date.now();
-  const due = command.dueAt ? Date.parse(command.dueAt) : undefined;
+  const available = command.availableAt ? parseInstant(command.availableAt) : Date.now();
+  const due = command.dueAt ? parseInstant(command.dueAt) : undefined;
   if (!Number.isFinite(available) || (due !== undefined && (!Number.isFinite(due) || due < available))) throw new WorkflowError(400, "INVALID_SCHEDULE", "Due time must be valid and not precede availability");
 }
 
@@ -127,3 +141,22 @@ function inTransaction<Transaction, Result>(options: WorkflowServiceOptions<Tran
 async function allowed(authorizer: Authorizer, context: VerifiedRequestContext, permissionCode: string): Promise<boolean> { return (await authorizer.authorize({ context, permissionCode })).allowed; }
 function forbidden(permissionCode: string): WorkItemActionResult { return { kind: "Forbidden", permissionCode }; }
 function isUuid(value: string): boolean { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
+
+async function withReceipt<Transaction>(options: WorkflowServiceOptions<Transaction>, command: CreateWorkItemCommand | WorkItemActionCommand, action: string, transaction: Transaction, work: () => Promise<WorkItemActionResult>): Promise<WorkItemActionResult> {
+  if (command.idempotencyKey === undefined) return work();
+  if (!command.idempotencyKey.trim() || command.idempotencyKey.length > 200) throw new WorkflowError(400, "INVALID_IDEMPOTENCY_KEY", "Idempotency-Key must contain 1 to 200 characters");
+  if (!options.commandExecutions) throw new WorkflowError(503, "IDEMPOTENCY_UNAVAILABLE", "Workflow command receipts are unavailable");
+  const { context, idempotencyKey, ...input } = command;
+  const fingerprint = createHash("sha256").update(JSON.stringify(canonical({ ...input, action, principalId: context.principalId }))).digest("hex");
+  const receipt = await options.commandExecutions.begin({ tenantId: context.tenantId, commandCode: `workflow.work_item.${action}`, idempotencyKey, requestFingerprint: fingerprint, actorPrincipalId: context.principalId, sourceService: "workflow" }, transaction);
+  if (receipt.kind === "replay") return receipt.result;
+  if (receipt.kind !== "started") return { kind: "Conflict", reason: receipt.kind === "conflict" ? "Idempotency-Key was already used for a different command" : "Workflow command is already processing" };
+  const result = await work();
+  await options.commandExecutions.complete(receipt.executionId, result, context.principalId, transaction);
+  return result;
+}
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => [key, canonical(item)]));
+  return value;
+}

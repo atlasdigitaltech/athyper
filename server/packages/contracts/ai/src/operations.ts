@@ -28,12 +28,18 @@ export interface AtlasKnowledgeSource { readonly id: string; readonly tenantId: 
 export interface AtlasKnowledgeChunkInput { readonly ordinal: number; readonly characterStart: number; readonly characterEnd: number; readonly contentHash: string; readonly text: string }
 export interface AtlasKnowledgeCitation { readonly sourceId: string; readonly sourceVersionId: string; readonly revisionId: string; readonly chunkId: string; readonly contentHash: string; readonly characterStart: number; readonly characterEnd: number }
 export interface AtlasKnowledgeIndex { index(input: { readonly tenantId: string; readonly source: AtlasKnowledgeSource; readonly revisionId: string; readonly sourceVersionId: string; readonly chunks: readonly AtlasKnowledgeChunkInput[] }): Promise<readonly { readonly ordinal: number; readonly indexReference: string; readonly embeddingModel: string }[]>; search(input: { readonly tenantId: string; readonly query: string; readonly limit: number }): Promise<readonly { readonly citation: AtlasKnowledgeCitation; readonly permissionCode: string; readonly score: number }[]>; remove(input: { readonly tenantId: string; readonly revisionIds: readonly string[] }): Promise<void>; health(): Promise<{ readonly healthy: boolean; readonly message?: string }> }
+/** Owner admission must check current parent access, version, deletion and scan eligibility. */
+export interface AtlasKnowledgeAdmission {
+  authorize(input: { readonly context: VerifiedRequestContext; readonly source: AtlasKnowledgeSource; readonly citation: AtlasKnowledgeCitation }): Promise<boolean>;
+}
 export interface AtlasKnowledgeRepository {
+  /** Canonical admission in one bounded query; index metadata is never authoritative. */
+  admitCandidates?(input: { readonly context: VerifiedRequestContext; readonly citations: readonly AtlasKnowledgeCitation[] }): Promise<readonly { readonly citation: AtlasKnowledgeCitation; readonly source: AtlasKnowledgeSource }[]>;
   registerSource(input: { readonly context: VerifiedRequestContext; readonly sourceId: string; readonly sourceKind: string; readonly entityCode?: string; readonly permissionCode: string; readonly id: string; readonly at: string }): Promise<AtlasKnowledgeSource>;
   beginRevision(input: { readonly context: VerifiedRequestContext; readonly sourceId: string; readonly revisionId: string; readonly sourceVersionId: string; readonly contentHash: string; readonly chunks: readonly Omit<AtlasKnowledgeChunkInput, "text">[]; readonly at: string }): Promise<{ readonly revisionId: string; readonly replayed: boolean; readonly source: AtlasKnowledgeSource }>;
   markReady(input: { readonly context: VerifiedRequestContext; readonly sourceId: string; readonly revisionId: string; readonly indexed: readonly { readonly ordinal: number; readonly indexReference: string; readonly embeddingModel: string }[]; readonly at: string }): Promise<void>;
   markFailed(input: { readonly context: VerifiedRequestContext; readonly revisionId: string; readonly at: string }): Promise<void>;
-  retract(input: { readonly context: VerifiedRequestContext; readonly sourceId: string; readonly delete: boolean; readonly at: string }): Promise<readonly string[]>;
+  retract(input: { readonly context: VerifiedRequestContext; readonly sourceId: string; readonly sourceKind?: string; readonly delete: boolean; readonly at: string }): Promise<readonly string[]>;
   health(): Promise<{ readonly healthy: boolean; readonly message?: string }>;
 }
 

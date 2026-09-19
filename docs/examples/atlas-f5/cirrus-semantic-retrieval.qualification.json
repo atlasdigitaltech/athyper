@@ -1,0 +1,93 @@
+{
+  "observedAt": "2026-09-10T05:19:28.771Z",
+  "steps": [
+    {
+      "step": "exact",
+      "status": 200,
+      "elapsedMs": 1970,
+      "response": {
+        "citations": [
+          {
+            "citation": {
+              "sourceId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+              "sourceVersionId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6:21d82db385726457aff268204b19222a47d98aeb14426e1b9946e67c47478024",
+              "revisionId": "6f2a53ae-330a-442a-81bf-61f329422e68",
+              "chunkId": "01a08997-0f2d-7238-a99a-f75c3a224e0b",
+              "contentHash": "852954e63c1a9af0256d84d568d8e7ec66cd6e61ae1c301967ec705af3cc01e4",
+              "characterStart": 0,
+              "characterEnd": 1473
+            },
+            "score": 0.7859096527099609
+          }
+        ]
+      }
+    },
+    {
+      "step": "paraphrase",
+      "status": 200,
+      "elapsedMs": 194,
+      "response": {
+        "citations": [
+          {
+            "citation": {
+              "sourceId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+              "sourceVersionId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6:21d82db385726457aff268204b19222a47d98aeb14426e1b9946e67c47478024",
+              "revisionId": "6f2a53ae-330a-442a-81bf-61f329422e68",
+              "chunkId": "01a08997-0f2d-7238-a99a-f75c3a224e0b",
+              "contentHash": "852954e63c1a9af0256d84d568d8e7ec66cd6e61ae1c301967ec705af3cc01e4",
+              "characterStart": 0,
+              "characterEnd": 1473
+            },
+            "score": 0.8045927286148071
+          }
+        ]
+      }
+    },
+    {
+      "step": "support_paraphrase",
+      "status": 200,
+      "elapsedMs": 132,
+      "response": {
+        "citations": [
+          {
+            "citation": {
+              "sourceId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+              "sourceVersionId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6:21d82db385726457aff268204b19222a47d98aeb14426e1b9946e67c47478024",
+              "revisionId": "6f2a53ae-330a-442a-81bf-61f329422e68",
+              "chunkId": "01a08997-0f2d-7238-a99a-f75c3a224e0b",
+              "contentHash": "852954e63c1a9af0256d84d568d8e7ec66cd6e61ae1c301967ec705af3cc01e4",
+              "characterStart": 0,
+              "characterEnd": 1473
+            },
+            "score": 0.8114688396453857
+          }
+        ]
+      }
+    },
+    {
+      "step": "unrelated",
+      "status": 200,
+      "elapsedMs": 100,
+      "response": {
+        "citations": []
+      }
+    },
+    {
+      "step": "unrelated_weather",
+      "status": 200,
+      "elapsedMs": 95,
+      "response": {
+        "citations": []
+      }
+    },
+    {
+      "step": "vague",
+      "status": 200,
+      "elapsedMs": 112,
+      "response": {
+        "citations": []
+      }
+    }
+  ],
+  "passed": true
+}

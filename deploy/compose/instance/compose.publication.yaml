@@ -1,0 +1,26 @@
+# Opt-in overlay after compose.yaml and compose.parity.yaml. All references must
+# belong to the selected instance; private key material stays in Infisical.
+services:
+  worker:
+    environment:
+      PUBLICATION_APPLIER_PRINCIPAL_CODE: ${PUBLICATION_APPLIER_PRINCIPAL_CODE:-publication.worker}
+      PUBLICATION_COMPILE_ENABLED: "true"
+      PUBLICATION_DISPATCH_ENABLED: "true"
+      PUBLICATION_APPLY_ENABLED: "true"
+      PUBLICATION_REQUIRE_SIGNATURE: "true"
+      PUBLICATION_TARGET_PLANES: ${PUBLICATION_TARGET_PLANES:?Set intended consumer planes}
+      PUBLICATION_RUNTIME_VERSION: ${PUBLICATION_RUNTIME_VERSION:?Set deployed runtime contract version}
+      PUBLICATION_SIGNING_KEY_ID: ${PUBLICATION_SIGNING_KEY_ID:?Set an instance-specific key ID}
+      PUBLICATION_PRIVATE_KEY_REFERENCE: ${PUBLICATION_PRIVATE_KEY_REFERENCE:?Set the Infisical private key reference}
+      PUBLICATION_PUBLIC_KEY_REFERENCE: ${PUBLICATION_PUBLIC_KEY_REFERENCE:?Set the Infisical public key reference}
+      INFISICAL_URL: ${INFISICAL_URL:?Set the Infisical HTTPS endpoint}
+      INFISICAL_WORKSPACE_ID: ${INFISICAL_WORKSPACE_ID:?Set the Infisical workspace}
+      INFISICAL_ENVIRONMENT: ${INFISICAL_ENVIRONMENT:?Set the instance-specific Infisical environment}
+      INFISICAL_SECRET_PATH: ${INFISICAL_SECRET_PATH:?Set the instance-specific signing secret path}
+      INFISICAL_TOKEN_FILE: /run/secrets/publication-infisical-token
+    secrets:
+      - publication-infisical-token
+
+secrets:
+  publication-infisical-token:
+    file: ${PUBLICATION_INFISICAL_TOKEN_FILE:?Set the local secure token-file reference}

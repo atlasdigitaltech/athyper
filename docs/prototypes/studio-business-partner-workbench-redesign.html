@@ -1,0 +1,711 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Studio · Business Partner workbench redesign</title><style>
+:root{--ink:#17273d;--blue:#285b99;--blue-dk:#1d3f6e;--line:#e2e8f0;--muted:#65748b;--bg:#f4f6fa;--red:#b13c3c;--green:#237a52;--amber:#8a5a12;--card:#ffffff}
+*{box-sizing:border-box}body{margin:0;font:14.5px/1.5 -apple-system,system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer;background:white;border:1px solid var(--line);border-radius:8px;padding:8px 14px;color:var(--ink)}
+button:hover{border-color:var(--blue)}button:disabled{opacity:.4;cursor:not-allowed}
+.primary{background:var(--blue);color:white;border-color:var(--blue)}.primary:hover{background:var(--blue-dk)}
+.ghost{background:none;border-color:transparent;color:var(--blue)}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+header.top{height:64px;background:white;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:18px;padding:0 26px}
+.lockup{display:flex;flex-direction:column;line-height:1.05;margin-right:4px}
+.lockup .a{font-size:10px;letter-spacing:.14em;color:var(--muted);font-weight:600}
+.lockup .s{font-size:19px;font-weight:800;color:var(--blue-dk);letter-spacing:.02em}
+.vdiv{width:1px;height:28px;background:var(--line)}
+.tenant{display:flex;align-items:center;gap:8px;font-weight:650}
+.tenant .box{width:26px;height:26px;border-radius:6px;background:#eaf1fa;display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:14px}
+.topnav{margin-left:auto;display:flex;align-items:center;gap:22px;color:var(--muted);font-size:13px}
+.topnav span{display:flex;align-items:center;gap:6px}
+.atlaspill{border:1px solid var(--line);border-radius:20px;padding:6px 14px;color:var(--blue);font-weight:650;display:flex;align-items:center;gap:6px}
+main{max-width:1320px;margin:0 auto;padding:22px 26px 60px}
+.crumb{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.crumb a{color:var(--muted)}.crumb a:hover{color:var(--blue)}
+.pagehead{display:flex;gap:16px;align-items:flex-start;margin-bottom:18px}
+.pageicon{width:46px;height:46px;border-radius:10px;background:#eaf1fa;color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+.eyebrow{font-size:11px;letter-spacing:.06em;color:var(--blue);font-weight:700;text-transform:uppercase}
+.pagehead h1{font-size:25px;margin:2px 0 4px;display:inline}
+.pagemeta{color:var(--muted);font-size:12.5px;margin-left:10px}
+.pagedesc{color:var(--muted);font-size:13.5px;margin-top:2px}
+.tabbar{background:#eef1f6;border-radius:12px;padding:4px;display:inline-flex;gap:2px;margin-bottom:18px;flex-wrap:wrap}
+.tabbar button{border:0;background:none;border-radius:9px;padding:9px 15px;font-size:13.5px;color:var(--muted)}
+.tabbar button.active{background:white;color:var(--ink);font-weight:650;box-shadow:0 1px 2px rgba(20,30,50,.08)}
+.tabbar button:disabled{opacity:.45}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h2{font-size:17px;margin:0}
+h3{font-size:14.5px;margin:0 0 8px}
+.muted{color:var(--muted)}
+.pill{border-radius:20px;padding:3px 11px;font-size:11.5px;font-weight:650}
+.pill.blue{background:#eaf1fa;color:var(--blue)}
+.pill.green{background:#e6f5ec;color:var(--green)}
+.pill.amber{background:#fdf1de;color:var(--amber)}
+.pill.gray{background:#eef1f6;color:var(--muted)}
+select,input:not([type=checkbox]){width:100%;padding:9px 10px;border:1px solid #cfd8e3;border-radius:8px;background:white;color:var(--ink)}
+.field{margin:10px 0}.field label{display:block;font-size:12.5px;font-weight:650;margin-bottom:5px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.countcard{border:1px solid var(--line);border-radius:10px;padding:14px;text-align:left;background:white}
+.countcard:hover{border-color:var(--blue);background:#f8fafd}
+.countcard .n{font-size:22px;font-weight:800;color:var(--ink)}
+.countcard .l{font-size:12px;color:var(--muted);margin-top:2px}
+.actorrow{display:flex;align-items:center;gap:10px;margin:8px 0}
+.avatar{width:28px;height:28px;border-radius:50%;color:white;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.actorlabel{font-size:11.5px;color:var(--muted);width:150px;flex:none}
+.actorname{font-weight:650;font-size:13px}
+details summary{cursor:pointer;font-size:13px;color:var(--blue);margin:8px 0}
+pre{background:#f6f8fb;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:12px;overflow:auto}
+.two{display:grid;grid-template-columns:380px 1fr;gap:18px}
+.searchbox{position:relative}
+.treepane{max-height:60vh;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px}
+.catlabel{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;padding:8px 6px 4px}
+.node{display:flex;align-items:center;gap:2px;margin:1px 0}
+.twisty{border:0;background:none;width:18px;height:22px;padding:0;color:var(--muted)}
+.twisty-space{display:inline-block;width:18px}
+.nodebtn{border:0;background:none;text-align:left;padding:5px 8px;border-radius:7px;font-size:13px;flex:1;display:flex;align-items:center;gap:7px}
+.nodebtn:hover{background:#f2f6fb}
+.nodebtn.selected{background:#eaf1fa;font-weight:650}
+.nodekind{font-size:9.5px;text-transform:uppercase;color:var(--muted);background:#eef1f6;border-radius:4px;padding:1px 5px}
+.emptyline{padding:6px 8px 6px 30px;color:var(--muted);font-size:12.5px;font-style:italic}
+.status{min-height:20px;font-size:13px;margin-top:8px}
+.banner{border-radius:10px;padding:13px 16px;font-size:13.5px;display:flex;gap:12px;align-items:flex-start}
+.banner.info{background:#eaf1fa;border:1px solid #bcd3ec}
+.banner.warn{background:#fdf1de;border:1px solid #f0d69a}
+.banner.draft{background:#eefaf1;border:1px solid #b7e4c4}
+footer{color:var(--muted);font-size:12px;padding:20px 0;text-align:center}
+.hidden{display:none!important}
+.contextstrip{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:6px 0 4px}
+.contextstrip .sep{color:var(--line)}
+.segmented{background:#eef1f6;border-radius:8px;padding:2px;display:flex;gap:2px}
+.segmented button{border:0;background:none;padding:6px 11px;border-radius:6px;font-size:12.5px;color:var(--muted)}
+.segmented button.active{background:white;color:var(--ink);font-weight:650;box-shadow:0 1px 2px rgba(20,30,50,.08)}
+.previewstage{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:6px}
+.previewstage.device-mobile{grid-template-columns:1fr;max-width:340px;margin:6px auto 0}
+.previewcol h4{font-size:11.5px;color:var(--muted);margin:0 0 8px;text-transform:uppercase;letter-spacing:.03em}
+.mockform{border:1px solid var(--line);border-radius:10px;padding:16px;background:#fbfcfe}
+.mockfield{margin:0 0 14px;position:relative;padding:9px;border-radius:8px;border:1px solid transparent;transition:box-shadow .2s}
+.mockfield label{display:block;font-size:12.5px;font-weight:650;margin-bottom:4px}
+.mockfield input{background:white}
+.mockfield small{color:var(--muted);display:block;margin-top:4px;font-size:11.5px}
+.mockfield-changed{border-color:#f0d69a;background:#fffaf0}
+.changetag{position:absolute;top:6px;right:8px;font-size:9.5px;background:var(--amber);color:white;border-radius:10px;padding:1px 7px;text-transform:uppercase;letter-spacing:.03em}
+.ghostdiff{margin-top:6px}
+.ghostline{display:block;font-size:11px;color:var(--amber);margin-top:2px}
+.ghostline s{color:var(--muted)}
+.changelist{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.changechip{text-align:left;padding:10px 12px;border-radius:8px;font-size:12.5px}
+.changechip .from{color:var(--red);text-decoration:line-through}
+.changechip .to{color:var(--green);font-weight:650}
+.findingsrow{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:6px 0;color:var(--muted)}
+.ficon{flex:none;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:white;margin-top:1px}
+.ficon.ok{background:var(--green)}
+.ficon.warn{background:var(--amber)}
+.flash{animation:flashhi 1.1s ease}
+@keyframes flashhi{0%{box-shadow:0 0 0 4px rgba(40,91,153,.45)}100%{box-shadow:0 0 0 0 rgba(40,91,153,0)}}
+
+.stepper{display:flex;align-items:center;margin:16px 0}
+.step{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);white-space:nowrap}
+.stepdot{width:24px;height:24px;border-radius:50%;background:#eef1f6;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
+.step.done .stepdot{background:var(--green);color:white}
+.step.current .stepdot{background:var(--blue);color:white;box-shadow:0 0 0 4px rgba(40,91,153,.15)}
+.step.done .steplabel,.step.current .steplabel{color:var(--ink);font-weight:650}
+.step.external .steplabel small{display:block;color:var(--muted);font-weight:400;font-size:10.5px}
+.stepline{flex:1;height:2px;background:var(--line);margin:0 8px;min-width:16px}
+.step.done+.stepline{background:var(--green)}
+
+.trail{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px}
+.trailnode{display:flex;align-items:center;gap:8px}
+.trailnode small{display:block;font-size:11px}
+.trailnode small.good{color:var(--green)}.trailnode small.bad{color:var(--amber)}.trailnode small.muted{color:var(--muted)}
+.trailarrow{color:var(--line);font-size:16px}
+.avatar.ghost{background:#eef1f6;color:var(--muted);border:1.5px dashed #c7d0dd}
+.trailnode.pending .avatar{animation:pulseghost 1.6s ease-in-out infinite}
+@keyframes pulseghost{0%,100%{opacity:.55}50%{opacity:1}}
+
+.historyrail{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 2px}
+.historychip{padding:5px 11px;border-radius:20px;font-size:12px;border:1px solid var(--line);background:white;color:var(--muted)}
+.historychip.current{border-color:var(--blue);color:var(--blue);font-weight:650;background:#eaf1fa}
+.historydetail{border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:12.5px;margin:6px 0 4px;background:#f8fafd}
+@media(max-width:900px){.grid4,.grid5{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}main{padding:16px}}
+</style></head>
+<body>
+<header class="top">
+  <div class="lockup"><span class="a">athyper</span><span class="s">STUDIO</span></div>
+  <div class="vdiv"></div>
+  <div class="tenant"><span class="box">&#127970;</span>CirrusAtlantic</div>
+  <div class="topnav">
+    <span>&#128269; Search</span><span>&#128276; Notifications</span><span>&#128228; Inbox</span>
+    <span class="atlaspill">&#128200; Atlas</span>
+  </div>
+</header>
+<main>
+  <div class="crumb" id="crumb"></div>
+  <div class="pagehead">
+    <div class="pageicon">&#9881;</div>
+    <div>
+      <div class="eyebrow">MDG &middot; MODULE CONFIGURATION</div>
+      <h1>Business Partner</h1><span class="pagemeta">Governed definition &middot; <code>studio.business_partner.definition.business_partner.onboarding</code></span>
+      <div class="pagedesc">The governed module definition consumed by Neon stewardship and Mesh partner-network experiences.</div>
+    </div>
+  </div>
+
+  <div class="tabbar" id="tabbar"></div>
+
+  <!-- Shared context: rendered once, identical regardless of active tab. Expanded by default on Overview,
+       collapsed to a status strip by default on Data Model; a manual toggle overrides the tab default either way. -->
+  <div class="card" id="contextCard">
+    <div class="bar">
+      <h2>Configuration workbench</h2>
+      <div class="row">
+        <button id="refreshBtn">&#8635; Refresh stored data</button>
+        <button id="contextToggle" class="ghost" style="border:1px solid var(--line);color:var(--ink)"></button>
+      </div>
+    </div>
+    <div id="contextStrip"></div>
+    <div id="contextBody">
+      <p class="muted" style="margin:4px 0 14px">Inspect a stored definition across every tab. Inspection makes no changes until you fork a draft.</p>
+      <div class="field"><label>Stored version</label>
+        <select id="versionSelect">
+          <option value="">Select a published release or change set</option>
+          <option value="rev63" selected>approved &middot; revision 63 &middot; be767e01-f36d-434f-91f3-67bff689a367</option>
+        </select>
+      </div>
+      <div id="versionSummary"></div>
+    </div>
+  </div>
+
+  <div id="tabpanel"></div>
+</main>
+<footer>Design prototype &middot; redesign of the Business Partner Overview and Data Model tabs. No backend calls.</footer>
+<script>
+const $=id=>document.getElementById(id);
+function E(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+
+const ACTORS={
+  a1:{name:'Jordan Lee',initials:'JL',color:'#285b99'},
+  a2:{name:'Priya Shah',initials:'PS',color:'#7a4fa3'},
+};
+let revision={id:'be767e01-f36d-434f-91f3-67bff689a367',version:63,state:'approved',authorId:'a1',submittedById:'a1',approvedById:'a2'};
+let revisionHistory=[
+  {version:62,state:'approved',authorId:'a2',submittedById:'a2',approvedById:'a1'},
+  {version:61,state:'approved',authorId:'a1',submittedById:'a1',approvedById:'a2'},
+  {version:60,state:'approved',authorId:'a1',submittedById:'a1',approvedById:'a2'}
+];
+let expandedHistoryVersion=null;
+let simulateSameApprover=false;
+let mode='inspect'; // 'inspect' | 'draft' | 'submitted'
+let actingAs='reviewer'; // who the current user is simulating while a draft awaits approval
+let draft=null;
+const STAGES=['Draft','Submitted','Approved','Published'];
+function currentStageIndex(){return mode==='draft'?0:mode==='submitted'?1:2}
+
+let activeTab='overview';
+let contextExpanded=true;   // current visible state of the shared context card
+let contextManual=false;    // true once the user has explicitly toggled it, overriding the per-tab default
+const defaultExpandedForTab=tab=>tab==='overview';
+const TABS=[
+  {id:'overview',label:'Overview',enabled:true},
+  {id:'datamodel',label:'Data Model',enabled:true},
+  {id:'validation',label:'Validation',enabled:false},
+  {id:'matching',label:'Matching',enabled:false},
+  {id:'workflows',label:'Workflows',enabled:false},
+  {id:'publication',label:'Publication',enabled:false},
+  {id:'opsproof',label:'Operations & Proof',enabled:false},
+  {id:'atlas',label:'Atlas Experience',enabled:false}
+];
+
+// --- Composition data (mock; field/operation catalogues carry a representative sample of the real 158/42 counts) ---
+const TREE={
+  surfaces:{label:'Forms and surfaces',count:23,children:[
+    {id:'surf-address',label:'Address',kind:'surface',children:[
+      {id:'sec-purpose',label:'Purpose and country',kind:'section',children:[
+        {id:'fp-country',label:'Country',kind:'field placement'},
+        {id:'fp-purpose',label:'Purpose',kind:'field placement'},
+        {id:'fp-primary',label:'Primary address',kind:'field placement'}
+      ]},
+      {id:'sec-details',label:'Address details',kind:'section',children:[
+        {id:'fp-line1',label:'Address line 1',kind:'field placement'},
+        {id:'fp-line2',label:'Address line 2',kind:'field placement'}
+      ]}
+    ],meta:{surfaceKey:'partner_address_intake',surfaceKind:'form',title:'Address',layoutKind:'flow',layoutConfig:{columns:1,renderer:'intake',addressRegionVersion:1,advancedAddressVersion:1},isDefault:false,status:'active'}},
+    {id:'surf-details',label:'Business Partner · Details',kind:'surface',children:[
+      {id:'sec-identity',label:'Identity',kind:'section',children:[
+        {id:'fp-legal',label:'Legal name',kind:'field placement',editable:{label:'Legal name',help:'Use the name on the registration document.',placeholder:'Enter legal name',columnSpan:6}},
+        {id:'fp-trading',label:'Trading name',kind:'field placement',editable:{label:'Trading name',help:'',placeholder:'Optional trading name',columnSpan:6}}
+      ]}
+    ],meta:{surfaceKey:'business_partner_details',surfaceKind:'form',title:'Business Partner · Details',layoutKind:'flow',layoutConfig:{columns:2},isDefault:true,status:'active'}}
+  ]},
+  fieldCatalogue:{label:'Field catalogue',count:158,note:'Showing 8 of 158 for this prototype.',children:[
+    {id:'f-legal',label:'legal_name',kind:'field'},{id:'f-trading',label:'trading_name',kind:'field'},
+    {id:'f-regnum',label:'registration_number',kind:'field'},{id:'f-country',label:'country',kind:'field'},
+    {id:'f-display',label:'display_name',kind:'field'},{id:'f-taxid',label:'tax_id',kind:'field'},
+    {id:'f-incdate',label:'incorporation_date',kind:'field'},{id:'f-duns',label:'duns_number',kind:'field'}
+  ]},
+  operationCatalogue:{label:'Operation catalogue',count:42,note:'Showing 6 of 42 for this prototype.',children:[
+    {id:'op-create',label:'business_partner.create',kind:'operation'},{id:'op-amend',label:'business_partner.amend',kind:'operation'},
+    {id:'op-escalate',label:'business_partner.escalate',kind:'operation'},{id:'op-suspend',label:'business_partner.suspend',kind:'operation'},
+    {id:'op-archive',label:'business_partner.archive',kind:'operation'},{id:'op-export',label:'business_partner.export',kind:'operation'}
+  ]},
+  operationPermissions:{label:'Operation permissions',count:42,note:'Showing 6 of 42 for this prototype.',children:[
+    {id:'perm1',label:'neon · business_partner.create',kind:'permission'},{id:'perm2',label:'neon · business_partner.amend',kind:'permission'},
+    {id:'perm3',label:'neon · business_partner.escalate',kind:'permission'},{id:'perm4',label:'mesh · business_partner.export',kind:'permission'},
+    {id:'perm5',label:'neon · business_partner.suspend',kind:'permission'},{id:'perm6',label:'neon · business_partner.archive',kind:'permission'}
+  ]},
+  relations:{label:'Relations',count:0,children:[],emptyReason:'No relations are declared for this entity.'},
+  intakeFlows:{label:'Intake flows',count:0,children:[],emptyReason:'Not yet populated for this module — this category is not available for browsing.'}
+};
+const CATEGORY_ORDER=['surfaces','fieldCatalogue','operationCatalogue','operationPermissions','relations','intakeFlows'];
+
+let selectedNode=null;
+let expandedCats=new Set(['surfaces']);
+let expandedNodes=new Set(['surf-address']);
+let searchTerm='';
+let changes=0;
+let baseSnapshot=null;         // {fieldId: {...editable}} captured at fork time, for the visual diff
+let previewView='split';       // 'split' | 'unified'
+let previewDevice='desktop';   // 'desktop' | 'mobile'
+let focusedChange=null;
+
+const EDITABLE_FIELD_IDS=['fp-legal','fp-trading'];
+function editableFieldNode(id){return findNode('surfaces',id)}
+
+function startFork(){
+  draft={version:revision.version+1,forkedFrom:revision.version};
+  mode='draft';changes=0;previewView='split';focusedChange=null;
+  baseSnapshot={};
+  EDITABLE_FIELD_IDS.forEach(id=>{const n=editableFieldNode(id);if(n&&n.editable)baseSnapshot[id]={...n.editable}});
+}
+function restoreSnapshot(){
+  if(!baseSnapshot)return;
+  EDITABLE_FIELD_IDS.forEach(id=>{const n=editableFieldNode(id);if(n&&n.editable&&baseSnapshot[id])Object.assign(n.editable,baseSnapshot[id])});
+}
+function computeFieldDiffs(){
+  if(!baseSnapshot)return[];
+  const diffs=[];
+  EDITABLE_FIELD_IDS.forEach(id=>{
+    const n=editableFieldNode(id);if(!n||!n.editable)return;
+    const before=baseSnapshot[id],after=n.editable;
+    ['label','help','placeholder','columnSpan'].forEach(prop=>{
+      if(before[prop]!==after[prop])diffs.push({fieldId:id,fieldLabel:n.label,prop,from:before[prop],to:after[prop]});
+    });
+  });
+  return diffs;
+}
+
+function actorRow(label,actorId,badge){
+  const a=ACTORS[actorId];
+  return `<div class="actorrow"><span class="actorlabel">${label}</span><span class="avatar" style="background:${a.color}">${a.initials}</span><span class="actorname">${a.name}</span>${badge||''}</div>`;
+}
+
+function renderShell(){
+  $('crumb').innerHTML=`<a href="#">Entity Studio</a> / <a href="#">Master Data Governance</a> / <a href="#">Business Partner</a>`+(activeTab==='datamodel'?' / <span>Model</span>':'');
+  $('tabbar').innerHTML=TABS.map(t=>`<button data-tab="${t.id}" class="${t.id===activeTab?'active':''}" ${t.enabled?'':'disabled title="Not part of this mockup"'}>${t.label}</button>`).join('');
+  document.querySelectorAll('[data-tab]').forEach(b=>{if(!b.disabled)b.onclick=()=>{
+    activeTab=b.dataset.tab;
+    if(!contextManual)contextExpanded=defaultExpandedForTab(activeTab);
+    renderAll();
+  }});
+  $('contextToggle').textContent=contextExpanded?'▾ Hide details':'▸ Show details';
+  $('contextToggle').onclick=()=>{contextManual=true;contextExpanded=!contextExpanded;renderShell();renderVersionSummary()};
+  $('contextBody').classList.toggle('hidden',!contextExpanded);
+  $('contextStrip').classList.toggle('hidden',contextExpanded);
+}
+
+function renderStepper(){
+  const idx=currentStageIndex();
+  return `<div class="stepper">${STAGES.map((s,i)=>{
+    const cls=i<idx?'done':i===idx?'current':'external';
+    const dot=i<idx?'&#10003;':i+1;
+    return `<div class="step ${cls}"><span class="stepdot">${dot}</span><span class="steplabel">${s}${s==='Published'?'<small>tracked in Publication</small>':''}</span></div>`
+      +(i<STAGES.length-1?'<span class="stepline"></span>':'');
+  }).join('')}</div>`;
+}
+
+function renderApprovalTrail(){
+  const author=ACTORS[revision.authorId];
+  if(mode==='draft'){
+    return `<div class="trail">
+      <div class="trailnode"><span class="avatar" style="background:${author.color}">${author.initials}</span><div><strong>${author.name}</strong><br><small class="muted">editing draft ${draft.version}</small></div></div>
+      <span class="trailarrow">&rarr;</span>
+      <div class="trailnode pending"><span class="avatar ghost">?</span><div><strong>Not submitted</strong><br><small class="muted">Submit when ready</small></div></div>
+      <span class="trailarrow">&rarr;</span>
+      <div class="trailnode pending"><span class="avatar ghost">?</span><div><strong>Not approved</strong><br><small class="muted">Independent reviewer required</small></div></div>
+    </div>`;
+  }
+  if(mode==='submitted'){
+    return `<div class="trail">
+      <div class="trailnode"><span class="avatar" style="background:${author.color}">${author.initials}</span><div><strong>${author.name}</strong><br><small class="muted">authored &amp; submitted</small></div></div>
+      <span class="trailarrow">&rarr;</span>
+      <div class="trailnode pending"><span class="avatar ghost">?</span><div><strong>Awaiting approval</strong><br><small class="muted">Independent reviewer required</small></div></div>
+    </div>`;
+  }
+  const approver=ACTORS[simulateSameApprover?revision.authorId:revision.approvedById];
+  const independent=(simulateSameApprover?revision.authorId:revision.approvedById)!==revision.authorId;
+  const submittedBy=ACTORS[revision.submittedById];
+  return `<div class="trail">
+    <div class="trailnode"><span class="avatar" style="background:${author.color}">${author.initials}</span><div><strong>${author.name}</strong><br><small class="muted">authored</small></div></div>
+    <span class="trailarrow">&rarr;</span>
+    <div class="trailnode"><span class="avatar" style="background:${submittedBy.color}">${submittedBy.initials}</span><div><strong>${submittedBy.name}</strong><br><small class="muted">submitted</small></div></div>
+    <span class="trailarrow">&rarr;</span>
+    <div class="trailnode"><span class="avatar" style="background:${approver.color}">${approver.initials}</span><div><strong>${approver.name}</strong><br><small class="${independent?'good':'bad'}">${independent?'&#10003; approved, independent':'&#9888; same as author'}</small></div></div>
+  </div>
+  <label class="row" style="font-size:12px;color:var(--muted);margin-top:6px"><input type="checkbox" id="simSame" ${simulateSameApprover?'checked':''}> Simulate approver being the same person as the author</label>`;
+}
+
+function renderHistoryRail(){
+  const all=[{version:revision.version,state:revision.state,current:true},...revisionHistory.map(r=>({...r,current:false}))];
+  const chips=all.map(r=>`<button class="historychip ${r.current?'current':''}" data-history="${r.version}">v${r.version} &middot; ${r.state}</button>`).join('');
+  const expanded=expandedHistoryVersion!=null?revisionHistory.find(r=>r.version===expandedHistoryVersion):null;
+  return `<div class="historyrail">${chips}</div>`+
+    (expanded?`<div class="historydetail">
+      <strong>Revision ${expanded.version}</strong> &middot; ${expanded.state} &middot; approved by ${ACTORS[expanded.approvedById].name}
+      <div class="muted" style="margin-top:4px">Historical metadata only &mdash; this prototype does not carry separate composition data per past revision.</div>
+    </div>`:'');
+}
+
+function renderContextStrip(){
+  const idx=currentStageIndex();
+  const stateHtml=mode==='draft'
+    ? `<span class="pill amber">draft ${draft.version}</span><span class="sep">&middot;</span><span class="muted">${STAGES[idx]}</span>`
+    : mode==='submitted'
+    ? `<span class="pill blue">draft ${draft.version}</span><span class="sep">&middot;</span><span class="muted">${STAGES[idx]}, awaiting approval</span>`
+    : `<span class="pill blue">${revision.state} &middot; rev ${revision.version}</span>`;
+  const actionHtml=mode==='inspect'
+    ? `<button class="primary" id="forkBtnStrip" style="padding:5px 10px">&#8994; Fork to draft</button>`
+    : `<button data-goto="datamodel" style="padding:5px 10px">Continue in Data Model &rarr;</button>`;
+  $('contextStrip').innerHTML=`<div class="contextstrip">${stateHtml}<span class="sep">&middot;</span>${actionHtml}</div>`;
+  const forkStrip=$('forkBtnStrip');if(forkStrip)forkStrip.onclick=()=>{startFork();renderVersionSummary();renderTabPanel()};
+  document.querySelectorAll('#contextStrip [data-goto]').forEach(b=>b.onclick=()=>{activeTab=b.dataset.goto;if(!contextManual)contextExpanded=defaultExpandedForTab(activeTab);renderAll()});
+}
+
+function doDiscard(){
+  if(changes>0&&!confirm('Discard this draft and its unsaved changes?'))return;
+  restoreSnapshot();
+  mode='inspect';draft=null;changes=0;baseSnapshot=null;
+  renderVersionSummary();renderTabPanel();
+}
+
+function renderVersionSummary(){
+  renderContextStrip();
+  let html=`<div class="row" style="margin:14px 0 4px">
+    <div><small class="muted">Source</small><br><strong>Native entity change set</strong></div>
+    <div style="margin-left:26px"><small class="muted">Version</small><br><strong>${mode==='inspect'?revision.version:draft.version}</strong></div>
+    <div style="margin-left:26px"><small class="muted">Target planes declared</small><br><strong>Not supplied by this source</strong></div>
+  </div>
+  ${renderStepper()}
+  <div class="note muted" style="font-size:12.5px;margin:2px 0 14px">Source publication is not target activation. Use target activation tracking in Publication for a published release.</div>
+  <h3 style="margin-top:6px">Approval trail</h3>
+  ${renderApprovalTrail()}
+  <h3 style="margin-top:18px">Version history</h3>
+  ${renderHistoryRail()}
+  <div style="margin-top:16px">`;
+
+  if(mode==='inspect'){
+    html+=`<div class="banner info"><div>
+      <strong>This revision is approved and immutable.</strong> You're viewing stored configuration; nothing here can be changed.
+      Fork it to start an editable working copy, or use Publication to activate it on a target.
+    </div></div>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" id="forkBtn">&#8994; Fork to draft</button>
+      <button id="mfaBtn">Verify with MFA</button>
+    </div>`;
+  } else if(mode==='draft'){
+    html+=`<div class="banner draft"><div>
+      <strong>Draft ${draft.version} &middot; forked from revision ${revision.version}.</strong> You're editing a working copy. Nothing publishes until you submit it for review.
+      ${changes>0?`<div style="margin-top:4px"><span class="pill amber">${changes} unsaved change${changes>1?'s':''}</span></div>`:''}
+    </div></div>
+    <div class="row" style="margin-top:12px">
+      <button data-goto="datamodel">Continue editing in Data Model &rarr;</button>
+      <button class="primary" id="submitReviewBtn" ${changes===0?'disabled':''}>Submit for review</button>
+      <button id="discardBtn">Discard draft</button>
+      <button id="mfaBtn">Verify with MFA</button>
+    </div>`;
+  } else {
+    html+=`<div class="banner draft"><div>
+      <strong>Draft ${draft.version} submitted.</strong> Editing is locked while it awaits an independent reviewer. The author cannot approve their own draft.
+    </div></div>
+    <div class="field" style="max-width:280px"><label>Acting as</label>
+      <select id="actingAsSelect">
+        <option value="author" ${actingAs==='author'?'selected':''}>Jordan Lee &middot; author</option>
+        <option value="reviewer" ${actingAs==='reviewer'?'selected':''}>Priya Shah &middot; independent reviewer</option>
+      </select>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" id="approveBtn" ${actingAs!=='reviewer'?'disabled':''}>&#10003; Approve &amp; publish revision</button>
+      <button id="returnToDraftBtn">&larr; Return to draft</button>
+      <button id="discardBtn">Discard draft</button>
+      <button id="mfaBtn">Verify with MFA</button>
+    </div>
+    ${actingAs!=='reviewer'?'<p class="muted" style="font-size:12px;margin-top:8px">Switch "Acting as" to the independent reviewer to approve.</p>':''}`;
+  }
+  html+='</div>';
+  $('versionSummary').innerHTML=html;
+  const sim=$('simSame');if(sim)sim.onchange=()=>{simulateSameApprover=sim.checked;renderVersionSummary()};
+  const fork=$('forkBtn');if(fork)fork.onclick=()=>{startFork();renderVersionSummary();renderTabPanel()};
+  const discard=$('discardBtn');if(discard)discard.onclick=doDiscard;
+  const submit=$('submitReviewBtn');if(submit)submit.onclick=()=>{mode='submitted';actingAs='author';renderVersionSummary();renderTabPanel()};
+  const returnBtn=$('returnToDraftBtn');if(returnBtn)returnBtn.onclick=()=>{mode='draft';renderVersionSummary();renderTabPanel()};
+  const actingSel=$('actingAsSelect');if(actingSel)actingSel.onchange=()=>{actingAs=actingSel.value;renderVersionSummary()};
+  const approve=$('approveBtn');if(approve)approve.onclick=()=>{
+    revisionHistory.unshift(revision);
+    revision={id:'rev-'+draft.version+'-'+Math.random().toString(36).slice(2,6),version:draft.version,state:'approved',authorId:'a1',submittedById:'a1',approvedById:'a2'};
+    mode='inspect';draft=null;changes=0;baseSnapshot=null;expandedHistoryVersion=null;
+    renderVersionSummary();renderTabPanel();
+  };
+  document.querySelectorAll('[data-history]').forEach(b=>b.onclick=()=>{
+    const v=Number(b.dataset.history);
+    expandedHistoryVersion=(v===revision.version)?null:(expandedHistoryVersion===v?null:v);
+    renderVersionSummary();
+  });
+  document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{activeTab=b.dataset.goto;renderAll()});
+}
+
+// --- Overview tab ---
+function renderOverview(){
+  const counts=CATEGORY_ORDER.map(key=>{const c=TREE[key];return `<button class="countcard" data-goto-cat="${key}"><div class="n">${c.count}</div><div class="l">${c.label}</div></button>`}).join('');
+  return `
+  <div class="card">
+    <h2>Selected configuration</h2>
+    <p class="muted" style="margin-top:4px">Every count below is a live link into the Data Model tree &mdash; it is the same object it's counting, not a separate static number.</p>
+    <div class="grid5" style="margin-top:10px">${counts}</div>
+  </div>
+  <div class="card">
+    <h3>Entity / bundle identity (3)</h3>
+    <details><summary>entityCode</summary><pre>"BP-0001"</pre></details>
+    <details><summary>entityClass</summary><pre>"external_organization"</pre></details>
+    <details><summary>ownershipModel</summary><pre>"tenant_scoped"</pre></details>
+    <p class="muted" style="margin-top:10px;font-size:12.5px">Counts describe this source only. Publication does not assign permissions to users.</p>
+  </div>
+  <div class="card">
+    <h3>Composition findings</h3>
+    <p class="muted">No structural reference findings in this inspection. Backend validation is still required.</p>
+  </div>
+  <div class="card">
+    <details><summary>Complete stored source (read-only)</summary><pre>{ "changeSetId": "${revision.id}", "version": ${revision.version}, "state": "${revision.state}" }</pre></details>
+  </div>`;
+}
+
+// --- Data Model tab ---
+function nodeMatchesDeep(node,term){
+  if(!term)return true;
+  if(node.label.toLowerCase().includes(term))return true;
+  return (node.children||[]).some(c=>nodeMatchesDeep(c,term));
+}
+function renderNode(node,depth,catKey){
+  const key='node:'+node.id;
+  const hasChildren=node.children&&node.children.length;
+  const isOpen=expandedNodes.has(key)||!!searchTerm.trim();
+  const isSelected=selectedNode===node.id;
+  let html=`<div class="node" style="padding-left:${depth*16}px">
+    ${hasChildren?`<button class="twisty" data-toggle="${key}">${isOpen?'▾':'▸'}</button>`:'<span class="twisty-space"></span>'}
+    <button class="nodebtn ${isSelected?'selected':''}" data-select="${catKey}|${node.id}"><span class="nodekind">${node.kind}</span>${E(node.label)}</button>
+  </div>`;
+  if(hasChildren&&isOpen){
+    const term=searchTerm.trim().toLowerCase();
+    node.children.filter(c=>nodeMatchesDeep(c,term)).forEach(c=>{html+=renderNode(c,depth+1,catKey)});
+  }
+  return html;
+}
+function renderTree(){
+  const term=searchTerm.trim().toLowerCase();
+  let html='';
+  CATEGORY_ORDER.forEach(key=>{
+    const cat=TREE[key];
+    const labelHit=cat.label.toLowerCase().includes(term);
+    const childHit=(cat.children||[]).some(c=>nodeMatchesDeep(c,term));
+    if(term&&!labelHit&&!childHit)return;
+    const isOpen=expandedCats.has(key)||!!term;
+    html+=`<div class="catlabel"><button class="twisty" data-toggle-cat="${key}" style="vertical-align:middle">${isOpen?'▾':'▸'}</button>${E(cat.label)} <span class="muted" style="font-weight:400;text-transform:none">(${cat.count})</span></div>`;
+    if(!isOpen)return;
+    if(cat.note)html+=`<div class="emptyline">${cat.note}</div>`;
+    if(cat.children.length===0){
+      html+=`<div class="emptyline">${cat.emptyReason||'No objects.'}</div>`;
+    } else {
+      const visible=term&&!labelHit?cat.children.filter(c=>nodeMatchesDeep(c,term)):cat.children;
+      visible.forEach(n=>{html+=renderNode(n,1,key)});
+    }
+  });
+  if(term&&html===''){html='<div class="emptyline">No matching objects.</div>'}
+  $('treePane').innerHTML=html;
+  document.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=()=>{const k=b.dataset.toggle;expandedNodes.has(k)?expandedNodes.delete(k):expandedNodes.add(k);renderTree()});
+  document.querySelectorAll('[data-toggle-cat]').forEach(b=>b.onclick=()=>{const k=b.dataset.toggleCat;expandedCats.has(k)?expandedCats.delete(k):expandedCats.add(k);renderTree()});
+  document.querySelectorAll('[data-select]').forEach(b=>b.onclick=()=>{const [cat,id]=b.dataset.select.split('|');selectedNode=id;selectedCat=cat;renderTree();renderDetail()});
+}
+function findNode(catKey,id,list){
+  list=list||TREE[catKey].children;
+  for(const n of list){if(n.id===id)return n;if(n.children){const f=findNode(catKey,id,n.children);if(f)return f}}
+  return null;
+}
+let selectedCat=null;
+function renderDetail(){
+  if(!selectedNode){$('detailPane').innerHTML='<div class="muted" style="padding:20px">Select an object in the tree, or search to find one.</div>';return}
+  const node=findNode(selectedCat,selectedNode);
+  if(!node){$('detailPane').innerHTML='';return}
+  let html=`<div class="bar"><h3 style="margin:0">${E(node.label)}</h3><span class="pill gray">${node.kind}${mode==='draft'?' · editable':' · read-only'}</span></div>`;
+  if(node.meta){
+    html+='<table style="width:100%;font-size:13px;margin-top:10px">'+Object.entries(node.meta).map(([k,v])=>`<tr><td class="muted" style="padding:5px 10px 5px 0">${k}</td><td style="padding:5px 0">${typeof v==='object'?`<code>${E(JSON.stringify(v))}</code>`:E(String(v))}</td></tr>`).join('')+'</table>';
+    html+=`<details style="margin-top:10px"><summary>Advanced &middot; complete stored object</summary><pre>${E(JSON.stringify(node.meta,null,2))}</pre></details>`;
+  } else if(mode==='draft'&&node.editable){
+    const ed=node.editable;
+    html+=`<div class="field"><label>Label</label><input id="edLabel" value="${E(ed.label)}"></div>
+      <div class="field"><label>Help text</label><input id="edHelp" value="${E(ed.help)}"></div>
+      <div class="field"><label>Placeholder</label><input id="edPlaceholder" value="${E(ed.placeholder)}"></div>
+      <div class="field"><label>Column span (1-12)</label><input type="number" id="edSpan" min="1" max="12" value="${ed.columnSpan}"></div>
+      <div class="row"><button class="primary" id="saveNodeBtn">Validate &amp; save</button></div>
+      <div class="status" id="nodeStatus"></div>`;
+  } else if(node.editable){
+    const ed=node.editable;
+    html+=`<table style="width:100%;font-size:13px;margin-top:10px">
+      <tr><td class="muted" style="padding:5px 10px 5px 0">Label</td><td>${E(ed.label)}</td></tr>
+      <tr><td class="muted" style="padding:5px 10px 5px 0">Help text</td><td>${E(ed.help||'—')}</td></tr>
+      <tr><td class="muted" style="padding:5px 10px 5px 0">Placeholder</td><td>${E(ed.placeholder||'—')}</td></tr>
+      <tr><td class="muted" style="padding:5px 10px 5px 0">Column span</td><td>${ed.columnSpan}</td></tr>
+    </table>
+    <div class="banner info" style="margin-top:12px">${mode==='submitted'?'This draft is locked while it awaits an independent reviewer’s approval.':'Fork a draft from the workbench above to edit this field’s presentation.'}</div>`;
+  } else {
+    html+='<p class="muted" style="margin-top:10px">No editable presentation on this object type in this prototype.</p>';
+  }
+  $('detailPane').innerHTML=html;
+  const save=$('saveNodeBtn');
+  if(save)save.onclick=()=>{
+    const ed=node.editable;
+    const label=$('edLabel').value.trim(),help=$('edHelp').value,placeholder=$('edPlaceholder').value,span=Number($('edSpan').value);
+    const errors=[];
+    if(!label)errors.push('Label is required.');
+    if(label.length>2000)errors.push('Label exceeds 2000 characters.');
+    if(!Number.isInteger(span)||span<1||span>12)errors.push('Column span must be an integer 1–12.');
+    const el=$('nodeStatus');
+    if(errors.length){el.textContent='Rejected: '+errors.join(' ');el.style.color='var(--red)';return}
+    const dirty=label!==ed.label||help!==ed.help||placeholder!==ed.placeholder||span!==ed.columnSpan;
+    ed.label=label;ed.help=help;ed.placeholder=placeholder;ed.columnSpan=span;
+    el.textContent='Valid — saved to the working draft.';el.style.color='var(--green)';
+    if(dirty){changes++;renderVersionSummary()}
+    renderTree();refreshPreviewCard();
+  };
+}
+function renderDataModel(){
+  return `
+  <div class="card">
+    <div class="bar"><h2>Composition workspace</h2><span class="pill ${mode==='draft'?'green':'gray'}">${mode==='draft'?'Editable draft':mode==='submitted'?'Locked · awaiting approval':'Read-only'}</span></div>
+    <p class="muted" style="margin:4px 0 14px">${mode==='draft'?`Editing draft ${draft.version}, forked from revision ${revision.version}.`:mode==='submitted'?`Draft ${draft.version} is submitted and locked until an independent reviewer approves it.`:'Explore the selected stored definition. Properties are read-only until you fork a draft.'}</p>
+    <div class="row muted" style="font-size:12.5px;margin-bottom:12px">Saved ${mode==='inspect'?'revision':'draft'} &middot; version ${mode==='inspect'?revision.version:draft.version} &middot; 426 objects &middot; Target activation is separate from source inspection.</div>
+    <div class="field"><label>Find an object</label><input id="searchInput" placeholder="Search fields, sections, operations, or categories" value="${E(searchTerm)}"></div>
+    <div class="two">
+      <div class="treepane" id="treePane"></div>
+      <div id="detailPane"></div>
+    </div>
+  </div>
+  ${renderPreviewCard()}`;
+}
+
+function renderSplitForm(useBase){
+  const diffs=computeFieldDiffs();
+  return EDITABLE_FIELD_IDS.map(id=>{
+    const n=editableFieldNode(id);
+    const vals=useBase?baseSnapshot[id]:n.editable;
+    const changed=diffs.some(d=>d.fieldId===id);
+    return `<div class="mockfield ${changed?'mockfield-changed':''}" id="pf-${useBase?'base':'draft'}-${id}">
+      <label>${E(vals.label)}</label>
+      <input readonly placeholder="${E(vals.placeholder||'')}">
+      ${vals.help?`<small>${E(vals.help)}</small>`:''}
+      ${changed?'<span class="changetag">changed</span>':''}
+    </div>`;
+  }).join('');
+}
+function renderUnifiedForm(){
+  const diffs=computeFieldDiffs();
+  return EDITABLE_FIELD_IDS.map(id=>{
+    const n=editableFieldNode(id);
+    const vals=n.editable;
+    const fieldDiffs=diffs.filter(d=>d.fieldId===id);
+    const changed=fieldDiffs.length>0;
+    return `<div class="mockfield ${changed?'mockfield-changed':''}" id="pf-unified-${id}">
+      <label>${E(vals.label)}</label>
+      <input readonly placeholder="${E(vals.placeholder||'')}">
+      ${vals.help?`<small>${E(vals.help)}</small>`:''}
+      ${changed?`<div class="ghostdiff">${fieldDiffs.map(d=>`<span class="ghostline">${d.prop}: <s>${E(String(d.from||'(empty)'))}</s> &rarr; ${E(String(d.to||'(empty)'))}</span>`).join('')}</div>`:''}
+      ${changed?'<span class="changetag">changed</span>':''}
+    </div>`;
+  }).join('');
+}
+function renderPreviewCard(){
+  const hasDraft=mode!=='inspect';
+  const diffs=hasDraft?computeFieldDiffs():[];
+  return `
+  <div class="card" id="previewCard">
+    <div class="bar">
+      <h3 style="margin:0">Preview and differences</h3>
+      <div class="row">
+        <div class="segmented">
+          <button data-view="split" class="${previewView==='split'?'active':''}">Split</button>
+          <button data-view="unified" class="${previewView==='unified'?'active':''}">Unified</button>
+        </div>
+        <div class="segmented">
+          <button data-device="desktop" class="${previewDevice==='desktop'?'active':''}">&#128421; Desktop</button>
+          <button data-device="mobile" class="${previewDevice==='mobile'?'active':''}">&#128241; Mobile</button>
+        </div>
+      </div>
+    </div>
+    <p class="muted" style="margin:6px 0 14px">${hasDraft?`Comparison base: revision ${revision.version}, loaded when draft ${draft.version} was forked.`:'Fork a draft to compare it against the published base.'} Preview surface: Business Partner &middot; Details / Identity.</p>
+    ${!hasDraft?`<div class="banner info">No working copy yet. Fork a draft above, then edit a field in the Composition workspace to see a live before/after render here.</div>`:`
+    <div class="previewstage device-${previewDevice}">
+      ${previewView==='split'?`
+        <div class="previewcol"><h4>Published &middot; rev ${revision.version}</h4><div class="mockform">${renderSplitForm(true)}</div></div>
+        <div class="previewcol"><h4>Draft &middot; ${draft.version}</h4><div class="mockform">${renderSplitForm(false)}</div></div>
+      `:`
+        <div class="previewcol" style="grid-column:1/-1;max-width:520px"><h4>Draft ${draft.version} &middot; changes shown inline</h4><div class="mockform">${renderUnifiedForm()}</div></div>
+      `}
+    </div>
+    <h4 style="margin-top:18px">Changes (${diffs.length})</h4>
+    ${diffs.length===0?`<p class="muted">No changes yet &mdash; edit a field in the Composition workspace above, then come back here.</p>`:`
+      <div class="changelist">${diffs.map(d=>`<button class="changechip" data-jump="${d.fieldId}">
+        <strong>${E(d.fieldLabel)}</strong> <span class="muted">${d.prop}</span><br>
+        <span class="from">${E(String(d.from||'(empty)'))}</span> &rarr; <span class="to">${E(String(d.to||'(empty)'))}</span>
+      </button>`).join('')}</div>
+    `}
+    `}
+    <h4 style="margin-top:18px">Composition findings</h4>
+    <div class="findingsrow"><span class="ficon ok">&#10003;</span> No structural reference findings in this inspection.</div>
+    <div class="findingsrow"><span class="ficon warn">&#9888;</span> Backend validation is still required before this can be treated as qualified.</div>
+    <div class="findingsrow"><span class="ficon ok">&#10003;</span> Unrelated configuration is preserved &mdash; field keys, permissions, and validation stay untouched.</div>
+  </div>`;
+}
+function refreshPreviewCard(){
+  const el=$('previewCard');
+  if(!el)return;
+  el.outerHTML=renderPreviewCard();
+  wirePreviewCard();
+}
+function wirePreviewCard(){
+  document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{previewView=b.dataset.view;renderTabPanel()});
+  document.querySelectorAll('[data-device]').forEach(b=>b.onclick=()=>{previewDevice=b.dataset.device;renderTabPanel()});
+  document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.jump;
+    const ids=previewView==='split'?['pf-base-'+id,'pf-draft-'+id]:['pf-unified-'+id];
+    ids.map(x=>document.getElementById(x)).filter(Boolean).forEach(el=>{
+      el.scrollIntoView({behavior:'smooth',block:'center'});
+      el.classList.add('flash');
+      setTimeout(()=>el.classList.remove('flash'),1100);
+    });
+  });
+}
+
+function renderTabPanel(){
+  $('tabpanel').innerHTML=activeTab==='overview'?renderOverview():renderDataModel();
+  document.querySelectorAll('[data-goto-cat]').forEach(b=>b.onclick=()=>{
+    activeTab='datamodel';
+    expandedCats.add(b.dataset.gotoCat);
+    renderAll();
+  });
+  if(activeTab==='datamodel'){
+    renderTree();renderDetail();wirePreviewCard();
+    const s=$('searchInput');
+    s.oninput=()=>{searchTerm=s.value;renderTree()};
+    s.focus();s.setSelectionRange(s.value.length,s.value.length);
+  }
+}
+
+function renderAll(){renderShell();renderVersionSummary();renderTabPanel()}
+renderAll();
+</script>
+</body></html>

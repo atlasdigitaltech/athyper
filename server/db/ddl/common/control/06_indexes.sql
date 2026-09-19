@@ -173,3 +173,18 @@ CREATE INDEX rounding_context_lookup_idx
 
 CREATE INDEX rounding_context_rule_idx
     ON control.rounding_context (tenant_id, rounding_rule_id);
+
+CREATE INDEX ui_locale_catalog_rollout_idx
+    ON control.ui_locale_catalog (rollout_wave, status, locale_code);
+
+CREATE INDEX tenant_locale_activation_enabled_idx
+    ON master.tenant_locale_activation (tenant_id, locale_code)
+    WHERE enabled;
+
+CREATE UNIQUE INDEX tenant_locale_activation_one_default_uq
+    ON master.tenant_locale_activation (tenant_id)
+    WHERE is_default;
+
+CREATE UNIQUE INDEX tenant_locale_activation_one_fallback_uq
+    ON master.tenant_locale_activation (tenant_id)
+    WHERE is_fallback;

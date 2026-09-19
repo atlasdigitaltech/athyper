@@ -1,0 +1,44 @@
+{
+  "schema": "athyper.business-partner-r8-evidence-artifact/1",
+  "gate": "named_owner_certification",
+  "result": "pending",
+  "environment": "production",
+  "targetRef": null,
+  "sourceRevision": null,
+  "startedAt": null,
+  "completedAt": null,
+  "evidence": {
+    "reviewedReceipts": {
+      "target_evidence_lifecycle": null,
+      "manual_accessibility": null,
+      "clean_upgrade_parity": null,
+      "production_canary_rollback": null
+    },
+    "certifications": [
+      {
+        "role": "product_owner",
+        "name": null,
+        "signedAt": null,
+        "approvalRef": null
+      },
+      {
+        "role": "engineering_owner",
+        "name": null,
+        "signedAt": null,
+        "approvalRef": null
+      },
+      {
+        "role": "operations_owner",
+        "name": null,
+        "signedAt": null,
+        "approvalRef": null
+      },
+      {
+        "role": "security_privacy_owner",
+        "name": null,
+        "signedAt": null,
+        "approvalRef": null
+      }
+    ]
+  }
+}

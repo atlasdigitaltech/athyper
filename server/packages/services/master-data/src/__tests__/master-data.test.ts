@@ -15,7 +15,7 @@ describe("master contacts and addresses", () => {
 
   it.each(["studio", "neon", "mesh"])("enforces effective dating, signed verification evidence, and primary uniqueness in %s DDL", (plane) => {
     const root = resolve(process.cwd(), `../../../db/ddl/planes/${plane}/master`);
-    const tables = readFileSync(resolve(root, "03_tables.sql"), "utf8");
+    const tables = readFileSync(resolve(process.cwd(), "../../../db/ddl/common/master/03_platform_tables.sql"), "utf8");
     const indexes = readFileSync(resolve(root, "06_indexes.sql"), "utf8");
     const functions = readFileSync(resolve(root, "07_functions.sql"), "utf8");
     expect(tables).toContain("verification_evidence jsonb");

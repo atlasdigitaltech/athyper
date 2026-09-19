@@ -587,6 +587,46 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION mesh.trg_guard_document_business_status_projection()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, mesh
+AS $$
+DECLARE
+    v_envelope mesh.document_envelope%ROWTYPE;
+    v_event_envelope_id uuid;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Document business-status projections are rebuilt, not deleted directly'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    SELECT * INTO v_envelope FROM mesh.document_envelope
+     WHERE id=NEW.source_envelope_id;
+    SELECT envelope_id INTO v_event_envelope_id FROM mesh.document_event
+     WHERE id=NEW.last_event_id;
+    IF v_envelope.id IS NULL
+       OR v_envelope.network_relationship_id IS DISTINCT FROM NEW.network_relationship_id
+       OR v_event_envelope_id IS DISTINCT FROM NEW.source_envelope_id THEN
+        RAISE EXCEPTION 'Business-status projection must match its envelope, relationship and last event'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' THEN
+        IF (NEW.id,NEW.source_envelope_id,NEW.network_relationship_id,NEW.resource_kind,NEW.resource_ref)
+           IS DISTINCT FROM
+           (OLD.id,OLD.source_envelope_id,OLD.network_relationship_id,OLD.resource_kind,OLD.resource_ref) THEN
+            RAISE EXCEPTION 'Business-status projection coordinates are immutable'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+        IF NEW.lifecycle_version <= OLD.lifecycle_version THEN
+            RAISE EXCEPTION 'Business-status projection lifecycle version must increase'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+        NEW.updated_at := clock_timestamp();
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION mesh.trg_validate_profile_trade_role()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -641,22 +681,16 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, mesh
 AS $$
 BEGIN
-    IF TG_TABLE_NAME = 'bank_party' THEN
-        NEW.code := lower(btrim(NEW.code));
-        NEW.name := btrim(NEW.name);
-        NEW.bic := nullif(upper(regexp_replace(NEW.bic, '\s+', '', 'g')), '');
-    ELSE
         NEW.code := nullif(lower(btrim(NEW.code)), '');
         NEW.name := nullif(btrim(NEW.name), '');
         NEW.account_holder_name := btrim(NEW.account_holder_name);
-        NEW.account_id_value := upper(regexp_replace(
-            NEW.account_id_value, '[^A-Za-z0-9]', '', 'g'
-        ));
-        NEW.account_last4 := right(NEW.account_id_value, 4);
+        NEW.protected_value_token := btrim(NEW.protected_value_token);
+        NEW.identifier_fingerprint := lower(NEW.identifier_fingerprint);
+        NEW.account_last4 := upper(btrim(NEW.account_last4));
         NEW.bic_override := nullif(upper(regexp_replace(
             NEW.bic_override, '\s+', '', 'g'
         )), '');
-    END IF;
+
     RETURN NEW;
 END;
 $$;
@@ -667,6 +701,11 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, mesh
 AS $$
 BEGIN
+  IF (OLD.is_verified OR EXISTS(SELECT 1 FROM mesh.bank_account_link l WHERE l.tenant_id=OLD.tenant_id AND l.bank_account_id=OLD.id))
+  AND ROW(NEW.bank_institution_id,NEW.bank_branch_id,NEW.provisional_bank_reference_id)
+      IS DISTINCT FROM ROW(OLD.bank_institution_id,OLD.bank_branch_id,OLD.provisional_bank_reference_id) THEN
+    RAISE EXCEPTION 'Verified or linked bank routing identity is immutable; create a replacement account';
+  END IF;
     IF NEW.id IS DISTINCT FROM OLD.id
        OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
        OR NEW.network_account_id IS DISTINCT FROM OLD.network_account_id
@@ -677,7 +716,8 @@ BEGIN
                 WHERE link.tenant_id = OLD.tenant_id
                   AND link.bank_account_id = OLD.id
            )
-           AND NEW.account_id_value IS DISTINCT FROM OLD.account_id_value
+           AND ROW(NEW.protected_value_token, NEW.identifier_fingerprint)
+               IS DISTINCT FROM ROW(OLD.protected_value_token, OLD.identifier_fingerprint)
        )
        OR NEW.created_at IS DISTINCT FROM OLD.created_at
        OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
@@ -749,9 +789,28 @@ BEGIN
         RAISE EXCEPTION 'Mesh bank-disclosure coordinates and evidence are immutable'
             USING ERRCODE = 'check_violation';
     END IF;
-    IF OLD.status <> 'active' AND NEW.status IS DISTINCT FROM OLD.status THEN
+    IF OLD.status IN ('expired','revoked','superseded','rejected') AND NEW.status IS DISTINCT FROM OLD.status THEN
         RAISE EXCEPTION 'Terminal bank disclosure cannot transition'
             USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.disclosure_version IS DISTINCT FROM OLD.disclosure_version
+       OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key THEN
+        RAISE EXCEPTION 'Bank disclosure version and request idempotency are immutable'
+            USING ERRCODE='check_violation';
+    END IF;
+    IF OLD.decision_fingerprint IS NOT NULL AND (
+       NEW.snapshot_id IS DISTINCT FROM OLD.snapshot_id
+       OR NEW.payload_hash IS DISTINCT FROM OLD.payload_hash
+       OR NEW.secure_retrieval_reference IS DISTINCT FROM OLD.secure_retrieval_reference
+       OR NEW.decision_fingerprint IS DISTINCT FROM OLD.decision_fingerprint
+       OR NEW.approved_at IS DISTINCT FROM OLD.approved_at
+       OR NEW.approved_by IS DISTINCT FROM OLD.approved_by) THEN
+        RAISE EXCEPTION 'Bank disclosure approval and payload evidence are immutable'
+            USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.approved_by IS NOT NULL AND NEW.approved_by=NEW.disclosed_by THEN
+        RAISE EXCEPTION 'Bank disclosure requires independent approval'
+            USING ERRCODE='insufficient_privilege';
     END IF;
     IF NEW.status = 'revoked'
        AND (NEW.revoked_at IS NULL OR NEW.revoked_by IS NULL) THEN
@@ -761,6 +820,10 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION mesh.trg_reject_bank_disclosure_event_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+BEGIN RAISE EXCEPTION 'Bank disclosure lifecycle events are append-only' USING ERRCODE='integrity_constraint_violation'; END $$;
 
 CREATE OR REPLACE FUNCTION mesh.trg_validate_certification_type_scope()
 RETURNS trigger
@@ -861,3 +924,190 @@ END $$;
 
 CREATE OR REPLACE FUNCTION mesh.trg_reject_network_lifecycle_event_mutation() RETURNS trigger
 LANGUAGE plpgsql SET search_path=pg_catalog AS $$ BEGIN RAISE EXCEPTION 'network_lifecycle_event is append-only' USING ERRCODE='integrity_constraint_violation'; END $$;
+
+CREATE OR REPLACE FUNCTION mesh.profile_publication_payload_is_safe(p_payload jsonb)
+RETURNS boolean LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog,mesh AS $$
+DECLARE v_key text; v_value jsonb;
+BEGIN
+  IF jsonb_typeof(p_payload)='object' THEN
+    FOR v_key,v_value IN SELECT key,value FROM jsonb_each(p_payload) LOOP
+      IF lower(v_key) ~ '(bank|iban|swift|bic|routing|account.?number|tax|registration.?number|metadata|contact|email|phone|address|identifier)' THEN RETURN false; END IF;
+      IF NOT mesh.profile_publication_payload_is_safe(v_value) THEN RETURN false; END IF;
+    END LOOP;
+  ELSIF jsonb_typeof(p_payload)='array' THEN
+    FOR v_value IN SELECT value FROM jsonb_array_elements(p_payload) LOOP
+      IF NOT mesh.profile_publication_payload_is_safe(v_value) THEN RETURN false; END IF;
+    END LOOP;
+  END IF;
+  RETURN true;
+END $$;
+
+CREATE OR REPLACE FUNCTION mesh.trg_reject_profile_publication_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+BEGIN RAISE EXCEPTION 'MESH Business Partner profile publications are immutable; create a new version or lifecycle event' USING ERRCODE='integrity_constraint_violation'; END $$;
+
+CREATE OR REPLACE FUNCTION mesh.profile_publication_is_visible(p_publication_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog,mesh,shared SET row_security=off AS $$
+  SELECT EXISTS (SELECT 1 FROM mesh.network_account_profile_publication publication WHERE publication.id=p_publication_id AND shared.current_tenant_id_soft() IN (publication.owner_tenant_id,publication.recipient_tenant_id))
+$$;
+
+CREATE OR REPLACE FUNCTION mesh.lock_profile_publication_relationship(
+    p_owner_tenant_id uuid,
+    p_owner_account_id uuid,
+    p_relationship_id uuid
+)
+RETURNS TABLE (
+    id uuid,
+    buyer_tenant_id uuid,
+    buyer_account_id uuid,
+    supplier_tenant_id uuid,
+    supplier_account_id uuid,
+    status text,
+    effective_from date,
+    effective_until date,
+    owner_status text,
+    recipient_status text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, mesh, shared
+SET row_security = off
+AS $$
+BEGIN
+    IF p_owner_tenant_id IS DISTINCT FROM shared.current_tenant_id() THEN
+        RAISE EXCEPTION 'Profile publication tenant does not match the current tenant'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    RETURN QUERY
+    SELECT relationship.id,
+           relationship.buyer_tenant_id,
+           relationship.buyer_account_id,
+           relationship.supplier_tenant_id,
+           relationship.supplier_account_id,
+           relationship.status::text,
+           relationship.effective_from,
+           relationship.effective_until,
+           owner.status::text,
+           recipient.status::text
+      FROM mesh.network_relationship relationship
+      JOIN mesh.network_account owner
+        ON owner.tenant_id = relationship.supplier_tenant_id
+       AND owner.id = relationship.supplier_account_id
+      JOIN mesh.network_account recipient
+        ON recipient.tenant_id = relationship.buyer_tenant_id
+       AND recipient.id = relationship.buyer_account_id
+     WHERE relationship.id = p_relationship_id
+       AND relationship.supplier_tenant_id = p_owner_tenant_id
+       AND relationship.supplier_account_id = p_owner_account_id
+     FOR UPDATE OF relationship;
+END;
+$$;
+
+CREATE FUNCTION mesh.trg_delivery_acknowledgement_immutable() RETURNS trigger
+LANGUAGE plpgsql AS $$ BEGIN
+  RAISE EXCEPTION 'Delivery acknowledgements are immutable' USING ERRCODE='integrity_constraint_violation';
+END $$;
+
+CREATE OR REPLACE FUNCTION mesh.read_eligible_bank_disclosure_source(
+  p_owner_tenant_id uuid,
+  p_owner_account_id uuid,
+  p_bank_account_id uuid,
+  p_relationship_id uuid,
+  p_purpose text
+) RETURNS TABLE(
+  buyer_tenant_id uuid,
+  buyer_account_id uuid,
+  supplier_tenant_id uuid,
+  supplier_account_id uuid,
+  owner_status text,
+  recipient_status text,
+  account_holder_name text,
+  account_id_type text,
+  account_last4 text,
+  currency_code text,
+  bank_name text,
+  bank_country_code text,
+  bic text
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = pg_catalog, mesh, shared
+AS $function$
+  SELECT relationship.buyer_tenant_id,
+         relationship.buyer_account_id,
+         relationship.supplier_tenant_id,
+         relationship.supplier_account_id,
+         owner_account.status::text,
+         recipient_account.status::text,
+         bank_account.account_holder_name,
+         bank_account.account_id_type::text,
+         bank_account.account_last4,
+         bank_account.currency_code::text,
+         COALESCE(bank_account.bank_name_override, bank_party.name),
+         COALESCE(bank_account.bank_country_override, bank_party.country_code)::text,
+         COALESCE(bank_account.bic_override, bank_party.bic)
+    FROM mesh.network_relationship AS relationship
+    JOIN mesh.network_account AS owner_account
+      ON owner_account.tenant_id = p_owner_tenant_id
+     AND owner_account.id = p_owner_account_id
+    JOIN mesh.network_account AS recipient_account
+      ON recipient_account.id = CASE
+        WHEN p_purpose = 'settlement' THEN relationship.buyer_account_id
+        ELSE relationship.supplier_account_id
+      END
+    JOIN mesh.bank_account AS bank_account
+      ON bank_account.tenant_id = p_owner_tenant_id
+     AND bank_account.id = p_bank_account_id
+     AND bank_account.network_account_id = owner_account.id
+    LEFT JOIN shared.v_bank_directory AS bank_party
+      ON bank_party.id = bank_account.bank_institution_id AND bank_party.branch_id IS NOT DISTINCT FROM bank_account.bank_branch_id
+    JOIN mesh.bank_account_link AS bank_link
+      ON bank_link.tenant_id = bank_account.tenant_id
+     AND bank_link.network_account_id = owner_account.id
+     AND bank_link.bank_account_id = bank_account.id
+     AND bank_link.purpose = p_purpose
+     AND bank_link.effective_from <= CURRENT_DATE
+     AND (bank_link.effective_until IS NULL OR bank_link.effective_until > CURRENT_DATE)
+   WHERE p_owner_tenant_id = shared.current_tenant_id()
+     AND p_purpose IN ('settlement', 'refund')
+     AND relationship.id = p_relationship_id
+     AND relationship.status = 'active'
+     AND owner_account.status = 'active'
+     AND recipient_account.status = 'active'
+     AND bank_account.status = 'active'
+     AND bank_account.is_verified
+     AND (
+       (p_purpose = 'settlement'
+        AND relationship.supplier_tenant_id = p_owner_tenant_id
+        AND relationship.supplier_account_id = owner_account.id
+        AND recipient_account.tenant_id = relationship.buyer_tenant_id)
+       OR
+       (p_purpose = 'refund'
+        AND relationship.buyer_tenant_id = p_owner_tenant_id
+        AND relationship.buyer_account_id = owner_account.id
+        AND recipient_account.tenant_id = relationship.supplier_tenant_id)
+     )
+     AND (relationship.effective_from IS NULL OR relationship.effective_from <= CURRENT_DATE)
+     AND (relationship.effective_until IS NULL OR relationship.effective_until > CURRENT_DATE)
+   FOR UPDATE OF relationship, bank_account;
+$function$;
+
+COMMENT ON FUNCTION mesh.read_eligible_bank_disclosure_source(uuid, uuid, uuid, uuid, text) IS
+  'Validates and locks a relationship-scoped bank disclosure source while returning masked bank coordinates only.';
+
+CREATE FUNCTION mesh.trg_register_provisional_bank() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,mesh AS $$
+DECLARE p mesh.bank_provisional_reference;
+BEGIN
+ IF NEW.bank_institution_id IS NULL THEN
+  IF NEW.provisional_bank_reference_id IS NULL THEN
+   INSERT INTO mesh.bank_provisional_reference(tenant_id,submitted_name,submitted_country,submitted_bic)
+   VALUES(NEW.tenant_id,NEW.bank_name_override,NEW.bank_country_override,NEW.bic_override)
+   RETURNING id INTO NEW.provisional_bank_reference_id;
+  ELSE
+   SELECT * INTO p FROM mesh.bank_provisional_reference WHERE tenant_id=NEW.tenant_id AND id=NEW.provisional_bank_reference_id;
+   IF NOT FOUND OR ROW(p.submitted_name,p.submitted_country,p.submitted_bic) IS DISTINCT FROM ROW(NEW.bank_name_override,NEW.bank_country_override,NEW.bic_override) THEN RAISE EXCEPTION 'Provisional bank reference does not match submitted details'; END IF;
+  END IF;
+ END IF;
+ RETURN NEW;
+END $$;

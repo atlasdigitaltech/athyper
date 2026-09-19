@@ -1,0 +1,27 @@
+{
+  "selected": "surfaceFieldBindings:dd030024-3640-5185-874f-445546fc0027",
+  "retained": "surfaceFieldBindings:dd030024-3640-5185-874f-445546fc0027",
+  "selectionRetained": true,
+  "metrics": [
+    {
+      "width": 1440,
+      "overflow": false,
+      "treeItems": 422,
+      "inputFont": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif"
+    },
+    {
+      "width": 768,
+      "overflow": false,
+      "treeItems": 422,
+      "inputFont": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif"
+    },
+    {
+      "width": 390,
+      "overflow": false,
+      "treeItems": 422,
+      "inputFont": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif"
+    }
+  ],
+  "errors": [],
+  "refreshRetained": true
+}

@@ -1,0 +1,365 @@
+{
+  "package": "P2 \u2014 Submission/cycle ownership",
+  "qualifiedAt": "2026-09-14T08:36:16.370073+00:00",
+  "environment": "local DEV",
+  "status": "accepted",
+  "acceptance": {
+    "atomicSelectionRunAttemptAndDocumentDispatch": true,
+    "concurrentReplayKeepsAcceptedCoordinates": true,
+    "documentReadinessGuardsTasksAndDecisions": true,
+    "newerPolicyDoesNotRetargetAcceptedReplay": true,
+    "fourFaultProbesLeaveNoCommittedProcessWork": true
+  },
+  "validation": {
+    "tests": {
+      "caseService": 74,
+      "governance": 116,
+      "atlasBusinessPartner": 50,
+      "neonClient": 5,
+      "total": 245
+    },
+    "typechecks": [
+      "master-data",
+      "governance",
+      "platform-host",
+      "NEON business-partner"
+    ],
+    "builds": [
+      "contracts/master-data",
+      "platform/governance",
+      "services/master-data",
+      "platform/ai",
+      "platform-host"
+    ]
+  },
+  "boundaries": [
+    "P2 commits durable review-pack jobs and dispatch events; case document rendering, storage, scanning and ready-result callbacks belong to P4.",
+    "P3 owns task workflows and reviewer resolution after document readiness.",
+    "Database fault probes use controlled authorization/failure ports and rollback their writes; API/browser checks use the authenticated DEV session.",
+    "Synthetic accepted requests remain awaiting documents; no workflow requests or work items were created for the qualified cases.",
+    "P5 subsequent attempts, P6\u2013P9, and follow-ups B/C are separate scopes."
+  ],
+  "receipts": {
+    "liveApiAndBrowser": {
+      "at": "2026-09-14T08:21:31.886Z",
+      "cases": [
+        {
+          "level": "basic",
+          "id": "22962679-e8bf-4c1a-8c1e-431c32191c09",
+          "createdVersion": 1,
+          "validatedVersion": 2,
+          "command": {
+            "expectedVersion": 2,
+            "idempotencyKey": "2bf97c95-d3c6-4011-a21f-bbb451571fc2"
+          },
+          "process": {
+            "cycleRunId": "576a0e3b-b9e4-4d56-a13b-f0c7e09e5b06",
+            "attemptId": "e5e82457-44d6-47d8-81d8-1c62f582f412",
+            "attemptNumber": 1,
+            "selectionId": "b2de842e-81ad-48de-ab7a-128f51ee1e62",
+            "profile": "simple",
+            "reviewPackJobId": "6bbdb380-9b27-4d14-93f3-5b0546a0d330",
+            "documentStatus": "pending"
+          },
+          "submittedVersion": 3
+        },
+        {
+          "level": "standard",
+          "id": "0154500a-7d94-48dc-b1df-5a6f36c7bf40",
+          "createdVersion": 1,
+          "validatedVersion": 2,
+          "command": {
+            "expectedVersion": 2,
+            "idempotencyKey": "7938a556-19cd-45b3-9374-c51a172ae5e3"
+          },
+          "process": {
+            "cycleRunId": "77677bf0-17df-460f-b463-e899d71246d5",
+            "attemptId": "04050fdb-8b34-4b23-ba23-c7d706a5207a",
+            "attemptNumber": 1,
+            "selectionId": "98408f29-132a-49d8-8672-9947fc765b1f",
+            "profile": "standard",
+            "reviewPackJobId": "63cffbe1-d1f3-4f4b-8637-56d54a3d0027",
+            "documentStatus": "pending"
+          },
+          "submittedVersion": 3
+        },
+        {
+          "level": "enhanced",
+          "id": "370c9dc0-ebb1-4237-a35c-765bbc9457d5",
+          "createdVersion": 1,
+          "validatedVersion": 2,
+          "command": {
+            "expectedVersion": 2,
+            "idempotencyKey": "e006cd1a-5943-4dad-a1ef-2589cecddf9d"
+          },
+          "process": {
+            "cycleRunId": "6e63aa27-3354-4411-9331-e1ebc0ef0684",
+            "attemptId": "33ba85df-96ae-421d-8f02-fe65108eb92f",
+            "attemptNumber": 1,
+            "selectionId": "138edadf-b495-413a-a5d8-ed4b56a62e26",
+            "profile": "enhanced",
+            "reviewPackJobId": "84714eb2-e942-4e13-8598-f61f1f6759c8",
+            "documentStatus": "pending"
+          },
+          "submittedVersion": 3
+        },
+        {
+          "level": "rollback",
+          "id": "22e0f635-4adb-4510-aac9-7e35095c801c",
+          "createdVersion": 1,
+          "validatedVersion": 2
+        }
+      ],
+      "checks": [
+        {
+          "level": "basic",
+          "concurrentReplay": true,
+          "acceptedProfile": "simple",
+          "changedKeyRejected": true,
+          "workflowAbsent": true
+        },
+        {
+          "level": "standard",
+          "concurrentReplay": true,
+          "acceptedProfile": "standard",
+          "changedKeyRejected": true,
+          "workflowAbsent": true
+        },
+        {
+          "level": "enhanced",
+          "concurrentReplay": true,
+          "acceptedProfile": "enhanced",
+          "changedKeyRejected": true,
+          "workflowAbsent": true
+        },
+        {
+          "label": "browser can read submitted case without approval work",
+          "passed": true
+        }
+      ],
+      "qualifiedAt": "2026-09-14T08:35:46.300Z",
+      "passed": true
+    },
+    "databaseAndFaults": {
+      "at": "2026-09-14T08:35:47.149Z",
+      "mode": "real PostgreSQL and owner services; controlled authorization and failure ports; writes rolled back",
+      "checks": [
+        {
+          "level": "basic",
+          "acceptedAttemptCount": 1,
+          "taskCount": 2,
+          "documentIntentCount": 1,
+          "dispatchCount": 1,
+          "noWorkItems": true,
+          "databaseGatesReject": true,
+          "replayWithoutRetargeting": true
+        },
+        {
+          "level": "standard",
+          "acceptedAttemptCount": 1,
+          "taskCount": 3,
+          "documentIntentCount": 1,
+          "dispatchCount": 1,
+          "noWorkItems": true,
+          "databaseGatesReject": true,
+          "replayWithoutRetargeting": true
+        },
+        {
+          "level": "enhanced",
+          "acceptedAttemptCount": 1,
+          "taskCount": 10,
+          "documentIntentCount": 1,
+          "dispatchCount": 1,
+          "noWorkItems": true,
+          "databaseGatesReject": true,
+          "replayWithoutRetargeting": true
+        },
+        {
+          "fault": "selection_unavailable",
+          "caseSnapshotUnchanged": true,
+          "noAttemptEvidenceRunOrJob": true
+        },
+        {
+          "fault": "document_dispatch_failed",
+          "caseSnapshotUnchanged": true,
+          "noAttemptEvidenceRunOrJob": true
+        },
+        {
+          "fault": "after_acceptance_before_commit",
+          "caseSnapshotUnchanged": true,
+          "noAttemptEvidenceRunOrJob": true
+        },
+        {
+          "fault": "missing_document_job",
+          "caseSnapshotUnchanged": true,
+          "noAttemptEvidenceRunOrJob": true
+        }
+      ],
+      "passed": true
+    },
+    "canonicalStorage": {
+      "at": "2026-09-14T08:28:31.356Z",
+      "database": "athyper_neon",
+      "created": [],
+      "canonicalDefinitions": true,
+      "businessRowsCreated": 0
+    },
+    "deployment": {
+      "at": "2026-09-14T08:27:54.413Z",
+      "receipts": [
+        {
+          "service": "neon-web",
+          "image": "sha256:783b48e7f2871983cac5cb4e806d954daf7c84799b559173a1b88aa9173ba855",
+          "beforeImage": "sha256:9dde2bcabe097e51500ae41c7242ec95fb14f3e8f53a1ca27b86b7952f4c70ec",
+          "override": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/process-preview-1789371080613/neon-web/override.json",
+          "rollback": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/process-preview-1789371080613/neon-web/rollback.json",
+          "files": []
+        },
+        {
+          "service": "api",
+          "image": "sha256:96837bde9d26601209e4c873cf15f675dcbc376c176cfd55801fcfb508419860",
+          "beforeImage": "sha256:7993f9d90ab2373aa6151258cfee53229cb3859af100b1e6db293729df70bcb5",
+          "override": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/process-preview-1789374444382/api/override.json",
+          "rollback": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/process-preview-1789374444382/api/rollback.json",
+          "files": [
+            {
+              "source": "server/packages/contracts/control-admin/dist/index.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-contract-control-admin@file+server+packages+contracts+control-admin/node_modules/@athyper/server-contract-control-admin/dist/index.js",
+              "hash": "bece7b4bda7158197a496d35b81f231660a8eb50276fc76cd6282c276564bb2d"
+            },
+            {
+              "source": "server/packages/contracts/control-admin/dist/process-selection.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-contract-control-admin@file+server+packages+contracts+control-admin/node_modules/@athyper/server-contract-control-admin/dist/process-selection.js",
+              "hash": "7d61334f5d5e1d81e13b6909d6c761b5d40e30c01017dd0c6c082554fa3d7704"
+            },
+            {
+              "source": "server/packages/contracts/governance/dist/index.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-contract-governance@file+server+packages+contracts+governance/node_modules/@athyper/server-contract-governance/dist/index.js",
+              "hash": "4c6e1a6981de6dd237a6dbbddfd6c628e7e331882b5bb1b016b6a21e28d33e5a"
+            },
+            {
+              "source": "server/packages/contracts/governance/dist/process-selection.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-contract-governance@file+server+packages+contracts+governance/node_modules/@athyper/server-contract-governance/dist/process-selection.js",
+              "hash": "7d61334f5d5e1d81e13b6909d6c761b5d40e30c01017dd0c6c082554fa3d7704"
+            },
+            {
+              "source": "server/packages/platform/workflow/dist/authoring.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-workflow@file+server+packages+platform+workflow/node_modules/@athyper/server-platform-workflow/dist/authoring.js",
+              "hash": "bd18c38b8f392ad5a55d6a7f68c8aeca88846c8fa5625168ba96c8d34867075f"
+            },
+            {
+              "source": "server/packages/platform/ai/dist/business-partner-tools.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-ai@file+server+packages+platform+ai/node_modules/@athyper/server-platform-ai/dist/business-partner-tools.js",
+              "hash": "3e94ee0ee4d79c3f7b6deda72c0471bae0e1fc4ebe94867e99b3e32a9e5e230b"
+            },
+            {
+              "source": "server/packages/services/master-data/dist/business-partner-request-service.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-service-master-data@file+server+packages+services+master-data/node_modules/@athyper/server-service-master-data/dist/business-partner-request-service.js",
+              "hash": "eafe0a5dcb72dc53cd121592a24d98898784dfa1b6e622d9eec7ff7c940b2c34"
+            },
+            {
+              "source": "server/packages/services/master-data/dist/kysely-business-partner-case-repository.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-service-master-data@file+server+packages+services+master-data/node_modules/@athyper/server-service-master-data/dist/kysely-business-partner-case-repository.js",
+              "hash": "2fb7aa97be786a019e55ada5af6b7271444c465190e7feadce3ccbdc2f5cff6d"
+            },
+            {
+              "source": "server/packages/services/master-data/dist/business-partner-onboarding-cycle.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-service-master-data@file+server+packages+services+master-data/node_modules/@athyper/server-service-master-data/dist/business-partner-onboarding-cycle.js",
+              "hash": "59d34d09f2e752c313827bb3ba1b9552330e7395aad0b19bc051678fd2df8e5c"
+            },
+            {
+              "source": "server/packages/contracts/master-data/dist/business-partner-requests.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-contract-master-data@file+server+packages+contracts+master-data/node_modules/@athyper/server-contract-master-data/dist/business-partner-requests.js",
+              "hash": "4b686d9ad9c6c3e0d5d926cf892f655d170a3e165db3a0d458c6d344fa4c1b4a"
+            },
+            {
+              "source": "server/packages/platform/policy/dist/policy-service.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-policy@file+server+packages+platform+policy/node_modules/@athyper/server-platform-policy/dist/policy-service.js",
+              "hash": "f048796ee8b59e9e93f70b0713409c73ba0af0d87a183d14b7a1e3b224ae659c"
+            },
+            {
+              "source": "server/packages/platform/policy/dist/kysely-policy-repository.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-policy@file+server+packages+platform+policy/node_modules/@athyper/server-platform-policy/dist/kysely-policy-repository.js",
+              "hash": "6ae4a15e58956da2cd3233e32f01ecda51de26e0a514926aff8766007822043e"
+            },
+            {
+              "source": "server/packages/platform/policy/dist/cached-policy-repository.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-policy@file+server+packages+platform+policy/node_modules/@athyper/server-platform-policy/dist/cached-policy-repository.js",
+              "hash": "bf5ce24118cdfa9d37d2f3570885b6ec84ed4b1f091d831a5ddfa0bcce378c12"
+            },
+            {
+              "source": "server/packages/platform/control-admin/dist/index.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-control-admin@file+server+packages+platform+control-admin/node_modules/@athyper/server-platform-control-admin/dist/index.js",
+              "hash": "aa7e1c1b7f56513f7ab54e3bddd2ac6588ae88f822fde6a7db7b905711f9befb"
+            },
+            {
+              "source": "server/packages/platform/control-admin/dist/cycle/process-selection-compiler.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-control-admin@file+server+packages+platform+control-admin/node_modules/@athyper/server-platform-control-admin/dist/cycle/process-selection-compiler.js",
+              "hash": "ff1d20ed0e3559594e5c530d4381fa2fe3c34a22672427d9d4d4e91738df7da6"
+            },
+            {
+              "source": "server/packages/platform/control-admin/dist/cycle/process-selection-publication.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-control-admin@file+server+packages+platform+control-admin/node_modules/@athyper/server-platform-control-admin/dist/cycle/process-selection-publication.js",
+              "hash": "a521c38c17f011cf010c72247a5037beb4b421150206ccd97b56842d20fe503f"
+            },
+            {
+              "source": "server/packages/platform/control-admin/dist/cycle/process-selection-catalog.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-control-admin@file+server+packages+platform+control-admin/node_modules/@athyper/server-platform-control-admin/dist/cycle/process-selection-catalog.js",
+              "hash": "dc5a56cdfc5a9a92715f5168fb019e7a9e687249ca79dc7ab6e0dd3ba647fbf7"
+            },
+            {
+              "source": "server/packages/platform/control-admin/dist/cycle/cycle-config-service.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-control-admin@file+server+packages+platform+control-admin/node_modules/@athyper/server-platform-control-admin/dist/cycle/cycle-config-service.js",
+              "hash": "15b5605aba60d6a84232d4ff94b861ff978b69781cec94443a1add98c2516976"
+            },
+            {
+              "source": "server/packages/platform/governance/dist/index.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-governance@file+server+packages+platform+governance/node_modules/@athyper/server-platform-governance/dist/index.js",
+              "hash": "21c976c2daad1dc9d1845525b193ec96844c5dae8919d5e79795042ef82d16bd"
+            },
+            {
+              "source": "server/packages/platform/governance/dist/process-selection/process-selection-service.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-governance@file+server+packages+platform+governance/node_modules/@athyper/server-platform-governance/dist/process-selection/process-selection-service.js",
+              "hash": "39232908c4fcce187c064ce49488bc6c8070cd856da04f6fdce3ff5c83bb83c3"
+            },
+            {
+              "source": "server/packages/platform/governance/dist/process-selection/kysely-process-selection-evidence.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-governance@file+server+packages+platform+governance/node_modules/@athyper/server-platform-governance/dist/process-selection/kysely-process-selection-evidence.js",
+              "hash": "40d92e3837ddf0da440584659dca3fd3f1afec5cd2f234b0f01e70b8150f536a"
+            },
+            {
+              "source": "server/packages/platform/governance/dist/process-selection/kysely-process-document-intent.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-governance@file+server+packages+platform+governance/node_modules/@athyper/server-platform-governance/dist/process-selection/kysely-process-document-intent.js",
+              "hash": "da4a9491a0fd8373614df8be197d8a85e6ac7b8a0c0eab60d1221ff6740c971c"
+            },
+            {
+              "source": "server/packages/platform/governance/dist/routes/process-selection-routes.js",
+              "target": "/app/server/node_modules/.pnpm/@athyper+server-platform-governance@file+server+packages+platform+governance/node_modules/@athyper/server-platform-governance/dist/routes/process-selection-routes.js",
+              "hash": "0351f6262275f07da83245f4272637ec4b6fbb0c8529989ea483f544e70db4ec"
+            },
+            {
+              "source": "server/apps/platform-host/dist/composition/register-services.js",
+              "target": "/app/server/dist/composition/register-services.js",
+              "hash": "f8d68d2581049c34f46fb713adb04ebf44d3553e4b6bfd9660b755404a07cae7"
+            },
+            {
+              "source": "server/apps/platform-host/dist/composition/supplier-process-selection.js",
+              "target": "/app/server/dist/composition/supplier-process-selection.js",
+              "hash": "a4d08347f13542a42158778bc67b631cb84956f4a6a4ca841ab033101ad9cdc7"
+            },
+            {
+              "source": "server/apps/platform-host/dist/composition/supplier-process-workflow.js",
+              "target": "/app/server/dist/composition/supplier-process-workflow.js",
+              "hash": "3a423fa5450848d03696dd368a582105ac3d25409d7003f1c9ddb67bb0e674ee"
+            },
+            {
+              "source": "server/apps/platform-host/dist/composition/supplier-process-submission.js",
+              "target": "/app/server/dist/composition/supplier-process-submission.js",
+              "hash": "4edd779715c4991bc4477650d4c4f961a80e3eab902ffe7927f3b9ea01b6c636"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+# Opt-in API authoring. Apply after compose.publication.yaml. This enables the
+# native Studio signer without running publication worker jobs in the API.
+services:
+  api:
+    environment:
+      PUBLICATION_API_ENABLED: "true"
+      PUBLICATION_AUTHORING_ENABLED: "true"
+      PUBLICATION_RUNTIME_VERSION: ${PUBLICATION_RUNTIME_VERSION:?Set deployed runtime contract version}
+      PUBLICATION_SIGNING_KEY_ID: ${PUBLICATION_SIGNING_KEY_ID:?Set an instance-specific key ID}
+      PUBLICATION_PRIVATE_KEY_REFERENCE: ${PUBLICATION_PRIVATE_KEY_REFERENCE:?Set the Infisical private key reference}
+      PUBLICATION_PUBLIC_KEY_REFERENCE: ${PUBLICATION_PUBLIC_KEY_REFERENCE:?Set the Infisical public key reference}
+      INFISICAL_URL: ${INFISICAL_URL:?Set the Infisical HTTPS endpoint}
+      INFISICAL_WORKSPACE_ID: ${INFISICAL_WORKSPACE_ID:?Set the Infisical workspace}
+      INFISICAL_ENVIRONMENT: ${INFISICAL_ENVIRONMENT:?Set the instance-specific Infisical environment}
+      INFISICAL_SECRET_PATH: ${INFISICAL_SECRET_PATH:?Set the instance-specific signing secret path}
+      INFISICAL_TOKEN_FILE: /run/secrets/publication-infisical-token
+      AUTHORIZATION_MANAGEMENT_ROUTES_ENABLED: "true"
+      AUTHORIZATION_MANAGEMENT_MUTATIONS_ENABLED: "false"
+    secrets:
+      - publication-infisical-token

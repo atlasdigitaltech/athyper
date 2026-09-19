@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_reset_studio_catalog_proposal",
+  "status": "review_required",
+  "baselineSha256": "e78a9691649e612b05803b3151950a9cfdcf5b57080bc31c9a023a795198a757",
+  "database": "athyper_studio",
+  "definitions": [
+    {
+      "code": "metadata.entity.author",
+      "moduleCode": "meta",
+      "permissionKind": "capability",
+      "scopeKinds": [
+        "tenant"
+      ],
+      "propagation": "exact",
+      "riskTier": "medium",
+      "requiresMfa": true,
+      "requiresSod": false,
+      "shareable": false,
+      "delegable": false,
+      "overridable": false
+    },
+    {
+      "code": "metadata.entity.validate",
+      "moduleCode": "meta",
+      "permissionKind": "capability",
+      "scopeKinds": [
+        "tenant"
+      ],
+      "propagation": "exact",
+      "riskTier": "medium",
+      "requiresMfa": true,
+      "requiresSod": false,
+      "shareable": false,
+      "delegable": false,
+      "overridable": false
+    },
+    {
+      "code": "metadata.entity.test",
+      "moduleCode": "meta",
+      "permissionKind": "capability",
+      "scopeKinds": [
+        "tenant"
+      ],
+      "propagation": "exact",
+      "riskTier": "medium",
+      "requiresMfa": true,
+      "requiresSod": false,
+      "shareable": false,
+      "delegable": false,
+      "overridable": false
+    },
+    {
+      "code": "metadata.entity.submit",
+      "moduleCode": "meta",
+      "permissionKind": "capability",
+      "scopeKinds": [
+        "tenant"
+      ],
+      "propagation": "exact",
+      "riskTier": "medium",
+      "requiresMfa": true,
+      "requiresSod": false,
+      "shareable": false,
+      "delegable": false,
+      "overridable": false
+    },
+    {
+      "code": "metadata.entity.review",
+      "moduleCode": "meta",
+      "permissionKind": "capability",
+      "scopeKinds": [
+        "tenant"
+      ],
+      "propagation": "exact",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "requiresSod": true,
+      "shareable": false,
+      "delegable": false,
+      "overridable": false
+    },
+    {
+      "code": "metadata.entity.publish",
+      "moduleCode": "meta",
+      "permissionKind": "capability",
+      "scopeKinds": [
+        "tenant"
+      ],
+      "propagation": "exact",
+      "riskTier": "critical",
+      "requiresMfa": true,
+      "requiresSod": true,
+      "shareable": false,
+      "delegable": false,
+      "overridable": false
+    }
+  ],
+  "grantChanges": [],
+  "aliases": [],
+  "activationAuthorized": false,
+  "approvals": [],
+  "rationale": "Restore the six exact native authoring dependencies after intentional reset. All six require MFA; review and publish require separation of duties. No role or user assignments. This is a successor proposal, not restoration of historical grants.",
+  "proposalRevision": "4660931d7ff9567c4c729712a30c1b97e40250382b1b8ef92d42228eadc9eb5f"
+}

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-09-03",
+  "observationPolicy": "evidence_checkpoint_no_fixed_duration",
+  "surfaces": [
+    {
+      "surface": "document.business_partner_request family",
+      "owner": "Master Data / Business Partner",
+      "disposition": "replace",
+      "consumers": [
+        "server/packages/services/master-data/src/kysely-business-partner-case-repository.ts",
+        "server/packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "packages/planes/neon/business-partner/src/index.tsx"
+      ],
+      "usageMeasureSql": "SELECT count(*) AS retained_rows, count(*) FILTER (WHERE status IN ('draft','validating','validation_failed','pending_approval','returned','approved','applying','failed')) AS open_rows FROM document.business_partner_request",
+      "compatibilityWindow": "Retain through G1 case migration and until a production evidence checkpoint proves zero legacy activity after consumer cutover.",
+      "removalGate": "All listed consumers use document.entity_case; zero rows touched in the observation window; supported-upgrade rollback and catalog/privilege parity pass."
+    },
+    {
+      "surface": "master.business_partner.aliases",
+      "owner": "Master Data / Business Partner Search",
+      "disposition": "retire",
+      "consumers": [
+        "server/packages/services/master-data/src/kysely-business-partner-case-repository.ts",
+        "packages/planes/neon/business-partner/src/client.ts"
+      ],
+      "usageMeasureSql": "SELECT count(*) FILTER (WHERE cardinality(aliases) > 0) AS populated_rows, coalesce(sum(cardinality(aliases)), 0) AS cached_aliases FROM master.business_partner",
+      "compatibilityWindow": "Retain until every read uses master.business_partner_alias and a production evidence checkpoint proves zero cache use.",
+      "removalGate": "No application SQL selects aliases; cache-write trigger is disabled in rehearsal; supported-upgrade rollback and catalog/privilege parity pass."
+    },
+    {
+      "surface": "flattened Business Partner decision-scope columns",
+      "owner": "Master Data / Commercial Governance",
+      "disposition": "retire",
+      "consumers": [
+        "server/packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts",
+        "server/packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts"
+      ],
+      "usageMeasureSql": "SELECT (SELECT count(*) FROM control.business_partner_qualification WHERE operating_organization_id IS NOT NULL OR company_code_id IS NOT NULL OR commodity_category_id IS NOT NULL) + (SELECT count(*) FROM control.supplier_preference_designation WHERE operating_organization_id IS NOT NULL OR company_code_id IS NOT NULL OR commodity_category_id IS NOT NULL) + (SELECT count(*) FROM control.customer_account_designation WHERE operating_organization_id IS NOT NULL OR company_code_id IS NOT NULL) + (SELECT count(*) FROM control.customer_credit_review WHERE operating_organization_id IS NOT NULL OR company_code_id IS NOT NULL) AS populated_legacy_coordinates",
+      "compatibilityWindow": "Retain through normalized decision-scope consumer cutover and until a production evidence checkpoint proves zero flattened-coordinate use.",
+      "removalGate": "All reads and commands use control.business_partner_decision_scope; dual-write comparison has no mismatch; supported-upgrade rollback and catalog/privilege parity pass."
+    },
+    {
+      "surface": "document.workforce_iam_projection",
+      "owner": "People / IAM",
+      "disposition": "retain_then_replace",
+      "consumers": [
+        "server/packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
+      "usageMeasureSql": "SELECT count(*) AS retained_rows, count(*) FILTER (WHERE observed_state IN ('pending','failed')) AS outstanding_rows FROM document.workforce_iam_projection",
+      "compatibilityWindow": "Canonical now for clean/supported-upgrade parity; replace only after the G1/G5 governed-case IAM projection is live and a production evidence checkpoint proves no legacy use.",
+      "removalGate": "External and internal workforce projections pass exact replay, deprovisioning, retry, tenant and rollback probes; no outstanding row remains; supported-upgrade rollback and catalog/privilege parity pass."
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
-const repoRoot = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
+const repoRoot = resolve(fileURLToPath(new URL("../../../../../", import.meta.url)));
 
 async function read(path: string): Promise<string> {
   return readFile(resolve(repoRoot, path), "utf8");
@@ -135,8 +135,8 @@ expect(
 );
 
 const [dispositionPolicy, dispositionInventory] = await Promise.all([
-  read("config/governance/authorization-data-disposition-policy.v1.json"),
-  read("config/governance/authorization-data-disposition-inventory.v1.json"),
+  read("governance/config/governance/authorization-data-disposition-policy.v1.json"),
+  read("governance/config/governance/authorization-data-disposition-inventory.v1.json"),
 ]);
 for (const table of ["control.dimension_policy", "control.dimension_policy_allowed_value"]) {
   expect(

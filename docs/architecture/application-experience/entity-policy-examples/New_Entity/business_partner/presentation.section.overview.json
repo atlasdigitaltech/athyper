@@ -1,0 +1,78 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.overview",
+  "entityCode": "business_partner",
+  "plane": "neon",
+  "sectionKey": "overview",
+  "rendererKey": "platform.fields.v1",
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.overview.v1",
+    "existingRoutes": [],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "business_partner/core.json",
+  "fieldBindings": [
+    {
+      "fieldKey": "code"
+    },
+    {
+      "fieldKey": "name"
+    },
+    {
+      "fieldKey": "registration_country_code"
+    },
+    {
+      "fieldKey": "partner_category"
+    },
+    {
+      "fieldKey": "ownership_class"
+    },
+    {
+      "fieldKey": "legal_form"
+    },
+    {
+      "fieldKey": "incorporation_date"
+    },
+    {
+      "fieldKey": "website_url"
+    },
+    {
+      "fieldKey": "description"
+    },
+    {
+      "fieldKey": "status"
+    },
+    {
+      "fieldKey": "record_version"
+    }
+  ],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [
+    "business_partner/core"
+  ],
+  "artifactHash": "sha256:7d8bb28d9fa2b5ffdf03276be5ab744a2dcdd0b87b1c14ca06c5e130e9f35b9f"
+}

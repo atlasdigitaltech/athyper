@@ -1,0 +1,54 @@
+import { join } from "node:path";
+import Ajv from "ajv";
+import { readYaml } from "./io.mjs";
+
+const schemaFiles = Object.freeze({
+  Instance: "instance.schema.json",
+  ServiceCatalog: "service-catalog.schema.json",
+  ResourceProfile: "resource-profile.schema.json",
+  ImageSet: "image-set.schema.json",
+  ProviderCatalog: "provider-catalog.schema.json",
+  StagingRehearsal: "staging-rehearsal.schema.json",
+  StagingNotificationEvidence: "staging-notification-evidence.schema.json",
+  ProductionInstance: "production-instance.schema.json",
+  ProductionRehearsal: "production-rehearsal.schema.json",
+  ProductionEvidence: "production-evidence.schema.json",
+  BusinessPartnerReleaseCertification: "business-partner-release-certification.schema.json",
+  BusinessPartnerReleaseGateEvidence: "business-partner-release-gate-evidence.schema.json",
+  BusinessPartnerReleaseCertificationReport: "business-partner-release-certification-report.schema.json",
+  SanitizedDataManifest: "sanitized-data-manifest.schema.json",
+  PreMigrationBackupReceipt: "pre-migration-backup-receipt.schema.json",
+  RestoreDrillReceipt: "restore-drill-receipt.schema.json",
+  OrchestratorDecision: "orchestrator-decision.schema.json",
+  ComposeAcceptance: "compose-acceptance.schema.json",
+  TopologyRequirement: "topology-requirement.schema.json",
+  ColdStartQualification: "cold-start-qualification.schema.json",
+  StackV1ExportIntake: "stack-v1-export-intake.schema.json",
+  StackV1RestoreReceipt: "stack-v1-restore-receipt.schema.json",
+  StackV1Disposition: "stack-v1-disposition.schema.json",
+  ActiveInstanceReceipt: "active-instance-receipt.schema.json",
+  StackOperationReceipt: "stack-operation-receipt.schema.json",
+  StackBackup: "stack-backup.schema.json",
+  FoundationMigrationReceipt: "foundation-migration-receipt.schema.json",
+  DevQualification: "dev-qualification.schema.json",
+  WorkloadSetCatalog: "workload-set-catalog.schema.json",
+});
+
+export function createValidator(repoRoot) {
+  const ajv = new Ajv({ allErrors: true, strict: true });
+  const validators = {};
+  for (const [kind, file] of Object.entries(schemaFiles)) {
+    validators[kind] = ajv.compile(readYaml(join(repoRoot, "deploy/instances/schemas", file)));
+  }
+  return (document, source) => {
+    const validate = validators[document?.kind];
+    if (!validate) throw new Error(`${source}: unsupported kind ${String(document?.kind)}`);
+    if (!validate(document)) {
+      const details = validate.errors
+        .map((error) => `${error.instancePath || "/"} ${error.message}`)
+        .join("; ");
+      throw new Error(`${source}: ${details}`);
+    }
+    return document;
+  };
+}

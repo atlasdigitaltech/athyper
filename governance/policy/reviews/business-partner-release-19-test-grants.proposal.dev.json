@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_release_19_temporary_test_grant_proposal",
+  "environment": "dev",
+  "plane": "neon",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "effectiveFrom": "2026-09-10T06:35:00.000Z",
+  "effectiveUntil": "2026-09-10T10:35:00.000Z",
+  "assignments": [
+    {
+      "id": "37a44e3d-1efc-5df5-a9ad-35d9b9a44fd6",
+      "roleId": "d5ea2b79-2d84-5ef5-a95c-8f6cd8634ca1",
+      "groupId": "58ca1c2e-755f-5b4c-a855-4fbab8fcb442",
+      "code": "bp.r19.qualify.tenant",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "account": "catl.admin",
+      "scopeKind": "tenant",
+      "targetId": "44444444-4444-4444-8444-444444444444",
+      "propagation": "exact",
+      "permissions": [
+        {
+          "id": "01a087c3-4587-7c32-a0fe-d9b3aece9d6b",
+          "code": "neon.relationship.bp_target.enter",
+          "operation": "enter"
+        },
+        {
+          "id": "01a087c3-4587-7155-a3ba-feaf6f486941",
+          "code": "neon.relationship.bp_target.discover",
+          "operation": "discover"
+        },
+        {
+          "id": "01a087c3-4587-7561-9a76-1e59ed7d1479",
+          "code": "neon.relationship.bp_target.read",
+          "operation": "read"
+        },
+        {
+          "id": "01a087c3-4587-70d4-af36-ba069c3708df",
+          "code": "neon.relationship.bp_target.navigate_manage",
+          "operation": "navigate_manage"
+        },
+        {
+          "id": "01a087c3-4587-7c47-8632-805562a66672",
+          "code": "neon.relationship.bp_target.navigate_overview",
+          "operation": "navigate_overview"
+        },
+        {
+          "id": "01a087c3-4587-7c85-8beb-e83e9872f598",
+          "code": "neon.relationship.bp_target.export",
+          "operation": "export"
+        },
+        {
+          "id": "01a087c3-4587-7f94-9891-95324d5ab6fa",
+          "code": "neon.relationship.bp_target.import",
+          "operation": "import"
+        },
+        {
+          "id": "01a087c3-4588-7421-9af1-3f4c985a6e20",
+          "code": "neon.relationship.bp_target.identity_read",
+          "operation": "identity_read"
+        },
+        {
+          "id": "01a087c3-4588-7a4f-8d97-66b7d2655584",
+          "code": "neon.relationship.bp_target.contacts_read",
+          "operation": "contacts_read"
+        },
+        {
+          "id": "01a087c3-4588-76aa-a777-ad2986f91b59",
+          "code": "neon.relationship.bp_target.addresses_read",
+          "operation": "addresses_read"
+        },
+        {
+          "id": "01a087c3-4588-7daa-ab18-605306cb8a08",
+          "code": "neon.relationship.bp_target.identifier_read",
+          "operation": "identifier_read"
+        },
+        {
+          "id": "01a087c3-4588-77bb-8df7-75e58a75ee0c",
+          "code": "neon.relationship.bp_target.tax_read",
+          "operation": "tax_read"
+        },
+        {
+          "id": "01a087c3-4588-77e4-a994-b35dc3fea945",
+          "code": "neon.relationship.bp_target.bank_read",
+          "operation": "bank_read"
+        },
+        {
+          "id": "01a087c3-4588-7ea5-bfbc-f28f149fdab6",
+          "code": "neon.relationship.bp_target.qualification_read",
+          "operation": "qualification_read"
+        },
+        {
+          "id": "01a087c3-4588-7305-b380-34827b1f9f94",
+          "code": "neon.relationship.bp_target.certificate_read",
+          "operation": "certificate_read"
+        },
+        {
+          "id": "01a087c3-4588-75fb-b824-80fd38f42f35",
+          "code": "neon.relationship.bp_target.requests_read",
+          "operation": "requests_read"
+        },
+        {
+          "id": "01a087c3-4588-7f88-aea8-6dc143fd4a36",
+          "code": "neon.relationship.bp_target.activity_read",
+          "operation": "activity_read"
+        },
+        {
+          "id": "01a087c3-4588-73a8-88ce-6a88856e286a",
+          "code": "neon.relationship.bp_target.comments_read",
+          "operation": "comments_read"
+        },
+        {
+          "id": "01a087c3-4588-7efb-bb31-8ed923a79d78",
+          "code": "neon.relationship.bp_target.attachments_read",
+          "operation": "attachments_read"
+        },
+        {
+          "id": "01a087c3-4588-74ae-b8d6-8f0375bf08db",
+          "code": "neon.relationship.bp_target.bank_reveal",
+          "operation": "bank_reveal"
+        },
+        {
+          "id": "01a087c3-4588-7628-950c-453004741a6c",
+          "code": "neon.relationship.bp_target.tax_reveal",
+          "operation": "tax_reveal"
+        }
+      ]
+    },
+    {
+      "id": "74ba1e98-168d-50ff-a49f-8fb1febbc063",
+      "roleId": "9eb506c0-984b-596c-a2f6-f358d8d45aaa",
+      "groupId": "47075971-aea9-5b01-a573-b15666be2f01",
+      "code": "bp.r19.qualify.operating_organization",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "account": "catl.admin",
+      "scopeKind": "operating_organization",
+      "targetId": "a478f9c0-8226-5d22-9599-b8fb27a45180",
+      "propagation": "exact",
+      "permissions": [
+        {
+          "id": "01a087c3-4587-7c7b-a163-2d103a6d8308",
+          "code": "neon.relationship.bp_target.configure_company",
+          "operation": "configure_company"
+        },
+        {
+          "id": "01a087c3-4588-70d7-ae4d-c5c802ba7e55",
+          "code": "neon.relationship.bp_target.credit_read",
+          "operation": "credit_read"
+        },
+        {
+          "id": "01a087c3-4588-77da-82f6-4a524a8264ae",
+          "code": "neon.relationship.bp_target.network_read",
+          "operation": "network_read"
+        },
+        {
+          "id": "01a087c3-4588-7e2c-b733-05a4cc73e21d",
+          "code": "neon.relationship.bp_target.qualification_company",
+          "operation": "qualification_company"
+        },
+        {
+          "id": "01a087c3-4588-7a41-bf0d-a858fddc9886",
+          "code": "neon.relationship.bp_target.supplier_company_read",
+          "operation": "supplier_company_read"
+        },
+        {
+          "id": "01a087c3-4588-7d8c-a09b-feabb6769f7f",
+          "code": "neon.relationship.bp_target.customer_company_read",
+          "operation": "customer_company_read"
+        }
+      ]
+    },
+    {
+      "id": "31c99232-7284-50af-af68-14d0abe2716b",
+      "roleId": "4ec0f67b-b14f-5dfc-a034-5350ee326128",
+      "groupId": "65dc30a2-6818-566c-a348-acec380af852",
+      "code": "bp.r19.qualify.company_code",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "account": "catl.admin",
+      "scopeKind": "company_code",
+      "targetId": "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
+      "propagation": "exact",
+      "permissions": [
+        {
+          "id": "01a087c3-4587-7c7b-a163-2d103a6d8308",
+          "code": "neon.relationship.bp_target.configure_company",
+          "operation": "configure_company"
+        },
+        {
+          "id": "01a087c3-4588-70d7-ae4d-c5c802ba7e55",
+          "code": "neon.relationship.bp_target.credit_read",
+          "operation": "credit_read"
+        },
+        {
+          "id": "01a087c3-4588-77da-82f6-4a524a8264ae",
+          "code": "neon.relationship.bp_target.network_read",
+          "operation": "network_read"
+        },
+        {
+          "id": "01a087c3-4588-7e2c-b733-05a4cc73e21d",
+          "code": "neon.relationship.bp_target.qualification_company",
+          "operation": "qualification_company"
+        },
+        {
+          "id": "01a087c3-4588-7a41-bf0d-a858fddc9886",
+          "code": "neon.relationship.bp_target.supplier_company_read",
+          "operation": "supplier_company_read"
+        },
+        {
+          "id": "01a087c3-4588-7d8c-a09b-feabb6769f7f",
+          "code": "neon.relationship.bp_target.customer_company_read",
+          "operation": "customer_company_read"
+        }
+      ]
+    }
+  ],
+  "uniquePermissions": 27,
+  "reviewers": [
+    "catl.owner",
+    "catl.admin"
+  ],
+  "accessBoundary": "Tenant-scoped dedicated permissions cover all BP records in the existing DEV tenant; they cannot be restricted to test records by a resource grant. Organization/company permissions use only the listed exact coordinates.",
+  "approval": null,
+  "activationAuthorized": false,
+  "applySupported": false,
+  "conditions": {
+    "mfa": "Normal existing high-risk service preflights remain mandatory; no claim that group membership itself enforces MFA.",
+    "separationOfDuties": "Existing maker/approver/applier checks remain. catl.owner receives no new grants.",
+    "deniedBaseline": "Capture original authority before assignment; revalidate denials, scope incompatibility, revocation and expiry. No deny/ACL/delegation rows may be changed.",
+    "scopePropagation": "exact; no organization-to-tenant widening",
+    "effectiveDates": "Fixed four-hour UTC window. An expired proposal requires a new revision and acceptance.",
+    "workload": "Only isolated qualification records may be created or modified by the harness; this is an operator constraint, not a record-level limit on the grants.",
+    "rollback": "Revoke only the newly created qualification memberships/role assignments. Preserve all existing grants, denials and revocations; never restore a snapshot.",
+    "activation": "No release-head change and no removal of the release-19 activation hold."
+  },
+  "proposalRevision": "a4ef0dbcc40af46758034a70698463b5f6ec9bfbbe07a43497eefad1fe5c9176"
+}

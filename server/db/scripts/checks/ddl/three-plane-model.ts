@@ -95,7 +95,7 @@ for (const plane of planes) {
 }
 
 const packageJson = await readFile(resolve(databaseRoot, "package.json"), "utf8");
-const provision = await readFile(resolve(databaseRoot, "scripts/safe-provision.ts"), "utf8");
+const provision = await readFile(resolve(databaseRoot, "scripts/provisioning/safe-provision.ts"), "utf8");
 const foundationRunner = await readFile(resolve(databaseRoot, "ddl/foundation-runner.ps1"), "utf8");
 const activeSources = packageJson + provision + foundationRunner;
 
@@ -103,7 +103,7 @@ if (legacyPath.test(activeSources)) fail("active provisioning still references l
 else pass("active provisioning references only common and plane DDL");
 
 await access(resolve(databaseRoot, "ddl/common/_manifest.txt"));
-await access(resolve(repositoryRoot, "scripts/policy/authorization-legacy-freeze.ts"));
+await access(resolve(repositoryRoot, "tooling/scripts/policy/authorization-legacy-freeze.ts"));
 pass("common manifest and authorization freeze policy are present");
 
 const commonMasterTables = await readFile(

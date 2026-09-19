@@ -1,0 +1,23 @@
+{
+  "uid": "athyper-record-transfers",
+  "title": "Athyper Record Transfers",
+  "description": "Import/export throughput, latency, failures, retries, artifacts, and stuck work",
+  "tags": ["athyper", "records", "import", "export"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [
+    { "name": "plane", "type": "query", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": "label_values(athyper_record_transfer_operations_total, plane)", "includeAll": true, "allValue": ".*", "current": { "text": "All", "value": "$__all" } },
+    { "name": "kind", "type": "query", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": "label_values(athyper_record_transfer_operations_total, kind)", "includeAll": true, "allValue": ".*", "current": { "text": "All", "value": "$__all" } }
+  ]},
+  "panels": [
+    { "id": 1, "title": "Terminal outcomes", "type": "timeseries", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 }, "targets": [{ "expr": "sum by (outcome) (rate(athyper_record_transfer_operations_total{plane=~\"$plane\",kind=~\"$kind\"}[5m]))", "legendFormat": "{{outcome}}" }] },
+    { "id": 2, "title": "Queue delay p95", "type": "timeseries", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 }, "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, plane, kind) (rate(athyper_record_transfer_queue_delay_ms_bucket{plane=~\"$plane\",kind=~\"$kind\"}[5m])))", "legendFormat": "{{plane}} {{kind}}" }], "fieldConfig": { "defaults": { "unit": "ms" } } },
+    { "id": 3, "title": "Rows per second", "type": "timeseries", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 }, "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, plane, kind) (rate(athyper_record_transfer_rows_per_second_bucket{plane=~\"$plane\",kind=~\"$kind\"}[5m])))", "legendFormat": "{{plane}} {{kind}}" }] },
+    { "id": 4, "title": "Worker duration p95", "type": "timeseries", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 }, "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, plane, kind) (rate(athyper_record_transfer_duration_ms_bucket{plane=~\"$plane\",kind=~\"$kind\"}[5m])))", "legendFormat": "{{plane}} {{kind}}" }], "fieldConfig": { "defaults": { "unit": "ms" } } },
+    { "id": 5, "title": "Artifact size p95", "type": "timeseries", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 }, "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, plane, format) (rate(athyper_record_transfer_artifact_bytes_bucket{plane=~\"$plane\"}[5m])))", "legendFormat": "{{plane}} {{format}}" }], "fieldConfig": { "defaults": { "unit": "bytes" } } },
+    { "id": 6, "title": "Retries and stuck work", "type": "timeseries", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 }, "targets": [{ "expr": "sum by (plane, kind) (rate(athyper_record_transfer_retries_total{plane=~\"$plane\",kind=~\"$kind\"}[5m]))", "legendFormat": "retries {{plane}} {{kind}}" }, { "expr": "max by (plane, kind) (athyper_record_transfer_stuck{plane=~\"$plane\",kind=~\"$kind\"})", "legendFormat": "stuck {{plane}} {{kind}}" }] }
+  ]
+}

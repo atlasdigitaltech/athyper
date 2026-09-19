@@ -1,24 +1,93 @@
-import { createRelayHandler, EXPERIENCE_BOOTSTRAP_OPERATION, IAM_ME_OPERATION, type RelayHandler } from "@athyper/platform-gateway-bff-relay";
-import { authRuntime } from "@/lib/auth";
+import { readAppEnvironment } from "./environment";
+import {
+  STUDIO_BP_LOCAL_PREVIEW_OPERATION,
+  STUDIO_META_ENTITY_AUTHORING_RELAY_OPERATIONS,
+  STUDIO_AUTHORIZATION_MANAGEMENT_RELAY_OPERATIONS,
+  BANK_DIRECTORY_REFERENCE_OPERATION,
+  STUDIO_BANK_DIRECTORY_RELAY_OPERATIONS,
+} from "@athyper/platform-gateway-bff-relay";
+import {
+  ACTIVITY_CENTER_RELAY_OPERATIONS,
+  ATLAS_ANSWER_RELAY_OPERATIONS,
+  ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS,
+  createRelayHandler,
+  ENTITY_VIEWS_RELAY_OPERATIONS,
+  ENTITY_APPLICATION_DESCRIPTOR_OPERATION,
+  REFERENCE_HISTORY_RELAY_OPERATIONS,
+  ENTITY_LIST_DESCRIPTOR_OPERATION,
+  ENTITY_LIST_QUERY_OPERATION,
+  ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS,
+  EXPERIENCE_BOOTSTRAP_OPERATION,
+  EXPERIENCE_SURFACE_RUNTIME_RELAY_OPERATIONS,
+  IAM_ME_OPERATION,
+  LOCALE_POLICY_READ_OPERATION,
+  LOCALE_POLICY_UPDATE_OPERATION,
+  PRINCIPAL_LOCALE_UPDATE_OPERATION,
+  RECORD_BOOKMARK_RELAY_OPERATIONS,
+  RECORD_TRANSFER_RELAY_OPERATIONS,
+  ROUTE_SLUG_REDIRECT_REGISTER_OPERATION,
+  STUDIO_BP_CASE_CONTRACT_RELAY_OPERATIONS,
+  STUDIO_BP_DEFINITION_RELAY_OPERATIONS,
+  STUDIO_EXPERIENCE_SURFACE_RELAY_OPERATIONS,
+  type RelayHandler,
+} from "@athyper/platform-gateway-bff-relay";
+import { authRuntime } from "./auth";
 
 let relay: RelayHandler | undefined;
 export const platformRelay: RelayHandler = (request, context) => {
-  relay ??= createRelayHandler({
-    plane: "studio",
-    runtimeApiUrl: requiredEnvironment("RUNTIME_API_URL"),
-    appOrigin: process.env.APP_ORIGIN ?? process.env.NEXT_PUBLIC_APP_ORIGIN ?? "http://localhost:3200",
-    operations: [IAM_ME_OPERATION, EXPERIENCE_BOOTSTRAP_OPERATION],
-    session: {
-      resolve: (input) => authRuntime.resolveRelaySession(input),
-      refresh: (input) => authRuntime.refreshRelaySession(input),
-      invalidate: (input) => authRuntime.invalidateRelaySession(input),
+  relay ??= createAppRelay(
+    {
+      runtimeApiUrl: readAppEnvironment().runtimeApiUrl,
+      appOrigin: readAppEnvironment().appOrigin,
+
+      session: {
+        resolve: (input) => authRuntime.resolveRelaySession(input),
+        refresh: (input) => authRuntime.refreshRelaySession(input),
+        invalidate: (input) => authRuntime.invalidateRelaySession(input),
+      },
     },
-  });
+    process.env,
+  );
   return relay(request, context);
 };
 
-function requiredEnvironment(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`${name} is required; the browser relay fails closed without a server runtime URL`);
-  return value;
+export function createAppRelay(
+  options: Omit<
+    Parameters<typeof createRelayHandler>[0],
+    "plane" | "operations"
+  >,
+  environment: Readonly<Record<string, string | undefined>> = {},
+): RelayHandler {
+  return createRelayHandler({
+    ...options,
+    plane: "studio",
+    operations: [
+      STUDIO_BP_LOCAL_PREVIEW_OPERATION,
+      ...STUDIO_META_ENTITY_AUTHORING_RELAY_OPERATIONS,
+      ...STUDIO_AUTHORIZATION_MANAGEMENT_RELAY_OPERATIONS,
+      BANK_DIRECTORY_REFERENCE_OPERATION,
+      ...STUDIO_BANK_DIRECTORY_RELAY_OPERATIONS,
+      IAM_ME_OPERATION,
+      EXPERIENCE_BOOTSTRAP_OPERATION,
+      PRINCIPAL_LOCALE_UPDATE_OPERATION,
+      ...EXPERIENCE_SURFACE_RUNTIME_RELAY_OPERATIONS,
+      ...STUDIO_EXPERIENCE_SURFACE_RELAY_OPERATIONS,
+      ROUTE_SLUG_REDIRECT_REGISTER_OPERATION,
+      ...ATLAS_ANSWER_RELAY_OPERATIONS,
+      ...ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS,
+      LOCALE_POLICY_READ_OPERATION,
+      LOCALE_POLICY_UPDATE_OPERATION,
+      ...ENTITY_VIEWS_RELAY_OPERATIONS,
+      ENTITY_APPLICATION_DESCRIPTOR_OPERATION,
+      ...REFERENCE_HISTORY_RELAY_OPERATIONS,
+      ENTITY_LIST_DESCRIPTOR_OPERATION,
+      ENTITY_LIST_QUERY_OPERATION,
+      ...ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS,
+      ...RECORD_BOOKMARK_RELAY_OPERATIONS,
+      ...RECORD_TRANSFER_RELAY_OPERATIONS,
+      ...STUDIO_BP_DEFINITION_RELAY_OPERATIONS,
+      ...STUDIO_BP_CASE_CONTRACT_RELAY_OPERATIONS,
+      ...ACTIVITY_CENTER_RELAY_OPERATIONS,
+    ],
+  });
 }

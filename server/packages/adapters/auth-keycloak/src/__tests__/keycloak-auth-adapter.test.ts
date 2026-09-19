@@ -117,6 +117,22 @@ describe("Keycloak auth adapter", () => {
     );
   });
 
+  it("can fetch keys privately while preserving the public issuer", () => {
+    const privateJwks = "http://iam:8080/realms/athyper/protocol/openid-connect/certs";
+    const adapter = createKeycloakAuthAdapter({
+      defaultRealm: {
+        issuerUrl: ISSUER,
+        audience: "athyper-api",
+        jwksUrl: privateJwks,
+      },
+    });
+
+    expect(adapter.getIssuerUrl()).toBe(ISSUER);
+    expect(jose.createRemoteJWKSet).toHaveBeenCalledWith(new URL(privateJwks), {
+      cooldownDuration: 600_000,
+    });
+  });
+
   it("rejects unsafe or incomplete configuration", () => {
     expect(() =>
       createKeycloakAuthAdapter({

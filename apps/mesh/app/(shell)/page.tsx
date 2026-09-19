@@ -1,1 +1,3 @@
-export default function HomePage() { return <section aria-labelledby="page-title"><p>Partner Collaboration</p><h1 id="page-title">Athyper Mesh</h1><p>Your permitted partner exchange workspace is ready.</p></section>; }
+import { redirect } from "next/navigation";
+
+export default function HomePage(): never { redirect("/home"); }

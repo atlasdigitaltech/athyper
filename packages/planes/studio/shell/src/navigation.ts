@@ -1,6 +1,66 @@
+import { PLATFORM_CATALOG_ROUTES } from "../../../../contracts/platform/navigation/src/generated-catalog";
 import { definePlaneRoutes } from "@athyper/platform-shell/core";
+
+const catalogRoutes = PLATFORM_CATALOG_ROUTES.studio.flatMap(
+  (workspace, workspaceIndex) =>
+    workspace.modules.map((module) => ({
+      id: `studio.${workspace.code}.${module.code}`,
+      moduleCode: module.code,
+      href: `/${workspace.routeSlug}/${module.routeSlug}` as `/${string}`,
+      label: module.name,
+      iconKey: module.code === "exp" ? "layout" : "info",
+      requiredPermissions: [],
+      requiredFeatures: [],
+      navigation: "primary" as const,
+      presentation: {
+        workspaceCode: workspace.code,
+        workspaceName: workspace.name,
+        workspaceHref: `/${workspace.routeSlug}` as `/${string}`,
+        workspaceIconKey: "settings",
+        workspaceSortOrder: (workspaceIndex + 1) * 10,
+        moduleName: module.name,
+      },
+    })),
+);
+
+const publicationRoute = catalogRoutes.find(
+  (route) => route.moduleCode === "pub",
+);
+if (!publicationRoute)
+  throw new Error("Studio publication catalog route is required");
+
 export const studioRoutes = definePlaneRoutes([
-  { id: "studio.metadata", moduleCode: "meta", href: "/", label: "Metadata", iconKey: "home", requiredPermissions: [], requiredFeatures: [], navigation: "primary" },
-  { id: "studio.identity", moduleCode: "iam", href: "/identity", label: "Identity", iconKey: "user", requiredPermissions: [], requiredFeatures: [], navigation: "primary" },
-  { id: "studio.operations", moduleCode: "ops", href: "/operations", label: "Operations", iconKey: "info", requiredPermissions: [], requiredFeatures: [], navigation: "secondary" },
-] as const);
+  ...catalogRoutes,
+  {
+    ...publicationRoute,
+    id: "studio.entity.pub.graphs",
+    href: "/entity/graphs",
+    label: "Meta Entity Graphs",
+    requiredPermissions: ["metadata.entity.author"],
+    navigation: "secondary",
+  },
+  {
+    ...publicationRoute,
+    id: "studio.entity.pub.atlas-learning",
+    href: "/atlas/learning",
+    label: "Atlas learning inbox",
+    requiredPermissions: ["metadata.entity.review"],
+    navigation: "secondary",
+  },
+  {
+    ...publicationRoute,
+    id: "studio.entity.pub.mdg",
+    href: "/mdg",
+    label: "Master Data Governance",
+    requiredPermissions: ["studio.business_partner_definition.read"],
+    navigation: "hidden",
+  },
+  {
+    ...publicationRoute,
+    id: "studio.entity.pub.business-partner-publication",
+    href: "/mdg/business-partner/publication",
+    label: "Business Partner Publication",
+    requiredPermissions: ["studio.business_partner_definition.read"],
+    navigation: "secondary",
+  },
+]);

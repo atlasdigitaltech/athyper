@@ -1,0 +1,4 @@
+# Pre-rendered Redis ACL — contains SHA-256 password hashes.
+# Legacy output from tooling/tools/scripts/render-redis-acl.cjs.
+# Never commit generated credentials; keep operator state outside deploy/.
+redis-acl.conf

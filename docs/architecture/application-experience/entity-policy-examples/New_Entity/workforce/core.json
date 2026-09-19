@@ -1,0 +1,851 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "workforce/core",
+  "entityCode": "workforce",
+  "plane": "neon",
+  "storage": {
+    "kind": "handler_projection",
+    "sourceObjects": [
+      "master.employee",
+      "master.employment"
+    ],
+    "primaryObject": "master.employee",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.employee.id",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "code",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "code"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.employee.code",
+        "defaultText": "Code"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "name",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "name"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.employee.name",
+        "defaultText": "Name"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "principal_id",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "principal_id"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.principal_id",
+        "defaultText": "Principal Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "person_id",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "person_id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.employee.person_id",
+        "defaultText": "Person Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "employee_number",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "employee_number"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.employee.employee_number",
+        "defaultText": "Employee Number"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "first_name",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "first_name"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.employee.first_name",
+        "defaultText": "First Name"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "last_name",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "last_name"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.employee.last_name",
+        "defaultText": "Last Name"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "display_name",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "display_name"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.display_name",
+        "defaultText": "Display Name"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "email",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "email"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.email",
+        "defaultText": "Email"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "phone",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "phone"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.phone",
+        "defaultText": "Phone"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "employment_type",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "employment_type"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.employee.employment_type",
+        "defaultText": "Employment Type"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "department",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "department"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.department",
+        "defaultText": "Department"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "title",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "title"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.title",
+        "defaultText": "Title"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "manager_id",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "manager_id"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.manager_id",
+        "defaultText": "Manager Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "company_code_id",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "company_code_id"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.company_code_id",
+        "defaultText": "Company Code Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "hire_date",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "hire_date"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.hire_date",
+        "defaultText": "Hire Date"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "date",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "termination_date",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "termination_date"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.termination_date",
+        "defaultText": "Termination Date"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "date",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "status",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "status"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.employee.status",
+        "defaultText": "Status"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "is_active",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "is_active"
+      },
+      "dataType": "boolean",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.is_active",
+        "defaultText": "Is Active"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "boolean",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "status_changed_at",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "status_changed_at"
+      },
+      "dataType": "datetime",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.status_changed_at",
+        "defaultText": "Status Changed At"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "timestamptz",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "status_changed_by",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "status_changed_by"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.status_changed_by",
+        "defaultText": "Status Changed By"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "created_at",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "created_at"
+      },
+      "dataType": "datetime",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.employee.created_at",
+        "defaultText": "Created At"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "timestamptz",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "created_by",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "created_by"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.employee.created_by",
+        "defaultText": "Created By"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "updated_at",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "updated_at"
+      },
+      "dataType": "datetime",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.updated_at",
+        "defaultText": "Updated At"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "timestamptz",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "updated_by",
+      "binding": {
+        "sourceObject": "master.employee",
+        "column": "updated_by"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.employee.updated_by",
+        "defaultText": "Updated By"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "company",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [
+    {
+      "code": "BUSINESS_PARTNER_ACTIVE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.business_partner_active.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "legalEntityId",
+        "companyCodeId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    },
+    {
+      "code": "EMPLOYEE_ACTIVE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.employee_active.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "legalEntityId",
+        "companyCodeId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    },
+    {
+      "code": "EMPLOYMENT_EFFECTIVE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.employment_effective.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "legalEntityId",
+        "companyCodeId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    },
+    {
+      "code": "PRIMARY_ASSIGNMENT_EFFECTIVE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.primary_assignment_effective.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "legalEntityId",
+        "companyCodeId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    },
+    {
+      "code": "ONBOARDING_COMPLETE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.onboarding_complete.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "legalEntityId",
+        "companyCodeId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    }
+  ],
+  "fieldSelection": {
+    "default": "deny",
+    "publicReadFields": [
+      "id",
+      "employee_number",
+      "display_name",
+      "employment_type",
+      "company_code_id",
+      "status"
+    ],
+    "additionalFieldsRequireHandlerApproval": true
+  },
+  "dependencies": [],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "artifactHash": "sha256:77475b6d8587243ae2f035bae2fa863db08de003c5b0bf0b0671848475fab3fb"
+}

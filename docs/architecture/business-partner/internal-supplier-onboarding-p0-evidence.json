@@ -1,0 +1,3306 @@
+{
+  "schema": "athyper.internal-supplier-onboarding-p0/1",
+  "capturedAt": "2026-09-14T06:03:34.144Z",
+  "sourceCommit": "ee58a9f495d6b2dee8e6e6b17140bad15b010cf2",
+  "scope": {
+    "databaseContainer": "athyper-dev-db-1",
+    "database": "athyper_neon",
+    "sourceApiContainer": "athyper-dev-source-api-1",
+    "access": "read-only configuration; no browser qualification"
+  },
+  "preview": [
+    {
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "entityCode": "business_partner",
+      "changeSetId": "be767e01-f36d-434f-91f3-67bff689a367",
+      "revision": 58,
+      "graphHash": "890379d02697d6df27213886c87da3f62d6ea18c645bef26bdd6eab8cb7e22b9",
+      "artifactHash": "457e72afaf043e7e4f988f7ca932d3da543dcf7f34469323881603c0e8095a36",
+      "operations": {
+        "activity_read": {
+          "code": "activity_read",
+          "permissionCode": "neon.relationship.bp_target.activity_read",
+          "authorizationMode": "bound_operation"
+        },
+        "add_role": {
+          "code": "add_role",
+          "permissionCode": "neon.relationship.entity_case.create",
+          "authorizationMode": "bound_operation"
+        },
+        "addresses_read": {
+          "code": "addresses_read",
+          "permissionCode": "neon.relationship.bp_target.addresses_read",
+          "authorizationMode": "bound_operation"
+        },
+        "amend_partner": {
+          "code": "amend_partner",
+          "permissionCode": "neon.relationship.entity_case.create",
+          "authorizationMode": "bound_operation"
+        },
+        "assign_organization": {
+          "code": "assign_organization",
+          "permissionCode": "neon.relationship.entity_case.create",
+          "authorizationMode": "bound_operation"
+        },
+        "attachments_read": {
+          "code": "attachments_read",
+          "permissionCode": "neon.relationship.bp_target.attachments_read",
+          "authorizationMode": "bound_operation"
+        },
+        "bank_read": {
+          "code": "bank_read",
+          "permissionCode": "neon.relationship.bp_target.bank_read",
+          "authorizationMode": "bound_operation"
+        },
+        "bank_reveal": {
+          "code": "bank_reveal",
+          "permissionCode": "neon.relationship.bp_target.bank_reveal",
+          "authorizationMode": "bound_operation"
+        },
+        "case_create": {
+          "code": "case_create",
+          "permissionCode": "neon.relationship.entity_case.create",
+          "authorizationMode": "bound_operation"
+        },
+        "case_decide": {
+          "code": "case_decide",
+          "permissionCode": "neon.relationship.entity_case.decide",
+          "authorizationMode": "bound_operation"
+        },
+        "case_materialize": {
+          "code": "case_materialize",
+          "permissionCode": "neon.relationship.entity_case.materialize",
+          "authorizationMode": "bound_operation"
+        },
+        "case_read": {
+          "code": "case_read",
+          "permissionCode": "neon.relationship.entity_case.read",
+          "authorizationMode": "bound_operation"
+        },
+        "case_submit": {
+          "code": "case_submit",
+          "permissionCode": "neon.relationship.entity_case.submit",
+          "authorizationMode": "bound_operation"
+        },
+        "case_update": {
+          "code": "case_update",
+          "permissionCode": "neon.relationship.entity_case.update",
+          "authorizationMode": "bound_operation"
+        },
+        "case_validate": {
+          "code": "case_validate",
+          "permissionCode": "neon.relationship.entity_case.validate",
+          "authorizationMode": "bound_operation"
+        },
+        "certificate_read": {
+          "code": "certificate_read",
+          "permissionCode": "neon.relationship.bp_target.certificate_read",
+          "authorizationMode": "bound_operation"
+        },
+        "change_bank": {
+          "code": "change_bank",
+          "permissionCode": "neon.relationship.entity_case.create",
+          "authorizationMode": "bound_operation"
+        },
+        "comments_read": {
+          "code": "comments_read",
+          "permissionCode": "neon.relationship.bp_target.comments_read",
+          "authorizationMode": "bound_operation"
+        },
+        "configure_company": {
+          "code": "configure_company",
+          "permissionCode": "neon.relationship.bp_target.configure_company",
+          "authorizationMode": "bound_operation"
+        },
+        "contacts_read": {
+          "code": "contacts_read",
+          "permissionCode": "neon.relationship.bp_target.contacts_read",
+          "authorizationMode": "bound_operation"
+        },
+        "credit_read": {
+          "code": "credit_read",
+          "permissionCode": "neon.relationship.bp_target.credit_read",
+          "authorizationMode": "bound_operation"
+        },
+        "customer_company_read": {
+          "code": "customer_company_read",
+          "permissionCode": "neon.relationship.bp_target.customer_company_read",
+          "authorizationMode": "bound_operation"
+        },
+        "discover": {
+          "code": "discover",
+          "permissionCode": "neon.relationship.bp_target.discover",
+          "authorizationMode": "bound_operation"
+        },
+        "enter": {
+          "code": "enter",
+          "permissionCode": "neon.relationship.bp_target.enter",
+          "authorizationMode": "bound_operation"
+        },
+        "export": {
+          "code": "export",
+          "permissionCode": "neon.relationship.bp_target.export",
+          "authorizationMode": "bound_operation"
+        },
+        "identifier_read": {
+          "code": "identifier_read",
+          "permissionCode": "neon.relationship.bp_target.identifier_read",
+          "authorizationMode": "bound_operation"
+        },
+        "identity_read": {
+          "code": "identity_read",
+          "permissionCode": "neon.relationship.bp_target.identity_read",
+          "authorizationMode": "bound_operation"
+        },
+        "import": {
+          "code": "import",
+          "permissionCode": "neon.relationship.bp_target.import",
+          "authorizationMode": "bound_operation"
+        },
+        "lifecycle": {
+          "code": "lifecycle",
+          "permissionCode": "neon.relationship.entity_case.create",
+          "authorizationMode": "bound_operation"
+        },
+        "navigate_manage": {
+          "code": "navigate_manage",
+          "permissionCode": "neon.relationship.bp_target.navigate_manage",
+          "authorizationMode": "bound_operation"
+        },
+        "navigate_overview": {
+          "code": "navigate_overview",
+          "permissionCode": "neon.relationship.bp_target.navigate_overview",
+          "authorizationMode": "bound_operation"
+        },
+        "navigate_review": {
+          "code": "navigate_review",
+          "permissionCode": "neon.relationship.entity_case.read",
+          "authorizationMode": "bound_operation"
+        },
+        "network_read": {
+          "code": "network_read",
+          "permissionCode": "neon.relationship.bp_target.network_read",
+          "authorizationMode": "bound_operation"
+        },
+        "qualification": {
+          "code": "qualification",
+          "permissionCode": "neon.supplier.qualification.admin",
+          "authorizationMode": "bound_operation"
+        },
+        "qualification_company": {
+          "code": "qualification_company",
+          "permissionCode": "neon.relationship.bp_target.qualification_company",
+          "authorizationMode": "bound_operation"
+        },
+        "qualification_read": {
+          "code": "qualification_read",
+          "permissionCode": "neon.relationship.bp_target.qualification_read",
+          "authorizationMode": "bound_operation"
+        },
+        "read": {
+          "code": "read",
+          "permissionCode": "neon.relationship.bp_target.read",
+          "authorizationMode": "bound_operation"
+        },
+        "request_supplier": {
+          "code": "request_supplier",
+          "permissionCode": "neon.relationship.entity_case.create",
+          "authorizationMode": "bound_operation"
+        },
+        "requests_read": {
+          "code": "requests_read",
+          "permissionCode": "neon.relationship.bp_target.requests_read",
+          "authorizationMode": "bound_operation"
+        },
+        "supplier_company_read": {
+          "code": "supplier_company_read",
+          "permissionCode": "neon.relationship.bp_target.supplier_company_read",
+          "authorizationMode": "bound_operation"
+        },
+        "tax_read": {
+          "code": "tax_read",
+          "permissionCode": "neon.relationship.bp_target.tax_read",
+          "authorizationMode": "bound_operation"
+        },
+        "tax_reveal": {
+          "code": "tax_reveal",
+          "permissionCode": "neon.relationship.bp_target.tax_reveal",
+          "authorizationMode": "bound_operation"
+        }
+      },
+      "intakeSurfaces": [
+        {
+          "key": "capture_document_classification",
+          "title": "Supporting document",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "capture_classification_document_type",
+                  "valueKey": "documentType",
+                  "label": "Document type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "brochure",
+                        "label": "brochure"
+                      },
+                      {
+                        "value": "product_specification",
+                        "label": "product specification"
+                      },
+                      {
+                        "value": "company_profile",
+                        "label": "company profile"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "capture_classification_attachment_id",
+                  "valueKey": "attachmentId",
+                  "label": "File",
+                  "control": "input",
+                  "widget": "registered",
+                  "required": true
+                },
+                {
+                  "key": "capture_classification_issued_on",
+                  "valueKey": "issuedOn",
+                  "label": "Issue date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "capture_classification_expires_on",
+                  "valueKey": "expiresOn",
+                  "label": "Expiry date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "profile_identifier",
+          "title": "Registration identifier",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "identifier_scheme_code",
+                  "valueKey": "schemeCode",
+                  "label": "Registration type",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "identifier_value",
+                  "valueKey": "value",
+                  "label": "Registration number",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "identifier_issuing_country_code",
+                  "valueKey": "issuingCountryCode",
+                  "label": "Issuing country",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "sourceKey": "iso.country",
+                    "recent": {
+                      "enabled": true,
+                      "limit": 5,
+                      "persistence": "server",
+                      "scope": "referenceSource",
+                      "retentionDays": 90
+                    }
+                  }
+                },
+                {
+                  "key": "identifier_issuing_authority",
+                  "valueKey": "issuingAuthority",
+                  "label": "Issuing authority",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "identifier_effective_from",
+                  "valueKey": "effectiveFrom",
+                  "label": "Valid from",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "identifier_effective_until",
+                  "valueKey": "effectiveUntil",
+                  "label": "Valid until",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "identifier_is_primary",
+                  "valueKey": "isPrimary",
+                  "label": "Primary",
+                  "control": "input",
+                  "widget": "checkbox",
+                  "required": false,
+                  "defaultValue": false
+                }
+              ]
+            },
+            {
+              "key": "supporting_documents",
+              "fields": [
+                {
+                  "key": "capture_identifier_documents",
+                  "valueKey": "supportingDocuments",
+                  "label": "Supporting documents",
+                  "control": "repeatableGroup",
+                  "itemSurfaceKey": "capture_document_identifier",
+                  "minItems": 0,
+                  "maxItems": 10
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "profile_tax",
+          "title": "Tax registration",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "tax_jurisdiction_id",
+                  "valueKey": "jurisdictionId",
+                  "label": "Tax jurisdiction",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "sourceKey": "neon.tax_jurisdiction"
+                  }
+                },
+                {
+                  "key": "tax_tax_type_id",
+                  "valueKey": "taxTypeId",
+                  "label": "Tax type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "lookup": {
+                    "sourceKey": "neon.tax_type"
+                  }
+                },
+                {
+                  "key": "tax_registration_type_code",
+                  "valueKey": "registrationTypeCode",
+                  "label": "Registration type",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "tax_value",
+                  "valueKey": "value",
+                  "label": "Tax registration number",
+                  "control": "input",
+                  "widget": "password",
+                  "required": true
+                },
+                {
+                  "key": "tax_effective_from",
+                  "valueKey": "effectiveFrom",
+                  "label": "Valid from",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "tax_effective_until",
+                  "valueKey": "effectiveUntil",
+                  "label": "Valid until",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "tax_is_primary",
+                  "valueKey": "isPrimary",
+                  "label": "Primary",
+                  "control": "input",
+                  "widget": "checkbox",
+                  "required": false,
+                  "defaultValue": false
+                }
+              ]
+            },
+            {
+              "key": "supporting_documents",
+              "fields": [
+                {
+                  "key": "capture_tax_documents",
+                  "valueKey": "supportingDocuments",
+                  "label": "Supporting documents",
+                  "control": "repeatableGroup",
+                  "itemSurfaceKey": "capture_document_tax",
+                  "minItems": 0,
+                  "maxItems": 10
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "partner_contact_intake",
+          "title": "Contact",
+          "sections": [
+            {
+              "key": "editor_0",
+              "fields": [
+                {
+                  "key": "contact_contact_name",
+                  "valueKey": "contactName",
+                  "label": "Contact name",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "contact_business_title",
+                  "valueKey": "businessTitle",
+                  "label": "Business title",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "contact_department_name",
+                  "valueKey": "departmentName",
+                  "label": "Department",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "contact_is_primary",
+                  "valueKey": "isPrimary",
+                  "label": "Primary contact",
+                  "control": "input",
+                  "widget": "checkbox",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "editor_1",
+              "fields": [
+                {
+                  "key": "details_channels",
+                  "valueKey": "channels",
+                  "label": "Communication channels",
+                  "control": "repeatableGroup",
+                  "itemSurfaceKey": "partner_channel_intake",
+                  "minItems": 1,
+                  "maxItems": 10
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "profile_certification",
+          "title": "Certification",
+          "sections": [
+            {
+              "key": "editor_0",
+              "fields": [
+                {
+                  "key": "certification_custom_name",
+                  "valueKey": "customName",
+                  "label": "Certificate name",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "certification_certificate_number",
+                  "valueKey": "certificateNumber",
+                  "label": "Certificate number",
+                  "control": "input",
+                  "widget": "password",
+                  "required": false
+                },
+                {
+                  "key": "certification_certified_by",
+                  "valueKey": "certifiedBy",
+                  "label": "Issued by",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "editor_1",
+              "fields": [
+                {
+                  "key": "certification_effective_from",
+                  "valueKey": "effectiveFrom",
+                  "label": "Valid from",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "certification_effective_until",
+                  "valueKey": "effectiveUntil",
+                  "label": "Valid until",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "certification_certified_location",
+                  "valueKey": "certifiedLocation",
+                  "label": "Certified location",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "supporting_documents",
+              "fields": [
+                {
+                  "key": "capture_certification_documents",
+                  "valueKey": "supportingDocuments",
+                  "label": "Supporting documents",
+                  "control": "repeatableGroup",
+                  "itemSurfaceKey": "capture_document_certification",
+                  "minItems": 0,
+                  "maxItems": 10
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "partner_address_intake",
+          "title": "Address",
+          "sections": [
+            {
+              "key": "editor_0",
+              "fields": [
+                {
+                  "key": "address_country_code",
+                  "valueKey": "countryCode",
+                  "label": "Country",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "sourceKey": "iso.country",
+                    "recent": {
+                      "enabled": true,
+                      "limit": 5,
+                      "persistence": "server",
+                      "scope": "referenceSource",
+                      "retentionDays": 90
+                    }
+                  }
+                },
+                {
+                  "key": "address_purpose",
+                  "valueKey": "purpose",
+                  "label": "Purpose",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "defaultValue": "default",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "default",
+                        "label": "Default"
+                      },
+                      {
+                        "value": "correspondence",
+                        "label": "Correspondence"
+                      },
+                      {
+                        "value": "remit_to",
+                        "label": "Remit to"
+                      },
+                      {
+                        "value": "ship_from",
+                        "label": "Ship from"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "address_is_primary",
+                  "valueKey": "isPrimary",
+                  "label": "Primary address",
+                  "control": "input",
+                  "widget": "checkbox",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "editor_1",
+              "fields": [
+                {
+                  "key": "address_line1",
+                  "valueKey": "line1",
+                  "label": "Address line 1",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "address_line2",
+                  "valueKey": "line2",
+                  "label": "Address line 2",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "address_city",
+                  "valueKey": "city",
+                  "label": "City",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "address_state_region",
+                  "valueKey": "stateRegionCode",
+                  "label": "State / Province / Region",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "lookup": {
+                    "sourceKey": "shared.state_region",
+                    "filterBy": [
+                      {
+                        "field": "countryCode",
+                        "property": "countryCode"
+                      }
+                    ],
+                    "copyFields": [
+                      {
+                        "from": "name",
+                        "to": "region"
+                      }
+                    ],
+                    "emptyText": "No listed subdivisions are available for this country. Use manual entry if a state or region is needed."
+                  }
+                },
+                {
+                  "key": "address_region",
+                  "valueKey": "region",
+                  "label": "State / Province / Region",
+                  "control": "input",
+                  "widget": "hidden",
+                  "required": false
+                },
+                {
+                  "key": "address_region_mode",
+                  "valueKey": "regionEntryMode",
+                  "label": "State / Region entry",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "defaultValue": "directory",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "directory",
+                        "label": "Select from reference list"
+                      },
+                      {
+                        "value": "manual",
+                        "label": "Enter manually / not listed"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "address_postal_code",
+                  "valueKey": "postalCode",
+                  "label": "Postal code",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "additional_address_details",
+              "fields": [
+                {
+                  "key": "advanced_address_kind",
+                  "valueKey": "addressKind",
+                  "label": "Address kind",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "defaultValue": "street",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "street",
+                        "label": "Street address"
+                      },
+                      {
+                        "value": "po_box",
+                        "label": "PO box"
+                      },
+                      {
+                        "value": "rural",
+                        "label": "Rural address"
+                      },
+                      {
+                        "value": "military",
+                        "label": "Military address"
+                      },
+                      {
+                        "value": "other",
+                        "label": "Other address"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "advanced_address_building_name",
+                  "valueKey": "buildingName",
+                  "label": "Building name",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "advanced_address_unit",
+                  "valueKey": "unit",
+                  "label": "Unit / Suite",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "advanced_address_floor",
+                  "valueKey": "floor",
+                  "label": "Floor",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "advanced_address_house_number",
+                  "valueKey": "houseNumber",
+                  "label": "House number",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "advanced_address_street_name",
+                  "valueKey": "streetName",
+                  "label": "Street name",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "advanced_address_po_box",
+                  "valueKey": "poBox",
+                  "label": "PO box number",
+                  "control": "input",
+                  "widget": "hidden",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "capture_document_governance",
+          "title": "Supporting document",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "capture_governance_document_type",
+                  "valueKey": "documentType",
+                  "label": "Document type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "ownership_chart",
+                        "label": "ownership chart"
+                      },
+                      {
+                        "value": "shareholder_register",
+                        "label": "shareholder register"
+                      },
+                      {
+                        "value": "authorization",
+                        "label": "authorization"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "capture_governance_attachment_id",
+                  "valueKey": "attachmentId",
+                  "label": "File",
+                  "control": "input",
+                  "widget": "registered",
+                  "required": true
+                },
+                {
+                  "key": "capture_governance_issued_on",
+                  "valueKey": "issuedOn",
+                  "label": "Issue date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "capture_governance_expires_on",
+                  "valueKey": "expiresOn",
+                  "label": "Expiry date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "capture_document_tax",
+          "title": "Supporting document",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "capture_tax_document_type",
+                  "valueKey": "documentType",
+                  "label": "Document type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "tax_card",
+                        "label": "tax card"
+                      },
+                      {
+                        "value": "vat_certificate",
+                        "label": "vat certificate"
+                      },
+                      {
+                        "value": "exemption_certificate",
+                        "label": "exemption certificate"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "capture_tax_attachment_id",
+                  "valueKey": "attachmentId",
+                  "label": "File",
+                  "control": "input",
+                  "widget": "registered",
+                  "required": true
+                },
+                {
+                  "key": "capture_tax_issued_on",
+                  "valueKey": "issuedOn",
+                  "label": "Issue date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "capture_tax_expires_on",
+                  "valueKey": "expiresOn",
+                  "label": "Expiry date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "profile_classification",
+          "title": "Business classification",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "classification_classification_kind",
+                  "valueKey": "classificationKind",
+                  "label": "Classification type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "defaultValue": "commodity",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "commodity",
+                        "label": "Commodity"
+                      },
+                      {
+                        "value": "industry",
+                        "label": "Industry"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "classification_commodity_reference_id",
+                  "valueKey": "commodityReferenceId",
+                  "label": "Commodity category",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "sourceKey": "neon.commodity_category"
+                  },
+                  "payload": {
+                    "target": "canonical",
+                    "path": "referenceId"
+                  },
+                  "visibleWhen": {
+                    "field": "classification_classification_kind",
+                    "operator": "equals",
+                    "value": "commodity"
+                  }
+                },
+                {
+                  "key": "classification_industry_reference_id",
+                  "valueKey": "industryReferenceId",
+                  "label": "Industry classification",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "sourceKey": "shared.industry_code"
+                  },
+                  "payload": {
+                    "target": "canonical",
+                    "path": "referenceId"
+                  },
+                  "visibleWhen": {
+                    "field": "classification_classification_kind",
+                    "operator": "equals",
+                    "value": "industry"
+                  }
+                },
+                {
+                  "key": "classification_domain_code",
+                  "valueKey": "domainCode",
+                  "label": "Industry standard",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "isic",
+                        "label": "Isic"
+                      },
+                      {
+                        "value": "naics",
+                        "label": "Naics"
+                      }
+                    ]
+                  },
+                  "visibleWhen": {
+                    "field": "classification_classification_kind",
+                    "operator": "equals",
+                    "value": "industry"
+                  }
+                },
+                {
+                  "key": "classification_partner_role",
+                  "valueKey": "partnerRole",
+                  "label": "Partner role",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "defaultValue": "supplier",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "supplier",
+                        "label": "Supplier"
+                      },
+                      {
+                        "value": "customer",
+                        "label": "Customer"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "classification_effective_from",
+                  "valueKey": "effectiveFrom",
+                  "label": "Valid from",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "classification_effective_until",
+                  "valueKey": "effectiveUntil",
+                  "label": "Valid until",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "classification_is_primary",
+                  "valueKey": "isPrimary",
+                  "label": "Primary",
+                  "control": "input",
+                  "widget": "checkbox",
+                  "required": false,
+                  "defaultValue": false
+                }
+              ]
+            },
+            {
+              "key": "supporting_documents",
+              "fields": [
+                {
+                  "key": "capture_classification_documents",
+                  "valueKey": "supportingDocuments",
+                  "label": "Supporting documents",
+                  "control": "repeatableGroup",
+                  "itemSurfaceKey": "capture_document_classification",
+                  "minItems": 0,
+                  "maxItems": 10
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "profile_bank",
+          "title": "Bank account",
+          "sections": [
+            {
+              "key": "editor_0",
+              "fields": [
+                {
+                  "key": "capture_bank_country_code",
+                  "valueKey": "bankCountryCode",
+                  "label": "Bank country",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "sourceKey": "control.bank_country"
+                  }
+                },
+                {
+                  "key": "bank_source",
+                  "valueKey": "bankSource",
+                  "label": "Bank selection",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "defaultValue": "directory",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "directory",
+                        "label": "Select from bank directory"
+                      },
+                      {
+                        "value": "unlisted",
+                        "label": "Bank not listed — enter for review"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "bank_institution",
+                  "valueKey": "bankInstitutionId",
+                  "label": "Bank",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "lookup": {
+                    "sourceKey": "shared.bank_institution",
+                    "filterBy": [
+                      {
+                        "field": "bankCountryCode",
+                        "property": "countryCode"
+                      }
+                    ],
+                    "copyFields": [
+                      {
+                        "from": "name",
+                        "to": "bankName"
+                      },
+                      {
+                        "from": "bic",
+                        "to": "bic"
+                      },
+                      {
+                        "from": "releaseId",
+                        "to": "bankDirectoryReleaseId"
+                      }
+                    ],
+                    "emptyText": "No published banks are available for this country. Choose “Bank not listed” to enter details for review."
+                  }
+                },
+                {
+                  "key": "bank_branch",
+                  "valueKey": "bankBranchId",
+                  "label": "Branch",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "lookup": {
+                    "sourceKey": "shared.bank_branch",
+                    "filterBy": [
+                      {
+                        "field": "bankInstitutionId",
+                        "property": "institutionId"
+                      },
+                      {
+                        "field": "bankCountryCode",
+                        "property": "countryCode"
+                      }
+                    ],
+                    "copyFields": [
+                      {
+                        "from": "branch",
+                        "to": "branch"
+                      }
+                    ],
+                    "emptyText": "No published branches are available for this bank. Leave the branch unselected; do not guess."
+                  }
+                },
+                {
+                  "key": "capture_bank_name",
+                  "valueKey": "bankName",
+                  "label": "Bank name",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "capture_branch",
+                  "valueKey": "branch",
+                  "label": "Branch",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "capture_bic",
+                  "valueKey": "bic",
+                  "label": "SWIFT / BIC",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "bank_directory_release",
+                  "valueKey": "bankDirectoryReleaseId",
+                  "label": "Bank directory release",
+                  "control": "input",
+                  "widget": "hidden",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "editor_1",
+              "fields": [
+                {
+                  "key": "capture_account_holder_name",
+                  "valueKey": "accountHolderName",
+                  "label": "Account holder name",
+                  "control": "input",
+                  "widget": "registered",
+                  "required": true
+                },
+                {
+                  "key": "capture_account_id_type",
+                  "valueKey": "accountIdType",
+                  "label": "Account number format",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "sourceKey": "control.bank_account_type",
+                    "filterBy": [
+                      {
+                        "field": "bankCountryCode",
+                        "property": "countries"
+                      }
+                    ],
+                    "fallbackToAll": true
+                  }
+                },
+                {
+                  "key": "capture_account_identifier",
+                  "valueKey": "accountIdentifier",
+                  "label": "IBAN / Account number",
+                  "control": "input",
+                  "widget": "password",
+                  "required": true
+                },
+                {
+                  "key": "capture_clearing_code",
+                  "valueKey": "clearingCode",
+                  "label": "Local routing code",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false,
+                  "visibleWhen": {
+                    "field": "capture_account_id_type",
+                    "operator": "equals",
+                    "value": "local_account"
+                  }
+                },
+                {
+                  "key": "capture_currency_code",
+                  "valueKey": "currencyCode",
+                  "label": "Account currency",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "lookup": {
+                    "sourceKey": "iso.currency"
+                  }
+                },
+                {
+                  "key": "capture_intended_use",
+                  "valueKey": "intendedUse",
+                  "label": "Intended use",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "supplier_payment",
+                        "label": "Supplier payment"
+                      },
+                      {
+                        "value": "customer_refund",
+                        "label": "Customer refund"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "capture_notes",
+                  "valueKey": "notes",
+                  "label": "Notes",
+                  "control": "input",
+                  "widget": "textarea",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "supporting_documents",
+              "fields": [
+                {
+                  "key": "capture_bank_documents",
+                  "valueKey": "supportingDocuments",
+                  "label": "Supporting documents",
+                  "control": "repeatableGroup",
+                  "itemSurfaceKey": "capture_document_bank",
+                  "minItems": 0,
+                  "maxItems": 10
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "capture_document_identifier",
+          "title": "Supporting document",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "capture_identifier_document_type",
+                  "valueKey": "documentType",
+                  "label": "Document type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "commercial_registration",
+                        "label": "commercial registration"
+                      },
+                      {
+                        "value": "registry_extract",
+                        "label": "registry extract"
+                      },
+                      {
+                        "value": "registration_certificate",
+                        "label": "registration certificate"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "capture_identifier_attachment_id",
+                  "valueKey": "attachmentId",
+                  "label": "File",
+                  "control": "input",
+                  "widget": "registered",
+                  "required": true
+                },
+                {
+                  "key": "capture_identifier_issued_on",
+                  "valueKey": "issuedOn",
+                  "label": "Issue date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "capture_identifier_expires_on",
+                  "valueKey": "expiresOn",
+                  "label": "Expiry date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "capture_document_bank",
+          "title": "Supporting document",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "capture_bank_document_type",
+                  "valueKey": "documentType",
+                  "label": "Document type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "bank_confirmation",
+                        "label": "bank confirmation"
+                      },
+                      {
+                        "value": "account_certificate",
+                        "label": "account certificate"
+                      },
+                      {
+                        "value": "beneficiary_authorization",
+                        "label": "beneficiary authorization"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "capture_bank_attachment_id",
+                  "valueKey": "attachmentId",
+                  "label": "File",
+                  "control": "input",
+                  "widget": "registered",
+                  "required": true
+                },
+                {
+                  "key": "capture_bank_issued_on",
+                  "valueKey": "issuedOn",
+                  "label": "Issue date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "capture_bank_expires_on",
+                  "valueKey": "expiresOn",
+                  "label": "Expiry date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "partner_channel_intake",
+          "title": "Communication channel",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "channel_channel_type",
+                  "valueKey": "channelType",
+                  "label": "Channel type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "defaultValue": "email",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "email",
+                        "label": "Email"
+                      },
+                      {
+                        "value": "phone",
+                        "label": "Phone"
+                      },
+                      {
+                        "value": "sms",
+                        "label": "SMS"
+                      },
+                      {
+                        "value": "whatsapp",
+                        "label": "WhatsApp"
+                      },
+                      {
+                        "value": "website",
+                        "label": "Website"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "channel_purpose",
+                  "valueKey": "purpose",
+                  "label": "Purpose",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "defaultValue": "default",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "default",
+                        "label": "Default"
+                      },
+                      {
+                        "value": "correspondence",
+                        "label": "Correspondence"
+                      },
+                      {
+                        "value": "procurement",
+                        "label": "Procurement"
+                      },
+                      {
+                        "value": "notification",
+                        "label": "Notification"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "channel_value",
+                  "valueKey": "value",
+                  "label": "Contact detail",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "channel_is_primary",
+                  "valueKey": "isPrimary",
+                  "label": "Primary channel",
+                  "control": "input",
+                  "widget": "checkbox",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "capture_document_certification",
+          "title": "Supporting document",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "capture_certification_document_type",
+                  "valueKey": "documentType",
+                  "label": "Document type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "certificate",
+                        "label": "certificate"
+                      },
+                      {
+                        "value": "annex",
+                        "label": "annex"
+                      },
+                      {
+                        "value": "renewal",
+                        "label": "renewal"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "capture_certification_attachment_id",
+                  "valueKey": "attachmentId",
+                  "label": "File",
+                  "control": "input",
+                  "widget": "registered",
+                  "required": true
+                },
+                {
+                  "key": "capture_certification_issued_on",
+                  "valueKey": "issuedOn",
+                  "label": "Issue date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "capture_certification_expires_on",
+                  "valueKey": "expiresOn",
+                  "label": "Expiry date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "intake_partner",
+          "title": "Partner",
+          "sections": [
+            {
+              "key": "role",
+              "fields": [
+                {
+                  "key": "requested_role",
+                  "label": "Requested role",
+                  "control": "choiceCards",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "key": "partner_search",
+              "fields": [
+                {
+                  "key": "partner_lookup",
+                  "label": "Partner name or code",
+                  "control": "entityLookup",
+                  "required": false,
+                  "lookup": {
+                    "mode": "choose",
+                    "selectionMode": "single",
+                    "recordAccess": "readOnly",
+                    "presentation": {
+                      "viewType": "full",
+                      "fullViewHost": "inline"
+                    },
+                    "creation": {
+                      "showIn": [
+                        "full"
+                      ],
+                      "actionKey": "request_partner",
+                      "label": "New partner request"
+                    },
+                    "display": {
+                      "settingsShowIn": [
+                        "full"
+                      ],
+                      "defaults": {
+                        "layout": "table",
+                        "density": "compact",
+                        "searchBehavior": "instant"
+                      },
+                      "userOverrides": [
+                        "layout",
+                        "density",
+                        "searchBehavior"
+                      ],
+                      "preferenceScope": "surface"
+                    },
+                    "views": {
+                      "defaultViewKey": "system",
+                      "allowSwitching": true,
+                      "usePersonalDefault": false
+                    },
+                    "recent": {
+                      "enabled": false,
+                      "limit": 5
+                    },
+                    "messages": {
+                      "emptyDescription": "You can request a new partner below.",
+                      "emptyTitle": "No business partners to display",
+                      "noMatchesDescription": "Try another search term or adjust your filters.",
+                      "noMatchesTitle": "No matching business partners found",
+                      "selectMultiple": "Use selected partners"
+                    },
+                    "targetEntity": "business_partner",
+                    "adapterKey": "business_partner.intake",
+                    "searchLabel": "Search partners",
+                    "emptyMessage": "No matching business partners found.",
+                    "resultsMessage": "Select an existing partner to continue.",
+                    "moreMessage": "More matches are available. Refine your search or open full view.",
+                    "result": {
+                      "titleFields": [
+                        "name",
+                        "code"
+                      ],
+                      "detailFields": [
+                        "code"
+                      ]
+                    },
+                    "actions": [
+                      {
+                        "key": "select",
+                        "kind": "select",
+                        "label": "Use selected partner"
+                      },
+                      {
+                        "key": "create_supplier",
+                        "kind": "create",
+                        "label": "Onboard new supplier",
+                        "visibleWhen": {
+                          "field": "requested_role",
+                          "operator": "equals",
+                          "value": "supplier"
+                        }
+                      },
+                      {
+                        "key": "create_customer",
+                        "kind": "create",
+                        "label": "Onboard new customer",
+                        "visibleWhen": {
+                          "field": "requested_role",
+                          "operator": "equals",
+                          "value": "customer"
+                        }
+                      }
+                    ]
+                  },
+                  "visibleWhen": {
+                    "field": "requested_role",
+                    "operator": "present"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "profile_alias",
+          "title": "Alias",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "alias_alias_name",
+                  "valueKey": "aliasName",
+                  "label": "Alias name",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "alias_alias_kind",
+                  "valueKey": "aliasKind",
+                  "label": "Name type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "defaultValue": "trading",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "trading",
+                        "label": "Trading"
+                      },
+                      {
+                        "value": "former",
+                        "label": "Former"
+                      },
+                      {
+                        "value": "legal",
+                        "label": "Legal"
+                      },
+                      {
+                        "value": "search",
+                        "label": "Search"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "alias_language_code",
+                  "valueKey": "languageCode",
+                  "label": "Language code",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "alias_country_code",
+                  "valueKey": "countryCode",
+                  "label": "Country",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "lookup": {
+                    "sourceKey": "iso.country",
+                    "recent": {
+                      "enabled": true,
+                      "limit": 5,
+                      "persistence": "server",
+                      "scope": "referenceSource",
+                      "retentionDays": 90
+                    }
+                  }
+                },
+                {
+                  "key": "alias_effective_from",
+                  "valueKey": "effectiveFrom",
+                  "label": "Valid from",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "alias_effective_until",
+                  "valueKey": "effectiveUntil",
+                  "label": "Valid until",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "alias_is_primary",
+                  "valueKey": "isPrimary",
+                  "label": "Primary",
+                  "control": "input",
+                  "widget": "checkbox",
+                  "required": false,
+                  "defaultValue": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "profile_governance",
+          "title": "Governance member",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "governance_relation_type_code",
+                  "valueKey": "relationTypeCode",
+                  "label": "Governance role",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "governance_member_name",
+                  "valueKey": "memberName",
+                  "label": "Member name",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "governance_member_type",
+                  "valueKey": "memberType",
+                  "label": "Member type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "defaultValue": "individual",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "individual",
+                        "label": "Individual"
+                      },
+                      {
+                        "value": "organization",
+                        "label": "Organization"
+                      },
+                      {
+                        "value": "trust",
+                        "label": "Trust"
+                      },
+                      {
+                        "value": "public_float",
+                        "label": "Public float"
+                      },
+                      {
+                        "value": "other",
+                        "label": "Other"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": "governance_member_business_partner_id",
+                  "valueKey": "memberBusinessPartnerId",
+                  "label": "Linked organization",
+                  "control": "input",
+                  "widget": "registered",
+                  "required": false,
+                  "visibleWhen": {
+                    "field": "governance_member_type",
+                    "operator": "equals",
+                    "value": "organization"
+                  }
+                },
+                {
+                  "key": "governance_member_country_code",
+                  "valueKey": "memberCountryCode",
+                  "label": "Member country",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "lookup": {
+                    "sourceKey": "iso.country",
+                    "recent": {
+                      "enabled": true,
+                      "limit": 5,
+                      "persistence": "server",
+                      "scope": "referenceSource",
+                      "retentionDays": 90
+                    }
+                  }
+                },
+                {
+                  "key": "governance_business_title",
+                  "valueKey": "businessTitle",
+                  "label": "Business title",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false
+                },
+                {
+                  "key": "governance_ownership_pct",
+                  "valueKey": "ownershipPct",
+                  "label": "Ownership %",
+                  "control": "input",
+                  "widget": "decimal",
+                  "required": false
+                },
+                {
+                  "key": "governance_voting_pct",
+                  "valueKey": "votingPct",
+                  "label": "Voting %",
+                  "control": "input",
+                  "widget": "decimal",
+                  "required": false
+                },
+                {
+                  "key": "governance_beneficial_ownership_pct",
+                  "valueKey": "beneficialOwnershipPct",
+                  "label": "Beneficial ownership %",
+                  "control": "input",
+                  "widget": "decimal",
+                  "required": false
+                },
+                {
+                  "key": "governance_appointed_date",
+                  "valueKey": "appointedDate",
+                  "label": "Appointed date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "governance_end_of_term",
+                  "valueKey": "endOfTerm",
+                  "label": "End of term",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "governance_notes",
+                  "valueKey": "notes",
+                  "label": "Notes",
+                  "control": "input",
+                  "widget": "textarea",
+                  "required": false
+                }
+              ]
+            },
+            {
+              "key": "supporting_documents",
+              "fields": [
+                {
+                  "key": "capture_governance_documents",
+                  "valueKey": "supportingDocuments",
+                  "label": "Supporting documents",
+                  "control": "repeatableGroup",
+                  "itemSurfaceKey": "capture_document_governance",
+                  "minItems": 0,
+                  "maxItems": 10
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "profile_relationship",
+          "title": "Partner relationship",
+          "sections": [
+            {
+              "key": "fields",
+              "fields": [
+                {
+                  "key": "relationship_target_business_partner_id",
+                  "valueKey": "targetBusinessPartnerId",
+                  "label": "Related partner",
+                  "control": "input",
+                  "widget": "registered",
+                  "required": true
+                },
+                {
+                  "key": "relationship_relationship_type_code",
+                  "valueKey": "relationshipTypeCode",
+                  "label": "Relationship type",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true
+                },
+                {
+                  "key": "relationship_country_code",
+                  "valueKey": "countryCode",
+                  "label": "Country",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "lookup": {
+                    "sourceKey": "iso.country",
+                    "recent": {
+                      "enabled": true,
+                      "limit": 5,
+                      "persistence": "server",
+                      "scope": "referenceSource",
+                      "retentionDays": 90
+                    }
+                  }
+                },
+                {
+                  "key": "relationship_effective_from",
+                  "valueKey": "effectiveFrom",
+                  "label": "Valid from",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "relationship_effective_until",
+                  "valueKey": "effectiveUntil",
+                  "label": "Valid until",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false
+                },
+                {
+                  "key": "relationship_notes",
+                  "valueKey": "notes",
+                  "label": "Notes",
+                  "control": "input",
+                  "widget": "textarea",
+                  "required": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "intake_details",
+          "title": "New supplier onboarding request",
+          "sections": [
+            {
+              "key": "scope",
+              "fields": [
+                {
+                  "key": "details_operating_organization_id",
+                  "valueKey": "operatingOrganizationId",
+                  "label": "Operating organization",
+                  "control": "input",
+                  "widget": "registered",
+                  "required": true,
+                  "payload": {
+                    "target": "context",
+                    "path": "operatingOrganizationId"
+                  }
+                },
+                {
+                  "key": "details_profile_mode",
+                  "valueKey": "profileMode",
+                  "label": "Profile view",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "defaultValue": "standard",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "standard",
+                        "label": "Standard request"
+                      },
+                      {
+                        "value": "full",
+                        "label": "Full profile"
+                      }
+                    ]
+                  },
+                  "payload": {
+                    "target": "request_only",
+                    "path": "profileMode"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "identity",
+              "fields": [
+                {
+                  "key": "details_name",
+                  "valueKey": "name",
+                  "label": "Registered name",
+                  "control": "input",
+                  "widget": "text",
+                  "required": true,
+                  "payload": {
+                    "target": "canonical",
+                    "path": "name"
+                  }
+                },
+                {
+                  "key": "details_registration_country_code",
+                  "valueKey": "registrationCountryCode",
+                  "label": "Registration country",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "lookup": {
+                    "sourceKey": "iso.country",
+                    "recent": {
+                      "enabled": true,
+                      "limit": 5,
+                      "persistence": "server",
+                      "scope": "referenceSource",
+                      "retentionDays": 90
+                    }
+                  },
+                  "payload": {
+                    "target": "canonical",
+                    "path": "registrationCountryCode"
+                  }
+                },
+                {
+                  "key": "details_ownership_class",
+                  "valueKey": "ownershipClass",
+                  "label": "Ownership",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "defaultValue": "external",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "external",
+                        "label": "External"
+                      },
+                      {
+                        "value": "internal",
+                        "label": "Internal"
+                      }
+                    ]
+                  },
+                  "payload": {
+                    "target": "canonical",
+                    "path": "ownershipClass"
+                  }
+                },
+                {
+                  "key": "details_legal_classification",
+                  "valueKey": "legalClassification",
+                  "label": "Legal classification",
+                  "control": "input",
+                  "widget": "select",
+                  "required": false,
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "government",
+                        "label": "Government"
+                      },
+                      {
+                        "value": "nonprofit",
+                        "label": "Nonprofit"
+                      },
+                      {
+                        "value": "sole_proprietor",
+                        "label": "Sole proprietor"
+                      }
+                    ]
+                  },
+                  "payload": {
+                    "target": "canonical",
+                    "path": "legalClassification"
+                  }
+                },
+                {
+                  "key": "details_supplier_type",
+                  "valueKey": "supplierType",
+                  "label": "Supplier type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "defaultValue": "general",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "general",
+                        "label": "General"
+                      },
+                      {
+                        "value": "strategic",
+                        "label": "Strategic"
+                      },
+                      {
+                        "value": "service",
+                        "label": "Service"
+                      },
+                      {
+                        "value": "carrier",
+                        "label": "Carrier"
+                      },
+                      {
+                        "value": "intercompany",
+                        "label": "Intercompany"
+                      }
+                    ]
+                  },
+                  "payload": {
+                    "target": "canonical",
+                    "path": "supplierType"
+                  }
+                },
+                {
+                  "key": "details_qualification_type_code",
+                  "valueKey": "qualificationTypeCode",
+                  "label": "Qualification type",
+                  "control": "input",
+                  "widget": "select",
+                  "required": true,
+                  "defaultValue": "compliance",
+                  "lookup": {
+                    "options": [
+                      {
+                        "value": "compliance",
+                        "label": "Compliance"
+                      },
+                      {
+                        "value": "basic",
+                        "label": "Basic"
+                      }
+                    ]
+                  },
+                  "payload": {
+                    "target": "canonical",
+                    "path": "qualificationTypeCode"
+                  },
+                  "visibleWhen": {
+                    "field": "details_ownership_class",
+                    "operator": "equals",
+                    "value": "external"
+                  }
+                },
+                {
+                  "key": "details_legal_form",
+                  "valueKey": "legalForm",
+                  "label": "Legal form",
+                  "control": "input",
+                  "widget": "text",
+                  "required": false,
+                  "payload": {
+                    "target": "canonical",
+                    "path": "legalForm"
+                  }
+                },
+                {
+                  "key": "details_website_url",
+                  "valueKey": "websiteUrl",
+                  "label": "Website",
+                  "control": "input",
+                  "widget": "url",
+                  "required": false,
+                  "payload": {
+                    "target": "canonical",
+                    "path": "websiteUrl"
+                  }
+                },
+                {
+                  "key": "details_description",
+                  "valueKey": "description",
+                  "label": "Description",
+                  "control": "input",
+                  "widget": "textarea",
+                  "required": false,
+                  "payload": {
+                    "target": "canonical",
+                    "path": "description"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "addresses",
+              "fields": [
+                {
+                  "key": "details_addresses",
+                  "valueKey": "addresses",
+                  "label": "Supplier addresses",
+                  "control": "repeatableGroup",
+                  "itemSurfaceKey": "partner_address_intake",
+                  "minItems": 1,
+                  "maxItems": 10
+                }
+              ]
+            },
+            {
+              "key": "contacts",
+              "fields": [
+                {
+                  "key": "details_contacts",
+                  "valueKey": "contacts",
+                  "label": "Supplier contacts",
+                  "control": "repeatableGroup",
+                  "itemSurfaceKey": "partner_contact_intake",
+                  "minItems": 1,
+                  "maxItems": 10
+                }
+              ]
+            },
+            {
+              "key": "profile_identity",
+              "fields": [
+                {
+                  "key": "profile_incorporation_date",
+                  "valueKey": "incorporationDate",
+                  "label": "Incorporation date",
+                  "control": "input",
+                  "widget": "date",
+                  "required": false,
+                  "payload": {
+                    "target": "canonical",
+                    "path": "incorporationDate"
+                  },
+                  "visibleWhen": {
+                    "field": "details_profile_mode",
+                    "operator": "equals",
+                    "value": "full"
+                  }
+                }
+              ]
+            },
+            {
+              "key": "profile_aliases",
+              "fields": [
+                {
+                  "key": "details_aliases",
+                  "valueKey": "aliases",
+                  "label": "Alternate names",
+                  "control": "repeatableGroup",
+                  "visibleWhen": {
+                    "field": "details_profile_mode",
+                    "operator": "equals",
+                    "value": "full"
+                  },
+                  "itemSurfaceKey": "profile_alias",
+                  "minItems": 0,
+                  "maxItems": 20
+                }
+              ]
+            },
+            {
+              "key": "profile_identifiers",
+              "fields": [
+                {
+                  "key": "details_identifiers",
+                  "valueKey": "identifiers",
+                  "label": "Business registration identifiers",
+                  "control": "repeatableGroup",
+                  "visibleWhen": {
+                    "field": "details_profile_mode",
+                    "operator": "equals",
+                    "value": "full"
+                  },
+                  "itemSurfaceKey": "profile_identifier",
+                  "minItems": 0,
+                  "maxItems": 20
+                }
+              ]
+            },
+            {
+              "key": "profile_tax_registrations",
+              "fields": [
+                {
+                  "key": "details_tax_registrations",
+                  "valueKey": "taxRegistrations",
+                  "label": "Tax registrations",
+                  "control": "repeatableGroup",
+                  "visibleWhen": {
+                    "field": "details_profile_mode",
+                    "operator": "equals",
+                    "value": "full"
+                  },
+                  "itemSurfaceKey": "profile_tax",
+                  "minItems": 0,
+                  "maxItems": 20
+                }
+              ]
+            },
+            {
+              "key": "profile_classifications",
+              "fields": [
+                {
+                  "key": "details_classifications",
+                  "valueKey": "classifications",
+                  "label": "Commodity and industry classifications",
+                  "control": "repeatableGroup",
+                  "visibleWhen": {
+                    "field": "details_profile_mode",
+                    "operator": "equals",
+                    "value": "full"
+                  },
+                  "itemSurfaceKey": "profile_classification",
+                  "minItems": 0,
+                  "maxItems": 20
+                }
+              ]
+            },
+            {
+              "key": "profile_governance_relations",
+              "fields": [
+                {
+                  "key": "details_governance_relations",
+                  "valueKey": "governanceRelations",
+                  "label": "Governance and ownership",
+                  "control": "repeatableGroup",
+                  "visibleWhen": {
+                    "field": "details_profile_mode",
+                    "operator": "equals",
+                    "value": "full"
+                  },
+                  "itemSurfaceKey": "profile_governance",
+                  "minItems": 0,
+                  "maxItems": 20
+                }
+              ]
+            },
+            {
+              "key": "profile_relationships",
+              "fields": [
+                {
+                  "key": "details_relationships",
+                  "valueKey": "relationships",
+                  "label": "Partner relationships",
+                  "control": "repeatableGroup",
+                  "visibleWhen": {
+                    "field": "details_profile_mode",
+                    "operator": "equals",
+                    "value": "full"
+                  },
+                  "itemSurfaceKey": "profile_relationship",
+                  "minItems": 0,
+                  "maxItems": 20
+                }
+              ]
+            },
+            {
+              "key": "profile_certifications",
+              "fields": [
+                {
+                  "key": "details_certifications",
+                  "valueKey": "certifications",
+                  "label": "Certifications",
+                  "control": "repeatableGroup",
+                  "visibleWhen": {
+                    "field": "details_profile_mode",
+                    "operator": "equals",
+                    "value": "full"
+                  },
+                  "itemSurfaceKey": "profile_certification",
+                  "minItems": 0,
+                  "maxItems": 20
+                }
+              ]
+            },
+            {
+              "key": "request_bank_accounts",
+              "fields": [
+                {
+                  "key": "capture_bank_accounts",
+                  "valueKey": "bankAccounts",
+                  "label": "Bank accounts",
+                  "control": "repeatableGroup",
+                  "itemSurfaceKey": "profile_bank",
+                  "minItems": 0,
+                  "maxItems": 20
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "entityCode": "business_partner_request",
+      "changeSetId": "a5ffb5d6-b338-4b14-9ea0-37e0e7f1c472",
+      "revision": 1,
+      "graphHash": "e6cfa1a5eda2b7667c19d35d5bd43dd433725829f3ed7c661d7785640de6dcda",
+      "artifactHash": "e4d50fadd29b3788e1aabe4a895e38595462324dde6a3ebb9f5743bc91b687d9",
+      "operations": {
+        "discover": {
+          "code": "discover",
+          "permissionCode": "neon.relationship.entity_case.read"
+        },
+        "read": {
+          "code": "read",
+          "permissionCode": "neon.relationship.entity_case.read"
+        }
+      }
+    }
+  ],
+  "caseContracts": [
+    {
+      "id": "fec7fec0-76e1-4096-8dd2-3511f212d6e4",
+      "status": "published",
+      "tenant_id": "44444444-4444-4444-8444-444444444444",
+      "release_no": 1,
+      "entity_code": "master.business_partner",
+      "contract_json": {
+        "type": "object",
+        "required": [
+          "businessPartnerCode"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 320,
+            "minLength": 1
+          },
+          "roleCode": {
+            "type": "string"
+          },
+          "legalForm": {
+            "type": "string"
+          },
+          "preflight": {
+            "type": "object"
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "websiteUrl": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "priorStatus": {
+            "type": "string"
+          },
+          "currencyCode": {
+            "type": "string"
+          },
+          "customerType": {
+            "type": "string"
+          },
+          "dependencies": {
+            "type": "array"
+          },
+          "supplierType": {
+            "type": "string"
+          },
+          "tenantFields": {
+            "type": "object"
+          },
+          "companyCodeId": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "paymentTermId": {
+            "type": "string"
+          },
+          "requestedRole": {
+            "enum": [
+              "supplier",
+              "customer"
+            ],
+            "type": "string"
+          },
+          "effectiveUntil": {
+            "type": "string"
+          },
+          "ownershipClass": {
+            "enum": [
+              "internal",
+              "external"
+            ],
+            "type": "string"
+          },
+          "partnerCategory": {
+            "enum": [
+              "organization"
+            ],
+            "type": "string"
+          },
+          "priorBankLinkId": {
+            "type": "string"
+          },
+          "bankProjectionId": {
+            "type": "string"
+          },
+          "incorporationDate": {
+            "type": "string"
+          },
+          "statementCycleCode": {
+            "type": "string"
+          },
+          "businessPartnerCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "commodityCategoryId": {
+            "type": "string"
+          },
+          "legalClassification": {
+            "type": "string"
+          },
+          "preferenceRationale": {
+            "type": "string"
+          },
+          "registrationChannel": {
+            "type": "string"
+          },
+          "defaultDimensionSetId": {
+            "type": "string"
+          },
+          "qualificationTypeCode": {
+            "type": "string"
+          },
+          "relationshipProposals": {
+            "type": "object"
+          },
+          "expectedBankSnapshotId": {
+            "type": "string"
+          },
+          "bankDisclosureReceiptId": {
+            "type": "string"
+          },
+          "operatingOrganizationId": {
+            "type": "string"
+          },
+          "registrationCountryCode": {
+            "type": "string"
+          },
+          "supplierCompanyProfileId": {
+            "type": "string"
+          },
+          "bankDisclosurePurposeCode": {
+            "type": "string"
+          },
+          "defaultAccountingProfileId": {
+            "type": "string"
+          },
+          "meshRegistrationExchangeId": {
+            "type": "string"
+          },
+          "meshRegistrationEvidenceHash": {
+            "type": "string"
+          },
+          "preferredRemittanceBankLinkId": {
+            "type": "string"
+          },
+          "expectedBusinessPartnerVersion": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "entity_contract_hash": "8479bcda43aab1f93588e74145fdf6ca6483e2cee58dd492e56d62953d099b60"
+    }
+  ],
+  "caseDescriptors": [
+    {
+      "id": "07800fdb-e9a5-4c2b-be61-fad8e7ed0690",
+      "status": "active",
+      "tenant_id": "44444444-4444-4444-8444-444444444444",
+      "compiled_hash": "935f2a4d661e1ca320886186b529d9166ec811fc41e5d20d221fd7098febea10",
+      "descriptor_kind": "entity_case_runtime"
+    }
+  ],
+  "cycles": [
+    {
+      "code": "BP_SUPPLIER_ONBOARDING",
+      "tasks": [
+        {
+          "id": "01a08f7f-41db-7ebe-a794-1a39885067cd",
+          "code": "INVITATION",
+          "name": "Invitation",
+          "phaseId": "01a08f7f-41da-7833-84bf-19f4ca4257d6",
+          "sortOrder": 10,
+          "categoryId": "01a08f7f-41da-7342-807d-bf36ba00b661",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner_invitation.supplier.accepted",
+              "business_partner.case.created"
+            ]
+          },
+          "completionMode": "system",
+          "systemCheckHandler": "business_partner_onboarding_event"
+        },
+        {
+          "id": "01a08f7f-41db-7fa6-8c99-3cc8e3fc5ec0",
+          "code": "REGISTRATION",
+          "name": "Registration",
+          "phaseId": "01a08f7f-41da-7833-84bf-19f4ca4257d6",
+          "sortOrder": 20,
+          "categoryId": "01a08f7f-41da-7342-807d-bf36ba00b661",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner.case.submitted"
+            ]
+          },
+          "completionMode": "system",
+          "systemCheckHandler": "business_partner_onboarding_event"
+        },
+        {
+          "id": "01a08f7f-41dc-7fff-b326-ea6453d72044",
+          "code": "DUPLICATE_REVIEW",
+          "name": "Duplicate review",
+          "phaseId": "01a08f7f-41da-7833-84bf-19f4ca4257d6",
+          "sortOrder": 30,
+          "categoryId": "01a08f7f-41da-7342-807d-bf36ba00b661",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner.case.submitted"
+            ],
+            "blockWhen": "duplicateSummary.blocking"
+          },
+          "completionMode": "hybrid",
+          "systemCheckHandler": "business_partner_duplicate_review"
+        },
+        {
+          "id": "01a08f7f-41dc-79ee-b310-0f8993483670",
+          "code": "QUALIFICATION",
+          "name": "Qualification",
+          "phaseId": "01a08f7f-41da-7833-84bf-19f4ca4257d6",
+          "sortOrder": 40,
+          "categoryId": "01a08f7f-41da-7342-807d-bf36ba00b661",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner.case.approved"
+            ]
+          },
+          "completionMode": "system",
+          "systemCheckHandler": "business_partner_onboarding_event"
+        }
+      ],
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "revision_id": "01a08f7f-41de-7e16-9f1f-d047879d3742",
+      "cycle_type_id": "01a08f7f-41d9-780e-972e-5369723e642b",
+      "template_hash": "b317e384070e2696ec07b152f7503fcb44d0bccd529d5f6929147002152e9cac",
+      "revision_number": 1
+    },
+    {
+      "code": "BP_SUPPLIER_ONBOARDING",
+      "tasks": [
+        {
+          "id": "01a08f7f-41db-7ebe-a794-1a39885067cd",
+          "code": "INVITATION",
+          "name": "Invitation",
+          "phaseId": "01a08f7f-41da-7833-84bf-19f4ca4257d6",
+          "sortOrder": 10,
+          "categoryId": "01a08f7f-41da-7342-807d-bf36ba00b661",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner_invitation.supplier.accepted",
+              "business_partner.case.created"
+            ]
+          },
+          "completionMode": "system",
+          "systemCheckHandler": "business_partner_onboarding_event"
+        },
+        {
+          "id": "01a08f7f-41db-7fa6-8c99-3cc8e3fc5ec0",
+          "code": "REGISTRATION",
+          "name": "Registration",
+          "phaseId": "01a08f7f-41da-7833-84bf-19f4ca4257d6",
+          "sortOrder": 20,
+          "categoryId": "01a08f7f-41da-7342-807d-bf36ba00b661",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner.case.submitted"
+            ]
+          },
+          "completionMode": "system",
+          "systemCheckHandler": "business_partner_onboarding_event"
+        },
+        {
+          "id": "01a08f7f-41dc-7fff-b326-ea6453d72044",
+          "code": "DUPLICATE_REVIEW",
+          "name": "Duplicate review",
+          "phaseId": "01a08f7f-41da-7833-84bf-19f4ca4257d6",
+          "sortOrder": 30,
+          "categoryId": "01a08f7f-41da-7342-807d-bf36ba00b661",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner.case.submitted"
+            ],
+            "blockWhen": "duplicateSummary.blocking"
+          },
+          "completionMode": "hybrid",
+          "systemCheckHandler": "business_partner_duplicate_review"
+        },
+        {
+          "id": "01a08f7f-41dc-79ee-b310-0f8993483670",
+          "code": "QUALIFICATION",
+          "name": "Qualification",
+          "phaseId": "01a08f7f-41da-7833-84bf-19f4ca4257d6",
+          "sortOrder": 40,
+          "categoryId": "01a08f7f-41da-7342-807d-bf36ba00b661",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner.case.approved"
+            ]
+          },
+          "completionMode": "system",
+          "systemCheckHandler": "business_partner_onboarding_event"
+        },
+        {
+          "id": "01a08f7f-41e0-72ee-b5e6-510cdd406f37",
+          "code": "BANK_REGISTRATION",
+          "name": "Protected bank registration",
+          "phaseId": "01a08f7f-41da-7833-84bf-19f4ca4257d6",
+          "sortOrder": 50,
+          "categoryId": "01a08f7f-41da-7342-807d-bf36ba00b661",
+          "entityCode": "master.bank_account",
+          "isWaivable": false,
+          "isMandatory": true,
+          "completionMode": "system"
+        },
+        {
+          "id": "01a08f7f-41e0-7c1f-b204-27ffa6d90de3",
+          "code": "BANK_VERIFICATION",
+          "name": "Independent bank verification",
+          "phaseId": "01a08f7f-41da-7833-84bf-19f4ca4257d6",
+          "sortOrder": 60,
+          "categoryId": "01a08f7f-41da-7342-807d-bf36ba00b661",
+          "entityCode": "master.bank_account",
+          "isWaivable": false,
+          "isMandatory": true,
+          "completionMode": "system"
+        },
+        {
+          "id": "01a08f7f-41e1-7b6a-a079-f08eed282399",
+          "code": "SUPPLIER_READINESS",
+          "name": "Supplier readiness",
+          "phaseId": "01a08f7f-41da-7833-84bf-19f4ca4257d6",
+          "sortOrder": 70,
+          "categoryId": "01a08f7f-41da-7342-807d-bf36ba00b661",
+          "entityCode": "master.supplier",
+          "isWaivable": false,
+          "isMandatory": true,
+          "completionMode": "system"
+        },
+        {
+          "id": "01a08f7f-41e1-7abd-9a82-fb09b1542c9f",
+          "code": "ACTIVATION",
+          "name": "Supplier activation",
+          "phaseId": "01a08f7f-41da-7833-84bf-19f4ca4257d6",
+          "sortOrder": 80,
+          "categoryId": "01a08f7f-41da-7342-807d-bf36ba00b661",
+          "entityCode": "master.supplier",
+          "isWaivable": false,
+          "isMandatory": true,
+          "completionMode": "system"
+        }
+      ],
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "revision_id": "01a08f7f-41e2-7c64-89a6-351adc1540b8",
+      "cycle_type_id": "01a08f7f-41d9-780e-972e-5369723e642b",
+      "template_hash": "e84929f47bd963fbccfabc4255110096e2e272a7245cdbe42829c6bd1f5af9c0",
+      "revision_number": 2
+    },
+    {
+      "code": "BP_SUPPLIER_ONBOARDING",
+      "tasks": [
+        {
+          "id": "01a09ddf-3a3c-7023-a108-a2c030a7ef7f",
+          "code": "INVITATION",
+          "name": "Invitation",
+          "phaseId": "01a09ddf-3a3b-7d38-9a92-135758e67541",
+          "sortOrder": 10,
+          "categoryId": "01a09ddf-3a3c-7bd4-8816-82cd221221a4",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner_invitation.supplier.accepted",
+              "business_partner.case.created"
+            ]
+          },
+          "completionMode": "system",
+          "systemCheckHandler": "business_partner_onboarding_event"
+        },
+        {
+          "id": "01a09ddf-3a3d-7f33-b3ac-72ef5978d5e1",
+          "code": "REGISTRATION",
+          "name": "Registration",
+          "phaseId": "01a09ddf-3a3b-7d38-9a92-135758e67541",
+          "sortOrder": 20,
+          "categoryId": "01a09ddf-3a3c-7bd4-8816-82cd221221a4",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner.case.submitted"
+            ]
+          },
+          "completionMode": "system",
+          "systemCheckHandler": "business_partner_onboarding_event"
+        },
+        {
+          "id": "01a09ddf-3a3e-72df-a66f-b9cdef8b77d7",
+          "code": "DUPLICATE_REVIEW",
+          "name": "Duplicate review",
+          "phaseId": "01a09ddf-3a3b-7d38-9a92-135758e67541",
+          "sortOrder": 30,
+          "categoryId": "01a09ddf-3a3c-7bd4-8816-82cd221221a4",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner.case.submitted"
+            ],
+            "blockWhen": "duplicateSummary.blocking"
+          },
+          "completionMode": "hybrid",
+          "systemCheckHandler": "business_partner_duplicate_review"
+        },
+        {
+          "id": "01a09ddf-3a3e-7584-ac82-d72c9a19f081",
+          "code": "QUALIFICATION",
+          "name": "Qualification",
+          "phaseId": "01a09ddf-3a3b-7d38-9a92-135758e67541",
+          "sortOrder": 40,
+          "categoryId": "01a09ddf-3a3c-7bd4-8816-82cd221221a4",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner.case.approved"
+            ]
+          },
+          "completionMode": "system",
+          "systemCheckHandler": "business_partner_onboarding_event"
+        }
+      ],
+      "tenant_id": "44444444-4444-4444-8444-444444444444",
+      "revision_id": "01a09ddf-3a40-7e8d-8353-b1f0a3b805d2",
+      "cycle_type_id": "01a09ddf-3a3b-7b7f-88ed-7ef68b90ac22",
+      "template_hash": "61c8b42b8a628a570c4033cc2133e02447a0bd85caab07979556a27c23d2831e",
+      "revision_number": 1
+    },
+    {
+      "code": "BP_SUPPLIER_ONBOARDING",
+      "tasks": [
+        {
+          "id": "01a09ddf-3a3c-7023-a108-a2c030a7ef7f",
+          "code": "INVITATION",
+          "name": "Invitation",
+          "phaseId": "01a09ddf-3a3b-7d38-9a92-135758e67541",
+          "sortOrder": 10,
+          "categoryId": "01a09ddf-3a3c-7bd4-8816-82cd221221a4",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner_invitation.supplier.accepted",
+              "business_partner.case.created"
+            ]
+          },
+          "completionMode": "system",
+          "systemCheckHandler": "business_partner_onboarding_event"
+        },
+        {
+          "id": "01a09ddf-3a3d-7f33-b3ac-72ef5978d5e1",
+          "code": "REGISTRATION",
+          "name": "Registration",
+          "phaseId": "01a09ddf-3a3b-7d38-9a92-135758e67541",
+          "sortOrder": 20,
+          "categoryId": "01a09ddf-3a3c-7bd4-8816-82cd221221a4",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner.case.submitted"
+            ]
+          },
+          "completionMode": "system",
+          "systemCheckHandler": "business_partner_onboarding_event"
+        },
+        {
+          "id": "01a09ddf-3a3e-72df-a66f-b9cdef8b77d7",
+          "code": "DUPLICATE_REVIEW",
+          "name": "Duplicate review",
+          "phaseId": "01a09ddf-3a3b-7d38-9a92-135758e67541",
+          "sortOrder": 30,
+          "categoryId": "01a09ddf-3a3c-7bd4-8816-82cd221221a4",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner.case.submitted"
+            ],
+            "blockWhen": "duplicateSummary.blocking"
+          },
+          "completionMode": "hybrid",
+          "systemCheckHandler": "business_partner_duplicate_review"
+        },
+        {
+          "id": "01a09ddf-3a3e-7584-ac82-d72c9a19f081",
+          "code": "QUALIFICATION",
+          "name": "Qualification",
+          "phaseId": "01a09ddf-3a3b-7d38-9a92-135758e67541",
+          "sortOrder": 40,
+          "categoryId": "01a09ddf-3a3c-7bd4-8816-82cd221221a4",
+          "entityCode": "master.business_partner",
+          "isWaivable": false,
+          "isMandatory": true,
+          "applicability": {
+            "events": [
+              "business_partner.case.approved"
+            ]
+          },
+          "completionMode": "system",
+          "systemCheckHandler": "business_partner_onboarding_event"
+        },
+        {
+          "id": "01a09ddf-3a42-7392-8724-1e19caff042a",
+          "code": "BANK_REGISTRATION",
+          "name": "Protected bank registration",
+          "phaseId": "01a09ddf-3a3b-7d38-9a92-135758e67541",
+          "sortOrder": 50,
+          "categoryId": "01a09ddf-3a3c-7bd4-8816-82cd221221a4",
+          "entityCode": "master.bank_account",
+          "isWaivable": false,
+          "isMandatory": true,
+          "completionMode": "system"
+        },
+        {
+          "id": "01a09ddf-3a42-75a7-9278-4bdee409ae92",
+          "code": "BANK_VERIFICATION",
+          "name": "Independent bank verification",
+          "phaseId": "01a09ddf-3a3b-7d38-9a92-135758e67541",
+          "sortOrder": 60,
+          "categoryId": "01a09ddf-3a3c-7bd4-8816-82cd221221a4",
+          "entityCode": "master.bank_account",
+          "isWaivable": false,
+          "isMandatory": true,
+          "completionMode": "system"
+        },
+        {
+          "id": "01a09ddf-3a42-72e0-9567-3d97aef9d8ca",
+          "code": "SUPPLIER_READINESS",
+          "name": "Supplier readiness",
+          "phaseId": "01a09ddf-3a3b-7d38-9a92-135758e67541",
+          "sortOrder": 70,
+          "categoryId": "01a09ddf-3a3c-7bd4-8816-82cd221221a4",
+          "entityCode": "master.supplier",
+          "isWaivable": false,
+          "isMandatory": true,
+          "completionMode": "system"
+        },
+        {
+          "id": "01a09ddf-3a43-718c-bed0-bd9a22d2e388",
+          "code": "ACTIVATION",
+          "name": "Supplier activation",
+          "phaseId": "01a09ddf-3a3b-7d38-9a92-135758e67541",
+          "sortOrder": 80,
+          "categoryId": "01a09ddf-3a3c-7bd4-8816-82cd221221a4",
+          "entityCode": "master.supplier",
+          "isWaivable": false,
+          "isMandatory": true,
+          "completionMode": "system"
+        }
+      ],
+      "tenant_id": "44444444-4444-4444-8444-444444444444",
+      "revision_id": "01a09ddf-3a44-7c47-9e3a-18ec284c20bf",
+      "cycle_type_id": "01a09ddf-3a3b-7b7f-88ed-7ef68b90ac22",
+      "template_hash": "98d5067fcc064af9bcfad40409723ddba07b53ccd8877984ca1f02270239933b",
+      "revision_number": 2
+    }
+  ],
+  "policies": [],
+  "templates": [
+    {
+      "code": "virusscan.qualification",
+      "status": "published",
+      "version": 1,
+      "checksum": "6f9e8f5e8dfd4e47fb28fe0b10d54fd9f93608c94501df3e667e249daaf29fd9",
+      "tenant_id": "d17f5873-f56c-41e1-8100-788594de67f8",
+      "version_id": "e3667767-c804-45d2-a3ae-4a5dbdf45d5d",
+      "entity_code": "qualification",
+      "locale_code": "en",
+      "variant_code": "default",
+      "operation_code": "print"
+    }
+  ],
+  "notifications": [
+    {
+      "status": "active",
+      "channel": "in_app",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.case.approved.v1"
+    },
+    {
+      "status": "active",
+      "channel": "in_app",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.case.materialized.v1"
+    },
+    {
+      "status": "active",
+      "channel": "email",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.case.rejected.v1"
+    },
+    {
+      "status": "active",
+      "channel": "in_app",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.case.rejected.v1"
+    },
+    {
+      "status": "active",
+      "channel": "email",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.case.returned.v1"
+    },
+    {
+      "status": "active",
+      "channel": "in_app",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.case.returned.v1"
+    },
+    {
+      "status": "active",
+      "channel": "email",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.case.submitted.v1"
+    },
+    {
+      "status": "active",
+      "channel": "in_app",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.case.submitted.v1"
+    },
+    {
+      "status": "active",
+      "channel": "in_app",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.customer.activated.v1"
+    },
+    {
+      "status": "active",
+      "channel": "in_app",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.customer.archived.v1"
+    },
+    {
+      "status": "active",
+      "channel": "in_app",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.customer.deactivated.v1"
+    },
+    {
+      "status": "active",
+      "channel": "in_app",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.customer.reactivated.v1"
+    },
+    {
+      "status": "active",
+      "channel": "in_app",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.customer.suspended.v1"
+    },
+    {
+      "status": "active",
+      "channel": "email",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.workflow.stage.activated.v1"
+    },
+    {
+      "status": "active",
+      "channel": "in_app",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.workflow.stage.activated.v1"
+    },
+    {
+      "status": "active",
+      "channel": "push",
+      "version": 1,
+      "tenant_id": null,
+      "template_key": "business_partner.workflow.stage.activated.v1"
+    }
+  ],
+  "localServices": [
+    "athyper-dev-iam-1\tUp 2 hours (healthy)",
+    "athyper-dev-source-api-1\tUp 2 hours (healthy)",
+    "athyper-dev-source-worker-1\tUp 2 hours (healthy)",
+    "athyper-dev-source-scheduler-1\tUp 2 hours (healthy)",
+    "athyper-dev-source-mesh-web-1\tUp 2 hours (healthy)",
+    "athyper-dev-source-studio-web-1\tUp 2 hours (healthy)",
+    "athyper-dev-source-neon-web-1\tUp 2 hours (healthy)",
+    "athyper-dev-storage-console-1\tUp 2 hours (healthy)",
+    "athyper-dev-memorycache-1\tUp 2 hours (healthy)",
+    "athyper-dev-objectstorage-1\tUp 2 hours (healthy)",
+    "athyper-dev-searchcore-1\tUp 2 hours (healthy)",
+    "athyper-dev-mailtrap-1\tUp 2 hours (healthy)",
+    "athyper-dev-docparser-1\tUp 2 hours (healthy)",
+    "athyper-dev-docrender-1\tUp 2 hours (healthy)",
+    "athyper-dev-gateway-1\tUp 2 hours (healthy)",
+    "athyper-dev-gateway-outage-1\tUp 2 hours (healthy)",
+    "athyper-dev-dbpool-session-1\tUp 2 hours (healthy)",
+    "athyper-dev-dbpool-apps-1\tUp 2 hours (healthy)",
+    "athyper-dev-db-1\tUp 2 hours (healthy)",
+    "athyper-dev-publication-secretstore-tls-1\tUp 2 hours",
+    "athyper-dev-virusscan-1\tUp 2 hours (healthy)",
+    "athyper-dev-bp-operation-review-1\tUp 2 hours (healthy)",
+    "athyper-dev-bp-role-review-1\tUp 2 hours (healthy)",
+    "athyper-dev-secretstore-1\tUp 2 hours"
+  ],
+  "toolchain": {
+    "node": "v24.19.0",
+    "pnpm": "10.33.0"
+  }
+}

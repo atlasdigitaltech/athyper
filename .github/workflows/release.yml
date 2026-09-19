@@ -3,12 +3,20 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 permissions:
   contents: write
 
 jobs:
+  infrastructure-scan:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/infrastructure-maintenance.yml
+
+  openapi-policy:
+    uses: ./.github/workflows/openapi-policy.yml
+
   # ─── Validate Tag Format ─────────────────────────────────────────
   validate-tag:
     name: Validate Tag
@@ -27,7 +35,7 @@ jobs:
   build:
     name: Build Release
     runs-on: ubuntu-latest
-    needs: validate-tag
+    needs: [validate-tag, openapi-policy]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,32 +44,39 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 24.19.0
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify workflow entrypoints
+        run: pnpm policy:ci-entrypoints
+
       - name: Verify deployment profiles and package boundaries
         run: pnpm policy:release-boundaries
 
-      - name: Build Neon profile
-        run: pnpm --filter @athyper/neon... build
+      - name: Generate database types for release builds
+        run: pnpm --fail-if-no-match --filter @athyper/server-db run codegen
 
-      - name: Build Admin profile
-        run: pnpm --filter @athyper/admin... build
+      - name: Build Neon profile
+        run: pnpm --fail-if-no-match --filter @athyper/neon... build
+
+      - name: Build Studio profile
+        run: pnpm --fail-if-no-match --filter @athyper/studio... build
 
       - name: Build Mesh profile
-        run: pnpm --filter @athyper/mesh... build
+        run: pnpm --fail-if-no-match --filter @athyper/mesh... build
 
       - name: Build Server profile
-        run: pnpm --filter @athyper/runtime-server... build
+        run: pnpm --fail-if-no-match --filter @athyper/server-platform-host... build
+
+      - name: Verify nonempty product artifacts
+        run: pnpm verify:ci-build
 
       # - name: Upload artifacts
       #   uses: actions/upload-artifact@v4
@@ -73,7 +88,7 @@ jobs:
   extract-changelog:
     name: Extract Changelog
     runs-on: ubuntu-latest
-    needs: validate-tag
+    needs: [validate-tag, openapi-policy]
     outputs:
       release-notes: ${{ steps.extract.outputs.notes }}
     steps:
@@ -99,7 +114,7 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build, extract-changelog]
+    needs: [build, extract-changelog, infrastructure-scan]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

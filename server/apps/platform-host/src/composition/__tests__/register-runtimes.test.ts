@@ -51,7 +51,7 @@ describe("runtime composition", () => {
       const upsert = vi.fn(async () => undefined);
       const reconcile = vi.fn(async () => ({ upserted: 1, removed: 0 }));
       registerRuntimes(container, loadConfig(), lifecycle, {
-        createScheduler: () => ({ upsert, remove: vi.fn(), close: vi.fn(async () => undefined) }),
+        createScheduler: () => ({ listScheduleIds: async () => [], upsert, remove: vi.fn(), close: vi.fn(async () => undefined) }),
       });
       container.runtimes.scheduleReconcile = reconcile;
       container.runtimes.scheduledJobs.push({

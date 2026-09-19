@@ -1,0 +1,70 @@
+{
+  "observedAt": "2026-09-10T08:36:51.092Z",
+  "applied": false,
+  "baseImage": "sha256:b604218602a65433c330bf2c0fe2dc2197227d4625846281f5737372d8de361a",
+  "image": "athyper-runtime-server:distributed-inference-20260910",
+  "imageDigest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+  "deploymentDirectory": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/atlas-inference-reliability-2026-09-10T08-36-48-223Z",
+  "sourceFiles": [
+    {
+      "path": "server/packages/adapters/ai-ollama/src/index.ts",
+      "sha256": "68d2368adda7c575af503b1e4b38f7d80b337583b21704d70d8195798e0988c0"
+    },
+    {
+      "path": "server/packages/platform/ai/src/agent-runtime.ts",
+      "sha256": "2a35961a0f51bc0c1d3b07cca9dec434574ed6e8a21b43edd823f923086ad752"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/atlas-semantic-index.ts",
+      "sha256": "c322d37afba0eb747d7242ea1d333a134d682cacd9a18bcb95707ed071a499a5"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/atlas-inference-admission.ts",
+      "sha256": "3d240842997ec53a3cd8ec77f8f389a0d85d2b25f8a557f9914c9ce29af670d9"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts",
+      "sha256": "7d3263b08d63d91f99a1dfaeed07ec0cb8ac4dc8729fda3929ba20ef2296516d"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/atlas-document-grounding.ts",
+      "sha256": "8140f4059c7879da8f05c419154731666adce336ed6c77db3c0718c8fb861134"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/register-services.ts",
+      "sha256": "31ad94f6ce7dd4673d8528a26ebdc23b0341577a6689cbf851d3d13d200756cc"
+    }
+  ],
+  "moduleImportPassed": true,
+  "deploymentStrategy": "transpile changed modules; patch the deployed composition narrowly",
+  "artifacts": [
+    {
+      "name": "ollama-index",
+      "sha256": "b55f1a188628cabbc6c125c459b9df16e1bd1c223eee3d06b87e51fcf3b58f1f"
+    },
+    {
+      "name": "agent-runtime",
+      "sha256": "151be9d1f831c83dd9fcee51cb87da84ab943d18e521f5a98e2db8b0630faf83"
+    },
+    {
+      "name": "atlas-semantic-index",
+      "sha256": "28a11a6e48b5f427e412974858f064f6b359ca00d994203f4d590ceb7d3d08a1"
+    },
+    {
+      "name": "atlas-inference-admission",
+      "sha256": "90f003c430ed8a5209d6f5a25b8517a9e3619d40985942d32c5e3c23b7a2d737"
+    },
+    {
+      "name": "atlas-attachment-knowledge",
+      "sha256": "615eac52b681acc4a2d79ead62181aec8eeb06cd329c9041f115f0d305b43fe1"
+    },
+    {
+      "name": "atlas-document-grounding",
+      "sha256": "2bc87d43c228eb4fa1f112bb23bb25d42a65450815f94545d9ae480fcb534b4c"
+    },
+    {
+      "name": "register-services",
+      "sha256": "27df295831d4daf5d4f7da0dc82e7623e0f1ce64284c7402ff7cf80db847cdee"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+environment             = "production"
+expected_aws_account_id = "222222222222"
+aws_region              = "ap-southeast-1"
+
+identity_domain   = "notify.athyper.com"
+mail_from_domain  = "bounce.notify.athyper.com"
+from_address      = "notifications@notify.athyper.com"
+dmarc_rua_address = "dmarc@athyper.com"
+
+# Replace with the production workload identities. Never use STG principals.
+sender_principal_arns = [
+  "arn:aws:iam::222222222222:role/athyper-production-notification-worker",
+]
+consumer_principal_arns = [
+  "arn:aws:iam::222222222222:role/athyper-production-ses-event-consumer",
+]
+
+tags = {
+  Owner      = "communications"
+  CostCenter = "platform"
+}

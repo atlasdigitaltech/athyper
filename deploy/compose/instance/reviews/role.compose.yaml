@@ -1,0 +1,17 @@
+# Append to the DEV base stack and the generated bp-role-review service definition.
+# Paths resolve against the first Compose file (instance/compose.yaml).
+services:
+  gateway:
+    command: !override
+      - --entrypoints.web.address=:8080
+      - --entrypoints.health.address=:8082
+      - --ping=true
+      - --ping.entrypoint=health
+      - --providers.file.directory=/etc/traefik/review-config
+      - --providers.file.watch=false
+      - --log.level=INFO
+    depends_on:
+      bp-role-review: { condition: service_started }
+    volumes:
+      - ./config/traefik/dev.yaml:/etc/traefik/review-config/base.yaml:ro
+      - ./config/traefik/reviews/role.yaml:/etc/traefik/review-config/role.yaml:ro

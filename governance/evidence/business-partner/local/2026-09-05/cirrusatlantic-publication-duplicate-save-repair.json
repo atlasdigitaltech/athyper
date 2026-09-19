@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-09-05T04:30:36.289790+00:00",
+  "failedRequestId": "be660b97-0c12-44d7-9a45-9216465fa058",
+  "cause": "duplicate immutable definition version",
+  "existingRevisionId": "4849ea52-4e91-4c09-b06a-22e511362050",
+  "apiImage": "sha256:799e6dfb31d6ff1e1d566573fd3fbd957a85111e8a4a61f65e0e62abbf937a10",
+  "repair": "specific version uniqueness violation maps to 409; unrelated failures remain internal errors",
+  "testsPassed": 62,
+  "typecheck": "passed",
+  "build": "passed",
+  "deployment": "running_healthy",
+  "livezStatus": 200,
+  "nativeOwnerApproval": "pending"
+}

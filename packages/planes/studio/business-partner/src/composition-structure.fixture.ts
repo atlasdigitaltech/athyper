@@ -1,0 +1,135 @@
+export const graph = {
+  contractSchema: "athyper.meta-entity-contract/2.1",
+  entity: { entityCode: "business_partner" },
+  operations: [],
+  runtimeProfiles: [
+    {
+      profileKey: "default",
+      backingKind: "virtual",
+      apiExposure: "catalog_only",
+      readMode: "none",
+      writeMode: "none",
+    },
+  ],
+  surfaces: [
+    {
+      id: "surface-main",
+      surfaceKey: "intake_main",
+      surfaceKind: "form",
+      title: "Main",
+      layoutConfig: { renderer: "intake" },
+    },
+    {
+      id: "surface-other",
+      surfaceKey: "intake_other",
+      surfaceKind: "form",
+      title: "Other",
+      layoutConfig: { renderer: "intake" },
+    },
+  ],
+  surfaceSections: [
+    {
+      id: "section-main",
+      entitySurfaceId: "surface-main",
+      sectionKey: "first",
+      title: "First",
+      position: 0,
+    },
+    {
+      id: "section-last",
+      entitySurfaceId: "surface-main",
+      sectionKey: "last",
+      title: "Last",
+      position: 1,
+    },
+    {
+      id: "section-other",
+      entitySurfaceId: "surface-other",
+      sectionKey: "other",
+      title: "Other",
+      position: 0,
+    },
+  ],
+  fields: [
+    {
+      id: "field-role",
+      fieldKey: "requested_role",
+      dataType: "string",
+      typeConfig: { kind: "string" },
+      valueOrigin: "runtime",
+      writeMode: "mutable",
+      validationSpec: {
+        schema_version: 1,
+        rules: [
+          {
+            kind: "allowed_values",
+            parameters: { values: ["supplier", "customer"] },
+          },
+        ],
+      },
+    },
+    {
+      id: "field-mode",
+      fieldKey: "request_mode",
+      dataType: "string",
+      typeConfig: { kind: "string" },
+      valueOrigin: "runtime",
+      writeMode: "mutable",
+      validationSpec: {
+        schema_version: 1,
+        rules: [
+          { kind: "allowed_values", parameters: { values: ["full", "basic"] } },
+        ],
+      },
+    },
+  ],
+  surfaceFieldBindings: [
+    {
+      id: "placement-role",
+      entitySurfaceId: "surface-main",
+      entitySurfaceSectionId: "section-main",
+      entityFieldId: "field-role",
+      position: 0,
+      widgetKey: "choice_cards",
+      labelOverride: "Role",
+      displayConfig: {
+        required: false,
+        options: [
+          { value: "supplier", label: "Supplier" },
+          { value: "customer", label: "Customer" },
+        ],
+      },
+      unknown: { keep: true },
+    },
+    {
+      id: "placement-mode",
+      entitySurfaceId: "surface-other",
+      entitySurfaceSectionId: "section-other",
+      entityFieldId: "field-mode",
+      position: 0,
+      widgetKey: "choice_cards",
+      labelOverride: "Mode",
+      displayConfig: {
+        required: false,
+        options: [
+          { value: "full", label: "Full" },
+          { value: "basic", label: "Basic" },
+        ],
+      },
+    },
+  ],
+  unknown: { preserve: true },
+};
+// Every qualified section starts with a placement; shared field definitions remain separate.
+graph.fields.push({
+  ...graph.fields[0]!,
+  id: "field-extra",
+  fieldKey: "additional_role",
+});
+graph.surfaceFieldBindings.push({
+  ...graph.surfaceFieldBindings[0]!,
+  id: "placement-extra",
+  entityFieldId: "field-extra",
+  entitySurfaceSectionId: "section-last",
+  labelOverride: "Additional role",
+});

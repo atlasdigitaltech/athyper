@@ -1,0 +1,7 @@
+{
+  "schema": "athyper.studio-workbench-neon-verification/2",
+  "observedAt": "2026-09-15T21:58:26.305Z",
+  "releaseId": "c2cc6900-26c1-47ca-8dfc-1d488000950c",
+  "passed": false,
+  "error": "Expected surface field label is not in the selected source release"
+}

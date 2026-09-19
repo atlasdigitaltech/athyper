@@ -3,6 +3,9 @@
 export * from "@athyper/server-plane-studio-meta-entity-authoring";
 export * from "@athyper/server-plane-studio-onboarding";
 export * from "@athyper/server-plane-studio-control-authoring";
+export * from "./record-collection-scope.js";
+export * from "./catalog-metadata-reader.js";
+export * from "./metadata-draft-import.js";
 
 export const studioPlaneComposition = Object.freeze({
   planeKey: "studio",

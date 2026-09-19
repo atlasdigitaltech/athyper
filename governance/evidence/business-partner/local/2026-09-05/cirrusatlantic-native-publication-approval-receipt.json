@@ -1,0 +1,22 @@
+{
+  "schema": "athyper.native-publication-approval-receipt/1",
+  "observedAt": "2026-09-05T04:50:47.334020+00:00",
+  "environment": "dev",
+  "revisionId": "4849ea52-4e91-4c09-b06a-22e511362050",
+  "revisionAuthor": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+  "nativeRelease": {
+    "id": "e0abaddf-5319-4393-a0a9-a30a9507d4ac",
+    "tenant_id": "44444444-4444-4444-8444-444444444444",
+    "status": "approved",
+    "release_key": "studio.business_partner.definition.business_partner.onboarding",
+    "release_no": 1,
+    "release_hash": "9f8de2e01d609634245993853acd46c0b2817c9098d9e32d6e3c508910d65cd5",
+    "manifest_hash": "0a9c03851565d959fb7facc56ccc80e01ce13d4bf2821e4f28fc0f40e4c50c38",
+    "minimum_runtime_version": "2.1.1",
+    "created_by": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+    "approved_by": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+    "approved_at": "2026-09-05T04:43:24.118509+00:00"
+  },
+  "independentReviewer": true,
+  "source": "native Studio publication.release"
+}

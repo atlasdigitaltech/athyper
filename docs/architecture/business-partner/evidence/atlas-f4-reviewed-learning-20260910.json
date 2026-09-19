@@ -1,0 +1,74 @@
+{
+  "schema": "atlas-f4-reviewed-learning-qualification/1",
+  "recordedAt": "2026-09-09T19:00:17.142580+00:00",
+  "gitHead": "421dd872b9df44086abcd815034a9978809112f4",
+  "workingTree": "uncommitted changes; hashes identify the listed implementation files",
+  "scope": {
+    "locale": "en and en-* runtime pages",
+    "capability": "entity_read_record",
+    "authoring": "tenant-owned definitions",
+    "runtimeEntities": [
+      "business_partner",
+      "network_relationship"
+    ]
+  },
+  "unitAndInteractionTests": {
+    "metadataContracts": 46,
+    "studioAuthoring": 29,
+    "metadataRuntime": 36,
+    "atlasRuntime": 352,
+    "publication": 122,
+    "hostVertical": 9,
+    "clientAndUi": 17,
+    "total": 611
+  },
+  "typechecks": {
+    "serverPackages": 6,
+    "frontendPackages": 4,
+    "studioApplication": 1,
+    "passed": true
+  },
+  "postgresql": {
+    "disposable": true,
+    "image": "postgres:16.13-bookworm",
+    "planes": [
+      "neon",
+      "mesh",
+      "studio"
+    ],
+    "freshCanonicalAndForwardMigration": true,
+    "responseBindingAndTenantIsolation": true,
+    "retryAndHandoffDeduplication": true,
+    "independentReviewAndHeldOutEvaluation": true,
+    "realAuthoringAndPublicationArtifacts": true,
+    "ed25519VerifiedDelivery": true,
+    "activationAndRollback": true,
+    "legacySnapshotHashes": true,
+    "deployedServiceRolesQualified": false
+  },
+  "liveChanges": {
+    "migrationsApplied": false,
+    "tenantPublication": false,
+    "deployment": false
+  },
+  "limitations": [
+    "Initial promotion target is English generic record-summary vocabulary.",
+    "Tenant feedback does not promote platform-global definitions.",
+    "Registered handoff is an in-host service port; remote transport and background retention reconciliation remain follow-up work.",
+    "Disposable authoring uses privileged database access; deployed authoring-role grants require qualification."
+  ],
+  "sourceSha256": {
+    "server/packages/contracts/metadata/src/entity-ai.ts": "cd2d5edbc2b750c5a64b35ccb691785d70a6336f1388938176b88961981b6b1e",
+    "server/packages/contracts/metadata/src/atlas-learning.ts": "708f5a206fa0e70c1f3267f1d691b548ae9f28b7e500eb894e28cf72e4fe4e48",
+    "server/packages/platform/ai/src/learning-candidates.ts": "ee11f9eb3ca2dd34e471ba8bd71f49e710c9b954eb9589c526c8e205d282149c",
+    "server/packages/platform/ai/src/learning-evaluation.ts": "4191db7d8615085897176592b3bdd6460a4fc1bb04f50b2b83ccdf261d604d7f",
+    "server/packages/platform/ai/src/runtime-tool-coordinator.ts": "740754ac176cb13e7bfec028407ba18534a3826aa9456c8c4dd7f5fc4d878fa4",
+    "server/packages/platform/ai/src/entity-section-tool-selection.ts": "ebb7d1845579ca20262fc504c724283bb2442f382710eb9d2994ab8aae660498",
+    "server/packages/planes/studio/meta-entity-authoring/src/learning-inbox.ts": "447f0169b3f7027848c00177dd6253ef0b0ea21933c926596a382039a97488dd",
+    "server/packages/planes/studio/meta-entity-authoring/src/learning-publication.ts": "f7ea234afd7be8f58e424794528926054f204a47a7710befe0e2b5f2d2d83cf8",
+    "server/packages/services/publication/src/kysely-publication-authority-work.ts": "39dd76674f633ab4097b808bceb86c5387b1efda9858c37662e28fee580a4bdb",
+    "server/packages/services/publication/src/publication-artifact-loader.ts": "2fdb6fbc494d8486c24da05aef98783a4d6c1ec2e6c800073ee08f14fa227318",
+    "server/db/migrations/20260910_atlas_learning_common.sql": "4d2d47d485fcaa2fbbc44c4a3a73c8ba597dbd9501ac06a4105804533a1f4925",
+    "server/db/migrations/20260910_atlas_learning_studio.sql": "6b23c3d57b9684ca986900f02d2e9666b7ab50edfd21578600e295252fc4c0fe"
+  }
+}

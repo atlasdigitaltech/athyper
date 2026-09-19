@@ -1,5 +1,6 @@
 -- Generated from the extracted live Atlas AI contract.
--- Regenerate with: node server/db/scripts/catalog/build-common-ai-ddl.mjs
+-- Maintained as canonical foundation DDL; use additive migrations for installed databases.
+-- Supported verification and maintenance: server/db/scripts/README.md (Atlas AI DDL).
 
 CREATE OR REPLACE FUNCTION ai.trg_guard_ai_tool_invocation_mutation()
  RETURNS trigger
@@ -779,6 +780,22 @@ BEGIN
             USING ERRCODE = 'check_violation';
     END IF;
 
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION ai.trg_guard_atlas_generation_metadata()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+    IF OLD.generation_config IS DISTINCT FROM NEW.generation_config
+       OR OLD.request_digest IS DISTINCT FROM NEW.request_digest
+       OR OLD.lease_expires_at IS DISTINCT FROM NEW.lease_expires_at
+    THEN
+        RAISE EXCEPTION 'Atlas generation identity is immutable'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
     RETURN NEW;
 END;
 $function$;

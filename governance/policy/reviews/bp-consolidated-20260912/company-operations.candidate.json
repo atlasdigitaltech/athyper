@@ -1,0 +1,324 @@
+{
+  "contractSchema": "athyper.meta-entity-contract/2.1",
+  "entity": {
+    "entityCode": "business_partner_company_setup_request",
+    "entityClass": "process",
+    "ownershipModel": "tenant"
+  },
+  "runtimeProfiles": [
+    {
+      "id": "a2f63503-7ac7-45dd-8b7d-b9593bf5959b",
+      "profileKey": "default",
+      "backingKind": "table",
+      "storagePlane": "neon",
+      "storageSchema": "document",
+      "storageObject": "entity_case",
+      "tenantFieldKey": "tenant_id",
+      "apiExposure": "catalog_only",
+      "readMode": "none",
+      "writeMode": "none"
+    }
+  ],
+  "fields": [
+    {
+      "id": "1aec6d83-16e3-4820-8435-3a6765d0c337",
+      "fieldKey": "target_entity_id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "storagePath": "target_entity_id",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "358d780c-cad3-4253-a70c-6e0846b3ba44",
+      "fieldKey": "status",
+      "dataType": "string",
+      "typeConfig": {
+        "kind": "string"
+      },
+      "storagePath": "status",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "54425f91-f1ac-4f5f-b006-181949a159d5",
+      "fieldKey": "id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "storagePath": "id",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "9cf00b66-8c72-4850-b12c-ce81795966eb",
+      "fieldKey": "tenant_id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "storagePath": "tenant_id",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    },
+    {
+      "id": "a4b820e8-44b8-4183-a479-565f3439d311",
+      "fieldKey": "owner_company_code_id",
+      "dataType": "uuid",
+      "typeConfig": {
+        "kind": "uuid"
+      },
+      "storagePath": "owner_company_code_id",
+      "writeMode": "read_only",
+      "valueOrigin": "stored",
+      "cardinality": "one"
+    }
+  ],
+  "operations": [
+    {
+      "id": "180ac8de-3731-49c5-b739-891fb0bbe183",
+      "operationKey": "validate",
+      "operationKind": "execute",
+      "label": "validate",
+      "permissionCode": "neon.relationship.bp_company_setup_request.validate",
+      "auditEventCode": "business_partner_company_setup_request.validate"
+    },
+    {
+      "id": "213bbd80-cbe6-44e7-b981-8e67c2dc4f37",
+      "operationKey": "discover",
+      "operationKind": "read",
+      "label": "discover",
+      "permissionCode": "neon.relationship.bp_company_setup_request.read",
+      "auditEventCode": "business_partner_company_setup_request.discover"
+    },
+    {
+      "id": "4c1c0b48-a735-4f24-9aa2-3ffb25304d83",
+      "operationKey": "decide",
+      "operationKind": "execute",
+      "label": "decide",
+      "permissionCode": "neon.relationship.bp_company_setup_request.decide",
+      "auditEventCode": "business_partner_company_setup_request.decide"
+    },
+    {
+      "id": "7221664f-2d2b-4884-ada7-e5c4814bea23",
+      "operationKey": "submit",
+      "operationKind": "execute",
+      "label": "submit",
+      "permissionCode": "neon.relationship.bp_company_setup_request.submit",
+      "auditEventCode": "business_partner_company_setup_request.submit"
+    },
+    {
+      "id": "739ee7e2-4b74-48aa-ac22-41938ac9cb2b",
+      "operationKey": "create",
+      "operationKind": "execute",
+      "label": "create",
+      "permissionCode": "neon.relationship.bp_company_setup_request.create",
+      "auditEventCode": "business_partner_company_setup_request.create"
+    },
+    {
+      "id": "bcc02301-8660-4305-9816-80d1c86871ab",
+      "operationKey": "read",
+      "operationKind": "read",
+      "label": "read",
+      "permissionCode": "neon.relationship.bp_company_setup_request.read",
+      "auditEventCode": "business_partner_company_setup_request.read"
+    },
+    {
+      "id": "c2b930f7-1b74-4dcd-b3dd-c880f04e880b",
+      "operationKey": "update",
+      "operationKind": "execute",
+      "label": "update",
+      "permissionCode": "neon.relationship.bp_company_setup_request.update",
+      "auditEventCode": "business_partner_company_setup_request.update"
+    },
+    {
+      "id": "e7cef870-8ef6-45f1-9da2-f790498d2748",
+      "operationKey": "materialize",
+      "operationKind": "execute",
+      "label": "materialize",
+      "permissionCode": "neon.relationship.bp_company_setup_request.materialize",
+      "auditEventCode": "business_partner_company_setup_request.materialize"
+    }
+  ],
+  "tests": [
+    {
+      "key": "company_storage_owner",
+      "assertion": "path_equals",
+      "path": "fields.4.storagePath",
+      "expected": "owner_company_code_id"
+    },
+    {
+      "key": "no_generic_reads",
+      "assertion": "path_equals",
+      "path": "runtimeProfiles.0.readMode",
+      "expected": "none"
+    },
+    {
+      "key": "no_direct_writes",
+      "assertion": "path_equals",
+      "path": "runtimeProfiles.0.writeMode",
+      "expected": "none"
+    },
+    {
+      "key": "company_scope",
+      "assertion": "path_equals",
+      "path": "operationScopeBindings.1.scopeKind",
+      "expected": "company_code"
+    }
+  ],
+  "operationPermissions": [
+    {
+      "id": "31c962bf-ed57-4593-aebd-4b1815ab04b6",
+      "entityOperationId": "213bbd80-cbe6-44e7-b981-8e67c2dc4f37",
+      "targetPlane": "neon",
+      "permissionCode": "neon.relationship.bp_company_setup_request.read",
+      "permissionKind": "entity_operation"
+    },
+    {
+      "id": "40fdf161-79cc-4e07-9964-5840b5043be1",
+      "entityOperationId": "bcc02301-8660-4305-9816-80d1c86871ab",
+      "targetPlane": "neon",
+      "permissionCode": "neon.relationship.bp_company_setup_request.read",
+      "permissionKind": "entity_operation"
+    },
+    {
+      "id": "7f34a8c0-12b8-4506-bb68-4c99aac4bc3a",
+      "entityOperationId": "e7cef870-8ef6-45f1-9da2-f790498d2748",
+      "targetPlane": "neon",
+      "permissionCode": "neon.relationship.bp_company_setup_request.materialize",
+      "permissionKind": "entity_operation"
+    },
+    {
+      "id": "9e9d777d-b122-4d69-b0d7-8386ecc9beda",
+      "entityOperationId": "739ee7e2-4b74-48aa-ac22-41938ac9cb2b",
+      "targetPlane": "neon",
+      "permissionCode": "neon.relationship.bp_company_setup_request.create",
+      "permissionKind": "entity_operation"
+    },
+    {
+      "id": "a5a703b6-dab8-46f6-9d3b-453a8c5d22b3",
+      "entityOperationId": "4c1c0b48-a735-4f24-9aa2-3ffb25304d83",
+      "targetPlane": "neon",
+      "permissionCode": "neon.relationship.bp_company_setup_request.decide",
+      "permissionKind": "entity_operation"
+    },
+    {
+      "id": "b97ae09e-b8ce-4087-9cc1-0a7a3bfcf19d",
+      "entityOperationId": "c2b930f7-1b74-4dcd-b3dd-c880f04e880b",
+      "targetPlane": "neon",
+      "permissionCode": "neon.relationship.bp_company_setup_request.update",
+      "permissionKind": "entity_operation"
+    },
+    {
+      "id": "c2ca54d3-8904-4e50-b389-6ef659da09b0",
+      "entityOperationId": "7221664f-2d2b-4884-ada7-e5c4814bea23",
+      "targetPlane": "neon",
+      "permissionCode": "neon.relationship.bp_company_setup_request.submit",
+      "permissionKind": "entity_operation"
+    },
+    {
+      "id": "d13ef279-4412-40fd-ba36-5b5997c2eb86",
+      "entityOperationId": "180ac8de-3731-49c5-b739-891fb0bbe183",
+      "targetPlane": "neon",
+      "permissionCode": "neon.relationship.bp_company_setup_request.validate",
+      "permissionKind": "entity_operation"
+    }
+  ],
+  "operationScopeBindings": [
+    {
+      "id": "6546d148-f8fb-4284-bb19-0da09076aac6",
+      "entityOperationId": "7221664f-2d2b-4884-ada7-e5c4814bea23",
+      "bindingKey": "submit_company",
+      "targetPlane": "neon",
+      "decisionMode": "entity_resource",
+      "scopeKind": "company_code",
+      "coordinateSource": "relation_resolver",
+      "resolverKey": "company.record.v1",
+      "missingValueBehavior": "deny"
+    },
+    {
+      "id": "76fb2755-9d71-4480-ac51-bf26c67306d9",
+      "entityOperationId": "213bbd80-cbe6-44e7-b981-8e67c2dc4f37",
+      "bindingKey": "discover_company",
+      "targetPlane": "neon",
+      "decisionMode": "collection",
+      "scopeKind": "company_code",
+      "coordinateSource": "relation_resolver",
+      "resolverKey": "company.record.v1",
+      "missingValueBehavior": "deny"
+    },
+    {
+      "id": "7a0ce1b2-2739-403a-a330-06efaa373bb7",
+      "entityOperationId": "180ac8de-3731-49c5-b739-891fb0bbe183",
+      "bindingKey": "validate_company",
+      "targetPlane": "neon",
+      "decisionMode": "entity_resource",
+      "scopeKind": "company_code",
+      "coordinateSource": "relation_resolver",
+      "resolverKey": "company.record.v1",
+      "missingValueBehavior": "deny"
+    },
+    {
+      "id": "844c2aa4-b39f-48b3-800f-0469afe82eb4",
+      "entityOperationId": "739ee7e2-4b74-48aa-ac22-41938ac9cb2b",
+      "bindingKey": "create_company",
+      "targetPlane": "neon",
+      "decisionMode": "entity_resource",
+      "scopeKind": "company_code",
+      "coordinateSource": "relation_resolver",
+      "resolverKey": "company.record.v1",
+      "missingValueBehavior": "deny"
+    },
+    {
+      "id": "8e04b766-efff-4af7-a244-22559db37d75",
+      "entityOperationId": "4c1c0b48-a735-4f24-9aa2-3ffb25304d83",
+      "bindingKey": "decide_company",
+      "targetPlane": "neon",
+      "decisionMode": "entity_resource",
+      "scopeKind": "company_code",
+      "coordinateSource": "relation_resolver",
+      "resolverKey": "company.record.v1",
+      "missingValueBehavior": "deny"
+    },
+    {
+      "id": "aa428154-a48c-4f6f-8a2c-73ec05ac58de",
+      "entityOperationId": "bcc02301-8660-4305-9816-80d1c86871ab",
+      "bindingKey": "read_company",
+      "targetPlane": "neon",
+      "decisionMode": "entity_resource",
+      "scopeKind": "company_code",
+      "coordinateSource": "relation_resolver",
+      "resolverKey": "company.record.v1",
+      "missingValueBehavior": "deny"
+    },
+    {
+      "id": "b1db352f-ae89-4055-b6fb-eaa88d587d62",
+      "entityOperationId": "e7cef870-8ef6-45f1-9da2-f790498d2748",
+      "bindingKey": "materialize_company",
+      "targetPlane": "neon",
+      "decisionMode": "entity_resource",
+      "scopeKind": "company_code",
+      "coordinateSource": "relation_resolver",
+      "resolverKey": "company.record.v1",
+      "missingValueBehavior": "deny"
+    },
+    {
+      "id": "f17b3f17-c906-49d3-ba63-4fadcb45d51f",
+      "entityOperationId": "c2b930f7-1b74-4dcd-b3dd-c880f04e880b",
+      "bindingKey": "update_company",
+      "targetPlane": "neon",
+      "decisionMode": "entity_resource",
+      "scopeKind": "company_code",
+      "coordinateSource": "relation_resolver",
+      "resolverKey": "company.record.v1",
+      "missingValueBehavior": "deny"
+    }
+  ]
+}

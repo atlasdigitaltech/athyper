@@ -1,0 +1,307 @@
+import { BusinessPartnerAction } from "./governed-action";
+import { businessLabel } from "../display-values";
+import {
+  useApiClient,
+  useSessionIdentity,
+} from "@athyper/platform-shell-app-foundation";
+import { Card, Skeleton } from "@athyper/platform-ui";
+import { useEffect, useMemo, useState } from "react";
+import {
+  createBusinessPartner360RoleClient,
+  roleCompanyQueryKey,
+  type RoleCompanySection,
+} from "../business-partner-360-role-client";
+import { useBusinessPartner360 } from "../business-partner-360-context";
+import { useRecordFooterSources } from "@athyper/platform-shell";
+export function SupplierCompanySection() {
+  return <ScopedSection code="supplier-company" />;
+}
+export function CustomerCompanySection() {
+  return <ScopedSection code="customer-company" />;
+}
+type CompanyConfigurationSectionCode = "supplier-company" | "customer-company";
+
+function ScopedSection({ code }: { code: CompanyConfigurationSectionCode }) {
+  const http = useApiClient(),
+    identity = useSessionIdentity(),
+    { summary, roleLens } = useBusinessPartner360(),
+    client = useMemo(() => createBusinessPartner360RoleClient(http), [http]),
+    [value, setValue] = useState<RoleCompanySection>(),
+    [failed, setFailed] = useState(false),
+    [loadedKey, setLoadedKey] = useState<string>(),
+    query = {
+      tenantId: identity.scope?.tenantId ?? "unbound",
+      principalId: identity.scope?.principalId ?? "unbound",
+      businessPartnerId: summary.identity.id,
+      sectionCode: code,
+      roleLens,
+      authEpoch: identity.scope?.authEpoch ?? 0,
+      ...(summary.scope.operatingOrganizationId
+        ? { operatingOrganizationId: summary.scope.operatingOrganizationId }
+        : {}),
+      ...(summary.scope.companyCodeId
+        ? { companyCodeId: summary.scope.companyCodeId }
+        : {}),
+      ...(summary.scope.legalEntityId
+        ? { legalEntityId: summary.scope.legalEntityId }
+        : {}),
+      ...(new URLSearchParams(
+        typeof window !== "undefined" ? window.location.search : "",
+      ).has("asOf")
+        ? { asOf: summary.asOf }
+        : {}),
+    },
+    key = roleCompanyQueryKey(query).join(":");
+  useEffect(() => {
+    const controller = new AbortController();
+    setFailed(false);
+    client
+      .read(query, controller.signal)
+      .then(next=>{if(!controller.signal.aborted){setValue(next);setLoadedKey(key);}})
+      .catch(() => {
+        if (!controller.signal.aborted) setFailed(true);
+      });
+    return () => controller.abort();
+  }, [client, key]);
+  useRecordFooterSources(
+    !failed && value && loadedKey === key ? value.provenance : [],
+  );
+  if (failed)
+    return (
+      <Card className="bp360-section-card">
+        <h2>Scoped section unavailable</h2>
+        <p>The global identity view remains available.</p>
+      </Card>
+    );
+  if (!value || loadedKey !== key) return <Skeleton className="bp360-shell-skeleton" />;
+  const data = value.data,
+    state = String(data["scopeState"] ?? "scoped"),
+    readOnly = Boolean(data["readOnly"]);
+  if (state === "missing_scope")
+    return (
+      <Card className="bp360-section-card">
+        <h2>Select organization and company</h2>
+        <p>This section never infers company configuration from row order.</p>
+      </Card>
+    );
+  return (
+    <div className="bp360-section-list">
+      {state === "global" ? (
+        <Card className="bp360-section-card">
+          <strong>Global identity view</strong>
+          <p>Select an authorized scope to narrow assignments.</p>
+        </Card>
+      ) : null}
+      {state === "historical" ? (
+        <Card className="bp360-section-card">
+          <strong>Historical read-only view</strong>
+          <p>Governed actions are disabled for an explicit as-of date.</p>
+        </Card>
+      ) : null}
+      {code === "supplier-company" ? (
+        <Supplier data={data} />
+      ) : (
+        <Customer data={data} />
+      )}{" "}
+      {!readOnly ? <Actions id={summary.identity.id} code={code} /> : null}
+    </div>
+  );
+}
+export function Supplier({
+  data,
+}: {
+  data: Readonly<Record<string, unknown>>;
+}) {
+  return (
+    <>
+      <ObjectCard
+        title="Supplier role"
+        value={record(data["supplier"])}
+        fields={["code", "type", "status"]}
+      />
+      <ObjectCard
+        title="Procurement assignment"
+        value={record(data["organizationAssignment"])}
+        fields={[
+          "operatingOrganizationId",
+          "effectiveFrom",
+          "effectiveUntil",
+          "status",
+        ]}
+      />
+      <ObjectCard
+        title="Accounts payable configuration"
+        value={record(data["profile"])}
+        fields={[
+          "companyCodeId",
+          "currencyCode",
+          "paymentTermId",
+          "defaultAccountingProfileId",
+          "defaultDimensionSetId",
+          "preferredRemittanceBankLinkId",
+          "status",
+        ]}
+      />
+    </>
+  );
+}
+function Customer({ data }: { data: Readonly<Record<string, unknown>> }) {
+  return (
+    <>
+      <ObjectCard
+        title="Customer role"
+        value={record(data["customer"])}
+        fields={["code", "type", "status"]}
+      />
+      <Cards
+        title="Governed designations"
+        rows={asRows(record(data["customer"])?.["designations"])}
+        fields={["type", "priorityTier", "effectiveFrom", "effectiveUntil"]}
+      />
+      <ObjectCard
+        title="Sales assignment"
+        value={record(data["organizationAssignment"])}
+        fields={[
+          "operatingOrganizationId",
+          "effectiveFrom",
+          "effectiveUntil",
+          "status",
+        ]}
+      />
+      <ObjectCard
+        title="Accounts receivable configuration"
+        value={record(data["profile"])}
+        fields={[
+          "companyCodeId",
+          "currencyCode",
+          "paymentTermId",
+          "defaultAccountingProfileId",
+          "defaultDimensionSetId",
+          "statementCycleCode",
+          "status",
+        ]}
+      />
+    </>
+  );
+}
+function Cards({
+  title,
+  rows,
+  fields,
+}: {
+  title: string;
+  rows: readonly Readonly<Record<string, unknown>>[];
+  fields: readonly string[];
+}) {
+  return (
+    <Card className="bp360-section-card">
+      <h2>{title}</h2>
+      {rows.length ? (
+        rows.map((row, index) => (
+          <dl key={String(row["id"] ?? index)}>
+            {fields.map((field) => (
+              <div key={field}>
+                <dt>{label(field.replace(/Id$/, ""))}</dt>
+                <dd>{fieldValue(row, field)}</dd>
+              </div>
+            ))}
+          </dl>
+        ))
+      ) : (
+        <p>No effective assignments in this scope.</p>
+      )}
+    </Card>
+  );
+}
+function Actions({ code }: { id: string; code: CompanyConfigurationSectionCode }) {
+  const { summary } = useBusinessPartner360();
+  const keys = ["add_role", "assign_organization", "configure_company"];
+  const actions = summary.completeness.readOnly
+    ? []
+    : (summary.recordHeader?.actions.filter(
+        (action) =>
+          keys.includes(action.operationKey ?? action.key),
+      ) ?? []);
+  if (!actions.length) return null;
+  return (
+    <Card className="bp360-section-card">
+      <h2>Setup actions</h2>
+      <div className="bp-actions">
+        {actions.map((action) => (
+          <BusinessPartnerAction key={action.key} action={action} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function asRows(value: unknown): readonly Readonly<Record<string, unknown>>[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is Readonly<Record<string, unknown>> =>
+        Boolean(item && typeof item === "object" && !Array.isArray(item)),
+      )
+    : [];
+}
+function ObjectCard({
+  title,
+  value,
+  fields,
+}: {
+  title: string;
+  value?: Readonly<Record<string, unknown>>;
+  fields: readonly string[];
+}) {
+  return (
+    <Card className="bp360-section-card">
+      <h2>{title}</h2>
+      {value ? (
+        <dl>
+          {fields.map((field) => (
+            <div key={field}>
+              <dt>{label(field.replace(/Id$/, ""))}</dt>
+              <dd>{fieldValue(value, field)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p>Not configured in the selected scope.</p>
+      )}
+    </Card>
+  );
+}
+function fieldValue(row: Readonly<Record<string, unknown>>, field: string) {
+  if (field.endsWith("Id") && typeof row[field] === "string") {
+    const name = record(row["displayValues"])?.[field];
+    return (
+      <>
+        {typeof name === "string" ? name : "Name unavailable"}
+        <details>
+          <summary>Technical details</summary>
+          {show(row[field])}
+        </details>
+      </>
+    );
+  }
+  return ["role", "partnerRole", "status", "type"].includes(field)
+    ? businessLabel(String(row[field] ?? "")) || "—"
+    : show(row[field]);
+}
+function record(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Readonly<Record<string, unknown>>)
+    : undefined;
+}
+function show(value: unknown) {
+  return value === undefined || value === null || value === ""
+    ? "—"
+    : typeof value === "boolean"
+      ? value
+        ? "Yes"
+        : "No"
+      : String(value);
+}
+function label(value: string) {
+  return value
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (letter) => letter.toUpperCase());
+}

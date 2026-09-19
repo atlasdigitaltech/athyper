@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { ProvisionPlane } from "../safe-provision.js";
+import type { ProvisionPlane } from "./safe-provision.js";
 import type { TenantAuthorityProjection } from "../seed/tenant-authority-projection.js";
 
 export const THREE_PLANE_MANIFEST = resolve(
@@ -36,6 +36,7 @@ export interface TenantScenarioPack {
     readonly numberFormat: string;
     readonly weekStart: number;
     readonly weekendDays: readonly number[];
+    readonly logoAssetRef?: string;
   };
   readonly legalEntities: readonly {
     readonly scopeKey: string;
@@ -47,6 +48,7 @@ export interface TenantScenarioPack {
     readonly functionalCurrency: string;
     readonly reportingCurrency: string;
     readonly regionCode: string;
+    readonly logoAssetRef?: string;
   }[];
   readonly companyCodes: readonly {
     readonly code: string;
@@ -59,6 +61,7 @@ export interface TenantScenarioPack {
     readonly localeCode: string;
     readonly companyPurpose: "statutory" | "operations";
     readonly readinessProfile: "finance_baseline_v1";
+    readonly logoAssetRef?: string;
   }[];
   readonly operatingOrganizations: readonly {
     readonly code: string;
@@ -220,6 +223,7 @@ export interface LegalEntityResource {
   readonly registrationCountryCode: string;
   readonly functionalCurrency: string;
   readonly reportingCurrency: string;
+  readonly logoAssetRef?: string;
 }
 
 export interface NetworkAccountResource {
@@ -228,6 +232,7 @@ export interface NetworkAccountResource {
   readonly accountCode: string;
   readonly name: string;
   readonly networkRole: "buyer" | "supplier" | "both";
+  readonly logoAssetRef?: string;
 }
 
 export interface ProvisionInputs {
@@ -334,6 +339,7 @@ export function legalEntityResources(inputs: ProvisionInputs): readonly LegalEnt
       registrationCountryCode: scenario.registrationCountryCode,
       functionalCurrency: scenario.functionalCurrency,
       reportingCurrency: scenario.reportingCurrency,
+      ...(scenario.logoAssetRef ? { logoAssetRef: scenario.logoAssetRef } : {}),
     }];
   });
   assertUnique(resources, (resource) => `${resource.tenantCode}:${resource.scopeKey}`, "legal-entity scope");
@@ -346,6 +352,10 @@ export function networkAccountResources(inputs: ProvisionInputs): readonly Netwo
   const subjectTenants = new Map(inputs.authorizationPacks.mesh.subjectAssignments
     .map((subject) => [subject.keycloakSubject, new Set(subject.tenantCodes)] as const));
   const byAccount = new Map<string, NetworkAccountResource>();
+  const legalEntityLogos = new Map(Object.values(inputs.scenarioPacks).flatMap((pack) =>
+    pack.legalEntities.flatMap((entity) => entity.logoAssetRef
+      ? [[`${pack.tenantCode}:${entity.scopeKey}`, entity.logoAssetRef] as const]
+      : [])));
   for (const organization of inputs.identitySource.organizations ?? []) {
     const buyer = first(organization.attributes?.buyer_account_code);
     const supplier = first(organization.attributes?.supplier_account_code);
@@ -366,6 +376,9 @@ export function networkAccountResources(inputs: ProvisionInputs): readonly Netwo
         accountCode: normalizeBusinessCode(scopeKey),
         name: organization.name?.trim() || scopeKey,
         networkRole,
+        ...(organization.alias && legalEntityLogos.get(`${tenantCode}:${organization.alias}`)
+          ? { logoAssetRef: legalEntityLogos.get(`${tenantCode}:${organization.alias}`)! }
+          : {}),
       } satisfies NetworkAccountResource;
       const coordinate = `${tenantCode}:${scopeKey}`;
       const previous = byAccount.get(coordinate);
@@ -446,6 +459,13 @@ function validateScenarioPack(pack: TenantScenarioPack, tenantCode: string): voi
   const code = /^[a-z][a-z0-9_.-]{1,62}$/;
   const currency = /^[A-Z]{3}$/;
   const country = /^[A-Z]{2}$/;
+  const logoAssetRef = /^\/[A-Za-z0-9][A-Za-z0-9_./-]{0,1022}$/;
+  const assertLogoAssetRef = (value: string | undefined, label: string): void => {
+    if (value && (!logoAssetRef.test(value) || /(^|\/)\.\.(\/|$)/.test(value))) {
+      throw new Error(`invalid ${tenantCode} ${label} logo asset ref`);
+    }
+  };
+  assertLogoAssetRef(pack.tenantProfile.logoAssetRef, "tenant profile");
   const assertCodes = (values: readonly { code: string }[], label: string): void => {
     assertUnique(values, (value) => value.code, `${tenantCode} ${label} code`);
     for (const value of values) if (!code.test(value.code)) throw new Error(`invalid ${tenantCode} ${label} code: ${value.code}`);
@@ -466,6 +486,7 @@ function validateScenarioPack(pack: TenantScenarioPack, tenantCode: string): voi
     if (!code.test(entity.regionCode) || !country.test(entity.registrationCountryCode) || !currency.test(entity.functionalCurrency) || !currency.test(entity.reportingCurrency)) {
       throw new Error(`invalid ${tenantCode} legal entity localization: ${entity.code}`);
     }
+    assertLogoAssetRef(entity.logoAssetRef, `legal entity ${entity.code}`);
   }
   for (const company of pack.companyCodes) {
     if (!legalScopes.has(company.legalEntityScopeKey)) throw new Error(`unknown ${tenantCode} company legal entity: ${company.legalEntityScopeKey}`);
@@ -473,6 +494,7 @@ function validateScenarioPack(pack: TenantScenarioPack, tenantCode: string): voi
       || !["statutory", "operations"].includes(company.companyPurpose) || company.readinessProfile !== "finance_baseline_v1") {
       throw new Error(`invalid ${tenantCode} company localization: ${company.code}`);
     }
+    assertLogoAssetRef(company.logoAssetRef, `company ${company.code}`);
   }
   for (const organization of pack.operatingOrganizations) {
     if (organization.parentCode && !organizations.has(organization.parentCode)) throw new Error(`unknown ${tenantCode} parent operating organization: ${organization.parentCode}`);

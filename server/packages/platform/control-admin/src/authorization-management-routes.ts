@@ -1,6 +1,6 @@
 import type { AuthorizationManagementCommand, AuthorizationManagementService, AuthorizationMutationKind, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { controlAdminSchemas } from "@athyper/server-contract-control-admin";
-import { defineRouteContract, registerContractRoute } from "@athyper/server-runtime-http";
+import { HttpError, defineRouteContract, registerContractRoute } from "@athyper/server-runtime-http";
 import type { Application, Request, RequestHandler, Response } from "express";
 import { authorizationManagementPermissionFor } from "./authorization-management-service.js";
 
@@ -11,9 +11,9 @@ type MutationRoute = "manage" | "approve" | "revoke" | "break-glass";
  * approve, revoke, or invoke break-glass through a generic command endpoint.
  */
 export function registerAuthorizationManagementRoutes(application: Application, options: { readonly authenticate: RequestHandler; readonly readContext: (response: Response) => VerifiedRequestContext; readonly service: AuthorizationManagementService }): void {
-  registerContractRoute(application, defineRouteContract({ method: "get", path: "/api/control-admin/authorization", operationId: "controlAdmin.authorization.read", summary: "Read authorization administration status", tags: ["Control Administration"], authenticated: true, permission: "authorization.management.read", responses: { 200: { description: "Authorization administration status", body: controlAdminSchemas.response }, 403: { description: "Permission denied" } } }), options.authenticate, route(async (_request, response) => options.service.readStatus(options.readContext(response))));
+  registerContractRoute(application, defineRouteContract({ method: "get", path: "/api/control-admin/authorization", operationId: "controlAdmin.authorization.read", summary: "Read authorization administration status", tags: ["Control Administration"], authenticated: true, permission: "authorization.management.read", responses: { 200: { description: "Authorization administration status", body: controlAdminSchemas.response }, 401: { description: "Authentication required" }, 403: { description: "Permission denied" }, 503: { description: "Authorization writer unavailable or not ready" } } }), options.authenticate, route(async (_request, response) => options.service.readStatus(options.readContext(response))));
   for (const action of ["manage", "approve", "revoke", "break-glass"] as const) {
-    registerContractRoute(application, defineRouteContract({ method: "post", path: `/api/control-admin/authorization/${action}`, operationId: `controlAdmin.authorization.${action.replace("-", "_")}`, summary: `${action} an authorization administration command`, tags: ["Control Administration"], authenticated: true, permission: `authorization.management.${action === "break-glass" ? "break_glass" : action}`, request: { body: controlAdminSchemas.authorizationCommand }, responses: { 200: { description: "Authorization command result", body: controlAdminSchemas.response }, 400: { description: "Invalid command" }, 403: { description: "Permission denied" } } }), options.authenticate, route(async (request, response) => {
+    registerContractRoute(application, defineRouteContract({ method: "post", path: `/api/control-admin/authorization/${action}`, operationId: `controlAdmin.authorization.${action.replace("-", "_")}`, summary: `${action} an authorization administration command`, tags: ["Control Administration"], authenticated: true, permission: `authorization.management.${action === "break-glass" ? "break_glass" : action}`, request: { body: controlAdminSchemas.authorizationCommand }, responses: { 200: { description: "Authorization command result", body: controlAdminSchemas.response }, 400: { description: "Invalid command" }, 401: { description: "Authentication required" }, 403: { description: "Permission denied" }, 404: { description: "Override request not found" }, 409: { description: "Version or approval conflict" }, 503: { description: "Authorization writer unavailable or not ready" } } }), options.authenticate, route(async (request, response) => {
       const command = parseCommand(request, options.readContext(response));
       assertRouteMatchesPermission(action, command.kind);
       return options.service.execute(command);
@@ -48,8 +48,12 @@ function parseCommand(request: Request, context: VerifiedRequestContext): Author
   };
 }
 
-function route(work: (request: Request, response: Response) => Promise<unknown>) { return async (request: Request, response: Response, next: (error?: unknown) => void) => { try { response.json(await work(request, response)); } catch (error) { next(error); } }; }
+function route(work: (request: Request, response: Response) => Promise<unknown>) { return async (request: Request, response: Response, next: (error?: unknown) => void) => { try { response.json(await work(request, response)); } catch (error) {
+    if (error instanceof Error && "code" in error && typeof error.code === "string" && error.code.startsWith("AUTHZ_") && "status" in error && typeof error.status === "number" && [400, 403, 404, 409, 503].includes(error.status)) {
+      next(new HttpError(error.status, error.code, error.code));
+    } else next(error);
+  } }; }
 function required(value: unknown): string { const text = optional(value); if (!text) throw invalid("AUTHZ_INVALID_COMMAND"); return text; }
-function optional(value: unknown): string | undefined { return typeof value === "string" && value.trim() ? value.trim() : undefined; }
-function optionalPositive(value: unknown): number | undefined { if (value === undefined) return undefined; const number = Number(value); if (!Number.isSafeInteger(number) || number < 1) throw invalid("AUTHZ_INVALID_EXPECTED_VERSION"); return number; }
+function optional(value: unknown): string | undefined { if (value === undefined) return undefined; if (typeof value !== "string" || !value.trim()) throw invalid("AUTHZ_INVALID_COMMAND"); return value.trim(); }
+function optionalPositive(value: unknown): number | undefined { if (value === undefined) return undefined; const number = value; if (typeof number !== "number" || !Number.isSafeInteger(number) || number < 1) throw invalid("AUTHZ_INVALID_EXPECTED_VERSION"); return number; }
 function invalid(code: string): Error { return Object.assign(new TypeError(code), { code, status: 400 }); }

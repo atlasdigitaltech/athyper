@@ -1,0 +1,16 @@
+{
+  "schema": "bp-address-tool-evidence/1",
+  "capturedAt": "2026-09-09T04:11:37.717968+00:00",
+  "apiImage": "athyper-runtime-server:bp-address-tool-20260909",
+  "health": "healthy",
+  "checks": {
+    "aiTests": 225,
+    "ownerTests": 17,
+    "bp360PolicyServiceTests": 27,
+    "hostTests": 7,
+    "typechecks": "passed",
+    "builds": "passed",
+    "syntheticDeployedAddressRead": "passed"
+  },
+  "authenticatedLiveModelQualification": "pending"
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "explicit_user_image_binding_approval",
+  "decision": "approved",
+  "proposalRevision": "5ffe103d2645a4428119bdf795988022bb7981121dce2a82c52ec2d4f4eadc39",
+  "approvedAt": "2026-09-12T05:17:52.206Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "approved",
+    "respondingTo": "Tested image-only correction for provider denials incorrectly returning 500; restores no access"
+  },
+  "grantMutation": false,
+  "activationAuthorized": false,
+  "dispositionAcceptance": false
+}

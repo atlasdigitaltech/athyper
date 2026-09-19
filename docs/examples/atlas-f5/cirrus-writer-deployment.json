@@ -1,0 +1,12 @@
+{
+  "observedAt": "2026-09-10T01:16:58.250Z",
+  "image": "athyper-runtime-server:atlas-writer-20260910",
+  "imageDigest": "sha256:d3c0fbb7150aba60140a922e313d0dc7f5733b874405b651aa2c0b111a8b784d",
+  "healthy": true,
+  "restarts": 0,
+  "nativeStatus": 401,
+  "nativeCode": "AUTHENTICATION_REQUIRED",
+  "permissionAssignmentsChanged": false,
+  "metadataPublished": false,
+  "documentUploaded": false
+}

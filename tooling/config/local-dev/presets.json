@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "coreServices": [
+    "gateway",
+    "db",
+    "db-init",
+    "dbpool-apps",
+    "dbpool-session",
+    "memorycache",
+    "objectstorage",
+    "objectstorage-init",
+    "iam",
+    "jobqueue"
+  ],
+  "capabilities": {
+    "search": {
+      "services": ["searchcore", "searchcore-key-init"],
+      "profiles": []
+    },
+    "documents": {
+      "services": ["virusscan", "docrender", "docparser"],
+      "profiles": []
+    },
+    "mail": {
+      "services": ["mailtrap"],
+      "profiles": []
+    },
+    "observability": {
+      "services": [
+        "memorycache-exporter",
+        "metrics",
+        "logging",
+        "tracing",
+        "alertmanager",
+        "telemetry",
+        "jobqueue-exporter",
+        "secretstore-cache-exporter"
+      ],
+      "profiles": ["observability"]
+    },
+    "secretstore": {
+      "services": ["secretstore"],
+      "profiles": ["secretstore"]
+    },
+    "admin-db": {
+      "services": ["dbconsole"],
+      "profiles": ["admin-db"]
+    },
+    "queue": {
+      "services": ["queueconsole"],
+      "profiles": ["admin-queue"]
+    },
+    "analytics": {
+      "services": ["analyticsboard"],
+      "profiles": ["analytics"]
+    }
+  },
+  "presets": {
+    "devsimple": {
+      "apps": ["neon"],
+      "capabilities": [],
+      "idleInfrastructureLimitMiB": 6144,
+      "buildConcurrency": 1,
+      "minimumAvailableMiB": 2048,
+      "serviceMemoryMiB": {
+        "db": 2048,
+        "iam": 1024,
+        "memorycache": 1024,
+        "objectstorage": 512,
+        "gateway": 128,
+        "dbpool-apps": 128,
+        "dbpool-session": 128,
+        "objectstorage-init": 512,
+        "jobqueue": 1024
+      }
+    },
+    "devfull": {
+      "apps": ["studio", "neon", "mesh"],
+      "capabilities": [
+        "search",
+        "documents",
+        "mail",
+        "observability",
+        "secretstore",
+        "admin-db"
+      ],
+      "idleInfrastructureLimitMiB": 16384,
+      "buildConcurrency": 2,
+      "minimumAvailableMiB": 8192,
+      "serviceMemoryMiB": {
+        "db": 4096,
+        "iam": 2048,
+        "memorycache": 1024,
+        "objectstorage": 1024,
+        "gateway": 256,
+        "dbpool-apps": 256,
+        "dbpool-session": 256,
+        "objectstorage-init": 512,
+        "jobqueue": 1024
+      }
+    }
+  }
+}

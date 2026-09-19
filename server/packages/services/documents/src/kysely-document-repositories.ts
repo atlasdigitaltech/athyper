@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { DocumentArtifactRepository, DocumentTemplateRepository, GeneratedDocument, NotificationAttachmentCandidate, PublishedDocumentTemplate } from "@athyper/server-contract-documents";
 import type { PdfPageFormat, PdfRenderOptions } from "@athyper/server-contract-rendering";
 import { sql, type Transaction } from "kysely";
@@ -12,7 +13,17 @@ interface TemplateRow {
 }
 
 export function createKyselyDocumentTemplateRepository(): DocumentTemplateRepository<DocumentTransaction> {
-  return { async resolvePublished(query, transaction) {
+  return { async resolveExact(query, transaction) {
+    const e=query.exact;
+    const row=(await sql<TemplateRow & {assets_manifest:unknown}>`SELECT b.id binding_id,t.id template_id,v.id template_version_id,v.version,v.checksum,t.name template_name,t.engine,b.locale_code,b.variant_code,v.content_html,v.styles_css,v.variables_schema,v.assets_manifest,NULL::text paper_size,NULL::text orientation,NULL::text margins,false header_footer,true background_graphics,NULL::text header_html,NULL::text footer_html
+      FROM master.template_binding b JOIN master.template t ON t.tenant_id=b.tenant_id AND t.id=b.template_id JOIN snapshot.template_version v ON v.tenant_id=t.tenant_id AND v.template_id=t.id
+      WHERE b.tenant_id=${query.tenantId}::uuid AND b.id=${e.bindingId}::uuid AND t.id=${e.templateId}::uuid AND v.id=${e.id}::uuid AND v.version=${e.version} AND v.checksum=${e.hash} AND b.entity_code=${query.entityType} AND b.operation_code=${query.operationCode} AND b.locale_code=${e.locale} AND b.variant_code=${e.variant} AND v.locale_code=${e.locale} AND b.letterhead_id IS NULL AND b.print_profile_id IS NULL AND b.is_active AND b.status='active' AND t.status='published' AND t.engine='handlebars'`.execute(transaction)).rows[0];
+    if(!row)return null;
+    const canonical=(v:unknown):string=>Array.isArray(v)?`[${v.map(canonical).join(',')}]`:v!==null&&typeof v==='object'?`{${Object.entries(v).sort(([a],[b])=>a.localeCompare(b)).map(([k,x])=>`${JSON.stringify(k)}:${canonical(x)}`).join(',')}}`:JSON.stringify(v);
+    const content={content_html:row.content_html,styles_css:row.styles_css,variables_schema:row.variables_schema,assets_manifest:row.assets_manifest};
+    if(createHash('sha256').update(canonical(content)).digest('hex')!==e.hash)return null;
+    return mapTemplate(row);
+  }, async resolvePublished(query, transaction) {
     const result = await sql<TemplateRow>`
       SELECT binding.id AS binding_id, template.id AS template_id, version.id AS template_version_id,
              version.version, version.checksum, template.name AS template_name, template.engine,
@@ -46,21 +57,26 @@ export function createKyselyDocumentTemplateRepository(): DocumentTemplateReposi
 export function createKyselyDocumentArtifactRepository(): DocumentArtifactRepository<DocumentTransaction> {
   return {
     async save(input, transaction) {
+      await sql`INSERT INTO document.attachment_series(id,tenant_id,created_by)
+        VALUES (${input.id}::uuid,${input.tenantId}::uuid,${input.principalId}::uuid)`.execute(transaction);
       const created = await sql<{ created_at: Date | string }>`
         INSERT INTO document.attachment
           (id,tenant_id,file_name,original_filename,content_type,size_bytes,sha256,kind,
-           storage_bucket,storage_key,version_no,reference_count,is_current,is_active,
+           storage_bucket,storage_key,version_no,reference_count,series_id,is_active,
            is_virus_scanned,text_extraction_status,metadata,status,uploaded_by,created_by)
         VALUES (${input.id}::uuid,${input.tenantId}::uuid,${input.fileName},${input.fileName},
           'application/pdf',${input.sizeBytes},${input.sha256},'generated_document',
-          ${input.storageBucket},${input.storageKey},1,1,true,true,true,'pending',
-          ${JSON.stringify({ template_id: input.template.templateId, template_version_id: input.template.templateVersionId, template_version: input.template.version, template_checksum: input.template.checksum, binding_id: input.template.bindingId, render_provider: input.renderProvider, render_duration_ms: input.renderDurationMs, malware_scan: { status: input.malwareScan.status, scanner: input.malwareScan.scanner, scanned_at: input.malwareScan.scannedAt, duration_ms: input.malwareScan.durationMs, ...(input.malwareScan.signatureVersion ? { signature_version: input.malwareScan.signatureVersion } : {}) }, ...(input.idempotencyKey ? { idempotency_key: input.idempotencyKey } : {}) })}::jsonb,
+          ${input.storageBucket},${input.storageKey},1,1,${input.id}::uuid,true,true,'pending',
+          ${JSON.stringify({ template_id: input.template.templateId, template_version_id: input.template.templateVersionId, template_version: input.template.version, template_checksum: input.template.checksum, binding_id: input.template.bindingId, render_provider: input.renderProvider, render_duration_ms: input.renderDurationMs, ...(input.provenance ? {process_document:input.provenance} : {}), malware_scan: { status: input.malwareScan.status, scanner: input.malwareScan.scanner, scanned_at: input.malwareScan.scannedAt, duration_ms: input.malwareScan.durationMs, ...(input.malwareScan.signatureVersion ? { signature_version: input.malwareScan.signatureVersion } : {}) }, ...(input.idempotencyKey ? { idempotency_key: input.idempotencyKey, request_hash: input.requestHash } : {}) })}::jsonb,
           'active',${input.principalId}::uuid,${input.principalId}::uuid)
         RETURNING created_at
       `.execute(transaction);
+      await sql`UPDATE document.attachment_series SET current_attachment_id=${input.id}::uuid,
+        updated_at=clock_timestamp(),updated_by=${input.principalId}::uuid
+        WHERE tenant_id=${input.tenantId}::uuid AND id=${input.id}::uuid`.execute(transaction);
       await sql`INSERT INTO document.attachment_link
-          (tenant_id,entity_type,entity_id,attachment_id,link_kind,display_order,metadata,created_by)
-        VALUES (${input.tenantId}::uuid,${input.entityType},${input.entityId},${input.id}::uuid,
+          (tenant_id,entity_type,entity_id,attachment_series_id,pinned_attachment_id,link_kind,display_order,metadata,created_by)
+        VALUES (${input.tenantId}::uuid,${input.entityType},${input.entityId},${input.id}::uuid,${input.provenance ? input.id : null}::uuid,
           'rendered',0,${JSON.stringify({ operation_code: input.operationCode, binding_id: input.template.bindingId })}::jsonb,${input.principalId}::uuid)`.execute(transaction);
       return generated(input, dateTime(created.rows[0]?.created_at));
     },
@@ -71,9 +87,11 @@ export function createKyselyDocumentArtifactRepository(): DocumentArtifactReposi
                attachment.storage_key, attachment.metadata, attachment.created_at
           FROM document.attachment AS attachment
           JOIN document.attachment_link AS link
-            ON link.tenant_id = attachment.tenant_id AND link.attachment_id = attachment.id
+            ON link.tenant_id = attachment.tenant_id AND link.attachment_series_id = attachment.series_id
          WHERE attachment.tenant_id = ${context.tenantId}::uuid AND attachment.id = ${documentId}::uuid
            AND attachment.kind = 'generated_document' AND attachment.status = 'active' AND attachment.is_virus_scanned
+           AND attachment.is_active AND (attachment.expires_at IS NULL OR attachment.expires_at > clock_timestamp())
+           AND (link.pinned_attachment_id IS NULL OR link.pinned_attachment_id = attachment.id)
          LIMIT 1
       `.execute(transaction);
       const row = result.rows[0]; if (!row) return null;
@@ -84,15 +102,18 @@ export function createKyselyDocumentArtifactRepository(): DocumentArtifactReposi
       const result = await sql<Record<string, unknown>>`
         SELECT attachment.id, link.entity_type, link.entity_id, attachment.file_name,
                attachment.content_type, attachment.size_bytes, attachment.sha256,
-               attachment.metadata, attachment.created_at
+               attachment.metadata, attachment.created_at,
+               (attachment.status = 'active' AND attachment.is_active AND attachment.is_virus_scanned
+                AND link.entity_id IS NOT NULL
+                AND (attachment.expires_at IS NULL OR attachment.expires_at > clock_timestamp())) AS replayable
           FROM document.attachment AS attachment
-          JOIN document.attachment_link AS link
-            ON link.tenant_id=attachment.tenant_id AND link.attachment_id=attachment.id
-         WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.kind='generated_document' AND attachment.is_virus_scanned
-           AND attachment.status='active' AND attachment.metadata->>'idempotency_key'=${idempotencyKey}
+          LEFT JOIN document.attachment_link AS link
+            ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id
+         WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.kind='generated_document'
+           AND attachment.metadata->>'idempotency_key'=${idempotencyKey}
          LIMIT 1`.execute(transaction);
       const row=result.rows[0]; if(!row)return null; const metadata=object(row["metadata"]);
-      return {id:String(row["id"]),entityType:String(row["entity_type"]),entityId:String(row["entity_id"]),fileName:String(row["file_name"]),contentType:"application/pdf",sizeBytes:Number(row["size_bytes"]),sha256:String(row["sha256"]),templateId:stringValue(metadata["template_id"]),templateVersionId:stringValue(metadata["template_version_id"]),templateVersion:Number(metadata["template_version"]),createdAt:dateTime(row["created_at"])};
+      return {id:String(row["id"]),entityType:String(row["entity_type"]),entityId:String(row["entity_id"]),fileName:String(row["file_name"]),contentType:"application/pdf",sizeBytes:Number(row["size_bytes"]),sha256:String(row["sha256"]),templateId:stringValue(metadata["template_id"]),templateVersionId:stringValue(metadata["template_version_id"]),templateVersion:Number(metadata["template_version"]),createdAt:dateTime(row["created_at"]), ...(row["replayable"] === true && typeof metadata["request_hash"] === "string" ? { requestHash: metadata["request_hash"] } : {})};
     },
     async findNotificationCandidate(input, transaction) {
       const result = await sql<Record<string, unknown>>`
@@ -121,7 +142,8 @@ export function createKyselyDocumentArtifactRepository(): DocumentArtifactReposi
                link.entity_type,link.entity_id
         FROM selected
         LEFT JOIN document.attachment_link link
-          ON link.tenant_id=selected.tenant_id AND link.attachment_id=selected.id
+          ON link.tenant_id=selected.tenant_id AND link.attachment_series_id=selected.series_id
+         AND (link.pinned_attachment_id IS NULL OR link.pinned_attachment_id=selected.id)
         ORDER BY link.display_order,link.created_at
       `.execute(transaction);
       const first = result.rows[0];

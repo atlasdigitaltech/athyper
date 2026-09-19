@@ -1,6 +1,7 @@
 import { MeshShell } from "@athyper/product-mesh-shell";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { loadProtectedAppBootstrap } from "@/lib/bootstrap";
 import { AppProviders } from "../providers";
 export const dynamic = "force-dynamic";
-export default async function ProtectedLayout({ children }: { readonly children: React.ReactNode }) { const state = await loadProtectedAppBootstrap("/"); if (state.state === "redirect") redirect(state.location); return <AppProviders session={state.session} bootstrap={state.bootstrap} dehydratedState={state.dehydratedState}><MeshShell bootstrap={state.bootstrap} principalId={state.session.principalId ?? "Account"}>{children}</MeshShell></AppProviders>; }
+export default async function ProtectedLayout({ children }: { readonly children: React.ReactNode }) { const [state,cookieStore] = await Promise.all([loadProtectedAppBootstrap(),cookies()]); if (state.state === "redirect") redirect(state.location); const initialCollapsed=cookieStore.get("athyper_shell_collapsed")?.value==="true"; return <AppProviders session={state.session} bootstrap={state.bootstrap} dehydratedState={state.dehydratedState}><MeshShell bootstrap={state.bootstrap} principalId={state.session.principalId ?? "Account"} initialCollapsed={initialCollapsed}>{children}</MeshShell></AppProviders>; }

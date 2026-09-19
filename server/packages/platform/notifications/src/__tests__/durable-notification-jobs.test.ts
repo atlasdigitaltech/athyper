@@ -9,6 +9,7 @@ import {
   createDeliverySweepHandler,
   createNotificationDiscoveryHandler,
   createNotificationOutboxSweepHandler,
+  notificationPlanningFailureDisposition,
   createWebhookSweepHandler,
 } from "../index.js";
 
@@ -16,9 +17,18 @@ const TENANT_ID = "11111111-1111-4111-8111-111111111111";
 const PRINCIPAL_ID = "22222222-2222-4222-8222-222222222222";
 
 describe("durable notification jobs", () => {
+  it("retries planning failures and dead-letters the exhausted tenth attempt", () => {
+    expect(notificationPlanningFailureDisposition(1)).toBe("retry");
+    expect(notificationPlanningFailureDisposition(9)).toBe("retry");
+    expect(notificationPlanningFailureDisposition(10)).toBe("dead_letter");
+    expect(() => notificationPlanningFailureDisposition(0)).toThrow(
+      /positive integer/,
+    );
+  });
   it("completes and retries outbox items independently", async () => {
     const complete = vi.fn();
     const fail = vi.fn();
+    const telemetry = vi.fn();
     const events = [sourceEvent("event-1"), sourceEvent("event-2")];
     const repository = {
       claim: vi.fn().mockResolvedValue([
@@ -29,22 +39,47 @@ describe("durable notification jobs", () => {
       fail,
     };
     const planner = {
-      plan: vi.fn()
-        .mockResolvedValueOnce({ matchedRules: 1, messages: 2, deliveries: 2, digests: 0 })
+      plan: vi
+        .fn()
+        .mockResolvedValueOnce({
+          matchedRules: 1,
+          messages: 2,
+          deliveries: 2,
+          digests: 0,
+        })
         .mockRejectedValueOnce(new Error("invalid template")),
     };
-    const handler = createNotificationOutboxSweepHandler({ repository, planner } as never);
+    const handler = createNotificationOutboxSweepHandler({
+      repository,
+      planner,
+      telemetry,
+    } as never);
 
-    await expect(handler.handle(job(PLAN_NOTIFICATION_OUTBOX_JOB, request()), context()))
-      .resolves.toEqual({
-        status: "completed",
-        output: { claimed: 2, messages: 2, failed: 1 },
-      });
+    await expect(
+      handler.handle(job(PLAN_NOTIFICATION_OUTBOX_JOB, request()), context()),
+    ).resolves.toEqual({
+      status: "completed",
+      output: { claimed: 2, messages: 2, failed: 1 },
+    });
     expect(complete).toHaveBeenCalledWith(request(), "state-1", 2);
     expect(fail).toHaveBeenCalledWith(
       request(),
       expect.objectContaining({ stateId: "state-2" }),
       "invalid template",
+    );
+    expect(telemetry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        outcome: "completed",
+        eventCode: "record.changed",
+        attemptCount: 1,
+      }),
+    );
+    expect(telemetry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        outcome: "retry",
+        eventCode: "record.changed",
+        attemptCount: 1,
+      }),
     );
   });
 
@@ -53,62 +88,143 @@ describe("durable notification jobs", () => {
     const publish = vi.fn();
     const send = vi.fn().mockResolvedValue({ externalId: "mail-1" });
     const repository = {
-      claim: vi.fn().mockResolvedValue([
-        delivery("email", "delivery-email"),
-        delivery("in_app", "delivery-in-app"),
-      ]),
+      claim: vi
+        .fn()
+        .mockResolvedValue([
+          delivery("email", "delivery-email"),
+          delivery("in_app", "delivery-in-app"),
+        ]),
       attachments: vi.fn().mockResolvedValue([]),
       complete,
     };
     const handler = createDeliverySweepHandler({
       repository,
-      handlers: new Map([["email", { channel: "email", send, health: vi.fn() }]]),
+      handlers: new Map([
+        ["email", { channel: "email", send, health: vi.fn() }],
+      ]),
       events: { publish },
     } as never);
 
-    await expect(handler.handle(job(DELIVERY_SWEEP_JOB, request()), context()))
-      .resolves.toEqual({
-        status: "completed",
-        output: { claimed: 2, delivered: 2, failed: 0 },
-      });
+    await expect(
+      handler.handle(job(DELIVERY_SWEEP_JOB, request()), context()),
+    ).resolves.toEqual({
+      status: "completed",
+      output: { claimed: 2, delivered: 2, failed: 0 },
+    });
     expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ deliveryId: "delivery-email" }),
+    );
     expect(complete).toHaveBeenCalledTimes(2);
     expect(publish).toHaveBeenCalledOnce();
     expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({ principalId: PRINCIPAL_ID, notificationId: "message-1" }),
+      expect.objectContaining({
+        principalId: PRINCIPAL_ID,
+        notificationId: "message-1",
+      }),
     );
   });
 
+  it("suppresses a stale recipient before attachment resolution, transport or inbox publication", async () => {
+    const complete=vi.fn(), send=vi.fn(), publish=vi.fn(), attachments=vi.fn();
+    const handler=createDeliverySweepHandler({repository:{claim:vi.fn().mockResolvedValue([delivery("email","stale"),delivery("in_app","stale-inbox")]),attachments,complete},handlers:new Map([["email",{channel:"email",send,health:vi.fn()}]]),events:{publish},authorizeDelivery:async()=>({allowed:false,reason:"ATTEMPT_SUPERSEDED"})} as never);
+    await expect(handler.handle(job(DELIVERY_SWEEP_JOB,request()),context())).resolves.toMatchObject({output:{delivered:0,failed:0,suppressed:2}});
+    expect(complete).toHaveBeenCalledWith(expect.anything(),expect.objectContaining({suppressed:true,retryable:false,error:"ATTEMPT_SUPERSEDED"}),PRINCIPAL_ID);
+    expect(send).not.toHaveBeenCalled();expect(publish).not.toHaveBeenCalled();expect(attachments).not.toHaveBeenCalled();
+  });
+
+  it("preserves asynchronous provider acceptance for authoritative delivery events", async () => {
+    const complete = vi.fn();
+    const repository = {
+      claim: vi.fn().mockResolvedValue([delivery("email", "delivery-ses")]),
+      attachments: vi.fn().mockResolvedValue([]),
+      complete,
+    };
+    const handler = createDeliverySweepHandler({
+      repository,
+      handlers: new Map([
+        [
+          "email",
+          {
+            channel: "email",
+            send: vi.fn().mockResolvedValue({
+              externalId: "ses-message-1",
+              confirmation: "provider_accepted",
+            }),
+            health: vi.fn(),
+          },
+        ],
+      ]),
+      events: { publish: vi.fn() },
+    } as never);
+
+    await handler.handle(job(DELIVERY_SWEEP_JOB, request()), context());
+    expect(complete).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "delivery-ses" }),
+      expect.objectContaining({
+        delivered: true,
+        externalId: "ses-message-1",
+        confirmation: "provider_accepted",
+      }),
+      PRINCIPAL_ID,
+    );
+  });
+
+  it("does not send when a required attachment loses recipient access", async () => {
+    const send=vi.fn(),complete=vi.fn();
+    const handler=createDeliverySweepHandler({repository:{claim:async()=>[delivery("email","required-denied")],attachments:async()=>[{attachmentId:"44444444-4444-4444-8444-444444444444",attachmentVersionId:"44444444-4444-4444-8444-444444444444",versionPolicy:"pinned",requestedDisposition:"embed",required:true,sortOrder:0}],complete},handlers:new Map([["email",{channel:"email",send}]]),events:{publish:vi.fn()},attachments:{resolveForDelivery:async()=>{throw Object.assign(new Error("ARTIFACT_ACCESS_REVOKED"),{retryable:false});}}} as never);
+    await handler.handle(job(DELIVERY_SWEEP_JOB,request()),context());
+    expect(send).not.toHaveBeenCalled();
+    expect(complete).toHaveBeenCalledWith(expect.anything(),expect.objectContaining({delivered:false,retryable:false,error:"ARTIFACT_ACCESS_REVOKED"}),expect.anything());
+  });
   it("resolves a durable attachment immediately before the external send", async () => {
     const send = vi.fn().mockResolvedValue({ externalId: "mail-attachment" });
     const resolveForDelivery = vi.fn().mockResolvedValue({
       attachmentId: "44444444-4444-4444-8444-444444444444",
       attachmentVersionId: "44444444-4444-4444-8444-444444444444",
-      filename: "invoice.pdf", contentType: "application/pdf", sizeBytes: 20,
-      sha256: "a".repeat(64), disposition: "link", downloadUrl: "https://download.example/invoice",
+      filename: "invoice.pdf",
+      contentType: "application/pdf",
+      sizeBytes: 20,
+      sha256: "a".repeat(64),
+      disposition: "link",
+      downloadUrl: "https://download.example/invoice",
     });
     const repository = {
-      claim: vi.fn().mockResolvedValue([delivery("email", "delivery-attachment")]),
-      attachments: vi.fn().mockResolvedValue([{
-        attachmentId: "44444444-4444-4444-8444-444444444444",
-        versionPolicy: "current", requestedDisposition: "auto", required: true, sortOrder: 0,
-      }]),
+      claim: vi
+        .fn()
+        .mockResolvedValue([delivery("email", "delivery-attachment")]),
+      attachments: vi.fn().mockResolvedValue([
+        {
+          attachmentId: "44444444-4444-4444-8444-444444444444",
+          versionPolicy: "current",
+          requestedDisposition: "auto",
+          required: true,
+          sortOrder: 0,
+        },
+      ]),
       complete: vi.fn(),
     };
     const handler = createDeliverySweepHandler({
       repository,
-      handlers: new Map([["email", { channel: "email", send, health: vi.fn() }]]),
+      handlers: new Map([
+        ["email", { channel: "email", send, health: vi.fn() }],
+      ]),
       events: { publish: vi.fn() },
       attachments: { resolveForDelivery },
     } as never);
 
     await handler.handle(job(DELIVERY_SWEEP_JOB, request()), context());
-    expect(resolveForDelivery).toHaveBeenCalledWith(expect.objectContaining({
-      purpose: "notification_delivery", accessMode: "link",
-    }));
-    expect(send).toHaveBeenCalledWith(expect.objectContaining({
-      attachments: [expect.objectContaining({ filename: "invoice.pdf" })],
-    }));
+    expect(resolveForDelivery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        purpose: "notification_delivery",
+        accessMode: "link",
+      }),
+    );
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attachments: [expect.objectContaining({ filename: "invoice.pdf" })],
+      }),
+    );
   });
 
   it("discovers tenant work and fans out deterministic tenant-scoped sweeps", async () => {
@@ -117,15 +233,23 @@ describe("durable notification jobs", () => {
       listTenants: vi.fn().mockResolvedValue([TENANT_ID]),
       listWebhookDeliveries: vi.fn(),
     };
-    const handler = createNotificationDiscoveryHandler({ catalog, jobs: { enqueue } });
+    const handler = createNotificationDiscoveryHandler({
+      catalog,
+      jobs: { enqueue },
+    });
 
-    await expect(handler.handle(
-      job(DISCOVER_NOTIFICATION_WORK_JOB, {
-        planeKey: "neon" as const,
-        principalId: PRINCIPAL_ID,
-      }),
-      context(),
-    )).resolves.toEqual({ status: "completed", output: { tenants: 1, kind: "message" } });
+    await expect(
+      handler.handle(
+        job(DISCOVER_NOTIFICATION_WORK_JOB, {
+          planeKey: "neon" as const,
+          principalId: PRINCIPAL_ID,
+        }),
+        context(),
+      ),
+    ).resolves.toEqual({
+      status: "completed",
+      output: { tenants: 1, kind: "message" },
+    });
     expect(enqueue).toHaveBeenCalledTimes(3);
     expect(enqueue).toHaveBeenCalledWith(
       NOTIFICATION_MAINTENANCE_QUEUE,
@@ -139,14 +263,20 @@ describe("durable notification jobs", () => {
     const enqueue = vi.fn().mockResolvedValue("job-1");
     const catalog = {
       listTenants: vi.fn(),
-      listWebhookDeliveries: vi.fn().mockResolvedValue([
-        { deliveryId: "delivery-1", attempt: 2 },
-      ]),
+      listWebhookDeliveries: vi
+        .fn()
+        .mockResolvedValue([{ deliveryId: "delivery-1", attempt: 2 }]),
     };
     const handler = createWebhookSweepHandler({ catalog, jobs: { enqueue } });
-    const data = { planeKey: "mesh" as const, tenantId: TENANT_ID, principalId: PRINCIPAL_ID };
+    const data = {
+      planeKey: "mesh" as const,
+      tenantId: TENANT_ID,
+      principalId: PRINCIPAL_ID,
+    };
 
-    await expect(handler.handle(job(WEBHOOK_SWEEP_JOB, data), context())).resolves.toEqual({
+    await expect(
+      handler.handle(job(WEBHOOK_SWEEP_JOB, data), context()),
+    ).resolves.toEqual({
       status: "completed",
       output: { enqueued: 1 },
     });
@@ -186,7 +316,9 @@ function delivery(channel: "email" | "in_app", id: string) {
     planeKey: "neon" as const,
     messageId: "message-1",
     principalId: PRINCIPAL_ID,
-    recipientAddress: channel === "email" ? "person@example.test" : PRINCIPAL_ID,
+    actorPrincipalId: PRINCIPAL_ID,
+    recipientAddress:
+      channel === "email" ? "person@example.test" : PRINCIPAL_ID,
     channel,
     templateKey: "record.changed",
     subject: "Changed",
@@ -197,7 +329,10 @@ function delivery(channel: "email" | "in_app", id: string) {
   };
 }
 
-function job<Name extends string, Data extends Record<string, unknown>>(name: Name, data: Data) {
+function job<Name extends string, Data extends Record<string, unknown>>(
+  name: Name,
+  data: Data,
+) {
   return {
     id: "job-1",
     name,
@@ -210,5 +345,9 @@ function job<Name extends string, Data extends Record<string, unknown>>(name: Na
 }
 
 function context() {
-  return { signal: new AbortController().signal, attempt: 1, reportProgress: vi.fn() };
+  return {
+    signal: new AbortController().signal,
+    attempt: 1,
+    reportProgress: vi.fn(),
+  };
 }

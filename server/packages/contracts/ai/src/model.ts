@@ -1,4 +1,4 @@
-export type AtlasProviderId = "anthropic" | "openai" | "gemini";
+export type AtlasProviderId = "anthropic" | "openai" | "gemini" | "ollama";
 export type AtlasPublicModelId = "atlas-fast" | "atlas-balanced" | "atlas-best" | (string & {});
 export type AtlasDataClass = "public" | "internal" | "confidential" | "restricted" | "synthetic";
 
@@ -24,7 +24,8 @@ export interface AtlasModelBinding {
   readonly exposure: "product" | "internal_evaluation";
   readonly status: "available" | "restricted" | "disabled";
   readonly capabilities: AtlasModelCapabilities;
-  readonly credentialPolicy: "platform" | "tenant_required";
+  readonly credentialPolicy: "platform" | "tenant_required" | "local_transport";
+  readonly modelDigest?: string;
   readonly credentialOwnerId: string;
   readonly providerRegion: string;
   readonly dataHandlingProfileId: string;
@@ -40,13 +41,14 @@ export interface AtlasModelBinding {
   readonly reasoningPricePerMtokUsd?: number | null;
 }
 
-export interface AtlasTextBlock { readonly type: "text"; readonly text: string }
+export interface AtlasHistoryCitation { readonly toolCode: string; readonly coordinate: import("./records.js").AtlasRecordSourceCoordinate }
+export interface AtlasTextBlock { /** Server-retained, reauthorized provenance; never read from provider output. */ readonly citations?: readonly AtlasHistoryCitation[]; readonly type: "text"; readonly text: string }
 export interface AtlasToolUseBlock { readonly type: "tool_use"; readonly callId: string; readonly toolName: string; readonly input: Readonly<Record<string, unknown>> }
-export interface AtlasToolResultBlock { readonly type: "tool_result"; readonly callId: string; readonly toolName: string; readonly result: unknown; readonly isError?: boolean }
+export interface AtlasToolResultBlock { /** Server-owned citation coordinates, retained under message lineage authorization. */ readonly sources?: readonly import("./records.js").AtlasRecordSourceCoordinate[]; readonly type: "tool_result"; readonly callId: string; readonly toolName: string; readonly result: unknown; readonly isError?: boolean }
 export type AtlasContentBlock = AtlasTextBlock | AtlasToolUseBlock | AtlasToolResultBlock;
 export type AtlasMessageRole = "system" | "user" | "assistant" | "tool";
 export interface AtlasModelMessage { readonly role: AtlasMessageRole; readonly content: readonly AtlasContentBlock[] }
-export interface AtlasProviderToolDefinition { readonly name: string; readonly description: string; readonly inputSchema: Readonly<Record<string, unknown>> }
+export interface AtlasProviderToolDefinition { readonly entitySection?: import("./entity-sections.js").AtlasEntitySectionContext; readonly name: string; readonly description: string; readonly inputSchema: Readonly<Record<string, unknown>> }
 
 export interface AtlasModelPrompt {
   readonly messages: readonly AtlasModelMessage[];
@@ -55,7 +57,8 @@ export interface AtlasModelPrompt {
 }
 
 /** Secret leases are resolved server-side after exact binding resolution. */
-export interface AtlasProviderCredentialLease {
+export interface AtlasApiKeyCredentialLease {
+  readonly authMode?: "api_key";
   readonly secret: string;
   readonly credentialId: string;
   readonly credentialRevision: string;
@@ -63,7 +66,18 @@ export interface AtlasProviderCredentialLease {
   readonly expiresAt?: string;
 }
 
+export type AtlasProviderCredentialLease = AtlasApiKeyCredentialLease | {
+  readonly authMode: "local_transport";
+  readonly endpoint: string;
+  readonly ownerId: string;
+  readonly secret?: never;
+  readonly credentialId: null;
+  readonly credentialRevision: null;
+};
+
 export interface AtlasProviderInvocation {
+  /** Internal callback; never serialized into provider payloads. */
+  readonly reauthorize?: () => Promise<boolean>;
   readonly binding: AtlasModelBinding;
   readonly credential: AtlasProviderCredentialLease;
   readonly prompt: AtlasModelPrompt;
@@ -81,7 +95,7 @@ export interface AtlasProviderInvocation {
 
 export type AtlasFinishReason = "stop" | "length" | "tool_call" | "content_filter" | "refusal" | "cancelled" | "incomplete" | "error";
 export type AtlasProviderErrorClass = "authentication" | "permission" | "invalid_request" | "model_unavailable" | "rate_limited" | "quota_exhausted" | "overloaded" | "timeout" | "safety_block" | "stream_incomplete" | "protocol_error" | "upstream_error" | "cancelled";
-export interface AtlasProviderError { readonly errorClass: AtlasProviderErrorClass; readonly code: string; readonly safeMessage: string; readonly retryable: boolean; readonly retryAfterMs?: number }
+export interface AtlasProviderError { readonly errorClass: AtlasProviderErrorClass; readonly code: string; readonly safeMessage: string; readonly retryable: boolean; readonly retryAfterMs?: number; readonly diagnostics?: { readonly modelDigest: string; readonly queueWaitMs: number; readonly loadDurationMs: number; readonly readinessChecks: number } }
 export interface AtlasProviderUsage { readonly inputTokens?: number; readonly outputTokens?: number; readonly cacheReadTokens?: number; readonly cacheWriteTokens?: number; readonly reasoningTokens?: number }
 
 export type AtlasProviderEvent =

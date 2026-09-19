@@ -12,6 +12,7 @@ CREATE TABLE mesh.network_account (
     network_role      mesh.network_account_role_d   NOT NULL,
     country_code      character(2),
     default_currency  character(3),
+    logo_asset_ref    text,
     capabilities      jsonb                         NOT NULL DEFAULT '{}'::jsonb,
     metadata          jsonb                         NOT NULL DEFAULT '{}'::jsonb,
     status            mesh.network_account_status_d NOT NULL DEFAULT 'pending',
@@ -34,6 +35,15 @@ CREATE TABLE mesh.network_account (
         btrim(display_name) <> ''
         AND (legal_name IS NULL OR btrim(legal_name) <> '')
     ),
+    CONSTRAINT network_account_logo_asset_ref_chk CHECK (
+        logo_asset_ref IS NULL
+        OR (
+            btrim(logo_asset_ref) = logo_asset_ref
+            AND length(logo_asset_ref) BETWEEN 2 AND 1024
+            AND logo_asset_ref ~ '^/[A-Za-z0-9][A-Za-z0-9_./-]*$'
+            AND logo_asset_ref !~ '(^|/)\.\.(/|$)'
+        )
+    ),
     CONSTRAINT network_account_capabilities_object_chk
         CHECK (jsonb_typeof(capabilities) = 'object'),
     CONSTRAINT network_account_metadata_object_chk
@@ -46,6 +56,9 @@ CREATE TABLE mesh.network_account (
 
 COMMENT ON TABLE mesh.network_account IS
   'Mesh exchange boundary owned by one participant tenant and reconciled to a canonical party. network_role declares buyer, supplier, or both and never replaces tenant_id or grants user access.';
+
+COMMENT ON COLUMN mesh.network_account.logo_asset_ref IS
+  'Optional same-origin managed logo path for buyer or supplier account presentation.';
 
 CREATE TABLE mesh.network_account_identifier (
     id                 uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -133,6 +146,8 @@ CREATE TABLE mesh.network_relationship (
     CONSTRAINT network_relationship_pkey PRIMARY KEY (id),
     CONSTRAINT network_relationship_participants_chk
         CHECK (buyer_account_id <> supplier_account_id),
+    CONSTRAINT network_relationship_tenants_chk
+        CHECK (buyer_tenant_id <> supplier_tenant_id),
     CONSTRAINT network_relationship_kind_chk
         CHECK (relationship_kind ~ '^[a-z][a-z0-9_.-]{1,62}$'),
     CONSTRAINT network_relationship_creator_participant_chk CHECK (
@@ -697,6 +712,35 @@ CREATE TABLE mesh.document_acknowledgement (
         CHECK (acknowledged_at <= created_at)
 );
 
+CREATE TABLE mesh.document_business_status_projection (
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    source_envelope_id      uuid        NOT NULL,
+    network_relationship_id uuid        NOT NULL,
+    resource_kind           text        NOT NULL,
+    resource_ref            text        NOT NULL,
+    lifecycle_version       bigint      NOT NULL,
+    business_status         text        NOT NULL,
+    safe_reason_code        text,
+    submitted_at            timestamptz,
+    decided_at              timestamptz,
+    last_event_id           uuid        NOT NULL,
+    last_event_hash         char(64)    NOT NULL,
+    updated_at              timestamptz NOT NULL DEFAULT clock_timestamp(),
+    CONSTRAINT document_business_status_projection_pkey PRIMARY KEY (id),
+    CONSTRAINT document_business_status_projection_resource_uq UNIQUE (network_relationship_id, resource_kind, resource_ref),
+    CONSTRAINT document_business_status_projection_envelope_uq UNIQUE (source_envelope_id, resource_kind, resource_ref),
+    CONSTRAINT document_business_status_projection_version_chk CHECK (lifecycle_version >= 1),
+    CONSTRAINT document_business_status_projection_kind_chk CHECK (resource_kind IN ('external_time_sheet','external_expense_sheet','service_sheet','supplier_invoice','invoice_match')),
+    CONSTRAINT document_business_status_projection_ref_chk CHECK (btrim(resource_ref) <> '' AND length(resource_ref) <= 256),
+    CONSTRAINT document_business_status_projection_status_chk CHECK (business_status IN ('received','accepted_for_processing','submitted','pending_approval','approved','rejected','reversed','matched','exception','posted','paid','cancelled')),
+    CONSTRAINT document_business_status_projection_reason_chk CHECK (safe_reason_code IS NULL OR safe_reason_code ~ '^[A-Z][A-Z0-9_.-]{1,126}$'),
+    CONSTRAINT document_business_status_projection_hash_chk CHECK (last_event_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT document_business_status_projection_dates_chk CHECK (decided_at IS NULL OR submitted_at IS NULL OR decided_at >= submitted_at)
+);
+
+COMMENT ON TABLE mesh.document_business_status_projection IS
+  'Rebuildable participant-safe status head for workforce claims, service sheets and invoices. It contains opaque references and safe reason codes only, never person, rate, receipt, accounting or unrestricted payload data.';
+
 -- Mesh-owned participant profile and bank foundation.
 -- Cross-plane publication/projection/onboarding is intentionally parked.
 
@@ -777,6 +821,59 @@ CREATE TABLE mesh.network_account_commodity_capability (
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
 
+CREATE TABLE mesh.network_account_industry_classification (
+    id                   uuid                         NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id            uuid                         NOT NULL,
+    network_account_id   uuid                         NOT NULL,
+    industry_domain_code text                         NOT NULL,
+    industry_code_id     uuid                         NOT NULL,
+    assignment_kind      text                         NOT NULL DEFAULT 'declared',
+    is_primary           boolean                      NOT NULL DEFAULT false,
+    confidence           smallint,
+    effective_from       date                         NOT NULL DEFAULT CURRENT_DATE,
+    effective_until      date,
+    verified_at          timestamptz,
+    verified_by          uuid,
+    source_system        text,
+    source_reference     text,
+    metadata             jsonb                        NOT NULL DEFAULT '{}'::jsonb,
+    status               mesh.profile_record_status_d NOT NULL DEFAULT 'active',
+    is_active            boolean GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at    timestamptz,
+    status_changed_by    uuid,
+    created_at           timestamptz                  NOT NULL DEFAULT now(),
+    created_by           uuid                         NOT NULL,
+    updated_at           timestamptz,
+    updated_by           uuid,
+
+    CONSTRAINT network_account_industry_classification_pkey PRIMARY KEY (id),
+    CONSTRAINT network_account_industry_classification_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT network_account_industry_classification_domain_chk
+        CHECK (industry_domain_code IN ('isic', 'naics')),
+    CONSTRAINT network_account_industry_classification_kind_chk
+        CHECK (assignment_kind IN ('declared', 'verified', 'inferred', 'imported')),
+    CONSTRAINT network_account_industry_classification_confidence_chk
+        CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 100),
+    CONSTRAINT network_account_industry_classification_range_chk
+        CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT network_account_industry_classification_verification_chk
+        CHECK (
+            ((verified_at IS NULL) = (verified_by IS NULL))
+            AND (assignment_kind <> 'verified' OR verified_at IS NOT NULL)
+        ),
+    CONSTRAINT network_account_industry_classification_source_chk
+        CHECK (
+            (source_system IS NULL OR (btrim(source_system) <> '' AND length(source_system) <= 128))
+            AND (source_reference IS NULL OR (btrim(source_reference) <> '' AND length(source_reference) <= 256))
+        ),
+    CONSTRAINT network_account_industry_classification_metadata_chk
+        CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT network_account_industry_classification_status_pair_chk
+        CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT network_account_industry_classification_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
 CREATE TABLE mesh.network_account_tax_registration (
     id                     uuid                         NOT NULL DEFAULT shared.uuidv7(),
     tenant_id              uuid                         NOT NULL,
@@ -821,46 +918,79 @@ CREATE TABLE mesh.network_account_tax_registration (
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
 
-CREATE TABLE mesh.bank_party (
-    id                       uuid                         NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id                uuid                         NOT NULL,
-    code                     text                         NOT NULL,
-    name                     text                         NOT NULL,
-    country_code             character(2)                 NOT NULL,
-    institution_type         mesh.bank_institution_type_d NOT NULL DEFAULT 'bank',
-    bic                      text,
-    national_bank_code_type  text,
-    national_bank_code       text,
-    branch_code              text,
-    branch_name              text,
-    supports_swift           boolean                      NOT NULL DEFAULT false,
-    supports_local_clearing  boolean                      NOT NULL DEFAULT false,
-    supports_sepa            boolean                      NOT NULL DEFAULT false,
-    supports_ach             boolean                      NOT NULL DEFAULT false,
-    metadata                 jsonb                        NOT NULL DEFAULT '{}'::jsonb,
-    status                   mesh.profile_record_status_d NOT NULL DEFAULT 'active',
-    is_active                boolean GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at        timestamptz,
-    status_changed_by        uuid,
-    created_at               timestamptz                  NOT NULL DEFAULT now(),
-    created_by               uuid                         NOT NULL,
-    updated_at               timestamptz,
-    updated_by               uuid,
+CREATE TABLE mesh.network_account_profile_publication (
+    id                       uuid        NOT NULL DEFAULT shared.uuidv7(),
+    owner_tenant_id          uuid        NOT NULL,
+    owner_account_id         uuid        NOT NULL,
+    recipient_tenant_id      uuid        NOT NULL,
+    recipient_account_id     uuid        NOT NULL,
+    network_relationship_id  uuid        NOT NULL,
+    snapshot_id              uuid        NOT NULL,
+    publication_version      integer     NOT NULL,
+    schema_version           integer     NOT NULL,
+    field_set_code           text        NOT NULL,
+    payload_hash             text        NOT NULL,
+    previous_publication_id  uuid,
+    idempotency_key          text        NOT NULL,
+    published_at             timestamptz NOT NULL DEFAULT clock_timestamp(),
+    published_by             uuid        NOT NULL,
 
-    CONSTRAINT mesh_bank_party_pkey PRIMARY KEY (id),
-    CONSTRAINT mesh_bank_party_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT mesh_bank_party_code_uq UNIQUE (tenant_id, code),
-    CONSTRAINT mesh_bank_party_code_chk CHECK (code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
-    CONSTRAINT mesh_bank_party_name_chk CHECK (btrim(name) <> ''),
-    CONSTRAINT mesh_bank_party_bic_chk
-        CHECK (bic IS NULL OR bic ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$'),
-    CONSTRAINT mesh_bank_party_national_code_pair_chk
-        CHECK ((national_bank_code_type IS NULL) = (national_bank_code IS NULL)),
-    CONSTRAINT mesh_bank_party_metadata_chk CHECK (jsonb_typeof(metadata) = 'object'),
-    CONSTRAINT mesh_bank_party_status_pair_chk
-        CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
-    CONSTRAINT mesh_bank_party_audit_pair_chk
-        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+    CONSTRAINT network_account_profile_publication_pkey PRIMARY KEY (id),
+    CONSTRAINT network_account_profile_publication_owner_id_uq UNIQUE (owner_tenant_id, id),
+    CONSTRAINT network_account_profile_publication_version_uq UNIQUE (owner_tenant_id, owner_account_id, recipient_account_id, publication_version),
+    CONSTRAINT network_account_profile_publication_snapshot_uq UNIQUE (owner_tenant_id, snapshot_id),
+    CONSTRAINT network_account_profile_publication_idempotency_uq UNIQUE (owner_tenant_id, idempotency_key),
+    CONSTRAINT network_account_profile_publication_participants_chk CHECK (owner_tenant_id <> recipient_tenant_id AND owner_account_id <> recipient_account_id),
+    CONSTRAINT network_account_profile_publication_version_chk CHECK (publication_version >= 1 AND schema_version >= 1),
+    CONSTRAINT network_account_profile_publication_field_set_chk CHECK (field_set_code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
+    CONSTRAINT network_account_profile_publication_hash_chk CHECK (payload_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT network_account_profile_publication_idempotency_chk CHECK (btrim(idempotency_key) = idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200)
+);
+
+CREATE TABLE mesh.network_account_profile_publication_event (
+    id                       uuid                             NOT NULL DEFAULT shared.uuidv7(),
+    owner_tenant_id          uuid                             NOT NULL,
+    recipient_tenant_id      uuid                             NOT NULL,
+    publication_id           uuid                             NOT NULL,
+    lifecycle_version        integer                          NOT NULL,
+    event_kind               mesh.profile_publication_event_d NOT NULL,
+    reason                   text,
+    decision_fingerprint     text                             NOT NULL,
+    idempotency_key          text                             NOT NULL,
+    recorded_at              timestamptz                      NOT NULL DEFAULT clock_timestamp(),
+    recorded_by              uuid                             NOT NULL,
+
+    CONSTRAINT network_account_profile_publication_event_pkey PRIMARY KEY (id),
+    CONSTRAINT network_account_profile_publication_event_owner_id_uq UNIQUE (owner_tenant_id, id),
+    CONSTRAINT network_account_profile_publication_event_version_uq UNIQUE (owner_tenant_id, publication_id, lifecycle_version),
+    CONSTRAINT network_account_profile_publication_event_idempotency_uq UNIQUE (owner_tenant_id, idempotency_key),
+    CONSTRAINT network_account_profile_publication_event_participants_chk CHECK (owner_tenant_id <> recipient_tenant_id),
+    CONSTRAINT network_account_profile_publication_event_version_chk CHECK (lifecycle_version >= 1),
+    CONSTRAINT network_account_profile_publication_event_reason_chk CHECK ((event_kind = 'published' AND reason IS NULL) OR (event_kind = 'withdrawn' AND reason IS NOT NULL AND length(reason) BETWEEN 1 AND 4000)),
+    CONSTRAINT network_account_profile_publication_event_fingerprint_chk CHECK (decision_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT network_account_profile_publication_event_idempotency_chk CHECK (btrim(idempotency_key) = idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200)
+);
+
+COMMENT ON TABLE mesh.network_account_profile_publication IS
+  'Immutable recipient binding for one bank-free Business Partner profile snapshot. New content creates a new version.';
+COMMENT ON TABLE mesh.network_account_profile_publication_event IS
+  'Append-only governed publication lifecycle. Withdrawal preserves the publication and snapshot.';
+
+
+CREATE TABLE mesh.bank_provisional_reference (
+ id uuid PRIMARY KEY DEFAULT shared.uuidv7(),
+ tenant_id uuid NOT NULL REFERENCES master.tenant(id),
+ submitted_name text NOT NULL CHECK (btrim(submitted_name) <> ''),
+ submitted_country character(2) NOT NULL REFERENCES shared.country(code),
+ submitted_bic text,
+ status text NOT NULL DEFAULT 'unresolved' CHECK (status IN ('unresolved','resolved','rejected')),
+ resolved_institution_id uuid REFERENCES shared.bank_institution(id),
+ resolved_branch_id uuid,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE (tenant_id,id),
+ FOREIGN KEY (resolved_institution_id,resolved_branch_id) REFERENCES shared.bank_branch(institution_id,id),
+ CHECK ((status='resolved') = (resolved_institution_id IS NOT NULL)),
+ CHECK (resolved_branch_id IS NULL OR resolved_institution_id IS NOT NULL)
 );
 
 CREATE TABLE mesh.bank_account (
@@ -869,10 +999,14 @@ CREATE TABLE mesh.bank_account (
     network_account_id   uuid                            NOT NULL,
     code                 text,
     name                 text,
-    bank_party_id        uuid,
+    bank_institution_id        uuid,
+    bank_branch_id uuid,
+    provisional_bank_reference_id uuid,
     account_holder_name  text                            NOT NULL,
     account_id_type      mesh.bank_account_id_type_d     NOT NULL,
-    account_id_value     text                            NOT NULL,
+    protected_value_token text                           NOT NULL,
+    identifier_fingerprint char(64)                      NOT NULL,
+    protection_key_version integer                       NOT NULL,
     account_last4        text                            NOT NULL,
     currency_code        character(3)                    NOT NULL,
     bic_override         text,
@@ -900,16 +1034,22 @@ CREATE TABLE mesh.bank_account (
         CHECK (code IS NULL OR code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
     CONSTRAINT mesh_bank_account_name_chk CHECK (name IS NULL OR btrim(name) <> ''),
     CONSTRAINT mesh_bank_account_holder_chk CHECK (btrim(account_holder_name) <> ''),
-    CONSTRAINT mesh_bank_account_identifier_chk
-        CHECK (account_id_value ~ '^[A-Z0-9]{4,64}$'),
+    CONSTRAINT mesh_bank_account_token_chk CHECK (
+        length(protected_value_token) BETWEEN 8 AND 512
+        AND protected_value_token ~ '^[A-Za-z0-9][A-Za-z0-9._:/-]+$'
+        AND protected_value_token !~ '(\.\.|//)'
+    ),
+    CONSTRAINT mesh_bank_account_fingerprint_chk
+        CHECK (identifier_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT mesh_bank_account_key_version_chk
+        CHECK (protection_key_version >= 1),
     CONSTRAINT mesh_bank_account_last4_chk
-        CHECK (account_last4 ~ '^[A-Z0-9]{4}$'
-               AND account_last4 = right(account_id_value, 4)),
+        CHECK (account_last4 ~ '^[A-Z0-9]{4}$'),
     CONSTRAINT mesh_bank_account_bank_identity_chk CHECK (
-        (bank_party_id IS NOT NULL
+        (bank_institution_id IS NOT NULL
          AND bank_name_override IS NULL AND bank_country_override IS NULL)
         OR
-        (bank_party_id IS NULL
+        (bank_institution_id IS NULL
          AND nullif(btrim(bank_name_override), '') IS NOT NULL
          AND bank_country_override IS NOT NULL)
     ),
@@ -924,15 +1064,19 @@ CREATE TABLE mesh.bank_account (
          AND verification_method IS NOT NULL)
     ),
     CONSTRAINT mesh_bank_account_active_chk CHECK (status <> 'active' OR is_verified),
-    CONSTRAINT mesh_bank_account_metadata_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT mesh_bank_account_metadata_chk CHECK (
+        jsonb_typeof(metadata) = 'object' AND pg_column_size(metadata) <= 4096
+    ),
     CONSTRAINT mesh_bank_account_status_pair_chk
         CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
     CONSTRAINT mesh_bank_account_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
 
-COMMENT ON COLUMN mesh.bank_account.account_id_value IS
-  'Sensitive normalized identifier. athyperapp receives no direct SELECT privilege on this column.';
+COMMENT ON COLUMN mesh.bank_account.protected_value_token IS
+  'Opaque tenant-scoped secret-store token. The raw bank-account identifier is prohibited from MESH tables, snapshots, envelopes, logs and browser responses.';
+COMMENT ON COLUMN mesh.bank_account.identifier_fingerprint IS
+  'Non-reversible, tenant-bound comparison fingerprint; never a retrieval credential.';
 
 CREATE TABLE mesh.bank_account_link (
     id                 uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -976,7 +1120,15 @@ CREATE TABLE mesh.bank_account_disclosure (
     revoked_by               uuid,
     revocation_reason        text,
     metadata                 jsonb                         NOT NULL DEFAULT '{}'::jsonb,
-    status                   mesh.bank_disclosure_status_d NOT NULL DEFAULT 'active',
+    disclosure_version       integer                       NOT NULL DEFAULT 1,
+    snapshot_id              uuid,
+    payload_hash             text,
+    secure_retrieval_reference text,
+    idempotency_key          text                          NOT NULL,
+    decision_fingerprint     text,
+    approved_at              timestamptz,
+    approved_by              uuid,
+    status                   mesh.bank_disclosure_status_d NOT NULL DEFAULT 'pending_approval',
     created_at               timestamptz                   NOT NULL DEFAULT now(),
     created_by               uuid                          NOT NULL,
     updated_at               timestamptz,
@@ -987,6 +1139,14 @@ CREATE TABLE mesh.bank_account_disclosure (
         CHECK (owner_account_id <> recipient_account_id),
     CONSTRAINT bank_account_disclosure_purpose_chk
         CHECK (purpose IN ('settlement', 'refund')),
+    CONSTRAINT bank_account_disclosure_version_chk CHECK (disclosure_version >= 1),
+    CONSTRAINT bank_account_disclosure_hash_chk CHECK (payload_hash IS NULL OR payload_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT bank_account_disclosure_idempotency_chk CHECK (btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
+    CONSTRAINT bank_account_disclosure_decision_chk CHECK (
+        (status='pending_approval' AND snapshot_id IS NULL AND payload_hash IS NULL AND secure_retrieval_reference IS NULL AND decision_fingerprint IS NULL AND approved_at IS NULL AND approved_by IS NULL)
+        OR (status='rejected' AND snapshot_id IS NULL AND payload_hash IS NULL AND secure_retrieval_reference IS NULL AND decision_fingerprint ~ '^[a-f0-9]{64}$' AND approved_at IS NULL AND approved_by IS NULL)
+        OR (status IN ('active','expired','revoked','superseded') AND snapshot_id IS NOT NULL AND payload_hash ~ '^[a-f0-9]{64}$' AND nullif(btrim(secure_retrieval_reference),'') IS NOT NULL AND decision_fingerprint ~ '^[a-f0-9]{64}$' AND approved_at IS NOT NULL AND approved_by IS NOT NULL)
+    ),
     CONSTRAINT bank_account_disclosure_expiry_chk
         CHECK (expires_at IS NULL OR expires_at > disclosed_at),
     CONSTRAINT bank_account_disclosure_revocation_chk CHECK (
@@ -999,6 +1159,28 @@ CREATE TABLE mesh.bank_account_disclosure (
         CHECK (jsonb_typeof(metadata) = 'object' AND pg_column_size(metadata) <= 4096),
     CONSTRAINT bank_account_disclosure_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE mesh.bank_account_disclosure_event (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    owner_tenant_id       uuid        NOT NULL,
+    recipient_tenant_id   uuid        NOT NULL,
+    disclosure_id         uuid        NOT NULL,
+    lifecycle_version     integer     NOT NULL,
+    event_kind            text        NOT NULL,
+    reason                text,
+    decision_fingerprint  text        NOT NULL,
+    idempotency_key       text        NOT NULL,
+    recorded_at           timestamptz NOT NULL DEFAULT clock_timestamp(),
+    recorded_by           uuid        NOT NULL,
+    CONSTRAINT bank_account_disclosure_event_pkey PRIMARY KEY(id),
+    CONSTRAINT bank_account_disclosure_event_version_uq UNIQUE(owner_tenant_id,disclosure_id,lifecycle_version),
+    CONSTRAINT bank_account_disclosure_event_idempotency_uq UNIQUE(owner_tenant_id,idempotency_key),
+    CONSTRAINT bank_account_disclosure_event_kind_chk CHECK(event_kind IN ('approved','rejected','revoked','superseded','expired')),
+    CONSTRAINT bank_account_disclosure_event_version_chk CHECK(lifecycle_version>=1),
+    CONSTRAINT bank_account_disclosure_event_reason_chk CHECK((event_kind='approved' AND reason IS NULL) OR (event_kind<>'approved' AND nullif(btrim(reason),'') IS NOT NULL)),
+    CONSTRAINT bank_account_disclosure_event_fingerprint_chk CHECK(decision_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT bank_account_disclosure_event_idempotency_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200)
 );
 
 -- Mesh projection of the Neon-derived party finance/compliance optional pack.
@@ -1088,3 +1270,23 @@ CREATE TABLE mesh.network_lifecycle_event (
     CONSTRAINT network_lifecycle_event_evidence_chk CHECK(jsonb_typeof(evidence)='object')
 );
 COMMENT ON TABLE mesh.network_lifecycle_event IS 'Append-only BNA and buyer-supplier relationship lifecycle evidence visible to the owning and participating tenants through Mesh RLS.';
+
+-- Source-side confirmation written atomically with completion of a claimed outbox
+-- delivery, after the recipient transaction has committed. No profile payloads.
+CREATE TABLE mesh.business_partner_delivery_acknowledgement (
+  id uuid PRIMARY KEY DEFAULT shared.uuidv7(),
+  source_tenant_id uuid NOT NULL,
+  recipient_tenant_id uuid NOT NULL,
+  source_network_account_id uuid NOT NULL,
+  outbox_id uuid NOT NULL,
+  event_id uuid NOT NULL,
+  delivery_lease_id text NOT NULL,
+  attempt_no integer NOT NULL CHECK (attempt_no > 0),
+  disposition text NOT NULL CHECK (disposition IN ('applied','duplicate','stale','quarantined')),
+  reason_code text,
+  acknowledged_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  UNIQUE (outbox_id, delivery_lease_id),
+  CHECK (length(delivery_lease_id) BETWEEN 1 AND 300),
+  CHECK (reason_code IS NULL OR length(reason_code) <= 120)
+);
+-- Outbox records may be purged independently; receipt coordinates survive purge.

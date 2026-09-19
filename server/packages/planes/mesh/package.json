@@ -4,14 +4,27 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./business-partner-delivery": "./src/business-partner-delivery.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@athyper/server-contract-audit": "workspace:*",
+    "@athyper/server-contract-auth": "workspace:*",
+    "@athyper/server-contract-events": "workspace:*",
+    "@athyper/server-contract-jobs": "workspace:*",
+    "@athyper/server-contract-master-data": "workspace:*",
+    "@athyper/server-contract-records": "workspace:*",
+    "@athyper/server-runtime-http": "workspace:*",
+    "kysely": "^0.28.17"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
   }
 }

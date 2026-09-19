@@ -18,3 +18,30 @@ export * from "./thread-service.js";
 export * from "./tool-service.js";
 export * from "./atlas-routes.js";
 export * from "./atlas-admin-routes.js";
+export * from "./experience-configuration.js";
+export * from "./atlas-experience-routes.js";
+export * from "./attachment-context.js";
+export * from "./surface-draft-generation.js";
+export * from "./atlas-surface-draft-routes.js";
+
+export * from "./business-partner-tools.js";
+export * from "./kysely-thread-repository.js";
+export * from "./conversation-composition.js";
+
+export * from "./local-generation-composition.js";
+export * from "./kysely-run-repository.js";
+export * from "./insight-disclosure.js";
+export * from "./insight-reuse-policy.js";
+export * from "./redis-insight-cache.js";
+
+export * from "./business-context.js";
+export { createBusinessPartnerInsightTools } from "./business-partner-insight-tools.js";
+
+export { createAtlasEntitySectionTool } from "./entity-section-tool.js";
+
+export { createBusinessPartnerCaseTools } from "./business-partner-case-tools.js";
+
+export { createAtlasEntityRecordTool } from "./entity-record-tool.js";
+export * from "./response-feedback.js";
+export * from "./learning-candidates.js";
+export * from "./learning-evaluation.js";

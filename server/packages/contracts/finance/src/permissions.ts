@@ -1,4 +1,5 @@
 export const financePermissions = {
+  businessPartnerActivityRead: "finance.ledger.business_partner_activity.read",
   ledgerRead: "finance.ledger.read",
   ledgerPost: "finance.ledger.post",
   commitmentPost: "finance.commitment.post",

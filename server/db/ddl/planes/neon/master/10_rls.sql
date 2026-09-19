@@ -364,6 +364,8 @@ ALTER TABLE master.sales_organization_profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.sales_organization_profile FORCE ROW LEVEL SECURITY;
 ALTER TABLE master.operating_organization_company_assignment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.operating_organization_company_assignment FORCE ROW LEVEL SECURITY;
+ALTER TABLE master.operating_organization_capability ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.operating_organization_capability FORCE ROW LEVEL SECURITY;
 ALTER TABLE master.org_unit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.org_unit FORCE ROW LEVEL SECURITY;
 
@@ -401,6 +403,11 @@ CREATE POLICY tenant_access ON master.operating_organization_company_assignment 
     USING (tenant_id = shared.current_tenant_id_soft())
     WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY seed_write ON master.operating_organization_company_assignment FOR ALL TO CURRENT_USER
+    USING (true) WITH CHECK (true);
+CREATE POLICY tenant_access ON master.operating_organization_capability FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON master.operating_organization_capability FOR ALL TO CURRENT_USER
     USING (true) WITH CHECK (true);
 CREATE POLICY tenant_access ON master.org_unit FOR ALL
     USING (tenant_id = shared.current_tenant_id_soft())
@@ -482,6 +489,7 @@ BEGIN
             'procurement_organization_profile',
             'sales_organization_profile',
             'operating_organization_company_assignment',
+            'operating_organization_capability',
             'org_unit',
             'profit_center',
             'cost_center',
@@ -712,7 +720,7 @@ DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
-        'bank_party', 'bank_account', 'bank_account_link',
+        'bank_account', 'bank_account_link',
         'bank_account_house_config'
     ]
     LOOP
@@ -733,7 +741,7 @@ BEGIN
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         FOREACH v_table IN ARRAY ARRAY[
-            'bank_party', 'bank_account', 'bank_account_link',
+            'bank_account', 'bank_account_link',
             'bank_account_house_config'
         ]
         LOOP
@@ -819,15 +827,17 @@ DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
+        'business_partner_alias',
         'business_partner_relationship',
         'business_partner_governance_relation',
         'business_partner_identifier',
         'business_partner_tax_registration',
         'business_partner_commodity_capability',
+        'business_partner_industry_classification',
         'business_partner_operating_organization_assignment',
         'company_code_supplier_profile',
         'company_code_customer_profile',
-        'legal_entity_business_partner_link',
+        'legal_entity_internal_partner_link',
         'intercompany_trading_pair',
         'contact_person_identity_link'
     ] LOOP
@@ -1111,3 +1121,20 @@ ALTER TABLE master.organization_amendment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.organization_amendment FORCE ROW LEVEL SECURITY;
 CREATE POLICY organization_amendment_tenant_read ON master.organization_amendment FOR SELECT USING(tenant_id=shared.current_tenant_id_soft());
 CREATE POLICY organization_amendment_seed_owner ON master.organization_amendment FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+
+ALTER TABLE master.external_worker ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.external_worker FORCE ROW LEVEL SECURITY;
+CREATE POLICY external_worker_tenant_access ON master.external_worker FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY external_worker_seed_write ON master.external_worker FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+-- Publication resolves configured tenant-local service identities for target jobs.
+CREATE POLICY publication_service_principal_read ON master.principal
+  FOR SELECT TO athyper_publication_service
+  USING (tenant_id=shared.current_tenant_id_soft() AND principal_type='service_account');
+
+ALTER TABLE master.bank_provisional_reference ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.bank_provisional_reference FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON master.bank_provisional_reference FOR ALL USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON master.bank_provisional_reference FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);

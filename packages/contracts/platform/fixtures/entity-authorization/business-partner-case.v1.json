@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "entityCode": "entity_case",
+  "planeKey": "neon",
+  "ownership": "organization.record.v1",
+  "directory": {
+    "operation": "discover",
+    "population": "ownership"
+  },
+  "recordReadOperation": "read",
+  "operations": [
+    {
+      "key": "discover",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "scope": "organization.record.v1",
+      "target": "collection",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false
+    },
+    {
+      "key": "read",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "scope": "organization.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false
+    },
+    {
+      "key": "create",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true
+    },
+    {
+      "key": "update",
+      "permissionCode": "neon.relationship.entity_case.update",
+      "scope": "organization.record.v1",
+      "target": "existing",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true
+    },
+    {
+      "key": "reassign",
+      "permissionCode": "neon.relationship.entity_case.update",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true
+    },
+    {
+      "key": "validate",
+      "permissionCode": "neon.relationship.entity_case.validate",
+      "scope": "organization.record.v1",
+      "target": "existing",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true
+    },
+    {
+      "key": "submit",
+      "permissionCode": "neon.relationship.entity_case.submit",
+      "scope": "organization.record.v1",
+      "target": "existing",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true
+    },
+    {
+      "key": "decide",
+      "permissionCode": "neon.relationship.entity_case.decide",
+      "scope": "organization.record.v1",
+      "target": "existing",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true
+    },
+    {
+      "key": "materialize",
+      "permissionCode": "neon.relationship.entity_case.materialize",
+      "scope": "organization.record.v1",
+      "target": "existing",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true
+    }
+  ],
+  "fieldPolicies": [
+    {
+      "key": "case_identity",
+      "fields": [
+        "id",
+        "status",
+        "operatingOrganizationId",
+        "companyCodeId"
+      ],
+      "readOperation": "read",
+      "representation": "plain",
+      "writeOperations": [],
+      "queryUses": [
+        "filter",
+        "sort"
+      ]
+    }
+  ],
+  "surfaces": [],
+  "relationships": []
+}

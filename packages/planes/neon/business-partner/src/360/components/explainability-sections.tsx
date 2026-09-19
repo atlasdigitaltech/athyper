@@ -1,0 +1,285 @@
+import {
+  useApiClient,
+  useSessionIdentity,
+} from "@athyper/platform-shell-app-foundation";
+import { useRecordFooterSources } from "@athyper/platform-shell";
+import { Card, Skeleton } from "@athyper/platform-ui";
+import { useEffect, useMemo, useState } from "react";
+import {
+  createBusinessPartner360ExplainabilityClient,
+  explainabilityQueryKey,
+  type ExplainabilitySection,
+  type ExplainabilitySectionCode,
+} from "../business-partner-360-explainability-client";
+import { useBusinessPartner360 } from "../business-partner-360-context";
+export function RequestsSection() {
+  return <Section code="requests" />;
+}
+export function GovernanceActivitySection() {
+  return <Section code="activity" />;
+}
+export function BusinessActivitySection() {
+  return <Section code="business-activity" />;
+}
+function Section({ code }: { code: ExplainabilitySectionCode }) {
+  const http = useApiClient(),
+    identity = useSessionIdentity(),
+    { summary, roleLens } = useBusinessPartner360(),
+    client = useMemo(
+      () => createBusinessPartner360ExplainabilityClient(http),
+      [http],
+    ),
+    [state, setState] = useState<{
+      baseKey: string;
+      value?: ExplainabilitySection;
+      failed?: boolean;
+      loading: boolean;
+    }>(),
+    [pageSelection, setPageSelection] = useState<{
+      baseKey: string;
+      cursor: string;
+    }>(),
+    [retry, setRetry] = useState(0),
+    coordinates = {
+      tenantId: identity.scope?.tenantId ?? "unbound",
+      principalId: identity.scope?.principalId ?? "unbound",
+      businessPartnerId: summary.identity.id,
+      sectionCode: code,
+      roleLens,
+      authEpoch: identity.scope?.authEpoch ?? 0,
+      ...(summary.scope.operatingOrganizationId
+        ? { operatingOrganizationId: summary.scope.operatingOrganizationId }
+        : {}),
+      ...(summary.scope.companyCodeId
+        ? { companyCodeId: summary.scope.companyCodeId }
+        : {}),
+      ...(summary.scope.legalEntityId
+        ? { legalEntityId: summary.scope.legalEntityId }
+        : {}),
+      asOf: summary.asOf,
+    },
+    baseKey = JSON.stringify(explainabilityQueryKey(coordinates)),
+    cursor =
+      pageSelection?.baseKey === baseKey ? pageSelection.cursor : undefined,
+    query = { ...coordinates, ...(cursor ? { cursor } : {}) },
+    key = JSON.stringify(explainabilityQueryKey(query));
+  useEffect(() => {
+    const controller = new AbortController();
+    if (pageSelection?.baseKey !== baseKey) setPageSelection(undefined);
+    setState((current) => ({
+      baseKey,
+      loading: true,
+      ...(cursor && current?.baseKey === baseKey
+        ? { value: current.value }
+        : {}),
+    }));
+    client
+      .read(query, controller.signal)
+      .then((next) => {
+        if (controller.signal.aborted) return;
+        setState((current) => ({
+          baseKey,
+          loading: false,
+          value:
+            cursor && current?.baseKey === baseKey && current.value
+              ? merge(current.value, next)
+              : next,
+        }));
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setState((current) => ({
+            baseKey,
+            loading: false,
+            failed: true,
+            ...(current?.baseKey === baseKey ? { value: current.value } : {}),
+          }));
+      });
+    return () => controller.abort();
+  }, [client, key, retry]);
+  const current = state?.baseKey === baseKey ? state : undefined;
+  const value = current?.value,
+    failed = current?.failed;
+  useRecordFooterSources(!failed && value ? value.provenance : []);
+  if (failed && !value)
+    return (
+      <Card className="bp360-section-card">
+        <h2>Section unavailable</h2>
+        <p>Other Business Partner sections remain available.</p>
+        <button onClick={() => setRetry((value) => value + 1)}>
+          Try again
+        </button>
+      </Card>
+    );
+  if (!value) return <Skeleton className="bp360-shell-skeleton" />;
+  const next =
+    typeof value.data["nextCursor"] === "string"
+      ? value.data["nextCursor"]
+      : undefined;
+  return (
+    <div className="bp360-section-list">
+      {code === "requests" ? (
+        <Requests data={value.data} />
+      ) : code === "activity" ? (
+        <Activity data={value.data} />
+      ) : (
+        <Business data={value.data} />
+      )}{" "}
+      {failed ? (
+        <p role="alert">
+          Unable to load more results.{" "}
+          <button onClick={() => setRetry((value) => value + 1)}>
+            Try again
+          </button>
+        </p>
+      ) : null}
+      {next ? (
+        <button
+          disabled={current?.loading}
+          onClick={() => setPageSelection({ baseKey, cursor: next })}
+        >
+          Load more
+        </button>
+      ) : null}
+    </div>
+  );
+}
+function Requests({ data }: { data: Readonly<Record<string, unknown>> }) {
+  const summary = record(data["openWork"]);
+  return (
+    <>
+      <Card className="bp360-section-card">
+        <h2>Open work</h2>
+        <p>
+          {show(summary?.["active"])} active ·{" "}
+          {show(summary?.["pendingApproval"])} pending approval ·{" "}
+          {show(summary?.["returned"])} returned · {show(summary?.["failed"])}{" "}
+          failed
+        </p>
+      </Card>
+      {rows(data["items"]).map((item) => (
+        <Card className="bp360-section-card" key={String(item["id"])}>
+          <h2>
+            {show(item["requestNo"])} · {show(item["status"])}
+          </h2>
+          <dl>
+            <Field label="Kind" value={item["requestKind"]} />
+            <Field label="Role" value={item["requestedRole"]} />
+            <Field label="Source" value={item["sourceKind"]} />
+            <Field label="Created" value={item["createdAt"]} />
+            <Field label="Submitted" value={item["submittedAt"]} />
+            <Field label="Approved" value={item["approvedAt"]} />
+            <Field label="Applied" value={item["appliedAt"]} />
+            <Field label="Result" value={item["applicationResultKind"]} />
+          </dl>
+          <p>
+            {rows(item["evidence"]).length} evidence manifest entries ·{" "}
+            {rows(item["materialization"]).length} materialized records
+          </p>
+          <a href={String(item["href"])}>Open governed request</a>
+        </Card>
+      ))}
+    </>
+  );
+}
+function Activity({ data }: { data: Readonly<Record<string, unknown>> }) {
+  if (!rows(data["items"]).length)
+    return (
+      <Card>
+        <h2>Activity</h2>
+        <p>No activity available for this partner and date.</p>
+      </Card>
+    );
+  return (
+    <>
+      {rows(data["items"]).map((item) => (
+        <Card className="bp360-section-card" key={String(item["id"])}>
+          <h2>{show(item["title"])}</h2>
+          <p>
+            {show(item["occurredAt"])} · {show(item["sourceService"])} ·{" "}
+            {show(item["outcome"])}
+          </p>
+          <dl>
+            <Field label="Actor" value={item["actorId"]} />
+            <Field label="Request" value={item["requestId"]} />
+            <Field
+              label="Changed fields"
+              value={
+                Array.isArray(item["changedFields"])
+                  ? item["changedFields"].join(", ")
+                  : undefined
+              }
+            />
+          </dl>
+          {item["evidenceHref"] ? (
+            <a href={String(item["evidenceHref"])}>Open safe evidence</a>
+          ) : null}
+        </Card>
+      ))}
+    </>
+  );
+}
+function Business({ data }: { data: Readonly<Record<string, unknown>> }) {
+  if (!rows(data["providers"]).length)
+    return (
+      <Card>
+        <h2>Business Transactions</h2>
+        <p>No transaction providers are available in this context.</p>
+      </Card>
+    );
+  return (
+    <>
+      {rows(data["providers"]).map((item) => (
+        <Card className="bp360-section-card" key={String(item["provider"])}>
+          <h2>{show(item["provider"])}</h2>
+          <p>
+            {show(item["state"])}
+            {item["reasonCode"] ? ` · ${show(item["reasonCode"])}` : ""}
+          </p>
+          {rows(item["metrics"]).map((metric) => (
+            <p key={String(metric["code"])}>
+              {show(metric["label"])}: {show(metric["value"])}{" "}
+              {show(metric["unit"] ?? "")}
+            </p>
+          ))}
+          {item["href"] ? (
+            <a href={String(item["href"])}>Open owning module</a>
+          ) : null}
+        </Card>
+      ))}
+    </>
+  );
+}
+function merge(
+  current: ExplainabilitySection,
+  next: ExplainabilitySection,
+): ExplainabilitySection {
+  const existing = rows(current.data["items"]),
+    incoming = rows(next.data["items"]);
+  return { ...next, data: { ...next.data, items: [...existing, ...incoming] } };
+}
+function Field({ label, value }: { label: string; value: unknown }) {
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd>{show(value)}</dd>
+    </div>
+  );
+}
+function rows(value: unknown) {
+  return Array.isArray(value)
+    ? (value.filter(
+        (item) => item && typeof item === "object" && !Array.isArray(item),
+      ) as readonly Readonly<Record<string, unknown>>[])
+    : [];
+}
+function record(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Readonly<Record<string, unknown>>)
+    : undefined;
+}
+function show(value: unknown) {
+  return value === undefined || value === null || value === ""
+    ? "—"
+    : String(value);
+}

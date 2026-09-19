@@ -1,0 +1,164 @@
+{
+  "observedAt": "2026-09-10T09:09:14.888Z",
+  "imagesBefore": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "digest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "digest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "digest": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "digest": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "checks": [
+    "browser disconnect cancels globally queued embedding before inference dispatch",
+    "browser disconnect aborts an admitted cold embedding request",
+    "both cancellations leave no shared owner or waiter",
+    "authorized retrieval succeeds after cancellation"
+  ],
+  "queued": {
+    "observedUntil": "2026-09-10T09:09:15.715Z",
+    "events": [
+      {
+        "workload": "embedding",
+        "phase": "failed",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "fab3e5da-00a4-4893-a867-6b6cebcb3f78",
+        "attempt": 1,
+        "queueWaitMs": 129,
+        "loadDurationMs": null,
+        "elapsedMs": 129,
+        "code": "embedding_cancelled"
+      },
+      {
+        "workload": "embedding",
+        "phase": "released",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "fab3e5da-00a4-4893-a867-6b6cebcb3f78",
+        "attempt": 1,
+        "queueWaitMs": 129,
+        "loadDurationMs": null,
+        "elapsedMs": 129
+      }
+    ],
+    "peakAdmitted": 0,
+    "unreleasedAtEnd": 0,
+    "scope": "API process diagnostics in the assessment interval; generation is correlated by provider call, embeddings by operation ID."
+  },
+  "active": {
+    "observedUntil": "2026-09-10T09:09:21.892Z",
+    "events": [
+      {
+        "workload": "embedding",
+        "phase": "admitted",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "c5370917-fb4c-4594-84a0-03d349d1bb06",
+        "attempt": 1,
+        "queueWaitMs": 0,
+        "loadDurationMs": null,
+        "elapsedMs": 0
+      },
+      {
+        "workload": "embedding",
+        "phase": "failed",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "c5370917-fb4c-4594-84a0-03d349d1bb06",
+        "attempt": 1,
+        "queueWaitMs": 0,
+        "loadDurationMs": null,
+        "elapsedMs": 92,
+        "code": "embedding_cancelled"
+      },
+      {
+        "workload": "embedding",
+        "phase": "released",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "c5370917-fb4c-4594-84a0-03d349d1bb06",
+        "attempt": 1,
+        "queueWaitMs": 0,
+        "loadDurationMs": null,
+        "elapsedMs": 93
+      }
+    ],
+    "peakAdmitted": 1,
+    "unreleasedAtEnd": 0,
+    "scope": "API process diagnostics in the assessment interval; generation is correlated by provider call, embeddings by operation ID."
+  },
+  "recovery": {
+    "status": 200,
+    "citations": 1
+  },
+  "passed": true,
+  "imagesAfter": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "digest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "digest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "digest": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "digest": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "stableDeployment": true
+}

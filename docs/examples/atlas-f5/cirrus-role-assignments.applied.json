@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-09-10T01:25:40.298Z",
+  "applied": true,
+  "complete": true,
+  "packetSha256": "5d316684980dabed654ff9c7a147cef692f0eafce07368588fb73178df9a94f5",
+  "receipts": [
+    {
+      "plane": "studio",
+      "expiresAt": "2026-09-11T01:15:12.051Z",
+      "assignments": 2,
+      "existingAuthorityRowsUnchanged": true
+    },
+    {
+      "plane": "neon",
+      "expiresAt": "2026-09-11T01:15:12.051Z",
+      "assignments": 1,
+      "existingAuthorityRowsUnchanged": true
+    }
+  ]
+}

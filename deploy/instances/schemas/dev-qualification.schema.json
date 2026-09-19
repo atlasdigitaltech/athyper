@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/dev-qualification-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "DevQualification" },
+    "metadata": {
+      "type": "object", "additionalProperties": false,
+      "required": ["instance", "qualifiedAt", "sourceRevision"],
+      "properties": {
+        "instance": { "const": "dev" },
+        "qualifiedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T" },
+        "sourceRevision": { "type": "string", "minLength": 7 }
+      }
+    },
+    "spec": {
+      "type": "object", "additionalProperties": false,
+      "required": ["project", "status", "summary", "checks", "resources", "blockers"],
+      "properties": {
+        "project": { "const": "athyper-dev" },
+        "status": { "enum": ["passed", "blocked"] },
+        "summary": {
+          "type": "object", "additionalProperties": false,
+          "required": ["passed", "blocked", "total"],
+          "properties": {
+            "passed": { "type": "integer", "minimum": 0 },
+            "blocked": { "type": "integer", "minimum": 0 },
+            "total": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "checks": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "category", "status", "message"],
+            "properties": {
+              "id": { "type": "string", "minLength": 3 },
+              "category": { "enum": ["ownership", "topology", "functional", "resource"] },
+              "status": { "enum": ["pass", "blocked"] },
+              "message": { "type": "string", "minLength": 1 },
+              "evidence": {}
+            }
+          }
+        },
+        "resources": {
+          "type": "object", "additionalProperties": false,
+          "required": ["profile", "declaredMemoryMiB", "declaredCpu", "memoryLimitMiB", "cpuLimit", "containers"],
+          "properties": {
+            "profile": { "type": "string", "minLength": 1 },
+            "declaredMemoryMiB": { "type": "number", "minimum": 0 },
+            "declaredCpu": { "type": "number", "minimum": 0 },
+            "memoryLimitMiB": { "type": "number", "exclusiveMinimum": 0 },
+            "cpuLimit": { "type": "number", "exclusiveMinimum": 0 },
+            "containers": {
+              "type": "array",
+              "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["service", "name", "image", "state", "health", "restartCount", "cpuPercent", "memoryUsage"],
+                "properties": {
+                  "service": { "type": "string" }, "name": { "type": "string" }, "image": { "type": "string" },
+                  "state": { "type": "string" }, "health": { "type": "string" },
+                  "restartCount": { "type": "integer", "minimum": 0 },
+                  "cpuPercent": { "type": "number", "minimum": 0 }, "memoryUsage": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "blockers": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

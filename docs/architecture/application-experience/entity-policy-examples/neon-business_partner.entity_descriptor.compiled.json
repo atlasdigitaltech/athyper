@@ -1,0 +1,58 @@
+{
+  "schema": "athyper.entity-runtime-descriptor/2.0",
+  "planeKey": "neon",
+  "entityCode": "business_partner",
+  "detailRouteTemplate": "/mdg/business-partner/:recordId",
+  "storage": {
+    "schema": "master",
+    "object": "business_partner",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "versionField": "row_version",
+    "statusField": "status"
+  },
+  "fields": [
+    { "key": "id", "type": "uuid", "required": true, "storagePath": "id", "writableOn": [], "searchable": false, "filterable": false, "sortable": false },
+    { "key": "code", "type": "string", "required": true, "storagePath": "code", "writableOn": ["create"], "searchable": true, "filterable": true, "sortable": true, "list": { "label": "Code", "semanticRole": "identity", "defaultOrder": 0, "defaultWidth": 140, "defaultVisible": true } },
+    { "key": "display_name", "type": "string", "required": true, "storagePath": "display_name", "writableOn": ["create", "patch"], "searchable": true, "filterable": true, "sortable": true, "list": { "label": "Business partner", "semanticRole": "identity", "defaultOrder": 1, "defaultWidth": 300, "defaultVisible": true } },
+    { "key": "country_code", "type": "string", "required": false, "storagePath": "country_code", "writableOn": ["create", "patch"], "searchable": false, "filterable": true, "sortable": true, "list": { "label": "Country", "defaultOrder": 2, "defaultWidth": 120, "defaultVisible": true } },
+    { "key": "status", "type": "enum", "required": true, "storagePath": "status", "writableOn": [], "searchable": false, "filterable": true, "sortable": true, "list": { "label": "Status", "semanticRole": "status", "groupable": true, "defaultOrder": 3, "defaultWidth": 120, "defaultVisible": true } }
+  ],
+  "operations": {
+    "read": { "code": "read", "permissionCode": "neon.business_partner.read", "authorizationMode": "bound_operation" },
+    "create": { "code": "create", "permissionCode": "neon.business_partner.create", "authorizationMode": "bound_operation" },
+    "patch": { "code": "patch", "permissionCode": "neon.business_partner.update", "authorizationMode": "bound_operation" },
+    "supplier_participation_update": { "code": "supplier_participation_update", "permissionCode": "neon.business_partner.supplier.update", "authorizationMode": "bound_operation" },
+    "customer_participation_update": { "code": "customer_participation_update", "permissionCode": "neon.business_partner.customer.update", "authorizationMode": "bound_operation" }
+  },
+  "operation_scope_bindings": [
+    { "operationKey": "read", "permissionCode": "neon.business_partner.read", "scopeKind": "tenant", "decisionMode": "collection", "coordinateSource": "tenant_context", "coordinateKey": null, "resolverKey": null },
+    { "operationKey": "create", "permissionCode": "neon.business_partner.create", "scopeKind": "tenant", "decisionMode": "command", "coordinateSource": "tenant_context", "coordinateKey": null, "resolverKey": null },
+    { "operationKey": "supplier_participation_update", "permissionCode": "neon.business_partner.supplier.update", "scopeKind": "operating_organization", "decisionMode": "command", "coordinateSource": "business_context", "coordinateKey": "operatingOrganizationId", "resolverKey": "neon.business_partner.operating_organization.v1" },
+    { "operationKey": "customer_participation_update", "permissionCode": "neon.business_partner.customer.update", "scopeKind": "operating_organization", "decisionMode": "command", "coordinateSource": "business_context", "coordinateKey": "operatingOrganizationId", "resolverKey": "neon.business_partner.operating_organization.v1" }
+  ],
+  "businessContext": {
+    "schemaVersion": 1,
+    "scopeKind": "tenant",
+    "globalLegalEntityEffect": "none_on_base_identity",
+    "recordOwnership": { "tenantId": "required", "legalEntityId": "not_applicable", "companyCodeId": "not_applicable", "operatingOrganizationId": "not_applicable" },
+    "workspace": { "standardView": "all_accessible", "supportedViews": ["my_documents", "my_team", "shared_with_me", "all_accessible"], "aggregateMode": "tenant_wide_base_identity_only" },
+    "extensions": [
+      { "key": "supplier_participation", "requiredCoordinates": ["legalEntityId", "operatingOrganizationId"], "requiredCapability": "procurement" },
+      { "key": "customer_participation", "requiredCoordinates": ["legalEntityId", "operatingOrganizationId"], "requiredCapability": "sales" },
+      { "key": "banking_and_finance", "requiredCoordinates": ["legalEntityId", "companyCodeId"], "requiredCapability": "finance" }
+    ],
+    "draftContextChanges": { "allowed": false }
+  },
+  "listPresentation": {
+    "schemaVersion": 1,
+    "title": "Business Partners",
+    "description": "Tenant-wide business partner identities. Organization and company extensions are separately authorized.",
+    "identityField": "display_name",
+    "supportedModes": ["table", "compact"],
+    "defaultState": { "filters": [], "sort": [{ "field": "display_name", "direction": "asc" }], "columns": ["code", "display_name", "country_code", "status"], "density": "comfortable", "mode": "table" },
+    "search": { "minimumQueryLength": 1 },
+    "filterPresentation": { "quickFields": [{ "field": "status", "defaultOperator": "eq" }, { "field": "country_code", "defaultOperator": "eq" }], "allowUserPinning": true },
+    "limits": { "defaultPageSize": 25, "allowedPageSizes": [25, 50, 100], "maxSortLevels": 3, "countMode": "exact" }
+  }
+}

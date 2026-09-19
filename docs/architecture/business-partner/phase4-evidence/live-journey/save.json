@@ -1,0 +1,22 @@
+{
+  "status": 200,
+  "result": {
+    "id": "be767e01-f36d-434f-91f3-67bff689a367",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "entityId": "289732bb-45c2-49e6-abb3-70ff4b85336b",
+    "entityCode": "business_partner",
+    "branchCode": "local-preview",
+    "status": "draft",
+    "revision": 60,
+    "createdBy": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+    "preview": {
+      "developmentEvidence": true,
+      "changeSetId": "be767e01-f36d-434f-91f3-67bff689a367",
+      "savedRevision": 60,
+      "state": "active",
+      "contractHash": "ac740ab3451f4ebffcc53d22c8a31438c33238f9291e393100d4761076b5f5e7",
+      "activeRevision": 60,
+      "activeChangeSetId": "be767e01-f36d-434f-91f3-67bff689a367"
+    }
+  }
+}

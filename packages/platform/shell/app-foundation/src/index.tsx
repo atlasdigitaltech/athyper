@@ -1,19 +1,55 @@
 "use client";
 
+import { readBrowserCsrfToken } from "./browser-csrf";
+export { readBrowserCsrfToken } from "./browser-csrf";
+
+import { parseInstant } from "@athyper/platform-temporal";
 export * from "./boundaries";
+export { ApplicationLoading, ApplicationFatalError, ApplicationError } from "./application-fallbacks";
 export * from "./error-taxonomy";
 export { FeatureGate, PermissionGate, RouteGuard, classifyServerDenial, runGuardedMutation, useAccessSnapshot, useHasAnyPermission, useHasPermission, useIsFeatureEnabled } from "@athyper/platform-shell-runtime";
 
 import { principalQueryScope, type PrincipalQueryScope, type SanitizedSession, type SessionNextAction } from "@athyper/contract-platform-auth-session";
-import { ApiTransportError, type ExperienceBootstrap, type ExperienceFeature, type ExperienceProfile, type ExperienceWorkspace, type HttpClient } from "@athyper/platform-api-client";
-import { PlatformQueryProvider, PrincipalQueryLifecycle, type DehydratedState, type QueryClient } from "@athyper/platform-query";
+import { createHttpClient, ApiTransportError, type ExperienceBootstrap, type ExperienceFeature, type ExperienceProfile, type ExperienceWorkspace, type HttpClient } from "@athyper/platform-api-client";
+import { getBrowserQueryClient, PlatformQueryProvider, PrincipalQueryLifecycle, type DehydratedState, type QueryClient } from "@athyper/platform-query";
 import { AccessProvider, createAccessSnapshot, type AccessDiagnostic } from "@athyper/platform-shell-runtime";
 import { validateSurfaceOpen, type SurfaceFrame, type SurfaceKind } from "@athyper/platform-surface-kit";
+import { DENSITY_STORAGE_KEY, THEME_STORAGE_KEY, type ColorMode } from "@athyper/platform-theme/tokens";
 import { Toast, ToastRegion } from "@athyper/platform-ui";
 import * as React from "react";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-const AppearanceContext = createContext<ExperienceProfile | undefined>(undefined);
+export type AppearancePreference = Partial<Pick<ExperienceProfile, "appearanceMode" | "densityCode">>;
+export interface AppearanceProfileHandle { readonly profile: ExperienceProfile; readonly setPreference: (patch: AppearancePreference) => void; }
+const AppearanceContext = createContext<AppearanceProfileHandle | undefined>(undefined);
+/** Same keys the blocking ThemeScript reads before first paint (see @athyper/platform-theme); keep them in sync to avoid a themed-then-flash-to-light reload. */
+function storedColorMode(mode: ExperienceProfile["appearanceMode"]): ColorMode | undefined {
+  if (mode === "high_contrast") return "high-contrast";
+  if (mode === "light" || mode === "dark") return mode;
+  return undefined;
+}
+function profileColorMode(value: string | null): ExperienceProfile["appearanceMode"] | undefined {
+  if (value === "high-contrast") return "high_contrast";
+  if (value === "light" || value === "dark") return value;
+  return undefined;
+}
+function readAppearancePreference(): AppearancePreference {
+  try {
+    const appearanceMode = profileColorMode(localStorage.getItem(THEME_STORAGE_KEY));
+    const storedDensity = localStorage.getItem(DENSITY_STORAGE_KEY);
+    const densityCode = storedDensity === "comfortable" || storedDensity === "compact" ? storedDensity : undefined;
+    return Object.freeze({ ...(appearanceMode ? { appearanceMode } : {}), ...(densityCode ? { densityCode } : {}) });
+  } catch { return {}; }
+}
+function writeAppearancePreference(patch: AppearancePreference): void {
+  try {
+    if (patch.appearanceMode !== undefined) {
+      const mode = storedColorMode(patch.appearanceMode);
+      if (mode) localStorage.setItem(THEME_STORAGE_KEY, mode); else localStorage.removeItem(THEME_STORAGE_KEY);
+    }
+    if (patch.densityCode !== undefined) localStorage.setItem(DENSITY_STORAGE_KEY, patch.densityCode);
+  } catch { /* Keep the in-memory choice for this session. */ }
+}
 const SessionIdentityContext = createContext<Readonly<{ state: SanitizedSession["state"]; scope?: PrincipalQueryScope }> | undefined>(undefined);
 type SessionExpiry = Readonly<{ expiresAt?: string; idleExpiresAt?: string; absoluteExpiresAt?: string }>;
 const SessionExpiryContext = createContext<SessionExpiry | undefined>(undefined);
@@ -24,6 +60,9 @@ const ExperienceRevisionContext = createContext<Readonly<{ state: ExperienceBoot
 const ApiClientContext = createContext<HttpClient | undefined>(undefined);
 const PermissionContext = createContext<ReadonlySet<string> | undefined>(undefined);
 const FeatureContext = createContext<Readonly<Record<string, ExperienceFeature>> | undefined>(undefined);
+export interface ApplicationNavigation { push(href: string): void; replace(href: string): void; refresh(): void; }
+const ApplicationNavigationContext = createContext<ApplicationNavigation | undefined>(undefined);
+export function ApplicationNavigationProvider({ navigation, children }: { readonly navigation?: ApplicationNavigation; readonly children: ReactNode }) { return <ApplicationNavigationContext.Provider value={navigation}>{children}</ApplicationNavigationContext.Provider>; }
 
 interface ToastMessage { readonly id: string; readonly title: string; readonly detail?: string; readonly tone: "info" | "success" | "warning" | "danger"; }
 const ToastContext = createContext<Readonly<{ messages: readonly ToastMessage[]; push(message: Omit<ToastMessage, "id">): string; dismiss(id: string): void }> | undefined>(undefined);
@@ -39,7 +78,15 @@ export interface AppFoundationProvidersProps {
   readonly onAuthenticationFailure?: (error: ApiTransportError) => void;
   readonly onBootstrapRevalidation?: (reason: BootstrapRevalidationReason) => void;
   readonly onAccessDiagnostic?: (event: AccessDiagnostic) => void;
+  readonly navigation?: ApplicationNavigation;
   readonly children: ReactNode;
+}
+
+/** Browser client setup shared by plane adapters; routing and bootstrap stay app-owned. */
+export function BrowserApplicationProviders(props: Omit<AppFoundationProvidersProps, "apiClient" | "queryClient">) {
+  const [queryClient] = useState(getBrowserQueryClient);
+  const apiClient = useMemo(() => createHttpClient({ csrfToken: readBrowserCsrfToken }), []);
+  return <AppFoundationProviders {...props} queryClient={queryClient} apiClient={apiClient} />;
 }
 
 /** Provider nesting is security-significant; keep this order aligned with the Phase 6 contract. */
@@ -59,13 +106,14 @@ export function AppFoundationProviders(props: AppFoundationProvidersProps) {
           <PlatformQueryProvider client={props.queryClient} dehydratedState={props.dehydratedState}>
             <AccessProvider snapshot={access}><PermissionProvider permissions={bootstrap.permissions}>
               <FeatureProvider features={bootstrap.features}>
-                <ToastProvider><SurfaceStackProvider><ShellStateProvider>
+                <ApplicationNavigationProvider navigation={props.navigation}><ToastProvider><SurfaceStackProvider><ShellStateProvider>
                   <AuthenticationFailureBridge client={props.queryClient} lifecycle={lifecycle} onInvalidated={markInvalidated} onFailure={props.onAuthenticationFailure} />
                   <BootstrapFreshnessBridge session={props.session} onRevalidate={props.onBootstrapRevalidation} />
                   <SessionActivityBridge sessionState={props.session.state} onRevalidate={props.onBootstrapRevalidation} />
+                  <SessionTerminationBridge plane={props.session.plane} />
                   <SessionExpiryWarning />
                   {props.children}
-                </ShellStateProvider></SurfaceStackProvider></ToastProvider>
+                </ShellStateProvider></SurfaceStackProvider></ToastProvider></ApplicationNavigationProvider>
               </FeatureProvider>
             </PermissionProvider></AccessProvider>
           </PlatformQueryProvider>
@@ -75,7 +123,41 @@ export function AppFoundationProviders(props: AppFoundationProvidersProps) {
   </AppearanceProvider>;
 }
 
-function AppearanceProvider({ profile, children }: { readonly profile: ExperienceProfile; readonly children: ReactNode }) { return <AppearanceContext.Provider value={profile}>{children}</AppearanceContext.Provider>; }
+function AppearanceProvider({ profile, children }: { readonly profile: ExperienceProfile; readonly children: ReactNode }) {
+  const [preference, setPreferenceState] = useState<AppearancePreference>(() => (typeof window === "undefined" ? {} : readAppearancePreference()));
+  const effectiveProfile = useMemo(() => Object.freeze({ ...profile, ...preference }), [profile, preference]);
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const dark = window.matchMedia("(prefers-color-scheme: dark)");
+    const contrast = window.matchMedia("(forced-colors: active), (prefers-contrast: more)");
+    const apply = () => {
+      const mode = resolveProfileColorMode(effectiveProfile.appearanceMode, dark.matches, contrast.matches);
+      root.dataset.theme = mode;
+      root.dataset.density = effectiveProfile.densityCode;
+      root.style.colorScheme = mode === "dark" || mode === "high-contrast" ? "dark" : "light";
+    };
+    apply();
+    if (effectiveProfile.appearanceMode !== "system") return;
+    dark.addEventListener("change", apply);
+    contrast.addEventListener("change", apply);
+    return () => {
+      dark.removeEventListener("change", apply);
+      contrast.removeEventListener("change", apply);
+    };
+  }, [effectiveProfile.appearanceMode, effectiveProfile.densityCode]);
+  const setPreference = useCallback((patch: AppearancePreference) => {
+    writeAppearancePreference(patch);
+    setPreferenceState((current) => Object.freeze({ ...current, ...patch }));
+  }, []);
+  const handle = useMemo(() => Object.freeze({ profile: effectiveProfile, setPreference }), [effectiveProfile, setPreference]);
+  return <AppearanceContext.Provider value={handle}>{children}</AppearanceContext.Provider>;
+}
+
+export function resolveProfileColorMode(appearanceMode: ExperienceProfile["appearanceMode"], systemDark = false, systemHighContrast = false): "light" | "dark" | "high-contrast" {
+  if (appearanceMode === "high_contrast" || (appearanceMode === "system" && systemHighContrast)) return "high-contrast";
+  if (appearanceMode === "dark" || (appearanceMode === "system" && systemDark)) return "dark";
+  return "light";
+}
 function SessionProvider({ session, lifecycle, children }: { readonly session: SanitizedSession; readonly lifecycle: PrincipalQueryLifecycle; readonly children: ReactNode }) {
   const scope = principalQueryScope(session);
   const identity = useMemo(() => Object.freeze({ state: session.state, ...(scope ? { scope } : {}) }), [session.state, scope?.plane, scope?.tenantId, scope?.principalId, scope?.authEpoch]);
@@ -127,7 +209,7 @@ function BootstrapFreshnessBridge({ session, onRevalidate }: { readonly session:
   const expiry = useSessionExpiry();
   useEffect(() => {
     if (!onRevalidate) return;
-    const expiresAt = expiry.expiresAt ? Date.parse(expiry.expiresAt) : Number.NaN, delay = Number.isFinite(expiresAt) ? Math.max(0, expiresAt - Date.now() - 60_000) : undefined;
+    const expiresAt = expiry.expiresAt ? parseInstant(expiry.expiresAt) : Number.NaN, delay = Number.isFinite(expiresAt) ? Math.max(0, expiresAt - Date.now() - 60_000) : undefined;
     const timer = delay === undefined ? undefined : window.setTimeout(() => onRevalidate("expiry"), delay);
     const listener = (event: Event) => { const reason = (event as CustomEvent<BootstrapRevalidationReason>).detail; if (["auth_epoch", "context", "experience_revision"].includes(reason)) onRevalidate(reason); };
     window.addEventListener(BOOTSTRAP_REVALIDATE_EVENT, listener);
@@ -139,9 +221,9 @@ function BootstrapFreshnessBridge({ session, onRevalidate }: { readonly session:
 const SESSION_EXPIRY_WARNING_MS = 5 * 60_000;
 const SESSION_TOUCH_INTERVAL_MS = 60_000;
 export interface SessionExpiryWarningTarget { readonly kind: "idle" | "absolute"; readonly expiresAt: string; readonly delayMs: number; }
-export function sessionExpiryWarningDelay(expiresAt: string | undefined, currentTime = Date.now(), leadTimeMs = SESSION_EXPIRY_WARNING_MS): number | undefined { const expiry = expiresAt ? Date.parse(expiresAt) : Number.NaN; if (!Number.isFinite(expiry) || expiry <= currentTime) return undefined; return Math.max(0, expiry - currentTime - leadTimeMs); }
+export function sessionExpiryWarningDelay(expiresAt: string | undefined, currentTime = Date.now(), leadTimeMs = SESSION_EXPIRY_WARNING_MS): number | undefined { const expiry = expiresAt ? parseInstant(expiresAt) : Number.NaN; if (!Number.isFinite(expiry) || expiry <= currentTime) return undefined; return Math.max(0, expiry - currentTime - leadTimeMs); }
 export function sessionExpiryWarningTarget(expiry: Pick<SessionExpiry, "idleExpiresAt" | "absoluteExpiresAt">, currentTime = Date.now(), leadTimeMs = SESSION_EXPIRY_WARNING_MS): SessionExpiryWarningTarget | undefined {
-  const idle = expiry.idleExpiresAt ? Date.parse(expiry.idleExpiresAt) : Number.NaN, absolute = expiry.absoluteExpiresAt ? Date.parse(expiry.absoluteExpiresAt) : Number.NaN;
+  const idle = expiry.idleExpiresAt ? parseInstant(expiry.idleExpiresAt) : Number.NaN, absolute = expiry.absoluteExpiresAt ? parseInstant(expiry.absoluteExpiresAt) : Number.NaN;
   const candidates = [
     ...(Number.isFinite(idle) && idle > currentTime ? [{ kind: "idle" as const, expiresAt: expiry.idleExpiresAt!, value: idle }] : []),
     ...(Number.isFinite(absolute) && absolute > currentTime ? [{ kind: "absolute" as const, expiresAt: expiry.absoluteExpiresAt!, value: absolute }] : []),
@@ -169,7 +251,7 @@ function SessionActivityBridge({ sessionState, onRevalidate }: { readonly sessio
     if (sessionState === "anonymous") return;
     const touch = () => {
       const currentTime = Date.now(); if (inFlight.current || !shouldSendSessionTouch(lastAttemptAt.current, currentTime)) return;
-      const csrfToken = readBrowserCookie("__Host-athyper-csrf") ?? readBrowserCookie("athyper-csrf"); if (!csrfToken) return;
+      const csrfToken = readBrowserCsrfToken(); if (!csrfToken) return;
       lastAttemptAt.current = currentTime;
       inFlight.current = fetch("/api/auth/touch", { method: "POST", credentials: "same-origin", headers: { "x-csrf-token": csrfToken, accept: "application/json" }, cache: "no-store" })
         .then(async (response) => { if (response.status === 401) { onRevalidate?.("expiry"); return; } if (!response.ok) return; const value = await response.json() as Partial<SanitizedSession>; updateExpiry(sessionExpiry(value)); })
@@ -183,12 +265,29 @@ function SessionActivityBridge({ sessionState, onRevalidate }: { readonly sessio
   return null;
 }
 
+export function sessionActivityChannelName(plane: SanitizedSession["plane"]): string { return `athyper:${plane}:session-activity`; }
+function SessionTerminationBridge({ plane }: { readonly plane: SanitizedSession["plane"] }) {
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+    const channel = new BroadcastChannel(sessionActivityChannelName(plane));
+    channel.addEventListener("message", (event: MessageEvent<unknown>) => {
+      const message = event.data;
+      if (!message || typeof message !== "object" || !("type" in message)) return;
+      if (message.type === "session_probe") channel.postMessage({ type: "session_listener_ready" });
+      if (message.type === "session_terminated") window.location.assign("/logout?reason=signed-out");
+    });
+    return () => channel.close();
+  }, [plane]);
+  return null;
+}
+
 function sessionExpiry(value: Pick<SanitizedSession, "expiresAt" | "idleExpiresAt" | "absoluteExpiresAt">): SessionExpiry { return Object.freeze({ ...(value.expiresAt ? { expiresAt: value.expiresAt } : {}), ...(value.idleExpiresAt ? { idleExpiresAt: value.idleExpiresAt } : {}), ...(value.absoluteExpiresAt ? { absoluteExpiresAt: value.absoluteExpiresAt } : {}) }); }
-function readBrowserCookie(name: string): string | undefined { const prefix = `${name}=`; const value = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length); if (!value) return undefined; try { return decodeURIComponent(value); } catch { return undefined; } }
 
 function required<T>(value: T | undefined, name: string): T { if (value === undefined) throw new Error(`${name} must be used inside AppFoundationProviders`); return value; }
 function developmentAccessDiagnostic(event: AccessDiagnostic): void { if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname.endsWith(".local"))) console.warn("[athyper/access]", event); }
 export const useAppearanceProfile = () => required(useContext(AppearanceContext), "useAppearanceProfile");
+/** Non-throwing variant for shared UI that may render outside AppFoundationProviders (e.g. isolated test fixtures). */
+export const useOptionalAppearanceProfile = () => useContext(AppearanceContext);
 export const useSessionIdentity = () => required(useContext(SessionIdentityContext), "useSessionIdentity");
 export const useSessionExpiry = () => required(useContext(SessionExpiryContext), "useSessionExpiry");
 export const useSessionActions = () => required(useContext(SessionActionsContext), "useSessionActions");
@@ -199,6 +298,7 @@ export const usePermissions = () => required(useContext(PermissionContext), "use
 export const usePermission = (code: string) => usePermissions().has(code);
 export const useFeatures = () => required(useContext(FeatureContext), "useFeatures");
 export const useFeature = (code: string) => useFeatures()[code]?.enabled === true;
+export const useApplicationNavigation = () => required(useContext(ApplicationNavigationContext), "useApplicationNavigation");
 export const useToasts = () => required(useContext(ToastContext), "useToasts");
 export const useSurfaceStack = () => required(useContext(SurfaceContext), "useSurfaceStack");
 export const useShellState = () => required(useContext(ShellContext), "useShellState");

@@ -15,6 +15,7 @@ import {
 export interface KeycloakRealmConfig {
   readonly issuerUrl: string;
   readonly audience: string;
+  readonly jwksUrl?: string;
 }
 
 export interface KeycloakAuthAdapterConfig {
@@ -114,6 +115,7 @@ function createRealm(
     issuerUrl,
     audience,
     jwks: new KeycloakJwksManager(issuerUrl, {
+      jwksUrl: realmConfig.jwksUrl,
       cacheTtlMs: adapterConfig.jwksCacheTtlMs,
       warmUpTimeoutMs: adapterConfig.jwksWarmUpTimeoutMs,
       logger: adapterConfig.logger,

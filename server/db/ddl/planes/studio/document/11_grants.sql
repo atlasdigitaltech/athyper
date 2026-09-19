@@ -12,17 +12,12 @@ BEGIN
         TO athyperapp;
         GRANT SELECT, INSERT, UPDATE, DELETE ON
             document.attachment,
-            document.attachment_quota_usage,
-            document.attachment_quota_reservation,
             document.attachment_folder,
             document.attachment_link,
             document.comment,
             document.comment_draft,
             document.comment_feed_cursor,
             document.content_item,
-            document.content_item_access_grant,
-            document.content_quota_usage,
-            document.content_quota_reservation,
             document.conversation,
             document.conversation_participant,
             document.multipart_upload

@@ -1,0 +1,37 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.attachments",
+  "entityCode": "business_partner",
+  "plane": "neon",
+  "sectionKey": "attachments",
+  "rendererKey": "platform.attachments.v1",
+  "dataBinding": {
+    "serviceKey": "platform.attachments.v1",
+    "ownerEntityCode": "business_partner",
+    "includeInAggregate": false
+  },
+  "authorization": {
+    "viewPermission": "neon.business_partner.attachments.read",
+    "permissionStatus": "proposed_requires_catalog_verification",
+    "discoverableWhenDenied": false
+  },
+  "load": "on_visible",
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "dependencies": [
+    "business_partner/core"
+  ],
+  "artifactHash": "sha256:60b553c90e53b31b4fa4d0a85f99fc95de3a48597983e1a0681582410792c693"
+}

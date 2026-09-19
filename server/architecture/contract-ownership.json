@@ -27,7 +27,11 @@
     "search": "@athyper/server-contract-search",
     "secrets": "@athyper/server-contract-secrets",
     "telemetry": "@athyper/server-contract-telemetry",
-    "workflow": "@athyper/server-contract-workflow"
+    "workflow": "@athyper/server-contract-workflow",
+    "experience": "@athyper/server-contract-experience",
+    "control-admin": "@athyper/server-contract-control-admin",
+    "finance": "@athyper/server-contract-finance",
+    "governance": "@athyper/server-contract-governance"
   },
   "duplicateSymbolAllowlist": []
 }

@@ -1,0 +1,9 @@
+{
+  "schema": "athyper.entity-runtime-descriptor/2.0", "contractStatus": "proposed_for_review", "planeKey": "neon", "entityCode": "supplier", "descriptorKind": "role_extension",
+  "aggregate": { "key": "business_partner", "rootEntityCode": "business_partner" }, "ownership": { "ownerEntityCode": "business_partner", "ownerIdSource": "business_partner_id", "cardinality": "zero_or_one" },
+  "storage": { "sourceObjects": ["master.supplier"], "schema": "master", "object": "supplier", "idField": "id", "tenantField": "tenant_id", "statusField": "status" },
+  "fields": [{ "key": "supplierId", "type": "uuid", "storagePath": "id", "readOnly": true }, { "key": "status", "type": "enum", "storagePath": "status", "readOnly": true }, { "key": "effectivePeriod", "type": "date_range" }],
+  "businessContext": { "scopeKind": "tenant", "extensions": [{ "key": "operating_organization_participation", "requiredCoordinates": ["legalEntityId", "operatingOrganizationId"], "requiredCapability": "procurement" }, { "key": "company_profile", "requiredCoordinates": ["legalEntityId", "companyCodeId", "operatingOrganizationId"], "requiredCapability": "procurement" }] },
+  "operations": [{ "key": "read", "permission": "neon.business_partner.supplier.read", "scope": "tenant" }, { "key": "activate", "permission": "neon.business_partner.supplier.update", "scope": "tenant" }], "handlers": { "read": "neon.business_partner.supplier.read.v1", "write": "neon.business_partner.supplier.write.v1" },
+  "childDescriptorRefs": ["business_partner_operating_organization_assignment", "supplier_company_profile"], "presentation": { "section": "Supplier", "component": "supplier-role.v1" }, "serverPolicies": ["role_activation", "procurement_capability", "effective_dates", "audit"]
+}

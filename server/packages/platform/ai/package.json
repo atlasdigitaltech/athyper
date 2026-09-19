@@ -3,13 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./knowledge": "./src/knowledge.ts",
+    "./learning-evaluation": "./src/learning-evaluation.ts",
+    "./kysely-run-repository": "./src/kysely-run-repository.ts",
+    "./kysely-thread-repository": "./src/kysely-thread-repository.ts",
+    "./response-feedback": "./src/response-feedback.ts",
+    "./learning-candidates": "./src/learning-candidates.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
+    "@athyper/platform-temporal": "workspace:*",
     "@athyper/server-contract-ai": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-jobs": "workspace:*",
@@ -17,11 +26,11 @@
     "@athyper/server-contract-records": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
-    "kysely": "^0.28.16",
-    "express": "^5.0.0"
+    "express": "^5.2.1",
+    "kysely": "^0.28.17"
   },
   "devDependencies": {
-    "@types/express": "^5.0.1",
+    "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"

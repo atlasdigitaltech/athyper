@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "environment": "dev",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "expiresAt": "2026-09-11T01:15:12.051Z",
+  "authorizationSource": "Explicit user instruction to assign catl.admin and catl.owner in the current task; operator bootstrap, not an authenticated reviewer decision.",
+  "scopeNote": "Current Studio authoring routes authorize at exact tenant scope; authoring permission is not restricted to BP by the route. Neon attachment rights are limited to one resource.",
+  "assignments": [
+    {
+      "plane": "studio",
+      "user": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "name": "Atlas BP author and publisher",
+      "code": "atlas_f5_bp_author",
+      "scopeKind": "tenant",
+      "scopeId": "1d2550e6-6e20-5f74-81d9-388d1e75d20f",
+      "targetId": "44444444-4444-4444-8444-444444444444",
+      "permissions": [
+        "metadata.entity.author",
+        "metadata.entity.validate",
+        "metadata.entity.test",
+        "metadata.entity.submit",
+        "metadata.entity.publish",
+        "metadata.entity.activate",
+        "authorization.management.read"
+      ],
+      "roleId": "c1c4eb99-d99d-40e7-acd6-a3e86b6a5740",
+      "groupId": "12619b16-0595-4c4e-9940-b3cdc294fa5a"
+    },
+    {
+      "plane": "studio",
+      "user": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "name": "Atlas BP independent reviewer",
+      "code": "atlas_f5_bp_reviewer",
+      "scopeKind": "tenant",
+      "scopeId": "1d2550e6-6e20-5f74-81d9-388d1e75d20f",
+      "targetId": "44444444-4444-4444-8444-444444444444",
+      "permissions": [
+        "metadata.entity.review",
+        "metadata.entity.validate",
+        "metadata.entity.test"
+      ],
+      "roleId": "a6ef2747-7f36-422a-984d-f76a5eaf84d7",
+      "groupId": "aa83ee8d-d510-4761-b8c6-86d6d6f9d814"
+    },
+    {
+      "plane": "neon",
+      "user": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "name": "Atlas synthetic attachment operator",
+      "code": "atlas_f5_synthetic_document",
+      "scopeKind": "resource",
+      "scopeId": "6b827c96-0bcb-4248-8c5e-340b023a98d4",
+      "targetId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+      "permissions": [
+        "neon.collaboration.attachment.create",
+        "neon.collaboration.attachment.read"
+      ],
+      "roleId": "db12bd1a-489d-41da-b5b9-4b2480ecc968",
+      "groupId": "dd1de7c6-b593-439f-b6a8-e3a2618c6098"
+    }
+  ]
+}

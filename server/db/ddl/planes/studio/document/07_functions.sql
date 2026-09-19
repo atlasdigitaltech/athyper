@@ -59,7 +59,8 @@ BEGIN
        OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
        OR NEW.entity_type IS DISTINCT FROM OLD.entity_type
        OR NEW.entity_id IS DISTINCT FROM OLD.entity_id
-       OR NEW.attachment_id IS DISTINCT FROM OLD.attachment_id
+       OR NEW.attachment_series_id IS DISTINCT FROM OLD.attachment_series_id
+       OR NEW.pinned_attachment_id IS DISTINCT FROM OLD.pinned_attachment_id
        OR NEW.link_kind IS DISTINCT FROM OLD.link_kind
        OR NEW.created_at IS DISTINCT FROM OLD.created_at
        OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN

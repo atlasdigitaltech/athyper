@@ -1,0 +1,4 @@
+import{renderToStaticMarkup}from"react-dom/server";
+import{describe,expect,it}from"vitest";
+import{SupplierRequestFormDesigner}from"./supplier-request-form-designer";
+describe("Supplier request form designer",()=>{it("presents canonical and request-only field authoring through the governed bundle",()=>{const html=renderToStaticMarkup(<SupplierRequestFormDesigner value={{title:"Supplier request",description:"Test",submitLabel:"Create",sections:[{key:"identity",title:"Identity",fields:[{key:"legalName",path:"legalName",target:"canonical",label:"Legal name",widget:"text",required:true},{key:"buyerNote",path:"buyerNote",target:"request_only",label:"Buyer note",widget:"textarea",required:false}]}]}} onChange={()=>undefined}/>);expect(html).toContain("Supplier request form designer");expect(html).toContain("Business Partner mapping");expect(html).toContain("Request only");expect(html).toContain("Buyer note");});});

@@ -23,7 +23,7 @@ END $guard$;
 INSERT INTO control.lookup_domain
   (code, name, description, source_schema, is_extensible, metadata, status, created_by)
 VALUES
-  ('entity_field.origin', 'Field Origin', 'Who defined this field ??? platform, standard, or tenant.', 'control', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
+  ('entity_field.origin', 'Field Origin', 'Who defined this field — platform, standard, or tenant.', 'control', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
 ON CONFLICT (code) DO UPDATE SET
   name = excluded.name, description = excluded.description,
   source_schema = excluded.source_schema, is_extensible = excluded.is_extensible,

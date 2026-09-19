@@ -1,0 +1,10 @@
+{
+  "name": "@athyper/governance-qualification-data",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./business-partner-v1": "./business-partner-v1-qualification.v1.json",
+    "./business-partner-r8": "./business-partner-r8-qualification.v1.json"
+  }
+}

@@ -1,0 +1,455 @@
+{
+  "package": "P8",
+  "status": "accepted_local_dev",
+  "recordedAt": "2026-09-14T16:21:27.655Z",
+  "acceptanceOpen": [],
+  "boundaries": [
+    "Real DEV NEON and owning APIs; no test-only permission grants",
+    "P7 completed/activated fixtures supply real stored/scanned documents and existing supplier readiness; no fabricated fresh activation outcome",
+    "Document failure/retry display and request binding have component coverage; renderer/scanner failure semantics remain P4 owner qualification",
+    "P9 final local qualification and follow-ups B/C remain separate scopes"
+  ],
+  "validation": {
+    "productTests": 204,
+    "hostTests": 462,
+    "hostSkipped": 1,
+    "cycleTests": 27,
+    "typechecks": [
+      "business-partner",
+      "platform-host"
+    ],
+    "builds": [
+      "platform-governance",
+      "platform-host",
+      "neon"
+    ]
+  },
+  "live": {
+    "freshProfileRequests": [
+      {
+        "caseId": "0626ef25-4bff-47a7-baae-e15440b803fc",
+        "level": "basic",
+        "votes": 1
+      },
+      {
+        "caseId": "dfab115b-f1da-48a3-ba40-566fb470c063",
+        "level": "standard",
+        "votes": 2
+      },
+      {
+        "caseId": "5842e225-03ee-47a5-8020-15c84b3d924b",
+        "level": "enhanced",
+        "votes": 10
+      }
+    ],
+    "correction": {
+      "id": "fb364314-7675-458d-a43b-82175a9862e6",
+      "process": {
+        "cycleRunId": "3aabe984-5e9f-4c05-9796-f21be184b5fa",
+        "attemptId": "51ab5616-e896-49e9-9b21-2efee5d94985",
+        "attemptNumber": 1,
+        "selectionId": "3f713780-6822-4484-a921-b9f5f3096c99",
+        "profile": "standard",
+        "reviewPackJobId": "8e3a2dbc-f0f0-4f00-a9ad-ccaec948efee",
+        "documentStatus": "pending"
+      },
+      "returned": true,
+      "edited": true,
+      "rejection": {
+        "type": "https://athyper.dev/problems/process_correction_profile_change_unsupported",
+        "title": "PROCESS_CORRECTION_PROFILE_CHANGE_UNSUPPORTED",
+        "status": 409,
+        "detail": "This correction requires a different onboarding profile; changing the process for this case is not supported in this prototype. Close this proposal and create a new request.",
+        "code": "PROCESS_CORRECTION_PROFILE_CHANGE_UNSUPPORTED"
+      },
+      "bothFormViews": true,
+      "profileChangeRejected": true,
+      "second": {
+        "cycleRunId": "3aabe984-5e9f-4c05-9796-f21be184b5fa",
+        "attemptId": "a3e98f64-da26-4c25-af05-d800300cf609",
+        "attemptNumber": 2,
+        "selectionId": "3e56a1e7-e7e0-49f4-98c4-72cff73372bd",
+        "profile": "standard",
+        "reviewPackJobId": "d97b06b0-c7f9-4b58-a75c-8826f010c8bf",
+        "documentStatus": "pending"
+      },
+      "resubmitted": true,
+      "votes": 2,
+      "reviewed": true,
+      "closeResponse": {
+        "entity_case_id": "fb364314-7675-458d-a43b-82175a9862e6",
+        "snapshot_id": "01a0a0b3-41e3-73a2-a840-52a8944535d3",
+        "row_version": "19",
+        "status": "cancelled",
+        "replayed": false,
+        "outbox_id": "01a0a0b3-41ea-7ce2-b727-807e0eff78d8"
+      },
+      "closed": true,
+      "retainedAttempts": 2
+    },
+    "rejection": {
+      "id": "9280a524-0015-42e0-b04c-87175dd10620",
+      "process": {
+        "cycleRunId": "cb0b91c9-0f85-4037-8445-fba59a10a241",
+        "attemptId": "d537584f-399b-41ce-83f1-8b2cf8f58707",
+        "attemptNumber": 1,
+        "selectionId": "e44b4c19-5277-4d07-9bde-4c96288f211a",
+        "profile": "simple",
+        "reviewPackJobId": "6dbd2947-75c0-4522-a52c-f0cc98bac10e",
+        "documentStatus": "pending"
+      },
+      "passed": true
+    },
+    "browserChecks": [
+      {
+        "principal": "catl.admin",
+        "caseId": "a87e6353-40bf-4184-9768-bbd4a0e9a166",
+        "requirement": "basic",
+        "profile": "simple",
+        "taskCount": 2,
+        "documentPurposes": [
+          {
+            "purpose": "submitted_review_pack",
+            "canDownload": false,
+            "canRetry": false
+          },
+          {
+            "purpose": "decision_document",
+            "canDownload": true,
+            "canRetry": false
+          },
+          {
+            "purpose": "activation_confirmation",
+            "canDownload": true,
+            "canRetry": false
+          }
+        ],
+        "communicationCount": 6,
+        "readinessStatus": "completed",
+        "closedCommandsHidden": true,
+        "documentPinPreserved": true,
+        "downloads": [
+          {
+            "purpose": "decision_document",
+            "jobId": "60bd7eb4-8b1f-4910-8cd9-c7540ebb9981",
+            "sha256": "96d2c0620ea9884db01a8879e6787ce39a658d24b64e4c8814a184ee660ea1fd",
+            "bytes": 19186
+          },
+          {
+            "purpose": "activation_confirmation",
+            "jobId": "bd64f781-e233-4d20-896a-2f8546dc0fe0",
+            "sha256": "3367b5abb973c8e3828fa227c647bc27d8b55b7b6d923221ea451e2346e1da83",
+            "bytes": 19602
+          }
+        ],
+        "screenshot": "governance/policy/reports/p8-browser/catl.admin-a87e6353-40bf-4184-9768-bbd4a0e9a166.png",
+        "readinessLinkScopePreserved": true,
+        "activeSupplierCannotBeActivatedAgain": true
+      },
+      {
+        "principal": "catl.admin",
+        "caseId": "4d575964-d3ae-4b03-8014-59e3923c667c",
+        "requirement": "standard",
+        "profile": "standard",
+        "taskCount": 3,
+        "documentPurposes": [
+          {
+            "purpose": "submitted_review_pack",
+            "canDownload": false,
+            "canRetry": false
+          },
+          {
+            "purpose": "decision_document",
+            "canDownload": true,
+            "canRetry": false
+          },
+          {
+            "purpose": "activation_confirmation",
+            "canDownload": true,
+            "canRetry": false
+          }
+        ],
+        "communicationCount": 6,
+        "readinessStatus": "completed",
+        "closedCommandsHidden": true,
+        "documentPinPreserved": true,
+        "downloads": [
+          {
+            "purpose": "decision_document",
+            "jobId": "73cbcc38-ed37-4f99-b8e4-0d89872e2b12",
+            "sha256": "58dca9422521519dc947c28321dc9a858ddfd6621bd236be5e85987d3fd3e99c",
+            "bytes": 19305
+          },
+          {
+            "purpose": "activation_confirmation",
+            "jobId": "f20b3c32-e28a-40b2-8166-f856068572dd",
+            "sha256": "b2c19fe74bea5b4fa2c45578868b478897b705bd006de2a8567200f4b22b6251",
+            "bytes": 19619
+          }
+        ],
+        "screenshot": "governance/policy/reports/p8-browser/catl.admin-4d575964-d3ae-4b03-8014-59e3923c667c.png",
+        "readinessLinkScopePreserved": true,
+        "activeSupplierCannotBeActivatedAgain": true
+      },
+      {
+        "principal": "catl.admin",
+        "caseId": "cb43c12e-d6a7-4cdb-8c12-5c5f541109e8",
+        "requirement": "enhanced",
+        "profile": "enhanced",
+        "taskCount": 10,
+        "documentPurposes": [
+          {
+            "purpose": "submitted_review_pack",
+            "canDownload": false,
+            "canRetry": false
+          },
+          {
+            "purpose": "decision_document",
+            "canDownload": true,
+            "canRetry": false
+          },
+          {
+            "purpose": "activation_confirmation",
+            "canDownload": true,
+            "canRetry": false
+          }
+        ],
+        "communicationCount": 6,
+        "readinessStatus": "completed",
+        "closedCommandsHidden": true,
+        "documentPinPreserved": true,
+        "downloads": [
+          {
+            "purpose": "decision_document",
+            "jobId": "ad81fdcf-a3be-4ace-b107-564eecda9e95",
+            "sha256": "66a28ded6e150c637240a17511edc66ae7bfd68efd37b64655d84630be16ce4b",
+            "bytes": 19426
+          },
+          {
+            "purpose": "activation_confirmation",
+            "jobId": "eefb2a3e-2794-47a5-b4cc-2ec467c5f6b1",
+            "sha256": "b855271d4f8a7458830f689f803d37308b7745c7b970c7c23acf09d9a2715a56",
+            "bytes": 19649
+          }
+        ],
+        "screenshot": "governance/policy/reports/p8-browser/catl.admin-cb43c12e-d6a7-4cdb-8c12-5c5f541109e8.png",
+        "readinessLinkScopePreserved": true,
+        "activeSupplierCannotBeActivatedAgain": true
+      },
+      {
+        "principal": "catl.owner",
+        "caseId": "a87e6353-40bf-4184-9768-bbd4a0e9a166",
+        "requirement": "basic",
+        "profile": "simple",
+        "taskCount": 2,
+        "documentPurposes": [
+          {
+            "purpose": "submitted_review_pack",
+            "canDownload": true,
+            "canRetry": false
+          },
+          {
+            "purpose": "decision_document",
+            "canDownload": false,
+            "canRetry": false
+          },
+          {
+            "purpose": "activation_confirmation",
+            "canDownload": false,
+            "canRetry": false
+          }
+        ],
+        "communicationCount": 2,
+        "readinessStatus": "completed",
+        "closedCommandsHidden": true,
+        "documentPinPreserved": true,
+        "downloads": [
+          {
+            "purpose": "submitted_review_pack",
+            "jobId": "df6e1ef7-307c-4f25-9fae-544640274afb",
+            "sha256": "0184916265460ccfc4417ff70ff53a3c8541365e4691936bf83e147e5378711e",
+            "bytes": 21823
+          }
+        ],
+        "screenshot": "governance/policy/reports/p8-browser/catl.owner-a87e6353-40bf-4184-9768-bbd4a0e9a166.png",
+        "readinessLinkScopePreserved": true,
+        "activeSupplierCannotBeActivatedAgain": true
+      },
+      {
+        "principal": "catl.owner",
+        "caseId": "4d575964-d3ae-4b03-8014-59e3923c667c",
+        "requirement": "standard",
+        "profile": "standard",
+        "taskCount": 3,
+        "documentPurposes": [
+          {
+            "purpose": "submitted_review_pack",
+            "canDownload": true,
+            "canRetry": false
+          },
+          {
+            "purpose": "decision_document",
+            "canDownload": false,
+            "canRetry": false
+          },
+          {
+            "purpose": "activation_confirmation",
+            "canDownload": false,
+            "canRetry": false
+          }
+        ],
+        "communicationCount": 4,
+        "readinessStatus": "completed",
+        "closedCommandsHidden": true,
+        "documentPinPreserved": true,
+        "downloads": [
+          {
+            "purpose": "submitted_review_pack",
+            "jobId": "34ef1179-3d67-4d30-8ebb-f127501dd93a",
+            "sha256": "8136b35e2669f95706bf8acb52713939592d7628226327cf0acf10b01a1e7074",
+            "bytes": 21818
+          }
+        ],
+        "screenshot": "governance/policy/reports/p8-browser/catl.owner-4d575964-d3ae-4b03-8014-59e3923c667c.png",
+        "readinessLinkScopePreserved": true,
+        "activeSupplierCannotBeActivatedAgain": true
+      },
+      {
+        "principal": "catl.owner",
+        "caseId": "cb43c12e-d6a7-4cdb-8c12-5c5f541109e8",
+        "requirement": "enhanced",
+        "profile": "enhanced",
+        "taskCount": 10,
+        "documentPurposes": [
+          {
+            "purpose": "submitted_review_pack",
+            "canDownload": true,
+            "canRetry": false
+          },
+          {
+            "purpose": "decision_document",
+            "canDownload": false,
+            "canRetry": false
+          },
+          {
+            "purpose": "activation_confirmation",
+            "canDownload": false,
+            "canRetry": false
+          }
+        ],
+        "communicationCount": 20,
+        "readinessStatus": "completed",
+        "closedCommandsHidden": true,
+        "documentPinPreserved": true,
+        "downloads": [
+          {
+            "purpose": "submitted_review_pack",
+            "jobId": "f93cdeec-8f15-494a-9beb-3a2137ffe0e5",
+            "sha256": "05d2b950924ae3b34180f4c35c3e223b6f7a3ff9638e6147d8a9ce3399751989",
+            "bytes": 21827
+          }
+        ],
+        "screenshot": "governance/policy/reports/p8-browser/catl.owner-cb43c12e-d6a7-4cdb-8c12-5c5f541109e8.png",
+        "readinessLinkScopePreserved": true,
+        "activeSupplierCannotBeActivatedAgain": true
+      }
+    ],
+    "verifiedDownloads": 9,
+    "database": {
+      "at": "2026-09-14T16:15:10.093Z",
+      "passed": true,
+      "caseId": "0626ef25-4bff-47a7-baae-e15440b803fc",
+      "checks": [
+        "direct run-pin mutation rejected",
+        "real lifecycle cancellation preserves run pins",
+        "case command retains closure reason and snapshot"
+      ],
+      "boundary": "PostgreSQL owner-command regression with rollback; live authorization is qualified by the NEON action script"
+    },
+    "historicalNotice": {
+      "at": "2026-09-14T16:20:40.548Z",
+      "caseId": "fb364314-7675-458d-a43b-82175a9862e6",
+      "attemptId": "51ab5616-e896-49e9-9b21-2efee5d94985",
+      "jobId": "8e3a2dbc-f0f0-4f00-a9ad-ccaec948efee",
+      "passed": true,
+      "screenshot": "governance/policy/reports/p8-browser/historical-notice.png",
+      "onlyPinnedDocument": true,
+      "currentCommandsHidden": true,
+      "downloadAuthorized": true
+    }
+  },
+  "access": {
+    "newTemporaryGrants": 0,
+    "activeP7Grants": 0
+  },
+  "containers": [
+    {
+      "name": "/athyper-dev-source-api-1",
+      "image": "sha256:15820eb3861963e35847377115def22d3d0bef1b4d6596350fb219104d4e84d2",
+      "status": "running",
+      "health": "healthy"
+    },
+    {
+      "name": "/athyper-dev-source-neon-web-1",
+      "image": "sha256:799547ba03dce3820cffb7420513ff5d60b017e305e5f429dee1950e80e3c3f7",
+      "status": "running",
+      "health": "healthy"
+    }
+  ],
+  "sourceHashes": [
+    {
+      "path": "packages/planes/neon/business-partner/src/index.tsx",
+      "sha256": "32680060a174ba9dc2a7d41464ba2fa01ccfae67b54849c44a672a3be20802b0"
+    },
+    {
+      "path": "apps/neon/app/(shell)/mdg/business-partner/requests/[requestId]/page.tsx",
+      "sha256": "392b375e9a7b23639338a5ff3eda40bb97bb4aff02a7323d4e30a20a4c0eabd6"
+    },
+    {
+      "path": "apps/neon/app/(shell)/mdg/business-partner/[recordId]/supplier/page.tsx",
+      "sha256": "4aa76004a08ad43a69f4bde21067f7cee542d4ec5134aa91da112a8fb5dc4495"
+    },
+    {
+      "path": "packages/planes/neon/business-partner/src/supplier-process-correction.tsx",
+      "sha256": "488477adb2ad7dfb113da4893074fcfffdf34c5ff1694e874b311a0d8e3ffaec"
+    },
+    {
+      "path": "packages/planes/neon/business-partner/src/supplier-process-documents.tsx",
+      "sha256": "88ac3fffdc03d1d83d2c34d34858c1d97b31febb7e109e65acd8899d5e8b308e"
+    },
+    {
+      "path": "packages/planes/neon/business-partner/src/supplier-process-preview.tsx",
+      "sha256": "88959ae7dba77c1323d0e5655585be0db16ca8ac9e30ed2dc11ca0ae2342c556"
+    },
+    {
+      "path": "packages/planes/neon/business-partner/src/supplier-process-readiness.tsx",
+      "sha256": "f5806e999a9f5be2454491870b2cc690f3f3dfe34afd20a0f15a7a6a26d5078e"
+    },
+    {
+      "path": "packages/planes/neon/business-partner/src/supplier-controls.tsx",
+      "sha256": "21868d66a07fa1470761a38596e6f1fa12c423c9ffde399bfd9170ffb8530478"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/supplier-process-tasks.ts",
+      "sha256": "5e1883c06323bee360078de64f15cf0be8f63070364c8075125c6f79f901eda6"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/supplier-process-documents.ts",
+      "sha256": "4b9b7f1fef8611f191b9a1d31d64dc52a03cd3fc1be021b2d4a4a9eeeecadbf1"
+    },
+    {
+      "path": "server/packages/platform/governance/src/cycles/cycle-execution-services.ts",
+      "sha256": "f64b3f871e65b9b8b7d04d7d5c395743ed7e91c18f6d4b25c7140a60a0319e72"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/document/07_functions.sql",
+      "sha256": "0b8522c96749f1012b9b1bfa588c569d00376c4d650b8f0d6d7476f7323cceca"
+    }
+  ],
+  "reports": [
+    "supplier-onboarding-neon-actions.dev.json",
+    "supplier-onboarding-neon-live.dev.json",
+    "supplier-onboarding-neon-db.dev.json",
+    "supplier-onboarding-neon-history.dev.json"
+  ]
+}

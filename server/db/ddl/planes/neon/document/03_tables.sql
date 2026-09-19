@@ -2,374 +2,14 @@
 -- entity_type/entity_id remain API coordinates until the metadata entity
 -- registry and control.owner_type catalog have complete one-to-one coverage.
 
-CREATE TABLE document.attachment (
-    id                            uuid                         NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id                     uuid                         NOT NULL,
-    file_name                     text                         NOT NULL,
-    original_filename             text,
-    content_type                  text,
-    size_bytes                    bigint,
-    sha256                        text,
-    kind                          text                         NOT NULL DEFAULT 'attachment',
-    storage_bucket                text                         NOT NULL,
-    storage_key                   text                         NOT NULL,
-    thumbnail_key                 text,
-    preview_key                   text,
-    preview_generated_at          timestamptz,
-    is_preview_generation_failed  boolean                      NOT NULL DEFAULT false,
-    is_virus_scanned              boolean                      NOT NULL DEFAULT false,
-    version_no                    integer                      NOT NULL DEFAULT 1,
-    parent_attachment_id          uuid,
-    reference_count               integer                      NOT NULL DEFAULT 0,
-    is_current                    boolean                      NOT NULL DEFAULT true,
-    is_active                     boolean                      NOT NULL DEFAULT true,
-    is_auto_delete_on_expiry      boolean                      NOT NULL DEFAULT false,
-    expires_at                    timestamptz,
-    retention_until               timestamptz,
-    uploaded_by                   uuid,
-    metadata                      jsonb                        NOT NULL DEFAULT '{}'::jsonb,
-    status                        document.attachment_status_d NOT NULL DEFAULT 'active',
-    status_changed_at             timestamptz,
-    status_changed_by             uuid,
-    created_at                    timestamptz                  NOT NULL DEFAULT now(),
-    created_by                    uuid                         NOT NULL,
-    updated_at                    timestamptz,
-    updated_by                    uuid,
-    extracted_text                text,
-    extracted_text_chars          integer,
-    text_extracted_at             timestamptz,
-    text_extraction_status        text,
-    text_extraction_error         text,
-    pii_detected                  boolean                      NOT NULL DEFAULT false,
-    pii_types                     jsonb                        NOT NULL DEFAULT '[]'::jsonb,
-    pii_scanned_at                timestamptz,
-    series_id                     uuid,
-
-    CONSTRAINT attachment_pkey PRIMARY KEY (id),
-    CONSTRAINT attachment_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT attachment_file_name_chk
-        CHECK (btrim(file_name) <> '' AND length(file_name) <= 1024),
-    CONSTRAINT attachment_original_filename_chk
-        CHECK (original_filename IS NULL OR (btrim(original_filename) <> '' AND length(original_filename) <= 1024)),
-    CONSTRAINT attachment_size_chk CHECK (size_bytes IS NULL OR size_bytes >= 0),
-    CONSTRAINT attachment_sha256_chk CHECK (sha256 IS NULL OR sha256 ~ '^[a-f0-9]{64}$'),
-    CONSTRAINT attachment_kind_chk CHECK (kind ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT attachment_storage_chk
-        CHECK (btrim(storage_bucket) <> '' AND btrim(storage_key) <> ''),
-    CONSTRAINT attachment_version_chk CHECK (version_no >= 1),
-    CONSTRAINT attachment_reference_count_chk CHECK (reference_count >= 0),
-    CONSTRAINT attachment_parent_version_chk
-        CHECK (
-            (parent_attachment_id IS NULL AND version_no = 1)
-            OR (parent_attachment_id IS NOT NULL AND version_no > 1)
-        ),
-    CONSTRAINT attachment_expiry_chk
-        CHECK (retention_until IS NULL OR expires_at IS NULL OR retention_until >= expires_at),
-    CONSTRAINT attachment_metadata_chk CHECK (jsonb_typeof(metadata) = 'object'),
-    CONSTRAINT attachment_pii_types_chk CHECK (jsonb_typeof(pii_types) = 'array'),
-    CONSTRAINT attachment_extract_chars_chk
-        CHECK (extracted_text_chars IS NULL OR extracted_text_chars >= 0),
-    CONSTRAINT attachment_extract_status_chk
-        CHECK (
-            text_extraction_status IS NULL
-            OR text_extraction_status IN ('pending', 'extracted', 'skipped', 'failed')
-        ),
-    CONSTRAINT attachment_status_audit_pair_chk
-        CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
-    CONSTRAINT attachment_audit_pair_chk
-        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
-);
 
 COMMENT ON TABLE document.attachment IS
   'Tenant-scoped object-storage attachment metadata shared by all planes. Processing fields remain operational compatibility fields until a protected processing satellite is introduced.';
 
-CREATE TABLE document.attachment_quota_usage (
-    tenant_id uuid NOT NULL, quota_kind text NOT NULL, used_bytes bigint NOT NULL DEFAULT 0,
-    reserved_bytes bigint NOT NULL DEFAULT 0, used_items bigint NOT NULL DEFAULT 0, reserved_items bigint NOT NULL DEFAULT 0,
-    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
-    PRIMARY KEY (tenant_id, quota_kind), CHECK (quota_kind ~ '^[a-z][a-z0-9_.]{1,126}$'),
-    CHECK (used_bytes >= 0 AND reserved_bytes >= 0 AND used_items >= 0 AND reserved_items >= 0)
-);
-CREATE TABLE document.attachment_quota_reservation (
-    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, quota_kind text NOT NULL, resource_type text NOT NULL,
-    resource_id uuid NOT NULL, reserved_bytes bigint NOT NULL, reserved_items bigint NOT NULL DEFAULT 1, actual_bytes bigint,
-    status text NOT NULL DEFAULT 'reserved', expires_at timestamptz NOT NULL, committed_at timestamptz, released_at timestamptz,
-    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
-    PRIMARY KEY (id), UNIQUE (tenant_id, quota_kind, resource_type, resource_id),
-    CHECK (reserved_bytes >= 0 AND reserved_items > 0 AND (actual_bytes IS NULL OR actual_bytes >= 0)), CHECK (status IN ('reserved','committed','released','expired'))
-);
-
-CREATE TABLE document.attachment_folder (
-    id            uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id     uuid        NOT NULL,
-    entity_type   text        NOT NULL,
-    entity_id     text        NOT NULL,
-    name          text        NOT NULL,
-    parent_id     uuid,
-    display_order integer     NOT NULL DEFAULT 0,
-    created_at    timestamptz NOT NULL DEFAULT now(),
-    created_by    uuid        NOT NULL,
-    updated_at    timestamptz,
-    updated_by    uuid,
-
-    CONSTRAINT attachment_folder_pkey PRIMARY KEY (id),
-    CONSTRAINT attachment_folder_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT attachment_folder_owner_chk
-        CHECK (
-            entity_type ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$'
-            AND btrim(entity_id) <> ''
-            AND length(entity_id) <= 512
-        ),
-    CONSTRAINT attachment_folder_name_chk
-        CHECK (btrim(name) <> '' AND length(name) <= 256),
-    CONSTRAINT attachment_folder_display_order_chk CHECK (display_order >= 0),
-    CONSTRAINT attachment_folder_audit_pair_chk
-        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
-);
-
-CREATE TABLE document.attachment_link (
-    id            uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id     uuid        NOT NULL,
-    entity_type   text        NOT NULL,
-    entity_id     text        NOT NULL,
-    attachment_id        uuid        NOT NULL,
-    attachment_series_id uuid,
-    link_kind            text        NOT NULL DEFAULT 'related',
-    display_order integer     NOT NULL DEFAULT 0,
-    metadata      jsonb       NOT NULL DEFAULT '{}'::jsonb,
-    folder_id     uuid,
-    created_at    timestamptz NOT NULL DEFAULT now(),
-    created_by    uuid        NOT NULL,
-
-    CONSTRAINT attachment_link_pkey PRIMARY KEY (id),
-    CONSTRAINT attachment_link_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT attachment_link_owner_chk
-        CHECK (
-            entity_type ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$'
-            AND btrim(entity_id) <> ''
-            AND length(entity_id) <= 512
-        ),
-    CONSTRAINT attachment_link_kind_chk CHECK (link_kind ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT attachment_link_order_chk CHECK (display_order >= 0),
-    CONSTRAINT attachment_link_metadata_chk CHECK (jsonb_typeof(metadata) = 'object'),
-    CONSTRAINT attachment_link_owner_attachment_uq
-        UNIQUE (tenant_id, entity_type, entity_id, attachment_id, link_kind)
-);
 
 COMMENT ON TABLE document.attachment_link IS
   'Canonical polymorphic entity-to-attachment relation. Replaces the misleading master.entity_document_link name.';
 
-CREATE TABLE document.comment (
-    id                    uuid                              NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id             uuid                              NOT NULL,
-    context_type          text                              NOT NULL DEFAULT 'entity',
-    entity_type           text                              NOT NULL,
-    entity_id             text                              NOT NULL,
-    comment_intent        text                              NOT NULL DEFAULT 'general',
-    commenter_id          uuid                              NOT NULL,
-    comment_text          text                              NOT NULL,
-    content_format        document.comment_content_format_d NOT NULL DEFAULT 'plain',
-    content_json          jsonb,
-    content_html          text,
-    content_schema        text,
-    parent_comment_id     uuid,
-    thread_depth          smallint                          NOT NULL DEFAULT 0,
-    visibility            document.comment_visibility_d     NOT NULL DEFAULT 'public',
-    deleted_at            timestamptz,
-    deleted_by            uuid,
-    archived_at           timestamptz,
-    archived_by           uuid,
-    retention_until       timestamptz,
-    retention_policy_id   uuid,
-    status                text                              NOT NULL DEFAULT 'open',
-    created_at            timestamptz                       NOT NULL DEFAULT now(),
-    created_by            uuid                              NOT NULL,
-    updated_at            timestamptz,
-    updated_by            uuid,
-
-    CONSTRAINT comment_pkey PRIMARY KEY (id),
-    CONSTRAINT comment_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT comment_owner_chk
-        CHECK (
-            entity_type ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$'
-            AND btrim(entity_id) <> ''
-            AND length(entity_id) <= 512
-        ),
-    CONSTRAINT comment_context_type_chk CHECK (context_type ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT comment_intent_chk CHECK (comment_intent ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT comment_text_chk CHECK (btrim(comment_text) <> '' AND length(comment_text) <= 50000),
-    CONSTRAINT comment_content_json_chk
-        CHECK (content_json IS NULL OR jsonb_typeof(content_json) = 'object'),
-    CONSTRAINT comment_content_schema_chk
-        CHECK (content_schema IS NULL OR content_schema ~ '^athyper\.rich-text/[0-9]+\.[0-9]+$'),
-    CONSTRAINT comment_content_consistency_chk
-        CHECK (
-            (content_format = 'plain' AND content_json IS NULL)
-            OR content_format <> 'plain'
-        ),
-    CONSTRAINT comment_thread_depth_chk CHECK (thread_depth BETWEEN 0 AND 5),
-    CONSTRAINT comment_parent_depth_chk
-        CHECK (
-            (parent_comment_id IS NULL AND thread_depth = 0)
-            OR (parent_comment_id IS NOT NULL AND thread_depth > 0)
-        ),
-    CONSTRAINT comment_delete_pair_chk CHECK ((deleted_at IS NULL) = (deleted_by IS NULL)),
-    CONSTRAINT comment_archive_pair_chk CHECK ((archived_at IS NULL) = (archived_by IS NULL)),
-    CONSTRAINT comment_status_chk CHECK (status IN ('open', 'resolved', 'archived', 'deleted')),
-    CONSTRAINT comment_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
-);
-
-CREATE TABLE document.comment_draft (
-    id                uuid                              NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id         uuid                              NOT NULL,
-    principal_id      uuid                              NOT NULL,
-    context_type      text                              NOT NULL DEFAULT 'entity',
-    entity_type       text                              NOT NULL,
-    entity_id         text                              NOT NULL,
-    parent_comment_id uuid,
-    draft_text        text                              NOT NULL,
-    content_format    document.comment_content_format_d NOT NULL DEFAULT 'plain',
-    content_json      jsonb,
-    content_html      text,
-    content_schema    text,
-    visibility        document.comment_visibility_d     NOT NULL DEFAULT 'public',
-    created_at        timestamptz                       NOT NULL DEFAULT now(),
-    created_by        uuid                              NOT NULL,
-    updated_at        timestamptz,
-    updated_by        uuid,
-
-    CONSTRAINT comment_draft_pkey PRIMARY KEY (id),
-    CONSTRAINT comment_draft_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT comment_draft_owner_chk
-        CHECK (
-            entity_type ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$'
-            AND btrim(entity_id) <> ''
-            AND length(entity_id) <= 512
-        ),
-    CONSTRAINT comment_draft_text_chk
-        CHECK (btrim(draft_text) <> '' AND length(draft_text) <= 50000),
-    CONSTRAINT comment_draft_content_json_chk
-        CHECK (content_json IS NULL OR jsonb_typeof(content_json) = 'object'),
-    CONSTRAINT comment_draft_content_schema_chk
-        CHECK (content_schema IS NULL OR content_schema ~ '^athyper\.rich-text/[0-9]+\.[0-9]+$'),
-    CONSTRAINT comment_draft_audit_pair_chk
-        CHECK ((updated_at IS NULL) = (updated_by IS NULL)),
-    CONSTRAINT comment_draft_target_uq
-        UNIQUE NULLS NOT DISTINCT (
-            tenant_id, principal_id, context_type,
-            entity_type, entity_id, parent_comment_id
-        )
-);
-
-CREATE TABLE document.comment_feed_cursor (
-    id           uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id    uuid        NOT NULL,
-    principal_id uuid        NOT NULL,
-    entity_type  text        NOT NULL,
-    entity_id    text        NOT NULL,
-    last_read_at timestamptz NOT NULL DEFAULT now(),
-    created_at   timestamptz NOT NULL DEFAULT now(),
-    updated_at   timestamptz,
-    updated_by   uuid,
-
-    CONSTRAINT comment_feed_cursor_pkey PRIMARY KEY (id),
-    CONSTRAINT comment_feed_cursor_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT comment_feed_cursor_owner_chk
-        CHECK (
-            entity_type ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$'
-            AND btrim(entity_id) <> ''
-            AND length(entity_id) <= 512
-        ),
-    CONSTRAINT comment_feed_cursor_target_uq
-        UNIQUE (tenant_id, principal_id, entity_type, entity_id),
-    CONSTRAINT comment_feed_cursor_audit_pair_chk
-        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
-);
-
-CREATE TABLE document.comment_mention (
-    id           uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id    uuid        NOT NULL,
-    comment_id   uuid        NOT NULL,
-    mentioned_id uuid        NOT NULL,
-    created_at   timestamptz NOT NULL DEFAULT now(),
-    created_by   uuid        NOT NULL,
-
-    CONSTRAINT comment_mention_pkey PRIMARY KEY (id),
-    CONSTRAINT comment_mention_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT comment_mention_target_uq UNIQUE (tenant_id, comment_id, mentioned_id)
-);
-
-CREATE TABLE document.comment_reaction (
-    id            uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id     uuid        NOT NULL,
-    comment_id    uuid        NOT NULL,
-    principal_id  uuid        NOT NULL,
-    reaction_type text        NOT NULL,
-    created_at    timestamptz NOT NULL DEFAULT now(),
-    created_by    uuid        NOT NULL,
-
-    CONSTRAINT comment_reaction_pkey PRIMARY KEY (id),
-    CONSTRAINT comment_reaction_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT comment_reaction_type_chk
-        CHECK (reaction_type ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT comment_reaction_target_uq
-        UNIQUE (tenant_id, comment_id, principal_id, reaction_type)
-);
-
-CREATE TABLE document.content_item (
-    id                   uuid                      NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id            uuid                      NOT NULL,
-    code                 text                      NOT NULL,
-    title                text                      NOT NULL,
-    kind                 text                      NOT NULL DEFAULT 'page',
-    parent_id            uuid,
-    locale_code          text                      NOT NULL DEFAULT 'en',
-    slug                 text                      NOT NULL,
-    summary              text,
-    current_version_id   uuid,
-    metadata             jsonb                     NOT NULL DEFAULT '{}'::jsonb,
-    status               document.content_status_d NOT NULL DEFAULT 'DRAFT',
-    status_changed_at    timestamptz,
-    status_changed_by    uuid,
-    preview_text         text,
-    preview_html         text,
-    preview_generated_at timestamptz,
-    created_at           timestamptz               NOT NULL DEFAULT now(),
-    created_by           uuid                      NOT NULL,
-    updated_at           timestamptz,
-    updated_by           uuid,
-    row_version          bigint                    NOT NULL DEFAULT 1,
-
-    CONSTRAINT content_item_pkey PRIMARY KEY (id),
-    CONSTRAINT content_item_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT content_item_code_uq UNIQUE (tenant_id, code, locale_code),
-    CONSTRAINT content_item_code_chk CHECK (code ~ '^[a-z][a-z0-9_.-]{1,126}$'),
-    CONSTRAINT content_item_title_chk CHECK (btrim(title) <> '' AND length(title) <= 512),
-    CONSTRAINT content_item_kind_chk CHECK (kind ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT content_item_locale_chk CHECK (locale_code ~ '^[a-z]{2,3}(-[A-Z]{2})?$'),
-    CONSTRAINT content_item_slug_chk CHECK (slug ~ '^[a-z0-9]+([_-][a-z0-9]+)*$'),
-    CONSTRAINT content_item_metadata_chk CHECK (jsonb_typeof(metadata) = 'object'),
-    CONSTRAINT content_item_status_audit_pair_chk
-        CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
-    CONSTRAINT content_item_audit_pair_chk
-        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
-);
-
-CREATE TABLE document.content_item_access_grant (
-    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
-    content_item_id uuid NOT NULL, subject_type text NOT NULL, subject_id uuid,
-    access_level text NOT NULL, effect text NOT NULL DEFAULT 'allow', expires_at timestamptz,
-    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
-    PRIMARY KEY (id), UNIQUE (tenant_id,id),
-    UNIQUE NULLS NOT DISTINCT (tenant_id,content_item_id,subject_type,subject_id,access_level,effect),
-    CHECK (subject_type IN ('principal','role','group','public')),
-    CHECK (access_level IN ('read','write','publish','admin')),
-    CHECK (effect IN ('allow','deny')),
-    CHECK ((subject_type='public' AND subject_id IS NULL) OR (subject_type<>'public' AND subject_id IS NOT NULL)),
-    CHECK (expires_at IS NULL OR expires_at>created_at)
-);
-CREATE TABLE document.content_quota_usage (tenant_id uuid NOT NULL,quota_kind text NOT NULL,used_items bigint NOT NULL DEFAULT 0,reserved_items bigint NOT NULL DEFAULT 0,created_at timestamptz NOT NULL DEFAULT now(),created_by uuid NOT NULL,updated_at timestamptz,updated_by uuid,PRIMARY KEY(tenant_id,quota_kind),CHECK(used_items>=0 AND reserved_items>=0));
-CREATE TABLE document.content_quota_reservation (id uuid NOT NULL DEFAULT shared.uuidv7(),tenant_id uuid NOT NULL,quota_kind text NOT NULL,content_item_id uuid NOT NULL,reserved_items bigint NOT NULL DEFAULT 1,status text NOT NULL DEFAULT 'reserved',expires_at timestamptz NOT NULL,committed_at timestamptz,released_at timestamptz,created_at timestamptz NOT NULL DEFAULT now(),created_by uuid NOT NULL,updated_at timestamptz,updated_by uuid,PRIMARY KEY(id),UNIQUE(tenant_id,quota_kind,content_item_id),CHECK(reserved_items>0),CHECK(status IN ('reserved','committed','released','expired')));
 
 CREATE UNIQUE INDEX content_item_root_slug_uq
     ON document.content_item (tenant_id, locale_code, slug)
@@ -378,31 +18,6 @@ CREATE UNIQUE INDEX content_item_child_slug_uq
     ON document.content_item (tenant_id, parent_id, locale_code, slug)
     WHERE parent_id IS NOT NULL;
 
-CREATE TABLE document.content_item_link (
-    id                     uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id              uuid        NOT NULL,
-    source_content_item_id uuid        NOT NULL,
-    target_content_item_id uuid        NOT NULL,
-    relation_type          text        NOT NULL DEFAULT 'related',
-    display_order          integer     NOT NULL DEFAULT 0,
-    metadata               jsonb       NOT NULL DEFAULT '{}'::jsonb,
-    created_at             timestamptz NOT NULL DEFAULT now(),
-    created_by             uuid        NOT NULL,
-
-    CONSTRAINT content_item_link_pkey PRIMARY KEY (id),
-    CONSTRAINT content_item_link_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT content_item_link_no_self_chk
-        CHECK (source_content_item_id <> target_content_item_id),
-    CONSTRAINT content_item_link_relation_chk
-        CHECK (relation_type ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT content_item_link_order_chk CHECK (display_order >= 0),
-    CONSTRAINT content_item_link_metadata_chk CHECK (jsonb_typeof(metadata) = 'object'),
-    CONSTRAINT content_item_link_target_uq
-        UNIQUE (
-            tenant_id, source_content_item_id,
-            target_content_item_id, relation_type
-        )
-);
 
 CREATE TABLE document.conversation (
     id                uuid                           NOT NULL DEFAULT shared.uuidv7(),
@@ -750,6 +365,10 @@ CREATE TABLE document.commitment_line (
     bill_from_address_id     uuid,
     ship_from_address_id     uuid,
     remit_to_address_id      uuid,
+    address_snapshot         jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    address_snapshot_hash    char(64),
+    address_snapshot_captured_at timestamptz,
+    address_snapshot_captured_by uuid,
     metadata                 jsonb       NOT NULL DEFAULT '{}'::jsonb,
     status                   document.commitment_line_status_d NOT NULL DEFAULT 'open',
     status_changed_at        timestamptz,
@@ -775,6 +394,9 @@ CREATE TABLE document.commitment_line (
         AND under_delivery_tolerance BETWEEN 0 AND 100
     ),
     CONSTRAINT commitment_line_warehouse_site_chk CHECK (warehouse_id IS NULL OR site_id IS NOT NULL),
+    CONSTRAINT commitment_line_address_snapshot_json_chk CHECK (jsonb_typeof(address_snapshot) = 'object'),
+    CONSTRAINT commitment_line_address_snapshot_hash_chk CHECK (address_snapshot_hash IS NULL OR address_snapshot_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT commitment_line_address_snapshot_capture_pair_chk CHECK ((address_snapshot_captured_at IS NULL) = (address_snapshot_captured_by IS NULL)),
     CONSTRAINT commitment_line_json_chk CHECK (
         jsonb_typeof(classification_decision) = 'object' AND jsonb_typeof(metadata) = 'object'
     ),
@@ -959,6 +581,10 @@ CREATE TABLE document.purchase_invoice_line (
     bill_from_address_id     uuid,
     ship_from_address_id     uuid,
     remit_to_address_id      uuid,
+    address_snapshot         jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    address_snapshot_hash    char(64),
+    address_snapshot_captured_at timestamptz,
+    address_snapshot_captured_by uuid,
     matched_quantity         numeric(18,4) NOT NULL DEFAULT 0,
     match_status             document.invoice_match_status_d NOT NULL DEFAULT 'unmatched',
     source_binding           jsonb       NOT NULL DEFAULT '{}'::jsonb,
@@ -984,6 +610,9 @@ CREATE TABLE document.purchase_invoice_line (
     ),
     CONSTRAINT purchase_invoice_line_match_chk CHECK (matched_quantity BETWEEN 0 AND quantity),
     CONSTRAINT purchase_invoice_line_warehouse_site_chk CHECK (warehouse_id IS NULL OR site_id IS NOT NULL),
+    CONSTRAINT purchase_invoice_line_address_snapshot_json_chk CHECK (jsonb_typeof(address_snapshot) = 'object'),
+    CONSTRAINT purchase_invoice_line_address_snapshot_hash_chk CHECK (address_snapshot_hash IS NULL OR address_snapshot_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT purchase_invoice_line_address_snapshot_capture_pair_chk CHECK ((address_snapshot_captured_at IS NULL) = (address_snapshot_captured_by IS NULL)),
     CONSTRAINT purchase_invoice_line_row_version_chk CHECK (row_version >= 1),
     CONSTRAINT purchase_invoice_line_json_chk CHECK (
         jsonb_typeof(classification_decision) = 'object'
@@ -3610,6 +3239,165 @@ CREATE TABLE document.people_request (
     CONSTRAINT people_request_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
 );
 
+-- S2 People/Workforce request authority. Business Partner requests are limited
+-- to organization identity and supplier/customer roles.
+CREATE TABLE document.workforce_request (
+    id                                uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                         uuid        NOT NULL,
+    request_no                        text        NOT NULL,
+    request_kind                      text        NOT NULL,
+    source_kind                       text        NOT NULL,
+    target_person_id                  uuid,
+    target_employee_id                uuid,
+    target_employment_id              uuid,
+    legal_entity_id                   uuid        NOT NULL,
+    company_code_id                   uuid,
+    org_unit_id                       uuid,
+    position_id                       uuid,
+    protected_profile_content_item_id uuid,
+    payload_schema_code               text        NOT NULL,
+    payload_schema_version            integer     NOT NULL,
+    payload_schema_hash               text        NOT NULL,
+    requested_changes                 jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    workflow_request_id               uuid,
+    materialized_person_id            uuid,
+    materialized_employee_id          uuid,
+    materialized_employment_id        uuid,
+    materialized_work_assignment_id   uuid,
+    materialized_principal_id         uuid,
+    materialized_onboarding_case_id   uuid,
+    materialization_snapshot_id       uuid,
+    decision_fingerprint              text,
+    application_fingerprint           text,
+    idempotency_key                   text        NOT NULL,
+    status                            text        NOT NULL DEFAULT 'draft',
+    submitted_at                      timestamptz,
+    submitted_by                      uuid,
+    approved_at                       timestamptz,
+    approved_by                       uuid,
+    applied_at                        timestamptz,
+    applied_by                        uuid,
+    failure_code                      text,
+    support_reference                 text,
+    row_version                       bigint      NOT NULL DEFAULT 1,
+    status_changed_at                 timestamptz,
+    status_changed_by                 uuid,
+    created_at                        timestamptz NOT NULL DEFAULT now(),
+    created_by                        uuid        NOT NULL,
+    updated_at                        timestamptz,
+    updated_by                        uuid,
+
+    CONSTRAINT workforce_request_pkey PRIMARY KEY (id),
+    CONSTRAINT workforce_request_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT workforce_request_no_uq UNIQUE (tenant_id, request_no),
+    CONSTRAINT workforce_request_idempotency_uq UNIQUE (tenant_id, idempotency_key),
+    CONSTRAINT workforce_request_no_chk CHECK (request_no ~ '^[A-Z][A-Z0-9_.-]{2,62}$'),
+    CONSTRAINT workforce_request_kind_chk CHECK (
+        request_kind IN ('onboard_person', 'add_employment', 'change_employment', 'offboard_employment')
+    ),
+    CONSTRAINT workforce_request_source_chk CHECK (source_kind IN ('manual', 'portal', 'import', 'api')),
+    CONSTRAINT workforce_request_target_chk CHECK (
+        (request_kind = 'onboard_person'
+            AND target_person_id IS NULL AND target_employee_id IS NULL AND target_employment_id IS NULL)
+        OR (request_kind = 'add_employment'
+            AND target_person_id IS NOT NULL AND target_employment_id IS NULL)
+        OR (request_kind IN ('change_employment', 'offboard_employment')
+            AND target_person_id IS NOT NULL AND target_employee_id IS NOT NULL
+            AND target_employment_id IS NOT NULL)
+    ),
+    CONSTRAINT workforce_request_scope_chk CHECK (
+        (request_kind IN ('onboard_person', 'add_employment', 'change_employment')
+            AND company_code_id IS NOT NULL AND org_unit_id IS NOT NULL)
+        OR request_kind = 'offboard_employment'
+    ),
+    CONSTRAINT workforce_request_profile_evidence_chk CHECK (
+        request_kind <> 'onboard_person' OR protected_profile_content_item_id IS NOT NULL
+    ),
+    CONSTRAINT workforce_request_schema_chk CHECK (
+        payload_schema_code ~ '^[a-z][a-z0-9_.-]{1,126}$'
+        AND payload_schema_version >= 1
+        AND payload_schema_hash ~ '^[a-f0-9]{64}$'
+    ),
+    CONSTRAINT workforce_request_payload_chk CHECK (
+        jsonb_typeof(requested_changes) = 'object'
+        AND pg_column_size(requested_changes) <= 262144
+    ),
+    CONSTRAINT workforce_request_fingerprint_chk CHECK (
+        (decision_fingerprint IS NULL OR decision_fingerprint ~ '^[a-f0-9]{64}$')
+        AND (application_fingerprint IS NULL OR application_fingerprint ~ '^[a-f0-9]{64}$')
+    ),
+    CONSTRAINT workforce_request_idempotency_chk CHECK (
+        btrim(idempotency_key) = idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200
+    ),
+    CONSTRAINT workforce_request_status_chk CHECK (status IN (
+        'draft', 'validating', 'validation_failed', 'pending_approval', 'returned',
+        'approved', 'rejected', 'applying', 'applied', 'failed', 'cancelled', 'superseded'
+    )),
+    CONSTRAINT workforce_request_application_chk CHECK (
+        (status = 'applied') = (
+            materialization_snapshot_id IS NOT NULL
+            AND application_fingerprint IS NOT NULL
+            AND applied_at IS NOT NULL AND applied_by IS NOT NULL
+            AND CASE request_kind
+                WHEN 'onboard_person' THEN
+                    materialized_person_id IS NOT NULL
+                    AND materialized_employee_id IS NOT NULL
+                    AND materialized_employment_id IS NOT NULL
+                    AND materialized_work_assignment_id IS NOT NULL
+                WHEN 'add_employment' THEN
+                    materialized_person_id = target_person_id
+                    AND materialized_employee_id IS NOT NULL
+                    AND materialized_employment_id IS NOT NULL
+                    AND materialized_work_assignment_id IS NOT NULL
+                WHEN 'change_employment' THEN
+                    materialized_person_id = target_person_id
+                    AND materialized_employee_id = target_employee_id
+                    AND materialized_employment_id IS NOT NULL
+                    AND materialized_work_assignment_id IS NOT NULL
+                WHEN 'offboard_employment' THEN
+                    materialized_person_id = target_person_id
+                    AND materialized_employee_id = target_employee_id
+                    AND materialized_employment_id = target_employment_id
+                    AND materialized_work_assignment_id IS NULL
+                ELSE false
+            END
+        )
+    ),
+    CONSTRAINT workforce_request_submission_pair_chk CHECK ((submitted_at IS NULL) = (submitted_by IS NULL)),
+    CONSTRAINT workforce_request_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT workforce_request_apply_pair_chk CHECK ((applied_at IS NULL) = (applied_by IS NULL)),
+    CONSTRAINT workforce_request_no_self_approval_chk CHECK (approved_by IS NULL OR approved_by IS DISTINCT FROM submitted_by),
+    CONSTRAINT workforce_request_failure_chk CHECK (
+        (status = 'failed' AND failure_code ~ '^[A-Z][A-Z0-9_.-]{2,126}$'
+                           AND nullif(btrim(support_reference), '') IS NOT NULL)
+        OR (status <> 'failed' AND failure_code IS NULL AND support_reference IS NULL)
+    ),
+    CONSTRAINT workforce_request_row_version_chk CHECK (row_version >= 1),
+    CONSTRAINT workforce_request_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT workforce_request_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE document.workforce_request IS
+  'People/Workforce-owned request authority for person onboarding and employment lifecycle. It never creates or targets a Business Partner; restricted identity values are referenced through protected content evidence.';
+
+CREATE TABLE document.workforce_request_validation (
+ id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, request_id uuid NOT NULL, evaluation_id uuid NOT NULL,
+ rule_code text NOT NULL, ruleset_code text NOT NULL, ruleset_version integer NOT NULL, ruleset_hash text NOT NULL,
+ severity text NOT NULL, field_path text NOT NULL DEFAULT '$', outcome text NOT NULL, message_code text NOT NULL,
+ evidence_reference jsonb NOT NULL DEFAULT '{}'::jsonb, evaluated_at timestamptz NOT NULL, evaluated_by uuid NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+ CONSTRAINT workforce_request_validation_pkey PRIMARY KEY(id), CONSTRAINT workforce_request_validation_tenant_id_uq UNIQUE(tenant_id,id),
+ CONSTRAINT workforce_request_validation_coordinate_uq UNIQUE(tenant_id,request_id,evaluation_id,rule_code,field_path),
+ CONSTRAINT workforce_request_validation_rule_chk CHECK(rule_code~'^[a-z][a-z0-9_.-]{1,126}$'),
+ CONSTRAINT workforce_request_validation_ruleset_chk CHECK(ruleset_code~'^[a-z][a-z0-9_.-]{1,126}$' AND ruleset_version>=1 AND ruleset_hash~'^[a-f0-9]{64}$'),
+ CONSTRAINT workforce_request_validation_severity_chk CHECK(severity IN('info','warning','error')),
+ CONSTRAINT workforce_request_validation_path_chk CHECK(length(btrim(field_path)) BETWEEN 1 AND 512),
+ CONSTRAINT workforce_request_validation_outcome_chk CHECK(outcome IN('passed','failed','skipped')),
+ CONSTRAINT workforce_request_validation_message_chk CHECK(message_code~'^[A-Z][A-Z0-9_.-]{1,126}$'),
+ CONSTRAINT workforce_request_validation_evidence_chk CHECK(jsonb_typeof(evidence_reference)='object' AND pg_column_size(evidence_reference)<=65536)
+);
+COMMENT ON TABLE document.workforce_request_validation IS 'Append-only, ruleset-pinned People/Workforce validation evidence reviewed by the approver.';
+
 CREATE TABLE document.hr_case (
     id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, code text NOT NULL, name text NOT NULL,
     employee_id uuid, case_type text NOT NULL DEFAULT 'general', priority document.hr_case_priority_d NOT NULL DEFAULT 'normal',
@@ -4540,131 +4328,18 @@ CREATE TABLE document.user_profile_update_request (
     CONSTRAINT user_profile_update_request_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
 );
 
-CREATE TABLE document.attachment_series (
-    id                       uuid                                NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id                uuid                                NOT NULL,
-    current_attachment_id    uuid,
-    status                   document.attachment_series_status_d NOT NULL DEFAULT 'active',
-    status_changed_at        timestamptz,
-    status_changed_by        uuid,
-    retention_until          timestamptz,
-    expires_at               timestamptz,
-    is_auto_delete_on_expiry boolean                             NOT NULL DEFAULT false,
-    created_at               timestamptz                         NOT NULL DEFAULT now(),
-    created_by               uuid                                NOT NULL,
-    updated_at               timestamptz,
-    updated_by               uuid,
-
-    CONSTRAINT attachment_series_pkey PRIMARY KEY (id),
-    CONSTRAINT attachment_series_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT attachment_series_expiry_chk
-        CHECK (retention_until IS NULL OR expires_at IS NULL OR retention_until >= expires_at),
-    CONSTRAINT attachment_series_status_audit_pair_chk
-        CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
-    CONSTRAINT attachment_series_audit_pair_chk
-        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
-);
 
 COMMENT ON TABLE document.attachment_series IS
   'Logical identity for a versioned attachment. current_attachment_id tracks the latest active version; all entity links target the series, not individual versions.';
 
-CREATE TABLE document.attachment_legal_hold (
-    id                   uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id            uuid        NOT NULL,
-    attachment_series_id uuid        NOT NULL,
-    hold_code            text,
-    reason               text        NOT NULL,
-    external_reference   text,
-    placed_at            timestamptz NOT NULL DEFAULT now(),
-    placed_by            uuid        NOT NULL,
-    released_at          timestamptz,
-    released_by          uuid,
-    release_reason       text,
-    created_at           timestamptz NOT NULL DEFAULT now(),
-    created_by           uuid        NOT NULL,
-
-    CONSTRAINT attachment_legal_hold_pkey PRIMARY KEY (id),
-    CONSTRAINT attachment_legal_hold_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT attachment_legal_hold_reason_chk CHECK (btrim(reason) <> ''),
-    CONSTRAINT attachment_legal_hold_hold_code_chk
-        CHECK (hold_code IS NULL OR hold_code ~ '^[a-z][a-z0-9_.-]{0,62}$'),
-    CONSTRAINT attachment_legal_hold_release_evidence_chk
-        CHECK (
-            (released_at IS NULL AND released_by IS NULL AND release_reason IS NULL)
-            OR (released_at IS NOT NULL AND released_by IS NOT NULL
-                AND release_reason IS NOT NULL AND btrim(release_reason) <> '')
-        ),
-    CONSTRAINT attachment_legal_hold_release_order_chk
-        CHECK (released_at IS NULL OR released_at >= placed_at)
-);
 
 COMMENT ON TABLE document.attachment_legal_hold IS
   'Evidentiary hold on an attachment series. Active when released_at IS NULL. Placement evidence is immutable. Release requires all three fields. Rows cannot be deleted through the application role.';
 
-CREATE TABLE document.attachment_legal_hold_event (
-    id                   uuid                                  NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id            uuid                                  NOT NULL,
-    legal_hold_id        uuid                                  NOT NULL,
-    attachment_series_id uuid                                  NOT NULL,
-    event_type           document.attachment_hold_event_type_d NOT NULL,
-    reason               text                                  NOT NULL,
-    actor_id             uuid                                  NOT NULL,
-    occurred_at          timestamptz                           NOT NULL DEFAULT now(),
-    correlation_id       uuid,
-    metadata             jsonb                                 NOT NULL DEFAULT '{}'::jsonb,
-
-    CONSTRAINT attachment_legal_hold_event_pkey PRIMARY KEY (id),
-    CONSTRAINT attachment_legal_hold_event_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT attachment_legal_hold_event_reason_chk CHECK (btrim(reason) <> ''),
-    CONSTRAINT attachment_legal_hold_event_metadata_chk CHECK (jsonb_typeof(metadata) = 'object')
-);
 
 COMMENT ON TABLE document.attachment_legal_hold_event IS
   'Append-only evidentiary log for hold placement and release. Answers who did what, when, and why. Rows are immutable once written.';
 
-CREATE TABLE document.attachment_derivative (
-    id                   uuid                                    NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id            uuid                                    NOT NULL,
-    attachment_id        uuid                                    NOT NULL,
-    derivative_type      text                                    NOT NULL,
-    rendition_code       text                                    NOT NULL,
-    source_sha256        text                                    NOT NULL,
-    specification_hash   text                                    NOT NULL,
-    content_type         text                                    NOT NULL,
-    storage_bucket       text,
-    storage_key          text,
-    size_bytes           bigint,
-    sha256               text,
-    width                integer,
-    height               integer,
-    page_number          integer,
-    status               document.attachment_derivative_status_d NOT NULL DEFAULT 'pending',
-    provider             text,
-    provider_version     text,
-    attempt_count        integer                                 NOT NULL DEFAULT 0,
-    last_error_code      text,
-    last_error_message   text,
-    generated_at         timestamptz,
-    created_at           timestamptz                             NOT NULL DEFAULT now(),
-    created_by           uuid                                    NOT NULL,
-    updated_at           timestamptz,
-    updated_by           uuid,
-
-    CONSTRAINT attachment_derivative_pkey PRIMARY KEY (id),
-    CONSTRAINT attachment_derivative_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT attachment_derivative_type_chk CHECK (derivative_type ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT attachment_derivative_rendition_chk CHECK (rendition_code ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT attachment_derivative_source_sha256_chk CHECK (source_sha256 ~ '^[a-f0-9]{64}$'),
-    CONSTRAINT attachment_derivative_spec_hash_chk CHECK (specification_hash ~ '^[a-f0-9]{64}$'),
-    CONSTRAINT attachment_derivative_size_chk CHECK (size_bytes IS NULL OR size_bytes >= 0),
-    CONSTRAINT attachment_derivative_sha256_chk CHECK (sha256 IS NULL OR sha256 ~ '^[a-f0-9]{64}$'),
-    CONSTRAINT attachment_derivative_dimensions_chk CHECK ((width IS NULL) = (height IS NULL)),
-    CONSTRAINT attachment_derivative_attempt_chk CHECK (attempt_count >= 0),
-    CONSTRAINT attachment_derivative_audit_pair_chk
-        CHECK ((updated_at IS NULL) = (updated_by IS NULL)),
-    CONSTRAINT attachment_derivative_idempotency_uq
-        UNIQUE (tenant_id, attachment_id, derivative_type, rendition_code, source_sha256, specification_hash)
-);
 
 COMMENT ON TABLE document.attachment_derivative IS
   'Idempotent renditions derived from an attachment version (thumbnail, preview PDF, page image). Deduplication key: (attachment_id, derivative_type, rendition_code, source_sha256, specification_hash). Only status=ready renditions are exposed by download APIs.';
@@ -4689,3 +4364,1334 @@ CREATE TABLE document.multipart_upload_part (
 
 COMMENT ON TABLE document.multipart_upload_part IS
   'Per-part evidence for multipart upload integrity. Append-only. Rows are immutable once written.';
+
+-- Source-neutral Business Partner onboarding and amendment envelope.
+-- Manual NEON, governed import, API, and MESH proposals converge here. The
+-- approved master remains in master.business_partner and its role extensions.
+CREATE TABLE document.business_partner_invitation (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, invitation_no text NOT NULL,
+    journey_kind text NOT NULL, registration_mode text NOT NULL DEFAULT 'self_service',
+    requested_role document.business_partner_requested_role_d NOT NULL, scope_kind text NOT NULL,
+    requested_operating_organization_id uuid, company_code_id uuid, legal_entity_id uuid, org_unit_id uuid, position_id uuid,
+    intended_party_name text NOT NULL, invitee_email_hash text NOT NULL, token_hash text NOT NULL,
+    expires_at timestamptz NOT NULL, status text NOT NULL DEFAULT 'pending', resend_count integer NOT NULL DEFAULT 0,
+    last_sent_at timestamptz NOT NULL DEFAULT now(), applicant_principal_id uuid,
+    business_partner_request_id uuid, entity_case_id uuid,
+    accepted_at timestamptz, cancelled_at timestamptz, superseded_at timestamptz,
+    applicant_access_revoked_at timestamptz, applicant_access_revoked_by uuid,
+    idempotency_key text NOT NULL, row_version bigint NOT NULL DEFAULT 1,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT business_partner_invitation_pkey PRIMARY KEY(id), CONSTRAINT business_partner_invitation_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT business_partner_invitation_no_uq UNIQUE(tenant_id,invitation_no), CONSTRAINT business_partner_invitation_idempotency_uq UNIQUE(tenant_id,idempotency_key), CONSTRAINT business_partner_invitation_token_uq UNIQUE(tenant_id,token_hash),
+    CONSTRAINT business_partner_invitation_journey_chk CHECK(journey_kind IN('supplier','customer','candidate')), CONSTRAINT business_partner_invitation_mode_chk CHECK(registration_mode IN('self_service','on_behalf','integration')),
+    CONSTRAINT business_partner_invitation_role_chk CHECK((journey_kind='supplier' AND requested_role='supplier') OR (journey_kind='customer' AND requested_role='customer') OR (journey_kind='candidate' AND requested_role='workforce')),
+    CONSTRAINT business_partner_invitation_scope_chk CHECK((scope_kind='commercial' AND journey_kind IN('supplier','customer') AND requested_operating_organization_id IS NOT NULL AND legal_entity_id IS NULL AND org_unit_id IS NULL AND position_id IS NULL) OR (scope_kind='workforce' AND journey_kind='candidate' AND requested_operating_organization_id IS NULL AND legal_entity_id IS NOT NULL AND company_code_id IS NOT NULL AND org_unit_id IS NOT NULL)),
+    CONSTRAINT business_partner_invitation_hash_chk CHECK(invitee_email_hash~'^[a-f0-9]{64}$' AND token_hash~'^[a-f0-9]{64}$'), CONSTRAINT business_partner_invitation_status_chk CHECK(status IN('pending','accepted','cancelled','expired','superseded')),
+    CONSTRAINT business_partner_invitation_lifecycle_chk CHECK((status='pending' AND applicant_principal_id IS NULL AND business_partner_request_id IS NULL AND entity_case_id IS NULL AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NULL) OR (status='accepted' AND applicant_principal_id IS NOT NULL AND num_nonnulls(business_partner_request_id,entity_case_id)=1 AND accepted_at IS NOT NULL AND cancelled_at IS NULL AND superseded_at IS NULL) OR (status='cancelled' AND accepted_at IS NULL AND cancelled_at IS NOT NULL AND superseded_at IS NULL) OR (status='expired' AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NULL) OR (status='superseded' AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NOT NULL)),
+    CONSTRAINT business_partner_invitation_expiry_chk CHECK(expires_at>created_at), CONSTRAINT business_partner_invitation_name_chk CHECK(length(btrim(intended_party_name)) BETWEEN 1 AND 512), CONSTRAINT business_partner_invitation_idempotency_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200), CONSTRAINT business_partner_invitation_version_chk CHECK(row_version>=1 AND resend_count>=0), CONSTRAINT business_partner_invitation_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL)), CONSTRAINT business_partner_invitation_access_revocation_chk CHECK((applicant_access_revoked_at IS NULL AND applicant_access_revoked_by IS NULL) OR (status='accepted' AND applicant_principal_id IS NOT NULL AND applicant_access_revoked_at IS NOT NULL AND applicant_access_revoked_by IS NOT NULL))
+);
+COMMENT ON TABLE document.business_partner_invitation IS 'Tenant-bound, expiring, single-use invitation authority for supplier, customer, and candidate onboarding. Only SHA-256 token and email hashes persist; raw secrets must never be stored or logged.';
+
+-- Compatibility disposition G0: retained as the employee-only IAM saga intent
+-- for supported-upgrade parity. G1/G5 may replace it only after measured
+-- consumer cutover; it is deliberately not an employee or principal authority.
+CREATE TABLE document.workforce_iam_projection (
+    id                           uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                    uuid        NOT NULL,
+    employee_id                  uuid        NOT NULL,
+    employer_organization_id     uuid        NOT NULL,
+    requested_principal_creation boolean     NOT NULL DEFAULT false,
+    desired_state                text        NOT NULL DEFAULT 'member',
+    observed_state               text        NOT NULL DEFAULT 'pending',
+    attempt_count                integer     NOT NULL DEFAULT 0,
+    last_error_code              text,
+    next_attempt_at              timestamptz NOT NULL DEFAULT now(),
+    idempotency_key              text        NOT NULL,
+    row_version                  bigint      NOT NULL DEFAULT 1,
+    created_at                   timestamptz NOT NULL DEFAULT now(),
+    created_by                   uuid        NOT NULL,
+    updated_at                   timestamptz,
+    updated_by                   uuid,
+    CONSTRAINT workforce_iam_projection_pkey PRIMARY KEY (id),
+    CONSTRAINT workforce_iam_projection_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT workforce_iam_projection_employee_uq UNIQUE (tenant_id, employee_id),
+    CONSTRAINT workforce_iam_projection_idempotency_uq UNIQUE (tenant_id, idempotency_key),
+    CONSTRAINT workforce_iam_projection_employee_fk FOREIGN KEY (tenant_id, employee_id) REFERENCES master.employee(tenant_id, id) ON DELETE RESTRICT,
+    CONSTRAINT workforce_iam_projection_state_chk CHECK (desired_state IN ('member', 'suspended', 'deprovisioned') AND observed_state IN ('pending', 'provisioned', 'failed', 'deprovisioned')),
+    CONSTRAINT workforce_iam_projection_attempt_chk CHECK (attempt_count >= 0 AND btrim(idempotency_key) <> ''),
+    CONSTRAINT workforce_iam_projection_audit_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+COMMENT ON TABLE document.workforce_iam_projection IS
+    'COMPATIBILITY; owner=People/IAM; disposition=retain for supported-upgrade parity then replace through governed-case IAM projection after measured zero legacy use. Employee-only saga intent; never Person, employee, or principal authority.';
+
+CREATE TABLE document.business_partner_request (
+    id                              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                       uuid        NOT NULL,
+    request_no                      text        NOT NULL,
+    request_kind                    document.business_partner_request_kind_d NOT NULL,
+    source_kind                     text        NOT NULL,
+    registration_mode               text        NOT NULL DEFAULT 'direct',
+    invitation_id                   uuid,
+    applicant_principal_id          uuid,
+    represented_party_name          text,
+    representation_evidence_id      uuid,
+    target_business_partner_id      uuid,
+    base_record_version             bigint,
+    base_snapshot_id                uuid,
+    base_payload_hash               text,
+    source_system_code              text,
+    source_entity_code              text,
+    source_entity_id                text,
+    source_entity_code_value        text,
+    source_projection_id            uuid,
+    source_version                  bigint,
+    source_payload_hash             text,
+    requested_role                  document.business_partner_requested_role_d,
+    operating_organization_id       uuid,
+    company_code_id                 uuid,
+    legal_entity_id                 uuid,
+    org_unit_id                     uuid,
+    position_id                     uuid,
+    payload_schema_code             text        NOT NULL,
+    payload_schema_version          integer     NOT NULL,
+    payload_schema_hash             text        NOT NULL,
+    proposed_payload                jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    extension_mode                  text        NOT NULL DEFAULT 'legacy_untyped',
+    extension_fingerprint           text,
+    extension_counts                jsonb       NOT NULL DEFAULT '{"addresses":0,"contactPersons":0,"contactChannels":0,"identifiers":0,"taxRegistrations":0,"classifications":0,"certifications":0}'::jsonb,
+    validation_summary              jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    duplicate_summary               jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    change_impact                   jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    workflow_request_id             uuid,
+    materialized_business_partner_id uuid,
+    materialized_supplier_id        uuid,
+    materialized_customer_id        uuid,
+    materialized_person_id          uuid,
+    materialized_employee_id        uuid,
+    materialized_employment_id      uuid,
+    materialized_work_assignment_id uuid,
+    materialized_principal_id       uuid,
+    materialized_bank_verification_id uuid,
+    materialized_supplier_company_profile_id uuid,
+    materialized_customer_company_profile_id uuid,
+    materialized_operating_organization_assignment_id uuid,
+    materialization_snapshot_id     uuid,
+    application_idempotency_key     text,
+    application_fingerprint         text,
+    application_result_kind         text,
+    application_reason_code         text,
+    decision_fingerprint            text,
+    idempotency_key                 text        NOT NULL,
+    status                          text        NOT NULL DEFAULT 'draft',
+    submitted_at                    timestamptz,
+    submitted_by                    uuid,
+    approved_at                     timestamptz,
+    approved_by                     uuid,
+    applied_at                      timestamptz,
+    applied_by                      uuid,
+    failure_code                    text,
+    failure_detail                  text,
+    support_reference               text,
+    row_version                     bigint      NOT NULL DEFAULT 1,
+    status_changed_at               timestamptz,
+    status_changed_by               uuid,
+    created_at                      timestamptz NOT NULL DEFAULT now(),
+    created_by                      uuid        NOT NULL,
+    updated_at                      timestamptz,
+    updated_by                      uuid,
+
+    CONSTRAINT business_partner_request_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_request_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_request_no_uq UNIQUE (tenant_id, request_no),
+    CONSTRAINT business_partner_request_idempotency_uq UNIQUE (tenant_id, idempotency_key),
+    CONSTRAINT business_partner_request_no_chk CHECK (request_no ~ '^[A-Z][A-Z0-9_.-]{2,62}$'),
+    CONSTRAINT business_partner_request_kind_chk CHECK (request_kind IN (
+        'new_partner', 'amend_partner', 'add_supplier', 'add_customer',
+        'add_workforce',
+        'assign_organization', 'configure_company', 'change_bank',
+        'change_employment',
+        'deactivate', 'reactivate', 'archive'
+    )),
+    CONSTRAINT business_partner_request_source_chk CHECK (source_kind IN ('manual', 'portal', 'mesh', 'import', 'api')),
+    CONSTRAINT business_partner_request_registration_mode_chk CHECK (registration_mode IN ('direct', 'self_service', 'on_behalf', 'integration')),
+    CONSTRAINT business_partner_request_registration_channel_chk CHECK (
+        (registration_mode = 'self_service' AND source_kind = 'portal' AND invitation_id IS NOT NULL AND applicant_principal_id IS NOT NULL AND represented_party_name IS NULL AND representation_evidence_id IS NULL)
+        OR (registration_mode = 'on_behalf' AND source_kind = 'manual' AND invitation_id IS NULL AND applicant_principal_id IS NULL AND nullif(btrim(represented_party_name), '') IS NOT NULL)
+        OR (registration_mode = 'integration' AND source_kind IN ('mesh', 'import', 'api') AND invitation_id IS NULL AND applicant_principal_id IS NULL AND represented_party_name IS NULL AND representation_evidence_id IS NULL)
+        OR (registration_mode = 'direct' AND source_kind = 'manual' AND invitation_id IS NULL AND applicant_principal_id IS NULL AND represented_party_name IS NULL AND representation_evidence_id IS NULL)
+    ),
+    CONSTRAINT business_partner_request_target_chk CHECK (
+        (request_kind = 'new_partner' AND target_business_partner_id IS NULL)
+        OR (request_kind <> 'new_partner' AND target_business_partner_id IS NOT NULL)
+    ),
+    CONSTRAINT business_partner_request_base_chk CHECK (base_record_version IS NULL OR base_record_version >= 1),
+    CONSTRAINT business_partner_request_base_snapshot_chk CHECK (
+        (base_snapshot_id IS NULL) = (base_payload_hash IS NULL)
+        AND (base_payload_hash IS NULL OR base_payload_hash ~ '^[a-f0-9]{64}$')
+    ),
+    CONSTRAINT business_partner_request_source_coordinates_chk CHECK (
+        source_kind <> 'mesh'
+        OR (
+            source_system_code = 'athyper_mesh'
+            AND nullif(btrim(source_entity_code), '') IS NOT NULL
+            AND nullif(btrim(source_entity_id), '') IS NOT NULL
+            AND source_projection_id IS NOT NULL
+            AND source_version >= 1
+            AND source_payload_hash ~ '^[a-f0-9]{64}$'
+        )
+    ),
+    CONSTRAINT business_partner_request_source_code_chk CHECK (
+        source_system_code IS NULL OR source_system_code ~ '^[a-z][a-z0-9_.-]{1,62}$'
+    ),
+    CONSTRAINT business_partner_request_source_entity_chk CHECK (
+        source_entity_code IS NULL OR source_entity_code ~ '^[a-z][a-z0-9_.-]{1,126}$'
+    ),
+    CONSTRAINT business_partner_request_source_version_chk CHECK (source_version IS NULL OR source_version >= 1),
+    CONSTRAINT business_partner_request_source_hash_chk CHECK (
+        source_payload_hash IS NULL OR source_payload_hash ~ '^[a-f0-9]{64}$'
+    ),
+    CONSTRAINT business_partner_request_schema_chk CHECK (
+        payload_schema_code ~ '^[a-z][a-z0-9_.-]{1,126}$'
+        AND payload_schema_version >= 1
+        AND payload_schema_hash ~ '^[a-f0-9]{64}$'
+    ),
+    CONSTRAINT business_partner_request_payload_chk CHECK (
+        jsonb_typeof(proposed_payload) = 'object'
+        AND jsonb_typeof(validation_summary) = 'object'
+        AND jsonb_typeof(duplicate_summary) = 'object'
+        AND jsonb_typeof(change_impact) = 'object'
+        AND pg_column_size(proposed_payload) <= 1048576
+        AND pg_column_size(validation_summary) <= 262144
+        AND pg_column_size(duplicate_summary) <= 262144
+        AND pg_column_size(change_impact) <= 262144
+    ),
+    CONSTRAINT business_partner_request_extension_mode_chk CHECK (
+        extension_mode IN ('legacy_untyped', 'typed_v1')
+    ),
+    CONSTRAINT business_partner_request_extension_fingerprint_chk CHECK (
+        (extension_mode = 'legacy_untyped' AND extension_fingerprint IS NULL)
+        OR (extension_mode = 'typed_v1' AND extension_fingerprint ~ '^[a-f0-9]{64}$')
+    ),
+    CONSTRAINT business_partner_request_extension_counts_chk CHECK (
+        jsonb_typeof(extension_counts) = 'object'
+        AND extension_counts = jsonb_build_object(
+            'addresses', extension_counts->'addresses',
+            'contactPersons', extension_counts->'contactPersons',
+            'contactChannels', extension_counts->'contactChannels',
+            'identifiers', extension_counts->'identifiers',
+            'taxRegistrations', extension_counts->'taxRegistrations',
+            'classifications', extension_counts->'classifications',
+            'certifications', extension_counts->'certifications'
+        )
+        AND NOT jsonb_path_exists(
+            extension_counts,
+            '$.keyvalue().value ? (@.type() != "number" || @ < 0 || @ % 1 != 0)'
+        )
+    ),
+    CONSTRAINT business_partner_request_fingerprint_chk CHECK (
+        (decision_fingerprint IS NULL OR decision_fingerprint ~ '^[a-f0-9]{64}$')
+        AND (application_fingerprint IS NULL OR application_fingerprint ~ '^[a-f0-9]{64}$')
+    ),
+    CONSTRAINT business_partner_request_application_key_chk CHECK (
+        application_idempotency_key IS NULL OR (
+            btrim(application_idempotency_key) = application_idempotency_key
+            AND length(application_idempotency_key) BETWEEN 8 AND 200
+        )
+    ),
+    CONSTRAINT business_partner_request_result_kind_chk CHECK (application_result_kind IS NULL OR application_result_kind IN (
+        'partner_role_created', 'workforce_created', 'partner_amended', 'organization_assigned', 'company_configured',
+        'bank_verification_started', 'employment_changed', 'partner_deactivated', 'partner_reactivated', 'partner_archived'
+    )),
+    CONSTRAINT business_partner_request_safe_reason_chk CHECK (
+        application_reason_code IS NULL OR application_reason_code ~ '^[A-Z][A-Z0-9_.-]{2,126}$'
+    ),
+    CONSTRAINT business_partner_request_materialization_evidence_chk CHECK (
+        (status = 'applied') = (
+            materialized_business_partner_id IS NOT NULL
+            AND materialization_snapshot_id IS NOT NULL
+            AND application_idempotency_key IS NOT NULL
+            AND application_fingerprint IS NOT NULL
+            AND application_result_kind IS NOT NULL
+            AND applied_at IS NOT NULL AND applied_by IS NOT NULL
+            AND CASE request_kind
+              WHEN 'new_partner' THEN (requested_role='workforce' AND application_result_kind='workforce_created' AND materialized_person_id IS NOT NULL AND materialized_employee_id IS NOT NULL AND materialized_employment_id IS NOT NULL AND materialized_work_assignment_id IS NOT NULL) OR (requested_role='supplier' AND application_result_kind='partner_role_created' AND materialized_supplier_id IS NOT NULL AND materialized_customer_id IS NULL AND materialized_person_id IS NULL AND materialized_operating_organization_assignment_id IS NOT NULL) OR (requested_role='customer' AND application_result_kind='partner_role_created' AND materialized_customer_id IS NOT NULL AND materialized_supplier_id IS NULL AND materialized_operating_organization_assignment_id IS NOT NULL AND materialized_person_id IS NULL AND num_nonnulls(materialized_employee_id,materialized_employment_id,materialized_work_assignment_id)=0)
+              WHEN 'add_supplier' THEN requested_role='supplier' AND application_result_kind='partner_role_created' AND materialized_supplier_id IS NOT NULL AND materialized_operating_organization_assignment_id IS NOT NULL
+              WHEN 'add_customer' THEN requested_role='customer' AND application_result_kind='partner_role_created' AND materialized_customer_id IS NOT NULL AND materialized_operating_organization_assignment_id IS NOT NULL
+              WHEN 'add_workforce' THEN requested_role='workforce' AND application_result_kind='workforce_created' AND materialized_person_id IS NOT NULL AND materialized_employee_id IS NOT NULL AND materialized_employment_id IS NOT NULL AND materialized_work_assignment_id IS NOT NULL
+              WHEN 'amend_partner' THEN requested_role IS NULL AND application_result_kind='partner_amended' AND num_nonnulls(materialized_supplier_id,materialized_customer_id,materialized_person_id,materialized_employee_id,materialized_employment_id,materialized_work_assignment_id,materialized_operating_organization_assignment_id,materialized_bank_verification_id)=0
+              WHEN 'assign_organization' THEN requested_role IN('supplier','customer') AND application_result_kind='organization_assigned' AND materialized_operating_organization_assignment_id IS NOT NULL AND num_nonnulls(materialized_supplier_company_profile_id,materialized_customer_company_profile_id,materialized_person_id,materialized_employee_id,materialized_employment_id,materialized_work_assignment_id,materialized_bank_verification_id)=0
+              WHEN 'configure_company' THEN requested_role IN('supplier','customer') AND application_result_kind='company_configured' AND num_nonnulls(materialized_supplier_company_profile_id,materialized_customer_company_profile_id)=1 AND num_nonnulls(materialized_person_id,materialized_employee_id,materialized_employment_id,materialized_work_assignment_id,materialized_bank_verification_id)=0
+              WHEN 'change_bank' THEN requested_role='supplier' AND application_result_kind='bank_verification_started' AND materialized_bank_verification_id IS NOT NULL
+              WHEN 'change_employment' THEN requested_role='workforce' AND application_result_kind='employment_changed' AND materialized_person_id IS NOT NULL AND materialized_employee_id IS NOT NULL AND materialized_employment_id IS NOT NULL AND materialized_work_assignment_id IS NOT NULL AND num_nonnulls(materialized_supplier_id,materialized_customer_id,materialized_supplier_company_profile_id,materialized_customer_company_profile_id,materialized_operating_organization_assignment_id,materialized_bank_verification_id)=0
+              WHEN 'deactivate' THEN requested_role IS NULL AND application_result_kind='partner_deactivated' AND application_reason_code IS NOT NULL AND num_nonnulls(materialized_supplier_id,materialized_customer_id,materialized_person_id,materialized_employee_id,materialized_employment_id,materialized_work_assignment_id,materialized_supplier_company_profile_id,materialized_customer_company_profile_id,materialized_operating_organization_assignment_id,materialized_bank_verification_id)=0
+              WHEN 'reactivate' THEN requested_role IS NULL AND application_result_kind='partner_reactivated' AND application_reason_code IS NOT NULL AND num_nonnulls(materialized_supplier_id,materialized_customer_id,materialized_person_id,materialized_employee_id,materialized_employment_id,materialized_work_assignment_id,materialized_supplier_company_profile_id,materialized_customer_company_profile_id,materialized_operating_organization_assignment_id,materialized_bank_verification_id)=0
+              WHEN 'archive' THEN requested_role IS NULL AND application_result_kind='partner_archived' AND application_reason_code IS NOT NULL AND num_nonnulls(materialized_supplier_id,materialized_customer_id,materialized_person_id,materialized_employee_id,materialized_employment_id,materialized_work_assignment_id,materialized_supplier_company_profile_id,materialized_customer_company_profile_id,materialized_operating_organization_assignment_id,materialized_bank_verification_id)=0
+              ELSE false END
+        )
+    ),
+    CONSTRAINT business_partner_request_role_scope_chk CHECK (
+        ((request_kind IN ('add_workforce','change_employment') OR (request_kind='new_partner' AND requested_role='workforce')) AND requested_role='workforce' AND legal_entity_id IS NOT NULL AND company_code_id IS NOT NULL AND org_unit_id IS NOT NULL AND operating_organization_id IS NULL)
+        OR (request_kind IN ('new_partner','add_supplier','add_customer','assign_organization','configure_company','change_bank') AND requested_role IN ('supplier','customer') AND operating_organization_id IS NOT NULL AND legal_entity_id IS NULL AND org_unit_id IS NULL AND position_id IS NULL)
+        OR (request_kind IN ('amend_partner','deactivate','reactivate','archive') AND requested_role IS NULL)
+    ),
+    CONSTRAINT business_partner_request_lifecycle_impact_chk CHECK (
+        request_kind NOT IN ('deactivate','reactivate','archive') OR status NOT IN ('pending_approval','approved','applying','applied') OR
+        (jsonb_typeof(change_impact->'dependencies')='array' AND change_impact->>'evidenceVersion' ~ '^[1-9][0-9]*$' AND change_impact->>'reasonCode' ~ '^[A-Z][A-Z0-9_.-]{2,126}$' AND change_impact->>'assessedAt' IS NOT NULL)
+    ),
+    CONSTRAINT business_partner_request_company_profile_role_chk CHECK (
+        (materialized_supplier_company_profile_id IS NULL OR (requested_role = 'supplier' AND materialized_supplier_id IS NOT NULL))
+        AND (materialized_customer_company_profile_id IS NULL OR (requested_role = 'customer' AND materialized_customer_id IS NOT NULL))
+        AND (request_kind <> 'configure_company' OR company_code_id IS NOT NULL)
+    ),
+    CONSTRAINT business_partner_request_idempotency_chk CHECK (
+        btrim(idempotency_key) = idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200
+    ),
+    CONSTRAINT business_partner_request_status_chk CHECK (status IN (
+        'draft', 'validating', 'validation_failed', 'pending_approval',
+        'returned', 'approved', 'rejected', 'applying', 'applied',
+        'failed', 'cancelled', 'superseded'
+    )),
+    CONSTRAINT business_partner_request_submission_pair_chk CHECK ((submitted_at IS NULL) = (submitted_by IS NULL)),
+    CONSTRAINT business_partner_request_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT business_partner_request_apply_pair_chk CHECK ((applied_at IS NULL) = (applied_by IS NULL)),
+    CONSTRAINT business_partner_request_no_self_approval_chk
+        CHECK (approved_by IS NULL OR approved_by IS DISTINCT FROM submitted_by),
+    CONSTRAINT business_partner_request_failure_chk CHECK (
+        (status = 'failed' AND nullif(btrim(failure_code), '') IS NOT NULL
+                           AND nullif(btrim(support_reference), '') IS NOT NULL)
+        OR (status <> 'failed' AND failure_code IS NULL AND failure_detail IS NULL)
+    ),
+    CONSTRAINT business_partner_request_row_version_chk CHECK (row_version >= 1),
+    CONSTRAINT business_partner_request_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT business_partner_request_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE document.business_partner_request IS
+  'Source-neutral governed request for NEON Business Partner registration, amendment, role extension, organization/company configuration, bank change, and lifecycle actions. Approved requests materialize through an idempotent domain command; source systems never write the master directly.';
+COMMENT ON COLUMN document.business_partner_request.source_projection_id IS
+  'Opaque recipient-local projection coordinate. A typed FK is added by the MESH projection wave; it is never a cross-database foreign key.';
+COMMENT ON COLUMN document.business_partner_request.proposed_payload IS
+  'Schema-versioned proposed canonical values. Unrestricted source dumps, secrets, raw bank identifiers, and authority-bearing metadata are prohibited.';
+COMMENT ON COLUMN document.business_partner_request.extension_mode IS
+  'legacy_untyped rows are never reinterpreted; typed_v1 rows materialize only typed child tables.';
+
+CREATE TABLE document.business_partner_request_evidence (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid        NOT NULL,
+    request_id            uuid        NOT NULL,
+    evidence_kind         text        NOT NULL,
+    attachment_id         uuid,
+    snapshot_id           uuid,
+    source_reference      text,
+    content_hash          text        NOT NULL,
+    classification_code   text        NOT NULL DEFAULT 'internal',
+    verification_status   text        NOT NULL DEFAULT 'pending',
+    verified_at           timestamptz,
+    verified_by           uuid,
+    metadata              jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    created_by            uuid        NOT NULL,
+
+    CONSTRAINT business_partner_request_evidence_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_request_evidence_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_request_evidence_kind_chk CHECK (evidence_kind ~ '^[a-z][a-z0-9_.-]{1,62}$'),
+    CONSTRAINT business_partner_request_evidence_source_chk CHECK (num_nonnulls(attachment_id, snapshot_id, source_reference) = 1),
+    CONSTRAINT business_partner_request_evidence_reference_chk
+        CHECK (source_reference IS NULL OR length(btrim(source_reference)) BETWEEN 1 AND 1024),
+    CONSTRAINT business_partner_request_evidence_hash_chk CHECK (content_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT business_partner_request_evidence_classification_chk
+        CHECK (classification_code IN ('public', 'internal', 'confidential', 'restricted')),
+    CONSTRAINT business_partner_request_evidence_verification_chk
+        CHECK (verification_status IN ('pending', 'verified', 'rejected', 'expired')),
+    CONSTRAINT business_partner_request_evidence_verification_pair_chk CHECK (
+        (verification_status = 'pending' AND verified_at IS NULL AND verified_by IS NULL)
+        OR (verification_status IN ('verified', 'rejected', 'expired') AND verified_at IS NOT NULL AND verified_by IS NOT NULL)
+    ),
+    CONSTRAINT business_partner_request_evidence_metadata_chk
+        CHECK (jsonb_typeof(metadata) = 'object' AND pg_column_size(metadata) <= 65536)
+);
+
+COMMENT ON TABLE document.business_partner_request_evidence IS
+  'Append-only evidence manifest for one Business Partner request. The referenced attachment, immutable entity snapshot, or bounded source reference owns the evidence payload.';
+
+CREATE TABLE document.business_partner_request_validation (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid        NOT NULL,
+    request_id            uuid        NOT NULL,
+    evaluation_id         uuid        NOT NULL,
+    rule_code             text        NOT NULL,
+    ruleset_code          text        NOT NULL,
+    ruleset_version       integer     NOT NULL,
+    ruleset_hash          text        NOT NULL,
+    severity              text        NOT NULL,
+    field_path            text        NOT NULL DEFAULT '$',
+    outcome               text        NOT NULL,
+    message_code          text        NOT NULL,
+    evidence_reference    jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    evaluated_at          timestamptz NOT NULL DEFAULT now(),
+    evaluated_by          uuid        NOT NULL,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    created_by            uuid        NOT NULL,
+
+    CONSTRAINT business_partner_request_validation_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_request_validation_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_request_validation_coordinate_uq
+        UNIQUE (tenant_id, request_id, evaluation_id, rule_code, field_path),
+    CONSTRAINT business_partner_request_validation_rule_chk CHECK (rule_code ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT business_partner_request_validation_ruleset_chk CHECK (
+        ruleset_code ~ '^[a-z][a-z0-9_.-]{1,126}$'
+        AND ruleset_version >= 1
+        AND ruleset_hash ~ '^[a-f0-9]{64}$'
+    ),
+    CONSTRAINT business_partner_request_validation_severity_chk CHECK (severity IN ('info', 'warning', 'error')),
+    CONSTRAINT business_partner_request_validation_path_chk CHECK (length(btrim(field_path)) BETWEEN 1 AND 512),
+    CONSTRAINT business_partner_request_validation_outcome_chk CHECK (outcome IN ('passed', 'failed', 'skipped')),
+    CONSTRAINT business_partner_request_validation_message_chk CHECK (message_code ~ '^[A-Z][A-Z0-9_.-]{1,126}$'),
+    CONSTRAINT business_partner_request_validation_evidence_chk
+        CHECK (jsonb_typeof(evidence_reference) = 'object' AND pg_column_size(evidence_reference) <= 65536)
+);
+
+COMMENT ON TABLE document.business_partner_request_validation IS
+  'Append-only, ruleset-pinned validation result. evaluation_id groups one deterministic validation run and preserves the exact rule evidence reviewed for approval.';
+
+CREATE TABLE document.business_partner_request_address (
+    id                     uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id              uuid        NOT NULL,
+    request_id             uuid        NOT NULL,
+    client_item_key        text        NOT NULL,
+    definition_field_code  text        NOT NULL,
+    purpose                text        NOT NULL,
+    address_kind           text        NOT NULL DEFAULT 'street',
+    line1                  text,
+    line2                  text,
+    city                   text,
+    region                 text,
+    state_region_code      text,
+    postal_code            text,
+    po_box                 text,
+    country_code           text        NOT NULL,
+    is_primary             boolean     NOT NULL DEFAULT false,
+    normalized_hash        text        NOT NULL,
+    validation_evidence_id uuid,
+    effective_from         date,
+    effective_until        date,
+    source_kind            text        NOT NULL,
+    source_reference       text,
+    created_at             timestamptz NOT NULL DEFAULT now(),
+    created_by             uuid        NOT NULL,
+
+    CONSTRAINT business_partner_request_address_subdivision_fk FOREIGN KEY (country_code, state_region_code) REFERENCES shared.state_region(country_code, code),
+    CONSTRAINT business_partner_request_address_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_request_address_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_request_address_client_key_uq UNIQUE (tenant_id, request_id, client_item_key),
+    CONSTRAINT business_partner_request_address_client_key_chk CHECK (client_item_key ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,126}$'),
+    CONSTRAINT business_partner_request_address_field_code_chk CHECK (definition_field_code ~ '^[A-Za-z][A-Za-z0-9_.-]{1,126}$'),
+    CONSTRAINT business_partner_request_address_kind_chk CHECK (address_kind IN ('street', 'po_box', 'rural', 'military', 'other')),
+    CONSTRAINT business_partner_request_address_country_chk CHECK (country_code ~ '^[A-Z]{2}$'),
+    CONSTRAINT business_partner_request_address_po_box_chk CHECK (address_kind <> 'po_box' OR length(btrim(po_box)) > 0),
+    CONSTRAINT business_partner_request_address_hash_chk CHECK (normalized_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT business_partner_request_address_range_chk CHECK (effective_until IS NULL OR effective_from IS NULL OR effective_until >= effective_from)
+);
+
+CREATE TABLE document.business_partner_request_contact_person (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid        NOT NULL,
+    request_id            uuid        NOT NULL,
+    client_item_key       text        NOT NULL,
+    definition_field_code text        NOT NULL,
+    contact_name          text        NOT NULL,
+    business_title        text,
+    department_name       text,
+    role_code             text,
+    is_primary            boolean     NOT NULL DEFAULT false,
+    effective_from        date,
+    effective_until       date,
+    source_kind           text        NOT NULL,
+    source_reference      text,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    created_by            uuid        NOT NULL,
+
+    CONSTRAINT business_partner_request_contact_person_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_request_contact_person_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_request_contact_person_client_key_uq UNIQUE (tenant_id, request_id, client_item_key),
+    CONSTRAINT business_partner_request_contact_person_client_key_chk CHECK (client_item_key ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,126}$'),
+    CONSTRAINT business_partner_request_contact_person_field_code_chk CHECK (definition_field_code ~ '^[A-Za-z][A-Za-z0-9_.-]{1,126}$'),
+    CONSTRAINT business_partner_request_contact_person_name_chk CHECK (length(btrim(contact_name)) BETWEEN 1 AND 255),
+    CONSTRAINT business_partner_request_contact_person_range_chk CHECK (effective_until IS NULL OR effective_from IS NULL OR effective_until >= effective_from)
+);
+
+CREATE TABLE document.business_partner_request_contact_channel (
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+    request_id              uuid        NOT NULL,
+    client_item_key         text        NOT NULL,
+    definition_field_code   text        NOT NULL,
+    contact_client_item_key text        NOT NULL,
+    channel_type            text        NOT NULL,
+    channel_value           text        NOT NULL,
+    purpose                 text        NOT NULL,
+    is_primary              boolean     NOT NULL DEFAULT false,
+    effective_from          date,
+    effective_until         date,
+    source_kind             text        NOT NULL,
+    source_reference        text,
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+
+    CONSTRAINT business_partner_request_contact_channel_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_request_contact_channel_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_request_contact_channel_client_key_uq UNIQUE (tenant_id, request_id, client_item_key),
+    CONSTRAINT business_partner_request_contact_channel_client_key_chk CHECK (client_item_key ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,126}$'),
+    CONSTRAINT business_partner_request_contact_channel_field_code_chk CHECK (definition_field_code ~ '^[A-Za-z][A-Za-z0-9_.-]{1,126}$'),
+    CONSTRAINT business_partner_request_contact_channel_type_chk CHECK (channel_type IN ('email', 'phone', 'fax', 'sms', 'whatsapp', 'website')),
+    CONSTRAINT business_partner_request_contact_channel_value_chk CHECK (length(channel_value) BETWEEN 1 AND 512),
+    CONSTRAINT business_partner_request_contact_channel_range_chk CHECK (effective_until IS NULL OR effective_from IS NULL OR effective_until >= effective_from)
+);
+
+CREATE TABLE document.business_partner_request_identifier (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid        NOT NULL,
+    request_id            uuid        NOT NULL,
+    client_item_key       text        NOT NULL,
+    definition_field_code text        NOT NULL,
+    scheme_code           text        NOT NULL,
+    identifier_value      text,
+    protected_value_token text,
+    value_hash            text        NOT NULL,
+    masked_value          text        NOT NULL,
+    issuing_authority     text,
+    issuing_country_code  text,
+    is_primary            boolean     NOT NULL DEFAULT false,
+    effective_from        date,
+    effective_until       date,
+    source_kind           text        NOT NULL,
+    source_reference      text,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    created_by            uuid        NOT NULL,
+
+    CONSTRAINT business_partner_request_identifier_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_request_identifier_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_request_identifier_client_key_uq UNIQUE (tenant_id, request_id, client_item_key),
+    CONSTRAINT business_partner_request_identifier_client_key_chk CHECK (client_item_key ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,126}$'),
+    CONSTRAINT business_partner_request_identifier_field_code_chk CHECK (definition_field_code ~ '^[A-Za-z][A-Za-z0-9_.-]{1,126}$'),
+    CONSTRAINT business_partner_request_identifier_value_chk CHECK (num_nonnulls(identifier_value, protected_value_token) = 1),
+    CONSTRAINT business_partner_request_identifier_hash_chk CHECK (value_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT business_partner_request_identifier_country_chk CHECK (issuing_country_code IS NULL OR issuing_country_code ~ '^[A-Z]{2}$'),
+    CONSTRAINT business_partner_request_identifier_range_chk CHECK (effective_until IS NULL OR effective_from IS NULL OR effective_until >= effective_from)
+);
+
+CREATE TABLE document.business_partner_request_tax_registration (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid        NOT NULL,
+    request_id            uuid        NOT NULL,
+    client_item_key       text        NOT NULL,
+    definition_field_code text        NOT NULL,
+    jurisdiction_id       uuid        NOT NULL,
+    tax_type_id           uuid,
+    registration_type_code text       NOT NULL,
+    protected_value_token text        NOT NULL,
+    value_hash            text        NOT NULL,
+    masked_value          text        NOT NULL,
+    is_primary            boolean     NOT NULL DEFAULT false,
+    effective_from        date,
+    effective_until       date,
+    source_kind           text        NOT NULL,
+    source_reference      text,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    created_by            uuid        NOT NULL,
+
+    CONSTRAINT business_partner_request_tax_registration_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_request_tax_registration_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_request_tax_registration_client_key_uq UNIQUE (tenant_id, request_id, client_item_key),
+    CONSTRAINT business_partner_request_tax_registration_client_key_chk CHECK (client_item_key ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,126}$'),
+    CONSTRAINT business_partner_request_tax_registration_field_code_chk CHECK (definition_field_code ~ '^[A-Za-z][A-Za-z0-9_.-]{1,126}$'),
+    CONSTRAINT business_partner_request_tax_registration_hash_chk CHECK (value_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT business_partner_request_tax_registration_range_chk CHECK (effective_until IS NULL OR effective_from IS NULL OR effective_until >= effective_from)
+);
+
+CREATE TABLE document.business_partner_request_classification (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid        NOT NULL,
+    request_id            uuid        NOT NULL,
+    client_item_key       text        NOT NULL,
+    definition_field_code text        NOT NULL,
+    classification_kind   text        NOT NULL,
+    reference_id          uuid        NOT NULL,
+    domain_code           text,
+    partner_role          text,
+    assignment_kind       text,
+    is_primary            boolean     NOT NULL DEFAULT false,
+    confidence            smallint,
+    effective_from        date,
+    effective_until       date,
+    source_kind           text        NOT NULL,
+    source_reference      text,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    created_by            uuid        NOT NULL,
+
+    CONSTRAINT business_partner_request_classification_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_request_classification_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_request_classification_client_key_uq UNIQUE (tenant_id, request_id, client_item_key),
+    CONSTRAINT business_partner_request_classification_client_key_chk CHECK (client_item_key ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,126}$'),
+    CONSTRAINT business_partner_request_classification_field_code_chk CHECK (definition_field_code ~ '^[A-Za-z][A-Za-z0-9_.-]{1,126}$'),
+    CONSTRAINT business_partner_request_classification_kind_chk CHECK (classification_kind IN ('commodity', 'industry')),
+    CONSTRAINT business_partner_request_classification_role_chk CHECK (partner_role IS NULL OR partner_role IN ('supplier', 'customer')),
+    CONSTRAINT business_partner_request_classification_assignment_chk CHECK (assignment_kind IS NULL OR assignment_kind IN ('declared', 'verified', 'inferred', 'imported')),
+    CONSTRAINT business_partner_request_classification_confidence_chk CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 1),
+    CONSTRAINT business_partner_request_classification_range_chk CHECK (effective_until IS NULL OR effective_from IS NULL OR effective_until >= effective_from)
+);
+
+CREATE TABLE document.business_partner_request_certification (
+    id                         uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                  uuid        NOT NULL,
+    request_id                 uuid        NOT NULL,
+    client_item_key            text        NOT NULL,
+    definition_field_code      text        NOT NULL,
+    certification_type_id      uuid,
+    custom_name                text,
+    certificate_number_token   text,
+    masked_certificate_number  text,
+    certified_by               text,
+    certified_location         text,
+    attachment_id              uuid,
+    company_code_id            uuid,
+    effective_from             date,
+    effective_until            date,
+    source_kind                text        NOT NULL,
+    source_reference           text,
+    created_at                 timestamptz NOT NULL DEFAULT now(),
+    created_by                 uuid        NOT NULL,
+
+    CONSTRAINT business_partner_request_certification_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_request_certification_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_request_certification_client_key_uq UNIQUE (tenant_id, request_id, client_item_key),
+    CONSTRAINT business_partner_request_certification_client_key_chk CHECK (client_item_key ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,126}$'),
+    CONSTRAINT business_partner_request_certification_field_code_chk CHECK (definition_field_code ~ '^[A-Za-z][A-Za-z0-9_.-]{1,126}$'),
+    CONSTRAINT business_partner_request_certification_type_chk CHECK (num_nonnulls(certification_type_id, custom_name) = 1),
+    CONSTRAINT business_partner_request_certification_range_chk CHECK (effective_until IS NULL OR effective_from IS NULL OR effective_until >= effective_from)
+);
+
+CREATE TABLE document.business_partner_request_materialization_item (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid        NOT NULL,
+    request_id            uuid        NOT NULL,
+    child_kind            text        NOT NULL,
+    request_child_id      uuid        NOT NULL,
+    client_item_key       text        NOT NULL,
+    definition_field_code text        NOT NULL,
+    source_kind           text        NOT NULL,
+    source_reference      text,
+    effective_from        date,
+    effective_until       date,
+    target_table          text        NOT NULL,
+    target_id             uuid        NOT NULL,
+    applied_at            timestamptz NOT NULL DEFAULT now(),
+    applied_by            uuid        NOT NULL,
+
+    CONSTRAINT business_partner_request_materialization_item_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_request_materialization_item_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_request_materialization_item_child_uq UNIQUE (tenant_id, request_id, child_kind, request_child_id),
+    CONSTRAINT business_partner_request_materialization_item_target_uq UNIQUE (tenant_id, target_table, target_id),
+    CONSTRAINT business_partner_request_materialization_item_kind_chk CHECK (child_kind IN ('address', 'contact_person', 'contact_channel', 'identifier', 'tax_registration', 'classification', 'certification')),
+    CONSTRAINT business_partner_request_materialization_item_target_chk CHECK (target_table ~ '^(master|common)\.[a-z][a-z0-9_]{1,62}$')
+);
+
+COMMENT ON TABLE document.business_partner_request_materialization_item IS
+  'Immutable request-child-to-authoritative-row application evidence; contains coordinates and safe provenance only.';
+
+CREATE TABLE document.mesh_business_partner_match (
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid        NOT NULL,
+    projection_id               uuid        NOT NULL,
+    snapshot_id                 uuid        NOT NULL,
+    source_payload_hash         text        NOT NULL,
+    source_publication_version  integer     NOT NULL,
+    operating_organization_id   uuid        NOT NULL,
+    company_code_id             uuid,
+    candidate_business_partner_id uuid,
+    candidate_fingerprint       text,
+    algorithm_code              text        NOT NULL,
+    algorithm_version           integer     NOT NULL,
+    algorithm_hash              text        NOT NULL,
+    ranked_candidates           jsonb       NOT NULL,
+    field_diff                  jsonb       NOT NULL,
+    diff_hash                   text        NOT NULL,
+    idempotency_key             text        NOT NULL,
+    created_at                  timestamptz NOT NULL DEFAULT clock_timestamp(),
+    created_by                  uuid        NOT NULL,
+
+    CONSTRAINT mesh_business_partner_match_pkey PRIMARY KEY (id),
+    CONSTRAINT mesh_business_partner_match_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT mesh_business_partner_match_key_uq UNIQUE (tenant_id, idempotency_key),
+    CONSTRAINT mesh_business_partner_match_snapshot_uq UNIQUE (tenant_id, id, snapshot_id),
+    CONSTRAINT mesh_business_partner_match_source_hash_chk CHECK (source_payload_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT mesh_business_partner_match_version_chk CHECK (source_publication_version >= 1 AND algorithm_version >= 1),
+    CONSTRAINT mesh_business_partner_match_algorithm_chk CHECK (algorithm_code ~ '^[a-z][a-z0-9_.-]{1,126}$' AND algorithm_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT mesh_business_partner_match_candidate_chk CHECK ((candidate_business_partner_id IS NULL) = (candidate_fingerprint IS NULL) AND (candidate_fingerprint IS NULL OR candidate_fingerprint ~ '^[a-f0-9]{64}$')),
+    CONSTRAINT mesh_business_partner_match_evidence_chk CHECK (jsonb_typeof(ranked_candidates) = 'array' AND jsonb_typeof(field_diff) = 'array' AND pg_column_size(ranked_candidates) <= 262144 AND pg_column_size(field_diff) <= 262144 AND diff_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT mesh_business_partner_match_key_chk CHECK (btrim(idempotency_key) = idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200)
+);
+
+CREATE TABLE document.mesh_business_partner_acceptance (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid        NOT NULL,
+    match_id              uuid        NOT NULL,
+    snapshot_id           uuid        NOT NULL,
+    accepted_field_paths  text[]      NOT NULL,
+    proposed_payload      jsonb       NOT NULL,
+    acceptance_hash       text        NOT NULL,
+    request_idempotency_key text      NOT NULL,
+    created_at            timestamptz NOT NULL DEFAULT clock_timestamp(),
+    created_by            uuid        NOT NULL,
+
+    CONSTRAINT mesh_business_partner_acceptance_pkey PRIMARY KEY (id),
+    CONSTRAINT mesh_business_partner_acceptance_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT mesh_business_partner_acceptance_key_uq UNIQUE (tenant_id, request_idempotency_key),
+    CONSTRAINT mesh_business_partner_acceptance_paths_chk CHECK (
+        cardinality(accepted_field_paths) BETWEEN 1 AND 7
+        AND array_position(accepted_field_paths, NULL) IS NULL
+        AND accepted_field_paths <@ ARRAY[
+            'partner.accountCode', 'partner.legalName',
+            'partner.legalForm', 'partner.countryCode', 'partner.incorporationDate',
+            'partner.websiteUrl', 'partner.description'
+        ]::text[]
+    ),
+    CONSTRAINT mesh_business_partner_acceptance_payload_chk CHECK (jsonb_typeof(proposed_payload) = 'object' AND pg_column_size(proposed_payload) <= 65536),
+    CONSTRAINT mesh_business_partner_acceptance_hash_chk CHECK (acceptance_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT mesh_business_partner_acceptance_key_chk CHECK (btrim(request_idempotency_key) = request_idempotency_key AND length(request_idempotency_key) BETWEEN 8 AND 200)
+);
+
+CREATE TABLE document.mesh_business_partner_acceptance_event (
+    id                uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id         uuid        NOT NULL,
+    acceptance_id     uuid        NOT NULL,
+    lifecycle_version integer     NOT NULL,
+    event_kind        text        NOT NULL,
+    business_partner_request_id uuid,
+    event_fingerprint text        NOT NULL,
+    recorded_at       timestamptz NOT NULL DEFAULT clock_timestamp(),
+    recorded_by       uuid        NOT NULL,
+
+    CONSTRAINT mesh_business_partner_acceptance_event_pkey PRIMARY KEY (id),
+    CONSTRAINT mesh_business_partner_acceptance_event_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT mesh_business_partner_acceptance_event_version_uq UNIQUE (tenant_id, acceptance_id, lifecycle_version),
+    CONSTRAINT mesh_business_partner_acceptance_event_request_uq UNIQUE NULLS NOT DISTINCT (tenant_id, acceptance_id, business_partner_request_id),
+    CONSTRAINT mesh_business_partner_acceptance_event_version_chk CHECK (lifecycle_version >= 1),
+    CONSTRAINT mesh_business_partner_acceptance_event_kind_chk CHECK (event_kind IN ('prepared','request_created')),
+    CONSTRAINT mesh_business_partner_acceptance_event_request_chk CHECK ((event_kind = 'prepared' AND business_partner_request_id IS NULL AND lifecycle_version = 1) OR (event_kind = 'request_created' AND business_partner_request_id IS NOT NULL AND lifecycle_version = 2)),
+    CONSTRAINT mesh_business_partner_acceptance_event_fingerprint_chk CHECK (event_fingerprint ~ '^[a-f0-9]{64}$')
+);
+
+COMMENT ON TABLE document.mesh_business_partner_match IS
+  'Immutable, snapshot-pinned deterministic MESH-to-NEON candidate ranking and field diff. Matching grants no master-data write authority.';
+COMMENT ON TABLE document.mesh_business_partner_acceptance IS
+  'Immutable selective-acceptance command containing only supported explicitly accepted fields and the exact derived onboarding payload.';
+COMMENT ON TABLE document.mesh_business_partner_acceptance_event IS
+  'Append-only recoverable saga evidence linking a selective acceptance to the ordinary governed Business Partner request.';
+
+CREATE TABLE document.business_partner_bank_verification (
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid        NOT NULL,
+    bank_projection_id          uuid        NOT NULL,
+    business_partner_id         uuid        NOT NULL,
+    supplier_company_profile_id uuid        NOT NULL,
+    company_code_id             uuid        NOT NULL,
+    candidate_bank_account_link_id uuid,
+    prior_bank_account_link_id  uuid,
+    expected_account_fingerprint text       NOT NULL,
+    verification_method         text,
+    verification_evidence       jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    idempotency_key             text        NOT NULL,
+    decision_fingerprint        text,
+    application_fingerprint     text,
+    status                      text        NOT NULL DEFAULT 'pending_verification',
+    verified_at                 timestamptz,
+    verified_by                 uuid,
+    rejected_at                 timestamptz,
+    rejected_by                 uuid,
+    rejection_reason            text,
+    applied_at                  timestamptz,
+    applied_by                  uuid,
+    row_version                 bigint      NOT NULL DEFAULT 1,
+    created_at                  timestamptz NOT NULL DEFAULT now(),
+    created_by                  uuid        NOT NULL,
+    updated_at                  timestamptz,
+    updated_by                  uuid,
+    CONSTRAINT business_partner_bank_verification_pkey PRIMARY KEY(id),
+    CONSTRAINT business_partner_bank_verification_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT business_partner_bank_verification_idempotency_uq UNIQUE(tenant_id,idempotency_key),
+    CONSTRAINT business_partner_bank_verification_status_chk CHECK(status IN('pending_verification','verified','rejected','applied','superseded')),
+    CONSTRAINT business_partner_bank_verification_fingerprint_chk CHECK(expected_account_fingerprint ~ '^[a-f0-9]{64}$' AND (decision_fingerprint IS NULL OR decision_fingerprint ~ '^[a-f0-9]{64}$') AND (application_fingerprint IS NULL OR application_fingerprint ~ '^[a-f0-9]{64}$')),
+    CONSTRAINT business_partner_bank_verification_key_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
+    CONSTRAINT business_partner_bank_verification_evidence_chk CHECK(jsonb_typeof(verification_evidence)='object' AND pg_column_size(verification_evidence)<=65536),
+    CONSTRAINT business_partner_bank_verification_decision_chk CHECK((status='pending_verification' AND candidate_bank_account_link_id IS NULL AND decision_fingerprint IS NULL AND verified_at IS NULL AND verified_by IS NULL AND rejected_at IS NULL AND rejected_by IS NULL) OR (status='verified' AND candidate_bank_account_link_id IS NOT NULL AND nullif(btrim(verification_method),'') IS NOT NULL AND verification_evidence<>'{}'::jsonb AND decision_fingerprint IS NOT NULL AND verified_at IS NOT NULL AND verified_by IS NOT NULL) OR (status='rejected' AND decision_fingerprint IS NOT NULL AND rejected_at IS NOT NULL AND rejected_by IS NOT NULL AND nullif(btrim(rejection_reason),'') IS NOT NULL) OR (status IN('applied','superseded') AND candidate_bank_account_link_id IS NOT NULL AND decision_fingerprint IS NOT NULL AND verified_at IS NOT NULL AND verified_by IS NOT NULL)),
+    CONSTRAINT business_partner_bank_verification_sod_chk CHECK(verified_by IS NULL OR verified_by IS DISTINCT FROM created_by),
+    CONSTRAINT business_partner_bank_verification_apply_chk CHECK((status='applied')=(application_fingerprint IS NOT NULL AND applied_at IS NOT NULL AND applied_by IS NOT NULL)),
+    CONSTRAINT business_partner_bank_verification_version_chk CHECK(row_version>=1),
+    CONSTRAINT business_partner_bank_verification_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
+);
+
+COMMENT ON TABLE document.business_partner_bank_verification IS
+  'Independent NEON verification and optimistic preferred-remittance switch for one masked MESH disclosure. It never stores the raw disclosed account identifier.';
+
+CREATE TABLE document.business_partner_duplicate_resolution (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    duplicate_business_partner_id uuid NOT NULL, surviving_business_partner_id uuid NOT NULL,
+    resolution_kind text NOT NULL, reason_code text NOT NULL, dependency_evidence jsonb NOT NULL,
+    rekey_manifest jsonb NOT NULL DEFAULT '[]'::jsonb, snapshot_id uuid NOT NULL,
+    resolved_at timestamptz NOT NULL DEFAULT now(), resolved_by uuid NOT NULL,
+    CONSTRAINT business_partner_duplicate_resolution_pkey PRIMARY KEY(id),
+    CONSTRAINT business_partner_duplicate_resolution_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT business_partner_duplicate_resolution_duplicate_uq UNIQUE(tenant_id,duplicate_business_partner_id),
+    CONSTRAINT business_partner_duplicate_resolution_distinct_chk CHECK(duplicate_business_partner_id<>surviving_business_partner_id),
+    CONSTRAINT business_partner_duplicate_resolution_kind_chk CHECK(resolution_kind IN('merge','rekey','supersede')),
+    CONSTRAINT business_partner_duplicate_resolution_reason_chk CHECK(reason_code ~ '^[A-Z][A-Z0-9_.-]{2,126}$'),
+    CONSTRAINT business_partner_duplicate_resolution_evidence_chk CHECK(jsonb_typeof(dependency_evidence)='object' AND dependency_evidence<>'{}'::jsonb AND jsonb_typeof(rekey_manifest)='array')
+);
+
+COMMENT ON TABLE document.business_partner_duplicate_resolution IS
+  'Steward-only immutable evidence for category-preserving duplicate merge, explicit foreign-key re-key manifest, and supersession. Category is never corrected in place.';
+
+CREATE TABLE document.supplier_activation_evidence (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    business_partner_id uuid NOT NULL, supplier_id uuid NOT NULL,
+    operating_organization_id uuid NOT NULL, company_code_id uuid,
+    business_date date NOT NULL, prior_status text NOT NULL, resulting_status text NOT NULL DEFAULT 'active',
+    readiness_fingerprint text NOT NULL, readiness_evidence jsonb NOT NULL,
+    idempotency_key text NOT NULL, command_fingerprint text NOT NULL,
+    activated_at timestamptz NOT NULL DEFAULT now(), activated_by uuid NOT NULL,
+    CONSTRAINT supplier_activation_evidence_pkey PRIMARY KEY(id),
+    CONSTRAINT supplier_activation_evidence_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT supplier_activation_evidence_idempotency_uq UNIQUE(tenant_id,idempotency_key),
+    CONSTRAINT supplier_activation_evidence_status_chk CHECK(prior_status IN('onboarding','suspended','inactive') AND resulting_status='active'),
+    CONSTRAINT supplier_activation_evidence_hash_chk CHECK(readiness_fingerprint~'^[a-f0-9]{64}$' AND command_fingerprint~'^[a-f0-9]{64}$'),
+    CONSTRAINT supplier_activation_evidence_key_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
+    CONSTRAINT supplier_activation_evidence_payload_chk CHECK(jsonb_typeof(readiness_evidence)='object' AND readiness_evidence->>'decisionFingerprint'=readiness_fingerprint AND readiness_evidence->>'role'='supplier' AND (readiness_evidence->>'eligible')::boolean=true AND pg_column_size(readiness_evidence)<=262144)
+);
+COMMENT ON TABLE document.supplier_activation_evidence IS 'Immutable evidence for the sole readiness-driven supplier activation command; registration and qualification decisions cannot activate a supplier.';
+
+CREATE TABLE document.business_partner_invitation_recovery(
+ id uuid NOT NULL DEFAULT shared.uuidv7(),tenant_id uuid NOT NULL,invitation_id uuid NOT NULL,request_id uuid,entity_case_id uuid,prior_applicant_principal_id uuid NOT NULL,requested_applicant_principal_id uuid NOT NULL,reason text NOT NULL,idempotency_key text NOT NULL,status text NOT NULL DEFAULT 'requested',requested_at timestamptz NOT NULL DEFAULT now(),requested_by uuid NOT NULL,
+ CONSTRAINT business_partner_invitation_recovery_pkey PRIMARY KEY(id),CONSTRAINT business_partner_invitation_recovery_tenant_id_uq UNIQUE(tenant_id,id),CONSTRAINT business_partner_invitation_recovery_idempotency_uq UNIQUE(tenant_id,idempotency_key),CONSTRAINT business_partner_invitation_recovery_status_chk CHECK(status='requested'),CONSTRAINT business_partner_invitation_recovery_subject_chk CHECK(num_nonnulls(request_id,entity_case_id)=1),CONSTRAINT business_partner_invitation_recovery_reason_chk CHECK(length(btrim(reason)) BETWEEN 1 AND 4000),CONSTRAINT business_partner_invitation_recovery_principal_chk CHECK(prior_applicant_principal_id<>requested_applicant_principal_id)
+);
+COMMENT ON TABLE document.business_partner_invitation_recovery IS 'Immutable idempotent recovery intent. IAM recovers the subject; historic ownership is never rewritten and principals or requests are never duplicated.';
+
+-- External workforce and services procurement.
+-- These aggregates govern sourcing, commercial engagement and service
+-- acceptance. They do not reuse business_partner_request or
+-- master.employment as transaction authorities.
+CREATE TABLE document.workforce_requisition (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    company_code_id uuid NOT NULL, legal_entity_id uuid NOT NULL, purchase_requisition_id uuid,
+    code text NOT NULL, name text NOT NULL, description text,
+    engagement_model text NOT NULL DEFAULT 'contingent', job_id uuid, position_id uuid, org_unit_id uuid,
+    manager_employee_id uuid, site_id uuid, cost_center_id uuid,
+    requested_headcount numeric(10,2) NOT NULL DEFAULT 1,
+    expected_start_date date NOT NULL, expected_end_date date,
+    currency_code character(3) NOT NULL, target_rate_min numeric(18,6), target_rate_max numeric(18,6), rate_unit text,
+    workflow_request_id uuid, approved_at timestamptz, approved_by uuid,
+    row_version bigint NOT NULL DEFAULT 1, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    status text NOT NULL DEFAULT 'draft', status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT workforce_requisition_pkey PRIMARY KEY (id),
+    CONSTRAINT workforce_requisition_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT workforce_requisition_code_uq UNIQUE (tenant_id, company_code_id, code),
+    CONSTRAINT workforce_requisition_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT workforce_requisition_name_chk CHECK (btrim(name) <> ''),
+    CONSTRAINT workforce_requisition_model_chk CHECK (engagement_model IN ('contingent','independent_contractor')),
+    CONSTRAINT workforce_requisition_dates_chk CHECK (expected_end_date IS NULL OR expected_end_date > expected_start_date),
+    CONSTRAINT workforce_requisition_headcount_chk CHECK (requested_headcount > 0),
+    CONSTRAINT workforce_requisition_rate_chk CHECK ((target_rate_min IS NULL OR target_rate_min >= 0) AND (target_rate_max IS NULL OR target_rate_max >= COALESCE(target_rate_min,0)) AND ((target_rate_min IS NULL AND target_rate_max IS NULL AND rate_unit IS NULL) OR rate_unit IN ('hour','day','week','month','each','fixed'))),
+    CONSTRAINT workforce_requisition_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT workforce_requisition_approval_state_chk CHECK (status NOT IN ('approved','released','partially_filled','filled','closed') OR approved_at IS NOT NULL),
+    CONSTRAINT workforce_requisition_version_chk CHECK (row_version >= 1),
+    CONSTRAINT workforce_requisition_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT workforce_requisition_status_chk CHECK (status IN ('draft','pending_approval','approved','released','partially_filled','filled','cancelled','closed')),
+    CONSTRAINT workforce_requisition_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT workforce_requisition_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.workforce_requisition_supplier (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    workforce_requisition_id uuid NOT NULL, supplier_id uuid NOT NULL,
+    distributed_at timestamptz NOT NULL, distributed_by uuid NOT NULL, response_due_at timestamptz,
+    acknowledged_at timestamptz, declined_at timestamptz, decline_reason text,
+    distribution_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb, status text NOT NULL DEFAULT 'distributed',
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT workforce_requisition_supplier_pkey PRIMARY KEY (id),
+    CONSTRAINT workforce_requisition_supplier_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT workforce_requisition_supplier_uq UNIQUE (tenant_id, workforce_requisition_id, supplier_id),
+    CONSTRAINT workforce_requisition_supplier_dates_chk CHECK (response_due_at IS NULL OR response_due_at > distributed_at),
+    CONSTRAINT workforce_requisition_supplier_decline_chk CHECK ((status = 'declined') = (declined_at IS NOT NULL) AND (decline_reason IS NULL OR btrim(decline_reason) <> '')),
+    CONSTRAINT workforce_requisition_supplier_json_chk CHECK (jsonb_typeof(distribution_snapshot) = 'object'),
+    CONSTRAINT workforce_requisition_supplier_status_chk CHECK (status IN ('distributed','acknowledged','declined','closed'))
+);
+
+CREATE TABLE document.external_candidate_submission (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    workforce_requisition_id uuid NOT NULL, requisition_supplier_id uuid NOT NULL, supplier_id uuid NOT NULL,
+    person_id uuid, candidate_reference_hash char(64) NOT NULL, profile_content_item_id uuid,
+    proposed_rate numeric(18,6), currency_code character(3) NOT NULL, rate_unit text, availability_date date,
+    submitted_at timestamptz NOT NULL, submitted_by uuid NOT NULL, consent_evidence_id uuid,
+    row_version bigint NOT NULL DEFAULT 1, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    status text NOT NULL DEFAULT 'submitted', status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT external_candidate_submission_pkey PRIMARY KEY (id),
+    CONSTRAINT external_candidate_submission_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_candidate_submission_ref_uq UNIQUE (tenant_id, workforce_requisition_id, supplier_id, candidate_reference_hash),
+    CONSTRAINT external_candidate_submission_hash_chk CHECK (candidate_reference_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT external_candidate_submission_rate_chk CHECK ((proposed_rate IS NULL AND rate_unit IS NULL) OR (proposed_rate >= 0 AND rate_unit IN ('hour','day','week','month','each','fixed'))),
+    CONSTRAINT external_candidate_submission_version_chk CHECK (row_version >= 1),
+    CONSTRAINT external_candidate_submission_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT external_candidate_submission_status_chk CHECK (status IN ('submitted','under_review','shortlisted','selected','rejected','withdrawn')),
+    CONSTRAINT external_candidate_submission_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT external_candidate_submission_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.external_candidate_evaluation (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, candidate_submission_id uuid NOT NULL,
+    evaluation_kind text NOT NULL, outcome text NOT NULL, score numeric(7,4), safe_reason_code text,
+    evidence_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
+    evaluated_at timestamptz NOT NULL DEFAULT now(), evaluated_by uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT external_candidate_evaluation_pkey PRIMARY KEY (id),
+    CONSTRAINT external_candidate_evaluation_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_candidate_evaluation_kind_chk CHECK (evaluation_kind IN ('screening','interview','assessment','compliance','commercial')),
+    CONSTRAINT external_candidate_evaluation_outcome_chk CHECK (outcome IN ('pass','fail','hold','recommended','not_recommended')),
+    CONSTRAINT external_candidate_evaluation_score_chk CHECK (score IS NULL OR score BETWEEN 0 AND 100),
+    CONSTRAINT external_candidate_evaluation_reason_chk CHECK (safe_reason_code IS NULL OR safe_reason_code ~ '^[A-Z][A-Z0-9_.-]{1,126}$'),
+    CONSTRAINT external_candidate_evaluation_json_chk CHECK (jsonb_typeof(evidence_snapshot) = 'object')
+);
+
+COMMENT ON TABLE document.external_candidate_submission IS 'Supplier submission against a released workforce requisition. Pre-selection identity may remain pseudonymous; resumes and restricted PII belong to protected content/person stores, never metadata.';
+COMMENT ON TABLE document.external_candidate_evaluation IS 'Append-only evaluation outcome with safe reason codes and non-PII evidence coordinates.';
+
+CREATE TABLE document.contingent_work_order (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    company_code_id uuid NOT NULL, legal_entity_id uuid NOT NULL, supplier_id uuid NOT NULL,
+    candidate_submission_id uuid NOT NULL, commitment_id uuid,
+    code text NOT NULL, name text NOT NULL, current_revision_no integer NOT NULL DEFAULT 0,
+    row_version bigint NOT NULL DEFAULT 1, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    status text NOT NULL DEFAULT 'draft', status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT contingent_work_order_pkey PRIMARY KEY (id),
+    CONSTRAINT contingent_work_order_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT contingent_work_order_code_uq UNIQUE (tenant_id, company_code_id, code),
+    CONSTRAINT contingent_work_order_candidate_uq UNIQUE (tenant_id, candidate_submission_id),
+    CONSTRAINT contingent_work_order_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT contingent_work_order_name_chk CHECK (btrim(name) <> ''),
+    CONSTRAINT contingent_work_order_revision_chk CHECK (current_revision_no >= 0),
+    CONSTRAINT contingent_work_order_version_chk CHECK (row_version >= 1),
+    CONSTRAINT contingent_work_order_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT contingent_work_order_status_chk CHECK (status IN ('draft','pending_approval','pending_supplier_acceptance','active','suspended','completed','cancelled','closed')),
+    CONSTRAINT contingent_work_order_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT contingent_work_order_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.contingent_work_order_revision (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, work_order_id uuid NOT NULL,
+    revision_no integer NOT NULL, prior_revision_id uuid, change_reason text NOT NULL,
+    start_date date NOT NULL, end_date date NOT NULL, worker_classification text NOT NULL,
+    rate_id uuid, currency_code character(3) NOT NULL, rate_unit text NOT NULL,
+    bill_rate numeric(18,6) NOT NULL, pay_rate numeric(18,6), not_to_exceed_amount numeric(18,4),
+    standard_hours_per_day numeric(7,4), standard_hours_per_week numeric(7,4),
+    terms_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb, terms_hash char(64) NOT NULL,
+    workflow_request_id uuid, approved_at timestamptz, approved_by uuid,
+    supplier_accepted_at timestamptz, supplier_accepted_by uuid,
+    effective_at timestamptz, status text NOT NULL DEFAULT 'draft',
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT contingent_work_order_revision_pkey PRIMARY KEY (id),
+    CONSTRAINT contingent_work_order_revision_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT contingent_work_order_revision_no_uq UNIQUE (tenant_id, work_order_id, revision_no),
+    CONSTRAINT contingent_work_order_revision_no_chk CHECK (revision_no >= 1),
+    CONSTRAINT contingent_work_order_revision_reason_chk CHECK (btrim(change_reason) <> ''),
+    CONSTRAINT contingent_work_order_revision_dates_chk CHECK (end_date > start_date),
+    CONSTRAINT contingent_work_order_revision_class_chk CHECK (worker_classification IN ('agency_worker','independent_contractor','consultant','other')),
+    CONSTRAINT contingent_work_order_revision_rate_chk CHECK (rate_unit IN ('hour','day','week','month','each','fixed') AND bill_rate >= 0 AND (pay_rate IS NULL OR pay_rate >= 0) AND (not_to_exceed_amount IS NULL OR not_to_exceed_amount >= 0)),
+    CONSTRAINT contingent_work_order_revision_hours_chk CHECK ((standard_hours_per_day IS NULL OR standard_hours_per_day > 0) AND (standard_hours_per_week IS NULL OR standard_hours_per_week > 0)),
+    CONSTRAINT contingent_work_order_revision_hash_chk CHECK (terms_hash ~ '^[a-f0-9]{64}$' AND jsonb_typeof(terms_snapshot) = 'object'),
+    CONSTRAINT contingent_work_order_revision_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT contingent_work_order_revision_acceptance_pair_chk CHECK ((supplier_accepted_at IS NULL) = (supplier_accepted_by IS NULL)),
+    CONSTRAINT contingent_work_order_revision_status_chk CHECK (status IN ('draft','pending_approval','approved','supplier_accepted','effective','superseded','rejected','cancelled')),
+    CONSTRAINT contingent_work_order_revision_effective_chk CHECK (status <> 'effective' OR (approved_at IS NOT NULL AND supplier_accepted_at IS NOT NULL AND effective_at IS NOT NULL))
+);
+
+CREATE TABLE document.statement_of_work (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    company_code_id uuid NOT NULL, legal_entity_id uuid NOT NULL, supplier_id uuid NOT NULL,
+    purchase_requisition_id uuid, commitment_id uuid,
+    code text NOT NULL, name text NOT NULL, description text,
+    current_revision_no integer NOT NULL DEFAULT 0, row_version bigint NOT NULL DEFAULT 1,
+    metadata jsonb NOT NULL DEFAULT '{}'::jsonb, status text NOT NULL DEFAULT 'draft',
+    status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT statement_of_work_pkey PRIMARY KEY (id),
+    CONSTRAINT statement_of_work_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT statement_of_work_code_uq UNIQUE (tenant_id, company_code_id, code),
+    CONSTRAINT statement_of_work_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT statement_of_work_name_chk CHECK (btrim(name) <> ''),
+    CONSTRAINT statement_of_work_revision_chk CHECK (current_revision_no >= 0),
+    CONSTRAINT statement_of_work_version_chk CHECK (row_version >= 1),
+    CONSTRAINT statement_of_work_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT statement_of_work_status_chk CHECK (status IN ('draft','pending_approval','pending_supplier_acceptance','active','suspended','completed','cancelled','closed')),
+    CONSTRAINT statement_of_work_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT statement_of_work_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.statement_of_work_revision (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, statement_of_work_id uuid NOT NULL,
+    revision_no integer NOT NULL, prior_revision_id uuid, change_reason text NOT NULL,
+    start_date date NOT NULL, end_date date NOT NULL, currency_code character(3) NOT NULL,
+    not_to_exceed_amount numeric(18,4) NOT NULL, allow_workers boolean NOT NULL DEFAULT true,
+    allow_time_sheets boolean NOT NULL DEFAULT false, allow_expense_sheets boolean NOT NULL DEFAULT false,
+    auto_invoice_approved_items boolean NOT NULL DEFAULT false,
+    terms_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb, terms_hash char(64) NOT NULL,
+    workflow_request_id uuid, approved_at timestamptz, approved_by uuid,
+    supplier_accepted_at timestamptz, supplier_accepted_by uuid,
+    effective_at timestamptz, status text NOT NULL DEFAULT 'draft',
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT statement_of_work_revision_pkey PRIMARY KEY (id),
+    CONSTRAINT statement_of_work_revision_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT statement_of_work_revision_no_uq UNIQUE (tenant_id, statement_of_work_id, revision_no),
+    CONSTRAINT statement_of_work_revision_no_chk CHECK (revision_no >= 1),
+    CONSTRAINT statement_of_work_revision_reason_chk CHECK (btrim(change_reason) <> ''),
+    CONSTRAINT statement_of_work_revision_dates_chk CHECK (end_date > start_date),
+    CONSTRAINT statement_of_work_revision_amount_chk CHECK (not_to_exceed_amount >= 0),
+    CONSTRAINT statement_of_work_revision_auto_invoice_chk CHECK (NOT auto_invoice_approved_items OR allow_time_sheets OR allow_expense_sheets),
+    CONSTRAINT statement_of_work_revision_hash_chk CHECK (terms_hash ~ '^[a-f0-9]{64}$' AND jsonb_typeof(terms_snapshot) = 'object'),
+    CONSTRAINT statement_of_work_revision_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT statement_of_work_revision_acceptance_pair_chk CHECK ((supplier_accepted_at IS NULL) = (supplier_accepted_by IS NULL)),
+    CONSTRAINT statement_of_work_revision_status_chk CHECK (status IN ('draft','pending_approval','approved','supplier_accepted','effective','superseded','rejected','cancelled')),
+    CONSTRAINT statement_of_work_revision_effective_chk CHECK (status <> 'effective' OR (approved_at IS NOT NULL AND supplier_accepted_at IS NOT NULL AND effective_at IS NOT NULL))
+);
+
+CREATE TABLE document.statement_of_work_item (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, statement_of_work_revision_id uuid NOT NULL,
+    line_no smallint NOT NULL, item_type text NOT NULL, code text NOT NULL, name text NOT NULL, description text,
+    due_date date, quantity numeric(18,4) NOT NULL DEFAULT 1, unit_price numeric(18,6) NOT NULL DEFAULT 0,
+    amount numeric(18,4) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+    acceptance_required boolean NOT NULL DEFAULT true, accepted_at timestamptz, accepted_by uuid,
+    status text NOT NULL DEFAULT 'planned', metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT statement_of_work_item_pkey PRIMARY KEY (id),
+    CONSTRAINT statement_of_work_item_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT statement_of_work_item_line_uq UNIQUE (tenant_id, statement_of_work_revision_id, line_no),
+    CONSTRAINT statement_of_work_item_code_uq UNIQUE (tenant_id, statement_of_work_revision_id, code),
+    CONSTRAINT statement_of_work_item_line_chk CHECK (line_no > 0 AND code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$' AND btrim(name) <> ''),
+    CONSTRAINT statement_of_work_item_type_chk CHECK (item_type IN ('deliverable','event','fee','schedule')),
+    CONSTRAINT statement_of_work_item_amount_chk CHECK (quantity > 0 AND unit_price >= 0),
+    CONSTRAINT statement_of_work_item_acceptance_chk CHECK ((accepted_at IS NULL) = (accepted_by IS NULL) AND (status <> 'accepted' OR accepted_at IS NOT NULL)),
+    CONSTRAINT statement_of_work_item_status_chk CHECK (status IN ('planned','submitted','accepted','rejected','cancelled')),
+    CONSTRAINT statement_of_work_item_json_chk CHECK (jsonb_typeof(metadata) = 'object')
+);
+
+COMMENT ON TABLE document.contingent_work_order_revision IS 'Immutable-on-approval commercial terms for one contingent worker. Revisions preserve prior rates, dates, budgets and supplier acceptance.';
+COMMENT ON TABLE document.statement_of_work_revision IS 'Immutable-on-approval SOW terms controlling workers, time, expense, deliverable/event/fee acceptance and auto-invoicing.';
+
+CREATE TABLE document.worker_engagement (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    external_worker_id uuid NOT NULL, supplier_id uuid NOT NULL,
+    company_code_id uuid NOT NULL, legal_entity_id uuid NOT NULL,
+    contingent_work_order_id uuid, statement_of_work_id uuid,
+    code text NOT NULL, name text NOT NULL, worker_classification text NOT NULL,
+    start_date date NOT NULL, end_date date NOT NULL, maximum_tenure_days integer,
+    currency_code character(3) NOT NULL, rate_id uuid, rate_unit text, bill_rate numeric(18,6),
+    not_to_exceed_amount numeric(18,4), workflow_request_id uuid,
+    readiness_evidence jsonb NOT NULL DEFAULT '{}'::jsonb, readiness_evidence_hash char(64),
+    onboarding_status text NOT NULL DEFAULT 'not_started', access_status text NOT NULL DEFAULT 'not_requested',
+    row_version bigint NOT NULL DEFAULT 1, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    status text NOT NULL DEFAULT 'pending', status_changed_at timestamptz, status_changed_by uuid,
+    activated_at timestamptz, activated_by uuid, closed_at timestamptz, closed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT worker_engagement_pkey PRIMARY KEY (id),
+    CONSTRAINT worker_engagement_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT worker_engagement_code_uq UNIQUE (tenant_id, company_code_id, code),
+    CONSTRAINT worker_engagement_source_uq UNIQUE NULLS NOT DISTINCT (tenant_id, contingent_work_order_id, statement_of_work_id, external_worker_id),
+    CONSTRAINT worker_engagement_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$' AND btrim(name) <> ''),
+    CONSTRAINT worker_engagement_source_chk CHECK (num_nonnulls(contingent_work_order_id, statement_of_work_id) = 1),
+    CONSTRAINT worker_engagement_class_chk CHECK (worker_classification IN ('agency_worker','independent_contractor','consultant','sow_worker','other')),
+    CONSTRAINT worker_engagement_dates_chk CHECK (end_date > start_date AND (maximum_tenure_days IS NULL OR maximum_tenure_days > 0)),
+    CONSTRAINT worker_engagement_rate_chk CHECK ((bill_rate IS NULL AND rate_unit IS NULL) OR (bill_rate >= 0 AND rate_unit IN ('hour','day','week','month','each','fixed'))),
+    CONSTRAINT worker_engagement_amount_chk CHECK (not_to_exceed_amount IS NULL OR not_to_exceed_amount >= 0),
+    CONSTRAINT worker_engagement_readiness_chk CHECK (jsonb_typeof(readiness_evidence) = 'object' AND (readiness_evidence_hash IS NULL OR readiness_evidence_hash ~ '^[a-f0-9]{64}$')),
+    CONSTRAINT worker_engagement_activation_pair_chk CHECK ((activated_at IS NULL) = (activated_by IS NULL)),
+    CONSTRAINT worker_engagement_close_pair_chk CHECK ((closed_at IS NULL) = (closed_by IS NULL)),
+    CONSTRAINT worker_engagement_activation_chk CHECK (status <> 'active' OR (activated_at IS NOT NULL AND onboarding_status = 'completed' AND readiness_evidence @> '{"eligible":true}'::jsonb)),
+    CONSTRAINT worker_engagement_onboarding_chk CHECK (onboarding_status IN ('not_started','in_progress','blocked','completed','cancelled')),
+    CONSTRAINT worker_engagement_access_chk CHECK (access_status IN ('not_requested','requested','provisioned','failed','deprovision_requested','deprovisioned')),
+    CONSTRAINT worker_engagement_status_chk CHECK (status IN ('pending','active','suspended','completed','terminated','cancelled','closed')),
+    CONSTRAINT worker_engagement_version_chk CHECK (row_version >= 1),
+    CONSTRAINT worker_engagement_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT worker_engagement_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT worker_engagement_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.worker_operational_placement (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, worker_engagement_id uuid NOT NULL,
+    position_id uuid, org_unit_id uuid, manager_employee_id uuid, company_code_id uuid NOT NULL,
+    cost_center_id uuid, profit_center_id uuid, project_id uuid, site_id uuid,
+    allocation_percent numeric(7,4) NOT NULL DEFAULT 100,
+    effective_from date NOT NULL, effective_until date,
+    is_primary boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    status text NOT NULL DEFAULT 'active', created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    updated_at timestamptz, updated_by uuid,
+    CONSTRAINT worker_operational_placement_pkey PRIMARY KEY (id),
+    CONSTRAINT worker_operational_placement_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT worker_operational_placement_effective_uq UNIQUE (tenant_id, worker_engagement_id, effective_from, is_primary),
+    CONSTRAINT worker_operational_placement_range_chk CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT worker_operational_placement_allocation_chk CHECK (allocation_percent > 0 AND allocation_percent <= 100),
+    CONSTRAINT worker_operational_placement_status_chk CHECK (status IN ('active','inactive','superseded')),
+    CONSTRAINT worker_operational_placement_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT worker_operational_placement_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.worker_compliance_item (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, worker_engagement_id uuid NOT NULL,
+    requirement_code text NOT NULL, requirement_version text NOT NULL, category text NOT NULL,
+    required_before text NOT NULL DEFAULT 'activation', evidence_content_item_id uuid,
+    evidence_fingerprint char(64), valid_from date, valid_until date,
+    decision text NOT NULL DEFAULT 'pending', safe_reason_code text,
+    decided_at timestamptz, decided_by uuid, decision_fingerprint char(64),
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT worker_compliance_item_pkey PRIMARY KEY (id),
+    CONSTRAINT worker_compliance_item_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT worker_compliance_item_requirement_uq UNIQUE (tenant_id, worker_engagement_id, requirement_code, requirement_version),
+    CONSTRAINT worker_compliance_item_code_chk CHECK (requirement_code ~ '^[A-Za-z][A-Za-z0-9_.-]{1,126}$' AND btrim(requirement_version) <> ''),
+    CONSTRAINT worker_compliance_item_category_chk CHECK (category IN ('identity','right_to_work','background','insurance','license','training','health_safety','classification','other')),
+    CONSTRAINT worker_compliance_item_gate_chk CHECK (required_before IN ('selection','activation','site_access','renewal')),
+    CONSTRAINT worker_compliance_item_evidence_chk CHECK ((evidence_fingerprint IS NULL OR evidence_fingerprint ~ '^[a-f0-9]{64}$') AND (valid_until IS NULL OR valid_from IS NULL OR valid_until >= valid_from)),
+    CONSTRAINT worker_compliance_item_decision_chk CHECK (decision IN ('pending','verified','rejected','waived','expired') AND (decision = 'pending') = (decided_at IS NULL AND decided_by IS NULL AND decision_fingerprint IS NULL)),
+    CONSTRAINT worker_compliance_item_decision_hash_chk CHECK (decision_fingerprint IS NULL OR decision_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT worker_compliance_item_reason_chk CHECK (safe_reason_code IS NULL OR safe_reason_code ~ '^[A-Z][A-Z0-9_.-]{1,126}$')
+);
+
+CREATE TABLE document.engagement_onboarding_case (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, worker_engagement_id uuid NOT NULL,
+    code text NOT NULL, name text NOT NULL, target_start_date date NOT NULL,
+    checklist jsonb NOT NULL DEFAULT '[]'::jsonb, workflow_request_id uuid,
+    activated_at timestamptz, completed_at timestamptz,
+    row_version bigint NOT NULL DEFAULT 1, status text NOT NULL DEFAULT 'draft',
+    status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT engagement_onboarding_case_pkey PRIMARY KEY (id),
+    CONSTRAINT engagement_onboarding_case_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT engagement_onboarding_case_engagement_uq UNIQUE (tenant_id, worker_engagement_id),
+    CONSTRAINT engagement_onboarding_case_code_uq UNIQUE (tenant_id, code),
+    CONSTRAINT engagement_onboarding_case_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$' AND btrim(name) <> ''),
+    CONSTRAINT engagement_onboarding_case_json_chk CHECK (jsonb_typeof(checklist) = 'array'),
+    CONSTRAINT engagement_onboarding_case_completion_chk CHECK (status <> 'completed' OR completed_at IS NOT NULL),
+    CONSTRAINT engagement_onboarding_case_version_chk CHECK (row_version >= 1),
+    CONSTRAINT engagement_onboarding_case_status_chk CHECK (status IN ('draft','active','blocked','completed','cancelled')),
+    CONSTRAINT engagement_onboarding_case_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT engagement_onboarding_case_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE document.worker_engagement IS 'Commercial and lifecycle authority for a supplier-provided person working for the buyer. Exactly one contingent work order or SOW is authoritative; no buyer employment is implied.';
+COMMENT ON TABLE document.worker_operational_placement IS 'Effective buyer-side manager, organization, site and cost allocation for an external engagement. This is not master.work_assignment and does not affect employee headcount.';
+COMMENT ON TABLE document.worker_compliance_item IS 'Engagement-specific compliance gate. Evidence content is protected separately; only fingerprints, validity and safe decisions are stored here.';
+
+CREATE TABLE document.external_time_sheet (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, worker_engagement_id uuid NOT NULL,
+    code text NOT NULL, period_start date NOT NULL, period_end date NOT NULL,
+    submitted_at timestamptz, submitted_by uuid, source_inbox_id uuid, workflow_request_id uuid,
+    approved_at timestamptz, approved_by uuid, rejection_reason_code text,
+    revision_of_time_sheet_id uuid, row_version bigint NOT NULL DEFAULT 1,
+    status text NOT NULL DEFAULT 'draft', status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT external_time_sheet_pkey PRIMARY KEY (id),
+    CONSTRAINT external_time_sheet_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_time_sheet_code_uq UNIQUE (tenant_id, code),
+    CONSTRAINT external_time_sheet_period_uq UNIQUE NULLS NOT DISTINCT (tenant_id, worker_engagement_id, period_start, revision_of_time_sheet_id),
+    CONSTRAINT external_time_sheet_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT external_time_sheet_period_chk CHECK (period_end >= period_start),
+    CONSTRAINT external_time_sheet_submit_source_chk CHECK (
+        (submitted_at IS NULL AND submitted_by IS NULL AND source_inbox_id IS NULL)
+        OR (submitted_at IS NOT NULL AND num_nonnulls(submitted_by, source_inbox_id) = 1)
+    ),
+    CONSTRAINT external_time_sheet_submit_state_chk CHECK (
+        status IN ('draft','cancelled') OR submitted_at IS NOT NULL
+    ),
+    CONSTRAINT external_time_sheet_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT external_time_sheet_approval_state_chk CHECK (status NOT IN ('approved','reversed') OR approved_at IS NOT NULL),
+    CONSTRAINT external_time_sheet_rejection_chk CHECK (status <> 'rejected' OR rejection_reason_code ~ '^[A-Z][A-Z0-9_.-]{1,126}$'),
+    CONSTRAINT external_time_sheet_version_chk CHECK (row_version >= 1),
+    CONSTRAINT external_time_sheet_status_chk CHECK (status IN ('draft','submitted','pending_approval','approved','rejected','reversed','cancelled')),
+    CONSTRAINT external_time_sheet_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT external_time_sheet_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.external_time_entry (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, time_sheet_id uuid NOT NULL,
+    line_no smallint NOT NULL, work_date date NOT NULL, time_category text NOT NULL DEFAULT 'regular',
+    hours numeric(9,4) NOT NULL, rate numeric(18,6) NOT NULL, currency_code character(3) NOT NULL,
+    amount numeric(18,4) GENERATED ALWAYS AS (hours * rate) STORED,
+    cost_center_id uuid, project_id uuid, project_task_id uuid, statement_of_work_item_id uuid,
+    task_code text, notes text, rate_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb, rate_snapshot_hash char(64) NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT external_time_entry_pkey PRIMARY KEY (id),
+    CONSTRAINT external_time_entry_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_time_entry_line_uq UNIQUE (tenant_id, time_sheet_id, line_no),
+    CONSTRAINT external_time_entry_line_chk CHECK (line_no > 0 AND hours > 0 AND hours <= 24 AND rate >= 0),
+    CONSTRAINT external_time_entry_category_chk CHECK (time_category IN ('regular','overtime','doubletime','on_call','absence','other')),
+    CONSTRAINT external_time_entry_hash_chk CHECK (rate_snapshot_hash ~ '^[a-f0-9]{64}$' AND jsonb_typeof(rate_snapshot) = 'object')
+);
+
+CREATE TABLE document.external_expense_sheet (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, worker_engagement_id uuid NOT NULL,
+    code text NOT NULL, period_start date NOT NULL, period_end date NOT NULL,
+    submitted_at timestamptz, submitted_by uuid, source_inbox_id uuid, workflow_request_id uuid,
+    approved_at timestamptz, approved_by uuid, rejection_reason_code text,
+    revision_of_expense_sheet_id uuid, row_version bigint NOT NULL DEFAULT 1,
+    status text NOT NULL DEFAULT 'draft', status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT external_expense_sheet_pkey PRIMARY KEY (id),
+    CONSTRAINT external_expense_sheet_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_expense_sheet_code_uq UNIQUE (tenant_id, code),
+    CONSTRAINT external_expense_sheet_period_uq UNIQUE NULLS NOT DISTINCT (tenant_id, worker_engagement_id, period_start, revision_of_expense_sheet_id),
+    CONSTRAINT external_expense_sheet_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT external_expense_sheet_period_chk CHECK (period_end >= period_start),
+    CONSTRAINT external_expense_sheet_submit_source_chk CHECK (
+        (submitted_at IS NULL AND submitted_by IS NULL AND source_inbox_id IS NULL)
+        OR (submitted_at IS NOT NULL AND num_nonnulls(submitted_by, source_inbox_id) = 1)
+    ),
+    CONSTRAINT external_expense_sheet_submit_state_chk CHECK (
+        status IN ('draft','cancelled') OR submitted_at IS NOT NULL
+    ),
+    CONSTRAINT external_expense_sheet_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT external_expense_sheet_approval_state_chk CHECK (status NOT IN ('approved','reversed') OR approved_at IS NOT NULL),
+    CONSTRAINT external_expense_sheet_rejection_chk CHECK (status <> 'rejected' OR rejection_reason_code ~ '^[A-Z][A-Z0-9_.-]{1,126}$'),
+    CONSTRAINT external_expense_sheet_version_chk CHECK (row_version >= 1),
+    CONSTRAINT external_expense_sheet_status_chk CHECK (status IN ('draft','submitted','pending_approval','approved','rejected','reversed','cancelled')),
+    CONSTRAINT external_expense_sheet_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT external_expense_sheet_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.external_expense_item (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, expense_sheet_id uuid NOT NULL,
+    line_no smallint NOT NULL, expense_date date NOT NULL, expense_code text NOT NULL, description text NOT NULL,
+    amount numeric(18,4) NOT NULL, tax_amount numeric(18,4) NOT NULL DEFAULT 0, currency_code character(3) NOT NULL,
+    cost_center_id uuid, project_id uuid, project_task_id uuid, statement_of_work_item_id uuid,
+    receipt_content_item_id uuid, merchant_name text, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT external_expense_item_pkey PRIMARY KEY (id),
+    CONSTRAINT external_expense_item_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_expense_item_line_uq UNIQUE (tenant_id, expense_sheet_id, line_no),
+    CONSTRAINT external_expense_item_line_chk CHECK (line_no > 0 AND amount >= 0 AND tax_amount >= 0),
+    CONSTRAINT external_expense_item_code_chk CHECK (expense_code ~ '^[A-Za-z][A-Za-z0-9_.-]{1,126}$' AND btrim(description) <> ''),
+    CONSTRAINT external_expense_item_json_chk CHECK (jsonb_typeof(metadata) = 'object')
+);
+
+CREATE TABLE document.external_service_entry (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    company_code_id uuid NOT NULL, supplier_id uuid NOT NULL, commitment_id uuid,
+    code text NOT NULL, name text NOT NULL, service_period_start date NOT NULL, service_period_end date NOT NULL,
+    currency_code character(3) NOT NULL, workflow_request_id uuid,
+    submitted_at timestamptz, submitted_by uuid, approved_at timestamptz, approved_by uuid,
+    row_version bigint NOT NULL DEFAULT 1, status text NOT NULL DEFAULT 'draft',
+    status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT external_service_entry_pkey PRIMARY KEY (id),
+    CONSTRAINT external_service_entry_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_service_entry_code_uq UNIQUE (tenant_id, company_code_id, code),
+    CONSTRAINT external_service_entry_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$' AND btrim(name) <> ''),
+    CONSTRAINT external_service_entry_period_chk CHECK (service_period_end >= service_period_start),
+    CONSTRAINT external_service_entry_submit_pair_chk CHECK ((submitted_at IS NULL) = (submitted_by IS NULL)),
+    CONSTRAINT external_service_entry_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT external_service_entry_approval_state_chk CHECK (status NOT IN ('approved','invoiced') OR approved_at IS NOT NULL),
+    CONSTRAINT external_service_entry_version_chk CHECK (row_version >= 1),
+    CONSTRAINT external_service_entry_status_chk CHECK (status IN ('draft','submitted','pending_approval','approved','rejected','reversed','invoiced','cancelled')),
+    CONSTRAINT external_service_entry_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT external_service_entry_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.external_service_entry_line (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, service_entry_id uuid NOT NULL,
+    line_no smallint NOT NULL, time_sheet_id uuid, expense_sheet_id uuid, statement_of_work_item_id uuid,
+    description text NOT NULL, quantity numeric(18,4) NOT NULL DEFAULT 1, unit_price numeric(18,6) NOT NULL,
+    accepted_amount numeric(18,4) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+    currency_code character(3) NOT NULL, acceptance_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
+    acceptance_hash char(64) NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT external_service_entry_line_pkey PRIMARY KEY (id),
+    CONSTRAINT external_service_entry_line_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_service_entry_line_no_uq UNIQUE (tenant_id, service_entry_id, line_no),
+    CONSTRAINT external_service_entry_line_source_chk CHECK (num_nonnulls(time_sheet_id, expense_sheet_id, statement_of_work_item_id) = 1),
+    CONSTRAINT external_service_entry_line_amount_chk CHECK (line_no > 0 AND quantity > 0 AND unit_price >= 0 AND btrim(description) <> ''),
+    CONSTRAINT external_service_entry_line_hash_chk CHECK (acceptance_hash ~ '^[a-f0-9]{64}$' AND jsonb_typeof(acceptance_snapshot) = 'object')
+);
+
+CREATE TABLE document.external_workforce_invoice_allocation (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    purchase_invoice_line_id uuid NOT NULL, service_entry_line_id uuid NOT NULL,
+    allocation_kind text NOT NULL DEFAULT 'invoice', allocated_amount numeric(18,4) NOT NULL,
+    currency_code character(3) NOT NULL, reverses_allocation_id uuid, idempotency_key text NOT NULL,
+    allocated_at timestamptz NOT NULL DEFAULT now(), allocated_by uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT external_workforce_invoice_allocation_pkey PRIMARY KEY (id),
+    CONSTRAINT external_workforce_invoice_allocation_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_workforce_invoice_allocation_idempotency_uq UNIQUE (tenant_id, idempotency_key),
+    CONSTRAINT external_workforce_invoice_allocation_kind_chk CHECK (allocation_kind IN ('invoice','reversal')),
+    CONSTRAINT external_workforce_invoice_allocation_amount_chk CHECK (allocated_amount > 0 AND btrim(idempotency_key) <> ''),
+    CONSTRAINT external_workforce_invoice_allocation_reversal_chk CHECK ((allocation_kind = 'reversal') = (reverses_allocation_id IS NOT NULL))
+);
+
+CREATE TABLE document.service_sheet_source_allocation (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, service_sheet_line_id uuid NOT NULL,
+    external_time_sheet_id uuid, external_expense_sheet_id uuid, statement_of_work_item_id uuid,
+    allocation_kind text NOT NULL DEFAULT 'acceptance', accepted_quantity numeric(18,4),
+    accepted_amount numeric(18,4) NOT NULL, currency_code character(3) NOT NULL,
+    reverses_allocation_id uuid, source_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
+    source_snapshot_hash char(64) NOT NULL, idempotency_key text NOT NULL,
+    allocated_at timestamptz NOT NULL DEFAULT now(), allocated_by uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT service_sheet_source_allocation_pkey PRIMARY KEY (id),
+    CONSTRAINT service_sheet_source_allocation_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT service_sheet_source_allocation_idempotency_uq UNIQUE (tenant_id, idempotency_key),
+    CONSTRAINT service_sheet_source_allocation_source_chk CHECK (num_nonnulls(external_time_sheet_id, external_expense_sheet_id, statement_of_work_item_id) = 1),
+    CONSTRAINT service_sheet_source_allocation_kind_chk CHECK (allocation_kind IN ('acceptance','reversal')),
+    CONSTRAINT service_sheet_source_allocation_amount_chk CHECK (accepted_amount > 0 AND (accepted_quantity IS NULL OR accepted_quantity > 0)),
+    CONSTRAINT service_sheet_source_allocation_reversal_chk CHECK ((allocation_kind = 'reversal') = (reverses_allocation_id IS NOT NULL)),
+    CONSTRAINT service_sheet_source_allocation_hash_chk CHECK (source_snapshot_hash ~ '^[a-f0-9]{64}$' AND jsonb_typeof(source_snapshot) = 'object'),
+    CONSTRAINT service_sheet_source_allocation_key_chk CHECK (btrim(idempotency_key) = idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200)
+);
+
+COMMENT ON TABLE document.external_time_sheet IS 'External-worker time document. Corrections create a linked revision/reversal; approved history is never overwritten.';
+COMMENT ON TABLE document.external_expense_sheet IS 'External-worker expense document. Receipt content is protected separately and approved history is never overwritten.';
+COMMENT ON TABLE document.external_service_entry IS 'DEPRECATED compatibility aggregate. New external-workforce acceptance uses document.service_sheet and document.service_sheet_source_allocation.';
+COMMENT ON TABLE document.external_service_entry_line IS 'DEPRECATED compatibility lines. New external-workforce acceptance uses document.service_sheet_line and document.service_sheet_source_allocation.';
+COMMENT ON TABLE document.external_workforce_invoice_allocation IS 'DEPRECATED compatibility allocation. New invoice matching binds purchase-invoice lines to document.service_sheet_line.';
+COMMENT ON TABLE document.service_sheet_source_allocation IS 'Append-only acceptance/reversal evidence connecting an approved external claim or SOW item to the canonical P2P service-sheet line.';
+
+-- Immutable explicit choices over a server-derived three-way comparison.
+CREATE TABLE document.mesh_profile_change_resolution (
+    id uuid PRIMARY KEY DEFAULT shared.uuidv7(),
+    tenant_id uuid NOT NULL,
+    projection_id uuid NOT NULL,
+    baseline_snapshot_id uuid NOT NULL,
+    incoming_snapshot_id uuid NOT NULL,
+    business_partner_id uuid NOT NULL,
+    operating_organization_id uuid NOT NULL,
+    expected_target_version bigint NOT NULL CHECK (expected_target_version > 0),
+    preview_fingerprint text NOT NULL CHECK (preview_fingerprint ~ '^[a-f0-9]{64}$'),
+    preview jsonb NOT NULL CHECK (jsonb_typeof(preview) = 'object'),
+    decisions jsonb NOT NULL CHECK (jsonb_typeof(decisions) = 'object'),
+    proposed_values jsonb NOT NULL CHECK (jsonb_typeof(proposed_values) = 'object'),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 8 AND 180),
+    created_by uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    UNIQUE (tenant_id, id),
+    UNIQUE (tenant_id, idempotency_key),
+    CHECK (
+        pg_column_size(preview) <= 65536
+        AND pg_column_size(decisions) <= 4096
+        AND pg_column_size(proposed_values) <= 32768
+    )
+);
+
+CREATE TABLE document.mesh_profile_change_case (
+    tenant_id uuid NOT NULL,
+    resolution_id uuid NOT NULL,
+    entity_case_id uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    PRIMARY KEY (tenant_id, resolution_id),
+    UNIQUE (tenant_id, entity_case_id)
+);

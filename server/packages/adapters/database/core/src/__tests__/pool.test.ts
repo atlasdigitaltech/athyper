@@ -1,8 +1,10 @@
+import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 
 import {
   checkPostgresPoolHealth,
   closePostgresPool,
+  createPostgresPool,
   getPostgresPoolStats,
 } from "../pool.js";
 
@@ -40,5 +42,20 @@ describe("PostgreSQL pool operations", () => {
     await closePostgresPool({ end } as never);
 
     expect(end).toHaveBeenCalledOnce();
+  });
+
+  it("observes checked-out client transport errors without leaving them unhandled", async () => {
+    const onPoolError = vi.fn();
+    const pool = createPostgresPool({ connectionString: "postgres://localhost/unused" }, { onPoolError });
+    const client = new EventEmitter();
+    const error = new Error("connection reset");
+
+    pool.emit("connect", client as never);
+    expect(() => client.emit("error", error)).not.toThrow();
+    pool.emit("error", error);
+
+    expect(onPoolError).toHaveBeenCalledOnce();
+    expect(onPoolError).toHaveBeenCalledWith(error);
+    await pool.end();
   });
 });

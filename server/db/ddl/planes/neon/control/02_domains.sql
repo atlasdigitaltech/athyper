@@ -50,6 +50,15 @@ CREATE DOMAIN control.qualification_decision_d AS text
         'suspended', 'expired'
     ));
 
+CREATE DOMAIN control.supplier_preference_status_d AS text
+    CHECK (VALUE IN ('pending', 'approved', 'rejected', 'revoked'));
+
+CREATE DOMAIN control.customer_account_designation_status_d AS text
+    CHECK (VALUE IN ('pending', 'approved', 'rejected', 'revoked'));
+
+CREATE DOMAIN control.customer_account_designation_type_d AS text
+    CHECK (VALUE IN ('key_account', 'strategic', 'priority_service'));
+
 CREATE DOMAIN control.partner_block_status_d AS text
     CHECK (VALUE IN ('active', 'lifted', 'cancelled', 'expired'));
 

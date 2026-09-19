@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-09-12T04:31:42.781414+00:00",
+  "scope": "Replacements for the 409 blocking package findings across the 10 remaining audited images; PostgreSQL handled separately",
+  "status": "passed",
+  "trivyVersion": "0.74.0",
+  "method": "Direct Trivy image scans, OS and language packages, including Java database analysis",
+  "fixableHighCriticalFindings": 0,
+  "images": [
+    {
+      "component": "redis",
+      "image": "athyper/redis:7.4.8-hardened",
+      "imageId": "sha256:e1a7db5e3643b870dc3a44f38eb7c4ac427d4834cfd676193c8a1048e349774f",
+      "repoDigests": [
+        "athyper/redis@sha256:e1a7db5e3643b870dc3a44f38eb7c4ac427d4834cfd676193c8a1048e349774f"
+      ],
+      "scannedAt": "2026-09-12T11:23:35.719791688+08:00",
+      "fixableHighCritical": 0,
+      "totalFindings": 0,
+      "unfixedHighCritical": 0,
+      "report": "athyper_redis_7.4.8-hardened.scan.json",
+      "reportSha256": "b549048b4380572bcd426dd7cd2d9a204ab00e5b9d3d28ccc3003fc03f479a3f"
+    },
+    {
+      "component": "pgbouncer",
+      "image": "athyper/pgbouncer:1.25.2-hardened",
+      "imageId": "sha256:fbde6a0a8046f48c1d340b21519f03b583c460978035b4f568f393d2f007007f",
+      "repoDigests": [
+        "athyper/pgbouncer@sha256:fbde6a0a8046f48c1d340b21519f03b583c460978035b4f568f393d2f007007f"
+      ],
+      "scannedAt": "2026-09-12T11:29:08.280257243+08:00",
+      "fixableHighCritical": 0,
+      "totalFindings": 0,
+      "unfixedHighCritical": 0,
+      "report": "athyper_pgbouncer_1.25.2-hardened.scan.json",
+      "reportSha256": "0ef9c74bd5240e749115e4a4c1bc679f4b047d6cbf9d5b29b217d36730135758"
+    },
+    {
+      "component": "traefik",
+      "image": "athyper/traefik:3.7.13-hardened",
+      "imageId": "sha256:0b6ff78c5de769069b0c7bc6035bf338752729b1973aff2dff94e2dfef2a611b",
+      "repoDigests": [
+        "athyper/traefik@sha256:0b6ff78c5de769069b0c7bc6035bf338752729b1973aff2dff94e2dfef2a611b"
+      ],
+      "scannedAt": "2026-09-12T11:26:58.91188053+08:00",
+      "fixableHighCritical": 0,
+      "totalFindings": 1,
+      "unfixedHighCritical": 0,
+      "report": "athyper_traefik_3.7.13-hardened.scan.json",
+      "reportSha256": "6d7aca734955e38ad1b63c734abeac0bf6c8acfb67f83d9dff5642eb086fb924"
+    },
+    {
+      "component": "meilisearch",
+      "image": "athyper/meilisearch:1.13.3-hardened",
+      "imageId": "sha256:77f474ae898f48972bc1fe220ec555c0f22d3d43afd6a7e8beb166560979924a",
+      "repoDigests": [
+        "athyper/meilisearch@sha256:77f474ae898f48972bc1fe220ec555c0f22d3d43afd6a7e8beb166560979924a"
+      ],
+      "scannedAt": "2026-09-12T11:27:00.713936055+08:00",
+      "fixableHighCritical": 0,
+      "totalFindings": 0,
+      "unfixedHighCritical": 0,
+      "report": "athyper_meilisearch_1.13.3-hardened.scan.json",
+      "reportSha256": "2b9547a28838bd89bb683203bd70c9491592303823b1ef4eec6122d5c4e9ec92"
+    },
+    {
+      "component": "gotenberg",
+      "image": "athyper/gotenberg:8.37.0-hardened",
+      "imageId": "sha256:374e5d6217da605ea41080de024edd46c8a726d054217c861c8dcb430317c916",
+      "repoDigests": [
+        "athyper/gotenberg@sha256:374e5d6217da605ea41080de024edd46c8a726d054217c861c8dcb430317c916"
+      ],
+      "scannedAt": "2026-09-12T11:46:10.716928495+08:00",
+      "fixableHighCritical": 0,
+      "totalFindings": 1191,
+      "unfixedHighCritical": 173,
+      "report": "athyper_gotenberg_8.37.0-hardened.scan.json",
+      "reportSha256": "b3b1cbbd4249ccfbd3b472d1665f7c86050db43b6dfe2c21c7a4a7ef19315cb2"
+    },
+    {
+      "component": "tika",
+      "image": "athyper/tika:4.0.0-hardened",
+      "imageId": "sha256:1c7bae83f7a0465385e19954b73bd5c788600ec172597d779a7d950db83bef20",
+      "repoDigests": [
+        "athyper/tika@sha256:1c7bae83f7a0465385e19954b73bd5c788600ec172597d779a7d950db83bef20"
+      ],
+      "scannedAt": "2026-09-12T11:51:40.563695903+08:00",
+      "fixableHighCritical": 0,
+      "totalFindings": 493,
+      "unfixedHighCritical": 0,
+      "report": "athyper_tika_4.0.0-hardened.scan.json",
+      "reportSha256": "1e7eff83c12daaf94bd483c4ab53a205303f72cd9d2c49d1e5abf938d8912edd"
+    },
+    {
+      "component": "seaweedfs",
+      "image": "athyper/seaweedfs:4.46-hardened",
+      "imageId": "sha256:7e647ae99818dbd2039852fddf4db14fd17bad79c42ab394c92d3f8564e51b8c",
+      "repoDigests": [
+        "athyper/seaweedfs@sha256:7e647ae99818dbd2039852fddf4db14fd17bad79c42ab394c92d3f8564e51b8c"
+      ],
+      "scannedAt": "2026-09-12T12:02:43.991923724+08:00",
+      "fixableHighCritical": 0,
+      "totalFindings": 3,
+      "unfixedHighCritical": 0,
+      "report": "athyper_seaweedfs_4.46-hardened.scan.json",
+      "reportSha256": "50875273d2fd4fd4766eb5000655ff332b300ab6db2b3ee08a846ba35df4f4fc"
+    },
+    {
+      "component": "s3-tools",
+      "image": "athyper/s3-tools:1",
+      "imageId": "sha256:94a09a21fb421d9a1a2720e08df8e103c4e17f0c54eaecfbe822c9505c963950",
+      "repoDigests": [
+        "athyper/s3-tools@sha256:94a09a21fb421d9a1a2720e08df8e103c4e17f0c54eaecfbe822c9505c963950"
+      ],
+      "scannedAt": "2026-09-12T12:17:13.466629458+08:00",
+      "fixableHighCritical": 0,
+      "totalFindings": 225,
+      "unfixedHighCritical": 56,
+      "report": "athyper_s3-tools_1.scan.json",
+      "reportSha256": "08b56d2a690d1665cbfd7e8f70a484da57bb5acf675e445e28aaee6388c684a9"
+    },
+    {
+      "component": "nginx",
+      "image": "nginxinc/nginx-unprivileged:stable-alpine",
+      "imageId": "sha256:442753882674b49ae2c1de83ed67896131c0777f56df5005e356e62bc3f7e7ce",
+      "repoDigests": [
+        "nginxinc/nginx-unprivileged@sha256:442753882674b49ae2c1de83ed67896131c0777f56df5005e356e62bc3f7e7ce"
+      ],
+      "scannedAt": "2026-09-12T11:21:37.734331964+08:00",
+      "fixableHighCritical": 0,
+      "totalFindings": 0,
+      "unfixedHighCritical": 0,
+      "report": "nginxinc_nginx-unprivileged_stable-alpine.scan.json",
+      "reportSha256": "2d977809abaa2a8c00572f34314018afd49629e676ef7a6535486a269b61c12e"
+    },
+    {
+      "component": "mailpit",
+      "image": "axllent/mailpit:v1.31.1",
+      "imageId": "sha256:98b916bd3c8d61f7633a52d3ea2f58d00620cb01ca57ab59edde68c347a95365",
+      "repoDigests": [
+        "axllent/mailpit@sha256:98b916bd3c8d61f7633a52d3ea2f58d00620cb01ca57ab59edde68c347a95365"
+      ],
+      "scannedAt": "2026-09-12T11:21:38.152972311+08:00",
+      "fixableHighCritical": 0,
+      "totalFindings": 1,
+      "unfixedHighCritical": 0,
+      "report": "axllent_mailpit_v1.31.1.scan.json",
+      "reportSha256": "4a52ec46ef6b3e0bf17abc9543eda0f0ab90f6e8b10ae1d5fe048043113e4334"
+    }
+  ],
+  "rawReportDirectory": "/home/chandravel_natarajan/.athyper/deployments/infra-remediation-20260912",
+  "awsStorage": "pending provisioning; no AWS resources created or AWS migration performed",
+  "additionalQaRuntime": {
+    "imageId": "sha256:b28b5428dc8c6ab36e0bd1c4c33e30f88e68e721fb0fc2c7699b572e69bf8265",
+    "fixableHighCritical": 0,
+    "previouslyDetectedPackageFindings": 7,
+    "fixes": [
+      "OpenSSL package upgrade",
+      "fast-uri 3.1.6",
+      "Nodemailer 9.1.0",
+      "presigning-only checksum configuration"
+    ],
+    "report": "athyper_runtime-qa_storage-20260912.scan.json",
+    "reportSha256": "31dc1629c864ca8c9bcb84d25f74310eb51cb006a8bb82593a6cf8c2d4a0536d"
+  },
+  "migrations": [
+    {
+      "environment": "qa",
+      "verifiedObjects": 2,
+      "verifiedBytes": 35389,
+      "proofSha256": "ba7a68f90bd90cc31206185ef589a989712842c0cf31f058a5964ed3e8ba75b1",
+      "postRestartContentVerified": true,
+      "retainedMinioVolumes": [
+        "athyper-qa-candidate-1789163256545_objectstorage-data"
+      ],
+      "seaweedfsVolume": "athyper-qa-candidate-1789163256545_seaweedfs-data"
+    },
+    {
+      "environment": "dev",
+      "verifiedObjects": 26,
+      "verifiedBytes": 294389,
+      "proofSha256": "3227ab436e5552f4bdf4f8c60a246c8e61862b3d85f475fb00a30daa05ccaaf4",
+      "postRestartContentVerified": true,
+      "retainedMinioVolumes": ["athyper-dev_objectstorage-data"],
+      "seaweedfsVolume": "athyper-dev_seaweedfs-data"
+    }
+  ],
+  "mailpit": [
+    {
+      "ID": "2lGD9S9RAWMmF8YzjTt7gb",
+      "Subject": "[FIRING:1] RedisExporterDown qa (qa athyper-instances memorycache critical)",
+      "To": [
+        {
+          "Name": "",
+          "Address": "redis-alerts@athyper.test"
+        }
+      ],
+      "Created": "2026-09-12T04:09:40.927Z"
+    },
+    {
+      "ID": "2LK5ihud2r8RoOtjeFZ43Z",
+      "Subject": "[RESOLVED] RedisExporterDown qa (qa athyper-instances memorycache critical)",
+      "To": [
+        {
+          "Name": "",
+          "Address": "redis-alerts@athyper.test"
+        }
+      ],
+      "Created": "2026-09-12T04:10:12.244Z"
+    }
+  ],
+  "live": [
+    {
+      "container": "athyper-qa-candidate-1789163256545-memorycache-1",
+      "imageId": "sha256:e1a7db5e3643b870dc3a44f38eb7c4ac427d4834cfd676193c8a1048e349774f",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-qa-candidate-1789163256545-dbpool-apps-1",
+      "imageId": "sha256:fbde6a0a8046f48c1d340b21519f03b583c460978035b4f568f393d2f007007f",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-qa-candidate-1789163256545-dbpool-session-1",
+      "imageId": "sha256:fbde6a0a8046f48c1d340b21519f03b583c460978035b4f568f393d2f007007f",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-qa-candidate-1789163256545-gateway-1",
+      "imageId": "sha256:0b6ff78c5de769069b0c7bc6035bf338752729b1973aff2dff94e2dfef2a611b",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-qa-candidate-1789163256545-gateway-outage-1",
+      "imageId": "sha256:442753882674b49ae2c1de83ed67896131c0777f56df5005e356e62bc3f7e7ce",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-qa-candidate-1789163256545-searchcore-1",
+      "imageId": "sha256:77f474ae898f48972bc1fe220ec555c0f22d3d43afd6a7e8beb166560979924a",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-qa-candidate-1789163256545-mailtrap-1",
+      "imageId": "sha256:98b916bd3c8d61f7633a52d3ea2f58d00620cb01ca57ab59edde68c347a95365",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-qa-candidate-1789163256545-docrender-1",
+      "imageId": "sha256:374e5d6217da605ea41080de024edd46c8a726d054217c861c8dcb430317c916",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-qa-candidate-1789163256545-docparser-1",
+      "imageId": "sha256:1c7bae83f7a0465385e19954b73bd5c788600ec172597d779a7d950db83bef20",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-qa-candidate-1789163256545-objectstorage-1",
+      "imageId": "sha256:7e647ae99818dbd2039852fddf4db14fd17bad79c42ab394c92d3f8564e51b8c",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-dev-memorycache-1",
+      "imageId": "sha256:e1a7db5e3643b870dc3a44f38eb7c4ac427d4834cfd676193c8a1048e349774f",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-dev-dbpool-apps-1",
+      "imageId": "sha256:fbde6a0a8046f48c1d340b21519f03b583c460978035b4f568f393d2f007007f",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-dev-dbpool-session-1",
+      "imageId": "sha256:fbde6a0a8046f48c1d340b21519f03b583c460978035b4f568f393d2f007007f",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-dev-gateway-1",
+      "imageId": "sha256:0b6ff78c5de769069b0c7bc6035bf338752729b1973aff2dff94e2dfef2a611b",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-dev-gateway-outage-1",
+      "imageId": "sha256:442753882674b49ae2c1de83ed67896131c0777f56df5005e356e62bc3f7e7ce",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-dev-searchcore-1",
+      "imageId": "sha256:77f474ae898f48972bc1fe220ec555c0f22d3d43afd6a7e8beb166560979924a",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-dev-mailtrap-1",
+      "imageId": "sha256:98b916bd3c8d61f7633a52d3ea2f58d00620cb01ca57ab59edde68c347a95365",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-dev-docrender-1",
+      "imageId": "sha256:374e5d6217da605ea41080de024edd46c8a726d054217c861c8dcb430317c916",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-dev-docparser-1",
+      "imageId": "sha256:1c7bae83f7a0465385e19954b73bd5c788600ec172597d779a7d950db83bef20",
+      "health": "healthy"
+    },
+    {
+      "container": "athyper-dev-objectstorage-1",
+      "imageId": "sha256:7e647ae99818dbd2039852fddf4db14fd17bad79c42ab394c92d3f8564e51b8c",
+      "health": "healthy"
+    }
+  ],
+  "validation": {
+    "infrastructureAndCloudTests": {
+      "passed": 31
+    },
+    "stackModelTests": {
+      "passed": 21
+    },
+    "s3AdapterTests": {
+      "passed": 23
+    },
+    "hostConfigurationTests": {
+      "passed": 41
+    },
+    "communicationsTests": {
+      "passed": 38,
+      "skipped": 1
+    },
+    "seaweedfsIntegration": "passed: initialization/rerun/restart, policy denials, multipart, copy, range, metadata, presigned upload/download",
+    "publicHttpsPresignedGet": ["qa", "dev"],
+    "awsTemplateValidation": "cfn-lint 1.56.3 passed",
+    "mailpitFiringResolved": "passed"
+  },
+  "formalRelease": "pending publication/promotion of complete immutable ImageSet and broader release certification"
+}

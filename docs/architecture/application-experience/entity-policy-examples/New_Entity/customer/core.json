@@ -1,0 +1,516 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "customer/core",
+  "entityCode": "customer",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "sourceObjects": [
+      "master.customer"
+    ],
+    "primaryObject": "master.customer",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.customer.id",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "business_partner_id",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "business_partner_id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.customer.business_partner_id",
+        "defaultText": "Business Partner Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "status",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "status"
+      },
+      "dataType": "domain",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.customer.status",
+        "defaultText": "Status"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "master.customer_status_d",
+      "domainCode": "master.customer_status_d",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "customer_code",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "customer_code"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.customer.customer_code",
+        "defaultText": "Customer Code"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "customer_type",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "customer_type"
+      },
+      "dataType": "domain",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.customer.customer_type",
+        "defaultText": "Customer Type"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "master.customer_type_d",
+      "domainCode": "master.customer_type_d",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "record_version",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "record_version"
+      },
+      "dataType": "integer",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.customer.record_version",
+        "defaultText": "Record Version"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "bigint",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "is_active",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "is_active"
+      },
+      "dataType": "boolean",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.customer.is_active",
+        "defaultText": "Is Active"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "boolean",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "status_changed_at",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "status_changed_at"
+      },
+      "dataType": "datetime",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.customer.status_changed_at",
+        "defaultText": "Status Changed At"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "timestamptz",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "status_changed_by",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "status_changed_by"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.customer.status_changed_by",
+        "defaultText": "Status Changed By"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "created_at",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "created_at"
+      },
+      "dataType": "datetime",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.customer.created_at",
+        "defaultText": "Created At"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "timestamptz",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "created_by",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "created_by"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.customer.created_by",
+        "defaultText": "Created By"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "updated_at",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "updated_at"
+      },
+      "dataType": "datetime",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.customer.updated_at",
+        "defaultText": "Updated At"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "timestamptz",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "updated_by",
+      "binding": {
+        "sourceObject": "master.customer",
+        "column": "updated_by"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.customer.updated_by",
+        "defaultText": "Updated By"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "tenant",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [
+    {
+      "code": "BUSINESS_PARTNER_ACTIVE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.business_partner_active.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "role",
+        "companyCodeId",
+        "operatingOrganizationId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    },
+    {
+      "code": "SALES_ASSIGNMENT_EFFECTIVE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.sales_assignment_effective.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "role",
+        "companyCodeId",
+        "operatingOrganizationId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    },
+    {
+      "code": "COMPANY_PROFILE_COMPLETE",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.company_profile_complete.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "role",
+        "companyCodeId",
+        "operatingOrganizationId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    },
+    {
+      "code": "CREDIT_REVIEW_CURRENT",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.credit_review_current.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "role",
+        "companyCodeId",
+        "operatingOrganizationId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    },
+    {
+      "code": "NO_PROHIBITIVE_BLOCK",
+      "resultType": "ready_not_ready_unknown_not_applicable",
+      "evaluatorKey": "neon.bp.readiness.no_prohibitive_block.v1",
+      "requiredCoordinates": [
+        "businessPartnerId",
+        "role",
+        "companyCodeId",
+        "operatingOrganizationId",
+        "asOf"
+      ],
+      "evaluation": "on_demand",
+      "resultMetadata": [
+        "evaluatedAt",
+        "context",
+        "reasonCodes",
+        "dependencyVersions"
+      ],
+      "unknownBehavior": "cannot_authorize_operation",
+      "commitRecheck": true
+    }
+  ],
+  "fieldSelection": {
+    "default": "deny",
+    "publicReadFields": [
+      "id",
+      "business_partner_id",
+      "status"
+    ],
+    "additionalFieldsRequireHandlerApproval": true
+  },
+  "dependencies": [],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "artifactHash": "sha256:2b813100b815adbb92cebde524dea5c8c696e09bcbf38de704f665c981c29e60"
+}

@@ -1,0 +1,65 @@
+{
+  "schema": "athyper.entity-runtime-descriptor/2.0",
+  "planeKey": "neon",
+  "entityCode": "business_partner_request",
+  "detailRouteTemplate": "/mdg/business-partner/requests/:recordId",
+  "storage": {
+    "schema": "document",
+    "object": "entity_case",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "versionField": "row_version",
+    "statusField": "status"
+  },
+  "collectionRelationship": {
+    "schemaVersion": 1,
+    "sourceRef": "entity_case",
+    "subject": { "fieldRef": "subject_entity", "value": "master.business_partner" },
+    "scope": { "fieldRef": "current_snapshot.organization", "contextRef": "operatingOrganizationId" }
+  },
+  "fields": [
+    { "key": "id", "type": "uuid", "required": true, "storagePath": "id", "writableOn": [], "searchable": false, "filterable": false, "sortable": false },
+    { "key": "request_number", "type": "string", "required": true, "storagePath": "business_key", "writableOn": [], "searchable": true, "filterable": true, "sortable": true, "list": { "label": "Request", "semanticRole": "identity", "defaultOrder": 0, "defaultWidth": 160, "defaultVisible": true } },
+    { "key": "requested_role", "type": "enum", "required": true, "storagePath": "current_snapshot.requested_role", "writableOn": ["create", "patch_draft"], "searchable": false, "filterable": true, "sortable": true, "list": { "label": "Requested role", "defaultOrder": 1, "defaultWidth": 150, "defaultVisible": true } },
+    { "key": "owning_legal_entity_id", "type": "reference", "required": true, "storagePath": "current_snapshot.owning_legal_entity_id", "writableOn": ["create", "patch_draft"], "searchable": false, "filterable": true, "sortable": false, "list": { "label": "Legal entity", "defaultOrder": 2, "defaultWidth": 220, "defaultVisible": true } },
+    { "key": "company_code_id", "type": "reference", "required": false, "storagePath": "current_snapshot.company_code_id", "writableOn": ["create", "patch_draft"], "searchable": false, "filterable": true, "sortable": false, "list": { "label": "Company code", "defaultOrder": 3, "defaultWidth": 150, "defaultVisible": true } },
+    { "key": "operating_organization_id", "type": "reference", "required": true, "storagePath": "current_snapshot.operating_organization_id", "writableOn": ["create", "patch_draft"], "searchable": false, "filterable": true, "sortable": false, "list": { "label": "Operating organization", "defaultOrder": 4, "defaultWidth": 240, "defaultVisible": true } },
+    { "key": "status", "type": "enum", "required": true, "storagePath": "status", "writableOn": [], "searchable": false, "filterable": true, "sortable": true, "list": { "label": "Status", "semanticRole": "status", "groupable": true, "defaultOrder": 5, "defaultWidth": 120, "defaultVisible": true } }
+  ],
+  "operations": {
+    "read": { "code": "read", "permissionCode": "neon.business_partner_request.read", "authorizationMode": "bound_operation" },
+    "create_supplier": { "code": "create_supplier", "permissionCode": "neon.business_partner_request.supplier.create", "authorizationMode": "bound_operation" },
+    "create_customer": { "code": "create_customer", "permissionCode": "neon.business_partner_request.customer.create", "authorizationMode": "bound_operation" },
+    "patch_draft": { "code": "patch_draft", "permissionCode": "neon.business_partner_request.update", "authorizationMode": "bound_operation" },
+    "submit": { "code": "submit", "permissionCode": "neon.business_partner_request.submit", "authorizationMode": "bound_operation" }
+  },
+  "operation_scope_bindings": [
+    { "operationKey": "read", "permissionCode": "neon.business_partner_request.read", "scopeKind": "operating_organization", "decisionMode": "collection", "coordinateSource": "business_context", "coordinateKey": "operatingOrganizationId", "resolverKey": "neon.business_partner_request.organization.v1" },
+    { "operationKey": "create_supplier", "permissionCode": "neon.business_partner_request.supplier.create", "scopeKind": "operating_organization", "decisionMode": "command", "coordinateSource": "business_context", "coordinateKey": "operatingOrganizationId", "resolverKey": "neon.business_partner_request.organization.v1" },
+    { "operationKey": "create_customer", "permissionCode": "neon.business_partner_request.customer.create", "scopeKind": "operating_organization", "decisionMode": "command", "coordinateSource": "business_context", "coordinateKey": "operatingOrganizationId", "resolverKey": "neon.business_partner_request.organization.v1" },
+    { "operationKey": "submit", "permissionCode": "neon.business_partner_request.submit", "scopeKind": "operating_organization", "decisionMode": "record", "coordinateSource": "persisted_record", "coordinateKey": "operatingOrganizationId", "resolverKey": "neon.business_partner_request.organization.v1" }
+  ],
+  "businessContext": {
+    "schemaVersion": 1,
+    "scopeKind": "organization",
+    "recordOwnership": { "tenantId": "required", "owningLegalEntityId": "required", "companyCodeId": "optional", "operatingOrganizationId": "required" },
+    "owningLegalEntityRule": { "status": "proposed_v1_requires_approval", "requireEffectiveOrganizationAssignment": true, "historicalMigration": "reliable_evidence_only" },
+    "requiredCoordinates": ["legalEntityId", "operatingOrganizationId"],
+    "capabilityByRequestedRole": { "supplier": "procurement", "customer": "sales" },
+    "workspace": { "standardView": "my_documents", "supportedViews": ["my_documents", "my_team", "shared_with_me", "delegated_to_me", "all_accessible"], "aggregateMode": "not_supported" },
+    "draftContextChanges": { "allowed": true, "until": "before_submission", "revalidate": ["requested_role", "company_applicability", "workflow_routing", "invitation_data", "attachments"], "afterSubmission": "correction_or_cancellation_required" }
+  },
+  "lifecycle": { "transitions": [
+    { "code": "submit", "from": ["draft"], "to": "submitted", "permissionCode": "neon.business_partner_request.submit" }
+  ] },
+  "listPresentation": {
+    "schemaVersion": 1,
+    "title": "Business Partner Requests",
+    "description": "Requests in the selected Operating Organization.",
+    "identityField": "request_number",
+    "supportedModes": ["table", "compact"],
+    "defaultState": { "filters": [], "sort": [{ "field": "request_number", "direction": "desc" }], "columns": ["request_number", "requested_role", "owning_legal_entity_id", "company_code_id", "operating_organization_id", "status"], "density": "comfortable", "mode": "table" },
+    "filterPresentation": { "quickFields": [{ "field": "requested_role", "defaultOperator": "eq" }, { "field": "status", "defaultOperator": "eq" }], "allowUserPinning": true },
+    "limits": { "defaultPageSize": 25, "allowedPageSizes": [25, 50, 100], "maxSortLevels": 3, "countMode": "exact" }
+  }
+}

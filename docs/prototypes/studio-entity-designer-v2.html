@@ -1,0 +1,724 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Studio · Entity Designer prototype v2</title><style>
+:root{--ink:#17273d;--blue:#285b99;--line:#dae3ed;--muted:#61748c;--bg:#f4f7fb;--red:#a14535;--green:#276649;--amber:#795815}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer;background:white;border:1px solid var(--line);border-radius:8px;padding:9px 14px;color:var(--ink)}
+button:hover{border-color:var(--blue)}button:disabled{opacity:.4;cursor:not-allowed}
+.primary{background:var(--blue);color:white;border-color:var(--blue)}
+header{height:76px;background:white;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:32px;padding:0 28px}
+.logo{letter-spacing:4px;font-size:25px;font-weight:800;color:var(--blue)}
+.demo{margin-left:auto;background:#fff4d9;color:var(--amber);border-radius:30px;padding:5px 12px;font-size:12px}
+aside{position:fixed;top:76px;bottom:0;width:220px;background:#10243b;padding:25px 16px;color:#c6d4e6}
+aside div{padding:13px;border-radius:8px}aside .active{background:#243f5d;color:white}
+main{margin-left:220px;padding:30px 38px;max-width:1700px}
+.crumb,.muted,small{color:var(--muted)}
+h1{font-size:30px;letter-spacing:-1px;margin:8px 0}h2{font-size:20px;margin:0 0 12px}h3{font-size:15px;margin:0 0 10px}
+p{margin:8px 0 16px}
+.bar,.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.bar{justify-content:space-between}
+.pill{border-radius:25px;background:#eaf1fa;color:var(--blue);padding:4px 10px;font-size:12px}
+.card{background:white;border:1px solid var(--line);border-radius:13px;padding:22px;margin-top:18px}
+.tabs{display:flex;gap:5px;margin-top:22px;border-bottom:1px solid var(--line);overflow:auto}
+.tabs button{border:0;background:none;white-space:nowrap;border-radius:0;padding:13px}
+.tabs .selected{color:var(--blue);border-bottom:3px solid var(--blue);font-weight:700}
+.subtabs{display:flex;gap:8px;margin:2px 0 16px}
+.subtabs button.selected{background:var(--blue);color:white;border-color:var(--blue)}
+.grid{display:grid;grid-template-columns:250px 1fr;gap:22px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.tree button{display:block;width:100%;text-align:left;margin:6px 0;font-size:13.5px}
+.tree .chosen{background:#edf4fe;border-color:#8dadcf}
+.field{margin:12px 0}.field label{display:block;font-size:13px;font-weight:650;margin-bottom:6px}
+input:not([type=checkbox]),select,textarea{width:100%;padding:9px;border:1px solid #c9d5e2;border-radius:7px;background:white;color:var(--ink)}
+textarea{min-height:60px}
+.note{background:#eef4fb;padding:12px;border-radius:8px;font-size:13px;margin:12px 0}
+.warn{background:#fff4db;color:var(--amber)}.success{background:#e8f5ee;color:var(--green)}.danger{background:#fff0ee;color:var(--red)}
+.gap{border:1px dashed #c3b3e0;background:#f7f3fc;color:#5a3f86;padding:10px 12px;border-radius:8px;font-size:12.5px;margin:10px 0}
+.gap b{font-family:ui-monospace,monospace}
+.steps{display:flex;gap:8px;margin:16px 0;flex-wrap:wrap}
+.step{padding:8px 12px;border-radius:8px;background:#edf1f6;font-size:12.5px}
+.step.done{background:#e4f2e9;color:var(--green)}.step.current{background:var(--blue);color:white}.step.blocked{background:#fdeceb;color:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:10px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-size:11.5px;text-transform:uppercase;background:#f7f9fc}
+code{font-size:12px;overflow-wrap:anywhere}
+.hidden{display:none!important}
+.chip{display:inline-block;border-radius:20px;padding:3px 10px;font-size:11.5px;font-weight:650}
+.chip.author{background:#e8f5ee;color:var(--green)}.chip.viewer{background:#fdeceb;color:var(--red)}
+.chip.structural{background:#eaf1fa;color:var(--blue)}.chip.cosmetic{background:#fff4d9;color:var(--amber)}.chip.readonly{background:#eef0f3;color:var(--muted)}
+.chip.match{background:#e8f5ee;color:var(--green)}.chip.mismatch{background:#fdeceb;color:var(--red)}.chip.unavailable{background:#eef0f3;color:var(--muted)}
+.idchip{font-family:ui-monospace,monospace;font-size:12px;background:#f2f5f9;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+.ladder{display:flex;align-items:stretch;gap:0;margin:16px 0;flex-wrap:wrap}
+.rung{flex:1;min-width:170px;border:1px solid var(--line);border-radius:10px;padding:14px;margin-right:10px;position:relative}
+.rung h4{margin:0 0 6px;font-size:13px}
+.rung.resolved{border-color:#9ecdb0;background:#f3faf5}
+.rung.unavailable{border-color:#e3c7c7;background:#fdf5f4}
+.diffrow{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0;font-size:13.5px}
+.diffrow.changed{border-left:4px solid var(--amber)}.diffrow.added{border-left:4px solid var(--green)}.diffrow.removed{border-left:4px solid var(--red)}.diffrow.reordered{border-left:4px solid var(--blue)}
+.tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-right:8px}
+.tag.changed{color:var(--amber)}.tag.added{color:var(--green)}.tag.removed{color:var(--red)}.tag.reordered{color:var(--blue)}
+.status{min-height:22px;font-size:13px;margin-top:10px}
+footer{color:var(--muted);font-size:12px;padding:26px 0}
+.right{margin-left:auto}
+.banner{border-radius:10px;padding:12px 16px;font-size:13.5px;margin:16px 0;display:flex;gap:10px;align-items:flex-start}
+.banner.cosmetic{background:#fff8e8;border:1px solid #f0d69a}.banner.structural{background:#eaf1fa;border:1px solid #b9cfe8}.banner.readonly{background:#f2f4f7;border:1px solid var(--line)}.banner.blocked{background:#fdeceb;border:1px solid #eec4bf}
+@media(max-width:1000px){aside{display:none}main{margin:0;padding:20px}.grid,.two{grid-template-columns:1fr}.tree{display:flex;flex-wrap:wrap}.tree button{width:auto}header{padding:12px;height:auto}}
+</style></head>
+<body>
+<header><span class="logo">STUDIO</span><strong>CirrusAtlantic</strong><span class="demo">PROTOTYPE V2 · GAP-AWARE DESIGN · SAMPLE DATA</span></header>
+<aside><div>⌂ &nbsp; Home</div><div class="active">▦ &nbsp; Entity Studio</div><div>♧ &nbsp; TrustIAM Studio</div><div>◫ &nbsp; Plans &amp; Entitlements</div><div>◎ &nbsp; Observability</div><div>✧ &nbsp; Atlas AI Studio</div></aside>
+<main>
+<div class="crumb">Entity Studio / Master Data Governance / Business Partner</div>
+<h1>Entity Designer</h1>
+<p class="muted">One selection drives every tab. Editing capability, preview behavior, and evidence shown are derived from the selected configuration family &mdash; not asserted by the editor. Built against the <a href="business-partner/studio-workbench-coverage-20260916.md" style="color:var(--blue)">Stage&nbsp;1 workbench coverage review</a>.</p>
+
+<div class="card">
+  <h3>Selection context <span class="pill">G1 &middot; shared across tabs</span></h3>
+  <div class="two">
+    <div class="field"><label for="family">Configuration family</label>
+      <select id="family">
+        <option value="graph">Native entity graph &mdash; change-set cs_8842</option>
+        <option value="bundle" selected>Business Partner definition bundle &mdash; rev-30</option>
+        <option value="policy">Task-edit policy baseline &mdash; v4</option>
+        <option value="case">Case contract &mdash; v9</option>
+      </select>
+    </div>
+    <div class="field"><label for="target">Target</label>
+      <select id="target"><option value="uk">Neon &middot; CirrusAtlantic UK &middot; DEV</option><option value="sg">Neon &middot; CirrusAtlantic Singapore &middot; DEV</option></select>
+    </div>
+  </div>
+  <div class="row">
+    <span class="idchip" id="chipRevision"></span>
+    <span class="chip" id="chipAccess"></span>
+    <span class="chip" id="chipEditKind"></span>
+    <label class="row" style="margin-left:auto;font-size:12.5px;gap:6px"><input type="checkbox" id="viewerOnly"> Simulate viewer-only access (no <code>metadata.entity.author</code>)</label>
+  </div>
+  <div class="note" id="familyNote"></div>
+</div>
+
+<nav class="tabs" aria-label="Workbench">
+  <button data-tab="overview" class="selected">1. Overview</button>
+  <button data-tab="structure">2. Metadata objects</button>
+  <button data-tab="editor">3. Fields &amp; editor</button>
+  <button data-tab="permissions">4. Permission &amp; operations</button>
+  <button data-tab="rules">5. Rules &amp; workflow</button>
+  <button data-tab="diff">6. Diff &amp; publish</button>
+</nav>
+
+<section id="overview" class="panel">
+  <div class="card">
+    <h2>Revision &rarr; release &rarr; target-active</h2>
+    <p class="muted">Each rung is resolved independently. Nothing here is inferred from publish success or from the highest known version number.</p>
+    <div class="ladder" id="ladder"></div>
+    <div class="row"><button class="primary" id="checkActivation">Check target activation</button><span class="muted" id="activationHint">Not checked yet in this session.</span></div>
+    <div class="gap"><b>G2</b> &mdash; the inspected workbench does not assemble definition &rarr; release &rarr; deployment &rarr; target-active evidence into shared context today. This ladder is the read composition that closes that gap.</div>
+  </div>
+  <div class="card">
+    <h3>Overview counts</h3>
+    <table><tbody id="overviewCounts"></tbody></table>
+  </div>
+</section>
+
+<section id="structure" class="panel hidden">
+  <div class="card">
+    <div class="bar"><h2>Metadata objects</h2><span class="pill">One renderer &middot; per-table descriptor</span></div>
+    <p class="muted">Every list and form below is produced by the same generic renderer, parameterized by a descriptor of each table's columns, domains, and constraints &mdash; not a hand-built screen per table. These are the physical <code>metadata.entity_*</code> tables for the Business Partner entity graph (independent of the configuration family selected above). Five tables are wired for this demo; the remaining ~25 in the tree use the identical descriptor shape once described.</p>
+    <div class="grid">
+      <div class="tree" id="metaTree"><h3>Tables</h3></div>
+      <div>
+        <div class="two">
+          <div>
+            <div class="bar"><h3 id="metaListTitle"></h3><button id="metaAddRow">+ New row</button></div>
+            <table><thead><tr id="metaListHead"></tr></thead><tbody id="metaListBody"></tbody></table>
+          </div>
+          <div id="metaFormWrap"></div>
+        </div>
+      </div>
+    </div>
+    <div class="gap"><b>Core piece</b> &mdash; the ~30 tables under <code>metadata.entity_*</code> share one shape: a scoped identity key, a lifecycle <code>status</code>, an audit pair, and either plain typed columns or a discriminated jsonb spec. One descriptor-driven list+form renderer covers all of them; a hand-built screen per table does not scale to this count.</div>
+  </div>
+</section>
+
+<section id="editor" class="panel hidden">
+  <div class="card">
+    <div id="editorBanner"></div>
+    <div class="grid" id="editorGrid">
+      <div class="tree" id="editorTree"><h3>Fields &amp; sections</h3></div>
+      <div id="editorForm"></div>
+    </div>
+  </div>
+</section>
+
+<section id="permissions" class="panel hidden">
+  <div class="card">
+    <div class="bar"><h2>Permission &amp; operation trace</h2><span class="pill">Source vs. target evidence</span></div>
+    <div id="accessBanner"></div>
+    <table>
+      <thead><tr><th>Surface</th><th>Operation</th><th>Source permission</th><th>Source scope binding</th><th>Target binding</th><th>Status</th></tr></thead>
+      <tbody id="permRows"></tbody>
+    </table>
+    <div class="gap"><b>G9</b> &mdash; this is a join of <code>entity_surface &rarr; entity_surface_operation &rarr; entity_operation &rarr; entity_operation_permission</code> plus <code>entity_operation_scope_binding</code>, compared against <code>authz.entity_operation_binding</code> on the target. A missing surface placement is not an authorization error; it is a headless operation.</div>
+    <h3 style="margin-top:22px">Widget dependencies</h3>
+    <table><thead><tr><th>Widget</th><th>Call</th><th>Authorization</th></tr></thead>
+    <tbody><tr><td>Attachment field</td><td>stage / finalize / status</td><td>Separate document-service permission &mdash; <b>not</b> inferred from <code>business_partner.create</code> or <code>.submit</code></td></tr></tbody></table>
+  </div>
+</section>
+
+<section id="rules" class="panel hidden">
+  <div class="card">
+    <div class="bar"><div><h2>Rules &amp; workflow</h2><p class="muted">Validation and matching are read-only until runtime consumption is traced. Workflow stages are editable within the real constrained shape.</p></div><span class="pill">G7 &middot; declared vs. proven</span></div>
+    <div class="subtabs">
+      <button data-rule="validation" class="selected">Validation</button>
+      <button data-rule="matching">Matching</button>
+      <button data-rule="workflow">Workflow</button>
+    </div>
+
+    <div id="validationRule">
+      <table><thead><tr><th>Field</th><th>Rule</th><th>Provenance</th></tr></thead>
+      <tbody>
+        <tr><td>Legal name</td><td>Must not be empty</td><td><span class="chip unavailable">Declared &middot; runtime consumption not traced</span></td></tr>
+        <tr><td>Registration number</td><td>Country-specific format</td><td><span class="chip unavailable">Declared &middot; runtime consumption not traced</span></td></tr>
+      </tbody></table>
+      <div class="note warn">Editing is disabled here. Bundle preview rejects validation-declaration changes outright; the native graph path needs consumer tracing before this can be a governed edit surface.</div>
+    </div>
+
+    <div id="matchingRule" class="hidden">
+      <table><thead><tr><th>Signal</th><th>Comparison</th><th>Outcome</th></tr></thead>
+      <tbody>
+        <tr><td>Registration number + country</td><td>Exact match</td><td>Flag for review</td></tr>
+        <tr><td>Legal name + address</td><td>Similarity</td><td>Show scored candidates</td></tr>
+      </tbody></table>
+      <div class="note warn">Declared duplicate rules only. No dedicated matching simulator identified in the inspected route surface &mdash; a declaration here does not prove the compiler-required policy runs this exact shape in production.</div>
+    </div>
+
+    <div id="workflowRule" class="hidden">
+      <p class="muted">Stages editable within the shape the bundle preview policy actually accepts: 1&ndash;20 stages, unique codes, serial/parallel mode, a supported quorum kind, optional SLA/reminders/escalation, an optional condition, and <code>noSelfApproval: true</code> fixed on every stage.</p>
+      <table>
+        <thead><tr><th>Code</th><th>Name</th><th>Mode</th><th>Quorum</th><th>SLA (min)</th><th>Condition</th><th></th></tr></thead>
+        <tbody id="stageRows"></tbody>
+      </table>
+      <button id="addStage">+ Add stage</button>
+      <div class="row" style="margin-top:14px"><button class="primary" id="validateStagesBtn">Validate stages</button></div>
+      <div class="status" id="stageStatus" role="status"></div>
+      <div class="gap"><b>G5</b> &mdash; this validator is the same rule the server enforces in <code>local-definition-preview-policy.ts</code> (mirrored client-side), so an invalid shape is caught before save instead of after.</div>
+    </div>
+  </div>
+</section>
+
+<section id="diff" class="panel hidden">
+  <div class="card">
+    <div class="bar"><h2>Differences from published base</h2><span class="pill">Identity-keyed, not index-keyed</span></div>
+    <div id="diffList"></div>
+    <div class="gap"><b>G6</b> &mdash; each row is matched by stable field key, so a reordered field shows as <em>reordered</em>, not as a changed value at that position.</div>
+  </div>
+  <div class="card">
+    <div class="bar"><h2>Release readiness</h2><span class="pill">Simulation &middot; no deployment</span></div>
+    <div class="steps" id="steps"></div>
+    <div class="two">
+      <div>
+        <h3 id="phaseTitle"></h3><p id="phaseText"></p>
+        <div class="field"><label for="actor">Simulated actor</label><select id="actor"><option value="author">Catl Admin &middot; author</option><option value="reviewer">Catl Owner &middot; independent reviewer</option></select></div>
+        <div id="approval" class="hidden"><label><input id="ack" type="checkbox"> I reviewed the differences and target evidence.</label></div>
+        <div class="row" style="margin-top:16px"><button class="primary" id="advance"></button></div>
+        <div class="status" id="pubStatus" role="status"></div>
+      </div>
+      <div>
+        <h3>Target activation</h3>
+        <table><tbody>
+          <tr><td>Release</td><td id="pubRelease">Version 2 &middot; current base</td></tr>
+          <tr><td>Deployment</td><td id="pubDeployment">Not resolved</td></tr>
+          <tr><td>Target-active</td><td id="pubActive">Unavailable until checked on the Overview tab</td></tr>
+        </tbody></table>
+        <div class="note">Publish acceptance, release creation, and target activation are three different facts. Advancing this tracker never marks target-active by itself.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>Design prototype v2 &middot; incorporates recommendations from the Stage 1 workbench coverage review. All identities, decisions, and deployment states are illustrative. No backend calls.</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const FAMILIES={
+  graph:{label:'Native entity graph',revision:'entity_change_set cs_8842 &middot; rev 114',access:'author',editKind:'structural',
+    note:'Structural edits: add/remove fields and sections, toggle required, reorder. Field key / storage path changes stay deferred pending save/compile/preview qualification.'},
+  bundle:{label:'Business Partner definition bundle',revision:'business_partner_definition_revision rev-30',access:'author',editKind:'cosmetic',
+    note:'Cosmetic edits only: label / help / placeholder text, column span 1&ndash;12, text&harr;textarea, and reordering with identities preserved. Required flag and new fields are rejected by the bundle preview allowlist.'},
+  policy:{label:'Task-edit policy baseline',revision:'supplier_task_rule_baseline v4',access:'viewer',editKind:'none',
+    note:'This family is authored in its own existing policy editor. It is not folded into this workbench as an atomic save.'},
+  case:{label:'Case contract',revision:'case_contract v9',access:'viewer',editKind:'none',
+    note:'This family is authored in its own existing case-contract workflow. Read-only here.'}
+};
+
+function cloneStructure(){return{
+  sections:[
+    {key:'identity',title:'Identity',columns:2,fields:[
+      {key:'legal_name',label:'Legal name',placeholder:'Enter legal name',help:'Use the name on the registration document.',widget:'text',columnSpan:6,required:true},
+      {key:'trading_name',label:'Trading name',placeholder:'Optional trading name',help:'',widget:'text',columnSpan:6,required:false}
+    ]},
+    {key:'registration',title:'Registration',columns:2,fields:[
+      {key:'registration_number',label:'Registration number',placeholder:'12345678',help:'',widget:'text',columnSpan:6,required:true},
+      {key:'country',label:'Country',placeholder:'',help:'',widget:'text',columnSpan:6,required:true}
+    ]}
+  ]
+}}
+
+const base=cloneStructure();
+let draft=structuredClone(base);
+let selectedFieldKey='legal_name';
+let activationChecked=false;
+let phase=0;
+
+let stages=[
+  {code:'draft',name:'Draft',mode:'serial',quorum:{kind:'all'},when:undefined,noSelfApproval:true},
+  {code:'review',name:'Independent review',mode:'serial',quorum:{kind:'count',value:1},slaMinutes:1440,when:{path:'amount',operator:'exists'},noSelfApproval:true}
+];
+
+function currentFamily(){return FAMILIES[$('family').value]}
+function isViewer(){return $('viewerOnly').checked||currentFamily().access==='viewer'}
+
+function renderSelectionBar(){
+  const f=currentFamily();
+  $('chipRevision').textContent=f.revision.replace(/&middot;/g,'·');
+  $('chipAccess').textContent=isViewer()?'Viewer access':'Author access';
+  $('chipAccess').className='chip '+(isViewer()?'viewer':'author');
+  $('chipEditKind').textContent=f.editKind==='structural'?'Structural edit path':f.editKind==='cosmetic'?'Cosmetic preview only':'Read-only, reuse existing editor';
+  $('chipEditKind').className='chip '+(f.editKind==='none'?'readonly':f.editKind);
+  $('familyNote').innerHTML=f.note;
+}
+
+function renderOverview(){
+  const f=currentFamily();
+  const rungs=[
+    {title:'Revision',status:'resolved',detail:f.revision.replace(/&middot;/g,'·')},
+    {title:'Release',status:f.editKind==='none'?'unavailable':'resolved',detail:f.editKind==='none'?'No release binding tracked in this workbench':'release_r58 &middot; published'},
+    {title:'Deployment',status:activationChecked?'resolved':'unavailable',detail:activationChecked?'deployment_d221 &middot; observed just now':'Not queried yet &mdash; deployment reads require a known deployment ID'},
+    {title:'Target-active',status:activationChecked?'resolved':'unavailable',detail:activationChecked?'Confirmed active on '+($('target').selectedOptions[0].textContent):'Unavailable until an authorized target read is performed'}
+  ];
+  $('ladder').innerHTML=rungs.map(r=>`<div class="rung ${r.status}"><h4>${r.title}</h4><div style="font-size:12.5px">${r.detail}</div></div>`).join('');
+  $('overviewCounts').innerHTML=`
+    <tr><th>Sections</th><td>${draft.sections.length}</td></tr>
+    <tr><th>Fields</th><td>${draft.sections.reduce((n,s)=>n+s.fields.length,0)}</td></tr>
+    <tr><th>Configuration family</th><td>${f.label}</td></tr>
+    <tr><th>Access level</th><td>${isViewer()?'Viewer &mdash; read only':'Author'}</td></tr>`;
+}
+
+// --- Descriptor-driven generic renderer for metadata.entity_* tables -----
+// Column shapes and domains are taken directly from server/db/ddl/planes/studio/metadata/{02_domains,03_tables}.sql.
+const DESCRIPTORS={
+  entity_field:{keyCol:'field_key',
+    listColumns:['field_key','data_type','value_origin','write_mode','status'],
+    columns:[
+      {name:'field_key',label:'Field key',type:'identity',pattern:/^[a-z][a-z0-9_]{0,62}$/,required:true},
+      {name:'data_type',label:'Data type',type:'enum',domain:['string','text','integer','bigint','decimal','boolean','uuid','date','datetime','json','enum','reference','money'],required:true},
+      {name:'cardinality',label:'Cardinality',type:'enum',domain:['one','zero_or_one','many'],default:'one'},
+      {name:'value_origin',label:'Value origin',type:'enum',domain:['stored','computed','projected','runtime'],default:'stored'},
+      {name:'write_mode',label:'Write mode',type:'enum',domain:['mutable','write_once','read_only','computed'],default:'mutable'},
+      {name:'storage_path',label:'Storage path',type:'text',pattern:/^[A-Za-z_][A-Za-z0-9_.]{0,126}$/,
+        visibleWhen:r=>['stored','projected'].includes(r.value_origin),requiredWhen:r=>['stored','projected'].includes(r.value_origin)},
+      {name:'data_classification',label:'Data classification',type:'enum',domain:['public','internal','confidential','pii','sensitive_pii'],default:'internal'},
+      {name:'description',label:'Description',type:'longtext',maxLength:2000},
+      {name:'status',label:'Status',type:'lifecycle',domain:['active','deprecated'],default:'active'}
+    ]},
+  entity_key:{keyCol:'key_key',
+    listColumns:['key_key','key_kind','uniqueness_scope','status'],
+    columns:[
+      {name:'key_key',label:'Key key',type:'identity',pattern:/^[a-z][a-z0-9_]{0,62}$/,required:true},
+      {name:'key_kind',label:'Key kind',type:'enum',domain:['primary','natural','alternate','idempotency'],required:true},
+      {name:'uniqueness_scope',label:'Uniqueness scope',type:'enum',domain:['global','tenant'],required:true},
+      {name:'null_semantics',label:'Null semantics',type:'enum',domain:['not_allowed','nulls_distinct','nulls_not_distinct'],default:'not_allowed',
+        disabledWhen:r=>r.key_kind==='primary',forceWhen:r=>r.key_kind==='primary'?'not_allowed':undefined},
+      {name:'status',label:'Status',type:'lifecycle',domain:['active','deprecated'],default:'active'}
+    ]},
+  entity_key_field:{keyCol:'id',
+    listColumns:['entity_key_id','entity_field_id','position'],
+    columns:[
+      {name:'entity_key_id',label:'Key',type:'ref',refTable:'entity_key',required:true},
+      {name:'entity_field_id',label:'Field',type:'ref',refTable:'entity_field',required:true},
+      {name:'position',label:'Position',type:'int',min:1,max:64,required:true,default:1}
+    ]},
+  entity_relation:{keyCol:'relation_key',
+    listColumns:['relation_key','relation_kind','ownership_mode','status'],
+    columns:[
+      {name:'relation_key',label:'Relation key',type:'identity',pattern:/^[a-z][a-z0-9_]{0,62}$/,required:true},
+      {name:'relation_kind',label:'Relation kind',type:'enum',domain:['one_to_one','many_to_one','one_to_many','many_to_many'],required:true},
+      {name:'resolution_kind',label:'Resolution kind',type:'enum',domain:['foreign_key','logical','polymorphic'],required:true},
+      {name:'ownership_mode',label:'Ownership mode',type:'enum',domain:['reference','aggregate_child','shared'],default:'reference'},
+      {name:'mutation_mode',label:'Mutation mode',type:'enum',domain:['read_only','source_owned','target_owned','coordinated'],default:'read_only'},
+      {name:'on_delete',label:'On delete',type:'enum',domain:['restrict','cascade','set_null','no_action'],default:'restrict'},
+      {name:'on_update',label:'On update',type:'enum',domain:['restrict','cascade','no_action'],default:'restrict'},
+      {name:'status',label:'Status',type:'lifecycle',domain:['active','deprecated'],default:'active'}
+    ],
+    crossFieldRules:[
+      r=>(r.on_delete==='set_null'&&!['one_to_one','many_to_one'].includes(r.relation_kind))?'On delete "set_null" requires relation kind one_to_one or many_to_one.':null,
+      r=>(r.ownership_mode==='aggregate_child'&&(r.relation_kind==='many_to_many'||!['source_owned','target_owned','coordinated'].includes(r.mutation_mode)))?'Ownership "aggregate_child" requires a non many-to-many relation with source_owned, target_owned, or coordinated mutation.':null
+    ]},
+  entity_surface_operation:{keyCol:'placement_key',
+    listColumns:['placement_key','entity_operation_id','interaction_target','position','status'],
+    columns:[
+      {name:'placement_key',label:'Placement key',type:'identity',pattern:/^[a-z][a-z0-9_.-]{1,126}$/,required:true},
+      {name:'entity_operation_id',label:'Operation',type:'ref',refTable:'entity_operation',required:true},
+      {name:'interaction_target',label:'Interaction target',type:'enum',domain:['primary','secondary','toolbar','row','selection','overflow'],default:'secondary'},
+      {name:'selection_mode',label:'Selection mode',type:'enum',domain:['none','single','multiple'],default:'none',
+        disabledWhen:r=>r.interaction_target!=='selection',forceWhen:r=>r.interaction_target!=='selection'?'none':undefined},
+      {name:'position',label:'Position',type:'int',min:0,required:true,default:0},
+      {name:'label_override',label:'Label override',type:'text',maxLength:256},
+      {name:'status',label:'Status',type:'lifecycle',domain:['active','deprecated'],default:'active'}
+    ]}
+};
+const ACTIVE_META_TABLES=new Set(['entity_field','entity_key','entity_key_field','entity_relation','entity_surface_operation']);
+const ALL_META_TABLES=['entity','entity_baseline_import','entity_baseline_import_revocation','entity_change_set','entity_class_profile',
+  'entity_contract_test_case','entity_field','entity_field_policy_binding','entity_flow','entity_flow_step','entity_key','entity_key_field',
+  'entity_lifecycle_binding','entity_lifecycle_operation_binding','entity_numbering_binding','entity_operation','entity_operation_permission',
+  'entity_operation_rule','entity_operation_scope_binding','entity_policy_binding','entity_relation','entity_relation_field',
+  'entity_relation_target','entity_release','entity_runtime_profile','entity_search_field','entity_search_profile','entity_surface',
+  'entity_surface_component_binding','entity_surface_field_binding','entity_surface_operation'];
+
+const metaRows={
+  entity_field:[
+    {id:'f1',field_key:'legal_name',data_type:'string',cardinality:'one',value_origin:'stored',write_mode:'mutable',storage_path:'legal_name',data_classification:'internal',description:'Registered legal name.',status:'active'},
+    {id:'f2',field_key:'trading_name',data_type:'string',cardinality:'zero_or_one',value_origin:'stored',write_mode:'mutable',storage_path:'trading_name',data_classification:'internal',description:'',status:'active'},
+    {id:'f3',field_key:'registration_number',data_type:'string',cardinality:'one',value_origin:'stored',write_mode:'write_once',storage_path:'registration_number',data_classification:'confidential',description:'',status:'active'},
+    {id:'f4',field_key:'country',data_type:'string',cardinality:'one',value_origin:'stored',write_mode:'mutable',storage_path:'country',data_classification:'internal',description:'',status:'active'},
+    {id:'f5',field_key:'display_name',data_type:'string',cardinality:'one',value_origin:'computed',write_mode:'computed',storage_path:'',data_classification:'internal',description:'Derived for search and display; no storage path.',status:'active'}
+  ],
+  entity_key:[
+    {id:'k1',key_key:'bp_primary_key',key_kind:'primary',uniqueness_scope:'tenant',null_semantics:'not_allowed',status:'active'},
+    {id:'k2',key_key:'bp_natural_key',key_kind:'natural',uniqueness_scope:'tenant',null_semantics:'not_allowed',status:'active'}
+  ],
+  entity_key_field:[
+    {id:'kf1',entity_key_id:'k2',entity_field_id:'f3',position:1},
+    {id:'kf2',entity_key_id:'k2',entity_field_id:'f4',position:2}
+  ],
+  entity_relation:[
+    {id:'r1',relation_key:'bank_accounts',relation_kind:'one_to_many',resolution_kind:'foreign_key',ownership_mode:'aggregate_child',mutation_mode:'coordinated',on_delete:'restrict',on_update:'restrict',status:'active'},
+    {id:'r2',relation_key:'primary_contact',relation_kind:'many_to_one',resolution_kind:'foreign_key',ownership_mode:'reference',mutation_mode:'read_only',on_delete:'set_null',on_update:'restrict',status:'active'}
+  ],
+  entity_surface_operation:[
+    {id:'so1',placement_key:'new-business-partner.create',entity_operation_id:'op1',interaction_target:'primary',selection_mode:'none',position:0,label_override:'',status:'active'},
+    {id:'so2',placement_key:'business-partner-360.amend',entity_operation_id:'op2',interaction_target:'toolbar',selection_mode:'none',position:1,label_override:'Amend',status:'active'}
+  ],
+  entity_operation:[
+    {id:'op1',operation_key:'business_partner.create'},
+    {id:'op2',operation_key:'business_partner.amend'},
+    {id:'op3',operation_key:'business_partner.escalate'}
+  ]
+};
+
+const metaState={table:'entity_field',rowId:null};
+
+function colVisible(col,row){return !col.visibleWhen||col.visibleWhen(row)}
+function applyForcedValues(d,row){d.columns.forEach(c=>{if(c.forceWhen){const forced=c.forceWhen(row);if(forced!==undefined)row[c.name]=forced}})}
+
+function validateRow(d,row){
+  const errors=[];
+  d.columns.forEach(c=>{
+    if(!colVisible(c,row))return;
+    const v=row[c.name];
+    const required=c.required||(c.requiredWhen&&c.requiredWhen(row));
+    if(required&&(v===undefined||v===null||v==='')){errors.push(`${c.label} is required.`);return}
+    if(v===undefined||v===null||v==='')return;
+    if(c.pattern&&typeof v==='string'&&!c.pattern.test(v))errors.push(`${c.label} does not match the required pattern.`);
+    if(c.maxLength&&String(v).length>c.maxLength)errors.push(`${c.label} exceeds ${c.maxLength} characters.`);
+    if((c.type==='enum'||c.type==='lifecycle')&&!c.domain.includes(v))errors.push(`${c.label} must be one of: ${c.domain.join(', ')}.`);
+    if(c.type==='int'){
+      if(!Number.isInteger(Number(v)))errors.push(`${c.label} must be an integer.`);
+      if(c.min!==undefined&&Number(v)<c.min)errors.push(`${c.label} must be >= ${c.min}.`);
+      if(c.max!==undefined&&Number(v)>c.max)errors.push(`${c.label} must be <= ${c.max}.`);
+    }
+  });
+  (d.crossFieldRules||[]).forEach(rule=>{const msg=rule(row);if(msg)errors.push(msg)});
+  return errors;
+}
+
+function labelFor(refTable,id){
+  if(!id)return'';
+  const rows=metaRows[refTable]||[];
+  const row=rows.find(r=>r.id===id);
+  if(!row)return'#'+id;
+  const d=DESCRIPTORS[refTable];
+  return row[d?d.keyCol:'id']??id;
+}
+
+function fieldControl(col,row){
+  if(!colVisible(col,row))return'';
+  const val=row[col.name];
+  const dis=(col.disabledWhen&&col.disabledWhen(row))?'disabled':'';
+  const req=col.required||(col.requiredWhen&&col.requiredWhen(row));
+  if(col.type==='longtext')return`<div class="field"><label>${col.label}${req?' *':''}</label><textarea data-col="${col.name}" ${dis}>${esc(val??'')}</textarea></div>`;
+  if(col.type==='enum'||col.type==='lifecycle')return`<div class="field"><label>${col.label}${req?' *':''}</label><select data-col="${col.name}" ${dis}>${col.domain.map(o=>`<option value="${o}" ${o===val?'selected':''}>${o}</option>`).join('')}</select></div>`;
+  if(col.type==='int')return`<div class="field"><label>${col.label}${req?' *':''}</label><input type="number" data-col="${col.name}" value="${val??''}" min="${col.min??''}" max="${col.max??''}" ${dis}></div>`;
+  if(col.type==='ref'){
+    const opts=(metaRows[col.refTable]||[]).map(r=>`<option value="${r.id}" ${r.id===val?'selected':''}>${esc(labelFor(col.refTable,r.id))}</option>`).join('');
+    return`<div class="field"><label>${col.label}${req?' *':''}</label><select data-col="${col.name}" ${dis}><option value="">Select&hellip;</option>${opts}</select></div>`;
+  }
+  return`<div class="field"><label>${col.label}${req?' *':''}</label><input data-col="${col.name}" value="${esc(val??'')}" ${dis}></div>`;
+}
+
+function renderMetaTree(){
+  $('metaTree').innerHTML='<h3>Tables</h3><small>metadata.entity_* &middot; Business Partner</small>'+
+    ALL_META_TABLES.map(t=>{
+      const active=ACTIVE_META_TABLES.has(t);
+      return `<button data-meta-table="${t}" class="${t===metaState.table?'chosen':''}" ${active?'':'disabled'} title="${active?'':'Same generic renderer applies — not wired in this demo'}">${t}</button>`;
+    }).join('');
+  document.querySelectorAll('#metaTree [data-meta-table]').forEach(b=>{if(!b.disabled)b.onclick=()=>{metaState.table=b.dataset.metaTable;metaState.rowId=null;renderMetaAll()}});
+}
+
+function renderMetaList(){
+  const d=DESCRIPTORS[metaState.table],rows=metaRows[metaState.table]||[];
+  $('metaListTitle').innerHTML=`<code>metadata.${metaState.table}</code>`;
+  $('metaListHead').innerHTML=d.listColumns.map(c=>`<th>${(d.columns.find(x=>x.name===c)||{}).label||c}</th>`).join('')+'<th></th>';
+  $('metaListBody').innerHTML=rows.map(r=>`<tr>${d.listColumns.map(c=>{
+    const col=d.columns.find(x=>x.name===c);
+    const v=col&&col.type==='ref'?labelFor(col.refTable,r[c]):r[c];
+    return `<td>${v===undefined||v===''?'<span class="muted">&mdash;</span>':esc(String(v))}</td>`;
+  }).join('')}<td><button data-select="${r.id}">${r.id===metaState.rowId?'Selected':'Open'}</button></td></tr>`).join('')
+    ||'<tr><td colspan="9" class="muted">No rows yet.</td></tr>';
+  document.querySelectorAll('#metaListBody [data-select]').forEach(b=>b.onclick=()=>{metaState.rowId=b.dataset.select;renderMetaForm()});
+}
+
+function newRowFor(table){
+  const d=DESCRIPTORS[table];
+  const row={id:table+'_'+Math.random().toString(36).slice(2,8)};
+  d.columns.forEach(c=>{row[c.name]=c.default!==undefined?c.default:(c.type==='int'?(c.min??0):'')});
+  return row;
+}
+
+function renderMetaForm(){
+  const d=DESCRIPTORS[metaState.table];
+  const row=(metaRows[metaState.table]||[]).find(r=>r.id===metaState.rowId);
+  if(!row){$('metaFormWrap').innerHTML='<div class="note">Select a row, or add a new one.</div>';return}
+  applyForcedValues(d,row);
+  $('metaFormWrap').innerHTML=`<div class="bar"><h3>${esc(row[d.keyCol]||row.id)}</h3><span class="pill">${metaState.table}</span></div>`+
+    d.columns.map(c=>fieldControl(c,row)).join('')+
+    `<div class="row"><button class="primary" data-meta-save>Validate &amp; save</button><button data-meta-delete>Remove</button></div><div class="status" id="metaFormStatus"></div>`;
+  d.columns.forEach(c=>{
+    const el=document.querySelector(`#metaFormWrap [data-col="${c.name}"]`);if(!el)return;
+    el.onchange=el.oninput=()=>{
+      row[c.name]=c.type==='int'?Number(el.value):el.value;
+      applyForcedValues(d,row);
+      renderMetaList();
+      if(c.type==='enum'||c.type==='ref')renderMetaForm();
+    };
+  });
+  $('metaFormWrap').querySelector('[data-meta-save]').onclick=()=>{
+    const errors=validateRow(d,row),el=$('metaFormStatus');
+    el.textContent=errors.length?('Rejected: '+errors.join(' ')):'Valid — row satisfies the descriptor constraints (mirrors the server CHECK constraints).';
+    el.style.color=errors.length?'var(--red)':'var(--green)';
+    renderMetaList();
+  };
+  $('metaFormWrap').querySelector('[data-meta-delete]').onclick=()=>{
+    metaRows[metaState.table]=metaRows[metaState.table].filter(r=>r.id!==metaState.rowId);
+    metaState.rowId=null;renderMetaAll();
+  };
+}
+
+$('metaAddRow').onclick=()=>{
+  const row=newRowFor(metaState.table);
+  metaRows[metaState.table].push(row);
+  metaState.rowId=row.id;
+  renderMetaAll();
+};
+
+function renderMetaAll(){renderMetaTree();renderMetaList();renderMetaForm()}
+
+function findField(key){for(const s of draft.sections)for(const f of s.fields)if(f.key===key)return{section:s,field:f};return null}
+
+function renderEditor(){
+  const f=currentFamily();
+  const grid=$('editorGrid');
+  if(f.editKind==='none'){
+    $('editorBanner').innerHTML=`<div class="banner readonly">This family is not editable in this workbench. Its editor already exists elsewhere and is not merged into a fictitious single save. <button style="margin-left:auto" disabled>Open ${esc(f.label)} editor &rarr;</button></div>`;
+    grid.classList.add('hidden');
+    return;
+  }
+  grid.classList.remove('hidden');
+  const blocked=isViewer();
+  $('editorBanner').innerHTML=blocked
+    ? `<div class="banner blocked"><b>G3</b> &mdash; graph reads currently require <code>metadata.entity.author</code>. Viewer access can browse structure but cannot edit here.</div>`
+    : `<div class="banner ${f.editKind}">${f.editKind==='cosmetic'?'<b>Cosmetic preview mode.</b> ':'<b>Structural edit mode.</b> '}${f.note}</div>`;
+
+  $('editorTree').innerHTML='<h3>Fields &amp; sections</h3><small>Select a field</small>'+
+    draft.sections.map(s=>s.fields.map(fl=>`<button data-field="${fl.key}" class="${fl.key===selectedFieldKey?'chosen':''}">${esc(s.title)} / ${esc(fl.label)}</button>`).join('')).join('');
+  document.querySelectorAll('#editorTree [data-field]').forEach(b=>b.onclick=()=>{selectedFieldKey=b.dataset.field;renderEditor()});
+
+  const found=findField(selectedFieldKey);
+  if(!found){$('editorForm').innerHTML='';return}
+  const fl=found.field;
+  const cosmetic=f.editKind==='cosmetic';
+  const disabled=blocked?'disabled':'';
+  $('editorForm').innerHTML=`
+    <div class="bar"><h2>${esc(fl.label)}</h2><span class="pill">Field &middot; ${esc(fl.key)}</span></div>
+    <div class="two">
+      <div class="field"><label>Display label</label><input id="fLabel" value="${esc(fl.label)}" ${disabled}></div>
+      <div class="field"><label>Placeholder</label><input id="fPlaceholder" value="${esc(fl.placeholder)}" ${disabled}></div>
+    </div>
+    <div class="field"><label>Help text</label><textarea id="fHelp" ${disabled}>${esc(fl.help)}</textarea></div>
+    <div class="two">
+      <div class="field"><label>Widget</label><select id="fWidget" ${disabled}><option value="text" ${fl.widget==='text'?'selected':''}>Text</option><option value="textarea" ${fl.widget==='textarea'?'selected':''}>Textarea</option><option value="select" ${fl.widget==='select'?'selected':''} ${cosmetic?'disabled':''}>Select (structural only)</option></select></div>
+      <div class="field"><label>Column span (1&ndash;12)</label><input id="fSpan" type="number" min="1" max="12" value="${fl.columnSpan}" ${disabled}></div>
+    </div>
+    <div class="field"><label><input id="fRequired" type="checkbox" ${fl.required?'checked':''} ${cosmetic||disabled?'disabled':''}> Required</label>
+      ${cosmetic?'<small>Rejected by bundle preview policy &mdash; requires the native graph path.</small>':''}
+    </div>
+    <div class="note">Field key <code>${esc(fl.key)}</code> and storage path are not editable from either mode &mdash; changing them is deferred pending a governed migration path.</div>
+    <div class="row"><button class="primary" id="saveField" ${disabled?'disabled':''}>Save</button><span class="status" id="editorStatus"></span></div>`;
+
+  ['fLabel','fPlaceholder','fHelp','fWidget','fSpan','fRequired'].forEach(id=>{
+    const el=$(id);if(!el)return;
+    el.oninput=el.onchange=()=>{
+      fl.label=$('fLabel').value;fl.placeholder=$('fPlaceholder').value;fl.help=$('fHelp').value;
+      fl.widget=$('fWidget').value;fl.columnSpan=Number($('fSpan').value)||fl.columnSpan;fl.required=$('fRequired').checked;
+      renderSelectionBar();renderOverview();renderPermissions();renderDiff();
+    };
+  });
+  if($('saveField'))$('saveField').onclick=()=>{
+    const problems=[];
+    if(cosmetic){
+      if(!fl.label.trim())problems.push('Label must be non-empty (bundle preview text allowlist).');
+      if(fl.label.length>2000)problems.push('Label exceeds 2000 characters.');
+      if(fl.columnSpan<1||fl.columnSpan>12)problems.push('Column span must be 1-12.');
+      if(!['text','textarea'].includes(fl.widget))problems.push('Widget change rejected outside text/textarea by bundle preview policy.');
+    }
+    $('editorStatus').textContent=problems.length?('Rejected: '+problems.join(' ')):'Accepted by preview policy for this mode.';
+    $('editorStatus').style.color=problems.length?'var(--red)':'var(--green)';
+  };
+}
+
+function renderPermissions(){
+  const f=currentFamily();
+  $('accessBanner').innerHTML=isViewer()
+    ? '<div class="banner blocked"><b>G3</b> &mdash; simulated viewer access. Source mappings below still resolve (metadata read), but this trace must not be confused with effective-user-access testing against the real authorization engine.</div>'
+    : '<div class="banner structural">Source mappings resolved with author access. Target column reflects <code>authz.entity_operation_binding</code> on the selected target, not an inference from the source.</div>';
+  const rows=[
+    ['New Business Partner','business_partner.create','neon.relationship.business_partner.create','Company scope','match'],
+    ['New Business Partner','business_partner.read','neon.relationship.business_partner.read','Company scope','match'],
+    ['360 record','business_partner.amend','neon.relationship.business_partner.amend','Company + record scope','unavailable'],
+    ['(headless)','business_partner.escalate','neon.relationship.business_partner.escalate','Company scope','mismatch']
+  ];
+  $('permRows').innerHTML=rows.map(([surface,op,perm,scope,status])=>
+    `<tr><td>${surface}</td><td><code>${op}</code></td><td><code>${perm}</code></td><td>${scope}</td><td><span class="chip ${status}">${status==='match'?'Match':status==='mismatch'?'Mismatch':'Unavailable'}</span></td></tr>`).join('');
+}
+
+function computeDiff(){
+  const rows=[];
+  const baseByKey=new Map();base.sections.forEach(s=>s.fields.forEach(f=>baseByKey.set(f.key,{section:s,field:f})));
+  const draftByKey=new Map();draft.sections.forEach(s=>s.fields.forEach(f=>draftByKey.set(f.key,{section:s,field:f})));
+  for(const [key,{field:bf}] of baseByKey){
+    const d=draftByKey.get(key);
+    if(!d){rows.push({kind:'removed',key,text:`Field <code>${key}</code> removed`});continue}
+    const changedProps=['label','placeholder','help','widget','columnSpan','required'].filter(p=>bf[p]!==d.field[p]);
+    if(changedProps.length)rows.push({kind:'changed',key,text:`Field <code>${key}</code>: ${changedProps.map(p=>`${p} "${esc(String(bf[p]))}" &rarr; "${esc(String(d.field[p]))}"`).join('; ')}`});
+  }
+  for(const [key] of draftByKey)if(!baseByKey.has(key))rows.push({kind:'added',key,text:`Field <code>${key}</code> added`});
+  const baseOrder=base.sections.flatMap(s=>s.fields.map(f=>f.key));
+  const draftOrder=draft.sections.flatMap(s=>s.fields.map(f=>f.key)).filter(k=>baseOrder.includes(k));
+  if(baseOrder.filter(k=>draftOrder.includes(k)).join(',')!==draftOrder.join(','))rows.push({kind:'reordered',key:'*',text:'Field order changed among preserved fields'});
+  return rows;
+}
+
+function renderDiff(){
+  const rows=computeDiff();
+  $('diffList').innerHTML=rows.length
+    ? rows.map(r=>`<div class="diffrow ${r.kind}"><span class="tag ${r.kind}">${r.kind}</span>${r.text}</div>`).join('')
+    : '<div class="note">No differences from the published base. Edit a field to begin.</div>';
+  publication(rows.length>0);
+}
+
+const titles=['Draft','Validated','Submitted','Approved','Published','Release resolved'];
+const descriptions=[
+  'Unsaved changes exist in the working copy. Save fields before validating.',
+  'Validation passed for this mode. Submit the saved differences for independent review.',
+  'Switch to the independent reviewer and acknowledge the differences and target evidence.',
+  'The approved draft is ready to publish.',
+  'Publication accepted by the service. Target activation has not been confirmed.',
+  'Release created. Return to Overview and run "Check target activation" before calling this live.'
+];
+function publication(hasDiff){
+  $('steps').innerHTML=titles.map((t,i)=>`<span class="step ${i<phase?'done':i===phase?'current':''}">${i<phase?'✓ ':''}${t}</span>`).join('');
+  $('phaseTitle').textContent=titles[phase];$('phaseText').textContent=descriptions[phase];
+  $('advance').textContent=phase>=titles.length-1?'Journey complete':['Validate draft','Submit for review','Approve release','Publish','Mark release resolved'][phase];
+  $('approval').classList.toggle('hidden',phase!==2);
+  const reviewerBlock=phase===2&&($('actor').value!=='reviewer'||!$('ack').checked);
+  const cannot=phase>=titles.length-1||!hasDiff||reviewerBlock;
+  $('advance').disabled=Boolean(cannot);
+  $('pubStatus').textContent=!hasDiff?'Make a change on the Fields & editor tab to start.':reviewerBlock?'Independent review required: the author cannot approve this release.':'';
+  $('pubRelease').textContent=phase>=4?'Version 3 · published':'Version 2 · current base';
+  $('pubDeployment').textContent=phase>=5?'deployment_d221 · queued':'Not resolved';
+  $('pubActive').textContent=activationChecked?'Confirmed active (checked on Overview)':'Unavailable until checked on the Overview tab';
+}
+$('actor').onchange=()=>publication(computeDiff().length>0);
+$('ack').onchange=()=>publication(computeDiff().length>0);
+$('advance').onclick=()=>{if(!$('advance').disabled){phase++;publication(computeDiff().length>0)}};
+
+function renderStages(){
+  $('stageRows').innerHTML=stages.map((s,i)=>`<tr>
+    <td><input data-i="${i}" data-p="code" value="${esc(s.code)}" style="width:90px"></td>
+    <td><input data-i="${i}" data-p="name" value="${esc(s.name)}" style="width:130px"></td>
+    <td><select data-i="${i}" data-p="mode"><option value="serial" ${s.mode==='serial'?'selected':''}>serial</option><option value="parallel" ${s.mode==='parallel'?'selected':''}>parallel</option></select></td>
+    <td><select data-i="${i}" data-p="quorumKind" style="width:100px">
+      ${['all','any','count','percentage'].map(k=>`<option value="${k}" ${s.quorum.kind===k?'selected':''}>${k}</option>`).join('')}
+    </select>${['count','percentage'].includes(s.quorum.kind)?`<input data-i="${i}" data-p="quorumValue" type="number" value="${s.quorum.value??''}" style="width:70px;margin-top:4px">`:''}</td>
+    <td><input data-i="${i}" data-p="slaMinutes" type="number" value="${s.slaMinutes??''}" style="width:80px"></td>
+    <td>${s.when?`<code>${esc(s.when.path)} ${esc(s.when.operator)}</code>`:'<span class="muted">unconditional</span>'}</td>
+    <td><button data-remove="${i}">Remove</button></td>
+  </tr>`).join('');
+  document.querySelectorAll('#stageRows [data-i]').forEach(el=>el.onchange=el.oninput=()=>{
+    const i=Number(el.dataset.i),p=el.dataset.p,s=stages[i];
+    if(p==='quorumKind'){s.quorum={kind:el.value,value:s.quorum.value};renderStages();return}
+    if(p==='quorumValue'){s.quorum.value=Number(el.value);return}
+    if(p==='slaMinutes'){s.slaMinutes=el.value?Number(el.value):undefined;return}
+    s[p]=el.value;
+  });
+  document.querySelectorAll('#stageRows [data-remove]').forEach(b=>b.onclick=()=>{stages.splice(Number(b.dataset.remove),1);renderStages()});
+}
+$('addStage').onclick=()=>{stages.push({code:'stage'+(stages.length+1),name:'New stage',mode:'serial',quorum:{kind:'all'},noSelfApproval:true});renderStages()};
+
+// Mirrors the shape enforced server-side in local-definition-preview-policy.ts validatePreviewStages.
+function validateStages(list){
+  if(!Array.isArray(list)||list.length===0||list.length>20)return{ok:false,reason:'Stage count must be between 1 and 20.'};
+  const codes=new Set();
+  for(const s of list){
+    if(s.noSelfApproval!==true)return{ok:false,reason:`Stage "${s.code}": noSelfApproval must be true.`};
+    if(!/^[A-Za-z][A-Za-z0-9_.-]{0,62}$/.test(s.code))return{ok:false,reason:`Stage code "${s.code}" is not a valid identifier.`};
+    if(codes.has(s.code))return{ok:false,reason:`Duplicate stage code "${s.code}".`};
+    codes.add(s.code);
+    if(!s.name||!s.name.trim())return{ok:false,reason:`Stage "${s.code}" needs a name.`};
+    if(!['serial','parallel'].includes(s.mode))return{ok:false,reason:`Stage "${s.code}" has an invalid mode.`};
+    const q=s.quorum;
+    if(!q||!['all','any','count','percentage'].includes(q.kind))return{ok:false,reason:`Stage "${s.code}" has an invalid quorum kind.`};
+    if(q.kind==='count'&&(!Number.isInteger(q.value)||q.value<1))return{ok:false,reason:`Stage "${s.code}": count quorum needs an integer >= 1.`};
+    if(q.kind==='percentage'&&(typeof q.value!=='number'||q.value<=0||q.value>100))return{ok:false,reason:`Stage "${s.code}": percentage quorum must be between 0 and 100.`};
+    if(s.slaMinutes!==undefined&&(!Number.isSafeInteger(s.slaMinutes)||s.slaMinutes<1))return{ok:false,reason:`Stage "${s.code}" has an invalid SLA.`};
+  }
+  if(!list.some(s=>s.when===undefined))return{ok:false,reason:'At least one stage must be unconditional (no "when" clause).'};
+  return{ok:true};
+}
+$('validateStagesBtn').onclick=()=>{
+  const r=validateStages(stages);
+  $('stageStatus').textContent=r.ok?'Valid — accepted by the bundle preview policy shape.':('Rejected: '+r.reason);
+  $('stageStatus').style.color=r.ok?'var(--green)':'var(--red)';
+};
+
+$('checkActivation').onclick=()=>{activationChecked=true;$('activationHint').textContent='Checked just now against '+$('target').selectedOptions[0].textContent+'.';renderAll(true)};
+
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.panel').forEach(e=>e.classList.toggle('hidden',e.id!==b.dataset.tab));
+  document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('selected',x===b));
+  renderAll();
+});
+document.querySelectorAll('[data-rule]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-rule]').forEach(x=>x.classList.toggle('selected',x===b));
+  ['validation','matching','workflow'].forEach(k=>$(k+'Rule').classList.toggle('hidden',k!==b.dataset.rule));
+});
+$('family').onchange=()=>{draft=structuredClone(base);selectedFieldKey='legal_name';phase=0;renderAll(true)};
+$('target').onchange=()=>{activationChecked=false;renderAll(true)};
+$('viewerOnly').onchange=()=>renderAll(true);
+
+function renderAll(){
+  renderSelectionBar();renderOverview();renderEditor();renderPermissions();renderDiff();renderMetaAll();
+}
+renderStages();
+renderAll();
+</script>
+</body></html>

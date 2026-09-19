@@ -1,0 +1,44 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "address/presentation.section",
+  "entityCode": "address",
+  "plane": "neon",
+  "sectionKey": "address",
+  "rendererKey": "platform.postal-address.v1",
+  "coreRef": "address/core.json",
+  "ownerBinding": "supplied_by_parent_relation",
+  "fieldBindings": [
+    {
+      "fieldKey": "line1"
+    },
+    {
+      "fieldKey": "line2"
+    },
+    {
+      "fieldKey": "city"
+    },
+    {
+      "fieldKey": "postal_code"
+    },
+    {
+      "fieldKey": "country_code"
+    },
+    {
+      "fieldKey": "validation_status"
+    }
+  ],
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "dependencies": [
+    "address/core"
+  ],
+  "artifactHash": "sha256:a451e402db2d9bca70689229afb2d3ab9e9ace09d19fb7dfb8f0420fd913e435"
+}

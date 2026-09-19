@@ -1,15 +1,23 @@
+import type { CommandExecutionStore } from "@athyper/server-contract-events";
+import { decodeInboxCursor, encodeInboxCursor } from "./inbox-cursor.js";
+import { parseInstant } from "@athyper/platform-temporal";
 import { randomUUID } from "node:crypto";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
-import type { WorkflowRepository, WorkItem, WorkItemListResult } from "@athyper/server-contract-workflow";
+import type { WorkflowRepository, WorkItem, WorkItemListResult, WorkItemActionResult } from "@athyper/server-contract-workflow";
 
-export interface InMemoryWorkflowTransaction { readonly items: Map<string, WorkItem>; }
+interface Receipt { id: string; fingerprint: string; result?: WorkItemActionResult; }
+export interface InMemoryWorkflowTransaction { readonly items: Map<string, WorkItem>; readonly receipts: Map<string, Receipt>; }
 
-export function createInMemoryWorkflowPersistence(options: { readonly now?: () => Date; readonly createId?: () => string } = {}): {
+export function createInMemoryWorkflowPersistence(options: { readonly now?: () => Date; readonly createId?: () => string; readonly teamMembers?: readonly { tenantId: string; teamId: string; principalId: string; joinedAt: string; leftAt?: string }[] } = {}): {
   readonly repository: WorkflowRepository<InMemoryWorkflowTransaction>;
+  readonly commandExecutions: CommandExecutionStore<InMemoryWorkflowTransaction, WorkItemActionResult>;
   readonly transactions: PlaneTransactionCoordinator<InMemoryWorkflowTransaction>;
 } {
   let committed = new Map<string, WorkItem>();
+  let receipts = new Map<string, Receipt>();
+  let pending = Promise.resolve();
   const now = () => (options.now?.() ?? new Date()).toISOString();
+  const teamMember = (item: WorkItem, principalId: string) => options.teamMembers?.some(member => member.tenantId === item.tenantId && member.teamId === item.assigneeTeamId && member.principalId === principalId && parseInstant(member.joinedAt) <= parseInstant(now()) && (!member.leftAt || parseInstant(member.leftAt) > parseInstant(now()))) ?? false;
   const repository: WorkflowRepository<InMemoryWorkflowTransaction> = {
     async create({ command }, transaction) {
       const item: WorkItem = {
@@ -32,15 +40,17 @@ export function createInMemoryWorkflowPersistence(options: { readonly now?: () =
     },
     async listInbox(query, transaction): Promise<WorkItemListResult> {
       const statuses = new Set(query.statuses ?? ["open", "claimed", "in_progress", "blocked"]);
-      const after = query.cursor ? decodeCursor(query.cursor) : undefined;
-      const data = [...transaction.items.values()]
-        .filter((item) => item.tenantId === query.context.tenantId && statuses.has(item.status)
-          && (item.assigneePrincipalId === query.context.principalId || item.claimantPrincipalId === query.context.principalId)
-          && (!after || `${item.createdAt}|${item.id}` < after))
+      const after = query.cursor ? decodeInboxCursor(query.cursor) : undefined;
+      const eligible=[...transaction.items.values()].filter((item) => item.tenantId === query.context.tenantId && statuses.has(item.status)
+          && (item.assigneePrincipalId === query.context.principalId || item.claimantPrincipalId === query.context.principalId
+            || (!item.claimantPrincipalId && (teamMember(item, query.context.principalId) || item.eligibilityEvidence?.candidates.some(candidate => candidate.principalId === query.context.principalId)))));
+      const page = eligible
+        .filter((item) => !after || `${item.createdAt}|${item.id}` < `${after.createdAt}|${after.id}`)
         .sort((left, right) => `${right.createdAt}|${right.id}`.localeCompare(`${left.createdAt}|${left.id}`))
-        .slice(0, query.limit ?? 50);
+        .slice(0, (query.limit ?? 50) + 1);
+      const data = page.slice(0, query.limit ?? 50);
       const last = data.at(-1);
-      return { data, ...(last && data.length === (query.limit ?? 50) ? { nextCursor: encodeCursor(`${last.createdAt}|${last.id}`) } : {}) };
+      return { data,totalCount:eligible.length, ...(last && page.length > data.length ? { nextCursor: encodeInboxCursor(last.createdAt, last.id) } : {}) };
     },
     async get(tenantId, workItemId, transaction) {
       const item = transaction.items.get(workItemId);
@@ -50,11 +60,11 @@ export function createInMemoryWorkflowPersistence(options: { readonly now?: () =
       const item = transaction.items.get(workItemId);
       if (!item || item.tenantId !== tenantId || item.rowVersion !== expectedRowVersion) return null;
       const eligible = item.assigneePrincipalId === principalId || item.claimantPrincipalId === principalId
-        || item.eligibilityEvidence?.candidates.some((candidate) => candidate.principalId === principalId);
-      if (!eligible) return null;
+        || teamMember(item, principalId) || item.eligibilityEvidence?.candidates.some((candidate) => candidate.principalId === principalId);
+      if (!eligible || (item.claimantPrincipalId && item.claimantPrincipalId !== principalId)) return null;
       let updated: WorkItem;
-      if (action === "claim" && item.status === "open" && Date.parse(item.availableAt) <= Date.now()) updated = { ...item, status: "claimed", claimantPrincipalId: principalId, claimedAt: now(), rowVersion: item.rowVersion + 1 };
-      else if ((action === "complete" || action === "approve" || action === "reject") && ["claimed", "in_progress", "open"].includes(item.status)) updated = { ...item, status: "completed", completedAt: now(), outcome: { ...outcome, action }, rowVersion: item.rowVersion + 1 };
+      if (action === "claim" && item.status === "open" && parseInstant(item.availableAt) <= parseInstant(now())) updated = { ...item, status: "claimed", claimantPrincipalId: principalId, claimedAt: now(), rowVersion: item.rowVersion + 1 };
+      else if ((action === "complete" || action === "approve" || action === "reject") && ["claimed", "in_progress", "open"].includes(item.status) && parseInstant(item.availableAt) <= parseInstant(now())) updated = { ...item, status: "completed", completedAt: now(), outcome: { ...outcome, action }, rowVersion: item.rowVersion + 1 };
       else if (action === "cancel" && !["completed", "cancelled"].includes(item.status)) updated = { ...item, status: "cancelled", rowVersion: item.rowVersion + 1 };
       else return null;
       transaction.items.set(item.id, updated);
@@ -63,12 +73,37 @@ export function createInMemoryWorkflowPersistence(options: { readonly now?: () =
   };
   return {
     repository,
+    commandExecutions: {
+      async begin(input, transaction) {
+        const key = JSON.stringify([input.tenantId, input.commandCode, input.idempotencyKey]);
+        const receipt = transaction.receipts.get(key);
+        if (receipt) {
+          if (receipt.fingerprint !== input.requestFingerprint) return { kind: "conflict" };
+          return receipt.result ? { kind: "replay", result: structuredClone(receipt.result) } : { kind: "in_progress" };
+        }
+        const id = randomUUID();
+        transaction.receipts.set(key, { id, fingerprint: input.requestFingerprint });
+        return { kind: "started", executionId: id };
+      },
+      async complete(id, result, _actor, transaction) {
+        const receipt = [...transaction.receipts.values()].find(receipt => receipt.id === id);
+        if (!receipt) throw new Error("Missing workflow command receipt");
+        receipt.result = structuredClone(result);
+      },
+    },
     transactions: {
       async run(_planeKey, _actor, work) {
-        const transaction = { items: new Map([...committed].map(([id, item]) => [id, structuredClone(item)])) };
-        const result = await work(transaction);
-        committed = transaction.items;
-        return result;
+        const previous = pending;
+        let release!: () => void;
+        pending = new Promise<void>(resolve => { release = resolve; });
+        await previous;
+        try {
+          const transaction = { items: structuredClone(committed), receipts: structuredClone(receipts) };
+          const result = await work(transaction);
+          committed = transaction.items;
+          receipts = transaction.receipts;
+          return result;
+        } finally { release(); }
       },
     },
   };
@@ -76,6 +111,3 @@ export function createInMemoryWorkflowPersistence(options: { readonly now?: () =
 
 function isRevision(value: unknown): value is NonNullable<WorkItem["workflowRevision"]> { if (!value || typeof value !== "object" || Array.isArray(value)) return false; const row = value as Record<string, unknown>; return typeof row["definitionCode"] === "string" && typeof row["version"] === "number" && typeof row["artifactHash"] === "string"; }
 function isEvidence(value: unknown): value is NonNullable<WorkItem["eligibilityEvidence"]> { if (!value || typeof value !== "object" || Array.isArray(value)) return false; const row = value as Record<string, unknown>; return typeof row["resolverVersion"] === "string" && typeof row["resolvedAt"] === "string" && Array.isArray(row["candidates"]) && Array.isArray(row["fallbackPath"]); }
-
-function encodeCursor(value: string): string { return Buffer.from(value, "utf8").toString("base64url"); }
-function decodeCursor(value: string): string { try { return Buffer.from(value, "base64url").toString("utf8"); } catch { return ""; } }

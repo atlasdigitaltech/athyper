@@ -12,17 +12,15 @@ CREATE INDEX attachment_expiry_idx
 CREATE INDEX attachment_processing_idx
     ON document.attachment (tenant_id, text_extraction_status, created_at)
     WHERE text_extraction_status IN ('pending', 'failed');
-CREATE INDEX attachment_quota_reservation_expiry_idx ON document.attachment_quota_reservation (tenant_id, expires_at) WHERE status='reserved';
-CREATE INDEX attachment_quota_reservation_resource_idx ON document.attachment_quota_reservation (tenant_id, resource_id);
-
 CREATE INDEX attachment_folder_owner_idx
     ON document.attachment_folder
     (tenant_id, entity_type, entity_id, parent_id, display_order);
 CREATE INDEX attachment_link_owner_idx
     ON document.attachment_link
     (tenant_id, entity_type, entity_id, display_order);
-CREATE INDEX attachment_link_attachment_idx
-    ON document.attachment_link (tenant_id, attachment_id);
+CREATE INDEX attachment_link_pinned_attachment_idx
+    ON document.attachment_link (tenant_id, pinned_attachment_id)
+    WHERE pinned_attachment_id IS NOT NULL;
 CREATE INDEX attachment_link_folder_idx
     ON document.attachment_link (tenant_id, folder_id)
     WHERE folder_id IS NOT NULL;
@@ -64,9 +62,6 @@ CREATE INDEX content_item_link_target_idx
 CREATE INDEX content_item_version_item_idx
     ON snapshot.content_item_version
     (tenant_id, content_item_id, version DESC);
-CREATE INDEX content_item_acl_subject_idx ON document.content_item_access_grant(tenant_id,subject_type,subject_id,content_item_id);
-CREATE INDEX content_quota_reservation_expiry_idx ON document.content_quota_reservation(tenant_id,expires_at) WHERE status='reserved';
-
 CREATE INDEX conversation_owner_idx
     ON document.conversation (tenant_id, entity_type, entity_id)
     WHERE entity_type IS NOT NULL;
@@ -105,8 +100,7 @@ CREATE INDEX attachment_series_id_idx
 
 -- attachment_link: series lookup
 CREATE INDEX attachment_link_series_idx
-    ON document.attachment_link (tenant_id, attachment_series_id)
-    WHERE attachment_series_id IS NOT NULL;
+    ON document.attachment_link (tenant_id, attachment_series_id);
 
 -- attachment_legal_hold indexes
 CREATE INDEX attachment_legal_hold_series_active_idx
@@ -131,6 +125,9 @@ CREATE INDEX attachment_derivative_ready_idx
 CREATE INDEX attachment_derivative_pending_idx
     ON document.attachment_derivative (created_at)
     WHERE status IN ('pending', 'failed') AND attempt_count < 5;
+CREATE INDEX attachment_derivative_scan_pending_idx
+    ON document.attachment_derivative (tenant_id, id)
+    WHERE status = 'ready' AND scanned_at IS NULL;
 
 -- multipart_upload_part indexes
 CREATE INDEX multipart_upload_part_upload_idx

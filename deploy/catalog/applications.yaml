@@ -1,0 +1,186 @@
+apiVersion: athyper.io/v1alpha1
+kind: ServiceCatalog
+metadata:
+  name: athyper-applications
+services:
+  - {
+      id: iam,
+      class: application,
+      lifecycle: long-running,
+      ledger: v2-native,
+      image: "ghcr.io/atlasdigitaltech/athyper-keycloak:dev",
+      stateful: true,
+      profiles: [],
+      presets: [dev-lite, dev-full, qa-standard, stg-standard, validation-full],
+      resources: { memoryMiB: 1024, cpu: 1 },
+      backupOwner: identity,
+      secrets:
+        [
+          iam-admin-password,
+          iam-db-password,
+          studio-iam-client-secret,
+          neon-iam-client-secret,
+          mesh-iam-client-secret,
+          runtime-iam-client-secret,
+        ],
+    }
+  - {
+      id: neon-web,
+      class: application,
+      lifecycle: long-running,
+      ledger: v2-native,
+      image: "ghcr.io/atlasdigitaltech/athyper-neon-web:dev",
+      stateful: false,
+      profiles: [apps],
+      presets: [dev-full, qa-standard, stg-standard, validation-full],
+      resources: { memoryMiB: 512, cpu: 0.75 },
+      backupOwner: source,
+      secrets:
+        [session-token-encryption-key, neon-iam-client-secret, redis-password],
+    }
+  - {
+      id: mesh-web,
+      class: application,
+      lifecycle: long-running,
+      ledger: v2-native,
+      image: "ghcr.io/atlasdigitaltech/athyper-mesh-web:dev",
+      stateful: false,
+      profiles: [apps],
+      presets: [dev-full, qa-standard, stg-standard, validation-full],
+      resources: { memoryMiB: 512, cpu: 0.75 },
+      backupOwner: source,
+      secrets:
+        [session-token-encryption-key, mesh-iam-client-secret, redis-password],
+    }
+  - {
+      id: studio-web,
+      class: application,
+      lifecycle: long-running,
+      ledger: v2-native,
+      image: "ghcr.io/atlasdigitaltech/athyper-studio-web:dev",
+      stateful: false,
+      profiles: [apps],
+      presets: [dev-full, qa-standard, stg-standard, validation-full],
+      resources: { memoryMiB: 512, cpu: 0.75 },
+      backupOwner: source,
+      secrets:
+        [
+          session-token-encryption-key,
+          studio-iam-client-secret,
+          redis-password,
+        ],
+    }
+  - {
+      id: api,
+      class: application,
+      lifecycle: long-running,
+      ledger: v2-native,
+      image: "ghcr.io/atlasdigitaltech/athyper-runtime-server:dev",
+      stateful: false,
+      profiles: [apps],
+      presets: [dev-full, qa-standard, stg-standard, validation-full],
+      resources: { memoryMiB: 768, cpu: 1 },
+      backupOwner: source,
+      secrets:
+        [
+          runtime-db-password,
+          worker-db-password,
+          redis-password,
+          runtime-iam-client-secret,
+          objectstorage-app-access-key,
+          objectstorage-app-secret-key,
+          objectstorage-artifacts-writer-access-key,
+          objectstorage-artifacts-writer-secret-key,
+          vapid-subject,
+          vapid-public-key,
+          vapid-private-key,
+        ],
+    }
+  - {
+      id: worker,
+      class: application,
+      lifecycle: long-running,
+      ledger: v2-native,
+      image: "ghcr.io/atlasdigitaltech/athyper-runtime-server:dev",
+      stateful: false,
+      profiles: [apps],
+      presets: [dev-full, qa-standard, stg-standard, validation-full],
+      resources: { memoryMiB: 768, cpu: 1 },
+      backupOwner: source,
+      secrets:
+        [
+          runtime-db-password,
+          worker-db-password,
+          redis-password,
+          runtime-iam-client-secret,
+          objectstorage-app-access-key,
+          objectstorage-app-secret-key,
+          objectstorage-artifacts-writer-access-key,
+          objectstorage-artifacts-writer-secret-key,
+          vapid-subject,
+          vapid-public-key,
+          vapid-private-key,
+        ],
+    }
+  - {
+      id: scheduler,
+      class: application,
+      lifecycle: long-running,
+      ledger: v2-native,
+      image: "ghcr.io/atlasdigitaltech/athyper-runtime-server:dev",
+      stateful: false,
+      profiles: [apps],
+      presets: [dev-full, qa-standard, stg-standard, validation-full],
+      resources: { memoryMiB: 384, cpu: 0.5 },
+      backupOwner: source,
+      secrets:
+        [
+          runtime-db-password,
+          worker-db-password,
+          redis-password,
+          runtime-iam-client-secret,
+          objectstorage-app-access-key,
+          objectstorage-app-secret-key,
+          objectstorage-artifacts-writer-access-key,
+          objectstorage-artifacts-writer-secret-key,
+        ],
+    }
+  - {
+      id: db-migration,
+      class: application,
+      lifecycle: one-shot,
+      ledger: v2-addition,
+      image: "ghcr.io/atlasdigitaltech/athyper-runtime-server:dev",
+      stateful: false,
+      profiles: [migration],
+      presets: [dev-full],
+      resources: { memoryMiB: 512, cpu: 1 },
+      backupOwner: database,
+      secrets: [postgres-password],
+    }
+  - {
+      id: db-forward-migration,
+      class: application,
+      lifecycle: one-shot,
+      ledger: v2-addition,
+      image: "ghcr.io/atlasdigitaltech/athyper-runtime-server:dev",
+      stateful: false,
+      profiles: [migration],
+      presets: [qa-standard, stg-standard, validation-full],
+      resources: { memoryMiB: 512, cpu: 1 },
+      backupOwner: database,
+      secrets: [postgres-password],
+    }
+  - {
+      id: db-migration-baseline,
+      class: application,
+      lifecycle: one-shot,
+      ledger: v2-addition,
+      image: "ghcr.io/atlasdigitaltech/athyper-runtime-server:dev",
+      stateful: false,
+      profiles: [migration],
+      presets: [qa-standard],
+      resources: { memoryMiB: 512, cpu: 1 },
+      backupOwner: database,
+      secrets: [postgres-password],
+    }

@@ -12,17 +12,12 @@ BEGIN
         TO athyperapp;
         GRANT SELECT, INSERT, UPDATE, DELETE ON
             document.attachment,
-            document.attachment_quota_usage,
-            document.attachment_quota_reservation,
             document.attachment_folder,
             document.attachment_link,
             document.comment,
             document.comment_draft,
             document.comment_feed_cursor,
             document.content_item,
-            document.content_item_access_grant,
-            document.content_quota_usage,
-            document.content_quota_reservation,
             document.conversation,
             document.conversation_participant,
             document.multipart_upload
@@ -40,6 +35,66 @@ BEGIN
         GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA document TO athyperadmin;
         GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA document TO athyperadmin;
         GRANT ALL PRIVILEGES ON snapshot.content_item_version TO athyperadmin;
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT ON document.supplier_registration_invitation TO athyperapp;
+        GRANT SELECT, INSERT, UPDATE ON
+            document.business_partner_invitation,
+            document.business_partner_invitation_recovery,
+            document.business_partner_request
+        TO athyperapp;
+        GRANT SELECT, INSERT ON
+            document.business_partner_request_evidence,
+            document.business_partner_request_validation
+        TO athyperapp;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON
+            document.business_partner_request_address,
+            document.business_partner_request_contact_person,
+            document.business_partner_request_contact_channel,
+            document.business_partner_request_identifier,
+            document.business_partner_request_tax_registration,
+            document.business_partner_request_classification,
+            document.business_partner_request_certification
+        TO athyperapp;
+        GRANT SELECT, INSERT ON
+            document.business_partner_request_materialization_item
+        TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_registration() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.fn_business_partner_payload_has_restricted_key(jsonb) TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_payload_boundary() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_extension() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) TO athyperapp;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT ALL PRIVILEGES ON
+            document.business_partner_invitation,
+            document.business_partner_invitation_recovery,
+            document.business_partner_request,
+            document.business_partner_request_evidence,
+            document.business_partner_request_validation,
+            document.business_partner_request_address,
+            document.business_partner_request_contact_person,
+            document.business_partner_request_contact_channel,
+            document.business_partner_request_identifier,
+            document.business_partner_request_tax_registration,
+            document.business_partner_request_classification,
+            document.business_partner_request_certification,
+            document.business_partner_request_materialization_item
+        TO athyperadmin;
+        GRANT SELECT ON document.supplier_registration_invitation TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_registration() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.fn_business_partner_payload_has_restricted_key(jsonb) TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_payload_boundary() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_extension() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) TO athyperadmin;
     END IF;
 END;
 $$;
@@ -294,27 +349,52 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.normalize_supplier_workforce_policy_evidence(text,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.command_worker_operational_placement_activate(uuid,uuid,bigint,text,uuid,uuid,date,date,uuid,uuid,uuid,uuid,uuid,uuid,uuid,uuid,numeric,boolean,jsonb,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.command_worker_engagement_terminate(uuid,uuid,bigint,text,uuid,uuid,text,timestamptz,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.trg_guard_worker_engagement_lifecycle_mutation() FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.trg_guard_worker_operational_placement_mutation() FROM PUBLIC;
 DO $$ BEGIN
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+        REVOKE ALL ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid) FROM athyperapp;
         GRANT USAGE ON SCHEMA document TO athyperapp;
         GRANT SELECT,INSERT,UPDATE ON
             document.shift_assignment,document.time_punch,document.attendance_day,document.attendance_adjustment_request,
             document.compensation_change,document.employee_tax_declaration,document.employee_tax_declaration_line,
-            document.leave_request,document.people_request,document.hr_case,document.onboarding_case,document.offboarding_case,
+            document.leave_request,document.people_request,document.workforce_request,document.hr_case,document.onboarding_case,document.offboarding_case,
             document.payroll_period,document.payroll_run,document.payroll_run_employee,document.payroll_result
         TO athyperapp;
-        GRANT SELECT,INSERT ON document.leave_balance_entry,document.payroll_result_line TO athyperapp;
+        GRANT SELECT,INSERT ON document.leave_balance_entry,document.payroll_result_line,document.workforce_request_validation TO athyperapp;
         GRANT SELECT,INSERT ON document.policy_acknowledgment TO athyperapp;
     END IF;
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
         GRANT ALL PRIVILEGES ON
             document.shift_assignment,document.time_punch,document.attendance_day,document.attendance_adjustment_request,
             document.compensation_change,document.employee_tax_declaration,document.employee_tax_declaration_line,
-            document.leave_request,document.leave_balance_entry,document.people_request,document.hr_case,
+            document.leave_request,document.leave_balance_entry,document.people_request,document.workforce_request,document.workforce_request_validation,document.hr_case,
             document.onboarding_case,document.offboarding_case,document.payroll_period,document.payroll_run,
             document.payroll_run_employee,document.payroll_result,document.payroll_result_line,
             document.policy_acknowledgment
         TO athyperadmin;
+    END IF;
+END $$;
+
+REVOKE ALL ON document.workforce_request FROM PUBLIC;
+REVOKE ALL ON document.workforce_request_validation FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.fn_workforce_request_payload_has_restricted_key(jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.trg_guard_workforce_request() FROM PUBLIC;
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT EXECUTE ON FUNCTION document.fn_workforce_request_payload_has_restricted_key(jsonb) TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_workforce_request() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.fn_workforce_request_approvers(uuid,uuid,uuid,uuid) TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT EXECUTE ON FUNCTION document.fn_workforce_request_payload_has_restricted_key(jsonb) TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_workforce_request() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.fn_workforce_request_approvers(uuid,uuid,uuid,uuid) TO athyperadmin;
     END IF;
 END $$;
 
@@ -432,3 +512,111 @@ BEGIN
     END IF;
 END;
 $$;
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+        GRANT SELECT, INSERT ON document.mesh_business_partner_match, document.mesh_business_partner_acceptance, document.mesh_business_partner_acceptance_event TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+        GRANT ALL PRIVILEGES ON document.mesh_business_partner_match, document.mesh_business_partner_acceptance, document.mesh_business_partner_acceptance_event TO athyperadmin;
+    END IF;
+END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT,UPDATE ON document.business_partner_bank_verification TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON document.business_partner_bank_verification TO athyperadmin; END IF; END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT ON document.business_partner_duplicate_resolution TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT ON document.business_partner_duplicate_resolution TO athyperadmin; END IF; END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION document.fn_resolve_business_partner_duplicate(uuid,uuid,uuid,text,text,jsonb,jsonb,uuid,uuid) TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION document.fn_resolve_business_partner_duplicate(uuid,uuid,uuid,text,text,jsonb,jsonb,uuid,uuid) TO athyperadmin; END IF; END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperadmin; END IF; END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperadmin; END IF; END $$;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+   GRANT SELECT,INSERT,UPDATE ON
+     document.workforce_requisition,document.workforce_requisition_supplier,document.external_candidate_submission,
+     document.contingent_work_order,document.contingent_work_order_revision,document.statement_of_work,
+     document.statement_of_work_revision,document.statement_of_work_item,document.worker_engagement,
+     document.worker_operational_placement,document.worker_compliance_item,document.engagement_onboarding_case,
+     document.external_time_sheet,document.external_time_entry,document.external_expense_sheet,document.external_expense_item
+   TO athyperapp;
+   GRANT SELECT,INSERT ON document.external_candidate_evaluation,document.service_sheet_source_allocation TO athyperapp;
+   GRANT SELECT ON document.external_service_entry,document.external_service_entry_line,
+     document.external_workforce_invoice_allocation,document.external_claim_reconciliation_v TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_reject_external_workforce_history_mutation() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_external_candidate_submission() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_contingent_work_order() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_worker_engagement() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid,jsonb) TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.command_worker_operational_placement_activate(uuid,uuid,bigint,text,uuid,uuid,date,date,uuid,uuid,uuid,uuid,uuid,uuid,uuid,uuid,numeric,boolean,jsonb,jsonb) TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.command_worker_engagement_terminate(uuid,uuid,bigint,text,uuid,uuid,text,timestamptz,jsonb) TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.command_publish_workforce_requisition(uuid,uuid,bigint,jsonb,text,uuid) TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_external_revision() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_worker_compliance_item() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_external_claim_header() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_external_claim_line() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_service_sheet_source_allocation() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_reject_deprecated_external_acceptance_write() TO athyperapp;
+ END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+   REVOKE ALL ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid) FROM athyperadmin;
+   GRANT ALL PRIVILEGES ON
+     document.workforce_requisition,document.workforce_requisition_supplier,document.external_candidate_submission,
+     document.external_candidate_evaluation,document.contingent_work_order,document.contingent_work_order_revision,
+     document.statement_of_work,document.statement_of_work_revision,document.statement_of_work_item,
+     document.worker_engagement,document.worker_operational_placement,document.worker_compliance_item,
+     document.engagement_onboarding_case,document.external_time_sheet,document.external_time_entry,
+     document.external_expense_sheet,document.external_expense_item,document.external_service_entry,
+     document.external_service_entry_line,document.external_workforce_invoice_allocation,
+     document.service_sheet_source_allocation
+   TO athyperadmin;
+   GRANT SELECT ON document.external_claim_reconciliation_v TO athyperadmin;
+   GRANT EXECUTE ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid,jsonb) TO athyperadmin;
+   GRANT EXECUTE ON FUNCTION document.command_worker_operational_placement_activate(uuid,uuid,bigint,text,uuid,uuid,date,date,uuid,uuid,uuid,uuid,uuid,uuid,uuid,uuid,numeric,boolean,jsonb,jsonb) TO athyperadmin;
+   GRANT EXECUTE ON FUNCTION document.command_worker_engagement_terminate(uuid,uuid,bigint,text,uuid,uuid,text,timestamptz,jsonb) TO athyperadmin;
+   GRANT EXECUTE ON FUNCTION document.command_publish_workforce_requisition(uuid,uuid,bigint,jsonb,text,uuid) TO athyperadmin;
+ END IF;
+END $$;
+REVOKE ALL ON FUNCTION document.command_publish_workforce_requisition(uuid,uuid,bigint,jsonb,text,uuid) FROM PUBLIC;
+REVOKE ALL ON document.workforce_iam_projection FROM PUBLIC;
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT, INSERT, UPDATE ON document.workforce_iam_projection TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT ALL ON document.workforce_iam_projection TO athyperadmin;
+    END IF;
+END
+$$;
+REVOKE ALL ON FUNCTION document.command_workforce_iam_projection(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.command_internal_workforce_identity_intent(uuid,uuid,text,boolean,text,uuid,uuid) FROM PUBLIC;
+DO $$ BEGIN
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION document.command_workforce_iam_projection(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp; END IF;
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION document.command_internal_workforce_identity_intent(uuid,uuid,text,boolean,text,uuid,uuid) TO athyperapp; END IF;
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION document.command_workforce_iam_projection(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin; END IF;
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION document.command_internal_workforce_identity_intent(uuid,uuid,text,boolean,text,uuid,uuid) TO athyperadmin; END IF;
+END $$;
+-- Canonical clean-build closeout. No legacy request-family object survives.
+ALTER TABLE document.business_partner_invitation DROP COLUMN IF EXISTS business_partner_request_id CASCADE;
+ALTER TABLE document.business_partner_invitation_recovery DROP COLUMN IF EXISTS request_id CASCADE;
+ALTER TABLE document.mesh_business_partner_acceptance_event DROP COLUMN IF EXISTS business_partner_request_id CASCADE;
+DROP VIEW IF EXISTS document.supplier_registration_invitation CASCADE;
+DROP TABLE IF EXISTS document.business_partner_request_contact_channel CASCADE;
+DROP TABLE IF EXISTS document.business_partner_request_contact_person CASCADE;
+DROP TABLE IF EXISTS document.business_partner_request_address CASCADE;
+DROP TABLE IF EXISTS document.business_partner_request_identifier CASCADE;
+DROP TABLE IF EXISTS document.business_partner_request_tax_registration CASCADE;
+DROP TABLE IF EXISTS document.business_partner_request_classification CASCADE;
+DROP TABLE IF EXISTS document.business_partner_request_certification CASCADE;
+DROP TABLE IF EXISTS document.business_partner_request_materialization_item CASCADE;
+DROP TABLE IF EXISTS document.business_partner_request_validation CASCADE;
+DROP TABLE IF EXISTS document.business_partner_request_evidence CASCADE;
+DROP TABLE IF EXISTS document.business_partner_request CASCADE;
+DROP FUNCTION IF EXISTS document.command_backfill_business_partner_request_cases(uuid,text,bigint,text,uuid,text,uuid,bigint,text,text,uuid,uuid);
+DROP FUNCTION IF EXISTS document.fn_business_partner_request_approvers(uuid,uuid,uuid,uuid);
+DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request_payload_boundary();
+DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request_extension();
+DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request();
+DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request_registration();
+DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request_evidence();
+
+REVOKE ALL ON document.mesh_profile_change_resolution, document.mesh_profile_change_case FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.trg_mesh_profile_resolution_immutable() FROM PUBLIC;
+GRANT SELECT, INSERT ON document.mesh_profile_change_resolution, document.mesh_profile_change_case TO athyperapp;
+REVOKE ALL ON FUNCTION document.command_materialize_supplier_activation_case(uuid,uuid,bigint,uuid,uuid,text,text,uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION document.command_materialize_supplier_activation_case(uuid,uuid,bigint,uuid,uuid,text,text,uuid,uuid) TO athyperapp,athyperadmin;

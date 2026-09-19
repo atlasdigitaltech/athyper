@@ -1,0 +1,96 @@
+{
+  "schema": "athyper.development-publication-progress/1",
+  "observedAt": "2026-09-05T05:02:12.175422+00:00",
+  "environment": "dev",
+  "tenantCode": "cirrusatlantic",
+  "sanitized": true,
+  "mfaEnrollment": {
+    "catl.admin": "verified",
+    "catl.owner": "verified"
+  },
+  "authorityReceipt": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-publication-authority-receipt.json",
+  "authorityProvisioning": "committed",
+  "runtimeBuild": {
+    "status": "passed",
+    "image": "athyper-runtime-server:publication-dev",
+    "imageId": "sha256:2e52adb82c3d432bef1f9bf1d1241eb624e919fb6c9abb6f878338d760bfc27d"
+  },
+  "secretstore": {
+    "databaseInitialized": true,
+    "serviceSecretsProvisioned": true,
+    "imagePull": "completed",
+    "bootstrap": "completed",
+    "runtimeNodeUid": 1001,
+    "signingReceipt": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-publication-signing-receipt.json",
+    "backupReceipt": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-infisical-backup-receipt.json"
+  },
+  "nativeApproval": {
+    "releaseId": "e0abaddf-5319-4393-a0a9-a30a9507d4ac",
+    "receipt": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-native-publication-approval-receipt.json"
+  },
+  "signedRelease": {
+    "id": "e0abaddf-5319-4393-a0a9-a30a9507d4ac",
+    "status": "published",
+    "receipt": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-signed-release-and-activation-receipts.json"
+  },
+  "consumerActivationReceipts": [
+    {
+      "plane": "mesh",
+      "deploymentId": "01a06fe8-fccb-76f6-bcf7-9582956d78eb",
+      "acknowledgementId": "01a06fea-cbdf-770a-8b7c-58543e6fa3e9",
+      "signatureVerified": true,
+      "bundleHash": "886a2b67521b4bb5ee2d54680a9aa237ac452855e9774a89e31bc75c49dc56cc"
+    },
+    {
+      "plane": "neon",
+      "deploymentId": "01a06fe8-fccb-74ec-ab0f-f89b54110de9",
+      "acknowledgementId": "01a06fea-cbdd-79b9-9bd1-3e34937c81b6",
+      "signatureVerified": true,
+      "bundleHash": "9f8de2e01d609634245993853acd46c0b2817c9098d9e32d6e3c508910d65cd5"
+    }
+  ],
+  "remaining": [],
+  "productionQualified": false,
+  "status": "completed_local_development",
+  "worker": {
+    "state": "running",
+    "health": "healthy",
+    "compileEnabled": true,
+    "dispatchEnabled": true,
+    "applyEnabled": true,
+    "requireSignature": true,
+    "tlsAndNativeAdapterVerification": "passed",
+    "receipt": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-publication-worker-receipt.json",
+    "targetPrincipalMapping": "verified_with_native_dispatch_replay"
+  },
+  "validation": {
+    "composeTests": {
+      "passed": 18,
+      "failed": 0
+    },
+    "nativePermissionProvisioning": "committed_and_idempotent",
+    "nativeKeyProbe": "passed",
+    "runtimeImageBuild": "passed",
+    "nativeWorkerAdapterTlsSignVerify": "passed",
+    "preexistingPublicationJobs": 0,
+    "publicationTestsPassed": 63
+  },
+  "studioPublicationRoute": {
+    "status": "fixed_and_deployed",
+    "receipt": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-publication-route-receipt.json",
+    "authenticatedBrowserVerification": "pending_user_retry"
+  },
+  "manualAuthoringBundle": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-definition-bundle-2.1.1.json",
+  "definitionSaveRepair": {
+    "receipt": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-publication-save-repair.json",
+    "status": "deployed_awaiting_authenticated_retry"
+  },
+  "definitionRevision": {
+    "id": "4849ea52-4e91-4c09-b06a-22e511362050",
+    "receipt": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-definition-revision-receipt.json"
+  },
+  "reviewerPolicyRepair": {
+    "status": "deployed_awaiting_native_owner_retry",
+    "receipt": "governance/evidence/business-partner/local/2026-09-05/cirrusatlantic-publication-reviewer-policy-repair.json"
+  }
+}

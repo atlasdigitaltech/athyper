@@ -83,10 +83,9 @@ ALTER TABLE master.address_link
     REFERENCES master.address (tenant_id, id)
     ON DELETE RESTRICT;
 
-ALTER TABLE master.address_link
-    ADD CONSTRAINT address_link_owner_purpose_address_uq
-    UNIQUE NULLS NOT DISTINCT
-    (tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id);
+CREATE UNIQUE INDEX address_link_owner_purpose_address_uq
+    ON master.address_link (tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id)
+    NULLS NOT DISTINCT WHERE usage_status <> 'cancelled';
 
 ALTER TABLE master.address_link
     ADD CONSTRAINT address_link_one_primary_excl
@@ -102,7 +101,7 @@ ALTER TABLE master.address_link
             '[)'
         ) WITH &&
     )
-    WHERE (is_primary);
+    WHERE (is_primary AND usage_status <> 'cancelled');
 
 ALTER TABLE master.contact_link
     ADD CONSTRAINT contact_link_tenant_fk
@@ -1077,6 +1076,12 @@ ALTER TABLE master.business_partner
     ON DELETE RESTRICT
     DEFERRABLE INITIALLY DEFERRED;
 
+ALTER TABLE master.business_partner
+    ADD CONSTRAINT business_partner_category_locked_by_fk
+    FOREIGN KEY (tenant_id, category_locked_by)
+    REFERENCES master.principal (tenant_id, id)
+    ON DELETE RESTRICT;
+
 ALTER TABLE master.supplier
     ADD CONSTRAINT supplier_tenant_fk
     FOREIGN KEY (tenant_id)
@@ -1100,6 +1105,34 @@ ALTER TABLE master.customer
     FOREIGN KEY (tenant_id, business_partner_id)
     REFERENCES master.business_partner (tenant_id, id)
     ON DELETE RESTRICT;
+
+ALTER TABLE master.business_partner_alias
+    ADD CONSTRAINT business_partner_alias_partner_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE CASCADE,
+    ADD CONSTRAINT business_partner_alias_country_fk
+    FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_alias_created_by_fk
+    FOREIGN KEY (tenant_id, created_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_alias_updated_by_fk
+    FOREIGN KEY (tenant_id, updated_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_alias_no_overlap_excl
+    EXCLUDE USING gist (
+        tenant_id WITH =, business_partner_id WITH =,
+        normalized_alias WITH =, alias_kind WITH =,
+        COALESCE(country_code, '**'::bpchar) WITH =,
+        COALESCE(language_code, '*'::text) WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active'),
+    ADD CONSTRAINT business_partner_alias_primary_no_overlap_excl
+    EXCLUDE USING gist (
+        tenant_id WITH =, business_partner_id WITH =, alias_kind WITH =,
+        COALESCE(country_code, '**'::bpchar) WITH =,
+        COALESCE(language_code, '*'::text) WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active' AND is_primary);
 
 DO $$
 DECLARE
@@ -1128,24 +1161,18 @@ END;
 $$;
 
 -- Neon operational banking foundation.
-ALTER TABLE master.bank_party
-    ADD CONSTRAINT bank_party_tenant_fk
-    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
-ALTER TABLE master.bank_party
-    ADD CONSTRAINT bank_party_country_fk
-    FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT;
 
 ALTER TABLE master.bank_account
     ADD CONSTRAINT bank_account_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
 ALTER TABLE master.bank_account
-    ADD CONSTRAINT bank_account_bank_party_fk
-    FOREIGN KEY (tenant_id, bank_party_id)
-    REFERENCES master.bank_party (tenant_id, id) ON DELETE RESTRICT;
+    ADD CONSTRAINT bank_account_bank_institution_fk
+    FOREIGN KEY (bank_institution_id)
+    REFERENCES shared.bank_institution (id) ON DELETE RESTRICT;
 ALTER TABLE master.bank_account
     ADD CONSTRAINT bank_account_correspondent_fk
-    FOREIGN KEY (tenant_id, correspondent_bank_party_id)
-    REFERENCES master.bank_party (tenant_id, id) ON DELETE RESTRICT;
+    FOREIGN KEY (correspondent_bank_institution_id)
+    REFERENCES shared.bank_institution (id) ON DELETE RESTRICT;
 ALTER TABLE master.bank_account
     ADD CONSTRAINT bank_account_currency_fk
     FOREIGN KEY (currency_code) REFERENCES shared.currency (code) ON DELETE RESTRICT;
@@ -1184,7 +1211,7 @@ DECLARE
     v_column text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
-        'bank_party', 'bank_account', 'bank_account_house_config'
+        'bank_account', 'bank_account_house_config'
     ]
     LOOP
         FOREACH v_column IN ARRAY ARRAY['created_by', 'updated_by', 'status_changed_by']
@@ -1338,8 +1365,8 @@ ALTER TABLE master.bank_account
 
 ALTER TABLE master.bank_account
     ADD CONSTRAINT bank_account_correspondent_self_chk CHECK (
-        correspondent_bank_party_id IS NULL
-        OR correspondent_bank_party_id IS DISTINCT FROM bank_party_id
+        correspondent_bank_institution_id IS NULL
+        OR correspondent_bank_institution_id IS DISTINCT FROM bank_institution_id
     );
 
 ALTER TABLE master.person
@@ -1347,6 +1374,11 @@ ALTER TABLE master.person
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE,
     ADD CONSTRAINT person_country_fk
     FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT;
+
+-- Business Partners are organizations; People/Workforce owns individual identities.
+ALTER TABLE master.business_partner
+    ADD CONSTRAINT business_partner_organization_only_chk
+    CHECK (partner_category = 'organization');
 
 ALTER TABLE master.person_sensitive_profile
     ADD CONSTRAINT person_sensitive_profile_tenant_fk
@@ -1604,6 +1636,10 @@ ALTER TABLE master.employee
     FOREIGN KEY (tenant_id, company_code_id)
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE master.employee
+    ADD CONSTRAINT employee_contract_identity_uq
+    UNIQUE (tenant_id, id, person_id);
+
 ALTER TABLE master.employment
     ADD CONSTRAINT employment_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE,
@@ -1619,6 +1655,22 @@ ALTER TABLE master.employment
     ADD CONSTRAINT employment_company_fk
     FOREIGN KEY (tenant_id, company_code_id)
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE master.employment
+    ADD CONSTRAINT employment_assignment_identity_uq
+    UNIQUE (tenant_id, id, employee_id, company_code_id),
+    ADD CONSTRAINT employment_employee_person_fk
+    FOREIGN KEY (tenant_id, employee_id, person_id)
+    REFERENCES master.employee (tenant_id, id, person_id) ON DELETE RESTRICT,
+    ADD CONSTRAINT employment_company_legal_entity_fk
+    FOREIGN KEY (tenant_id, company_code_id, legal_entity_id)
+    REFERENCES master.company_code (tenant_id, id, legal_entity_id) ON DELETE RESTRICT,
+    ADD CONSTRAINT employment_primary_effective_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        person_id WITH =,
+        daterange(hire_date, COALESCE(termination_date, 'infinity'::date), '[)') WITH &&
+    ) WHERE (is_primary AND status = 'active' AND employment_status IN ('active', 'suspended'));
 
 ALTER TABLE master.work_assignment
     ADD CONSTRAINT work_assignment_tenant_fk
@@ -1644,6 +1696,9 @@ ALTER TABLE master.work_assignment
     ADD CONSTRAINT work_assignment_company_fk
     FOREIGN KEY (tenant_id, company_code_id)
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT work_assignment_employment_contract_fk
+    FOREIGN KEY (tenant_id, employment_id, employee_id, company_code_id)
+    REFERENCES master.employment (tenant_id, id, employee_id, company_code_id) ON DELETE RESTRICT,
     ADD CONSTRAINT work_assignment_cost_center_fk
     FOREIGN KEY (tenant_id, company_code_id, cost_center_id)
     REFERENCES master.cost_center (tenant_id, company_code_id, id) ON DELETE RESTRICT,
@@ -1653,6 +1708,14 @@ ALTER TABLE master.work_assignment
     ADD CONSTRAINT work_assignment_site_fk
     FOREIGN KEY (tenant_id, company_code_id, site_id)
     REFERENCES master.site (tenant_id, company_code_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE master.work_assignment
+    ADD CONSTRAINT work_assignment_primary_effective_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        employee_id WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (assignment_type = 'primary' AND status = 'active');
 
 ALTER TABLE master.employee_leave_enrollment
     ADD CONSTRAINT employee_leave_enrollment_tenant_fk
@@ -2138,7 +2201,15 @@ ALTER TABLE master.business_partner_relationship
     FOREIGN KEY (tenant_id, target_business_partner_id)
     REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT business_partner_relationship_country_fk
-    FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT;
+    FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_relationship_no_overlap_excl
+    EXCLUDE USING gist (
+        tenant_id WITH =, source_business_partner_id WITH =,
+        target_business_partner_id WITH =, relationship_type_code WITH =,
+        COALESCE(country_code, '**'::bpchar) WITH =,
+        daterange(COALESCE(effective_from, '-infinity'::date),
+                  COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active');
 
 ALTER TABLE master.business_partner_governance_relation
     ADD CONSTRAINT business_partner_governance_relation_owner_fk
@@ -2184,13 +2255,45 @@ ALTER TABLE master.business_partner_commodity_capability
     FOREIGN KEY (tenant_id, commodity_category_id)
     REFERENCES master.commodity_category (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE master.business_partner_industry_classification
+    ADD CONSTRAINT business_partner_industry_classification_owner_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_industry_classification_code_fk
+    FOREIGN KEY (industry_domain_code, industry_code_id)
+    REFERENCES shared.industry_code (domain_code, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_industry_classification_verified_by_fk
+    FOREIGN KEY (tenant_id, verified_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_industry_classification_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        business_partner_id WITH =,
+        industry_domain_code WITH =,
+        industry_code_id WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active'),
+    ADD CONSTRAINT business_partner_industry_classification_primary_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        business_partner_id WITH =,
+        industry_domain_code WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (is_primary AND status = 'active');
+
 ALTER TABLE master.business_partner_operating_organization_assignment
     ADD CONSTRAINT business_partner_operating_org_assignment_owner_fk
     FOREIGN KEY (tenant_id, business_partner_id)
     REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT business_partner_operating_org_assignment_org_fk
     FOREIGN KEY (tenant_id, operating_organization_id)
-    REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT;
+    REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_operating_org_assignment_no_overlap_excl
+    EXCLUDE USING gist (
+        tenant_id WITH =, business_partner_id WITH =,
+        operating_organization_id WITH =, partner_role WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active');
 
 ALTER TABLE master.company_code_supplier_profile
     ADD CONSTRAINT company_code_supplier_profile_supplier_fk
@@ -2223,9 +2326,6 @@ ALTER TABLE master.company_code_customer_profile
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT company_code_customer_profile_currency_fk
     FOREIGN KEY (currency_code) REFERENCES shared.currency (code) ON DELETE RESTRICT,
-    ADD CONSTRAINT company_code_customer_profile_credit_currency_fk
-    FOREIGN KEY (credit_limit_currency_code)
-    REFERENCES shared.currency (code) ON DELETE RESTRICT,
     ADD CONSTRAINT company_code_customer_profile_payment_term_fk
     FOREIGN KEY (tenant_id, payment_term_id)
     REFERENCES master.payment_term (tenant_id, id) ON DELETE RESTRICT,
@@ -2236,11 +2336,11 @@ ALTER TABLE master.company_code_customer_profile
     FOREIGN KEY (tenant_id, default_dimension_set_id)
     REFERENCES master.dimension_set (tenant_id, id) ON DELETE RESTRICT;
 
-ALTER TABLE master.legal_entity_business_partner_link
-    ADD CONSTRAINT legal_entity_business_partner_link_legal_entity_fk
+ALTER TABLE master.legal_entity_internal_partner_link
+    ADD CONSTRAINT legal_entity_internal_partner_link_legal_entity_fk
     FOREIGN KEY (tenant_id, legal_entity_id)
     REFERENCES master.legal_entity (tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT legal_entity_business_partner_link_partner_fk
+    ADD CONSTRAINT legal_entity_internal_partner_link_partner_fk
     FOREIGN KEY (tenant_id, business_partner_id)
     REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT;
 
@@ -2283,7 +2383,7 @@ BEGIN
         'business_partner_operating_organization_assignment',
         'company_code_supplier_profile',
         'company_code_customer_profile',
-        'legal_entity_business_partner_link',
+        'legal_entity_internal_partner_link',
         'intercompany_trading_pair'
     ] LOOP
         EXECUTE format(
@@ -2372,3 +2472,18 @@ ALTER TABLE ONLY master.certification
 ALTER TABLE master.organization_amendment
   ADD CONSTRAINT organization_amendment_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
   ADD CONSTRAINT organization_amendment_recorded_by_fk FOREIGN KEY(tenant_id,recorded_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE master.external_worker
+    ADD CONSTRAINT external_worker_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_worker_person_fk FOREIGN KEY (tenant_id, person_id) REFERENCES master.person(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_worker_created_by_fk FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_worker_updated_by_fk FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_worker_status_changed_by_fk FOREIGN KEY (tenant_id, status_changed_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE master.bank_account
+ ADD CONSTRAINT bank_account_branch_fk FOREIGN KEY(bank_institution_id,bank_branch_id) REFERENCES shared.bank_branch(institution_id,id),
+ ADD CONSTRAINT bank_account_branch_parent_chk CHECK(bank_branch_id IS NULL OR bank_institution_id IS NOT NULL),
+ ADD CONSTRAINT bank_account_provisional_fk FOREIGN KEY(tenant_id,provisional_bank_reference_id) REFERENCES master.bank_provisional_reference(tenant_id,id),
+ ADD CONSTRAINT bank_account_reference_choice_chk CHECK ((bank_institution_id IS NOT NULL AND provisional_bank_reference_id IS NULL) OR (bank_institution_id IS NULL AND provisional_bank_reference_id IS NOT NULL));
+
+ALTER TABLE master.bank_account ADD CONSTRAINT bank_account_canonical_routing_chk CHECK(bank_institution_id IS NULL OR bic_override IS NULL);

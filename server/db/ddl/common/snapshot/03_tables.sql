@@ -87,6 +87,24 @@ CREATE TABLE snapshot.entity_snapshot (
         CHECK (jsonb_typeof(payload_json) = 'object')
 );
 
+CREATE TABLE snapshot.entity_case_snapshot_lineage (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    entity_case_id uuid NOT NULL, source_snapshot_id uuid NOT NULL, target_snapshot_id uuid NOT NULL,
+    lineage_role text NOT NULL, source_member_path text, target_authority_type text, target_authority_id uuid,
+    transformation_code text NOT NULL, transformation_version text NOT NULL,
+    evidence_hash char(64) NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT entity_case_snapshot_lineage_pkey PRIMARY KEY(id), CONSTRAINT entity_case_snapshot_lineage_tenant_uq UNIQUE(tenant_id,id),
+    CONSTRAINT entity_case_snapshot_lineage_edge_uq UNIQUE NULLS NOT DISTINCT(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id),
+    CONSTRAINT entity_case_snapshot_lineage_role_chk CHECK(lineage_role IN('submitted_from','validated_from','decided_from','materialized_from','merged_from','authority_projection')),
+    CONSTRAINT entity_case_snapshot_lineage_path_chk CHECK(source_member_path IS NULL OR length(source_member_path)<=512),
+    CONSTRAINT entity_case_snapshot_lineage_target_chk CHECK((target_authority_type IS NULL)=(target_authority_id IS NULL) AND (target_authority_type IS NULL OR target_authority_type ~ '^[a-z][a-z0-9_.:-]{1,126}$')),
+    CONSTRAINT entity_case_snapshot_lineage_transform_chk CHECK(transformation_code ~ '^[a-z][a-z0-9_.:-]{1,126}$' AND btrim(transformation_version)<>'' AND length(transformation_version)<=64),
+    CONSTRAINT entity_case_snapshot_lineage_hash_chk CHECK(evidence_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT entity_case_snapshot_lineage_source_fk FOREIGN KEY(tenant_id,source_snapshot_id) REFERENCES snapshot.entity_snapshot_identity(tenant_id,id) ON DELETE RESTRICT,
+    CONSTRAINT entity_case_snapshot_lineage_target_fk FOREIGN KEY(tenant_id,target_snapshot_id) REFERENCES snapshot.entity_snapshot_identity(tenant_id,id) ON DELETE RESTRICT,
+    CONSTRAINT entity_case_snapshot_lineage_actor_fk FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id)
+);
+
 COMMENT ON TABLE snapshot.entity_snapshot_identity IS
   'Stable, compact identity and evidence header for every immutable business-entity version. Operational FKs target (tenant_id, id).';
 
@@ -104,3 +122,21 @@ COMMENT ON COLUMN snapshot.entity_snapshot_identity.payload_hash IS
 
 COMMENT ON COLUMN snapshot.entity_snapshot_identity.audit_event_id IS
   'Canonical audit.audit_log event that caused this snapshot. No FK is possible because audit evidence is time-partitioned with a composite key.';
+
+-- Global plane-local commercial snapshots; tenant entity snapshots cannot
+-- represent this catalog without inventing a tenant owner.
+CREATE TABLE snapshot.subscription_plan_entitlement (
+    subscription_plan_id uuid NOT NULL,
+    version integer NOT NULL CHECK (version > 0),
+    code text NOT NULL,
+    effective_from timestamptz NOT NULL,
+    status shared.ref_status_d NOT NULL,
+    modules jsonb NOT NULL CHECK (jsonb_typeof(modules) = 'array'),
+    limits jsonb NOT NULL CHECK (jsonb_typeof(limits) = 'object'),
+    dimensions jsonb NOT NULL CHECK (jsonb_typeof(dimensions) = 'object'),
+    captured_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    captured_by uuid NOT NULL,
+    PRIMARY KEY (subscription_plan_id, version)
+);
+CREATE INDEX subscription_plan_entitlement_effective_idx
+    ON snapshot.subscription_plan_entitlement(code, effective_from DESC, version DESC);

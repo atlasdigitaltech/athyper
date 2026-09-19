@@ -1,0 +1,95 @@
+{
+  "schema": "athyper.bank-directory-import/1",
+  "sources": [
+    {
+      "source": "https://www.dbs.com.sg/personal/support/bank-general-swift-code-details.html",
+      "version": "observed-2026-09-09",
+      "retrievedAt": "2026-09-09T01:54:00+08:00"
+    },
+    {
+      "source": "https://www.maybank2u.com.my/maybank2u/malaysia/en/business/services/foreign-telegraphic-transfer.page",
+      "version": "observed-2026-09-09",
+      "retrievedAt": "2026-09-09T01:54:00+08:00"
+    },
+    {
+      "source": "https://www.business.hsbc.uk/-/media/media/uk/pdfs/regulations/guide-to-payment-instructions-dec25.pdf",
+      "version": "observed-2026-09-09",
+      "retrievedAt": "2026-09-09T01:54:00+08:00"
+    }
+  ],
+  "payload": {
+    "institutions": [
+      {
+        "id": "dbs",
+        "name": "DBS Bank",
+        "countryCode": "SG",
+        "institutionType": "bank",
+        "status": "active",
+        "effectiveFrom": "2026-09-08"
+      },
+      {
+        "id": "maybank",
+        "name": "Maybank",
+        "countryCode": "MY",
+        "institutionType": "bank",
+        "status": "active",
+        "effectiveFrom": "2026-09-08"
+      },
+      {
+        "id": "hsbc-bank-plc",
+        "name": "HSBC Bank plc",
+        "countryCode": "GB",
+        "institutionType": "bank",
+        "status": "active",
+        "effectiveFrom": "2026-09-08"
+      }
+    ],
+    "branches": [],
+    "identifiers": [
+      {
+        "id": "dbs-bic",
+        "institutionId": "dbs",
+        "scheme": "bic",
+        "schemeNamespace": "iso9362",
+        "jurisdiction": "SG",
+        "value": "DBSSSGSG",
+        "effectiveFrom": "2026-09-08"
+      },
+      {
+        "id": "maybank-bic",
+        "institutionId": "maybank",
+        "scheme": "bic",
+        "schemeNamespace": "iso9362",
+        "jurisdiction": "MY",
+        "value": "MBBEMYKL",
+        "effectiveFrom": "2026-09-08"
+      },
+      {
+        "id": "hsbc-bank-plc-bic",
+        "institutionId": "hsbc-bank-plc",
+        "scheme": "bic",
+        "schemeNamespace": "iso9362",
+        "jurisdiction": "GB",
+        "value": "MIDLGB22",
+        "effectiveFrom": "2026-09-08"
+      }
+    ],
+    "sourceRecords": [
+      {
+        "source": "https://www.dbs.com.sg/personal/support/bank-general-swift-code-details.html",
+        "sourceRecordId": "dbs",
+        "institutionId": "dbs"
+      },
+      {
+        "source": "https://www.maybank2u.com.my/maybank2u/malaysia/en/business/services/foreign-telegraphic-transfer.page",
+        "sourceRecordId": "maybank",
+        "institutionId": "maybank"
+      },
+      {
+        "source": "https://www.business.hsbc.uk/-/media/media/uk/pdfs/regulations/guide-to-payment-instructions-dec25.pdf",
+        "sourceRecordId": "hsbc-bank-plc",
+        "institutionId": "hsbc-bank-plc"
+      }
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-import { ATHYPER_RICH_TEXT_MIME, RICH_TEXT_SCHEMA, type ClipboardConversion, type PendingClipboardImage, type RichTextDocument, type RichTextMark, type RichTextNode } from "./rich-text-types.js";
+import { ATHYPER_RICH_TEXT_MIME, RICH_TEXT_SCHEMA, type ClipboardConversion, type PendingClipboardImage, type RichTextDocument, type RichTextMark, type RichTextNode } from "./rich-text-types";
 
 const LIMIT = { rows: 100, columns: 30, cells: 2_000, images: 10, text: 50_000 } as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

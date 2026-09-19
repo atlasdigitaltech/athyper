@@ -1,0 +1,18 @@
+{
+  "image": "athyper/postgres:16.15-hardened",
+  "imageId": "sha256:4446a3d7e0c5d206326cdf16876be738a175d74e34a07077e27ac3e6d9b4acc7",
+  "scanReportSha256": "5d8f5e323ec1c827d75a71f53f94c1b11b1456e6884c57887972347d2e5dc7c6",
+  "scanner": "Trivy 0.74.0",
+  "severityCounts": {
+    "LOW": 155,
+    "HIGH": 73,
+    "MEDIUM": 169,
+    "UNKNOWN": 12,
+    "CRITICAL": 15
+  },
+  "fixableHighCritical": 0,
+  "postgresGate": "pass",
+  "removedComponent": "gosu",
+  "replacement": "Debian util-linux setpriv",
+  "note": "Unfixed findings remain recorded; other infrastructure images have separate gates."
+}

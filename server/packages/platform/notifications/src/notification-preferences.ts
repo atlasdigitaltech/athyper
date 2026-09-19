@@ -1,12 +1,197 @@
-export type PreferenceChannel="in_app"|"email"|"sms"|"push"|"whatsapp";
-export type PreferencePlane="studio"|"neon"|"mesh";
-type PreferenceScope={tenantId:string;principalId:string;planeKey:PreferencePlane};
-export interface NotificationPreference{readonly tenantId:string;readonly principalId:string;readonly eventCode:string;readonly channels:readonly PreferenceChannel[];readonly version:number;}
-export interface NotificationPreferenceSnapshot{readonly preferences:readonly NotificationPreference[];readonly version:number;}
-export interface NotificationPreferenceStore{get(scope:PreferenceScope):Promise<NotificationPreferenceSnapshot>;replace(scope:PreferenceScope,preferences:readonly Omit<NotificationPreference,"tenantId"|"principalId"|"version">[],expectedVersion:number):Promise<NotificationPreferenceSnapshot|undefined>;}
-export interface PreferenceCapabilities{supports(scope:PreferenceScope,channel:PreferenceChannel):Promise<boolean>;hasConsent(scope:PreferenceScope,channel:PreferenceChannel):Promise<boolean>;}
-export interface PreferenceInvalidationPublisher{publish(event:{type:"notification.preferences.invalidated";tenantId:string;principalId:string;planeKey:PreferencePlane;version:number;occurredAt:string}):Promise<void>;}
-export interface NotificationPreferencePreview{readonly eventCode:string;readonly channels:readonly {readonly channel:PreferenceChannel;readonly enabled:boolean;readonly supported:boolean;readonly consented:boolean;readonly reason:"enabled"|"unsupported"|"consent_required"}[];}
-export class PreferenceVersionConflict extends Error{constructor(){super("Notification preferences were changed by another request");this.name="PreferenceVersionConflict";}}
-export function createNotificationPreferenceService(options:{store:NotificationPreferenceStore;capabilities:PreferenceCapabilities;events:PreferenceInvalidationPublisher;now?:()=>string}){return{get:(scope:PreferenceScope)=>options.store.get(scope),async preview(scope:PreferenceScope,preferences:readonly Omit<NotificationPreference,"tenantId"|"principalId"|"version">[]):Promise<readonly NotificationPreferencePreview[]>{validateShape(preferences);return Promise.all(preferences.map(async item=>({eventCode:item.eventCode,channels:await Promise.all(item.channels.map(async channel=>{const supported=await options.capabilities.supports(scope,channel);const consented=supported&&await options.capabilities.hasConsent(scope,channel);return{channel,enabled:supported&&consented,supported,consented,reason:!supported?"unsupported" as const:!consented?"consent_required" as const:"enabled" as const};}))})));},async patch(scope:PreferenceScope,expectedVersion:number,preferences:readonly Omit<NotificationPreference,"tenantId"|"principalId"|"version">[]){validateShape(preferences);for(const item of preferences)for(const channel of item.channels){if(!await options.capabilities.supports(scope,channel))throw new TypeError(`${channel} is not supported for this principal`);if(!await options.capabilities.hasConsent(scope,channel))throw new TypeError(`${channel} requires consent`);}const updated=await options.store.replace(scope,preferences,expectedVersion);if(!updated)throw new PreferenceVersionConflict();await options.events.publish({type:"notification.preferences.invalidated",tenantId:scope.tenantId,principalId:scope.principalId,planeKey:scope.planeKey,version:updated.version,occurredAt:(options.now??(()=>new Date().toISOString()))()});return updated;}};}
-function validateShape(preferences:readonly Omit<NotificationPreference,"tenantId"|"principalId"|"version">[]):void{const events=new Set<string>();for(const item of preferences){if(events.has(item.eventCode))throw new TypeError(`Duplicate notification event ${item.eventCode}`);events.add(item.eventCode);const channels=new Set<PreferenceChannel>();for(const channel of item.channels){if(channels.has(channel))throw new TypeError(`Duplicate channel ${channel}`);channels.add(channel);}}}
+import { HttpError } from "@athyper/server-runtime-http";
+export type PreferenceChannel =
+  "in_app" | "email" | "sms" | "push" | "whatsapp";
+export type PreferencePlane = "studio" | "neon" | "mesh";
+type PreferenceScope = {
+  tenantId: string;
+  principalId: string;
+  planeKey: PreferencePlane;
+};
+export interface NotificationPreference {
+  readonly tenantId: string;
+  readonly principalId: string;
+  readonly eventCode: string;
+  readonly channels: readonly PreferenceChannel[];
+  readonly version: number;
+}
+export interface NotificationPreferenceSnapshot {
+  readonly preferences: readonly NotificationPreference[];
+  readonly version: number;
+}
+export interface NotificationPreferenceStore {
+  get(scope: PreferenceScope): Promise<NotificationPreferenceSnapshot>;
+  replace(
+    scope: PreferenceScope,
+    preferences: readonly Omit<
+      NotificationPreference,
+      "tenantId" | "principalId" | "version"
+    >[],
+    expectedVersion: number,
+  ): Promise<NotificationPreferenceSnapshot | undefined>;
+}
+export interface PreferenceCapabilities {
+  supports(
+    scope: PreferenceScope,
+    channel: PreferenceChannel,
+  ): Promise<boolean>;
+  hasConsent(
+    scope: PreferenceScope,
+    channel: PreferenceChannel,
+  ): Promise<boolean>;
+}
+export interface PreferenceInvalidationPublisher {
+  publish(event: {
+    type: "notification.preferences.invalidated";
+    tenantId: string;
+    principalId: string;
+    planeKey: PreferencePlane;
+    version: number;
+    occurredAt: string;
+  }): Promise<void>;
+}
+export interface NotificationPreferencePreview {
+  readonly eventCode: string;
+  readonly channels: readonly {
+    readonly channel: PreferenceChannel;
+    readonly enabled: boolean;
+    readonly supported: boolean;
+    readonly consented: boolean;
+    readonly reason: "enabled" | "unsupported" | "consent_required";
+  }[];
+}
+export class PreferenceVersionConflict extends HttpError {
+  constructor() {
+    super(
+      412,
+      "NOTIFICATION_PREFERENCE_VERSION_CONFLICT",
+      "Notification preferences were changed by another request",
+    );
+    this.name = "PreferenceVersionConflict";
+  }
+}
+export function createNotificationPreferenceService(options: {
+  store: NotificationPreferenceStore;
+  capabilities: PreferenceCapabilities;
+  events: PreferenceInvalidationPublisher;
+  now?: () => string;
+}) {
+  return {
+    get: (scope: PreferenceScope) => options.store.get(scope),
+    async preview(
+      scope: PreferenceScope,
+      preferences: readonly Omit<
+        NotificationPreference,
+        "tenantId" | "principalId" | "version"
+      >[],
+    ): Promise<readonly NotificationPreferencePreview[]> {
+      validateShape(preferences);
+      return Promise.all(
+        preferences.map(async (item) => ({
+          eventCode: item.eventCode,
+          channels: await Promise.all(
+            item.channels.map(async (channel) => {
+              const supported = await options.capabilities.supports(
+                scope,
+                channel,
+              );
+              const consented =
+                supported &&
+                (await options.capabilities.hasConsent(scope, channel));
+              return {
+                channel,
+                enabled: supported && consented,
+                supported,
+                consented,
+                reason: !supported
+                  ? ("unsupported" as const)
+                  : !consented
+                    ? ("consent_required" as const)
+                    : ("enabled" as const),
+              };
+            }),
+          ),
+        })),
+      );
+    },
+    async patch(
+      scope: PreferenceScope,
+      expectedVersion: number,
+      preferences: readonly Omit<
+        NotificationPreference,
+        "tenantId" | "principalId" | "version"
+      >[],
+    ) {
+      validateShape(preferences);
+      for (const item of preferences)
+        for (const channel of item.channels) {
+          if (!(await options.capabilities.supports(scope, channel)))
+            throw new HttpError(
+              400,
+              "INVALID_NOTIFICATION_PREFERENCE",
+              `${channel} is not supported for this principal`,
+            );
+          if (!(await options.capabilities.hasConsent(scope, channel)))
+            throw new HttpError(
+              400,
+              "INVALID_NOTIFICATION_PREFERENCE",
+              `${channel} requires consent`,
+            );
+        }
+      const updated = await options.store.replace(
+        scope,
+        preferences,
+        expectedVersion,
+      );
+      if (!updated) throw new PreferenceVersionConflict();
+      void publishInvalidation(options.events, {
+        type: "notification.preferences.invalidated",
+        tenantId: scope.tenantId,
+        principalId: scope.principalId,
+        planeKey: scope.planeKey,
+        version: updated.version,
+        occurredAt: (options.now ?? (() => new Date().toISOString()))(),
+      });
+      return updated;
+    },
+  };
+}
+function validateShape(
+  preferences: readonly Omit<
+    NotificationPreference,
+    "tenantId" | "principalId" | "version"
+  >[],
+): void {
+  const events = new Set<string>();
+  for (const item of preferences) {
+    if (events.has(item.eventCode))
+      throw new HttpError(
+        400,
+        "INVALID_NOTIFICATION_PREFERENCE",
+        `Duplicate notification event ${item.eventCode}`,
+      );
+    events.add(item.eventCode);
+    const channels = new Set<PreferenceChannel>();
+    for (const channel of item.channels) {
+      if (channels.has(channel))
+        throw new HttpError(
+          400,
+          "INVALID_NOTIFICATION_PREFERENCE",
+          `Duplicate channel ${channel}`,
+        );
+      channels.add(channel);
+    }
+  }
+}
+
+// The PostgreSQL store writes its durable outbox event in the replacement transaction.
+// Additional publishers must not turn a committed update into an HTTP failure.
+async function publishInvalidation(
+  events: PreferenceInvalidationPublisher,
+  event: Parameters<PreferenceInvalidationPublisher["publish"]>[0],
+): Promise<void> {
+  try {
+    await events.publish(event);
+  } catch {
+    console.warn("[notifications] preference_invalidation_publish_failed");
+  }
+}

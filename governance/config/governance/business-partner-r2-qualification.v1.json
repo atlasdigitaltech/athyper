@@ -1,0 +1,75 @@
+{
+  "$schema": "athyper.business-partner-r2-qualification/1",
+  "asOf": "2026-09-05",
+  "slice": "R2 Existing/dual-role organization",
+  "scenarios": ["BP-SUP-002", "BP-SUP-003", "BP-CUS-002", "BP-CUS-003"],
+  "implementationStatus": "local_verified",
+  "productionQualification": "blocked",
+  "productionQualified": false,
+  "invariants": {
+    "reuseTargetBusinessPartnerId": true,
+    "createBusinessPartnerCount": 0,
+    "createRequestedRoleCount": 1,
+    "preserveOppositeRole": true,
+    "preserveOppositeRoleStatus": true,
+    "preserveOppositeRoleDecisions": true,
+    "automaticRoleActivation": false
+  },
+  "commands": [
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data test",
+      "result": "passed",
+      "tests": 100,
+      "files": 15
+    },
+    {
+      "command": "pnpm --filter @athyper/product-neon-business-partner test",
+      "result": "passed",
+      "tests": 59,
+      "files": 11
+    },
+    {
+      "command": "pnpm --dir server/db test",
+      "result": "passed",
+      "tests": 127
+    },
+    {
+      "command": "pnpm test:plane-contracts",
+      "result": "passed",
+      "tests": 160
+    },
+    {
+      "command": "pnpm test:e2e:bp-r2",
+      "result": "environment_required",
+      "tests": 4,
+      "optionalSkip": false
+    },
+    {
+      "command": "pnpm --dir server/db db:foundation:plan",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --dir server/db db:provision:neon:business-partner-r2-fixtures --plan",
+      "result": "passed",
+      "fixtures": 4
+    }
+  ],
+  "evidence": [
+    "packages/contracts/platform/fixtures/business-partner-r2-role-extension.v1.json",
+    "tests/contracts/business-partner-r2-contracts.test.ts",
+    "packages/planes/neon/business-partner/src/role-extension-experience.test.ts",
+    "server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts",
+    "server/db/scripts/__tests__/business-partner-foundation/business-partner-role-extension.test.ts",
+    "tests/e2e/business-partner/bp-r2.fixture.ts",
+    "tests/e2e/business-partner/bp-r2.spec.ts",
+    "server/db/scripts/provisioning/provision-business-partner-r2-fixtures.ts",
+    "server/db/scripts/__tests__/provisioning/business-partner-r2-fixtures.test.ts",
+    "tooling/scripts/verification/preflight-business-partner-environment.mjs",
+    "tooling/scripts/verification/run-playwright-with-linux-deps.sh",
+    "server/db/ddl/planes/neon/document/07_functions.sql"
+  ],
+  "environmentBlockers": [
+    "A reachable resettable NEON environment and requester, approver, and materializer credentials are required.",
+    "The deterministic four-target provisioner is restricted to a disposable local athyper_neon database; target environments must supply an equivalent reset boundary."
+  ]
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "class": "a-button a-button--secondary",
+    "font": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+    "fontSize": "16px",
+    "height": "40px",
+    "padding": "8px 12px",
+    "radius": "10px"
+  },
+  {
+    "class": "a-input",
+    "font": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+    "fontSize": "16px",
+    "height": "40px",
+    "padding": "8px 34.4px 8px 36px",
+    "radius": "6px"
+  },
+  {
+    "class": "a-button a-button--ghost a-entity-list__view-trigger",
+    "font": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+    "fontSize": "15px",
+    "height": "40px",
+    "padding": "4px 8px",
+    "radius": "10px"
+  },
+  {
+    "class": "a-button a-button--secondary a-button--small a-entity-list__toolbar-action",
+    "font": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+    "fontSize": "15px",
+    "height": "40px",
+    "padding": "4px 8px",
+    "radius": "10px"
+  },
+  {
+    "class": "a-button a-button--ghost a-entity-list__more-trigger",
+    "font": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+    "fontSize": "15px",
+    "height": "40px",
+    "padding": "4px 8px",
+    "radius": "10px"
+  },
+  {
+    "class": "a-button a-button--secondary a-button--small",
+    "font": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+    "fontSize": "14px",
+    "height": "40px",
+    "padding": "4px 8px",
+    "radius": "10px"
+  },
+  {
+    "class": "a-button a-button--secondary a-button--small",
+    "font": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+    "fontSize": "14px",
+    "height": "40px",
+    "padding": "4px 8px",
+    "radius": "10px"
+  },
+  {
+    "class": "a-button a-button--primary a-button--medium a-entity-lookup__confirm",
+    "font": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+    "fontSize": "16px",
+    "height": "40px",
+    "padding": "8px 12px",
+    "radius": "10px"
+  },
+  {
+    "class": "a-button a-button--secondary a-button--medium",
+    "font": "GeistSans, \"GeistSans Fallback\", Inter, ui-sans-serif, system-ui, sans-serif",
+    "fontSize": "16px",
+    "height": "40px",
+    "padding": "8px 12px",
+    "radius": "10px"
+  }
+]

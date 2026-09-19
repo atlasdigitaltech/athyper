@@ -17,17 +17,26 @@
       "node": "./src/environment.ts",
       "browser": "./src/browser-denied.ts",
       "default": "./src/browser-denied.ts"
+    },
+    "./runtime-environment": {
+      "types": "./src/runtime-environment.ts",
+      "node": "./src/runtime-environment.ts",
+      "browser": "./src/browser-denied.ts",
+      "default": "./src/browser-denied.ts"
     }
   },
-  "scripts": { "typecheck": "tsc --noEmit" },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@athyper/platform-iam-session": "workspace:*",
     "@athyper/platform-iam-session-store": "workspace:*",
+    "@athyper/platform-temporal": "workspace:*",
     "jose": "^6.2.2"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
     "@athyper/tsconfig": "workspace:*",
+    "@types/node": "^25.6.0",
     "typescript": "^6.0.3"
   }
 }

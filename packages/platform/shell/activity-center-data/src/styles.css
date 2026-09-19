@@ -1,0 +1,25 @@
+.athyper-activity-page{width:min(72rem,100%);margin:0 auto;color:var(--a-foreground)}
+.athyper-activity-page>.athyper-content-header{padding-bottom:var(--a-space-6)}
+.athyper-activity-page__count{min-width:3rem;height:3rem;display:grid;place-items:center;border-radius:999px;background:var(--a-brand-soft);color:var(--a-brand);font-variant-numeric:tabular-nums}
+.athyper-activity-page__tabs{display:flex;gap:var(--a-space-2);border-bottom:var(--a-border-width) solid var(--a-border)}
+.athyper-activity-page__tabs a{padding:.75rem 1rem;border-bottom:2px solid transparent;color:var(--a-muted-foreground);font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-strong);text-decoration:none}
+.athyper-activity-page__tabs a[aria-current=page]{border-color:var(--a-brand);color:var(--a-brand)}
+.athyper-activity-page__toolbar{min-height:3.6rem;display:flex;align-items:center;justify-content:space-between;gap:var(--a-space-3);padding:.6rem 0}
+.athyper-activity-page__toolbar>div{display:flex;gap:var(--a-space-2)}
+.athyper-activity-page__toolbar-actions{align-items:center;justify-content:flex-end}
+.athyper-activity-page__push-status,.athyper-activity-page__toolbar-actions button{display:inline-flex;align-items:center;gap:.4rem}.athyper-activity-page__push-status{color:var(--a-muted-foreground);font-size:var(--a-font-size-xs);font-weight:var(--a-font-weight-medium)}
+.athyper-activity-page button[data-state=enabled]{border-color:var(--a-success);background:color-mix(in srgb,var(--a-success) 10%,var(--a-surface));color:var(--a-success)}
+.athyper-activity-page button{min-height:2.25rem;padding:0 .75rem;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);color:var(--a-muted-foreground);font:650 .72rem var(--a-font-sans);cursor:pointer}
+.athyper-activity-page button:hover,.athyper-activity-page button[aria-pressed=true]{border-color:var(--a-brand);background:var(--a-brand-soft);color:var(--a-brand)}
+.athyper-activity-page__list{overflow:hidden;margin:0;padding:0;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg);background:var(--a-surface-raised);box-shadow:var(--a-shadow-raised);list-style:none}
+.athyper-activity-page__list>li+li{border-top:var(--a-border-width) solid var(--a-border)}
+.athyper-activity-page__list article{display:flex;align-items:center;gap:var(--a-space-3);padding:var(--a-space-3)}
+.athyper-activity-page__list article[data-unread=true]{background:color-mix(in srgb,var(--a-brand-soft) 52%,var(--a-surface-raised))}
+.athyper-activity-page__list article>a,.athyper-activity-page__list article>div{min-width:0;display:grid;grid-template-columns:2.4rem minmax(0,1fr);align-items:center;gap:var(--a-space-3);flex:1;color:inherit;text-decoration:none}
+.athyper-activity-page__glyph{width:2.4rem;height:2.4rem;display:grid;place-items:center;border-radius:var(--a-radius-md);background:var(--a-brand-soft);color:var(--a-brand)}
+.athyper-activity-page__glyph[data-tone=critical],.athyper-activity-page__glyph[data-tone=urgent]{background:var(--a-destructive-soft);color:var(--a-destructive)}
+.athyper-activity-page__list strong{font-size:var(--a-font-size-sm)}.athyper-activity-page__list p{margin:.3rem 0;color:var(--a-muted-foreground);font-size:var(--a-font-size-xs);line-height:var(--a-line-height-body)}.athyper-activity-page__list small{color:var(--a-muted-foreground);font-size:var(--a-font-size-2xs)}
+.athyper-activity-page__state{min-height:24rem;display:grid;align-content:center;justify-items:center;padding:var(--a-space-6);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg);background:var(--a-surface-raised);text-align:center}
+.athyper-activity-page__state>span{width:3rem;height:3rem;display:grid;place-items:center;margin-bottom:var(--a-space-3);border-radius:50%;background:var(--a-brand-soft);color:var(--a-brand)}.athyper-activity-page__state p{max-width:28rem;margin:.4rem 0 var(--a-space-3);color:var(--a-muted-foreground)}
+.athyper-activity-page__more{display:flex;justify-content:center;padding:var(--a-space-4)}
+@media(max-width:560px){.athyper-activity-page__toolbar{align-items:flex-start;flex-direction:column}.athyper-activity-page__toolbar-actions{width:100%;justify-content:space-between}.athyper-activity-page__list article{align-items:flex-start;flex-wrap:wrap}.athyper-activity-page__list article>button{margin-inline-start:3.15rem}}

@@ -1,0 +1,92 @@
+# Shared Stack v2 ingress. This is the only Compose project that publishes
+# workstation HTTP/HTTPS ports. Instance gateways attach to the deliberately
+# shared athyper-platform-ingress network with gateway-<instance> aliases.
+services:
+  ingress:
+    image: ${ATHYPER_IMAGE_TRAEFIK:-athyper/traefik:3.7.13-hardened}
+    build: { context: ../../config/traefik }
+    # Compose file-backed secrets retain their host UID/GID. Run as the
+    # controller caller so owner-only TLS material remains readable without
+    # granting DAC override or widening host permissions.
+    user: "${ATHYPER_RUNTIME_UID:-1000}:${ATHYPER_RUNTIME_GID:-1000}"
+    restart: unless-stopped
+    command:
+      - --entrypoints.web.address=:8080
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:8443
+      - --entrypoints.health.address=:8082
+      - --ping=true
+      - --ping.entrypoint=health
+      - --providers.file.filename=/etc/traefik/dynamic.yaml
+      - --providers.file.watch=false
+      - --log.level=INFO
+    ports:
+      - "127.0.0.1:80:8080"
+      - "127.0.0.1:443:8443"
+    secrets:
+      - platform-tls-certificate
+      - platform-tls-private-key
+    volumes:
+      - ./ingress/dynamic.yaml:/etc/traefik/dynamic.yaml:ro
+    # Joining the otherwise private observability network makes Compose the
+    # lifecycle owner of that cross-project network. No HTTP route targets
+    # this container through the observability network.
+    networks: [platform-ingress, platform-observability]
+    healthcheck:
+      test:
+        [
+          CMD,
+          traefik,
+          healthcheck,
+          --ping,
+          --ping.entrypoint=health,
+          --entrypoints.health.address=:8082,
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+    init: true
+    mem_limit: 256m
+    cpus: 0.5
+
+  platform-outage:
+    image: ${ATHYPER_IMAGE_NGINX:-nginxinc/nginx-unprivileged:stable-alpine@sha256:442753882674b49ae2c1de83ed67896131c0777f56df5005e356e62bc3f7e7ce}
+    # nginx's master process manages/reaps its workers; no separate init needed.
+    restart: unless-stopped
+    volumes:
+      - ./outage/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./outage/status.html:/usr/share/nginx/html/status.html:ro
+    networks: [platform-ingress]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/healthz]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    # Catalog budget for one shared outage endpoint; validate sizing under load.
+    mem_limit: 64m
+    cpus: 0.1
+
+networks:
+  platform-ingress:
+    # A fixed name is intentional only for this controller-owned cross-project
+    # network. Normal instance networks remain project-scoped and unnamed.
+    name: athyper-platform-ingress
+  platform-observability:
+    # Private cross-project discovery for Prometheus. No host port or edge
+    # router is attached to this network.
+    name: athyper-platform-observability
+
+secrets:
+  platform-tls-certificate:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/platform/secrets/tls.crt
+  platform-tls-private-key:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/platform/secrets/tls.key

@@ -10,6 +10,14 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION snapshot.trg_reject_network_profile_publication_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+BEGIN RAISE EXCEPTION 'snapshot.network_account_profile_publication is immutable' USING ERRCODE='integrity_constraint_violation'; END $$;
+
+CREATE OR REPLACE FUNCTION snapshot.trg_reject_bank_disclosure_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+BEGIN RAISE EXCEPTION 'snapshot.bank_account_disclosure is immutable' USING ERRCODE='integrity_constraint_violation'; END $$;
+
 CREATE OR REPLACE FUNCTION snapshot.trg_set_template_version_created_by()
 RETURNS trigger
 LANGUAGE plpgsql

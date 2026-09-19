@@ -1,40 +1,34 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve, join, normalize } from 'node:path';
 import pg from 'pg';
+import { isMain } from '../../lib/main.js';
+import { option } from '../../lib/cli.js';
 
 type Options = {
   connectionString: string;
   plane?: string;
   tenantCodes: string[];
   apply: boolean;
-  includeMissing: boolean;
+  seedRoot: string;
 };
 
-function parseArgs(): Options {
-  const args = process.argv.slice(2);
-  const get = (name: string) => {
-    const idx = args.findIndex((v) => v === `--${name}` || v.startsWith(`--${name}=`));
-    if (idx === -1) return undefined;
-    const direct = args[idx];
-    if (direct.includes('=')) return direct.split('=', 2)[1];
-    return args[idx + 1];
-  };
+export function parseArgs(args = process.argv.slice(2)): Options {
+  const get = (name: string) => option(args, `--${name}`);
+
+  if (args.includes('--help') || args.includes('-h')) throw new Error(helpText);
 
   const tenantArg = get('tenant');
   const tenantCodes = tenantArg ? tenantArg.split(',').map((v) => v.trim()).filter(Boolean) : [];
 
-  const plane = get('plane');
+  const plane = get('plane') ?? 'neon';
+  if (!['studio', 'neon', 'mesh'].includes(plane)) throw new Error('Invalid --plane; expected studio, neon, or mesh');
   const apply = args.includes('--apply');
-  const includeMissing = args.includes('--include-missing');
+  const seedRoot = resolveSeedRoot(get('seed-root'));
   const connectionString = get('db') ?? process.env.DATABASE_ADMIN_URL;
 
   if (!connectionString) {
     throw new Error('DATABASE_ADMIN_URL env var or --db is required');
-  }
-
-  if (args.includes('--help') || args.includes('-h')) {
-    throw new Error(helpText);
   }
 
   return {
@@ -42,7 +36,7 @@ function parseArgs(): Options {
     plane: plane,
     tenantCodes,
     apply,
-    includeMissing,
+    seedRoot,
   };
 }
 
@@ -53,10 +47,19 @@ Options:
   --plane            Only this plane (default: neon)
   --tenant           Tenant code(s) filter; supports comma-separated list
   --apply            Apply checksum updates (otherwise scan-only)
-  --include-missing  Fail if source files are missing
+  --include-missing  Accepted for compatibility; missing sources always fail
+  --seed-root        Override the checkout seed directory
   --db               Override DATABASE_ADMIN_URL`;
 
-function resolveFilePath(seedRoot: string, sourcePath: string | null, packKey: string, plane: string): string | null {
+export function resolveSeedRoot(explicit?: string): string {
+  const root = explicit ? resolve(explicit) : resolve(import.meta.dirname, '../../../seed');
+  if (!existsSync(root) || !statSync(root).isDirectory()) {
+    throw new Error(`Seed root is missing or is not a directory: ${root}`);
+  }
+  return root;
+}
+
+export function resolveFilePath(seedRoot: string, sourcePath: string | null, packKey: string, plane: string): string | null {
   const sanitizedPackKey = packKey.replace(/^tenants\//, '');
   const candidateOrder = [
     sourcePath ? join(seedRoot, sourcePath) : null,
@@ -69,7 +72,7 @@ function resolveFilePath(seedRoot: string, sourcePath: string | null, packKey: s
   ].filter((v): v is string => Boolean(v));
 
   for (const candidate of candidateOrder) {
-    if (existsSync(candidate)) return normalize(candidate);
+    if (existsSync(candidate) && statSync(candidate).isFile()) return normalize(candidate);
   }
   return null;
 }
@@ -84,8 +87,7 @@ async function main() {
   const client = new pg.Client({ connectionString: options.connectionString });
   await client.connect();
 
-  const repoRoot = resolve('D:/Products/athyper');
-  const seedRoot = resolve(repoRoot, 'server/db/seed');
+  const seedRoot = options.seedRoot;
   const planeFilter = options.plane ?? 'neon';
 
   try {
@@ -114,9 +116,7 @@ async function main() {
     for (const row of rows) {
       const filePath = resolveFilePath(seedRoot, row.source_path, row.pack_key, planeFilter);
       if (!filePath) {
-        if (options.includeMissing) {
-          missing.push({ row, filePath: 'MISSING' });
-        }
+        missing.push({ row, filePath: 'MISSING' });
         continue;
       }
       const hash = shaForFile(filePath);
@@ -150,12 +150,18 @@ async function main() {
       console.log(`  new: ${item.hash}`);
     }
 
+    if (missing.length > 0) {
+      throw new Error(`Ledger verification incomplete: ${missing.length} source files are missing; no repairs applied`);
+    }
+
     if (!options.apply || drifted.length === 0) {
       if (drifted.length === 0) console.log('No repair needed.');
       else console.log('Dry-run complete. Use --apply to write repaired hashes.');
       return;
     }
 
+    await client.query('BEGIN');
+    await client.query('LOCK TABLE public.seed_pack_ledger_v2 IN ACCESS EXCLUSIVE MODE');
     await client.query('DROP TRIGGER IF EXISTS trg_seed_pack_ledger_v2_immutable ON public.seed_pack_ledger_v2');
 
     for (const item of drifted) {
@@ -176,29 +182,17 @@ async function main() {
         EXECUTE FUNCTION public.trg_seed_pack_ledger_v2_immutable()
     `);
 
+    await client.query('COMMIT');
     console.log('Repaired', drifted.length, 'tenant seed rows.');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw error;
   } finally {
-    await client.query(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_trigger
-          WHERE tgname='trg_seed_pack_ledger_v2_immutable'
-            AND tgrelid='public.seed_pack_ledger_v2'::regclass
-        ) THEN
-          CREATE TRIGGER trg_seed_pack_ledger_v2_immutable
-            BEFORE UPDATE OR DELETE ON public.seed_pack_ledger_v2
-            FOR EACH ROW
-            EXECUTE FUNCTION public.trg_seed_pack_ledger_v2_immutable();
-        END IF;
-      END;
-      $$;
-    `).catch(() => {});
     await client.end();
   }
 }
 
-await main().catch((err) => {
+if (isMain(import.meta.url)) await main().catch((err) => {
   if (err instanceof Error && err.message === helpText) {
     console.log(err.message);
     process.exit(0);

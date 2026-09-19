@@ -28,16 +28,22 @@ BEGIN
   );
   SELECT * INTO v_release_one FROM runtime_meta.fn_stage_release_projection(
     'metadata.entity.projection_smoke','019fc300-0000-7000-8000-000000000011',1,
-    '019fc300-0000-7000-8000-000000000031',repeat('1',64),'{}'::jsonb,v_projection
+    '019fc300-0000-7000-8000-000000000031',repeat('1',64),'{"artifactKind":"entity_runtime"}'::jsonb,v_projection
   );
+  BEGIN
+    PERFORM runtime_meta.fn_activate_release(v_release_one.id,'{}'::jsonb);
+    RAISE EXCEPTION 'Unverified projection activated';
+  EXCEPTION WHEN object_not_in_prerequisite_state THEN NULL; END;
   PERFORM runtime_meta.fn_verify_release(v_release_one.id,repeat('1',64),
-    '{"signature_verified":true,"manifest_valid":true,"runtime_compatible":true}'::jsonb);
+    jsonb_build_object('signature_verified',true,'manifest_valid',true,'runtime_compatible',true,
+      'target_plane','neon','contract_hash',repeat('a',64),'descriptor_source_hash',repeat('a',64),
+      'contract_schema_version','5.3','descriptor_schema_version','1.1'));
   PERFORM runtime_meta.fn_activate_release(v_release_one.id,'{"smoke":"first"}'::jsonb);
   -- A delivery retry after local activation must remain idempotent so central
   -- acknowledgement can recover without restaging mutable projection content.
   PERFORM runtime_meta.fn_stage_release_projection(
     'metadata.entity.projection_smoke','019fc300-0000-7000-8000-000000000011',1,
-    '019fc300-0000-7000-8000-000000000031',repeat('1',64),'{}'::jsonb,v_projection
+    '019fc300-0000-7000-8000-000000000031',repeat('1',64),'{"artifactKind":"entity_runtime"}'::jsonb,v_projection
   );
 
   v_projection := jsonb_set(v_projection,'{contract,id}','"019fc300-0000-7000-8000-000000000102"');
@@ -52,10 +58,12 @@ BEGIN
   v_projection := jsonb_set(v_projection,'{descriptor,compiled_json}','{"release":2}');
   SELECT * INTO v_release_two FROM runtime_meta.fn_stage_release_projection(
     'metadata.entity.projection_smoke','019fc300-0000-7000-8000-000000000012',2,
-    '019fc300-0000-7000-8000-000000000032',repeat('2',64),'{}'::jsonb,v_projection
+    '019fc300-0000-7000-8000-000000000032',repeat('2',64),'{"artifactKind":"entity_runtime"}'::jsonb,v_projection
   );
   PERFORM runtime_meta.fn_verify_release(v_release_two.id,repeat('2',64),
-    '{"signature_verified":true,"manifest_valid":true,"runtime_compatible":true}'::jsonb);
+    jsonb_build_object('signature_verified',true,'manifest_valid',true,'runtime_compatible',true,
+      'target_plane','neon','contract_hash',repeat('c',64),'descriptor_source_hash',repeat('c',64),
+      'contract_schema_version','5.3','descriptor_schema_version','1.1'));
   PERFORM runtime_meta.fn_activate_release(v_release_two.id,'{"smoke":"successor"}'::jsonb);
 
   PERFORM runtime_meta.fn_rollback_release(

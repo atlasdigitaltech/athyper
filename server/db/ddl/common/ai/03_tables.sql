@@ -1,5 +1,6 @@
 -- Generated from the extracted live Atlas AI contract.
--- Regenerate with: node server/db/scripts/catalog/build-common-ai-ddl.mjs
+-- Maintained as canonical foundation DDL; use additive migrations for installed databases.
+-- Supported verification and maintenance: server/db/scripts/README.md (Atlas AI DDL).
 
 CREATE TABLE "ai"."ai_action_policy" (
   "id" uuid DEFAULT shared.uuidv7() NOT NULL,
@@ -161,6 +162,7 @@ CREATE TABLE "ai"."atlas_tenant_quota_reservation" (
   "reserved_output_tokens" bigint NOT NULL,
   "actual_input_tokens" bigint,
   "actual_output_tokens" bigint,
+  "usage_source" text,
   "status" text DEFAULT 'reserved' NOT NULL,
   "expires_at" timestamp with time zone NOT NULL,
   "settled_at" timestamp with time zone,
@@ -248,6 +250,10 @@ CREATE TABLE "ai"."atlas_run" (
   "plane" text NOT NULL,
   "principal_id" uuid NOT NULL,
   "client_request_id" uuid NOT NULL,
+  "generation_config" jsonb DEFAULT '{}'::jsonb NOT NULL,
+  "request_digest" text DEFAULT ''::text NOT NULL,
+  "lease_expires_at" timestamp with time zone DEFAULT (clock_timestamp() + interval '5 minutes') NOT NULL,
+  "finish_reason" text,
   "input_message_id" uuid NOT NULL,
   "output_message_id" uuid NOT NULL,
   "status" text DEFAULT 'started'::text NOT NULL,
@@ -331,6 +337,7 @@ COMMENT ON COLUMN "ai"."ai_agent_call"."credential_reference_hash" IS 'Versioned
 COMMENT ON COLUMN "ai"."ai_agent_call"."credential_fingerprint" IS 'Versioned keyed fingerprint for rotation/reconciliation. Never an API key, secret reference, or key suffix.';
 
 CREATE TABLE "ai"."ai_agent_run" (
+  "guidance_code" text,
   "id" uuid DEFAULT shared.uuidv7() NOT NULL,
   "tenant_id" uuid NOT NULL,
   "log_type" shared.log_type_d DEFAULT 'system'::text NOT NULL,
@@ -436,6 +443,8 @@ PARTITION BY RANGE (created_at);
 COMMENT ON TABLE "ai"."ai_call_transcript" IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_LOG. AI voice call transcripts. Reclassified from user-activity to AI domain. Partitioned monthly.';
 
 CREATE TABLE "ai"."ai_feedback_log" (
+  "atlas_response_message_id" uuid,
+  "atlas_response_plane" text,
   "id" uuid DEFAULT shared.uuidv7() NOT NULL,
   "tenant_id" uuid NOT NULL,
   "log_type" shared.log_type_d DEFAULT 'business'::text NOT NULL,
@@ -617,3 +626,60 @@ COMMENT ON COLUMN "ai"."atlas_thread"."retention_policy_id" IS 'Stable, versione
 COMMENT ON COLUMN "ai"."atlas_thread"."protected_summary_ref" IS 'Opaque reference to protected summary content. Never a provider conversation identifier.';
 
 COMMENT ON COLUMN "ai"."atlas_thread"."row_version" IS 'Optimistic concurrency token incremented by a database trigger on every update.';
+
+CREATE TABLE "ai"."atlas_provider_usage" (
+  "provider_call_id" uuid NOT NULL,
+  "tenant_id" uuid NOT NULL,
+  "run_id" uuid NOT NULL,
+  "provider_id" text NOT NULL,
+  "entry" jsonb NOT NULL,
+  "created_at" timestamp with time zone DEFAULT clock_timestamp() NOT NULL
+);
+
+COMMENT ON TABLE ai.atlas_provider_usage IS 'Content-free, idempotent provider usage receipts staged durably before atomic transcript/run finalization and append-only canonical metering.';
+
+COMMENT ON COLUMN ai.atlas_tenant_quota_reservation.usage_source IS 'Distinguishes final provider counters from conservative quota charges after missing final usage; estimates are never represented as provider-reported usage.';
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: ai.atlas_experience_release
+CREATE TABLE ai.atlas_experience_release (
+    id uuid DEFAULT shared.uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    scope text NOT NULL,
+    revision bigint NOT NULL,
+    status text DEFAULT 'draft'::text NOT NULL,
+    definition jsonb NOT NULL,
+    content_hash character(64) NOT NULL,
+    published_at timestamp with time zone,
+    published_by uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_by uuid NOT NULL,
+    updated_at timestamp with time zone,
+    updated_by uuid,
+    CONSTRAINT atlas_experience_release_audit_pair_chk CHECK (((updated_at IS NULL) = (updated_by IS NULL))),
+    CONSTRAINT atlas_experience_release_definition_chk CHECK ((((jsonb_typeof(definition) = 'object'::text) AND ((definition ->> 'schema'::text) = 'atlas-experience-definition/1'::text) AND ((definition ->> 'scope'::text) = scope) AND (octet_length((definition)::text) <= 131072))) IS TRUE),
+    CONSTRAINT atlas_experience_release_hash_chk CHECK ((content_hash ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT atlas_experience_release_publication_chk CHECK ((((status = 'draft'::text) AND (published_at IS NULL) AND (published_by IS NULL)) OR ((status = ANY (ARRAY['published'::text, 'retired'::text])) AND (published_at IS NOT NULL) AND (published_by IS NOT NULL)))),
+    CONSTRAINT atlas_experience_release_revision_chk CHECK ((revision > 0)),
+    CONSTRAINT atlas_experience_release_scope_chk CHECK ((scope ~ '^[a-z][a-z0-9_.:-]{0,127}$'::text)),
+    CONSTRAINT atlas_experience_release_status_chk CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'retired'::text])))
+);
+
+COMMENT ON TABLE ai.atlas_experience_release IS 'Versioned Studio-authored Atlas widgets, search sources, starter prompts, and agent profiles. Each plane reads only its locally published projection.';
+-- END ATLAS EXPERIENCE FOUNDATION: ai.atlas_experience_release
+
+-- BEGIN ATLAS F4 LEARNING COMMON
+CREATE TABLE ai.atlas_learning_candidate (
+ id uuid DEFAULT shared.uuidv7() PRIMARY KEY,
+ tenant_id uuid NOT NULL,
+ feedback_id uuid NOT NULL,
+ origin_plane text NOT NULL CHECK (origin_plane IN ('neon','mesh','studio')),
+ submitted_by uuid NOT NULL,
+ proposal jsonb NOT NULL CHECK (jsonb_typeof(proposal)='object' AND pg_column_size(proposal)<=4096),
+ proposal_hash text NOT NULL CHECK (proposal_hash ~ '^[0-9a-f]{64}$'),
+ created_at timestamptz NOT NULL DEFAULT now(),
+ expires_at timestamptz NOT NULL CHECK (expires_at>created_at),
+ handed_off_at timestamptz
+);
+COMMENT ON TABLE ai.atlas_learning_candidate IS 'ARCHETYPE=B;SCOPE=T. Immutable response-bound vocabulary proposals; not a runtime index.';
+-- END ATLAS F4 LEARNING COMMON

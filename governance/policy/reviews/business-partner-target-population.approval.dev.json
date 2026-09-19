@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "explicit_user_target_population_disposition",
+  "reference": "conversation-target-proposals:306927d9-c767-4899-86e9-599b4ad992f4",
+  "approvedAt": "2026-09-10T17:41:35.127Z",
+  "actor": {
+    "type": "conversation_user",
+    "namedAccountImpersonated": false
+  },
+  "source": {
+    "channel": "user",
+    "exactMessage": "go ahead",
+    "respondingTo": "Do you approve these three proposals?",
+    "approvedProposalRevisions": [
+      "e4f76cbdecd7962a0adf1a3584552a605f73b6419b12124540ef5cdce4fb2bc2",
+      "043ba1efdefd6863ae0a8b19111e139a8fc6f49ce80c91f3121e06da3fd14df1"
+    ]
+  },
+  "proposalRevision": "e4f76cbdecd7962a0adf1a3584552a605f73b6419b12124540ef5cdce4fb2bc2",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "accounts": [
+    {
+      "principalId": "1ee5151e-8296-57fc-9bb1-3ed1cc1537f4",
+      "account": "acceptance.bp.v1.approver",
+      "disposition": "case_only_target_access",
+      "tenantReadGrant": false,
+      "existingGrants": "retain",
+      "targetDirectoryAndMasterReadDenialAccepted": true,
+      "caseExecutionQualificationRequired": true
+    },
+    {
+      "principalId": "6a0a6543-fb1b-500a-9acf-b6a054599e7e",
+      "account": "acceptance.bp.v1.requester",
+      "disposition": "case_only_target_access",
+      "tenantReadGrant": false,
+      "existingGrants": "retain",
+      "targetDirectoryAndMasterReadDenialAccepted": true,
+      "caseExecutionQualificationRequired": true
+    },
+    {
+      "principalId": "4fa4f3ba-d4e6-5811-826c-a0ba323b4477",
+      "account": "acceptance.bp.v1.materializer",
+      "disposition": "case_only_target_access",
+      "tenantReadGrant": false,
+      "existingGrants": "retain",
+      "targetDirectoryAndMasterReadDenialAccepted": true,
+      "caseExecutionQualificationRequired": true
+    }
+  ],
+  "grantsChanged": false,
+  "activationAuthorized": false
+}

@@ -2,7 +2,7 @@ REVOKE ALL ON SCHEMA event FROM PUBLIC;
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA event FROM PUBLIC;
 REVOKE ALL ON FUNCTION event.fn_outbox_purge_completed(interval, integer) FROM PUBLIC;
 REVOKE ALL ON event.comment_flag, event.notification_message,
-    event.notification_delivery, event.notification_message_attachment, event.notification_inbox_state, event.notification_outbox_state,
+    event.notification_delivery, event.notification_provider_event, event.notification_email_suppression, event.notification_message_attachment, event.notification_inbox_state, event.notification_outbox_state,
     event.outbox, event.channel_consent_event, event.command_execution,
     event.integration_delivery, event.integration_inbound_receipt FROM PUBLIC;
 DO $$
@@ -12,6 +12,8 @@ BEGIN
         GRANT SELECT, INSERT, UPDATE, DELETE ON event.comment_flag TO athyperapp;
         GRANT SELECT, INSERT, UPDATE ON event.notification_message,
             event.notification_delivery, event.notification_message_attachment, event.outbox TO athyperapp;
+        GRANT SELECT, INSERT ON event.notification_provider_event TO athyperapp;
+        GRANT SELECT, INSERT, UPDATE ON event.notification_email_suppression TO athyperapp;
         GRANT DELETE ON event.outbox TO athyperapp;
         GRANT EXECUTE ON FUNCTION event.fn_outbox_purge_completed(interval, integer) TO athyperapp;
         GRANT SELECT, INSERT, UPDATE ON event.notification_inbox_state TO athyperapp;
@@ -21,10 +23,14 @@ BEGIN
         GRANT SELECT, INSERT, UPDATE ON event.integration_delivery TO athyperapp;
         GRANT SELECT, INSERT ON event.integration_inbound_receipt TO athyperapp;
     END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_jobs_service') THEN
+        GRANT USAGE ON SCHEMA event TO athyper_jobs_service;
+        GRANT SELECT, UPDATE ON event.outbox TO athyper_jobs_service;
+    END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT USAGE ON SCHEMA event TO athyperadmin;
         GRANT ALL PRIVILEGES ON event.comment_flag, event.notification_message,
-            event.notification_delivery, event.notification_message_attachment, event.notification_inbox_state,
+            event.notification_delivery, event.notification_provider_event, event.notification_email_suppression, event.notification_message_attachment, event.notification_inbox_state,
             event.notification_outbox_state,
             event.outbox, event.channel_consent_event, event.command_execution,
             event.integration_delivery, event.integration_inbound_receipt TO athyperadmin;
@@ -63,6 +69,7 @@ REVOKE ALL ON FUNCTION event.fn_notification_claim_deliveries(uuid, text, intege
 REVOKE ALL ON FUNCTION event.trg_mirror_whatsapp_consent_event() FROM PUBLIC;
 REVOKE ALL ON FUNCTION event.current_plane_key() FROM PUBLIC;
 REVOKE ALL ON FUNCTION event.fn_notification_work_tenants(text, text, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION event.fn_notification_worker_principal(uuid) FROM PUBLIC;
 
 DO $$
 BEGIN
@@ -74,6 +81,7 @@ BEGIN
         GRANT EXECUTE ON FUNCTION event.fn_notification_claim_deliveries(uuid, text, integer, integer) TO athyperapp;
         GRANT EXECUTE ON FUNCTION event.current_plane_key() TO athyperapp;
         GRANT EXECUTE ON FUNCTION event.fn_notification_work_tenants(text, text, integer) TO athyperapp;
+        GRANT EXECUTE ON FUNCTION event.fn_notification_worker_principal(uuid) TO athyperapp;
     END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON event.notification_delivery_claim, event.digest_staging,
@@ -81,6 +89,7 @@ BEGIN
         GRANT EXECUTE ON FUNCTION event.fn_notification_claim_deliveries(uuid, text, integer, integer) TO athyperadmin;
         GRANT EXECUTE ON FUNCTION event.current_plane_key() TO athyperadmin;
         GRANT EXECUTE ON FUNCTION event.fn_notification_work_tenants(text, text, integer) TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION event.fn_notification_worker_principal(uuid) TO athyperadmin;
     END IF;
 END;
 $$;

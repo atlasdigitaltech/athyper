@@ -1,0 +1,819 @@
+import { createHash, randomUUID } from "node:crypto";
+import { sql, type Transaction } from "kysely";
+import type { AuditRecorder } from "@athyper/server-contract-audit";
+import type {
+  Authorizer,
+  VerifiedRequestContext,
+} from "@athyper/server-contract-auth";
+import type { OutboxWriter } from "@athyper/server-contract-events";
+
+type Tx = Transaction<Record<string, never>>;
+type Row = Readonly<Record<string, unknown>>;
+export const businessPartnerProfilePublicationPermissions = Object.freeze({
+  publish: "mesh.business_partner_profile.publish",
+  read: "mesh.business_partner_profile.read",
+  withdraw: "mesh.business_partner_profile.withdraw",
+} as const);
+export type ProfilePublicationStatus = "published" | "withdrawn";
+export interface BusinessPartnerProfilePublication {
+  readonly id: string;
+  readonly ownerTenantId: string;
+  readonly ownerAccountId: string;
+  readonly recipientTenantId: string;
+  readonly recipientAccountId: string;
+  readonly networkRelationshipId: string;
+  readonly snapshotId: string;
+  readonly publicationVersion: number;
+  readonly schemaVersion: number;
+  readonly fieldSetCode: string;
+  readonly payloadHash: string;
+  readonly previousPublicationId?: string;
+  readonly publishedAt: string;
+  readonly publishedBy: string;
+  readonly status: ProfilePublicationStatus;
+  readonly lifecycleVersion: number;
+  readonly payload: Readonly<Record<string, unknown>>;
+}
+export class MeshProfilePublicationError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "MeshProfilePublicationError";
+  }
+}
+export interface ProfilePublicationTransactions {
+  run<T>(
+    plane: "mesh",
+    actor: {
+      readonly tenantId: string;
+      readonly principalId: string;
+      readonly requestId?: string;
+      readonly correlationId?: string;
+    },
+    work: (transaction: Tx) => Promise<T>,
+  ): Promise<T>;
+}
+export interface BusinessPartnerProfilePublicationService {
+  publish(input: {
+    readonly context: VerifiedRequestContext;
+    readonly ownerAccountId: string;
+    readonly networkRelationshipId: string;
+    readonly idempotencyKey: string;
+  }): Promise<{
+    readonly publication: BusinessPartnerProfilePublication;
+    readonly replayed: boolean;
+  }>;
+  get(input: {
+    readonly context: VerifiedRequestContext;
+    readonly publicationId: string;
+  }): Promise<BusinessPartnerProfilePublication>;
+  list(input: {
+    readonly context: VerifiedRequestContext;
+    readonly networkRelationshipId: string;
+    readonly limit?: number;
+  }): Promise<readonly BusinessPartnerProfilePublication[]>;
+  withdraw(input: {
+    readonly context: VerifiedRequestContext;
+    readonly publicationId: string;
+    readonly reason: string;
+    readonly idempotencyKey: string;
+  }): Promise<{
+    readonly publication: BusinessPartnerProfilePublication;
+    readonly replayed: boolean;
+  }>;
+}
+export interface MeshBusinessPartnerProfileDefinition {
+  organizationProfileSchema(): Promise<{
+    readonly schemaVersion: number;
+    readonly fieldSetCode: string;
+    readonly allowedPaths: readonly string[];
+    readonly prohibitedPatterns: readonly string[];
+  }>;
+}
+
+export class KyselyBusinessPartnerProfilePublicationRepository {
+  async byIdempotency(tenantId: string, key: string, tx: Tx) {
+    await sql`SELECT pg_advisory_xact_lock(hashtextextended(${tenantId + ":profile-publication"},0))`.execute(
+      tx,
+    );
+    const r =
+      await sql<Row>`SELECT p.*,s.payload_json,(SELECT e.event_kind::text FROM mesh.network_account_profile_publication_event e WHERE e.owner_tenant_id=p.owner_tenant_id AND e.publication_id=p.id ORDER BY e.lifecycle_version DESC LIMIT 1) lifecycle_status,(SELECT e.lifecycle_version FROM mesh.network_account_profile_publication_event e WHERE e.owner_tenant_id=p.owner_tenant_id AND e.publication_id=p.id ORDER BY e.lifecycle_version DESC LIMIT 1) lifecycle_version FROM mesh.network_account_profile_publication p JOIN snapshot.network_account_profile_publication s ON s.owner_tenant_id=p.owner_tenant_id AND s.id=p.snapshot_id WHERE p.owner_tenant_id=${tenantId}::uuid AND p.idempotency_key=${key}`.execute(
+        tx,
+      );
+    return r.rows[0] ? map(r.rows[0]) : null;
+  }
+  async relationship(
+    tenantId: string,
+    ownerAccountId: string,
+    relationshipId: string,
+    tx: Tx,
+  ) {
+    const r =
+      await sql<Row>`SELECT * FROM mesh.lock_profile_publication_relationship(${tenantId}::uuid,${ownerAccountId}::uuid,${relationshipId}::uuid)`.execute(
+        tx,
+      );
+    return r.rows[0] ?? null;
+  }
+  async source(tenantId: string, ownerAccountId: string, tx: Tx) {
+    const account = (
+      await sql<Row>`SELECT account_code,display_name,legal_name,network_role::text,country_code,default_currency,logo_asset_ref FROM mesh.network_account WHERE tenant_id=${tenantId}::uuid AND id=${ownerAccountId}::uuid AND status='active'`.execute(
+        tx,
+      )
+    ).rows[0];
+    if (!account) return null;
+    const profile = (
+      await sql<Row>`SELECT legal_form,incorporation_date::text,website_url,description,preferred_language_code FROM mesh.network_account_profile WHERE tenant_id=${tenantId}::uuid AND network_account_id=${ownerAccountId}::uuid AND status='active'`.execute(
+        tx,
+      )
+    ).rows[0];
+    if (!profile) return null;
+    const commodities = (
+      await sql<Row>`SELECT capability.trade_role::text,capability.effective_from::text,capability.effective_until::text,commodity.domain_code,commodity.code,commodity.name FROM mesh.network_account_commodity_capability capability JOIN shared.commodity_code commodity ON commodity.id=capability.commodity_code_id WHERE capability.tenant_id=${tenantId}::uuid AND capability.network_account_id=${ownerAccountId}::uuid AND capability.status='active' AND capability.effective_from<=CURRENT_DATE AND(capability.effective_until IS NULL OR capability.effective_until>CURRENT_DATE) AND commodity.status='active' ORDER BY commodity.domain_code,commodity.code,capability.trade_role`.execute(
+        tx,
+      )
+    ).rows;
+    const industries = (
+      await sql<Row>`SELECT classification.assignment_kind,classification.is_primary,classification.confidence,classification.effective_from::text,classification.effective_until::text,industry.domain_code,industry.code,industry.name FROM mesh.network_account_industry_classification classification JOIN shared.industry_code industry ON industry.domain_code=classification.industry_domain_code AND industry.id=classification.industry_code_id WHERE classification.tenant_id=${tenantId}::uuid AND classification.network_account_id=${ownerAccountId}::uuid AND classification.status='active' AND classification.effective_from<=CURRENT_DATE AND(classification.effective_until IS NULL OR classification.effective_until>CURRENT_DATE) AND industry.status='active' ORDER BY industry.domain_code,classification.is_primary DESC,industry.code`.execute(
+        tx,
+      )
+    ).rows;
+    return { account, profile, commodities, industries };
+  }
+  async create(
+    input: {
+      tenantId: string;
+      principalId: string;
+      ownerAccountId: string;
+      recipientTenantId: string;
+      recipientAccountId: string;
+      relationshipId: string;
+      idempotencyKey: string;
+      schemaVersion: number;
+      fieldSetCode: string;
+      payload: Readonly<Record<string, unknown>>;
+      hash: string;
+    },
+    tx: Tx,
+  ) {
+    const latest = (
+        await sql<{
+          id: string;
+          publication_version: number;
+        }>`SELECT id,publication_version FROM mesh.network_account_profile_publication WHERE owner_tenant_id=${input.tenantId}::uuid AND owner_account_id=${input.ownerAccountId}::uuid AND recipient_account_id=${input.recipientAccountId}::uuid ORDER BY publication_version DESC LIMIT 1`.execute(
+          tx,
+        )
+      ).rows[0],
+      publicationId = randomUUID(),
+      snapshotId = randomUUID(),
+      version = Number(latest?.publication_version ?? 0) + 1,
+      fingerprint = hash({
+        publicationId,
+        snapshotId,
+        version,
+        payloadHash: input.hash,
+        relationshipId: input.relationshipId,
+        recipientTenantId: input.recipientTenantId,
+      });
+    await sql`INSERT INTO snapshot.network_account_profile_publication(id,owner_tenant_id,owner_account_id,recipient_tenant_id,recipient_account_id,network_relationship_id,schema_code,schema_version,field_set_code,payload_json,payload_hash,captured_by) VALUES(${snapshotId}::uuid,${input.tenantId}::uuid,${input.ownerAccountId}::uuid,${input.recipientTenantId}::uuid,${input.recipientAccountId}::uuid,${input.relationshipId}::uuid,'mesh.business_partner_profile',${input.schemaVersion},${input.fieldSetCode},${JSON.stringify(input.payload)}::jsonb,${input.hash},${input.principalId}::uuid)`.execute(
+      tx,
+    );
+    await sql`INSERT INTO mesh.network_account_profile_publication(id,owner_tenant_id,owner_account_id,recipient_tenant_id,recipient_account_id,network_relationship_id,snapshot_id,publication_version,schema_version,field_set_code,payload_hash,previous_publication_id,idempotency_key,published_by) VALUES(${publicationId}::uuid,${input.tenantId}::uuid,${input.ownerAccountId}::uuid,${input.recipientTenantId}::uuid,${input.recipientAccountId}::uuid,${input.relationshipId}::uuid,${snapshotId}::uuid,${version},${input.schemaVersion},${input.fieldSetCode},${input.hash},${latest?.id ?? null}::uuid,${input.idempotencyKey},${input.principalId}::uuid)`.execute(
+      tx,
+    );
+    await sql`INSERT INTO mesh.network_account_profile_publication_event(owner_tenant_id,recipient_tenant_id,publication_id,lifecycle_version,event_kind,decision_fingerprint,idempotency_key,recorded_by) VALUES(${input.tenantId}::uuid,${input.recipientTenantId}::uuid,${publicationId}::uuid,1,'published',${fingerprint},${`publish:${hash(input.idempotencyKey)}`},${input.principalId}::uuid)`.execute(
+      tx,
+    );
+    return required(await this.get(publicationId, tx));
+  }
+  async get(id: string, tx: Tx) {
+    const r =
+      await sql<Row>`SELECT p.*,s.payload_json,(SELECT e.event_kind::text FROM mesh.network_account_profile_publication_event e WHERE e.owner_tenant_id=p.owner_tenant_id AND e.publication_id=p.id ORDER BY e.lifecycle_version DESC LIMIT 1) lifecycle_status,(SELECT e.lifecycle_version FROM mesh.network_account_profile_publication_event e WHERE e.owner_tenant_id=p.owner_tenant_id AND e.publication_id=p.id ORDER BY e.lifecycle_version DESC LIMIT 1) lifecycle_version FROM mesh.network_account_profile_publication p JOIN snapshot.network_account_profile_publication s ON s.owner_tenant_id=p.owner_tenant_id AND s.id=p.snapshot_id WHERE p.id=${id}::uuid`.execute(
+        tx,
+      );
+    return r.rows[0] ? map(r.rows[0]) : null;
+  }
+  async list(relationshipId: string, limit: number, tx: Tx) {
+    const r =
+      await sql<Row>`SELECT p.*,s.payload_json,(SELECT e.event_kind::text FROM mesh.network_account_profile_publication_event e WHERE e.owner_tenant_id=p.owner_tenant_id AND e.publication_id=p.id ORDER BY e.lifecycle_version DESC LIMIT 1) lifecycle_status,(SELECT e.lifecycle_version FROM mesh.network_account_profile_publication_event e WHERE e.owner_tenant_id=p.owner_tenant_id AND e.publication_id=p.id ORDER BY e.lifecycle_version DESC LIMIT 1) lifecycle_version FROM mesh.network_account_profile_publication p JOIN snapshot.network_account_profile_publication s ON s.owner_tenant_id=p.owner_tenant_id AND s.id=p.snapshot_id WHERE p.network_relationship_id=${relationshipId}::uuid ORDER BY p.published_at DESC,p.id DESC LIMIT ${limit}`.execute(
+        tx,
+      );
+    return r.rows.map(map);
+  }
+  async withdrawalByKey(
+    tenantId: string,
+    key: string,
+    tx: Tx,
+    reason?: string,
+    principalId?: string,
+  ) {
+    await sql`SELECT pg_advisory_xact_lock(hashtextextended(${tenantId + ":profile-publication"},0))`.execute(
+      tx,
+    );
+    const r = await sql<{
+      publication_id: string;
+      reason: string;
+      recorded_by: string;
+    }>`SELECT publication_id,reason,recorded_by FROM mesh.network_account_profile_publication_event WHERE owner_tenant_id=${tenantId}::uuid AND idempotency_key=${key} AND event_kind='withdrawn'`.execute(
+      tx,
+    );
+    const row = r.rows[0];
+    if (
+      row &&
+      ((reason !== undefined && row.reason !== reason) ||
+        (principalId !== undefined && row.recorded_by !== principalId))
+    )
+      throw new MeshProfilePublicationError(
+        409,
+        "MESH_PROFILE_PUBLICATION_IDEMPOTENCY_CONFLICT",
+        "Idempotency key was reused for another withdrawal command",
+      );
+    return row?.publication_id;
+  }
+  async withdraw(
+    publication: BusinessPartnerProfilePublication,
+    reason: string,
+    key: string,
+    principalId: string,
+    tx: Tx,
+  ) {
+    const current = required(await this.get(publication.id, tx));
+    if (current.status === "withdrawn")
+      throw new MeshProfilePublicationError(
+        409,
+        "MESH_PROFILE_PUBLICATION_ALREADY_WITHDRAWN",
+        "Publication is already withdrawn",
+      );
+    const lifecycle = current.lifecycleVersion + 1,
+      fingerprint = hash({
+        publicationId: current.id,
+        payloadHash: current.payloadHash,
+        lifecycleVersion: lifecycle,
+        reason,
+        recordedBy: principalId,
+      });
+    await sql`INSERT INTO mesh.network_account_profile_publication_event(owner_tenant_id,recipient_tenant_id,publication_id,lifecycle_version,event_kind,reason,decision_fingerprint,idempotency_key,recorded_by) VALUES(${current.ownerTenantId}::uuid,${current.recipientTenantId}::uuid,${current.id}::uuid,${lifecycle},'withdrawn',${reason},${fingerprint},${key},${principalId}::uuid)`.execute(
+      tx,
+    );
+    return required(await this.get(current.id, tx));
+  }
+}
+
+export function createBusinessPartnerProfilePublicationService(options: {
+  readonly authorizer: Authorizer;
+  readonly repository: KyselyBusinessPartnerProfilePublicationRepository;
+  readonly transactions: ProfilePublicationTransactions;
+  readonly audit: AuditRecorder<Tx>;
+  readonly outbox: OutboxWriter<Tx>;
+  readonly definition: MeshBusinessPartnerProfileDefinition;
+}): BusinessPartnerProfilePublicationService {
+  return {
+    async publish(input) {
+      context(input.context);
+      key(input.idempotencyKey);
+      await authorize(
+        options.authorizer,
+        input.context,
+        businessPartnerProfilePublicationPermissions.publish,
+        {
+          tenantId: input.context.tenantId,
+          networkAccountId: input.ownerAccountId,
+          networkRelationshipId: input.networkRelationshipId,
+          recipientRelationshipValidated: true,
+        },
+      );
+      return options.transactions.run(
+        "mesh",
+        actor(input.context),
+        async (tx) => {
+          const existing = await options.repository.byIdempotency(
+            input.context.tenantId,
+            input.idempotencyKey,
+            tx,
+          );
+          if (existing) {
+            if (
+              existing.ownerAccountId !== input.ownerAccountId ||
+              existing.networkRelationshipId !== input.networkRelationshipId
+            )
+              throw new MeshProfilePublicationError(
+                409,
+                "MESH_PROFILE_PUBLICATION_IDEMPOTENCY_CONFLICT",
+                "Idempotency key was reused for another publication coordinate",
+              );
+            return { publication: existing, replayed: true };
+          }
+          const relationship = await options.repository.relationship(
+            input.context.tenantId,
+            input.ownerAccountId,
+            input.networkRelationshipId,
+            tx,
+          );
+          if (!relationship)
+            throw new MeshProfilePublicationError(
+              404,
+              "MESH_PROFILE_PUBLICATION_RELATIONSHIP_NOT_FOUND",
+              "Active supplier-to-buyer relationship coordinate was not found",
+            );
+          const effectiveFrom = relationship["effective_from"]
+              ? dateOnly(relationship["effective_from"])
+              : undefined,
+            effectiveUntil = relationship["effective_until"]
+              ? dateOnly(relationship["effective_until"])
+              : undefined;
+          if (
+            String(relationship["status"]) !== "active" ||
+            String(relationship["owner_status"]) !== "active" ||
+            String(relationship["recipient_status"]) !== "active" ||
+            (effectiveFrom && effectiveFrom > today()) ||
+            (effectiveUntil && effectiveUntil <= today())
+          )
+            throw new MeshProfilePublicationError(
+              409,
+              "MESH_PROFILE_PUBLICATION_RELATIONSHIP_INACTIVE",
+              "Publication requires an active, effective relationship and participants",
+            );
+          const source = await options.repository.source(
+            input.context.tenantId,
+            input.ownerAccountId,
+            tx,
+          );
+          if (!source)
+            throw new MeshProfilePublicationError(
+              409,
+              "MESH_PROFILE_PUBLICATION_SOURCE_NOT_READY",
+              "An active network account and active profile are required",
+            );
+          const definition =
+              await options.definition.organizationProfileSchema(),
+            candidate = profilePayload(input, relationship, source, definition),
+            payload = projectAllowed(candidate, definition.allowedPaths);
+          assertNoProhibited(payload, definition.prohibitedPatterns);
+          const payloadHash = hash(payload);
+          const publication = await options.repository.create(
+            {
+              tenantId: input.context.tenantId,
+              principalId: input.context.principalId,
+              ownerAccountId: input.ownerAccountId,
+              recipientTenantId: String(relationship["buyer_tenant_id"]),
+              recipientAccountId: String(relationship["buyer_account_id"]),
+              relationshipId: input.networkRelationshipId,
+              idempotencyKey: input.idempotencyKey,
+              schemaVersion: definition.schemaVersion,
+              fieldSetCode: definition.fieldSetCode,
+              payload,
+              hash: payloadHash,
+            },
+            tx,
+          );
+          await effects(
+            options,
+            input.context,
+            tx,
+            "business_partner.profile_publication.published",
+            "create",
+            publication,
+            true,
+          );
+          return { publication, replayed: false };
+        },
+      );
+    },
+    async get(input) {
+      context(input.context);
+      return options.transactions.run(
+        "mesh",
+        actor(input.context),
+        async (tx) => {
+          const publication = await options.repository.get(
+            input.publicationId,
+            tx,
+          );
+          if (!publication)
+            throw new MeshProfilePublicationError(
+              404,
+              "MESH_PROFILE_PUBLICATION_NOT_FOUND",
+              "Profile publication was not found",
+            );
+          await authorize(
+            options.authorizer,
+            input.context,
+            businessPartnerProfilePublicationPermissions.read,
+            {
+              tenantId: input.context.tenantId,
+              networkRelationshipId: publication.networkRelationshipId,
+            },
+          );
+          return publication;
+        },
+      );
+    },
+    async list(input) {
+      context(input.context);
+      const limit = input.limit ?? 50;
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+        throw invalid("limit must be between 1 and 100");
+      await authorize(
+        options.authorizer,
+        input.context,
+        businessPartnerProfilePublicationPermissions.read,
+        {
+          tenantId: input.context.tenantId,
+          networkRelationshipId: input.networkRelationshipId,
+        },
+      );
+      return options.transactions.run("mesh", actor(input.context), (tx) =>
+        options.repository.list(input.networkRelationshipId, limit, tx),
+      );
+    },
+    async withdraw(input) {
+      context(input.context);
+      key(input.idempotencyKey);
+      reason(input.reason);
+      return options.transactions.run(
+        "mesh",
+        actor(input.context),
+        async (tx) => {
+          const current = await options.repository.get(input.publicationId, tx);
+          if (!current || current.ownerTenantId !== input.context.tenantId)
+            throw new MeshProfilePublicationError(
+              404,
+              "MESH_PROFILE_PUBLICATION_NOT_FOUND",
+              "Owned profile publication was not found",
+            );
+          await authorize(
+            options.authorizer,
+            input.context,
+            businessPartnerProfilePublicationPermissions.withdraw,
+            {
+              tenantId: input.context.tenantId,
+              networkAccountId: current.ownerAccountId,
+              networkRelationshipId: current.networkRelationshipId,
+              recipientRelationshipValidated: true,
+            },
+          );
+          const replayId = await options.repository.withdrawalByKey(
+            input.context.tenantId,
+            input.idempotencyKey,
+            tx,
+            input.reason,
+            input.context.principalId,
+          );
+          if (replayId) {
+            if (replayId !== input.publicationId)
+              throw new MeshProfilePublicationError(
+                409,
+                "MESH_PROFILE_PUBLICATION_IDEMPOTENCY_CONFLICT",
+                "Idempotency key was reused for another withdrawal",
+              );
+            return {
+              publication: required(await options.repository.get(replayId, tx)),
+              replayed: true,
+            };
+          }
+          const publication = await options.repository.withdraw(
+            current,
+            input.reason,
+            input.idempotencyKey,
+            input.context.principalId,
+            tx,
+          );
+          await effects(
+            options,
+            input.context,
+            tx,
+            "business_partner.profile_publication.withdrawn",
+            "revoke",
+            publication,
+            false,
+            input.reason,
+          );
+          return { publication, replayed: false };
+        },
+      );
+    },
+  };
+}
+
+function profilePayload(
+  input: { ownerAccountId: string; networkRelationshipId: string },
+  relationship: Row,
+  source: {
+    account: Row;
+    profile: Row;
+    commodities: readonly Row[];
+    industries: readonly Row[];
+  },
+  definition: { schemaVersion: number; fieldSetCode: string },
+) {
+  return {
+    schemaCode: "mesh.business_partner_profile",
+    schemaVersion: definition.schemaVersion,
+    fieldSetCode: definition.fieldSetCode,
+    authority: {
+      plane: "mesh",
+      ownerTenantId: String(relationship["supplier_tenant_id"]),
+      ownerNetworkAccountId: input.ownerAccountId,
+    },
+    recipient: {
+      tenantId: String(relationship["buyer_tenant_id"]),
+      networkAccountId: String(relationship["buyer_account_id"]),
+      networkRelationshipId: input.networkRelationshipId,
+      proposedNeonRole: "supplier",
+    },
+    partner: {
+      accountCode: String(source.account["account_code"]),
+      displayName: String(source.account["display_name"]),
+      legalName: nullable(source.account["legal_name"]),
+      networkRole: String(source.account["network_role"]),
+      countryCode: nullable(source.account["country_code"]),
+      defaultCurrency: nullable(source.account["default_currency"]),
+      logoAssetRef: nullable(source.account["logo_asset_ref"]),
+      legalForm: nullable(source.profile["legal_form"]),
+      incorporationDate: nullable(source.profile["incorporation_date"]),
+      websiteUrl: nullable(source.profile["website_url"]),
+      description: nullable(source.profile["description"]),
+      preferredLanguageCode: nullable(
+        source.profile["preferred_language_code"],
+      ),
+    },
+    commodityCapabilities: source.commodities.map((item) => ({
+      domainCode: String(item["domain_code"]),
+      code: String(item["code"]),
+      name: String(item["name"]),
+      tradeRole: String(item["trade_role"]),
+      effectiveFrom: String(item["effective_from"]),
+      effectiveUntil: nullable(item["effective_until"]),
+    })),
+    industryClassifications: source.industries.map((item) => ({
+      domainCode: String(item["domain_code"]),
+      code: String(item["code"]),
+      name: String(item["name"]),
+      assignmentKind: String(item["assignment_kind"]),
+      isPrimary: Boolean(item["is_primary"]),
+      confidence:
+        item["confidence"] == null ? null : Number(item["confidence"]),
+      effectiveFrom: String(item["effective_from"]),
+      effectiveUntil: nullable(item["effective_until"]),
+    })),
+  };
+}
+function projectAllowed(
+  value: Readonly<Record<string, unknown>>,
+  paths: readonly string[],
+) {
+  const root: Record<string, unknown> = {};
+  for (const path of paths) {
+    const parts = path.split(".");
+    copyPath(value, root, parts);
+  }
+  return root;
+}
+function copyPath(
+  source: unknown,
+  target: Record<string, unknown>,
+  parts: readonly string[],
+): void {
+  if (source == null || parts.length === 0) return;
+  if (Array.isArray(source)) {
+    const items = source.map((item) => {
+      const output: Record<string, unknown> = {};
+      copyPath(item, output, parts);
+      return output;
+    });
+    const current = target["$array"];
+    target["$array"] = Array.isArray(current)
+      ? mergeArrays(current, items)
+      : items;
+    return;
+  }
+  if (typeof source !== "object") return;
+  const [head, ...tail] = parts,
+    value = (source as Record<string, unknown>)[head!];
+  if (value === undefined) return;
+  if (tail.length === 0) {
+    target[head!] = value;
+    return;
+  }
+  if (Array.isArray(value)) {
+    const items = value.map((item) => {
+      const output: Record<string, unknown> = {};
+      copyPath(item, output, tail);
+      return output;
+    });
+    const current = target[head!];
+    target[head!] = Array.isArray(current)
+      ? mergeArrays(current, items)
+      : items;
+    return;
+  }
+  const child = recordValue(target[head!])
+    ? (target[head!] as Record<string, unknown>)
+    : {};
+  target[head!] = child;
+  copyPath(value, child, tail);
+}
+function mergeArrays(left: readonly unknown[], right: readonly unknown[]) {
+  return right.map((item, index) =>
+    recordValue(left[index]) && recordValue(item)
+      ? {
+          ...(left[index] as Record<string, unknown>),
+          ...(item as Record<string, unknown>),
+        }
+      : item,
+  );
+}
+function assertNoProhibited(
+  payload: Readonly<Record<string, unknown>>,
+  patterns: readonly string[],
+) {
+  const serialized = stable(payload).toLowerCase();
+  for (const pattern of patterns)
+    if (serialized.includes(pattern.toLowerCase()))
+      throw new MeshProfilePublicationError(
+        500,
+        "MESH_PROFILE_PUBLICATION_POLICY_VIOLATION",
+        `Projected payload contains prohibited definition pattern: ${pattern}`,
+      );
+}
+async function effects(
+  options: { audit: AuditRecorder<Tx>; outbox: OutboxWriter<Tx> },
+  context: VerifiedRequestContext,
+  tx: Tx,
+  eventCode: string,
+  action: "create" | "publish" | "revoke",
+  p: BusinessPartnerProfilePublication,
+  includePayload: boolean,
+  reasonValue?: string,
+) {
+  const envelope = {
+    eventId: randomUUID(),
+    eventType: eventCode,
+    schemaVersion: p.schemaVersion,
+    sourcePlane: "mesh",
+    sourceTenantId: p.ownerTenantId,
+    recipientTenantId: p.recipientTenantId,
+    sourceNetworkAccountId: p.ownerAccountId,
+    recipientNetworkAccountId: p.recipientAccountId,
+    networkRelationshipId: p.networkRelationshipId,
+    publicationId: p.id,
+    publicationVersion: p.publicationVersion,
+    lifecycleVersion: p.lifecycleVersion,
+    payloadHash: p.payloadHash,
+    occurredAt: new Date().toISOString(),
+    trace: {
+      requestId: context.requestId,
+      correlationId: context.correlationId,
+    },
+    ...(includePayload
+      ? { payload: p.payload }
+      : { withdrawal: { reason: reasonValue } }),
+  };
+  await options.outbox.append(
+    {
+      tenantId: p.ownerTenantId,
+      topic: "mesh-business-partner-profile",
+      eventType: eventCode,
+      eventKey: `${p.id}:lifecycle:${p.lifecycleVersion}`,
+      entityType: "network_account_profile_publication",
+      entityId: p.id,
+      aggregateType: "network_relationship",
+      aggregateId: p.networkRelationshipId,
+      actorId: context.principalId,
+      correlationId: context.correlationId,
+      partitionKey: p.recipientTenantId,
+      payload: envelope,
+    },
+    tx,
+  );
+  await options.audit.record(
+    {
+      eventCode,
+      action,
+      outcome: "success",
+      actor: { kind: "user", principalId: context.principalId },
+      tenantId: p.ownerTenantId,
+      entityType: "network_account_profile_publication",
+      entityId: p.id,
+      requestId: context.requestId,
+      ...(context.correlationId
+        ? { correlationId: context.correlationId }
+        : {}),
+      ...(reasonValue ? { reason: reasonValue } : {}),
+      metadata: {
+        networkRelationshipId: p.networkRelationshipId,
+        recipientTenantId: p.recipientTenantId,
+        publicationVersion: p.publicationVersion,
+        lifecycleVersion: p.lifecycleVersion,
+        payloadHash: p.payloadHash,
+        fieldSetCode: p.fieldSetCode,
+      },
+    },
+    tx,
+  );
+}
+function map(row: Row): BusinessPartnerProfilePublication {
+  return {
+    id: String(row["id"]),
+    ownerTenantId: String(row["owner_tenant_id"]),
+    ownerAccountId: String(row["owner_account_id"]),
+    recipientTenantId: String(row["recipient_tenant_id"]),
+    recipientAccountId: String(row["recipient_account_id"]),
+    networkRelationshipId: String(row["network_relationship_id"]),
+    snapshotId: String(row["snapshot_id"]),
+    publicationVersion: Number(row["publication_version"]),
+    schemaVersion: Number(row["schema_version"]),
+    fieldSetCode: String(row["field_set_code"]),
+    payloadHash: String(row["payload_hash"]),
+    ...(row["previous_publication_id"]
+      ? { previousPublicationId: String(row["previous_publication_id"]) }
+      : {}),
+    publishedAt: new Date(String(row["published_at"])).toISOString(),
+    publishedBy: String(row["published_by"]),
+    status: String(row["lifecycle_status"]) as ProfilePublicationStatus,
+    lifecycleVersion: Number(row["lifecycle_version"]),
+    payload: object(row["payload_json"]),
+  };
+}
+function context(c: VerifiedRequestContext) {
+  if (c.planeKey !== "mesh")
+    throw new MeshProfilePublicationError(
+      400,
+      "MESH_PROFILE_PUBLICATION_MESH_REQUIRED",
+      "Profile publication executes only in MESH",
+    );
+}
+function actor(c: VerifiedRequestContext) {
+  return {
+    tenantId: c.tenantId,
+    principalId: c.principalId,
+    requestId: c.requestId,
+    correlationId: c.correlationId,
+  };
+}
+async function authorize(
+  a: Authorizer,
+  c: VerifiedRequestContext,
+  permissionCode: string,
+  resource: Readonly<Record<string, unknown>>,
+) {
+  if (!(await a.authorize({ context: c, permissionCode, resource })).allowed)
+    throw new MeshProfilePublicationError(
+      403,
+      "FORBIDDEN",
+      `Permission denied: ${permissionCode}`,
+    );
+}
+function key(v: string) {
+  if (v.trim() !== v || v.length < 8 || v.length > 200)
+    throw invalid("idempotencyKey must contain 8 to 200 trimmed characters");
+}
+function reason(v: string) {
+  if (v.trim() !== v || v.length < 1 || v.length > 4000)
+    throw invalid("reason must contain 1 to 4000 trimmed characters");
+}
+function invalid(message: string) {
+  return new MeshProfilePublicationError(
+    400,
+    "MESH_PROFILE_PUBLICATION_INVALID",
+    message,
+  );
+}
+function required<T>(v: T | null | undefined): T {
+  if (v == null)
+    throw new Error("Required publication record was not returned");
+  return v;
+}
+function object(v: unknown): Readonly<Record<string, unknown>> {
+  return v && typeof v === "object" && !Array.isArray(v)
+    ? (v as Readonly<Record<string, unknown>>)
+    : {};
+}
+function recordValue(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+function nullable(v: unknown) {
+  return v == null ? null : String(v);
+}
+function dateOnly(v: unknown) {
+  return v instanceof Date
+    ? v.toISOString().slice(0, 10)
+    : String(v).slice(0, 10);
+}
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+function stable(v: unknown): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v);
+  if (Array.isArray(v)) return `[${v.map(stable).join(",")}]`;
+  return `{${Object.entries(v as Record<string, unknown>)
+    .filter(([, x]) => x !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, x]) => `${JSON.stringify(k)}:${stable(x)}`)
+    .join(",")}}`;
+}
+function hash(v: unknown) {
+  return createHash("sha256").update(stable(v)).digest("hex");
+}

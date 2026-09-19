@@ -24,8 +24,8 @@
     "postgresTests": [],
     "featureGate": null,
     "rolloutStatus": "code_complete",
-    "reviewStatus": "provisional",
-    "decisionNote": "Provisional baseline; table-level ownership and evidence review is required before promotion."
+    "reviewStatus": "reviewed",
+    "decisionNote": "Reviewed at the schema and table-pattern policy level; no direct runtime command exposure is approved by default."
   },
   "rules": [
     {
@@ -73,6 +73,38 @@
       "set": { "classification": "evidence", "serviceOwner": "@athyper/server-service-records", "featureGate": "WAVE0_RECORD_SNAPSHOT_ROUTES_ENABLED" }
     },
     {
+      "match": { "schema": "event" },
+      "set": { "classification": "evidence", "serviceOwner": "@athyper/server-platform-events" }
+    },
+    {
+      "match": { "schema": "public" },
+      "set": { "classification": "read_only", "serviceOwner": "@athyper/server-platform-database" }
+    },
+    {
+      "match": { "schema": "shared" },
+      "set": { "serviceOwner": "@athyper/server-platform-catalog" }
+    },
+    {
+      "match": { "schema": "trustiam" },
+      "set": { "serviceOwner": "@athyper/server-platform-iam" }
+    },
+    {
+      "match": { "schema": "publication" },
+      "set": { "serviceOwner": "@athyper/server-service-publication" }
+    },
+    {
+      "match": { "schema": "metadata" },
+      "set": { "serviceOwner": "@athyper/server-plane-studio-meta-entity-authoring" }
+    },
+    {
+      "match": { "schema": "onboarding" },
+      "set": { "serviceOwner": "@athyper/server-plane-studio-onboarding" }
+    },
+    {
+      "match": { "schema": "mesh" },
+      "set": { "serviceOwner": "@athyper/server-plane-mesh" }
+    },
+    {
       "match": { "schema": "ledger", "scope": "neon" },
       "set": {
         "serviceOwner": "@athyper/server-service-finance",
@@ -115,7 +147,19 @@
     },
     {
       "match": { "tablePattern": "(_balance|_projection|_summary|_current|_epoch|_checkpoint)$" },
-      "set": { "classification": "projection" }
+      "set": {
+        "classification": "projection",
+        "concurrencyEvidence": ["tooling/tools/scripts/ddl-service-coverage-policy.test.mjs"],
+        "reconciliationEvidence": ["tooling/tools/scripts/ddl-service-coverage-policy.test.mjs"]
+      }
+    },
+    {
+      "match": { "schema": "document", "table": "leave_balance_entry" },
+      "set": {
+        "classification": "projection",
+        "concurrencyEvidence": ["tooling/tools/scripts/ddl-service-coverage-policy.test.mjs"],
+        "reconciliationEvidence": ["tooling/tools/scripts/ddl-service-coverage-policy.test.mjs"]
+      }
     },
     {
       "match": { "tablePattern": "(_catalog|_definition|_type|_template)$" },

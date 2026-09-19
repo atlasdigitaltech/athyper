@@ -1,0 +1,13 @@
+{
+  "reportedRun": "273b3e97-29bd-4e24-9b70-d12687bab53c",
+  "databaseError": "ai_agent_run_aar_completed_usage_chk",
+  "toolOutcome": "completed",
+  "modelCalls": 0,
+  "migration": "20260909_atlas_tool_only_completion.sql",
+  "apiImage": "athyper-runtime-server:atlas-tool-only-metering-20260909",
+  "health": "healthy",
+  "tests": 255,
+  "postgresConstraintChecks": "passed; temporary-table transaction rolled back",
+  "deployedRepositoryCheck": "passed",
+  "authenticatedBrowserVerification": "pending"
+}

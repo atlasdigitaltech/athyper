@@ -1,0 +1,23 @@
+apiVersion: athyper.io/v1alpha1
+kind: Instance
+metadata:
+  id: dev
+spec:
+  mode: development
+  composeProject: athyper-dev
+  domainSuffix: dev.athyper.test
+  preset: dev-full
+  hostProfile: laptop-32
+  imageSet: image-sets/dev.yaml
+  dataPolicy: persistent
+  integrations: sandbox
+  debugPorts:
+    postgres: 127.0.0.1:5432
+  providers:
+    search: internal
+    secrets: file
+    objectStorage: internal
+    mail: internal
+    push: disabled
+    scanner: internal
+    rendering: internal

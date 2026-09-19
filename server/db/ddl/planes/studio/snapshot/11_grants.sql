@@ -126,3 +126,22 @@ BEGIN
     END IF;
 END
 $$;
+REVOKE ALL ON snapshot.business_partner_definition_revision FROM PUBLIC;
+REVOKE ALL ON FUNCTION snapshot.trg_guard_business_partner_definition_revision() FROM PUBLIC;
+DO $$ BEGIN
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_publication_service') THEN
+    GRANT USAGE ON SCHEMA snapshot, shared TO athyper_publication_service;
+    GRANT EXECUTE ON FUNCTION shared.current_tenant_id(), shared.current_tenant_id_soft() TO athyper_publication_service;
+    GRANT SELECT,INSERT ON snapshot.business_partner_definition_revision TO athyper_publication_service;
+  END IF;
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+    GRANT ALL PRIVILEGES ON snapshot.business_partner_definition_revision TO athyperadmin;
+  END IF;
+END $$;
+
+REVOKE ALL ON snapshot.business_partner_case_contract_revision FROM PUBLIC;
+REVOKE ALL ON FUNCTION snapshot.trg_reject_case_contract_mutation() FROM PUBLIC;
+GRANT SELECT, INSERT ON snapshot.business_partner_case_contract_revision TO athyper_publication_service;
+
+-- Saved draft comparison history
+GRANT SELECT, INSERT ON snapshot.entity_draft_save TO athyperapp;

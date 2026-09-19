@@ -1,0 +1,24 @@
+# Grafana dashboard provisioning — LOCAL override
+#
+# Intended to shadow, at /etc/grafana/provisioning/dashboards/dashboards.yml,
+# the production-safe default that ships in
+# deploy/config/telemetry/provisioning/dashboards/dashboards.yml. Not
+# currently mounted by any Stack v2 compose file.
+#
+# Local developers iterate on dashboards and need free edit/delete.
+# Any UI changes survive until the provisioner reloads from JSON on
+# container restart — treat Grafana as scratch, commit JSON to
+# provisioning/dashboards/json/ for persistence.
+apiVersion: 1
+
+providers:
+  - name: athyper
+    orgId: 1
+    folder: Athyper
+    type: file
+    disableDeletion: false
+    editable: true
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
+      foldersFromFilesStructure: false

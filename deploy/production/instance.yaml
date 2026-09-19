@@ -1,0 +1,17 @@
+apiVersion: athyper.io/v1alpha1
+kind: ProductionInstance
+metadata:
+  id: production
+spec:
+  mode: production
+  domainSuffix: athyper.com
+  deploymentTargetRef: secret-manager://athyper/production/deployment-target
+  orchestrator: external
+  secretAuthority:
+    provider: managed-secret-store
+    namespace: athyper/production
+    prohibitedNamespaces: [athyper/stg, athyper/qa, athyper/dev]
+  providers:
+    mail: external
+    push: external
+  dataClassification: production

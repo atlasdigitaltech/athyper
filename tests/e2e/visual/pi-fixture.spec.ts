@@ -53,7 +53,7 @@ test.describe("Purchase Invoice — visual regression", () => {
     await page.goto(`/app/purchase_invoice/${PI_FIXTURE_ID}`);
     await page.waitForLoadState("networkidle");
 
-    // maxDiffPixelRatio inherits from playwright.config.ts (1%); tighten
+    // maxDiffPixelRatio inherits from tooling/config/playwright.config.ts (1%); tighten
     // to 0.5% once the suite has caught a few real regressions.
     await expect(page).toHaveScreenshot("pi-fixture.png");
   });

@@ -1,0 +1,61 @@
+{
+  "schema": "bp-ai-build-progress/1",
+  "observedAt": "2026-09-10T10:20:55.684224+00:00",
+  "qualified": false,
+  "productionCacheEnabled": false,
+  "deploymentChanged": false,
+  "candidateManifest": "cfb11453-ef34-415f-8942-0b43578f5238/manifest.json",
+  "candidateRequiresRebindingAfterImplementation": true,
+  "checks": {
+    "ownerToolsAndCache": {
+      "passed": 62,
+      "skipped": 1
+    },
+    "proactiveAndHistory": {
+      "passed": 13
+    },
+    "r9": {
+      "atlas": 61,
+      "caseService": 47,
+      "publication": 3,
+      "passed": true
+    },
+    "redisCache": "redis-cache-qualification.json",
+    "platformAiTypecheck": "passed",
+    "assessmentScopeIntent": {
+      "passed": 34,
+      "typecheck": "passed",
+      "deployed": false
+    }
+  },
+  "logHashes": {
+    "ownerTools": "6d70118cc23bd5221aa99c1c27c010513889da6de1e24843cf5176cb3d2c8222",
+    "proactive": "631160ad443531dfe96cc8bc4247b0f065b858c11b6b0933537c9e01253d09b6",
+    "r9": "d0ea359d8d5b31c6b0d2504e83d3cc94c0a23009456e346ba37d19e276879d4a",
+    "typecheck": "34310f95ef1d16f3b6ca2914298c1838b8739200a498cf726c3770a28ca421c9",
+    "assessmentScope": "94cb2deb81c63df5641ff1f1dcf9182cc68ae8ccb11395a7b7ee249990aaebb4"
+  },
+  "remaining": [
+    "Qualify a complete owner dependency-revision resolver and integrate the evidence cache.",
+    "Complete automatic-request coordination and target rollout, revocation, session-continuity and performance assessment.",
+    "Obtain existing other-tenant and restricted persona mappings and current authenticated sessions.",
+    "Execute owner-backed Manage, record and exactly-once synthetic case submission qualification.",
+    "Complete all candidate gates and final human fixture/next-step review; no historical receipt is relabelled.",
+    "Diagnose selected Manage denial and deploy/requalify the assessment-scope candidate change."
+  ],
+  "assessmentFailures": [
+    {
+      "stage": "Redis harness startup",
+      "result": "Initial attempt produced no valid probe result; not counted as a pass."
+    },
+    {
+      "stage": "Redis invalidation",
+      "result": "Missing epoch returned an empty tuple instead of rejected-write integer 0; fixed and rerun successfully."
+    }
+  ],
+  "authenticatedProbe": "live-reads-8a2be62d-9cd7-4a0a-bd0d-eea9b8588f0a.json",
+  "currentSessions": {
+    "neon/catl.admin": "authenticated elevated; Atlas admitted",
+    "neon/catl.owner": "authenticated elevated; Atlas permission denied"
+  }
+}

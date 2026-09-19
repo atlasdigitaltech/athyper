@@ -1,0 +1,52 @@
+{
+  "environment": "local",
+  "deploymentTarget": "athyper-dev",
+  "date": "2026-09-07",
+  "authenticationMethod": "Keycloak admin-assisted development SSO sessions for selected principals; normal Neon session and CSRF relay",
+  "results": [
+    {
+      "username": "catl.admin",
+      "contactId": "01a0783e-5c32-7e27-b261-6a033b5d063e",
+      "challengeId": "0816468b-16e7-431d-ab42-b800d39e67a2",
+      "requestStatus": 202,
+      "confirmation": "verified",
+      "replay": "rejected",
+      "delivery": "durable_mailpit",
+      "getConsumed": false
+    },
+    {
+      "username": "catl.owner",
+      "contactId": "01a0783e-5c33-76f8-9dac-acfad78f3f2d",
+      "challengeId": "ad3af08e-d592-4915-b694-5ee30a0b6971",
+      "requestStatus": 202,
+      "confirmation": "verified",
+      "replay": "rejected",
+      "delivery": "durable_mailpit",
+      "getConsumed": false
+    },
+    {
+      "username": "athyper.admin",
+      "requestStatus": 403,
+      "outcome": "tenant_denied"
+    },
+    {
+      "username": "athyper.owner",
+      "requestStatus": 403,
+      "outcome": "tenant_denied"
+    }
+  ],
+  "databaseEvidence": {
+    "verificationAuditEvents": 2,
+    "verificationOutboxEvents": 2,
+    "perContact": 1
+  },
+  "images": {
+    "runtime": "athyper/runtime-server:local-verification-20260907-r2",
+    "neon": "athyper/neon-web:local-verification-20260907"
+  },
+  "limits": [
+    "Not a password/MFA enrollment test",
+    "Not staging or production qualification",
+    "Existing unrelated master-data legacy permissions remain outside the contact-verification mapping"
+  ]
+}

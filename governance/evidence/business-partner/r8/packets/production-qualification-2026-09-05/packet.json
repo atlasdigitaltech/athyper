@@ -1,0 +1,62 @@
+{
+  "schema": "athyper.business-partner-r8-execution-packet/1",
+  "createdAt": "2026-09-05T01:17:43.275Z",
+  "status": "prepared",
+  "productionQualified": false,
+  "preflight": {
+    "schema": "athyper.business-partner-r8-preflight/1",
+    "ready": false,
+    "missing": [
+      "ENVIRONMENT",
+      "R8_TARGET_REF",
+      "R8_SOURCE_REVISION",
+      "R8_UPGRADE_BASELINE_REF",
+      "R8_EVIDENCE_LOCATION_REF",
+      "CLEAN_DATABASE_URL",
+      "UPGRADE_DATABASE_URL",
+      "PUBLICATION_CANARY_API_URL",
+      "PUBLICATION_CANARY_BEARER_TOKEN",
+      "PUBLICATION_CANARY_RELEASE_ID",
+      "PUBLICATION_CANARY_PUBLICATION_KEY",
+      "PUBLICATION_CANARY_TENANT_ID",
+      "STUDIO_DATABASE_URL",
+      "NEON_DATABASE_URL",
+      "MESH_DATABASE_URL",
+      "R8_ACCESSIBILITY_REVIEWER",
+      "R8_PRODUCT_OWNER",
+      "R8_ENGINEERING_OWNER",
+      "R8_OPERATIONS_OWNER",
+      "R8_SECURITY_PRIVACY_OWNER"
+    ],
+    "invalid": [],
+    "note": "Configuration presence only; target identity, access, deployed revision, retention and human approvals require evidence."
+  },
+  "gates": [
+    {
+      "gate": "target_evidence_lifecycle",
+      "status": "pending",
+      "draft": "target_evidence_lifecycle.draft.json"
+    },
+    {
+      "gate": "manual_accessibility",
+      "status": "pending",
+      "draft": "manual_accessibility.draft.json"
+    },
+    {
+      "gate": "clean_upgrade_parity",
+      "status": "pending",
+      "draft": "clean_upgrade_parity.draft.json"
+    },
+    {
+      "gate": "production_canary_rollback",
+      "status": "pending",
+      "draft": "production_canary_rollback.draft.json"
+    },
+    {
+      "gate": "named_owner_certification",
+      "status": "pending",
+      "draft": "named_owner_certification.draft.json"
+    }
+  ],
+  "instructions": "Complete drafts from actual target/human evidence, then use record:business-partner-r8. Drafts cannot qualify a gate."
+}

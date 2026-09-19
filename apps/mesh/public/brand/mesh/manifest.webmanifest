@@ -1,1 +1,1 @@
-{"name":"Athyper Mesh","short_name":"Mesh","description":"Connected Business Network","start_url":"/","display":"standalone","background_color":"#fafafa","theme_color":"#151515","icons":[{"src":"/brand/mesh/app-icon.png","sizes":"64x64","type":"image/png"}]}
+{"name":"Athyper Mesh","short_name":"Mesh","description":"Business Collaboration Network","start_url":"/","display":"standalone","background_color":"#f8fafc","theme_color":"#234B84","icons":[{"src":"/brand/mesh/app-icon.png","sizes":"2048x2048","type":"image/png","purpose":"any"}]}

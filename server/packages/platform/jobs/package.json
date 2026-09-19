@@ -3,13 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
+    "@athyper/platform-temporal": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-jobs": "workspace:*",
     "@athyper/server-contract-notifications": "workspace:*",

@@ -3,9 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit", "test": "vitest run" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./retrieval-admission": "./src/retrieval-admission.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run"
+  },
   "dependencies": {
+    "@athyper/platform-temporal": "workspace:*",
     "@athyper/server-contract-attachments": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-content": "workspace:*",
@@ -15,8 +23,13 @@
     "@athyper/server-contract-object-storage": "workspace:*",
     "@athyper/server-contract-search": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
-    "express": "^5.0.0",
-    "kysely": "^0.28.16"
+    "express": "^5.2.1",
+    "kysely": "^0.28.17"
   },
-  "devDependencies": { "@types/express": "^5.0.1", "@types/node": "^25.6.0", "typescript": "^6.0.3", "vitest": "^4.1.4" }
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
 }

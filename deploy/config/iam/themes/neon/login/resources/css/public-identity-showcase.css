@@ -1,0 +1,11 @@
+/* Atlas treatment scoped to public authentication showcases; shared with IAM. */
+.a-public-identity__story,
+.kc-story-panel {
+  color-scheme: dark;
+  --a-identity-story-background: radial-gradient(circle at 75% 32%, var(--a-story-glow), transparent 27rem), linear-gradient(145deg, var(--a-story-start), var(--a-story-end));
+  --a-identity-card-surface: var(--a-story-surface);
+  --a-identity-card-border: var(--a-story-border);
+  --a-identity-accent: var(--a-story-wave-bright);
+  --a-identity-interactive: #84caff;
+  --a-identity-focus-shadow: 0 0 0 1px var(--a-story-selection-border), 0 0 20px color-mix(in srgb, var(--a-identity-interactive) 12%, transparent);
+}

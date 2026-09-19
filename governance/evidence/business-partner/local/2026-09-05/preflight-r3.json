@@ -1,0 +1,10 @@
+{
+  "schema": "athyper.business-partner-browser-environment-preflight/1",
+  "slice": "r3",
+  "ready": false,
+  "missing": [
+    "PLAYWRIGHT_BP_R3_OTHER_REQUEST_ID",
+    "PLAYWRIGHT_BP_R3_MESH_SNAPSHOT_ID"
+  ],
+  "invalid": []
+}

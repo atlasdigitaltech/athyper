@@ -20,6 +20,15 @@ const runtimeEnvironment = {
   mesh: "ATHYPER_MESH_DATABASE_URL",
 } as const;
 
+const projectionCollections = {
+  "authz.role": ["definitions", "roles"],
+  "authz.principal_group": ["definitions", "principalGroups"],
+  "authz.plane_membership": ["assignments", "planeMemberships"],
+  "authz.scope_target": ["assignments", "scopeTargets"],
+  "authz.group_member": ["assignments", "groupMembers"],
+  "authz.group_role": ["assignments", "groupRoles"],
+} as const;
+
 export async function verifyThreePlaneAuthorizationRls(manifestPath = THREE_PLANE_MANIFEST): Promise<unknown> {
   const inputs = await loadProvisionInputs(manifestPath);
   const results = [];
@@ -54,9 +63,12 @@ export async function verifyThreePlaneAuthorizationRls(manifestPath = THREE_PLAN
         const relationResults = [];
         for (const relation of relations) {
           const result = await count(client, relation, tenant.id);
-          if (result.visible === 0) throw new Error(`${plane}/${relation} exposes no seeded row for ${tenant.code}`);
+          const expected = expectedRows(inputs.authorizationPacks[plane].tenantAuthorityProjection, relation, tenant.id);
+          if ((expected === 0 && result.visible !== 0) || (expected > 0 && result.visible === 0)) {
+            throw new Error(`${plane}/${relation} exposes ${result.visible} row(s) for ${tenant.code}; seed contract expects ${expected === 0 ? "none" : "one or more"}`);
+          }
           if (result.crossTenant !== 0) throw new Error(`${plane}/${relation} leaked ${result.crossTenant} cross-tenant row(s) for ${tenant.code}`);
-          relationResults.push({ relation, visible: result.visible, crossTenant: result.crossTenant });
+          relationResults.push({ relation, expected, visible: result.visible, crossTenant: result.crossTenant });
         }
         tenantResults.push({ tenant: tenant.code, relations: relationResults });
       }
@@ -66,6 +78,12 @@ export async function verifyThreePlaneAuthorizationRls(manifestPath = THREE_PLAN
     }
   }
   return { contractVersion: "athyper.authorization.three-plane-rls-verification.v1", results };
+}
+
+function expectedRows(projection: unknown, relation: typeof relations[number], tenantId: string): number {
+  const [section, collection] = projectionCollections[relation];
+  const rows = (projection as Record<string, Record<string, Array<{ tenantId?: string }>>>)[section]?.[collection] ?? [];
+  return rows.filter((row) => row.tenantId === tenantId).length;
 }
 
 async function count(client: Client, relation: string, tenantId?: string): Promise<{ visible: number; crossTenant: number }> {

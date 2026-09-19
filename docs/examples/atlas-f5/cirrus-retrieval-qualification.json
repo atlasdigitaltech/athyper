@@ -1,0 +1,73 @@
+{
+  "observedAt": "2026-09-10T04:35:47.739Z",
+  "checks": [
+    {
+      "check": "idempotent_reindex",
+      "status": 200,
+      "body": {
+        "attachmentId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+        "sourceVersionId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6:21d82db385726457aff268204b19222a47d98aeb14426e1b9946e67c47478024",
+        "revisionId": "6f2a53ae-330a-442a-81bf-61f329422e68",
+        "replayed": true,
+        "chunkCount": 1
+      }
+    },
+    {
+      "check": "unseen_wording_locator_only",
+      "status": 200,
+      "body": {
+        "citations": [
+          {
+            "citation": {
+              "sourceId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+              "sourceVersionId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6:21d82db385726457aff268204b19222a47d98aeb14426e1b9946e67c47478024",
+              "revisionId": "6f2a53ae-330a-442a-81bf-61f329422e68",
+              "chunkId": "01a08997-0f2d-7238-a99a-f75c3a224e0b",
+              "contentHash": "852954e63c1a9af0256d84d568d8e7ec66cd6e61ae1c301967ec705af3cc01e4",
+              "characterStart": 0,
+              "characterEnd": 1473
+            },
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "check": "published_tenant_scope_allows_no_organization_selector",
+      "status": 200,
+      "body": {
+        "citations": [
+          {
+            "citation": {
+              "sourceId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+              "sourceVersionId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6:21d82db385726457aff268204b19222a47d98aeb14426e1b9946e67c47478024",
+              "revisionId": "6f2a53ae-330a-442a-81bf-61f329422e68",
+              "chunkId": "01a08997-0f2d-7238-a99a-f75c3a224e0b",
+              "contentHash": "852954e63c1a9af0256d84d568d8e7ec66cd6e61ae1c301967ec705af3cc01e4",
+              "characterStart": 0,
+              "characterEnd": 1473
+            },
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "check": "unavailable_record",
+      "status": 403,
+      "body": {
+        "code": "ATTACHMENT_KNOWLEDGE_UNAVAILABLE",
+        "message": "Attachment knowledge unavailable: parent record admission"
+      }
+    },
+    {
+      "check": "catl.owner_denied_at_atlas_admission",
+      "status": 403,
+      "body": {
+        "code": "ATTACHMENT_KNOWLEDGE_UNAVAILABLE",
+        "message": "Attachment knowledge unavailable: Atlas admission"
+      }
+    }
+  ],
+  "passed": true
+}

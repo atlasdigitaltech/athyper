@@ -1,0 +1,18 @@
+{
+  "uid": "athyper-business-partner-delivery",
+  "title": "Athyper Business Partner Delivery",
+  "description": "MESH-to-NEON Business Partner delivery, quarantine, retry and reconciliation outcomes",
+  "tags": ["athyper", "business-partner", "mesh", "neon"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [{ "name": "kind", "type": "query", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": "label_values(athyper_business_partner_mesh_delivery_total, kind)", "includeAll": true, "allValue": ".*", "current": { "text": "All", "value": "$__all" } }] },
+  "panels": [
+    { "id": 1, "title": "Delivery throughput", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }, "targets": [{ "expr": "sum by (kind, outcome) (rate(athyper_business_partner_mesh_delivery_total{operation=\"delivery\",kind=~\"$kind\"}[5m]))", "legendFormat": "{{kind}} {{outcome}}" }] },
+    { "id": 2, "title": "Unsafe and terminal outcomes", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }, "targets": [{ "expr": "sum by (kind, outcome) (increase(athyper_business_partner_mesh_delivery_total{operation=\"delivery\",kind=~\"$kind\",outcome=~\"retry|dead_letter|quarantined\"}[15m]))", "legendFormat": "{{kind}} {{outcome}}" }] },
+    { "id": 3, "title": "Reconciliation", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }, "targets": [{ "expr": "sum by (kind, outcome) (increase(athyper_business_partner_mesh_delivery_total{operation=\"reconciliation\",kind=~\"$kind\"}[15m]))", "legendFormat": "{{kind}} {{outcome}}" }] },
+    { "id": 4, "title": "Worker and scheduler availability", "type": "stat", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }, "targets": [{ "expr": "min(up{job=~\"athyper_worker|athyper_scheduler|athyper-runtime-processes\"})", "legendFormat": "runtime up" }] }
+  ]
+}

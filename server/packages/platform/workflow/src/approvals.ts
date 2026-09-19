@@ -1,9 +1,10 @@
+import { requiredTaskVotes } from "./task-governance.js";
 export interface Quorum { readonly kind: "all" | "any" | "count" | "percentage"; readonly value?: number; }
 export interface ApprovalVote { readonly principalId: string; readonly decision: "approved" | "rejected"; }
 export function evaluateQuorum(quorum: Quorum, eligibleCount: number, votes: readonly ApprovalVote[]): "pending" | "approved" | "rejected" {
+  const required = requiredTaskVotes(quorum, eligibleCount);
   if (votes.some((vote) => vote.decision === "rejected")) return "rejected";
   const approvals = new Set(votes.filter((vote) => vote.decision === "approved").map((vote) => vote.principalId)).size;
-  const required = quorum.kind === "all" ? eligibleCount : quorum.kind === "any" ? 1 : quorum.kind === "count" ? quorum.value ?? 1 : Math.ceil(eligibleCount * (quorum.value ?? 100) / 100);
   return approvals >= required ? "approved" : "pending";
 }
 
@@ -12,7 +13,7 @@ export interface ApprovalPersistence<Transaction> {
   create(request: import("@athyper/server-contract-workflow").ApprovalRequest, transaction: Transaction): Promise<void>;
   save(request: import("@athyper/server-contract-workflow").ApprovalRequest, transaction: Transaction): Promise<void>;
 }
-export function createNeonApprovalService<Transaction>(persistence: ApprovalPersistence<Transaction>, now: () => Date = () => new Date()) {
+export function createNeonApprovalService<Transaction>(persistence: ApprovalPersistence<Transaction>, now: () => Date = () => new Date(), activate?: (stage: import("@athyper/server-contract-workflow").ApprovalStage, transaction: Transaction) => Promise<import("@athyper/server-contract-workflow").ApprovalStage>) {
   return {
     async create(request: import("@athyper/server-contract-workflow").ApprovalRequest, transaction: Transaction) { if (!request.stages.length) throw new Error("Approval request requires stages"); await persistence.create(structuredClone(request), transaction); return request; },
     async decide(tenantId: string, requestId: string, stageId: string, principalId: string, decision: "approved" | "rejected", transaction: Transaction) {
@@ -22,7 +23,7 @@ export function createNeonApprovalService<Transaction>(persistence: ApprovalPers
       const votes = [...stage.votes, { principalId, decision, decidedAt: now().toISOString() }];
       const outcome = evaluateQuorum(stage.quorum, stage.eligibilityEvidence.candidates.length, votes);
       const stages = [...request.stages]; stages[index] = { ...stage, votes, status: outcome === "pending" ? "active" : "completed" };
-      if (outcome === "approved" && stages[index + 1]) stages[index + 1] = { ...stages[index + 1]!, status: "active" };
+      if (outcome === "approved" && stages[index + 1]) stages[index + 1] = activate ? await activate({ ...stages[index + 1]!, status: "active" }, transaction) : { ...stages[index + 1]!, status: "active" };
       const status = outcome === "rejected" ? "rejected" : outcome === "approved" && index === stages.length - 1 ? "approved" : "pending";
       const updated = { ...request, stages, status } as import("@athyper/server-contract-workflow").ApprovalRequest; await persistence.save(updated, transaction); return updated;
     },

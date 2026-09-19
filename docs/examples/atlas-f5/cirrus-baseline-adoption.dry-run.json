@@ -1,0 +1,32 @@
+{
+  "schema": "atlas-baseline-adoption-receipt/1",
+  "observedAt": "2026-09-10T02:39:59.878Z",
+  "environment": "dev",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "applied": false,
+  "action": "adopt_baseline",
+  "result": {
+    "baselineId": "5ca0968a-f81f-42b4-8333-dd54c1b02cbb",
+    "contentHash": "6b2379f486f15c74cda7294691d2bde263aa3d29736e0053edf43faffba97ee2",
+    "runtimeChanged": false,
+    "sourceReleaseNo": 17,
+    "permissionsChanged": false,
+    "nativeReleasesCreated": 0
+  },
+  "provenance": {
+    "kind": "observed_runtime_import",
+    "environment": "dev",
+    "sourceDatabase": "athyper_neon",
+    "sourceTables": [
+      "runtime_meta.entity_contract",
+      "runtime_meta.entity_descriptor",
+      "runtime_meta.release_activation_head",
+      "runtime_meta.applied_release"
+    ],
+    "historicalStudioApproval": "not_available",
+    "historicalStudioSignature": "not_available",
+    "sourceSignatureAlgorithm": "development-local-sha256",
+    "sourceSigningKeyId": "local-development-runtime-bootstrap",
+    "sourceSignatureVerification": "not_performed_by_importer"
+  }
+}

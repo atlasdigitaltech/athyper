@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/orchestrator-decision-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "OrchestratorDecision" },
+    "metadata": { "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "const": "compose-to-k3s" } } },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currentOrchestrator", "candidateOrchestrator", "composeAcceptanceEvidence", "topologyRequirementEvidence", "requireDevParity", "requireTwoQaCycles", "requireStgRestore", "requireApprovedMultiHostNeed", "laptopK3sAllowed", "dockerDesktopKubernetesAllowed", "automaticMigrationAllowed"],
+      "properties": {
+        "currentOrchestrator": { "const": "compose" },
+        "candidateOrchestrator": { "const": "k3s" },
+        "composeAcceptanceEvidence": { "const": "orchestration/compose-acceptance.json" },
+        "topologyRequirementEvidence": { "const": "orchestration/topology-requirement.json" },
+        "requireDevParity": { "const": true },
+        "requireTwoQaCycles": { "const": true },
+        "requireStgRestore": { "const": true },
+        "requireApprovedMultiHostNeed": { "const": true },
+        "laptopK3sAllowed": { "const": false },
+        "dockerDesktopKubernetesAllowed": { "const": false },
+        "automaticMigrationAllowed": { "const": false }
+      }
+    }
+  }
+}

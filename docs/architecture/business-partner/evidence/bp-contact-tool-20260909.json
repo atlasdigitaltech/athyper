@@ -1,0 +1,17 @@
+{
+  "schema": "bp-contact-tool-evidence/1",
+  "capturedAt": "2026-09-09T04:23:48.234541+00:00",
+  "apiImage": "athyper-runtime-server:bp-contact-address-complete-20260909",
+  "health": "healthy",
+  "checks": {
+    "aiTests": 230,
+    "ownerTests": 24,
+    "hostTests": 7,
+    "typechecks": "passed",
+    "builds": "passed",
+    "deployedSyntheticContacts": "passed",
+    "deployedSyntheticAddresses": "passed"
+  },
+  "authenticatedLiveModelQualification": "pending",
+  "deploymentNote": "Rebased on concurrent bank-card deployment; included both section adapter dependencies after startup module failure."
+}

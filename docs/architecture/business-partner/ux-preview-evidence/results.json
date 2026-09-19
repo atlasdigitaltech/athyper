@@ -1,0 +1,17 @@
+{
+  "actualCompilerAndRenderer": true,
+  "viewportWidths": [
+    1024,
+    390
+  ],
+  "inputPreservedAcrossModes": true,
+  "resetVerified": true,
+  "unsupportedSurfaceExplained": true,
+  "narrowSideSwitch": true,
+  "pageOverflow": false,
+  "pageErrors": [],
+  "networkRequests": [
+    "https://preview.test/"
+  ],
+  "fixtureOnly": true
+}

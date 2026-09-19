@@ -5,6 +5,15 @@
   "defaultScopeBehavior": "deny_undeclared",
   "permissions": [
     {
+      "permissionCode": "studio.ai.agent.use",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
       "permissionCode": "studio.iam.application_projection.read",
       "scopes": [
         {
@@ -307,5 +316,5 @@
       ]
     }
   ],
-  "sha256": "8d04b85b5f9fe13dcb32758e7ee9d20cabd6df44fde772bf99a29e85694f5176"
+  "sha256": "65583ae45bb0ed956e1db14c989e6ddb9f3ab52f882fff805e87b410d8ab3e78"
 }

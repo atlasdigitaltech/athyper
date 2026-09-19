@@ -1,0 +1,504 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner_request/presentation.section.form.supplierRequest",
+  "entityCode": "business_partner_request",
+  "plane": "neon",
+  "sectionKey": "form.supplierRequest",
+  "rendererKey": "platform.form.v1",
+  "form": {
+    "description": {
+      "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.description.description",
+      "defaultText": "Start an internal NEON request. Approval creates the partner and initial supplier organization assignment."
+    },
+    "schema": "athyper.business-partner-request-form/1",
+    "sections": [
+      {
+        "description": {
+          "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.scope.description",
+          "defaultText": "Select the organization that owns this request."
+        },
+        "fields": [
+          {
+            "key": "operatingOrganizationId",
+            "label": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.operatingorganizationid.label",
+              "defaultText": "Operating organization"
+            },
+            "path": "operatingOrganizationId",
+            "required": true,
+            "target": "context",
+            "widget": "operating_organization"
+          }
+        ],
+        "key": "scope",
+        "title": {
+          "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.scope.title",
+          "defaultText": "Onboarding scope"
+        }
+      },
+      {
+        "fields": [
+          {
+            "autoComplete": "organization",
+            "key": "name",
+            "label": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.name.label",
+              "defaultText": "Registered name"
+            },
+            "maxLength": 255,
+            "path": "name",
+            "required": true,
+            "target": "canonical",
+            "widget": "text"
+          },
+          {
+            "key": "legalName",
+            "label": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.legalname.label",
+              "defaultText": "Legal name"
+            },
+            "maxLength": 255,
+            "path": "legalName",
+            "required": true,
+            "target": "canonical",
+            "widget": "text"
+          },
+          {
+            "key": "displayName",
+            "label": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.displayname.label",
+              "defaultText": "Display name"
+            },
+            "maxLength": 255,
+            "path": "displayName",
+            "required": false,
+            "target": "canonical",
+            "widget": "text"
+          },
+          {
+            "key": "registrationCountryCode",
+            "label": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.registrationcountrycode.label",
+              "defaultText": "Registration country"
+            },
+            "lookup": {
+              "code": "iso.country",
+              "referenceConfig": {
+                "targetEntityCode": "country",
+                "valueField": "code"
+              }
+            },
+            "path": "registrationCountryCode",
+            "required": true,
+            "target": "canonical",
+            "widget": "lookup"
+          },
+          {
+            "defaultValue": "external",
+            "key": "ownershipClass",
+            "label": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.ownershipclass.label",
+              "defaultText": "Ownership"
+            },
+            "lookup": {
+              "code": "master.business_partner_ownership",
+              "options": [
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.external.label",
+                    "defaultText": "External"
+                  },
+                  "value": "external"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.internal.label",
+                    "defaultText": "Internal"
+                  },
+                  "value": "internal"
+                }
+              ]
+            },
+            "path": "ownershipClass",
+            "required": true,
+            "target": "canonical",
+            "widget": "lookup"
+          },
+          {
+            "key": "legalClassification",
+            "label": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.legalclassification.label",
+              "defaultText": "Legal classification"
+            },
+            "lookup": {
+              "code": "master.business_partner_legal_classification",
+              "options": [
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.government.label",
+                    "defaultText": "Government"
+                  },
+                  "value": "government"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.nonprofit.label",
+                    "defaultText": "Nonprofit"
+                  },
+                  "value": "nonprofit"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.sole.proprietor.label",
+                    "defaultText": "Sole proprietor"
+                  },
+                  "value": "sole_proprietor"
+                }
+              ]
+            },
+            "path": "legalClassification",
+            "required": false,
+            "target": "canonical",
+            "widget": "lookup"
+          },
+          {
+            "defaultValue": "general",
+            "key": "supplierType",
+            "label": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.suppliertype.label",
+              "defaultText": "Supplier type"
+            },
+            "lookup": {
+              "code": "master.supplier_type",
+              "options": [
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.general.label",
+                    "defaultText": "General"
+                  },
+                  "value": "general"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.strategic.label",
+                    "defaultText": "Strategic"
+                  },
+                  "value": "strategic"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.service.label",
+                    "defaultText": "Service"
+                  },
+                  "value": "service"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.carrier.label",
+                    "defaultText": "Carrier"
+                  },
+                  "value": "carrier"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.intercompany.label",
+                    "defaultText": "Intercompany"
+                  },
+                  "value": "intercompany"
+                }
+              ]
+            },
+            "path": "supplierType",
+            "required": true,
+            "target": "canonical",
+            "widget": "lookup"
+          },
+          {
+            "defaultValue": "compliance",
+            "helpText": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.qualificationtypecode.helpText",
+              "defaultText": "Policy used for the initial supplier qualification"
+            },
+            "key": "qualificationTypeCode",
+            "label": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.qualificationtypecode.label",
+              "defaultText": "Qualification type"
+            },
+            "lookup": {
+              "code": "control.qualification_type",
+              "options": [
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.compliance.label",
+                    "defaultText": "Compliance"
+                  },
+                  "value": "compliance"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.basic.label",
+                    "defaultText": "Basic"
+                  },
+                  "value": "basic"
+                }
+              ]
+            },
+            "path": "qualificationTypeCode",
+            "required": true,
+            "target": "canonical",
+            "visibility": {
+              "field": "ownershipClass",
+              "operator": "equals",
+              "value": "external"
+            },
+            "widget": "lookup"
+          },
+          {
+            "key": "legalForm",
+            "label": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.legalform.label",
+              "defaultText": "Legal form"
+            },
+            "maxLength": 80,
+            "path": "legalForm",
+            "required": false,
+            "target": "canonical",
+            "widget": "text"
+          },
+          {
+            "key": "websiteUrl",
+            "label": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.websiteurl.label",
+              "defaultText": "Website"
+            },
+            "maxLength": 2048,
+            "path": "websiteUrl",
+            "placeholder": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.websiteurl.placeholder",
+              "defaultText": "https://example.com"
+            },
+            "required": false,
+            "target": "canonical",
+            "widget": "url"
+          },
+          {
+            "columnSpan": 12,
+            "key": "description",
+            "label": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.description.label",
+              "defaultText": "Description"
+            },
+            "maxLength": 2000,
+            "path": "description",
+            "required": false,
+            "target": "canonical",
+            "widget": "textarea"
+          }
+        ],
+        "key": "identity",
+        "title": {
+          "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.identity.title",
+          "defaultText": "Organization identity"
+        }
+      },
+      {
+        "components": [
+          {
+            "addLabel": "Add address",
+            "key": "addresses",
+            "kind": "addresses",
+            "lookups": {
+              "countries": [
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.gb.label",
+                    "defaultText": "United Kingdom"
+                  },
+                  "value": "GB"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.my.label",
+                    "defaultText": "Malaysia"
+                  },
+                  "value": "MY"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.sg.label",
+                    "defaultText": "Singapore"
+                  },
+                  "value": "SG"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.us.label",
+                    "defaultText": "United States"
+                  },
+                  "value": "US"
+                }
+              ],
+              "purposes": [
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.default.label",
+                    "defaultText": "Default"
+                  },
+                  "value": "default"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.correspondence.label",
+                    "defaultText": "Correspondence"
+                  },
+                  "value": "correspondence"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.remit.to.label",
+                    "defaultText": "Remit to"
+                  },
+                  "value": "remit_to"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.ship.from.label",
+                    "defaultText": "Ship from"
+                  },
+                  "value": "ship_from"
+                }
+              ]
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "requirePrimary": true,
+            "title": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.addresses.title",
+              "defaultText": "Supplier addresses"
+            }
+          }
+        ],
+        "description": {
+          "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.addresses.description",
+          "defaultText": "Add at least one primary address."
+        },
+        "fields": [],
+        "key": "addresses",
+        "title": {
+          "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.addresses.title",
+          "defaultText": "Addresses"
+        }
+      },
+      {
+        "components": [
+          {
+            "addLabel": "Add contact",
+            "key": "contacts",
+            "kind": "contacts",
+            "lookups": {
+              "channels": [
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.email.label",
+                    "defaultText": "Email"
+                  },
+                  "value": "email"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.phone.label",
+                    "defaultText": "Phone"
+                  },
+                  "value": "phone"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.sms.label",
+                    "defaultText": "SMS"
+                  },
+                  "value": "sms"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.whatsapp.label",
+                    "defaultText": "WhatsApp"
+                  },
+                  "value": "whatsapp"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.website.label",
+                    "defaultText": "Website"
+                  },
+                  "value": "website"
+                }
+              ],
+              "purposes": [
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.default.label",
+                    "defaultText": "Default"
+                  },
+                  "value": "default"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.correspondence.label",
+                    "defaultText": "Correspondence"
+                  },
+                  "value": "correspondence"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.procurement.label",
+                    "defaultText": "Procurement"
+                  },
+                  "value": "procurement"
+                },
+                {
+                  "label": {
+                    "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.notification.label",
+                    "defaultText": "Notification"
+                  },
+                  "value": "notification"
+                }
+              ]
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "requirePrimary": true,
+            "title": {
+              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.contacts.title",
+              "defaultText": "Supplier contacts"
+            }
+          }
+        ],
+        "description": {
+          "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.contacts.description",
+          "defaultText": "Add at least one primary contact and communication channel."
+        },
+        "fields": [],
+        "key": "contacts",
+        "title": {
+          "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.contacts.title",
+          "defaultText": "Contacts"
+        }
+      }
+    ],
+    "submitLabel": "Create draft request",
+    "title": {
+      "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.title.title",
+      "defaultText": "New supplier onboarding request"
+    },
+    "version": "2.2.0"
+  },
+  "fieldBindingNamespace": "request_payload",
+  "validationAuthority": "operation_and_registered_request_schema",
+  "dependencies": [
+    "business_partner_request/core"
+  ],
+  "artifactHash": "sha256:c7f35f6c7ba110ba3494de753f3f605465d5d3a9ab8f2651af80d0510b90f8ed"
+}

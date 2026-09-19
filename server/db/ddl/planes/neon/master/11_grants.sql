@@ -31,7 +31,7 @@ BEGIN
                master.external_reference
             TO athyperapp;
 
-        GRANT SELECT ON master.principal TO athyperapp;
+        GRANT SELECT ON master.principal, master.principal_identity_binding TO athyperapp;
         GRANT SELECT ON
             master.team,
             master.team_member
@@ -65,6 +65,7 @@ BEGIN
                master.procurement_organization_profile,
                master.sales_organization_profile,
                master.operating_organization_company_assignment,
+               master.operating_organization_capability,
                master.org_unit,
                master.profit_center,
                master.cost_center,
@@ -89,19 +90,19 @@ BEGIN
         GRANT SELECT, INSERT, UPDATE
             ON master.fx_rate
             TO athyperapp;
-        GRANT SELECT ON master.mv_company_postable_account TO athyperapp;
+        REVOKE ALL ON master.mv_company_postable_account FROM athyperapp;
+        GRANT SELECT ON master.v_company_postable_account TO athyperapp;
         GRANT SELECT, INSERT, UPDATE
-            ON master.bank_party,
-               master.bank_account_link,
+            ON master.bank_account_link,
                master.bank_account_house_config
             TO athyperapp;
         GRANT INSERT, UPDATE ON master.bank_account TO athyperapp;
         GRANT SELECT (
-            id, tenant_id, code, name, bank_party_id,
+            id, tenant_id, code, name, bank_institution_id, bank_branch_id, provisional_bank_reference_id,
             account_holder_name, account_id_type, account_last4,
             currency_code, bic_override, bank_name_override,
             bank_country_override, account_nature, provider_account_ref,
-            correspondent_bank_party_id, is_verified, verified_at,
+            correspondent_bank_institution_id, is_verified, verified_at,
             verified_by, verification_method, metadata, status, is_active,
             status_changed_at, status_changed_by,
             created_at, created_by, updated_at, updated_by
@@ -139,9 +140,11 @@ BEGIN
 
         GRANT SELECT, INSERT, UPDATE ON
             master.business_partner,
-            master.supplier,
-            master.customer
+            master.supplier
             TO athyperapp;
+        GRANT SELECT, INSERT ON master.customer TO athyperapp;
+        GRANT UPDATE (customer_type, metadata, updated_at, updated_by)
+            ON master.customer TO athyperapp;
 
         GRANT SELECT, INSERT, UPDATE ON
             master.asset_class,
@@ -172,11 +175,21 @@ BEGIN
             uuid, uuid, uuid
         ) TO athyperapp;
     END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_publication_service') THEN
+        GRANT USAGE ON SCHEMA master TO athyper_publication_service;
+        GRANT SELECT ON master.principal TO athyper_publication_service;
+        GRANT EXECUTE ON FUNCTION master.current_principal_id_soft() TO athyper_publication_service;
+    END IF;
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT USAGE ON SCHEMA master TO athyperadmin;
         GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA master TO athyperadmin;
         GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA master TO athyperadmin;
+        REVOKE UPDATE ON master.customer FROM athyperadmin;
+        GRANT UPDATE (
+            business_partner_id, customer_code, customer_type, metadata,
+            updated_at, updated_by
+        ) ON master.customer TO athyperadmin;
     END IF;
 END;
 $$;
@@ -197,15 +210,17 @@ DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
         GRANT SELECT, INSERT, UPDATE ON
+            master.business_partner_alias,
             master.business_partner_relationship,
             master.business_partner_governance_relation,
             master.business_partner_identifier,
             master.business_partner_tax_registration,
             master.business_partner_commodity_capability,
+            master.business_partner_industry_classification,
             master.business_partner_operating_organization_assignment,
             master.company_code_supplier_profile,
             master.company_code_customer_profile,
-            master.legal_entity_business_partner_link,
+            master.legal_entity_internal_partner_link,
             master.intercompany_trading_pair
         TO athyperapp;
         GRANT SELECT, INSERT, DELETE ON
@@ -214,15 +229,17 @@ BEGIN
     END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON
+            master.business_partner_alias,
             master.business_partner_relationship,
             master.business_partner_governance_relation,
             master.business_partner_identifier,
             master.business_partner_tax_registration,
             master.business_partner_commodity_capability,
+            master.business_partner_industry_classification,
             master.business_partner_operating_organization_assignment,
             master.company_code_supplier_profile,
             master.company_code_customer_profile,
-            master.legal_entity_business_partner_link,
+            master.legal_entity_internal_partner_link,
             master.intercompany_trading_pair,
             master.contact_person_identity_link
         TO athyperadmin;
@@ -274,6 +291,7 @@ BEGIN
     END IF;
 END;
 $$;
+
 
 REVOKE ALL ON master.warehouse FROM PUBLIC;
 
@@ -394,8 +412,76 @@ GRANT EXECUTE
 
 
 REVOKE ALL ON master.organization_amendment FROM PUBLIC;
+REVOKE ALL ON master.external_worker FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT,UPDATE ON master.external_worker TO athyperapp; END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON master.external_worker TO athyperadmin; END IF;
+END $$;
 REVOKE ALL ON FUNCTION master.trg_guard_organization_lifecycle(),master.trg_record_organization_amendment(),master.trg_sync_organization_scope_target(),master.trg_emit_operating_assignment_invalidation(),master.trg_reject_organization_amendment_mutation() FROM PUBLIC;
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT ON master.organization_amendment TO athyperapp; END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON master.organization_amendment TO athyperadmin; END IF;
+END $$;
+
+REVOKE ALL ON master.legal_entity_business_partner_link FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT ON master.legal_entity_business_partner_link TO athyperapp; END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT ON master.legal_entity_business_partner_link TO athyperadmin; END IF;
+END $$;
+
+-- S5 removes direct runtime ownership of Business Partner lifecycle fields.
+REVOKE ALL ON FUNCTION master.command_materialize_internal_business_partner_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION master.command_materialize_business_partner_role_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION master.command_materialize_business_partner_company_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_internal_business_partner_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp;END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_role_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp;END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_company_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp;END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_internal_business_partner_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin;END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_role_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin;END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_company_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin;END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+        REVOKE UPDATE ON master.business_partner,master.supplier,master.customer,
+            master.business_partner_relationship FROM athyperapp;
+        GRANT UPDATE(name,legal_form,registration_country_code,
+            incorporation_date,website_url,parent_business_partner_id,description,metadata,updated_at,updated_by)
+            ON master.business_partner TO athyperapp;
+        GRANT UPDATE(supplier_type,metadata,updated_at,updated_by) ON master.supplier TO athyperapp;
+        GRANT UPDATE(customer_type,metadata,updated_at,updated_by) ON master.customer TO athyperapp;
+        GRANT UPDATE(country_code,effective_from,effective_until,notes,metadata,updated_at,updated_by)
+            ON master.business_partner_relationship TO athyperapp;
+    END IF;
+    IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+        REVOKE UPDATE ON master.business_partner,master.supplier,master.customer,
+            master.business_partner_relationship FROM athyperadmin;
+        GRANT UPDATE(name,legal_form,registration_country_code,
+            incorporation_date,website_url,parent_business_partner_id,description,metadata,updated_at,updated_by)
+            ON master.business_partner TO athyperadmin;
+        GRANT UPDATE(supplier_type,metadata,updated_at,updated_by) ON master.supplier TO athyperadmin;
+        GRANT UPDATE(customer_type,metadata,updated_at,updated_by) ON master.customer TO athyperadmin;
+        GRANT UPDATE(country_code,effective_from,effective_until,notes,metadata,updated_at,updated_by)
+            ON master.business_partner_relationship TO athyperadmin;
+    END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION master.command_materialize_business_partner_change_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_change_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp; END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_change_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin; END IF;
+END $$;
+
+REVOKE ALL ON FUNCTION master.command_materialize_mesh_profile_change_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION master.command_materialize_mesh_profile_change_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp,athyperadmin;
+
+REVOKE ALL ON FUNCTION master.fn_materialize_business_partner_case_relationships() FROM PUBLIC;
+
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+ GRANT SELECT,INSERT ON master.bank_provisional_reference TO athyperapp;
+ END IF;
 END $$;

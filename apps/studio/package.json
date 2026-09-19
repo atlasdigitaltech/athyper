@@ -11,18 +11,31 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@athyper/contract-platform-navigation": "workspace:*",
+    "@athyper/contract-platform-dashboard": "workspace:*",
     "@athyper/platform-gateway-bff-relay": "workspace:*",
+    "@athyper/platform-communications-notifications-client": "workspace:*",
     "@athyper/platform-iam-identity-gate": "workspace:*",
     "@athyper/platform-iam-auth-bff": "workspace:*",
     "@athyper/platform-api-client": "workspace:*",
+    "@athyper/platform-i18n": "workspace:*",
+    "@athyper/platform-icons": "workspace:*",
     "@athyper/platform-query": "workspace:*",
+    "@athyper/platform-shell": "workspace:*",
+    "@athyper/platform-shell-dashboard": "workspace:*",
     "@athyper/platform-shell-app-foundation": "workspace:*",
+    "@athyper/platform-shell-activity-center-data": "workspace:*",
     "@athyper/product-studio-shell": "workspace:*",
+    "@athyper/product-studio-business-partner": "workspace:*",
     "@athyper/platform-theme": "workspace:*",
     "geist": "^1.3.1",
-    "next": "^16.2.4",
+    "next": "16.3.3",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "@athyper/platform-entity-list-view": "workspace:*",
+    "@athyper/governance-qualification-data": "workspace:*",
+    "@athyper/contract-platform-entity-runtime": "workspace:*",
+    "@athyper/platform-entity-form-detail": "workspace:*"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",

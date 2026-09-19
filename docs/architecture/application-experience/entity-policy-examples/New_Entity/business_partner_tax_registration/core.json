@@ -1,0 +1,582 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "business_partner_tax_registration/core",
+  "entityCode": "business_partner_tax_registration",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "sourceObjects": [
+      "master.business_partner_tax_registration"
+    ],
+    "primaryObject": "master.business_partner_tax_registration",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.id",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "business_partner_id",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "business_partner_id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.business_partner_id",
+        "defaultText": "Business Partner Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "registration_type_code",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "registration_type_code"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.registration_type_code",
+        "defaultText": "Registration Type Code"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "registration_number",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "registration_number"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.registration_number",
+        "defaultText": "Registration Number"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "masked_only",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "mask": {
+        "classification": "restricted",
+        "readPermissionCode": "neon.relationship.business_partner_tax.read_masked",
+        "fallback": "••••",
+        "plaintextInNormalQueries": false,
+        "reveal": {
+          "permissionCode": "neon.relationship.business_partner_tax.reveal",
+          "requiresElevatedAssurance": true,
+          "historicalSnapshotAllowed": false,
+          "claim": "single_use_purpose_bound_expiring",
+          "audit": "same_transaction",
+          "cacheable": false
+        }
+      },
+      "storageType": "text",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "effective_from",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "effective_from"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.effective_from",
+        "defaultText": "Effective From"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "date",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "effective_until",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "effective_until"
+      },
+      "dataType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.effective_until",
+        "defaultText": "Effective Until"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "authorized_projection",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "date",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "jurisdiction_id",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "jurisdiction_id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.jurisdiction_id",
+        "defaultText": "Jurisdiction Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "tax_type_id",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "tax_type_id"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.tax_type_id",
+        "defaultText": "Tax Type Id"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "is_primary",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "is_primary"
+      },
+      "dataType": "boolean",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.is_primary",
+        "defaultText": "Is Primary"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "boolean",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "verified_at",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "verified_at"
+      },
+      "dataType": "datetime",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.verified_at",
+        "defaultText": "Verified At"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "timestamptz",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "verified_by",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "verified_by"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.verified_by",
+        "defaultText": "Verified By"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "status",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "status"
+      },
+      "dataType": "domain",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.status",
+        "defaultText": "Status"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "master.partner_extension_status_d",
+      "domainCode": "master.partner_extension_status_d",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "is_active",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "is_active"
+      },
+      "dataType": "boolean",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.is_active",
+        "defaultText": "Is Active"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "boolean",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "status_changed_at",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "status_changed_at"
+      },
+      "dataType": "datetime",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.status_changed_at",
+        "defaultText": "Status Changed At"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "timestamptz",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "status_changed_by",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "status_changed_by"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.status_changed_by",
+        "defaultText": "Status Changed By"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "created_at",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "created_at"
+      },
+      "dataType": "datetime",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.created_at",
+        "defaultText": "Created At"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "timestamptz",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "created_by",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "created_by"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.created_by",
+        "defaultText": "Created By"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "updated_at",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "updated_at"
+      },
+      "dataType": "datetime",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.updated_at",
+        "defaultText": "Updated At"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "timestamptz",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    },
+    {
+      "key": "updated_by",
+      "binding": {
+        "sourceObject": "master.business_partner_tax_registration",
+        "column": "updated_by"
+      },
+      "dataType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.master.business_partner_tax_registration.updated_by",
+        "defaultText": "Updated By"
+      },
+      "valueOrigin": "stored",
+      "writePolicy": "handler_only",
+      "readPolicy": "excluded_until_explicitly_authorized",
+      "validation": {
+        "requiredOn": [],
+        "rules": []
+      },
+      "storageType": "uuid",
+      "authoringPolicy": {
+        "ownership": "system",
+        "customizationPolicy": "facet_only",
+        "securityMayOnlyTighten": true
+      }
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "company_optional",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "fieldSelection": {
+    "default": "deny",
+    "publicReadFields": [
+      "id",
+      "business_partner_id",
+      "registration_type_code",
+      "registration_number",
+      "effective_from",
+      "effective_until"
+    ],
+    "additionalFieldsRequireHandlerApproval": true
+  },
+  "dependencies": [],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "artifactHash": "sha256:3e6380a5f9b567406f55ed8748ddee35da82521d5ba2e68cdcbf0a25d5ee6a1b"
+}

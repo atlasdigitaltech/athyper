@@ -1,0 +1,2055 @@
+{
+  "capturedAt": "2026-09-07T02:53:03.487353+00:00",
+  "url": "https://api.dev.athyper.test/openapi.json",
+  "tlsNote": "Development self-signed certificate; certificate validation disabled for these credential-free read-only probes only.",
+  "requestedOperations": 127,
+  "deployedOperations": 167,
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/atlas/experience",
+      "operationId": "atlas.experience.get",
+      "tag": "Atlas",
+      "sources": [
+        {
+          "source": "server/packages/platform/ai/src/atlas-experience-routes.ts",
+          "line": 9,
+          "declaredPath": "/api/atlas/experience",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/atlas/experience/draft",
+      "operationId": "atlas.admin.experience.draft",
+      "tag": "Atlas Administration",
+      "sources": [
+        {
+          "source": "server/packages/platform/ai/src/atlas-experience-routes.ts",
+          "line": 11,
+          "declaredPath": "/api/admin/atlas/experience/draft",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/atlas/experience/draft",
+      "operationId": "atlas.admin.experience.saveDraft",
+      "tag": "Atlas Administration",
+      "sources": [
+        {
+          "source": "server/packages/platform/ai/src/atlas-experience-routes.ts",
+          "line": 12,
+          "declaredPath": "/api/admin/atlas/experience/draft",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/atlas/experience/publish",
+      "operationId": "atlas.admin.experience.publish",
+      "tag": "Atlas Administration",
+      "sources": [
+        {
+          "source": "server/packages/platform/ai/src/atlas-experience-routes.ts",
+          "line": 13,
+          "declaredPath": "/api/admin/atlas/experience/publish",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/detail-descriptor",
+      "operationId": "entityDetail.descriptor",
+      "tag": "Entity runtime",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/entity-list-routes.ts",
+          "line": 30,
+          "declaredPath": "/api/entity-runtime/:entityCode/detail-descriptor",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/form-descriptor",
+      "operationId": "entityForm.descriptor",
+      "tag": "Entity runtime",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/entity-list-routes.ts",
+          "line": 29,
+          "declaredPath": "/api/entity-runtime/:entityCode/form-descriptor",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/list",
+      "operationId": "entityList.list",
+      "tag": "Entity runtime",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/entity-list-routes.ts",
+          "line": 32,
+          "declaredPath": "/api/entity-runtime/:entityCode/list",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/list-descriptor",
+      "operationId": "entityList.descriptor",
+      "tag": "Entity runtime",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/entity-list-routes.ts",
+          "line": 28,
+          "declaredPath": "/api/entity-runtime/:entityCode/list-descriptor",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/records/{recordId}",
+      "operationId": "entityDetail.record",
+      "tag": "Entity runtime",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/entity-list-routes.ts",
+          "line": 31,
+          "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/iam/contexts",
+      "operationId": "iam.listIdentityContexts",
+      "tag": "IAM",
+      "sources": [
+        {
+          "source": "server/apps/platform-host/src/composition/register-platform.ts",
+          "line": 1167,
+          "declaredPath": "/api/iam/contexts",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/iam/identity-saga-attempts/{attemptId}/evidence",
+      "operationId": "iam.readIdentitySagaEvidence",
+      "tag": "IAM",
+      "sources": [
+        {
+          "source": "server/apps/platform-host/src/composition/register-platform.ts",
+          "line": 451,
+          "declaredPath": "/api/iam/identity-saga-attempts/:attemptId/evidence",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/iam/identity-saga-attempts/{attemptId}/replay",
+      "operationId": "iam.replayIdentitySaga",
+      "tag": "IAM",
+      "sources": [
+        {
+          "source": "server/packages/platform/iam/src/identity-replay-routes.ts",
+          "line": 118,
+          "declaredPath": "/api/iam/identity-saga-attempts/:attemptId/replay",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/iam/me",
+      "operationId": "iam.getCurrentPrincipal",
+      "tag": "IAM",
+      "sources": [
+        {
+          "source": "server/packages/platform/iam/src/iam-routes.ts",
+          "line": 23,
+          "declaredPath": "/api/iam/me",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/iam/projection-health",
+      "operationId": "iam.getProjectionHealth",
+      "tag": "IAM",
+      "sources": [
+        {
+          "source": "server/apps/platform-host/src/composition/register-platform.ts",
+          "line": 768,
+          "declaredPath": "/api/iam/projection-health",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/iam/projection-reconciliation-attempts/{attemptId}/replay",
+      "operationId": "iam.replayProjectionReconciliation",
+      "tag": "IAM",
+      "sources": [
+        {
+          "source": "server/apps/platform-host/src/composition/register-platform.ts",
+          "line": 829,
+          "declaredPath": "/api/iam/projection-reconciliation-attempts/:attemptId/replay",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/iam/provisioning-requests",
+      "operationId": "iam.createProvisioningRequest",
+      "tag": "IAM",
+      "sources": [
+        {
+          "source": "server/packages/platform/iam/src/iam-routes.ts",
+          "line": 44,
+          "declaredPath": "/api/iam/provisioning-requests",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/iam/trusted-devices",
+      "operationId": "iam.registerTrustedDevice",
+      "tag": "IAM",
+      "sources": [
+        {
+          "source": "server/apps/platform-host/src/composition/register-platform.ts",
+          "line": 916,
+          "declaredPath": "/api/iam/trusted-devices",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/iam/trusted-devices/verify",
+      "operationId": "iam.verifyTrustedDevice",
+      "tag": "IAM",
+      "sources": [
+        {
+          "source": "server/apps/platform-host/src/composition/register-platform.ts",
+          "line": 1060,
+          "declaredPath": "/api/iam/trusted-devices/verify",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/dead-letters",
+      "operationId": "jobs.listDeadLetters",
+      "tag": "Jobs",
+      "sources": [
+        {
+          "source": "server/packages/platform/jobs/src/job-admin-routes.ts",
+          "line": 24,
+          "declaredPath": "/api/jobs/admin/dead-letters",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/executions",
+      "operationId": "jobs.listExecutions",
+      "tag": "Jobs",
+      "sources": [
+        {
+          "source": "server/packages/platform/jobs/src/job-admin-routes.ts",
+          "line": 51,
+          "declaredPath": "/api/jobs/admin/executions",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/jobs/admin/executions/{id}/cancel",
+      "operationId": "jobs.cancelExecution",
+      "tag": "Jobs",
+      "sources": [
+        {
+          "source": "server/packages/platform/jobs/src/job-admin-routes.ts",
+          "line": 198,
+          "declaredPath": "/api/jobs/admin/executions/:id/cancel",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/jobs/admin/executions/{id}/replay",
+      "operationId": "jobs.replayExecution",
+      "tag": "Jobs",
+      "sources": [
+        {
+          "source": "server/packages/platform/jobs/src/job-admin-routes.ts",
+          "line": 198,
+          "declaredPath": "/api/jobs/admin/executions/:id/replay",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/jobs/admin/executions/{id}/retry",
+      "operationId": "jobs.retryExecution",
+      "tag": "Jobs",
+      "sources": [
+        {
+          "source": "server/packages/platform/jobs/src/job-admin-routes.ts",
+          "line": 198,
+          "declaredPath": "/api/jobs/admin/executions/:id/retry",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/queues",
+      "operationId": "jobs.listQueues",
+      "tag": "Jobs",
+      "sources": [
+        {
+          "source": "server/packages/platform/jobs/src/job-admin-routes.ts",
+          "line": 38,
+          "declaredPath": "/api/jobs/admin/queues",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/schedules",
+      "operationId": "jobs.listSchedules",
+      "tag": "Jobs",
+      "sources": [
+        {
+          "source": "server/packages/platform/jobs/src/job-admin-routes.ts",
+          "line": 65,
+          "declaredPath": "/api/jobs/admin/schedules",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/jobs/admin/schedules",
+      "operationId": "jobs.createSchedule",
+      "tag": "Jobs",
+      "sources": [
+        {
+          "source": "server/packages/platform/jobs/src/job-admin-routes.ts",
+          "line": 93,
+          "declaredPath": "/api/jobs/admin/schedules",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/jobs/admin/schedules/preview",
+      "operationId": "jobs.previewSchedule",
+      "tag": "Jobs",
+      "sources": [
+        {
+          "source": "server/packages/platform/jobs/src/job-admin-routes.ts",
+          "line": 78,
+          "declaredPath": "/api/jobs/admin/schedules/preview",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/jobs/admin/schedules/{id}",
+      "operationId": "jobs.updateSchedule",
+      "tag": "Jobs",
+      "sources": [
+        {
+          "source": "server/packages/platform/jobs/src/job-admin-routes.ts",
+          "line": 109,
+          "declaredPath": "/api/jobs/admin/schedules/:id",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/schedules/{id}/audit",
+      "operationId": "jobs.getScheduleAudit",
+      "tag": "Jobs",
+      "sources": [
+        {
+          "source": "server/packages/platform/jobs/src/job-admin-routes.ts",
+          "line": 142,
+          "declaredPath": "/api/jobs/admin/schedules/:id/audit",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/jobs/admin/schedules/{id}/deactivate",
+      "operationId": "jobs.deactivateSchedule",
+      "tag": "Jobs",
+      "sources": [
+        {
+          "source": "server/packages/platform/jobs/src/job-admin-routes.ts",
+          "line": 126,
+          "declaredPath": "/api/jobs/admin/schedules/:id/deactivate",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/mesh/network-accounts",
+      "operationId": "meshNetworkAccounts",
+      "tag": "Mesh experience",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 26,
+          "declaredPath": "/api/mesh/network-accounts",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/neon/business-partner-definitions/active-descriptors",
+      "operationId": "neon.activeBusinessPartnerDefinitionDescriptors",
+      "tag": "NEON Business Partner Definitions",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/business-partner-definition-consumer-routes.ts",
+          "line": 6,
+          "declaredPath": "/api/neon/business-partner-definitions/active-descriptors",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/neon/business-partner-definitions/active-request-form",
+      "operationId": "neon.activeBusinessPartnerRequestForm",
+      "tag": "NEON Business Partner Definitions",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/business-partner-definition-consumer-routes.ts",
+          "line": 7,
+          "declaredPath": "/api/neon/business-partner-definitions/active-request-form",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/neon/operating-organizations",
+      "operationId": "neonOperatingOrganizations",
+      "tag": "Neon experience",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 25,
+          "declaredPath": "/api/neon/operating-organizations",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/neon/work-contexts",
+      "operationId": "neonWorkContexts",
+      "tag": "Neon experience",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 24,
+          "declaredPath": "/api/neon/work-contexts",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/counts",
+      "operationId": "notifications.getCounts",
+      "tag": "Notifications",
+      "sources": [
+        {
+          "source": "server/packages/platform/notifications/src/notification-routes.ts",
+          "line": 468,
+          "declaredPath": "/api/notifications/counts",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/push-configuration",
+      "operationId": "notifications.getPushConfiguration",
+      "tag": "Notifications",
+      "sources": [
+        {
+          "source": "server/packages/platform/notifications/src/notification-routes.ts",
+          "line": 438,
+          "declaredPath": "/api/notifications/push-configuration",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/read-all",
+      "operationId": "notifications.markAllRead",
+      "tag": "Notifications",
+      "sources": [
+        {
+          "source": "server/packages/platform/notifications/src/notification-routes.ts",
+          "line": 488,
+          "declaredPath": "/api/notifications/read-all",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/{id}/dismiss",
+      "operationId": "notifications.dismiss",
+      "tag": "Notifications",
+      "sources": [
+        {
+          "source": "server/packages/platform/notifications/src/notification-routes.ts",
+          "line": 511,
+          "declaredPath": "/api/notifications/:id/dismiss",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/experience/bootstrap",
+      "operationId": "platformExperienceBootstrap",
+      "tag": "Platform experience",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 9,
+          "declaredPath": "/api/platform/experience/bootstrap",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/experience/surfaces/{surfaceKey}",
+      "operationId": "getExperienceSurface",
+      "tag": "Platform experience",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 43,
+          "declaredPath": "/api/platform/experience/surfaces/:surfaceKey",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/platform/experience/surfaces/{surfaceKey}/arrangement",
+      "operationId": "deletePersonalSurfaceArrangement",
+      "tag": "Platform experience",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 45,
+          "declaredPath": "/api/platform/experience/surfaces/:surfaceKey/arrangement",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/platform/experience/surfaces/{surfaceKey}/arrangement",
+      "operationId": "savePersonalSurfaceArrangement",
+      "tag": "Platform experience",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 44,
+          "declaredPath": "/api/platform/experience/surfaces/:surfaceKey/arrangement",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/localization/policies/{planeKey}",
+      "operationId": "platformLocalePolicy",
+      "tag": "Platform localization",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 34,
+          "declaredPath": "/api/platform/localization/policies/:planeKey",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/platform/localization/policies/{planeKey}",
+      "operationId": "updatePlatformLocalePolicy",
+      "tag": "Platform localization",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 35,
+          "declaredPath": "/api/platform/localization/policies/:planeKey",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/platform/profile/locale",
+      "operationId": "updatePrincipalLocale",
+      "tag": "Platform localization",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 36,
+          "declaredPath": "/api/platform/profile/locale",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/navigation/slug-redirect",
+      "operationId": "resolveRouteSlugRedirect",
+      "tag": "Platform navigation",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 46,
+          "declaredPath": "/api/platform/navigation/slug-redirect",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/verification",
+      "operationId": "platform.verification.snapshot",
+      "tag": "Platform verification",
+      "sources": [
+        {
+          "source": "server/apps/platform-host/src/composition/verification-routes.ts",
+          "line": 45,
+          "declaredPath": "/api/platform/verification",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/platform/verification/runs",
+      "operationId": "platform.verification.run",
+      "tag": "Platform verification",
+      "sources": [
+        {
+          "source": "server/apps/platform-host/src/composition/verification-routes.ts",
+          "line": 46,
+          "declaredPath": "/api/platform/verification/runs",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/exports/{exportRequestId}/cancel",
+      "operationId": "public.v1.records.cancelExport",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/exports/{exportRequestId}/download",
+      "operationId": "public.v1.records.downloadExport",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/exports/{exportRequestId}/restart",
+      "operationId": "public.v1.records.restartExport",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/imports/{sessionId}",
+      "operationId": "public.v1.records.getImport",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/cancel",
+      "operationId": "public.v1.records.cancelImport",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/records/imports/{sessionId}/chunks/{chunkIndex}",
+      "operationId": "public.v1.records.appendImportChunk",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/commit",
+      "operationId": "public.v1.records.commitImport",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/complete",
+      "operationId": "public.v1.records.completeImportUpload",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/imports/{sessionId}/error-report",
+      "operationId": "public.v1.records.getImportErrorReport",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/file-complete",
+      "operationId": "public.v1.records.completeFileUpload",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/file-upload",
+      "operationId": "public.v1.records.prepareFileUpload",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/preview",
+      "operationId": "public.v1.records.previewImport",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/restart",
+      "operationId": "public.v1.records.restartImport",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/validate",
+      "operationId": "public.v1.records.validateImport",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/workbook-complete",
+      "operationId": "public.v1.records.completeWorkbookUpload",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/imports/{sessionId}/workbook-upload",
+      "operationId": "public.v1.records.prepareWorkbookUpload",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/transfers",
+      "operationId": "public.v1.records.listOwnTransfers",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/{entityCode}/exports",
+      "operationId": "public.v1.records.requestExport",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/{entityCode}/import-template.xlsx",
+      "operationId": "public.v1.records.createWorkbookTemplate",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/records/{entityCode}/imports",
+      "operationId": "public.v1.records.beginImport",
+      "tag": "Public Records Transfer V1",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/deployments/{deploymentId}",
+      "operationId": "publication.getDeployment",
+      "tag": "Publication",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/publication-routes.ts",
+          "line": 28,
+          "declaredPath": "/api/publication/deployments/:deploymentId",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/publication/deployments/{deploymentId}/retry",
+      "operationId": "publication.retryDeployment",
+      "tag": "Publication",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/publication-routes.ts",
+          "line": 30,
+          "declaredPath": "/api/publication/deployments/:deploymentId/retry",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/publication/publication-keys/{key}/rollback",
+      "operationId": "publication.rollbackRelease",
+      "tag": "Publication",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/publication-routes.ts",
+          "line": 31,
+          "declaredPath": "/api/publication/publication-keys/:key/rollback",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/releases/{releaseId}",
+      "operationId": "publication.getRelease",
+      "tag": "Publication",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/publication-routes.ts",
+          "line": 27,
+          "declaredPath": "/api/publication/releases/:releaseId",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/publication/releases/{releaseId}/publish",
+      "operationId": "publication.publishRelease",
+      "tag": "Publication",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/publication-routes.ts",
+          "line": 29,
+          "declaredPath": "/api/publication/releases/:releaseId/publish",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/deployments/{deploymentId}/provenance",
+      "operationId": "publication.getDeploymentProvenance",
+      "tag": "Publication Operations",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/publication-routes.ts",
+          "line": 25,
+          "declaredPath": "/api/publication/deployments/:deploymentId/provenance",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/operations/dead-letters",
+      "operationId": "publication.listDeadLetters",
+      "tag": "Publication Operations",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/publication-routes.ts",
+          "line": 23,
+          "declaredPath": "/api/publication/operations/dead-letters",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/publication/operations/deliveries/{deliveryId}/replay",
+      "operationId": "publication.replayDelivery",
+      "tag": "Publication Operations",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/publication-routes.ts",
+          "line": 26,
+          "declaredPath": "/api/publication/operations/deliveries/:deliveryId/replay",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/operations/destinations/{plane}/{targetInstance}/health",
+      "operationId": "publication.getDestinationHealth",
+      "tag": "Publication Operations",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/publication-routes.ts",
+          "line": 24,
+          "declaredPath": "/api/publication/operations/destinations/:plane/:targetInstance/health",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/record-bookmarks",
+      "operationId": "recordBookmarks.list",
+      "tag": "Record favourites",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/bookmarks/record-bookmark-routes.ts",
+          "line": 187,
+          "declaredPath": "/api/record-bookmarks",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/record-bookmarks/{entityCode}",
+      "operationId": "recordBookmarks.remove",
+      "tag": "Record favourites",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/bookmarks/record-bookmark-routes.ts",
+          "line": 241,
+          "declaredPath": "/api/record-bookmarks/:entityCode",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/record-bookmarks/{entityCode}",
+      "operationId": "recordBookmarks.add",
+      "tag": "Record favourites",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/bookmarks/record-bookmark-routes.ts",
+          "line": 228,
+          "declaredPath": "/api/record-bookmarks/:entityCode",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/record-bookmarks/{entityCode}/membership",
+      "operationId": "recordBookmarks.membership",
+      "tag": "Record favourites",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/bookmarks/record-bookmark-routes.ts",
+          "line": 200,
+          "declaredPath": "/api/record-bookmarks/:entityCode/membership",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/{entityCode}",
+      "operationId": "records.list",
+      "tag": "Records",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/records-routes.ts",
+          "line": 42,
+          "declaredPath": "/api/records/:entityCode",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/{entityCode}",
+      "operationId": "records.create",
+      "tag": "Records",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/records-routes.ts",
+          "line": 44,
+          "declaredPath": "/api/records/:entityCode",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/records/{entityCode}/{recordId}",
+      "operationId": "records.delete",
+      "tag": "Records",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/records-routes.ts",
+          "line": 46,
+          "declaredPath": "/api/records/:entityCode/:recordId",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/{entityCode}/{recordId}",
+      "operationId": "records.get",
+      "tag": "Records",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/records-routes.ts",
+          "line": 43,
+          "declaredPath": "/api/records/:entityCode/:recordId",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/records/{entityCode}/{recordId}",
+      "operationId": "records.patch",
+      "tag": "Records",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/records-routes.ts",
+          "line": 45,
+          "declaredPath": "/api/records/:entityCode/:recordId",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/{entityCode}/{recordId}/transitions/{transitionCode}",
+      "operationId": "records.transition",
+      "tag": "Records",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/records-routes.ts",
+          "line": 47,
+          "declaredPath": "/api/records/:entityCode/:recordId/transitions/:transitionCode",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/exports/{exportRequestId}/cancel",
+      "operationId": "records.cancelExport",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/exports/{exportRequestId}/download",
+      "operationId": "records.downloadExport",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/exports/{exportRequestId}/restart",
+      "operationId": "records.restartExport",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/imports/{sessionId}",
+      "operationId": "records.getImport",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/cancel",
+      "operationId": "records.cancelImport",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/records/imports/{sessionId}/chunks/{chunkIndex}",
+      "operationId": "records.appendImportChunk",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/commit",
+      "operationId": "records.commitImport",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/complete",
+      "operationId": "records.completeImportUpload",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/imports/{sessionId}/error-report",
+      "operationId": "records.getImportErrorReport",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/file-complete",
+      "operationId": "records.completeFileUpload",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/file-upload",
+      "operationId": "records.prepareFileUpload",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/preview",
+      "operationId": "records.previewImport",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/restart",
+      "operationId": "records.restartImport",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/validate",
+      "operationId": "records.validateImport",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/workbook-complete",
+      "operationId": "records.completeWorkbookUpload",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/imports/{sessionId}/workbook-upload",
+      "operationId": "records.prepareWorkbookUpload",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/transfers",
+      "operationId": "records.listOwnTransfers",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/{entityCode}/exports",
+      "operationId": "records.requestExport",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/{entityCode}/import-template.xlsx",
+      "operationId": "records.createWorkbookTemplate",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/records/{entityCode}/imports",
+      "operationId": "records.beginImport",
+      "tag": "Records Transfer",
+      "sources": [
+        {
+          "source": "server/packages/services/records/src/transfer/transfer-routes.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/business-partner-case-contracts",
+      "operationId": "studio.authorBusinessPartnerCaseContract",
+      "tag": "STUDIO Business Partner Definitions",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/business-partner-case-contract-routes.ts",
+          "line": 25,
+          "declaredPath": "/api/studio/business-partner-case-contracts",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/business-partner-case-contracts/simulations",
+      "operationId": "studio.simulateBusinessPartnerCaseContract",
+      "tag": "STUDIO Business Partner Definitions",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/business-partner-case-contract-routes.ts",
+          "line": 41,
+          "declaredPath": "/api/studio/business-partner-case-contracts/simulations",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/studio/business-partner-case-contracts/{revisionId}",
+      "operationId": "studio.getBusinessPartnerCaseContract",
+      "tag": "STUDIO Business Partner Definitions",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/business-partner-case-contract-routes.ts",
+          "line": 61,
+          "declaredPath": "/api/studio/business-partner-case-contracts/:revisionId",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/business-partner-case-contracts/{revisionId}/publish",
+      "operationId": "studio.publishBusinessPartnerCaseContract",
+      "tag": "STUDIO Business Partner Definitions",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/business-partner-case-contract-routes.ts",
+          "line": 75,
+          "declaredPath": "/api/studio/business-partner-case-contracts/:revisionId/publish",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/business-partner-definitions",
+      "operationId": "studio.authorBusinessPartnerDefinition",
+      "tag": "STUDIO Business Partner Definitions",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
+          "line": 25,
+          "declaredPath": "/api/studio/business-partner-definitions",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/business-partner-definitions/simulations",
+      "operationId": "studio.simulateBusinessPartnerDefinition",
+      "tag": "STUDIO Business Partner Definitions",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
+          "line": 41,
+          "declaredPath": "/api/studio/business-partner-definitions/simulations",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/studio/business-partner-definitions/{revisionId}",
+      "operationId": "studio.getBusinessPartnerDefinition",
+      "tag": "STUDIO Business Partner Definitions",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
+          "line": 61,
+          "declaredPath": "/api/studio/business-partner-definitions/:revisionId",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/business-partner-definitions/{revisionId}/publish",
+      "operationId": "studio.publishBusinessPartnerDefinition",
+      "tag": "STUDIO Business Partner Definitions",
+      "sources": [
+        {
+          "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
+          "line": 75,
+          "declaredPath": "/api/studio/business-partner-definitions/:revisionId/publish",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/studio/experience-surfaces",
+      "operationId": "listExperienceSurfaceHistory",
+      "tag": "Studio experience",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 39,
+          "declaredPath": "/api/studio/experience-surfaces",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/experience-surfaces/atlas-drafts",
+      "operationId": "generateAtlasExperienceSurfaceDraft",
+      "tag": "Studio experience",
+      "sources": [
+        {
+          "source": "server/packages/platform/ai/src/atlas-surface-draft-routes.ts",
+          "line": 7,
+          "declaredPath": "/api/studio/experience-surfaces/atlas-drafts",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/experience-surfaces/drafts",
+      "operationId": "saveExperienceSurfaceDraft",
+      "tag": "Studio experience",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 38,
+          "declaredPath": "/api/studio/experience-surfaces/drafts",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/experience-surfaces/{releaseId}/publish",
+      "operationId": "publishExperienceSurface",
+      "tag": "Studio experience",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 41,
+          "declaredPath": "/api/studio/experience-surfaces/:releaseId/publish",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/experience-surfaces/{releaseId}/rollback",
+      "operationId": "rollbackExperienceSurface",
+      "tag": "Studio experience",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 40,
+          "declaredPath": "/api/studio/experience-surfaces/:releaseId/rollback",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/studio/navigation/slug-redirects",
+      "operationId": "registerRouteSlugRedirect",
+      "tag": "Studio navigation",
+      "sources": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 47,
+          "declaredPath": "/api/studio/navigation/slug-redirects",
+          "kind": "contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "operationId": "system.getHealth",
+      "tag": "System",
+      "sources": [
+        {
+          "source": "server/packages/runtime/http/src/http-runtime.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "operationId": "system.getHealthz",
+      "tag": "System",
+      "sources": [
+        {
+          "source": "server/packages/runtime/http/src/http-runtime.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/livez",
+      "operationId": "system.getLiveness",
+      "tag": "System",
+      "sources": [
+        {
+          "source": "server/packages/runtime/http/src/http-runtime.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/readyz",
+      "operationId": "system.getReadiness",
+      "tag": "System",
+      "sources": [
+        {
+          "source": "server/packages/runtime/http/src/http-runtime.ts",
+          "kind": "generated-contract"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "operationId": "telemetry.getPrometheusMetrics",
+      "tag": "Telemetry",
+      "sources": [
+        {
+          "source": "server/packages/runtime/http/src/http-runtime.ts",
+          "line": 181,
+          "declaredPath": "/metrics",
+          "kind": "contract"
+        }
+      ]
+    }
+  ],
+  "unauthenticatedGetProbes": [
+    {
+      "method": "GET",
+      "path": "/api/atlas/experience",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/atlas/experience/draft",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/detail-descriptor",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/form-descriptor",
+      "status": 400,
+      "code": "REQUEST_SCHEMA_INVALID"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/list",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/list-descriptor",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entity-runtime/{entityCode}/records/{recordId}",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iam/contexts",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iam/identity-saga-attempts/{attemptId}/evidence",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iam/me",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iam/projection-health",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/dead-letters",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/executions",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/queues",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/schedules",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/admin/schedules/{id}/audit",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mesh/network-accounts",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/neon/business-partner-definitions/active-descriptors",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/neon/business-partner-definitions/active-request-form",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/neon/operating-organizations",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/neon/work-contexts",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/counts",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/push-configuration",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/experience/bootstrap",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/experience/surfaces/{surfaceKey}",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/localization/policies/{planeKey}",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/navigation/slug-redirect",
+      "status": 400,
+      "code": "REQUEST_SCHEMA_INVALID"
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/verification",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/exports/{exportRequestId}/download",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/imports/{sessionId}",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/imports/{sessionId}/error-report",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/transfers",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/{entityCode}/import-template.xlsx",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/deployments/{deploymentId}",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/releases/{releaseId}",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/deployments/{deploymentId}/provenance",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/operations/dead-letters",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/publication/operations/destinations/{plane}/{targetInstance}/health",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/record-bookmarks",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/record-bookmarks/{entityCode}/membership",
+      "status": 400,
+      "code": "REQUEST_SCHEMA_INVALID"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/{entityCode}",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/{entityCode}/{recordId}",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/exports/{exportRequestId}/download",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/imports/{sessionId}",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/imports/{sessionId}/error-report",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/transfers",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/records/{entityCode}/import-template.xlsx",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/studio/business-partner-case-contracts/{revisionId}",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/studio/business-partner-definitions/{revisionId}",
+      "status": 401,
+      "code": "AUTH_TOKEN_REQUIRED"
+    },
+    {
+      "method": "GET",
+      "path": "/api/studio/experience-surfaces",
+      "status": 400,
+      "code": "REQUEST_SCHEMA_INVALID"
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "status": 200,
+      "code": null
+    },
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "status": 200,
+      "code": null
+    },
+    {
+      "method": "GET",
+      "path": "/livez",
+      "status": 200,
+      "code": null
+    },
+    {
+      "method": "GET",
+      "path": "/readyz",
+      "status": 200,
+      "code": null
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "status": 403,
+      "code": "METRICS_ACCESS_DENIED"
+    }
+  ],
+  "validation": {
+    "suiteResults": {
+      "runtime-http": 31,
+      "publication": 88,
+      "records": 160,
+      "atlas-ai": 129,
+      "jobs": 46,
+      "experience": 51,
+      "iam": 156,
+      "notifications": 161,
+      "platform-host": 276
+    },
+    "passed": 1198,
+    "skipped": 3,
+    "typechecks": [
+      "runtime-http",
+      "publication",
+      "records",
+      "atlas-ai",
+      "platform-host"
+    ],
+    "openApiPolicy": "Failed on existing out-of-scope unresolved registrations, stale exceptions and undocumented raw routes; baseline not expanded.",
+    "deployment": "Source changes only; development runtime not restarted or redeployed."
+  }
+}

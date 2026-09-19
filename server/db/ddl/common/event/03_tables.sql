@@ -107,6 +107,61 @@ CREATE TABLE event.notification_delivery (
     CONSTRAINT notification_delivery_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
 
+-- Immutable, PII-redacted receipt ledger for external provider lifecycle events.
+-- Raw provider payloads and recipient addresses are deliberately not retained.
+CREATE TABLE event.notification_provider_event (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    delivery_id         uuid        NOT NULL,
+    provider_code       text        NOT NULL,
+    provider_event_id   text        NOT NULL,
+    provider_message_id text        NOT NULL,
+    event_type          text        NOT NULL,
+    occurred_at         timestamptz NOT NULL,
+    diagnostic          jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    payload_sha256      char(64)    NOT NULL,
+    previous_status     text        NOT NULL,
+    projected_status    text        NOT NULL,
+    transition_applied  boolean     NOT NULL,
+    is_redacted         boolean     NOT NULL DEFAULT true,
+    created_at          timestamptz NOT NULL DEFAULT clock_timestamp(),
+    created_by          uuid        NOT NULL,
+    CONSTRAINT notification_provider_event_pkey PRIMARY KEY (id),
+    CONSTRAINT notification_provider_event_provider_id_uq UNIQUE (provider_code,provider_event_id),
+    CONSTRAINT notification_provider_event_tenant_id_uq UNIQUE (tenant_id,id),
+    CONSTRAINT notification_provider_event_type_chk CHECK (event_type IN ('send','delivery','delivery_delay','bounce','complaint','reject','rendering_failure')),
+    CONSTRAINT notification_provider_event_provider_chk CHECK (provider_code='amazon_ses'),
+    CONSTRAINT notification_provider_event_hash_chk CHECK (payload_sha256 ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT notification_provider_event_redacted_chk CHECK (is_redacted),
+    CONSTRAINT notification_provider_event_diagnostic_chk CHECK (jsonb_typeof(diagnostic)='object')
+);
+
+-- Address values never leave the delivery record; suppressions use a canonical
+-- SHA-256 address fingerprint. Global rows are replicated to every plane.
+CREATE TABLE event.notification_email_suppression (
+    id                       uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                uuid,
+    scope                    text        NOT NULL,
+    address_hash             char(64)    NOT NULL,
+    reason                   text        NOT NULL,
+    provider_code            text,
+    source_provider_event_id uuid,
+    expires_at               timestamptz,
+    released_at              timestamptz,
+    released_by              uuid,
+    created_at               timestamptz NOT NULL DEFAULT clock_timestamp(),
+    created_by               uuid        NOT NULL,
+    updated_at               timestamptz,
+    updated_by               uuid,
+    CONSTRAINT notification_email_suppression_pkey PRIMARY KEY (id),
+    CONSTRAINT notification_email_suppression_scope_chk CHECK ((scope='global' AND tenant_id IS NULL) OR (scope='tenant' AND tenant_id IS NOT NULL)),
+    CONSTRAINT notification_email_suppression_hash_chk CHECK (address_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT notification_email_suppression_reason_chk CHECK (reason IN ('permanent_bounce','complaint','manual','legal','security')),
+    CONSTRAINT notification_email_suppression_expiry_chk CHECK (expires_at IS NULL OR expires_at>created_at),
+    CONSTRAINT notification_email_suppression_release_chk CHECK ((released_at IS NULL)=(released_by IS NULL)),
+    CONSTRAINT notification_email_suppression_audit_pair_chk CHECK ((updated_at IS NULL)=(updated_by IS NULL))
+);
+
 -- Durable attachment intent. URLs and object-storage coordinates are resolved
 -- only by Documents immediately before a delivery attempt.
 CREATE TABLE event.notification_message_attachment (

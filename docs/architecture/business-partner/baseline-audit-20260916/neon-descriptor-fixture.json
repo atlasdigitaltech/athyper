@@ -1,0 +1,3962 @@
+{
+  "entity": {
+    "code": "business_partner",
+    "label": "Business Partners",
+    "pluralLabel": "Business Partners"
+  },
+  "revision": {
+    "release": 60,
+    "descriptorHash": "eead4030fa20e6f07cda078545e90b6c92d9a883cd1aeda4a88611f55d32cea9",
+    "surfaceHash": "28ff94596f9bb9f7d3e0c81a46acaeb195bb6d16bda81a4603ad061e7686ab1a"
+  },
+  "scope": {
+    "status": "ready",
+    "labels": [
+      {
+        "key": "directory",
+        "label": "Directory filters",
+        "value": "Tenant directory"
+      }
+    ],
+    "fingerprint": "8bad1b18daf6069b2064a6131dc04ab91f68d2b2775ad6c727fd048488f05422"
+  },
+  "intakeFlows": [
+    {
+      "schemaVersion": 1,
+      "key": "request_intake",
+      "kind": "create",
+      "title": "New business partner request",
+      "navigation": "linear",
+      "allowDraftResume": true,
+      "entryOperation": "request_supplier",
+      "completionOperation": "case_submit",
+      "steps": [
+        {
+          "key": "partner",
+          "surfaceKey": "intake_partner",
+          "title": "Partner",
+          "optional": false,
+          "description": "Choose a role, then find an existing partner or request a new one."
+        },
+        {
+          "key": "details",
+          "surfaceKey": "intake_details",
+          "title": "Details",
+          "optional": false,
+          "description": "Enter the details required for the selected role and organization."
+        },
+        {
+          "key": "review",
+          "surfaceKey": "intake_review",
+          "title": "Review & submit",
+          "optional": false,
+          "description": "Check the request before submitting it for approval."
+        }
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "schemaVersion": 1,
+      "validationMessages": {
+        "maxLength": "validation.maxLength",
+        "required": "validation.required"
+      },
+      "key": "intake_partner",
+      "title": "Partner",
+      "columns": 1,
+      "sections": [
+        {
+          "key": "role",
+          "title": "Choose a role",
+          "columns": 1,
+          "fields": [
+            {
+              "key": "requested_role",
+              "control": "choiceCards",
+              "presentation": {
+                "layout": "grid",
+                "optionColumns": 2,
+                "density": "compact"
+              },
+              "label": "Requested role",
+              "required": true,
+              "options": [
+                {
+                  "value": "supplier",
+                  "label": "Supplier",
+                  "description": "We buy from them."
+                },
+                {
+                  "value": "customer",
+                  "label": "Customer",
+                  "description": "We sell to them."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "partner_search",
+          "title": "Find an existing partner",
+          "description": "Check existing suppliers and customers before requesting a new partner.",
+          "columns": 1,
+          "fields": [
+            {
+              "key": "partner_lookup",
+              "control": "entityLookup",
+              "label": "Partner name or code",
+              "required": false,
+              "visibleWhen": {
+                "field": "requested_role",
+                "operator": "present"
+              },
+              "lookup": {
+                "mode": "choose",
+                "selectionMode": "single",
+                "recordAccess": "readOnly",
+                "presentation": {
+                  "viewType": "full",
+                  "fullViewHost": "inline"
+                },
+                "creation": {
+                  "showIn": [
+                    "full"
+                  ],
+                  "actionKey": "request_partner",
+                  "label": "New partner request"
+                },
+                "display": {
+                  "settingsShowIn": [
+                    "full"
+                  ],
+                  "defaults": {
+                    "layout": "table",
+                    "density": "compact",
+                    "searchBehavior": "instant"
+                  },
+                  "userOverrides": [
+                    "layout",
+                    "density",
+                    "searchBehavior"
+                  ],
+                  "preferenceScope": "surface"
+                },
+                "views": {
+                  "defaultViewKey": "system",
+                  "allowSwitching": true,
+                  "usePersonalDefault": false
+                },
+                "recent": {
+                  "enabled": false,
+                  "limit": 5
+                },
+                "messages": {
+                  "emptyDescription": "You can request a new partner below.",
+                  "emptyTitle": "No business partners to display",
+                  "noMatchesDescription": "Try another search term or adjust your filters.",
+                  "noMatchesTitle": "No matching business partners found",
+                  "selectMultiple": "Use selected partners"
+                },
+                "targetEntity": "business_partner",
+                "adapterKey": "business_partner.intake",
+                "searchLabel": "Search partners",
+                "emptyMessage": "No matching business partners found.",
+                "resultsMessage": "Select an existing partner to continue.",
+                "moreMessage": "More matches are available. Refine your search or open full view.",
+                "result": {
+                  "titleFields": [
+                    "name",
+                    "code"
+                  ],
+                  "detailFields": [
+                    "code"
+                  ]
+                },
+                "actions": [
+                  {
+                    "key": "select",
+                    "kind": "select",
+                    "label": "Use selected partner"
+                  },
+                  {
+                    "key": "create_supplier",
+                    "kind": "create",
+                    "label": "Onboard new supplier",
+                    "visibleWhen": {
+                      "field": "requested_role",
+                      "operator": "equals",
+                      "value": "supplier"
+                    }
+                  },
+                  {
+                    "key": "create_customer",
+                    "kind": "create",
+                    "label": "Onboard new customer",
+                    "visibleWhen": {
+                      "field": "requested_role",
+                      "operator": "equals",
+                      "value": "customer"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "validationMessages": {
+        "maxLength": "validation.maxLength",
+        "required": "validation.required"
+      },
+      "key": "intake_details",
+      "title": "New supplier onboarding request",
+      "formLabels": {
+        "editTitle": "Edit business partner request",
+        "editDescription": "Update the draft, then review and submit.",
+        "close": "Close",
+        "draftStatus": "Draft",
+        "notSaved": "Not saved yet",
+        "unsavedChanges": "Unsaved changes",
+        "supplierRole": "Supplier",
+        "customerRole": "Customer",
+        "chooseRoleHint": "Choose a role to begin.",
+        "savedAt": "Saved at",
+        "copyReference": "Copy request number",
+        "referenceCopied": "Copied",
+        "copyFailed": "Unable to copy request number",
+        "changesNotSaved": "Changes not saved",
+        "requestTitle": "Business partner request",
+        "continue": "Continue to review",
+        "submit": "Create draft request",
+        "saveDraft": "Save draft",
+        "draftSaved": "Draft saved",
+        "savingDraft": "Saving…",
+        "draftRetry": "The save outcome is unknown. Retry saving before making further changes.",
+        "incompatibleDraft": "This draft uses a different form definition. Its saved data has been preserved; reopen it with the matching published definition."
+      },
+      "columns": 1,
+      "sections": [
+        {
+          "key": "scope",
+          "title": "Onboarding scope",
+          "description": "Select the organization that owns this request.",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "details_operating_organization_id",
+              "valueKey": "operatingOrganizationId",
+              "label": "Operating organization",
+              "columnSpan": 12,
+              "control": "input",
+              "widget": "registered",
+              "required": true,
+              "placeholder": "Select an authorized procurement or sales organization",
+              "handlerKey": "business_partner.organization",
+              "payload": {
+                "target": "context",
+                "path": "operatingOrganizationId"
+              }
+            },
+            {
+              "key": "details_profile_mode",
+              "valueKey": "profileMode",
+              "label": "Profile view",
+              "columnSpan": 12,
+              "control": "input",
+              "widget": "select",
+              "required": false,
+              "helpText": "Full profile exposes optional sections for development testing. Remove additional profile values before switching to Standard request. Each added record is validated.",
+              "defaultValue": "standard",
+              "lookup": {
+                "options": [
+                  {
+                    "value": "standard",
+                    "label": "Standard request"
+                  },
+                  {
+                    "value": "full",
+                    "label": "Full profile"
+                  }
+                ]
+              },
+              "payload": {
+                "target": "request_only",
+                "path": "profileMode"
+              }
+            }
+          ]
+        },
+        {
+          "key": "identity",
+          "title": "Organization identity",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "details_name",
+              "valueKey": "name",
+              "label": "Registered name",
+              "columnSpan": 6,
+              "control": "input",
+              "widget": "text",
+              "required": true,
+              "maxLength": 320,
+              "payload": {
+                "target": "canonical",
+                "path": "name"
+              }
+            },
+            {
+              "key": "details_registration_country_code",
+              "valueKey": "registrationCountryCode",
+              "label": "Registration country",
+              "columnSpan": 3,
+              "control": "input",
+              "widget": "select",
+              "required": true,
+              "placeholder": "Select registration country",
+              "lookup": {
+                "sourceKey": "iso.country",
+                "recent": {
+                  "enabled": true,
+                  "limit": 5,
+                  "persistence": "server",
+                  "scope": "referenceSource",
+                  "retentionDays": 90
+                },
+                "options": [
+                  {
+                    "value": "AF",
+                    "label": "Afghanistan",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1001",
+                      "postalHelp": "Example: 1001"
+                    }
+                  },
+                  {
+                    "value": "AX",
+                    "label": "Åland Islands",
+                    "data": {
+                      "regionLabel": "Municipality",
+                      "postalLabel": "Postnummer",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "22100",
+                      "postalHelp": "Example: 22100"
+                    }
+                  },
+                  {
+                    "value": "AL",
+                    "label": "Albania",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1001",
+                      "postalHelp": "Example: 1001"
+                    }
+                  },
+                  {
+                    "value": "DZ",
+                    "label": "Algeria",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "16000",
+                      "postalHelp": "Example: 16000"
+                    }
+                  },
+                  {
+                    "value": "AS",
+                    "label": "American Samoa",
+                    "data": {
+                      "regionLabel": "Territory",
+                      "postalLabel": "ZIP code",
+                      "postalPattern": "^\\d{5}(-\\d{4})?$",
+                      "postalExample": "96799",
+                      "postalHelp": "Example: 96799"
+                    }
+                  },
+                  {
+                    "value": "AD",
+                    "label": "Andorra",
+                    "data": {
+                      "regionLabel": "Parish",
+                      "postalLabel": "Codi postal",
+                      "postalPattern": "^AD\\d{3}$",
+                      "postalExample": "AD500",
+                      "postalHelp": "Example: AD500"
+                    }
+                  },
+                  {
+                    "value": "AO",
+                    "label": "Angola",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "AI",
+                    "label": "Anguilla",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^AI\\-2640$",
+                      "postalExample": "AI-2640",
+                      "postalHelp": "Example: AI-2640"
+                    }
+                  },
+                  {
+                    "value": "AQ",
+                    "label": "Antarctica",
+                    "data": {
+                      "regionLabel": "Territory",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "AG",
+                    "label": "Antigua and Barbuda",
+                    "data": {
+                      "regionLabel": "Parish",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "AR",
+                    "label": "Argentina",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^[A-Z]\\d{4}[A-Z]{3}$",
+                      "postalExample": "C1002AAB",
+                      "postalHelp": "Example: C1002AAB"
+                    }
+                  },
+                  {
+                    "value": "AM",
+                    "label": "Armenia",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "0010",
+                      "postalHelp": "Example: 0010"
+                    }
+                  },
+                  {
+                    "value": "AW",
+                    "label": "Aruba",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "AU",
+                    "label": "Australia",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "Postcode",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "2000",
+                      "postalHelp": "Example: 2000"
+                    }
+                  },
+                  {
+                    "value": "AT",
+                    "label": "Austria",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "Postleitzahl",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1010",
+                      "postalHelp": "Example: 1010"
+                    }
+                  },
+                  {
+                    "value": "AZ",
+                    "label": "Azerbaijan",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^AZ\\s?\\d{4}$",
+                      "postalExample": "AZ 1000",
+                      "postalHelp": "Example: AZ 1000"
+                    }
+                  },
+                  {
+                    "value": "BS",
+                    "label": "Bahamas",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "BH",
+                    "label": "Bahrain",
+                    "data": {
+                      "regionLabel": "Governorate",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{3,4}$",
+                      "postalExample": "316",
+                      "postalHelp": "Example: 316"
+                    }
+                  },
+                  {
+                    "value": "BD",
+                    "label": "Bangladesh",
+                    "data": {
+                      "regionLabel": "Division",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1000",
+                      "postalHelp": "Example: 1000"
+                    }
+                  },
+                  {
+                    "value": "BB",
+                    "label": "Barbados",
+                    "data": {
+                      "regionLabel": "Parish",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^BB\\d{5}$",
+                      "postalExample": "BB15156",
+                      "postalHelp": "Example: BB15156"
+                    }
+                  },
+                  {
+                    "value": "BY",
+                    "label": "Belarus",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "220000",
+                      "postalHelp": "Example: 220000"
+                    }
+                  },
+                  {
+                    "value": "BE",
+                    "label": "Belgium",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postcode / Code postal",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1000",
+                      "postalHelp": "Example: 1000"
+                    }
+                  },
+                  {
+                    "value": "BZ",
+                    "label": "Belize",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "BJ",
+                    "label": "Benin",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "BM",
+                    "label": "Bermuda",
+                    "data": {
+                      "regionLabel": "Parish",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^[A-Z]{2}\\s\\d{2}$",
+                      "postalExample": "HM 12",
+                      "postalHelp": "Example: HM 12"
+                    }
+                  },
+                  {
+                    "value": "BT",
+                    "label": "Bhutan",
+                    "data": {
+                      "regionLabel": "Dzongkhag",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "11001",
+                      "postalHelp": "Example: 11001"
+                    }
+                  },
+                  {
+                    "value": "BO",
+                    "label": "Bolivia",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "0200",
+                      "postalHelp": "Example: 0200"
+                    }
+                  },
+                  {
+                    "value": "BQ",
+                    "label": "Bonaire, Sint Eustatius and Saba",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Postcode",
+                      "postalPattern": "^\\d{4}[A-Z]{2}$",
+                      "postalExample": "1234AB",
+                      "postalHelp": "Example: 1234AB"
+                    }
+                  },
+                  {
+                    "value": "BA",
+                    "label": "Bosnia and Herzegovina",
+                    "data": {
+                      "regionLabel": "Entity",
+                      "postalLabel": "Poštanski broj",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "71000",
+                      "postalHelp": "Example: 71000"
+                    }
+                  },
+                  {
+                    "value": "BW",
+                    "label": "Botswana",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "BV",
+                    "label": "Bouvet Island",
+                    "data": {
+                      "regionLabel": "Territory",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "BR",
+                    "label": "Brazil",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "CEP",
+                      "postalPattern": "^\\d{5}-?\\d{3}$",
+                      "postalExample": "01310-100",
+                      "postalHelp": "Example: 01310-100"
+                    }
+                  },
+                  {
+                    "value": "VG",
+                    "label": "British Virgin Islands",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^VG11\\d{2}$",
+                      "postalExample": "VG1110",
+                      "postalHelp": "Example: VG1110"
+                    }
+                  },
+                  {
+                    "value": "BN",
+                    "label": "Brunei Darussalam",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postcode",
+                      "postalPattern": "^[A-Z]{2}\\d{4}$",
+                      "postalExample": "BU1234",
+                      "postalHelp": "Example: BU1234"
+                    }
+                  },
+                  {
+                    "value": "BG",
+                    "label": "Bulgaria",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1000",
+                      "postalHelp": "Example: 1000"
+                    }
+                  },
+                  {
+                    "value": "BF",
+                    "label": "Burkina Faso",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "BI",
+                    "label": "Burundi",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "CV",
+                    "label": "Cabo Verde",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Código Postal",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "7600",
+                      "postalHelp": "Example: 7600"
+                    }
+                  },
+                  {
+                    "value": "KH",
+                    "label": "Cambodia",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "12201",
+                      "postalHelp": "Example: 12201"
+                    }
+                  },
+                  {
+                    "value": "CM",
+                    "label": "Cameroon",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "CA",
+                    "label": "Canada",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^[A-Z]\\d[A-Z]\\s?\\d[A-Z]\\d$",
+                      "postalExample": "K1A 0A6",
+                      "postalHelp": "Example: K1A 0A6"
+                    }
+                  },
+                  {
+                    "value": "KY",
+                    "label": "Cayman Islands",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^KY[1-3]-[0-9]{4}$",
+                      "postalExample": "KY1-1100",
+                      "postalHelp": "Example: KY1-1100"
+                    }
+                  },
+                  {
+                    "value": "CF",
+                    "label": "Central African Republic",
+                    "data": {
+                      "regionLabel": "Prefecture",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "TD",
+                    "label": "Chad",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "CL",
+                    "label": "Chile",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{7}$",
+                      "postalExample": "7500000",
+                      "postalHelp": "Example: 7500000"
+                    }
+                  },
+                  {
+                    "value": "CN",
+                    "label": "China",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "邮政编码",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "100000",
+                      "postalHelp": "Example: 100000"
+                    }
+                  },
+                  {
+                    "value": "CX",
+                    "label": "Christmas Island",
+                    "data": {
+                      "regionLabel": "Territory",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^6798$",
+                      "postalExample": "6798",
+                      "postalHelp": "Example: 6798"
+                    }
+                  },
+                  {
+                    "value": "CC",
+                    "label": "Cocos (Keeling) Islands",
+                    "data": {
+                      "regionLabel": "Territory",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^6799$",
+                      "postalExample": "6799",
+                      "postalHelp": "Example: 6799"
+                    }
+                  },
+                  {
+                    "value": "CO",
+                    "label": "Colombia",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "110111",
+                      "postalHelp": "Example: 110111"
+                    }
+                  },
+                  {
+                    "value": "KM",
+                    "label": "Comoros",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "CG",
+                    "label": "Congo",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "CD",
+                    "label": "Congo (Democratic Republic)",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "CK",
+                    "label": "Cook Islands",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "CR",
+                    "label": "Costa Rica",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "10101",
+                      "postalHelp": "Example: 10101"
+                    }
+                  },
+                  {
+                    "value": "CI",
+                    "label": "Côte d'Ivoire",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "HR",
+                    "label": "Croatia",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Poštanski broj",
+                      "postalPattern": "^HR-\\d{5}$",
+                      "postalExample": "HR-10000",
+                      "postalHelp": "Example: HR-10000"
+                    }
+                  },
+                  {
+                    "value": "CU",
+                    "label": "Cuba",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "10400",
+                      "postalHelp": "Example: 10400"
+                    }
+                  },
+                  {
+                    "value": "CW",
+                    "label": "Curaçao",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "CY",
+                    "label": "Cyprus",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1011",
+                      "postalHelp": "Example: 1011"
+                    }
+                  },
+                  {
+                    "value": "CZ",
+                    "label": "Czechia",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "PSČ",
+                      "postalPattern": "^\\d{3}\\s?\\d{2}$",
+                      "postalExample": "110 00",
+                      "postalHelp": "Example: 110 00"
+                    }
+                  },
+                  {
+                    "value": "DK",
+                    "label": "Denmark",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postnummer",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1050",
+                      "postalHelp": "Example: 1050"
+                    }
+                  },
+                  {
+                    "value": "DJ",
+                    "label": "Djibouti",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "DM",
+                    "label": "Dominica",
+                    "data": {
+                      "regionLabel": "Parish",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "DO",
+                    "label": "Dominican Republic",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "10101",
+                      "postalHelp": "Example: 10101"
+                    }
+                  },
+                  {
+                    "value": "EC",
+                    "label": "Ecuador",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "170517",
+                      "postalHelp": "Example: 170517"
+                    }
+                  },
+                  {
+                    "value": "EG",
+                    "label": "Egypt",
+                    "data": {
+                      "regionLabel": "Governorate",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "11511",
+                      "postalHelp": "Example: 11511"
+                    }
+                  },
+                  {
+                    "value": "SV",
+                    "label": "El Salvador",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1101",
+                      "postalHelp": "Example: 1101"
+                    }
+                  },
+                  {
+                    "value": "GQ",
+                    "label": "Equatorial Guinea",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "ER",
+                    "label": "Eritrea",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "EE",
+                    "label": "Estonia",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Postiindeks",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "10111",
+                      "postalHelp": "Example: 10111"
+                    }
+                  },
+                  {
+                    "value": "SZ",
+                    "label": "Eswatini",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^[HLMS]\\d{3}$",
+                      "postalExample": "H100",
+                      "postalHelp": "Example: H100"
+                    }
+                  },
+                  {
+                    "value": "ET",
+                    "label": "Ethiopia",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1000",
+                      "postalHelp": "Example: 1000"
+                    }
+                  },
+                  {
+                    "value": "FK",
+                    "label": "Falkland Islands (Malvinas)",
+                    "data": {
+                      "regionLabel": "Settlement",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^FIQQ\\s1ZZ$",
+                      "postalExample": "FIQQ 1ZZ",
+                      "postalHelp": "Example: FIQQ 1ZZ"
+                    }
+                  },
+                  {
+                    "value": "FO",
+                    "label": "Faroe Islands",
+                    "data": {
+                      "regionLabel": "Municipality",
+                      "postalLabel": "Postnr.",
+                      "postalPattern": "^\\d{3}$",
+                      "postalExample": "100",
+                      "postalHelp": "Example: 100"
+                    }
+                  },
+                  {
+                    "value": "FJ",
+                    "label": "Fiji",
+                    "data": {
+                      "regionLabel": "Division",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "FI",
+                    "label": "Finland",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postinumero",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "00100",
+                      "postalHelp": "Example: 00100"
+                    }
+                  },
+                  {
+                    "value": "FR",
+                    "label": "France",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "75001",
+                      "postalHelp": "Example: 75001"
+                    }
+                  },
+                  {
+                    "value": "GF",
+                    "label": "French Guiana",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "97300",
+                      "postalHelp": "Example: 97300"
+                    }
+                  },
+                  {
+                    "value": "PF",
+                    "label": "French Polynesia",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "98714",
+                      "postalHelp": "Example: 98714"
+                    }
+                  },
+                  {
+                    "value": "TF",
+                    "label": "French Southern Territories",
+                    "data": {
+                      "regionLabel": "Territory",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "97498",
+                      "postalHelp": "Example: 97498"
+                    }
+                  },
+                  {
+                    "value": "GA",
+                    "label": "Gabon",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "GM",
+                    "label": "Gambia",
+                    "data": {
+                      "regionLabel": "Division",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "GE",
+                    "label": "Georgia",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "0100",
+                      "postalHelp": "Example: 0100"
+                    }
+                  },
+                  {
+                    "value": "DE",
+                    "label": "Germany",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "PLZ",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "10115",
+                      "postalHelp": "Example: 10115"
+                    }
+                  },
+                  {
+                    "value": "GH",
+                    "label": "Ghana",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Digital address",
+                      "postalPattern": "^[A-Z]{2}\\d{4}$",
+                      "postalExample": "GA184",
+                      "postalHelp": "Example: GA184"
+                    }
+                  },
+                  {
+                    "value": "GI",
+                    "label": "Gibraltar",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postcode",
+                      "postalPattern": "^GX11\\s1AA$",
+                      "postalExample": "GX11 1AA",
+                      "postalHelp": "Example: GX11 1AA"
+                    }
+                  },
+                  {
+                    "value": "GR",
+                    "label": "Greece",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Ταχυδρομικός κώδικας",
+                      "postalPattern": "^\\d{3}\\s?\\d{2}$",
+                      "postalExample": "105 57",
+                      "postalHelp": "Example: 105 57"
+                    }
+                  },
+                  {
+                    "value": "GL",
+                    "label": "Greenland",
+                    "data": {
+                      "regionLabel": "Municipality",
+                      "postalLabel": "Postnummer",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "3900",
+                      "postalHelp": "Example: 3900"
+                    }
+                  },
+                  {
+                    "value": "GD",
+                    "label": "Grenada",
+                    "data": {
+                      "regionLabel": "Parish",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "GP",
+                    "label": "Guadeloupe",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "97100",
+                      "postalHelp": "Example: 97100"
+                    }
+                  },
+                  {
+                    "value": "GU",
+                    "label": "Guam",
+                    "data": {
+                      "regionLabel": "Territory",
+                      "postalLabel": "ZIP code",
+                      "postalPattern": "^\\d{5}(-\\d{4})?$",
+                      "postalExample": "96910",
+                      "postalHelp": "Example: 96910"
+                    }
+                  },
+                  {
+                    "value": "GT",
+                    "label": "Guatemala",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "01001",
+                      "postalHelp": "Example: 01001"
+                    }
+                  },
+                  {
+                    "value": "GG",
+                    "label": "Guernsey",
+                    "data": {
+                      "regionLabel": "Parish",
+                      "postalLabel": "Postcode",
+                      "postalPattern": "^GY\\d{1,2}\\s\\d[A-Z]{2}$",
+                      "postalExample": "GY1 1AA",
+                      "postalHelp": "Example: GY1 1AA"
+                    }
+                  },
+                  {
+                    "value": "GN",
+                    "label": "Guinea",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "GW",
+                    "label": "Guinea-Bissau",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "GY",
+                    "label": "Guyana",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "HT",
+                    "label": "Haiti",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "HT6120",
+                      "postalHelp": "Example: HT6120"
+                    }
+                  },
+                  {
+                    "value": "HM",
+                    "label": "Heard Island and McDonald Islands",
+                    "data": {
+                      "regionLabel": "Territory",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "VA",
+                    "label": "Holy See",
+                    "data": {
+                      "regionLabel": "City State",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^00120$",
+                      "postalExample": "00120",
+                      "postalHelp": "Example: 00120"
+                    }
+                  },
+                  {
+                    "value": "HN",
+                    "label": "Honduras",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "11101",
+                      "postalHelp": "Example: 11101"
+                    }
+                  },
+                  {
+                    "value": "HK",
+                    "label": "Hong Kong",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "HU",
+                    "label": "Hungary",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Irányítószám",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1011",
+                      "postalHelp": "Example: 1011"
+                    }
+                  },
+                  {
+                    "value": "IS",
+                    "label": "Iceland",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Póstnúmer",
+                      "postalPattern": "^\\d{3}$",
+                      "postalExample": "101",
+                      "postalHelp": "Example: 101"
+                    }
+                  },
+                  {
+                    "value": "IN",
+                    "label": "India",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "PIN",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "110001",
+                      "postalHelp": "Example: 110001"
+                    }
+                  },
+                  {
+                    "value": "ID",
+                    "label": "Indonesia",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Kode Pos",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "10110",
+                      "postalHelp": "Example: 10110"
+                    }
+                  },
+                  {
+                    "value": "IR",
+                    "label": "Iran",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "کد پستی",
+                      "postalPattern": "^\\d{5}-\\d{5}$",
+                      "postalExample": "11359-36411",
+                      "postalHelp": "Example: 11359-36411"
+                    }
+                  },
+                  {
+                    "value": "IQ",
+                    "label": "Iraq",
+                    "data": {
+                      "regionLabel": "Governorate",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "10011",
+                      "postalHelp": "Example: 10011"
+                    }
+                  },
+                  {
+                    "value": "IE",
+                    "label": "Ireland",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Eircode",
+                      "postalPattern": "^[A-Z]\\d{2}\\s?[A-Z0-9]{4}$",
+                      "postalExample": "D01 W5Y6",
+                      "postalHelp": "Example: D01 W5Y6"
+                    }
+                  },
+                  {
+                    "value": "IM",
+                    "label": "Isle of Man",
+                    "data": {
+                      "regionLabel": "Sheading",
+                      "postalLabel": "Postcode",
+                      "postalPattern": "^IM\\d{1,2}\\s\\d[A-Z]{2}$",
+                      "postalExample": "IM1 1AA",
+                      "postalHelp": "Example: IM1 1AA"
+                    }
+                  },
+                  {
+                    "value": "IL",
+                    "label": "Israel",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{7}$",
+                      "postalExample": "9100101",
+                      "postalHelp": "Example: 9100101"
+                    }
+                  },
+                  {
+                    "value": "IT",
+                    "label": "Italy",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "CAP",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "00100",
+                      "postalHelp": "Example: 00100"
+                    }
+                  },
+                  {
+                    "value": "JM",
+                    "label": "Jamaica",
+                    "data": {
+                      "regionLabel": "Parish",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^JM[A-Z]{3}\\d{2}$",
+                      "postalExample": "JMAAW01",
+                      "postalHelp": "Example: JMAAW01"
+                    }
+                  },
+                  {
+                    "value": "JP",
+                    "label": "Japan",
+                    "data": {
+                      "regionLabel": "Prefecture",
+                      "postalLabel": "郵便番号",
+                      "postalPattern": "^\\d{3}-\\d{4}$",
+                      "postalExample": "100-0001",
+                      "postalHelp": "Example: 100-0001"
+                    }
+                  },
+                  {
+                    "value": "JE",
+                    "label": "Jersey",
+                    "data": {
+                      "regionLabel": "Parish",
+                      "postalLabel": "Postcode",
+                      "postalPattern": "^JE\\d{1,2}\\s\\d[A-Z]{2}$",
+                      "postalExample": "JE1 1AA",
+                      "postalHelp": "Example: JE1 1AA"
+                    }
+                  },
+                  {
+                    "value": "JO",
+                    "label": "Jordan",
+                    "data": {
+                      "regionLabel": "Governorate",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "11118",
+                      "postalHelp": "Example: 11118"
+                    }
+                  },
+                  {
+                    "value": "KZ",
+                    "label": "Kazakhstan",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "050000",
+                      "postalHelp": "Example: 050000"
+                    }
+                  },
+                  {
+                    "value": "KE",
+                    "label": "Kenya",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "00100",
+                      "postalHelp": "Example: 00100"
+                    }
+                  },
+                  {
+                    "value": "KI",
+                    "label": "Kiribati",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "KP",
+                    "label": "Korea (Democratic People's Republic)",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "950003",
+                      "postalHelp": "Example: 950003"
+                    }
+                  },
+                  {
+                    "value": "KR",
+                    "label": "Korea (Republic of)",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "우편번호",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "03051",
+                      "postalHelp": "Example: 03051"
+                    }
+                  },
+                  {
+                    "value": "XK",
+                    "label": "Kosovo",
+                    "data": {
+                      "regionLabel": "Municipality",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "10000",
+                      "postalHelp": "Example: 10000"
+                    }
+                  },
+                  {
+                    "value": "KW",
+                    "label": "Kuwait",
+                    "data": {
+                      "regionLabel": "Governorate",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "13001",
+                      "postalHelp": "Example: 13001"
+                    }
+                  },
+                  {
+                    "value": "KG",
+                    "label": "Kyrgyzstan",
+                    "data": {
+                      "regionLabel": "Oblast",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "720000",
+                      "postalHelp": "Example: 720000"
+                    }
+                  },
+                  {
+                    "value": "LA",
+                    "label": "Lao People's Democratic Republic",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "01000",
+                      "postalHelp": "Example: 01000"
+                    }
+                  },
+                  {
+                    "value": "LV",
+                    "label": "Latvia",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Pasta indekss",
+                      "postalPattern": "^LV-\\d{4}$",
+                      "postalExample": "LV-1001",
+                      "postalHelp": "Example: LV-1001"
+                    }
+                  },
+                  {
+                    "value": "LB",
+                    "label": "Lebanon",
+                    "data": {
+                      "regionLabel": "Governorate",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4,5}$",
+                      "postalExample": "1107 2810",
+                      "postalHelp": "Example: 1107 2810"
+                    }
+                  },
+                  {
+                    "value": "LS",
+                    "label": "Lesotho",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{3}$",
+                      "postalExample": "100",
+                      "postalHelp": "Example: 100"
+                    }
+                  },
+                  {
+                    "value": "LR",
+                    "label": "Liberia",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "LY",
+                    "label": "Libya",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "21131",
+                      "postalHelp": "Example: 21131"
+                    }
+                  },
+                  {
+                    "value": "LI",
+                    "label": "Liechtenstein",
+                    "data": {
+                      "regionLabel": "Municipality",
+                      "postalLabel": "Postleitzahl",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "9490",
+                      "postalHelp": "Example: 9490"
+                    }
+                  },
+                  {
+                    "value": "LT",
+                    "label": "Lithuania",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Pašto kodas",
+                      "postalPattern": "^LT-\\d{5}$",
+                      "postalExample": "LT-01100",
+                      "postalHelp": "Example: LT-01100"
+                    }
+                  },
+                  {
+                    "value": "LU",
+                    "label": "Luxembourg",
+                    "data": {
+                      "regionLabel": "Canton",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^L-\\d{4}$",
+                      "postalExample": "L-1011",
+                      "postalHelp": "Example: L-1011"
+                    }
+                  },
+                  {
+                    "value": "MO",
+                    "label": "Macao",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "MG",
+                    "label": "Madagascar",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{3}$",
+                      "postalExample": "101",
+                      "postalHelp": "Example: 101"
+                    }
+                  },
+                  {
+                    "value": "MW",
+                    "label": "Malawi",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "MY",
+                    "label": "Malaysia",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "Postcode",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "50450",
+                      "postalHelp": "Example: 50450"
+                    }
+                  },
+                  {
+                    "value": "MV",
+                    "label": "Maldives",
+                    "data": {
+                      "regionLabel": "Atoll",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "20026",
+                      "postalHelp": "Example: 20026"
+                    }
+                  },
+                  {
+                    "value": "ML",
+                    "label": "Mali",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "MT",
+                    "label": "Malta",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^[A-Z]{3}\\s?\\d{4}$",
+                      "postalExample": "VLT 1117",
+                      "postalHelp": "Example: VLT 1117"
+                    }
+                  },
+                  {
+                    "value": "MH",
+                    "label": "Marshall Islands",
+                    "data": {
+                      "regionLabel": "Atoll",
+                      "postalLabel": "ZIP code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "96960",
+                      "postalHelp": "Example: 96960"
+                    }
+                  },
+                  {
+                    "value": "MQ",
+                    "label": "Martinique",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "97200",
+                      "postalHelp": "Example: 97200"
+                    }
+                  },
+                  {
+                    "value": "MR",
+                    "label": "Mauritania",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "18011",
+                      "postalHelp": "Example: 18011"
+                    }
+                  },
+                  {
+                    "value": "MU",
+                    "label": "Mauritius",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "20101",
+                      "postalHelp": "Example: 20101"
+                    }
+                  },
+                  {
+                    "value": "YT",
+                    "label": "Mayotte",
+                    "data": {
+                      "regionLabel": "Collectivity",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "97600",
+                      "postalHelp": "Example: 97600"
+                    }
+                  },
+                  {
+                    "value": "MX",
+                    "label": "Mexico",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "06600",
+                      "postalHelp": "Example: 06600"
+                    }
+                  },
+                  {
+                    "value": "FM",
+                    "label": "Micronesia (Federated States of)",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "ZIP code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "96941",
+                      "postalHelp": "Example: 96941"
+                    }
+                  },
+                  {
+                    "value": "MD",
+                    "label": "Moldova",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^MD-\\d{4}$",
+                      "postalExample": "MD-2001",
+                      "postalHelp": "Example: MD-2001"
+                    }
+                  },
+                  {
+                    "value": "MC",
+                    "label": "Monaco",
+                    "data": {
+                      "regionLabel": "Ward",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^980\\d{2}$",
+                      "postalExample": "98000",
+                      "postalHelp": "Example: 98000"
+                    }
+                  },
+                  {
+                    "value": "MN",
+                    "label": "Mongolia",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "14200",
+                      "postalHelp": "Example: 14200"
+                    }
+                  },
+                  {
+                    "value": "ME",
+                    "label": "Montenegro",
+                    "data": {
+                      "regionLabel": "Municipality",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "81000",
+                      "postalHelp": "Example: 81000"
+                    }
+                  },
+                  {
+                    "value": "MS",
+                    "label": "Montserrat",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^MSR\\d{4}$",
+                      "postalExample": "MSR1120",
+                      "postalHelp": "Example: MSR1120"
+                    }
+                  },
+                  {
+                    "value": "MA",
+                    "label": "Morocco",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "20000",
+                      "postalHelp": "Example: 20000"
+                    }
+                  },
+                  {
+                    "value": "MZ",
+                    "label": "Mozambique",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Código Postal",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1100",
+                      "postalHelp": "Example: 1100"
+                    }
+                  },
+                  {
+                    "value": "MM",
+                    "label": "Myanmar",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "11041",
+                      "postalHelp": "Example: 11041"
+                    }
+                  },
+                  {
+                    "value": "NA",
+                    "label": "Namibia",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "NR",
+                    "label": "Nauru",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^NRU68$",
+                      "postalExample": "NRU68",
+                      "postalHelp": "Example: NRU68"
+                    }
+                  },
+                  {
+                    "value": "NP",
+                    "label": "Nepal",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "44600",
+                      "postalHelp": "Example: 44600"
+                    }
+                  },
+                  {
+                    "value": "NL",
+                    "label": "Netherlands",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postcode",
+                      "postalPattern": "^\\d{4}\\s?[A-Z]{2}$",
+                      "postalExample": "1011 AB",
+                      "postalHelp": "Example: 1011 AB"
+                    }
+                  },
+                  {
+                    "value": "NC",
+                    "label": "New Caledonia",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "98800",
+                      "postalHelp": "Example: 98800"
+                    }
+                  },
+                  {
+                    "value": "NZ",
+                    "label": "New Zealand",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postcode",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1010",
+                      "postalHelp": "Example: 1010"
+                    }
+                  },
+                  {
+                    "value": "NI",
+                    "label": "Nicaragua",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "11001",
+                      "postalHelp": "Example: 11001"
+                    }
+                  },
+                  {
+                    "value": "NE",
+                    "label": "Niger",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "NG",
+                    "label": "Nigeria",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "100001",
+                      "postalHelp": "Example: 100001"
+                    }
+                  },
+                  {
+                    "value": "NU",
+                    "label": "Niue",
+                    "data": {
+                      "regionLabel": "Village",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "NF",
+                    "label": "Norfolk Island",
+                    "data": {
+                      "regionLabel": "Territory",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^2899$",
+                      "postalExample": "2899",
+                      "postalHelp": "Example: 2899"
+                    }
+                  },
+                  {
+                    "value": "MP",
+                    "label": "Northern Mariana Islands",
+                    "data": {
+                      "regionLabel": "Municipality",
+                      "postalLabel": "ZIP code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "96950",
+                      "postalHelp": "Example: 96950"
+                    }
+                  },
+                  {
+                    "value": "MK",
+                    "label": "North Macedonia",
+                    "data": {
+                      "regionLabel": "Municipality",
+                      "postalLabel": "Поштенски број",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1000",
+                      "postalHelp": "Example: 1000"
+                    }
+                  },
+                  {
+                    "value": "NO",
+                    "label": "Norway",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Postnummer",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "0101",
+                      "postalHelp": "Example: 0101"
+                    }
+                  },
+                  {
+                    "value": "OM",
+                    "label": "Oman",
+                    "data": {
+                      "regionLabel": "Governorate",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{3}$",
+                      "postalExample": "100",
+                      "postalHelp": "Example: 100"
+                    }
+                  },
+                  {
+                    "value": "PK",
+                    "label": "Pakistan",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "75500",
+                      "postalHelp": "Example: 75500"
+                    }
+                  },
+                  {
+                    "value": "PW",
+                    "label": "Palau",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "ZIP code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "96940",
+                      "postalHelp": "Example: 96940"
+                    }
+                  },
+                  {
+                    "value": "PS",
+                    "label": "Palestine, State of",
+                    "data": {
+                      "regionLabel": "Governorate",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{3}$",
+                      "postalExample": "600",
+                      "postalHelp": "Example: 600"
+                    }
+                  },
+                  {
+                    "value": "PA",
+                    "label": "Panama",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "0801",
+                      "postalHelp": "Example: 0801"
+                    }
+                  },
+                  {
+                    "value": "PG",
+                    "label": "Papua New Guinea",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{3}$",
+                      "postalExample": "111",
+                      "postalHelp": "Example: 111"
+                    }
+                  },
+                  {
+                    "value": "PY",
+                    "label": "Paraguay",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1209",
+                      "postalHelp": "Example: 1209"
+                    }
+                  },
+                  {
+                    "value": "PE",
+                    "label": "Peru",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "15001",
+                      "postalHelp": "Example: 15001"
+                    }
+                  },
+                  {
+                    "value": "PH",
+                    "label": "Philippines",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1000",
+                      "postalHelp": "Example: 1000"
+                    }
+                  },
+                  {
+                    "value": "PN",
+                    "label": "Pitcairn",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^PCRN\\s1ZZ$",
+                      "postalExample": "PCRN 1ZZ",
+                      "postalHelp": "Example: PCRN 1ZZ"
+                    }
+                  },
+                  {
+                    "value": "PL",
+                    "label": "Poland",
+                    "data": {
+                      "regionLabel": "Voivodeship",
+                      "postalLabel": "Kod pocztowy",
+                      "postalPattern": "^\\d{2}-\\d{3}$",
+                      "postalExample": "00-001",
+                      "postalHelp": "Example: 00-001"
+                    }
+                  },
+                  {
+                    "value": "PT",
+                    "label": "Portugal",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Código Postal",
+                      "postalPattern": "^\\d{4}-\\d{3}$",
+                      "postalExample": "1000-001",
+                      "postalHelp": "Example: 1000-001"
+                    }
+                  },
+                  {
+                    "value": "PR",
+                    "label": "Puerto Rico",
+                    "data": {
+                      "regionLabel": "Municipality",
+                      "postalLabel": "ZIP code",
+                      "postalPattern": "^\\d{5}(-\\d{4})?$",
+                      "postalExample": "00901",
+                      "postalHelp": "Example: 00901"
+                    }
+                  },
+                  {
+                    "value": "QA",
+                    "label": "Qatar",
+                    "data": {
+                      "regionLabel": "Municipality",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4,5}$",
+                      "postalExample": "12345",
+                      "postalHelp": "Example: 12345"
+                    }
+                  },
+                  {
+                    "value": "RE",
+                    "label": "Réunion",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "97400",
+                      "postalHelp": "Example: 97400"
+                    }
+                  },
+                  {
+                    "value": "RO",
+                    "label": "Romania",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Cod poștal",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "010011",
+                      "postalHelp": "Example: 010011"
+                    }
+                  },
+                  {
+                    "value": "RU",
+                    "label": "Russian Federation",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Почтовый индекс",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "101000",
+                      "postalHelp": "Example: 101000"
+                    }
+                  },
+                  {
+                    "value": "RW",
+                    "label": "Rwanda",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "BL",
+                    "label": "Saint Barthélemy",
+                    "data": {
+                      "regionLabel": "Collectivity",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "97133",
+                      "postalHelp": "Example: 97133"
+                    }
+                  },
+                  {
+                    "value": "KN",
+                    "label": "Saint Kitts and Nevis",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^KN\\d{4}$",
+                      "postalExample": "KN0101",
+                      "postalHelp": "Example: KN0101"
+                    }
+                  },
+                  {
+                    "value": "LC",
+                    "label": "Saint Lucia",
+                    "data": {
+                      "regionLabel": "Quarter",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^LC\\d{2}\\s\\d{3}$",
+                      "postalExample": "LC04 201",
+                      "postalHelp": "Example: LC04 201"
+                    }
+                  },
+                  {
+                    "value": "MF",
+                    "label": "Saint Martin (French part)",
+                    "data": {
+                      "regionLabel": "Collectivity",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "97150",
+                      "postalHelp": "Example: 97150"
+                    }
+                  },
+                  {
+                    "value": "PM",
+                    "label": "Saint Pierre and Miquelon",
+                    "data": {
+                      "regionLabel": "Collectivity",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "97500",
+                      "postalHelp": "Example: 97500"
+                    }
+                  },
+                  {
+                    "value": "VC",
+                    "label": "Saint Vincent and the Grenadines",
+                    "data": {
+                      "regionLabel": "Parish",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^VC\\d{4}$",
+                      "postalExample": "VC0100",
+                      "postalHelp": "Example: VC0100"
+                    }
+                  },
+                  {
+                    "value": "WS",
+                    "label": "Samoa",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "SM",
+                    "label": "San Marino",
+                    "data": {
+                      "regionLabel": "Municipality",
+                      "postalLabel": "Codice postale",
+                      "postalPattern": "^4789\\d{1}$",
+                      "postalExample": "47890",
+                      "postalHelp": "Example: 47890"
+                    }
+                  },
+                  {
+                    "value": "ST",
+                    "label": "São Tomé and Príncipe",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "SA",
+                    "label": "Saudi Arabia",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}(-\\d{4})?$",
+                      "postalExample": "11564",
+                      "postalHelp": "Example: 11564"
+                    }
+                  },
+                  {
+                    "value": "SN",
+                    "label": "Senegal",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "10700",
+                      "postalHelp": "Example: 10700"
+                    }
+                  },
+                  {
+                    "value": "RS",
+                    "label": "Serbia",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Поштански број",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "11000",
+                      "postalHelp": "Example: 11000"
+                    }
+                  },
+                  {
+                    "value": "SC",
+                    "label": "Seychelles",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "10002",
+                      "postalHelp": "Example: 10002"
+                    }
+                  },
+                  {
+                    "value": "SL",
+                    "label": "Sierra Leone",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "SG",
+                    "label": "Singapore",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "018956",
+                      "postalHelp": "Example: 018956"
+                    }
+                  },
+                  {
+                    "value": "SX",
+                    "label": "Sint Maarten (Dutch part)",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "SK",
+                    "label": "Slovakia",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "PSČ",
+                      "postalPattern": "^\\d{3}\\s?\\d{2}$",
+                      "postalExample": "811 01",
+                      "postalHelp": "Example: 811 01"
+                    }
+                  },
+                  {
+                    "value": "SI",
+                    "label": "Slovenia",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Poštna številka",
+                      "postalPattern": "^SI-\\d{4}$",
+                      "postalExample": "SI-1000",
+                      "postalHelp": "Example: SI-1000"
+                    }
+                  },
+                  {
+                    "value": "SB",
+                    "label": "Solomon Islands",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "SO",
+                    "label": "Somalia",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "ZA",
+                    "label": "South Africa",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "0001",
+                      "postalHelp": "Example: 0001"
+                    }
+                  },
+                  {
+                    "value": "GS",
+                    "label": "South Georgia and the South Sandwich Islands",
+                    "data": {
+                      "regionLabel": "Territory",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^SIQQ\\s1ZZ$",
+                      "postalExample": "SIQQ 1ZZ",
+                      "postalHelp": "Example: SIQQ 1ZZ"
+                    }
+                  },
+                  {
+                    "value": "SS",
+                    "label": "South Sudan",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "ES",
+                    "label": "Spain",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "28001",
+                      "postalHelp": "Example: 28001"
+                    }
+                  },
+                  {
+                    "value": "LK",
+                    "label": "Sri Lanka",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "00100",
+                      "postalHelp": "Example: 00100"
+                    }
+                  },
+                  {
+                    "value": "SD",
+                    "label": "Sudan",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "11111",
+                      "postalHelp": "Example: 11111"
+                    }
+                  },
+                  {
+                    "value": "SR",
+                    "label": "Suriname",
+                    "data": {
+                      "regionLabel": "District",
+                      "postalLabel": "Postcode",
+                      "postalPattern": "^\\d{4}[A-Z]{2}$",
+                      "postalExample": "1234AB",
+                      "postalHelp": "Example: 1234AB"
+                    }
+                  },
+                  {
+                    "value": "SJ",
+                    "label": "Svalbard and Jan Mayen",
+                    "data": {
+                      "regionLabel": "Territory",
+                      "postalLabel": "Postnummer",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "9170",
+                      "postalHelp": "Example: 9170"
+                    }
+                  },
+                  {
+                    "value": "SE",
+                    "label": "Sweden",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Postnummer",
+                      "postalPattern": "^\\d{3}\\s?\\d{2}$",
+                      "postalExample": "111 21",
+                      "postalHelp": "Example: 111 21"
+                    }
+                  },
+                  {
+                    "value": "CH",
+                    "label": "Switzerland",
+                    "data": {
+                      "regionLabel": "Canton",
+                      "postalLabel": "PLZ / NPA / CAP",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "8001",
+                      "postalHelp": "Example: 8001"
+                    }
+                  },
+                  {
+                    "value": "SY",
+                    "label": "Syrian Arab Republic",
+                    "data": {
+                      "regionLabel": "Governorate",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4,5}$",
+                      "postalExample": "11515",
+                      "postalHelp": "Example: 11515"
+                    }
+                  },
+                  {
+                    "value": "TW",
+                    "label": "Taiwan",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "郵遞區號",
+                      "postalPattern": "^\\d{5}(-\\d{2})?$",
+                      "postalExample": "10001",
+                      "postalHelp": "Example: 10001"
+                    }
+                  },
+                  {
+                    "value": "TJ",
+                    "label": "Tajikistan",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "734000",
+                      "postalHelp": "Example: 734000"
+                    }
+                  },
+                  {
+                    "value": "TZ",
+                    "label": "Tanzania",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "11101",
+                      "postalHelp": "Example: 11101"
+                    }
+                  },
+                  {
+                    "value": "TH",
+                    "label": "Thailand",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "รหัสไปรษณีย์",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "10110",
+                      "postalHelp": "Example: 10110"
+                    }
+                  },
+                  {
+                    "value": "TL",
+                    "label": "Timor-Leste",
+                    "data": {
+                      "regionLabel": "Municipality",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "TG",
+                    "label": "Togo",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "TK",
+                    "label": "Tokelau",
+                    "data": {
+                      "regionLabel": "Atoll",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "TO",
+                    "label": "Tonga",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4,5}$",
+                      "postalExample": "23407",
+                      "postalHelp": "Example: 23407"
+                    }
+                  },
+                  {
+                    "value": "TT",
+                    "label": "Trinidad and Tobago",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "100101",
+                      "postalHelp": "Example: 100101"
+                    }
+                  },
+                  {
+                    "value": "TN",
+                    "label": "Tunisia",
+                    "data": {
+                      "regionLabel": "Governorate",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1001",
+                      "postalHelp": "Example: 1001"
+                    }
+                  },
+                  {
+                    "value": "TR",
+                    "label": "Türkiye",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Posta kodu",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "34000",
+                      "postalHelp": "Example: 34000"
+                    }
+                  },
+                  {
+                    "value": "TM",
+                    "label": "Turkmenistan",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "744000",
+                      "postalHelp": "Example: 744000"
+                    }
+                  },
+                  {
+                    "value": "TC",
+                    "label": "Turks and Caicos Islands",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^TKCA\\s1ZZ$",
+                      "postalExample": "TKCA 1ZZ",
+                      "postalHelp": "Example: TKCA 1ZZ"
+                    }
+                  },
+                  {
+                    "value": "TV",
+                    "label": "Tuvalu",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "UG",
+                    "label": "Uganda",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "UA",
+                    "label": "Ukraine",
+                    "data": {
+                      "regionLabel": "Oblast",
+                      "postalLabel": "Поштовий індекс",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "01001",
+                      "postalHelp": "Example: 01001"
+                    }
+                  },
+                  {
+                    "value": "AE",
+                    "label": "United Arab Emirates",
+                    "data": {
+                      "regionLabel": "Emirate",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "GB",
+                    "label": "United Kingdom",
+                    "data": {
+                      "regionLabel": "County",
+                      "postalLabel": "Postcode",
+                      "postalPattern": "^[A-Z]{1,2}\\d{1,2}[A-Z]?\\s?\\d[A-Z]{2}$",
+                      "postalExample": "SW1A 1AA",
+                      "postalHelp": "Example: SW1A 1AA"
+                    }
+                  },
+                  {
+                    "value": "US",
+                    "label": "United States of America",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "ZIP code",
+                      "postalPattern": "^\\d{5}(-\\d{4})?$",
+                      "postalExample": "90210",
+                      "postalHelp": "Example: 90210"
+                    }
+                  },
+                  {
+                    "value": "VI",
+                    "label": "United States Virgin Islands",
+                    "data": {
+                      "regionLabel": "Island",
+                      "postalLabel": "ZIP code",
+                      "postalPattern": "^\\d{5}(-\\d{4})?$",
+                      "postalExample": "00801",
+                      "postalHelp": "Example: 00801"
+                    }
+                  },
+                  {
+                    "value": "UY",
+                    "label": "Uruguay",
+                    "data": {
+                      "regionLabel": "Department",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "11000",
+                      "postalHelp": "Example: 11000"
+                    }
+                  },
+                  {
+                    "value": "UZ",
+                    "label": "Uzbekistan",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "100000",
+                      "postalHelp": "Example: 100000"
+                    }
+                  },
+                  {
+                    "value": "VU",
+                    "label": "Vanuatu",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "VE",
+                    "label": "Venezuela",
+                    "data": {
+                      "regionLabel": "State",
+                      "postalLabel": "Código postal",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "1010",
+                      "postalHelp": "Example: 1010"
+                    }
+                  },
+                  {
+                    "value": "VN",
+                    "label": "Viet Nam",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Mã bưu chính",
+                      "postalPattern": "^\\d{6}$",
+                      "postalExample": "100000",
+                      "postalHelp": "Example: 100000"
+                    }
+                  },
+                  {
+                    "value": "WF",
+                    "label": "Wallis and Futuna",
+                    "data": {
+                      "regionLabel": "Territory",
+                      "postalLabel": "Code postal",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "98600",
+                      "postalHelp": "Example: 98600"
+                    }
+                  },
+                  {
+                    "value": "EH",
+                    "label": "Western Sahara",
+                    "data": {
+                      "regionLabel": "Region",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "YE",
+                    "label": "Yemen",
+                    "data": {
+                      "regionLabel": "Governorate",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "",
+                      "postalExample": "",
+                      "postalHelp": "Postal codes are not used for this country."
+                    }
+                  },
+                  {
+                    "value": "ZM",
+                    "label": "Zambia",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{5}$",
+                      "postalExample": "10101",
+                      "postalHelp": "Example: 10101"
+                    }
+                  },
+                  {
+                    "value": "ZW",
+                    "label": "Zimbabwe",
+                    "data": {
+                      "regionLabel": "Province",
+                      "postalLabel": "Postal code",
+                      "postalPattern": "^\\d{4}$",
+                      "postalExample": "00263",
+                      "postalHelp": "Example: 00263"
+                    }
+                  }
+                ]
+              },
+              "payload": {
+                "target": "canonical",
+                "path": "registrationCountryCode"
+              }
+            },
+            {
+              "key": "details_ownership_class",
+              "valueKey": "ownershipClass",
+              "label": "Ownership",
+              "columnSpan": 3,
+              "control": "input",
+              "widget": "select",
+              "required": true,
+              "placeholder": "Select ownership",
+              "defaultValue": "external",
+              "lookup": {
+                "options": [
+                  {
+                    "value": "external",
+                    "label": "External"
+                  },
+                  {
+                    "value": "internal",
+                    "label": "Internal"
+                  }
+                ]
+              },
+              "payload": {
+                "target": "canonical",
+                "path": "ownershipClass"
+              }
+            },
+            {
+              "key": "details_legal_classification",
+              "valueKey": "legalClassification",
+              "label": "Legal classification",
+              "columnSpan": 3,
+              "control": "input",
+              "widget": "select",
+              "required": false,
+              "placeholder": "Select legal classification",
+              "lookup": {
+                "options": [
+                  {
+                    "value": "government",
+                    "label": "Government"
+                  },
+                  {
+                    "value": "nonprofit",
+                    "label": "Nonprofit"
+                  },
+                  {
+                    "value": "sole_proprietor",
+                    "label": "Sole proprietor"
+                  }
+                ]
+              },
+              "payload": {
+                "target": "canonical",
+                "path": "legalClassification"
+              }
+            },
+            {
+              "key": "details_supplier_type",
+              "valueKey": "supplierType",
+              "label": "Supplier type",
+              "columnSpan": 3,
+              "control": "input",
+              "widget": "select",
+              "required": true,
+              "placeholder": "Select supplier type",
+              "defaultValue": "general",
+              "lookup": {
+                "options": [
+                  {
+                    "value": "general",
+                    "label": "General"
+                  },
+                  {
+                    "value": "strategic",
+                    "label": "Strategic"
+                  },
+                  {
+                    "value": "service",
+                    "label": "Service"
+                  },
+                  {
+                    "value": "carrier",
+                    "label": "Carrier"
+                  },
+                  {
+                    "value": "intercompany",
+                    "label": "Intercompany"
+                  }
+                ]
+              },
+              "payload": {
+                "target": "canonical",
+                "path": "supplierType"
+              }
+            },
+            {
+              "key": "details_qualification_type_code",
+              "valueKey": "qualificationTypeCode",
+              "label": "Qualification type",
+              "columnSpan": 3,
+              "visibleWhen": {
+                "field": "details_ownership_class",
+                "operator": "equals",
+                "value": "external"
+              },
+              "control": "input",
+              "widget": "select",
+              "required": true,
+              "helpText": "Policy used for the initial supplier qualification",
+              "placeholder": "Select qualification type",
+              "defaultValue": "compliance",
+              "lookup": {
+                "options": [
+                  {
+                    "value": "compliance",
+                    "label": "Compliance"
+                  },
+                  {
+                    "value": "basic",
+                    "label": "Basic"
+                  }
+                ]
+              },
+              "payload": {
+                "target": "canonical",
+                "path": "qualificationTypeCode"
+              }
+            },
+            {
+              "key": "details_legal_form",
+              "valueKey": "legalForm",
+              "label": "Legal form",
+              "columnSpan": 3,
+              "control": "input",
+              "widget": "text",
+              "required": false,
+              "maxLength": 100,
+              "payload": {
+                "target": "canonical",
+                "path": "legalForm"
+              }
+            },
+            {
+              "key": "details_website_url",
+              "valueKey": "websiteUrl",
+              "label": "Website",
+              "columnSpan": 3,
+              "control": "input",
+              "widget": "url",
+              "required": false,
+              "placeholder": "https://example.com",
+              "maxLength": 2048,
+              "payload": {
+                "target": "canonical",
+                "path": "websiteUrl"
+              }
+            },
+            {
+              "key": "details_description",
+              "valueKey": "description",
+              "label": "Description",
+              "columnSpan": 12,
+              "control": "input",
+              "widget": "textarea",
+              "required": false,
+              "maxLength": 4000,
+              "payload": {
+                "target": "canonical",
+                "path": "description"
+              }
+            }
+          ]
+        },
+        {
+          "key": "addresses",
+          "title": "Addresses",
+          "description": "Add at least one primary address.",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "details_addresses",
+              "valueKey": "addresses",
+              "label": "Supplier addresses",
+              "columnSpan": 12,
+              "control": "repeatableGroup",
+              "presentation": {
+                "duplicateCheck": {
+                  "fields": [
+                    "line1",
+                    "line2",
+                    "city",
+                    "region",
+                    "postalCode",
+                    "countryCode",
+                    "buildingName",
+                    "floor",
+                    "unit",
+                    "houseNumber",
+                    "streetName",
+                    "poBox"
+                  ],
+                  "requireAny": [
+                    "line1",
+                    "poBox",
+                    "streetName"
+                  ],
+                  "label": "Possible duplicate",
+                  "message": "This address matches another entry in this request. Review both entries before continuing."
+                },
+                "renderer": "addresses",
+                "titleFields": [
+                  "line1"
+                ],
+                "summary": [
+                  {
+                    "field": "line1"
+                  },
+                  {
+                    "field": "city"
+                  },
+                  {
+                    "field": "region"
+                  },
+                  {
+                    "field": "postalCode"
+                  },
+                  {
+                    "field": "countryCode"
+                  },
+                  {
+                    "field": "purpose"
+                  }
+                ],
+                "emptyText": "Add an address and select its purpose.",
+                "editLabel": "Edit",
+                "doneLabel": "Done",
+                "issuesLabel": "Issues: {count}",
+                "headingCount": true,
+                "validateOnDone": true,
+                "removalConfirmation": {
+                  "mode": "dialog",
+                  "title": "Remove {item}?",
+                  "message": "This entry will be removed from this request.",
+                  "confirmLabel": "Remove address",
+                  "cancelLabel": "Cancel"
+                }
+              },
+              "itemSurfaceKey": "partner_address_intake",
+              "itemFieldRules": [
+                {
+                  "when": {
+                    "field": "details_profile_mode",
+                    "operator": "equals",
+                    "value": "full"
+                  },
+                  "fields": [
+                    "line1",
+                    "city"
+                  ],
+                  "required": false
+                }
+              ],
+              "itemLabel": "Address",
+              "addLabel": "Add address",
+              "removeLabel": "Remove address",
+              "minItems": 1,
+              "maxItems": 10,
+              "primaryField": "isPrimary",
+              "primaryLabel": "Primary address"
+            }
+          ]
+        },
+        {
+          "key": "contacts",
+          "title": "Contacts",
+          "description": "Add at least one primary contact and communication channel.",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "details_contacts",
+              "valueKey": "contacts",
+              "label": "Supplier contacts",
+              "columnSpan": 12,
+              "control": "repeatableGroup",
+              "presentation": {
+                "renderer": "contacts",
+                "titleFields": [
+                  "contactName"
+                ],
+                "summary": [
+                  {
+                    "field": "contactName"
+                  },
+                  {
+                    "field": "businessTitle"
+                  },
+                  {
+                    "field": "departmentName"
+                  },
+                  {
+                    "field": "channels",
+                    "format": "primary"
+                  }
+                ],
+                "emptyText": "Add a contact and their communication channels.",
+                "editLabel": "Edit",
+                "doneLabel": "Done",
+                "issuesLabel": "Issues: {count}",
+                "headingCount": true,
+                "validateOnDone": true,
+                "removalConfirmation": {
+                  "mode": "dialog",
+                  "title": "Remove {item}?",
+                  "impactField": "channels",
+                  "impactMessage": "This contact and its communication channels ({count}) will be removed from this request.",
+                  "message": "This contact will be removed from this request.",
+                  "confirmLabel": "Remove contact",
+                  "cancelLabel": "Cancel"
+                }
+              },
+              "itemSurfaceKey": "partner_contact_intake",
+              "itemLabel": "Contact",
+              "addLabel": "Add contact",
+              "removeLabel": "Remove contact",
+              "minItems": 1,
+              "maxItems": 10,
+              "primaryField": "isPrimary",
+              "primaryLabel": "Primary contact"
+            }
+          ]
+        },
+        {
+          "key": "profile_identity",
+          "title": "Additional organization details",
+          "description": "Recommended timing: contract or profile completion.",
+          "collapsible": true,
+          "columns": 12,
+          "fields": [
+            {
+              "key": "profile_incorporation_date",
+              "valueKey": "incorporationDate",
+              "label": "Incorporation date",
+              "columnSpan": 4,
+              "visibleWhen": {
+                "field": "details_profile_mode",
+                "operator": "equals",
+                "value": "full"
+              },
+              "control": "input",
+              "widget": "date",
+              "required": false,
+              "placeholder": "YYYY-MM-DD",
+              "maxLength": 10,
+              "payload": {
+                "target": "canonical",
+                "path": "incorporationDate"
+              }
+            }
+          ]
+        },
+        {
+          "key": "profile_aliases",
+          "title": "Alternate names",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "details_aliases",
+              "valueKey": "aliases",
+              "label": "Alternate names",
+              "columnSpan": 12,
+              "visibleWhen": {
+                "field": "details_profile_mode",
+                "operator": "equals",
+                "value": "full"
+              },
+              "control": "repeatableGroup",
+              "presentation": {
+                "renderer": "generic",
+                "titleFields": [
+                  "aliasName"
+                ],
+                "summary": [
+                  {
+                    "field": "aliasName"
+                  },
+                  {
+                    "field": "aliasKind"
+                  },
+                  {
+                    "field": "languageCode"
+                  },
+                  {
+                    "field": "countryCode"
+                  }
+                ],
+                "emptyText": "Add a trading, former or alternate name.",
+                "editLabel": "Edit",
+                "doneLabel": "Done",
+                "issuesLabel": "Issues: {count}",
+                "headingCount": true,
+                "validateOnDone": true,
+                "removalConfirmation": {
+                  "mode": "dialog",
+                  "title": "Remove {item}?",
+                  "message": "This entry will be removed from this request.",
+                  "confirmLabel": "Remove alias",
+                  "cancelLabel": "Cancel"
+                }
+              },
+              "itemSurfaceKey": "profile_alias",
+              "extensionGroup": "aliases",
+              "itemLabel": "Alias",
+              "addLabel": "Add alias",
+              "removeLabel": "Remove alias",
+              "minItems": 0,
+              "maxItems": 20,
+              "primaryField": "isPrimary",
+              "primaryLabel": "Primary alias"
+            }
+          ]
+        },
+        {
+          "key": "profile_identifiers",
+          "title": "Business registration identifiers",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "details_identifiers",
+              "valueKey": "identifiers",
+              "label": "Business registration identifiers",
+              "columnSpan": 12,
+              "visibleWhen": {
+                "field": "details_profile_mode",
+                "operator": "equals",
+                "value": "full"
+              },
+              "control": "repeatableGroup",
+              "presentation": {
+                "renderer": "generic",
+                "titleFields": [
+                  "schemeCode"
+                ],
+                "summary": [
+                  {
+                    "field": "schemeCode"
+                  },
+                  {
+                    "field": "issuingCountryCode"
+                  },
+                  {
+                    "field": "value",
+                    "format": "masked"
+                  }
+                ],
+                "emptyText": "Add a business registration identifier.",
+                "editLabel": "Edit",
+                "doneLabel": "Done",
+                "issuesLabel": "Issues: {count}",
+                "headingCount": true,
+                "validateOnDone": true,
+                "removalConfirmation": {
+                  "mode": "dialog",
+                  "title": "Remove {item}?",
+                  "message": "This entry will be removed from this request.",
+                  "confirmLabel": "Remove identifier",
+                  "cancelLabel": "Cancel"
+                }
+              },
+              "itemSurfaceKey": "profile_identifier",
+              "extensionGroup": "identifiers",
+              "itemLabel": "Identifier",
+              "addLabel": "Add identifier",
+              "removeLabel": "Remove identifier",
+              "minItems": 0,
+              "maxItems": 20,
+              "primaryField": "isPrimary",
+              "primaryLabel": "Primary identifier"
+            }
+          ]
+        },
+        {
+          "key": "profile_tax_registrations",
+          "title": "Tax registrations",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "details_tax_registrations",
+              "valueKey": "taxRegistrations",
+              "label": "Tax registrations",
+              "columnSpan": 12,
+              "visibleWhen": {
+                "field": "details_profile_mode",
+                "operator": "equals",
+                "value": "full"
+              },
+              "control": "repeatableGroup",
+              "presentation": {
+                "renderer": "generic",
+                "titleFields": [
+                  "registrationTypeCode"
+                ],
+                "summary": [
+                  {
+                    "field": "registrationTypeCode"
+                  },
+                  {
+                    "field": "jurisdictionId"
+                  },
+                  {
+                    "field": "value",
+                    "format": "masked"
+                  }
+                ],
+                "emptyText": "Add a tax registration.",
+                "editLabel": "Edit",
+                "doneLabel": "Done",
+                "issuesLabel": "Issues: {count}",
+                "headingCount": true,
+                "validateOnDone": true,
+                "removalConfirmation": {
+                  "mode": "dialog",
+                  "title": "Remove {item}?",
+                  "message": "This entry will be removed from this request.",
+                  "confirmLabel": "Remove tax registration",
+                  "cancelLabel": "Cancel"
+                }
+              },
+              "itemSurfaceKey": "profile_tax",
+              "extensionGroup": "taxRegistrations",
+              "itemLabel": "Tax registration",
+              "addLabel": "Add tax registration",
+              "removeLabel": "Remove tax registration",
+              "minItems": 0,
+              "maxItems": 20,
+              "primaryField": "isPrimary",
+              "primaryLabel": "Primary tax registration"
+            }
+          ]
+        },
+        {
+          "key": "profile_classifications",
+          "title": "Commodity and industry classifications",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "details_classifications",
+              "valueKey": "classifications",
+              "label": "Commodity and industry classifications",
+              "columnSpan": 12,
+              "visibleWhen": {
+                "field": "details_profile_mode",
+                "operator": "equals",
+                "value": "full"
+              },
+              "control": "repeatableGroup",
+              "presentation": {
+                "renderer": "generic",
+                "titleFields": [
+                  "commodityReferenceId",
+                  "industryReferenceId"
+                ],
+                "summary": [
+                  {
+                    "field": "commodityReferenceId"
+                  },
+                  {
+                    "field": "industryReferenceId"
+                  },
+                  {
+                    "field": "classificationKind"
+                  },
+                  {
+                    "field": "domainCode"
+                  },
+                  {
+                    "field": "partnerRole"
+                  }
+                ],
+                "emptyText": "Add a commodity or industry classification.",
+                "editLabel": "Edit",
+                "doneLabel": "Done",
+                "issuesLabel": "Issues: {count}",
+                "headingCount": true,
+                "validateOnDone": true,
+                "removalConfirmation": {
+                  "mode": "dialog",
+                  "title": "Remove {item}?",
+                  "message": "This entry will be removed from this request.",
+                  "confirmLabel": "Remove classification",
+                  "cancelLabel": "Cancel"
+                }
+              },
+              "itemSurfaceKey": "profile_classification",
+              "extensionGroup": "classifications",
+              "itemLabel": "Classification",
+              "addLabel": "Add classification",
+              "removeLabel": "Remove classification",
+              "minItems": 0,
+              "maxItems": 20,
+              "primaryField": "isPrimary",
+              "primaryLabel": "Primary classification"
+            }
+          ]
+        },
+        {
+          "key": "profile_governance_relations",
+          "title": "Governance and ownership",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "details_governance_relations",
+              "valueKey": "governanceRelations",
+              "label": "Governance and ownership",
+              "columnSpan": 12,
+              "visibleWhen": {
+                "field": "details_profile_mode",
+                "operator": "equals",
+                "value": "full"
+              },
+              "control": "repeatableGroup",
+              "presentation": {
+                "renderer": "generic",
+                "titleFields": [
+                  "memberName"
+                ],
+                "summary": [
+                  {
+                    "field": "memberName"
+                  },
+                  {
+                    "field": "relationTypeCode"
+                  },
+                  {
+                    "field": "memberType"
+                  },
+                  {
+                    "field": "businessTitle"
+                  }
+                ],
+                "emptyText": "Add a governance or ownership member.",
+                "editLabel": "Edit",
+                "doneLabel": "Done",
+                "issuesLabel": "Issues: {count}",
+                "headingCount": true,
+                "validateOnDone": true,
+                "removalConfirmation": {
+                  "mode": "dialog",
+                  "title": "Remove {item}?",
+                  "message": "This entry will be removed from this request.",
+                  "confirmLabel": "Remove member",
+                  "cancelLabel": "Cancel"
+                }
+              },
+              "itemSurfaceKey": "profile_governance",
+              "extensionGroup": "governanceRelations",
+              "itemLabel": "Member",
+              "addLabel": "Add member",
+              "removeLabel": "Remove member",
+              "minItems": 0,
+              "maxItems": 20
+            }
+          ]
+        },
+        {
+          "key": "profile_relationships",
+          "title": "Partner relationships",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "details_relationships",
+              "valueKey": "relationships",
+              "label": "Partner relationships",
+              "columnSpan": 12,
+              "visibleWhen": {
+                "field": "details_profile_mode",
+                "operator": "equals",
+                "value": "full"
+              },
+              "control": "repeatableGroup",
+              "presentation": {
+                "renderer": "generic",
+                "titleFields": [
+                  "relationshipTypeCode"
+                ],
+                "summary": [
+                  {
+                    "field": "relationshipTypeCode"
+                  },
+                  {
+                    "field": "countryCode"
+                  }
+                ],
+                "emptyText": "Add a relationship with another partner.",
+                "editLabel": "Edit",
+                "doneLabel": "Done",
+                "issuesLabel": "Issues: {count}",
+                "headingCount": true,
+                "validateOnDone": true,
+                "removalConfirmation": {
+                  "mode": "dialog",
+                  "title": "Remove {item}?",
+                  "message": "This entry will be removed from this request.",
+                  "confirmLabel": "Remove relationship",
+                  "cancelLabel": "Cancel"
+                }
+              },
+              "itemSurfaceKey": "profile_relationship",
+              "extensionGroup": "relationships",
+              "itemLabel": "Relationship",
+              "addLabel": "Add relationship",
+              "removeLabel": "Remove relationship",
+              "minItems": 0,
+              "maxItems": 20
+            }
+          ]
+        },
+        {
+          "key": "profile_certifications",
+          "title": "Certifications",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "details_certifications",
+              "valueKey": "certifications",
+              "label": "Certifications",
+              "columnSpan": 12,
+              "visibleWhen": {
+                "field": "details_profile_mode",
+                "operator": "equals",
+                "value": "full"
+              },
+              "control": "repeatableGroup",
+              "presentation": {
+                "renderer": "certifications",
+                "titleFields": [
+                  "customName"
+                ],
+                "summary": [
+                  {
+                    "field": "customName"
+                  },
+                  {
+                    "field": "certifiedBy"
+                  },
+                  {
+                    "field": "effectiveFrom"
+                  },
+                  {
+                    "field": "effectiveUntil"
+                  },
+                  {
+                    "field": "supportingDocuments",
+                    "format": "count"
+                  }
+                ],
+                "emptyText": "Add a certificate and its supporting documents.",
+                "editLabel": "Edit",
+                "doneLabel": "Done",
+                "issuesLabel": "Issues: {count}",
+                "headingCount": true,
+                "validateOnDone": true,
+                "removalConfirmation": {
+                  "mode": "dialog",
+                  "title": "Remove {item}?",
+                  "impactField": "supportingDocuments",
+                  "impactMessage": "This certificate and its supporting document entries ({count}) will be removed from this request.",
+                  "message": "This entry will be removed from this request.",
+                  "confirmLabel": "Remove certificate",
+                  "cancelLabel": "Cancel"
+                }
+              },
+              "itemSurfaceKey": "profile_certification",
+              "extensionGroup": "certifications",
+              "itemLabel": "Certificate",
+              "addLabel": "Add certificate",
+              "removeLabel": "Remove certificate",
+              "minItems": 0,
+              "maxItems": 20
+            }
+          ]
+        },
+        {
+          "key": "request_bank_accounts",
+          "title": "Bank accounts",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "capture_bank_accounts",
+              "valueKey": "bankAccounts",
+              "label": "Bank accounts",
+              "columnSpan": 12,
+              "control": "repeatableGroup",
+              "presentation": {
+                "renderer": "bank-accounts",
+                "summary": [
+                  {
+                    "field": "bankName"
+                  },
+                  {
+                    "field": "currencyCode"
+                  },
+                  {
+                    "field": "accountIdentifier",
+                    "format": "masked"
+                  },
+                  {
+                    "field": "intendedUse"
+                  },
+                  {
+                    "field": "supportingDocuments",
+                    "format": "count"
+                  }
+                ],
+                "emptyText": "Add an account and supporting documents when available.",
+                "editLabel": "Edit",
+                "doneLabel": "Done",
+                "issuesLabel": "Issues: {count}",
+                "headingCount": true,
+                "validateOnDone": true,
+                "removalConfirmation": {
+                  "mode": "dialog",
+                  "title": "Remove {item}?",
+                  "titleFields": [
+                    "bankName",
+                    "accountIdentifier"
+                  ],
+                  "impactField": "supportingDocuments",
+                  "impactMessage": "This bank account and its supporting document entries ({count}) will be removed from this request.",
+                  "message": "This bank account will be removed from this request.",
+                  "confirmLabel": "Remove bank account",
+                  "cancelLabel": "Cancel"
+                }
+              },
+              "itemSurfaceKey": "profile_bank",
+              "extensionGroup": "bankAccounts",
+              "itemLabel": "Bank account",
+              "addLabel": "Add bank account",
+              "removeLabel": "Remove bank account",
+              "minItems": 0,
+              "maxItems": 20
+            }
+          ]
+        },
+        {
+          "key": "request_governance",
+          "title": "Request governance",
+          "columns": 12,
+          "fields": [
+            {
+              "key": "details_requested_compliance_level",
+              "valueKey": "requestedComplianceLevel",
+              "label": "Compliance requirement",
+              "columnSpan": 12,
+              "control": "input",
+              "widget": "select",
+              "required": true,
+              "lookup": {
+                "options": [
+                  {
+                    "value": "basic",
+                    "label": "Basic"
+                  },
+                  {
+                    "value": "standard",
+                    "label": "Standard"
+                  },
+                  {
+                    "value": "enhanced",
+                    "label": "Enhanced"
+                  }
+                ]
+              },
+              "payload": {
+                "target": "canonical",
+                "path": "requestedComplianceLevel"
+              }
+            },
+            {
+              "key": "details_compliance_requirement_reason",
+              "valueKey": "complianceRequirementReason",
+              "label": "Requirement reason",
+              "columnSpan": 12,
+              "control": "input",
+              "widget": "textarea",
+              "variants": [
+                {
+                  "when": {
+                    "field": "details_requested_compliance_level",
+                    "operator": "equals",
+                    "value": "basic"
+                  },
+                  "required": true
+                }
+              ],
+              "required": false,
+              "maxLength": 2000,
+              "payload": {
+                "target": "canonical",
+                "path": "complianceRequirementReason"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

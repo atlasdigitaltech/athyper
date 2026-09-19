@@ -1,0 +1,13 @@
+{
+  "fixtureBacked": true,
+  "dependencyBlocked": true,
+  "addPlacement": true,
+  "splitSection": true,
+  "reorder": true,
+  "saveReload": true,
+  "mergeAndUndo": true,
+  "unrelatedDataPreserved": true,
+  "mobileOverflow": false,
+  "pageErrors": [],
+  "liveStructuralWrites": 0
+}

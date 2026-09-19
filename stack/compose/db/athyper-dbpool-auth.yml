@@ -1,9 +1,0 @@
-# =======================================================================
-# TOMBSTONE — superseded by athyper-dbpool-session.yml
-#
-# The session-mode pool (port 6433) was renamed from dbpool-auth to
-# dbpool-session to reflect that Metabase now shares it alongside
-# Keycloak. Update any reference to dbpool-auth → dbpool-session.
-#
-# This file is NOT included in compose.yml.
-# =======================================================================

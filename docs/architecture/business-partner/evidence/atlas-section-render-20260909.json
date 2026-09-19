@@ -1,0 +1,21 @@
+{
+  "schema": "atlas-section-render-evidence/1",
+  "capturedAt": "2026-09-09T04:55:21.551467+00:00",
+  "reportedRun": "b520e8e1-d680-4258-8f84-9f2e5c82d185",
+  "observedFailure": {
+    "tool": "bp_read_addresses",
+    "toolStatus": "completed",
+    "secondModelCall": "failed",
+    "errorCategory": "upstream_error",
+    "durationMs": 0
+  },
+  "apiImage": "athyper-runtime-server:atlas-section-render-20260909",
+  "health": "healthy",
+  "checks": {
+    "aiTests": 244,
+    "typecheck": "passed",
+    "build": "passed",
+    "syntheticDeployedRenderer": "passed"
+  },
+  "authenticatedRenderingVerification": "pending"
+}

@@ -1,0 +1,53 @@
+.bank-directory{display:grid;gap:24px;min-width:0;color:var(--a-foreground);font-size:14px;line-height:1.6}
+.bank-directory *{box-sizing:border-box}
+.bank-directory>section,.bank-directory__diagnostics{min-width:0;padding:24px;border:1px solid var(--a-border);border-radius:14px;background:var(--a-surface)}
+.bank-directory h2{margin:0 0 8px;font-size:19px;font-weight:650;letter-spacing:-.02em}
+.bank-directory h3{font-size:15px}
+.bank-directory p{margin:10px 0 16px;overflow-wrap:anywhere}
+.bank-directory__intro,.bank-directory section>p{color:var(--a-muted-foreground)}
+.bank-directory .bank-directory__intro{margin:0}
+.bank-directory section button:not(.a-button){min-height:40px;padding:8px 14px;border:1px solid var(--a-border);border-radius:8px;background:var(--a-surface);color:var(--a-primary);font:inherit;font-weight:600;cursor:pointer;transition:background .15s}
+.bank-directory section button:not(.a-button):hover:not(:disabled){background:var(--a-muted)}
+.bank-directory section button:not(.a-button):disabled{opacity:.5;cursor:not-allowed}
+.bank-directory section button:not(.a-button).bank-directory__primary{background:var(--a-primary);border-color:var(--a-primary);color:var(--a-primary-foreground)}
+.bank-directory section button:not(.a-button).bank-directory__primary:hover:not(:disabled){background:var(--a-primary-hover)}
+.bank-directory :is(button,textarea,input,summary):focus-visible{outline:2px solid var(--a-focus);outline-offset:3px}
+.bank-directory label{display:block;margin:16px 0 8px;font-weight:500}
+.bank-directory textarea{display:block;width:100%;min-height:90px;margin-top:8px;padding:12px;border:1px solid var(--a-input);border-radius:8px;background:var(--a-background);color:var(--a-foreground);font:inherit;resize:vertical}
+.bank-directory textarea[aria-label],.bank-directory textarea[placeholder]{font:13px/1.6 ui-monospace,monospace}
+.bank-directory input[type=file]{display:block;max-width:100%;margin:8px 0 16px;padding:12px;border:1px dashed var(--a-input);border-radius:8px;background:var(--a-background);font:inherit}
+.bank-directory input::file-selector-button{padding:8px 12px;margin-inline-end:12px;border:1px solid var(--a-border);border-radius:6px;background:var(--a-surface);color:var(--a-primary);font:inherit}
+.bank-directory input[type=checkbox]{width:17px;height:17px;margin:0 8px 0 0;vertical-align:middle;accent-color:var(--a-primary)}
+.bank-directory section table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px;text-align:start}
+.bank-directory section :is(th,td){padding:12px;border-bottom:1px solid var(--a-border);overflow-wrap:anywhere;vertical-align:top}
+.bank-directory section th{background:var(--a-muted);color:var(--a-muted-foreground);font-weight:600}
+.bank-directory details{margin:16px 0;padding:12px 16px;border:1px solid var(--a-border);border-radius:8px;background:var(--a-background);min-width:0}
+.bank-directory summary{cursor:pointer;color:var(--a-primary);font-weight:600}
+.bank-directory pre{padding:16px;background:var(--a-muted);border-radius:8px;font:12px/1.6 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.bank-directory .bank-directory__revisions{display:flex;flex-wrap:wrap;gap:10px;list-style:none;margin:20px 0;padding:0}
+.bank-directory__review{border-top:1px solid var(--a-border);padding-top:8px}
+.bank-directory__review>button{margin:4px 8px 4px 0}
+.bank-directory [role=alert]{padding:14px 18px;border-left:3px solid var(--a-danger);border-radius:8px;background:var(--a-danger-subtle);color:var(--a-danger-subtle-foreground)}
+.bank-directory [role=status],.bank-directory__guidance{padding:14px 18px;border-left:3px solid var(--a-primary);border-radius:8px;background:var(--a-muted)}
+.bank-directory .bank-directory__diagnostics{margin:0}
+@media(max-width:700px){.bank-directory>section,.bank-directory__diagnostics{padding:16px}.bank-directory section :is(th,td){padding:8px 4px;font-size:12px}.bank-directory__revisions button{width:100%;text-align:start}.bank-directory__revisions li{width:100%}}
+
+.bank-directory [hidden]{display:none!important}
+.bank-directory__sync{display:flex;align-items:center;justify-content:space-between;gap:var(--a-space-3);padding:var(--a-space-3) var(--a-space-4);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);color:var(--a-muted-foreground)}
+.bank-directory .bank-directory__sync[role=status]{border-left:var(--a-border-width) solid var(--a-border);margin:0}
+.bank-directory-list__search{display:flex;align-items:center;gap:var(--a-space-2);border:var(--a-border-width) solid var(--a-input);border-radius:var(--a-radius-md);padding-inline:var(--a-space-2);color:var(--a-muted-foreground)}
+.bank-directory-list__search .a-input{border:0;background:transparent;box-shadow:none;min-width:0;width:100%}
+.bank-directory label.bank-directory-list__view{display:flex;align-items:center;gap:var(--a-space-2);margin:0;padding:var(--a-space-2);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-muted);font-weight:600}
+.bank-directory-list__view select,.bank-directory-list__options select{color:var(--a-foreground);background:var(--a-surface);border:var(--a-border-width) solid var(--a-input);border-radius:var(--a-radius-sm);padding:var(--a-space-1);font:inherit}
+.bank-directory-list__options{display:flex;align-items:center;flex-wrap:wrap;gap:var(--a-space-3);padding:var(--a-space-3);margin:0;border:0;border-block:var(--a-border-width) solid var(--a-border);background:var(--a-muted)}
+.bank-directory-list__options label{margin:0;font-size:var(--a-font-size-sm)}
+.bank-directory-list__link{color:var(--a-brand);background:none;border:0;padding:0;font:inherit;font-weight:600;text-align:start;cursor:pointer}
+.bank-directory-list__status{text-transform:capitalize;display:inline-flex;align-items:center;gap:var(--a-space-2)}
+.bank-directory-list__status:before{content:"";width:.5rem;height:.5rem;border-radius:50%;background:var(--a-muted-foreground)}
+.bank-directory-list__status--active:before{background:var(--a-success)}
+.bank-directory-list__number{text-align:end;font-variant-numeric:tabular-nums}
+.bank-directory-list__empty{padding:var(--a-space-6);display:grid;gap:var(--a-space-3);text-align:center}
+.bank-directory-list__detail{padding:var(--a-space-5);margin-block-start:var(--a-space-4);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg);background:var(--a-surface)}
+.bank-directory-list__detail-heading{display:flex;justify-content:space-between;align-items:center;gap:var(--a-space-3)}
+@media(max-width:48rem){.bank-directory__sync{align-items:start;flex-direction:column}.bank-directory .a-management-toolbar>[data-slot=search]{flex-basis:100%}.bank-directory-list__detail-heading{align-items:start;flex-direction:column}}
+.bank-directory .a-entity-list__table .bank-directory-list__number{text-align:end}

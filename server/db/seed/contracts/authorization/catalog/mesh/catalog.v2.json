@@ -6,6 +6,19 @@
   "idStrategy": "uuidv5:namespace=uuidv5(dns,athyper.authorization.catalog.v2);name={canonicalCode}",
   "permissions": [
     {
+      "permissionId": "350c8f62-aa90-5a2c-89bb-e7dcde74a8d7",
+      "canonicalCode": "mesh.ai.agent.use",
+      "product": "mesh",
+      "domain": "ai",
+      "entity": "agent",
+      "operation": "use",
+      "permissionKind": "capability",
+      "riskTier": "medium",
+      "requiresMfa": true,
+      "lifecycle": "proposed",
+      "definitionSha256": "9c70c8983568eb80beaeff9e7d66345336bb9d40c00987aa6a5fb205cc9d71df"
+    },
+    {
       "permissionId": "fbaf0f38-a596-514c-bec3-e849f011f22f",
       "canonicalCode": "mesh.catalog.attachment.create",
       "product": "mesh",
@@ -357,6 +370,19 @@
       "definitionSha256": "244543f1fefe6f4a27e8d9f159a8e204775cd1382ac957b70d97746c7ab27e1c"
     },
     {
+      "permissionId": "82831768-bf1e-5d5d-94dd-f366030e26e9",
+      "canonicalCode": "mesh.catalog.network_relationship.request",
+      "product": "mesh",
+      "domain": "catalog",
+      "entity": "network_relationship",
+      "operation": "request",
+      "permissionKind": "entity_operation",
+      "riskTier": "medium",
+      "requiresMfa": false,
+      "lifecycle": "proposed",
+      "definitionSha256": "05c88f707b7947b5fa5cca96c6f9920c7695610606580682b31624ec07472e35"
+    },
+    {
       "permissionId": "bdc4714c-f66e-5a99-aa6c-898f3e8b855e",
       "canonicalCode": "mesh.catalog.network_relationship.suspend",
       "product": "mesh",
@@ -422,5 +448,5 @@
       "definitionSha256": "6f0370db47043ec21e8f5a9a8a50fa91c376da4eaa57c8798b34b430b11c6b81"
     }
   ],
-  "sha256": "2dea029fc2e91ad390fc9921055c00c47e83c871f62a91d6d20778434586cc98"
+  "sha256": "49c2beee6a1d8bf7d968109a7f88aea84fbac510a1fb0181ac3207ff1355ed35"
 }

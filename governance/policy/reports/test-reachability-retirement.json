@@ -1,0 +1,601 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Excluded workspace packages with test files must be retired or reactivated through package consolidation; they are not run by test:repo.",
+  "activeWorkspacePackageCount": 177,
+  "rootTests": [
+    {
+      "path": "deploy/compose/tests/structure.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tests/contracts/access-consumption-phase9.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/activity-center-client-contract.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/api-client-transport.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/app-composition-phase10.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/atlas-answer-envelope.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/atlas-grounded-answer.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/auth-deep-link.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/auth-session-foundation.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/backchannel-logout-retry.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/bff-relay-security.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-phase0-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r2-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r2-r3-environment.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r3-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r4-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r5-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r6-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r7-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r8-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/context-refresh-race.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/e2e-auth-state.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/entity-list-contract.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/first-business-module-readiness.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/frontend-spine-browser-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/frontend-spine-server-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/home-personalization-phase3.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/mesh-network-account-contract.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/mesh-url-review.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/neon-application-url-review.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/neon-operating-organization-contract.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/neon-work-context-contract.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/platform-catalog-experience.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/query-provider-lifecycle.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/refresh-touch-race.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/server-plane-composition.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/session-store-index-expiry.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/session-store-rotation.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/shared-shell-navigation.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/studio-authoring-relay.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/studio-publication-navigation.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/studio-url-review.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/three-plane-list-scope.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/trusted-device-authentication.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/foundation/access-gates-phase9.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/activity-center-interactions.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/atlas-answer.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/atlas-business-context.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/atlas-composer-interactions.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/atlas-history-interactions.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/atlas-prompt-rich-content.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/atlas-record-question.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/attachment-client-coordinate.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/brand-icons.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/business-partner-case-experience.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/content-header.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-breadcrumbs.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-list-columns.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-list-phase1a.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-list-scope-control.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-overview-favourites.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-overview.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-record-header.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-related-presentation.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/error-boundaries.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/foundation-render.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/foundation-snapshot.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/header-context-identity.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/i18n-foundation.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/page-foundation.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/primitive-interactions.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/public-auth-surface.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/quick-access-interactions.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/studio-experience-editor.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/surface-stack.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/theme-contract.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tooling/scripts/acceptance/controlled-transfer-disruption.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/performance/qualify-meta-entity.test.mjs",
+      "runner": "test:performance-guards"
+    },
+    {
+      "path": "tooling/scripts/performance/verify-experience-production-gates.test.mjs",
+      "runner": "test:performance-guards"
+    },
+    {
+      "path": "tooling/scripts/performance/verify-meta-entity-retirement.test.mjs",
+      "runner": "test:performance-guards"
+    },
+    {
+      "path": "tooling/scripts/performance/verify-runtime-list-cache-rollout.test.mjs",
+      "runner": "test:performance-guards"
+    },
+    {
+      "path": "tooling/scripts/performance/verify-shared-shell-bundle.test.mjs",
+      "runner": "test:performance-guards"
+    },
+    {
+      "path": "tooling/scripts/policy/audit-style-tokens.test.ts",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/authorization-inventory.test.ts",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/format-changed.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/frontend-spine-governance.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/generate-development-url-catalogue.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/generate-server-route-manifest.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/host-capability-registry.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/meta-entity-certification.test.ts",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/meta-entity-rollout-gate.test.ts",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/run-static-policies.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-ci-entrypoints.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-ci-realm.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-design-system.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-docker-toolchain.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-experience-cleanup.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-governance-plane-composition.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-server-docker-workspaces.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-server-rebuild-boundaries.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-theme-token-integrity.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/rehearsal/record-sanitized-data-evidence.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/release/promote-image-set.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/atlas-baseline-adoption.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/atlas-f6-pilot.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/atlas-foundation-baseline.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/atlas-inference-readiness.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/atlas-mesh-baseline.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/bp-ai-authenticated-evidence.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-ai-qualification.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-r2-qualification.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-r3-qualification.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-r5-qualification.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-r8-intake.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-r8-qualification.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-v1-qualification.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/ci-integrity-evidence.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/accepted-operation-selection.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/activation-readiness.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/authenticated-operation-review.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/authenticated-role-review.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/case-runtime-correction.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/combined-successor.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/compile-target-assignments.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/exact-release-execution-gate.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/governed-import-selection.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/named-role-approval-workflow.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/named-role-recommendations.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/named-role-review.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/policy-differences.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/successor-difference-review.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/target-read-grants.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/inspect-master-data-environment.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/isolated-execution/case-bindings.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/isolated-execution/import-policy.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/isolated-execution/release-boundary.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/local-master-data-operations.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/master-data-prerequisites.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/plan-entity-authorization-migration.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/preflight-business-partner-environment.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/staging-email-canary-evidence.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/verify-notification-provider-readiness.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/tools/scripts/ddl-service-coverage-policy.test.mjs",
+      "runner": "test:tools"
+    },
+    {
+      "path": "tooling/tools/scripts/ddl-service-coverage.test.mjs",
+      "runner": "test:tools"
+    },
+    {
+      "path": "tooling/tools/scripts/keycloak-plane-contract.test.mjs",
+      "runner": "test:tools"
+    },
+    {
+      "path": "tooling/tools/scripts/openapi-policy.test.mjs",
+      "runner": "test:tools"
+    },
+    {
+      "path": "tooling/tools/scripts/reconcile-keycloak-authorization-v2.test.mjs",
+      "runner": "test:tools"
+    },
+    {
+      "path": "tooling/tools/scripts/reconcile-keycloak-organization-scope.test.mjs",
+      "runner": "test:tools"
+    }
+  ],
+  "inactivePackageTestCount": 0,
+  "inactivePackages": []
+}

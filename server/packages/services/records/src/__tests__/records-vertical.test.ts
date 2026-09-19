@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { describe, expect, it, vi } from "vitest";
 import type { AuditEvent, AuditRecordInput } from "@athyper/server-contract-audit";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { OutboxEventInput } from "@athyper/server-contract-events";
 import type { EntityRuntimeDescriptor, MetadataReader } from "@athyper/server-contract-metadata";
+import type { RecordCollectionScopeResolver } from "@athyper/server-contract-records";
 import {
   createInMemoryRecordPersistence,
   createInMemoryCommandExecutionStore,
@@ -113,6 +115,82 @@ describe("descriptor-driven Records vertical", () => {
     const mutations = createRecordMutationService({ metadata: securedMetadata, authorizer, repository: persistence.repository, transactions: persistence.transactions, commandExecutions: createInMemoryCommandExecutionStore(), audit: { record: async (input) => eventFrom(input, 1) }, outbox: { append: async () => undefined } });
     await expect(mutations.patch({ context, entityCode: secured.entityCode, recordId: "bp-1", input: { taxId: "NEW" }, expectedVersion: 1, origin: "classic", validationMode: "strict", idempotencyKey: "records-field-security-01" })).resolves.toMatchObject({ kind: "FieldsNotWritable", fields: { taxId: [{ code: "FIELD_WRITE_FORBIDDEN" }] } });
   });
+
+  it("uses principal-bound keyset cursors and truthfully reports applied count mode", async () => {
+    const persistence = createInMemoryRecordPersistence();
+    persistence.seed(descriptor, context.tenantId, [
+      { id: "bp-1", tenant_id: context.tenantId, code: "A", name: "Alpha", status: "active", row_version: 1 },
+      { id: "bp-2", tenant_id: context.tenantId, code: "B", name: "Bravo", status: "active", row_version: 1 },
+      { id: "bp-3", tenant_id: context.tenantId, code: "C", name: "Charlie", status: "active", row_version: 1 },
+    ]);
+    const queries = createRecordQueryService({ metadata, authorizer, repository: persistence.repository, transactions: persistence.transactions });
+    const first = await queries.list({ context, entityCode: descriptor.entityCode, limit: 2, sort: [{ field: "name", direction: "asc" }], countMode: "approximate" });
+    expect(first.data.map((row) => row["code"])).toEqual(["A", "B"]);
+    expect(first.pagination).toMatchObject({ hasMore: true, countMode: "none" });
+    expect(first.pagination).not.toHaveProperty("total");
+    persistence.seed(descriptor, context.tenantId, [{ id: "bp-0", tenant_id: context.tenantId, code: "AA", name: "Aardvark", status: "active", row_version: 1 }]);
+    const second = await queries.list({ context, entityCode: descriptor.entityCode, limit: 2, cursor: first.pagination.nextCursor, sort: [{ field: "name", direction: "asc" }] });
+    expect(second.data.map((row) => row["code"])).toEqual(["C"]);
+    const otherContext = { ...context, principalId: "principal-2", permissions: { ...context.permissions, principalId: "principal-2", principalFingerprint: "other-fp" } };
+    await expect(queries.list({ context: otherContext, entityCode: descriptor.entityCode, limit: 2, cursor: first.pagination.nextCursor, sort: [{ field: "name", direction: "asc" }] })).rejects.toMatchObject({ code: "INVALID_CURSOR" });
+  });
+
+  it("applies a server-resolved operating-organization constraint and rejects cross-scope cursors", async () => {
+    const organizationA = "org-a", organizationB = "org-b";
+    const scope = { permissionCode: "master.business_partner.read", tenantWide: false, legalEntityIds: [], companyCodeIds: [], operatingOrganizationIds: [organizationA, organizationB], networkMembershipIds: [], visibility: "team" as const };
+    const scopedAuthorizer: Authorizer = { authorize: async ({ permissionCode, resource }) => permissionCode !== "master.business_partner.read" ? { allowed: false, reason: "missing_permission" } : typeof resource?.["operatingOrganizationId"] === "string" && scope.operatingOrganizationIds.includes(resource["operatingOrganizationId"] as string) ? { allowed: true, scope } : { allowed: false, reason: "scope_coordinate_missing" } };
+    const collectionScopes: RecordCollectionScopeResolver = { resolve: async ({ coordinate }) => coordinate?.operatingOrganizationId ? { status: "ready", authorizationResource: { operatingOrganizationId: coordinate.operatingOrganizationId }, constraints: [{ kind: "neon.business_partner.operating_organization.v1", operatingOrganizationId: coordinate.operatingOrganizationId }], labels: [], fingerprintMaterial: { operatingOrganizationId: coordinate.operatingOrganizationId } } : { status: "context_required", labels: [] } };
+    const persistence = createInMemoryRecordPersistence();
+    persistence.seed(descriptor, context.tenantId, [
+      { id: "bp-a1", tenant_id: context.tenantId, code: "A1", name: "Alpha One", status: "active", row_version: 1, __operatingOrganizationIds: [organizationA] },
+      { id: "bp-a2", tenant_id: context.tenantId, code: "A2", name: "Alpha Two", status: "active", row_version: 1, __operatingOrganizationIds: [organizationA] },
+      { id: "bp-b1", tenant_id: context.tenantId, code: "B1", name: "Bravo One", status: "active", row_version: 1, __operatingOrganizationIds: [organizationB] },
+    ]);
+    const queries = createRecordQueryService({ metadata, authorizer: scopedAuthorizer, repository: persistence.repository, transactions: persistence.transactions, collectionScopes });
+    await expect(queries.list({ context, entityCode: descriptor.entityCode })).rejects.toMatchObject({ code: "RECORD_LIST_SCOPE_REQUIRED", statusCode: 409 });
+    const first = await queries.list({ context, entityCode: descriptor.entityCode, limit: 1, sort: [{ field: "name", direction: "asc" }], scopeCoordinate: { operatingOrganizationId: organizationA } });
+    expect(first.data.map((row) => row["code"])).toEqual(["A1"]);
+    expect(first.pagination.hasMore).toBe(true);
+    await expect(queries.list({ context, entityCode: descriptor.entityCode, limit: 1, sort: [{ field: "name", direction: "asc" }], cursor: first.pagination.nextCursor, scopeCoordinate: { operatingOrganizationId: organizationB } })).rejects.toMatchObject({ code: "INVALID_CURSOR" });
+    const otherScope = await queries.list({ context, entityCode: descriptor.entityCode, scopeCoordinate: { operatingOrganizationId: organizationB } });
+    expect(otherScope.data.map((row) => row["code"])).toEqual(["B1"]);
+  });
 });
 
 function eventFrom(input: AuditRecordInput, sequence: number): AuditEvent { return { ...input, id: `audit-${sequence}`, occurredAt: "2026-08-09T00:00:00.000Z", severity: input.severity ?? "info" }; }
+
+// BP-AI-03: search, sort, groups and counts must not become hidden-field oracles.
+it("excludes unreadable search predicates and rejects hidden query operations", async () => {
+  const secured: EntityRuntimeDescriptor = { ...descriptor, fields: [...descriptor.fields, {
+    key: "secret", storagePath: "secret", type: "string", required: false, writableOn: [],
+    searchable: true, filterable: true, sortable: true, list: { groupable: true },
+    readPermissionCode: "master.secret.read",
+  }] };
+  const persistence = createInMemoryRecordPersistence();
+  persistence.seed(secured, context.tenantId, [{ id: "bp-1", tenant_id: context.tenantId, code: "ACME", name: "Acme", status: "active", row_version: 1, secret: "HIDDEN-SENTINEL" }]);
+  const queries = createRecordQueryService({ metadata: { getEntityDescriptor: async () => secured }, authorizer, repository: persistence.repository, transactions: persistence.transactions });
+  await expect(queries.list({ context, entityCode: secured.entityCode, search: "HIDDEN-SENTINEL", countMode: "exact" })).resolves.toMatchObject({ data: [], pagination: { total: 0 } });
+  const visible = await queries.list({ context, entityCode: secured.entityCode, search: "Acme", countMode: "exact" });
+  expect(visible.pagination.total).toBe(1);
+  expect(JSON.stringify(visible)).not.toContain("HIDDEN-SENTINEL");
+  for (const query of [{ filters: [{ field: "secret", operator: "eq" as const, value: "HIDDEN-SENTINEL" }] }, { sort: [{ field: "secret", direction: "asc" as const }] }, { group: "secret" }, { fields: ["secret"] }, { filters: [{ field: "linked.secret", operator: "eq" as const, value: "x" }] }]) {
+    await expect(queries.list({ context, entityCode: secured.entityCode, ...query })).rejects.toThrow();
+  }
+});
+
+it("accepted BP target selection blocks direct create and patch despite a permissive legacy authorizer", async () => {
+  const selection = JSON.parse(readFileSync(new URL("../../../../../../governance/policy/reports/business-partner-accepted-operations.dev.json", import.meta.url), "utf8"));
+  const selected: EntityRuntimeDescriptor = { ...descriptor, ...selection.descriptor };
+  const persistence = createInMemoryRecordPersistence();
+  const authorize = vi.fn(async () => ({ allowed: true as const }));
+  const record = vi.fn(), append = vi.fn();
+  const mutations = createRecordMutationService({
+    metadata: { getEntityDescriptor: async () => selected }, authorizer: { authorize },
+    repository: persistence.repository, transactions: persistence.transactions,
+    commandExecutions: createInMemoryCommandExecutionStore(), audit: { record }, outbox: { append },
+  });
+  const command = { context, entityCode: "business_partner", input: { name: "Deferred" }, origin: "classic", validationMode: "strict", idempotencyKey: "deferred-create-operation" } as const;
+  expect(await mutations.create(command)).toMatchObject({ kind: "Forbidden" });
+  expect(await mutations.patch({ ...command, recordId: "bp", expectedVersion: 1, idempotencyKey: "deferred-patch-operation" })).toMatchObject({ kind: "Forbidden" });
+  expect(authorize).not.toHaveBeenCalled(); expect(record).not.toHaveBeenCalled(); expect(append).not.toHaveBeenCalled();
+});

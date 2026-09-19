@@ -8,6 +8,16 @@
     REFERENCES control.usage_metric_catalog (id)
     ON DELETE RESTRICT;
 
+ALTER TABLE runtime_meta.usage_reservation
+    ADD CONSTRAINT usage_reservation_tenant_fk
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE,
+    ADD CONSTRAINT usage_reservation_metric_fk
+        FOREIGN KEY (usage_metric_id) REFERENCES control.usage_metric_catalog(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT usage_reservation_created_by_fk
+        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT usage_reservation_updated_by_fk
+        FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+
 ALTER TABLE runtime_meta.authorization_epoch
     ADD CONSTRAINT authorization_epoch_scope_chk CHECK (
         (scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL)
@@ -51,3 +61,21 @@ ALTER TABLE runtime_meta.entity_descriptor
         FOREIGN KEY (entity_contract_id) REFERENCES runtime_meta.entity_contract (id) ON DELETE RESTRICT,
     ADD CONSTRAINT runtime_entity_descriptor_applied_release_fk
         FOREIGN KEY (applied_release_id) REFERENCES runtime_meta.applied_release (id) ON DELETE RESTRICT;
+
+ALTER TABLE runtime_meta.applied_release_payload
+    ADD CONSTRAINT runtime_applied_release_payload_tenant_fk
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT runtime_applied_release_payload_release_fk
+        FOREIGN KEY (applied_release_id) REFERENCES runtime_meta.applied_release(id) ON DELETE RESTRICT;
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection
+ALTER TABLE ONLY runtime_meta.experience_surface_projection
+    ADD CONSTRAINT experience_surface_projection_coordinate_uq UNIQUE (tenant_id, id);
+
+ALTER TABLE ONLY runtime_meta.experience_surface_projection
+    ADD CONSTRAINT experience_surface_projection_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY runtime_meta.experience_surface_projection
+    ADD CONSTRAINT experience_surface_projection_source_uq UNIQUE (tenant_id, source_release_id);
+-- END ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection

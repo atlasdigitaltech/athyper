@@ -1,0 +1,110 @@
+{
+  "stage": 6,
+  "scope": "deployed dev Postgres/RLS, MinIO, Gotenberg and ClamAV; service entrypoints",
+  "seed": {
+    "runId": "21d2cc6f-961c-4c77-9835-56d9a86a8961",
+    "tenantId": "d17f5873-f56c-41e1-8100-788594de67f8",
+    "principalId": "64fc6517-6e4b-47fa-8ae3-18250e2e55f6",
+    "otherTenantId": "10c65143-9a77-4fc2-b4ac-3d855fad007d",
+    "templateId": "ca0c3abf-acc1-4162-9b2c-4147274a1318",
+    "versionId": "e3667767-c804-45d2-a3ae-4a5dbdf45d5d",
+    "bindingId": "8a63567d-ce8f-459d-91ff-40b0edaa19b6"
+  },
+  "results": [
+    {
+      "path": "upload",
+      "scenario": "clean",
+      "passed": true,
+      "id": "c1db2ea9-da04-4528-9224-ff2adb2aab43",
+      "recoveredSameRequest": false
+    },
+    {
+      "path": "upload",
+      "scenario": "eicar",
+      "passed": true,
+      "id": "367c026b-4d2d-40a2-9cc0-28fccd0018be",
+      "recoveredSameRequest": false
+    },
+    {
+      "path": "upload",
+      "scenario": "outage",
+      "passed": true,
+      "id": "8be78f6e-3bb1-4549-aa20-bd4ed6377e04",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "upload",
+      "scenario": "scan-outage",
+      "passed": true,
+      "id": "eb6d68f5-f2f4-4e9f-b672-f1c570cb0193",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "upload",
+      "scenario": "stale",
+      "passed": true,
+      "id": "65bb2804-8ca2-4613-9397-c5284f728164",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "render",
+      "scenario": "clean",
+      "passed": true,
+      "id": "09e580c5-8c70-47fa-a553-f9481344120d",
+      "recoveredSameRequest": false
+    },
+    {
+      "path": "render",
+      "scenario": "eicar",
+      "passed": true,
+      "id": "e16deb33-b710-45a6-b754-28bb954329a2",
+      "recoveredSameRequest": false
+    },
+    {
+      "path": "render",
+      "scenario": "outage",
+      "passed": true,
+      "id": "cb5a3ab6-3678-4839-a3b3-8421d0bfdfad",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "render",
+      "scenario": "scan-outage",
+      "passed": true,
+      "id": "2fc07b75-503e-4660-9547-4f4b9371c417",
+      "recoveredSameRequest": true
+    },
+    {
+      "path": "render",
+      "scenario": "stale",
+      "passed": true,
+      "id": "2a2420e6-0085-4e8e-a3c9-d2017d4cea72",
+      "recoveredSameRequest": true
+    }
+  ],
+  "passed": true,
+  "startedAt": "2026-09-11T22:11:10.377Z",
+  "databaseRole": {
+    "role": "athyper_runtime",
+    "superuser": false,
+    "bypass_rls": false
+  },
+  "initialHealth": {
+    "status": "healthy",
+    "signature": {
+      "fresh": true,
+      "version": "28119",
+      "builtAt": "2026-09-10T06:24:09.000Z",
+      "ageMs": 143221387
+    }
+  },
+  "bucket": "athyper-documents",
+  "renderingEndpoint": "http://docrender:3000",
+  "objectStorageEndpoint": "http://objectstorage:9000",
+  "cleanup": {
+    "removedObjects": 17,
+    "retainedDatabaseEvidence": true,
+    "errors": []
+  },
+  "finishedAt": "2026-09-11T22:11:14.409Z"
+}

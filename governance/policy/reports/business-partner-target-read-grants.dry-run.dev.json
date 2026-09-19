@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_target_named_read_grant_dry_run",
+  "capturedAt": "2026-09-11T01:38:08.697Z",
+  "members": 2,
+  "rolePermissions": 17,
+  "proposalRevision": "e4f76cbdecd7962a0adf1a3584552a605f73b6419b12124540ef5cdce4fb2bc2",
+  "rollbackConfirmed": true,
+  "grantsChanged": false,
+  "approvalRecordedByRehearsal": false,
+  "activationReady": false,
+  "limits": [
+    "SQL constraints and catalog/admission checks only; not effective target execution qualification."
+  ]
+}

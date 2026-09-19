@@ -1,0 +1,7 @@
+{
+  "observedAt": "2026-09-10T06:44:19.558Z",
+  "applied": true,
+  "baseImage": "sha256:2a7341e723195522919cbe40a3f096e7579c5d93db972f435dab4d646bc110ae",
+  "image": "athyper-runtime-server:mesh-fork-20260910",
+  "moduleImportPassed": true
+}

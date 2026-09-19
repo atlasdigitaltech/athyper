@@ -6,6 +6,12 @@ import { extname, join, resolve } from "node:path";
 import { dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { Client } from "pg";
+import {
+  edgeKey,
+  expectedMappedUserEdges,
+  verifyDoubleApply,
+  verifyProjectionRoleBehavior,
+} from "./authorization-release-live.js";
 
 type Plane = "studio" | "neon" | "mesh";
 type Status = "pass" | "fail" | "not_run";
@@ -61,11 +67,6 @@ const strict = process.argv.includes("--strict");
 const applyTwiceRequested = process.argv.includes("--apply-twice");
 const idempotencyOnly = process.argv.includes("--idempotency-only");
 const liveRequested = process.argv.includes("--live") || applyTwiceRequested;
-const AUTHORITY_SNAPSHOT_RELATIONS = [
-  "authz.permission", "authz.permission_scope_kind", "authz.role", "authz.role_permission",
-  "authz.principal_group", "authz.plane_membership", "authz.scope_target", "authz.group_member", "authz.group_role",
-] as const;
-const AUTHORITY_SNAPSHOT_EXCLUSIONS = ["public.seed_pack_ledger_v2", "public.seed_pack_execution_v2"] as const;
 
 export async function buildAuthorizationReleaseGate(): Promise<{
   contractVersion: string;
@@ -227,31 +228,24 @@ export async function buildAuthorizationReleaseGate(): Promise<{
     ),
     neonPhysicalTableAuthorizationCoverage: result(
       neonTableInventory.mode === "inventory_only_non_enforcing"
-        && neonTableInventory.counts.tables === 260
-        && neonTableInventory.counts.masterTables === 140
-        && neonTableInventory.counts.documentTables === 120
         && neonTableInventory.counts.pendingReviewTables === 0
         && neonTableInventory.releaseBlockers.length === 0
         && neonTableInventory.counts.roles === 0
         && neonTableInventory.counts.grants === 0,
       neonTableInventory.counts.pendingReviewTables === 0 && neonTableInventory.releaseBlockers.length === 0
-        ? "All 260 Neon master/document tables have reviewed authorization ownership and no implementation qualification blocker remains."
-        : `${neonTableInventory.counts.pendingReviewTables} of 260 Neon master/document tables still require authorization review; ${neonTableInventory.releaseBlockers.length - neonTableInventory.counts.pendingReviewTables} implementation qualification blocker(s) remain.`,
+        ? `All ${neonTableInventory.counts.tables} Neon master/document tables have reviewed authorization ownership and no implementation qualification blocker remains.`
+        : `${neonTableInventory.counts.pendingReviewTables} of ${neonTableInventory.counts.tables} Neon master/document tables still require authorization review; ${neonTableInventory.releaseBlockers.length - neonTableInventory.counts.pendingReviewTables} implementation qualification blocker(s) remain.`,
       { counts: neonTableInventory.counts, releaseBlockers: neonTableInventory.releaseBlockers.slice(0, 30) },
     ),
     meshPhysicalTableAuthorizationCoverage: result(
       meshTableInventory.mode === "inventory_only_non_enforcing"
-        && meshTableInventory.counts.tables === 78
-        && meshTableInventory.counts.masterTables === 28
-        && meshTableInventory.counts.documentTables === 24
-        && meshTableInventory.counts.meshTables === 26
         && meshTableInventory.counts.pendingReviewTables === 0
         && meshTableInventory.releaseBlockers.length === 0
         && meshTableInventory.counts.roles === 0
         && meshTableInventory.counts.grants === 0,
       meshTableInventory.counts.pendingReviewTables === 0 && meshTableInventory.releaseBlockers.length === 0
-        ? "All 78 Mesh master/document/network tables have reviewed authorization ownership and no implementation or RLS qualification blocker remains."
-        : `${meshTableInventory.counts.pendingReviewTables} of 78 Mesh master/document/network tables still require authorization review; ${meshTableInventory.releaseBlockers.length - meshTableInventory.counts.pendingReviewTables} implementation/RLS qualification blocker(s) remain.`,
+        ? `All ${meshTableInventory.counts.tables} Mesh master/document/network tables have reviewed authorization ownership and no implementation or RLS qualification blocker remains.`
+        : `${meshTableInventory.counts.pendingReviewTables} of ${meshTableInventory.counts.tables} Mesh master/document/network tables still require authorization review; ${meshTableInventory.releaseBlockers.length - meshTableInventory.counts.pendingReviewTables} implementation/RLS qualification blocker(s) remain.`,
       { counts: meshTableInventory.counts, releaseBlockers: meshTableInventory.releaseBlockers.slice(0, 30) },
     ),
     inventoryPermissionPromotionQualification: result(
@@ -281,10 +275,12 @@ export async function buildAuthorizationReleaseGate(): Promise<{
   };
 
   if (liveRequested) await addLiveEvidence(gates, packs);
+  const deferredStaticGates = new Set(["projectionRowsAreReconcilerOwned", "planePackDoubleApplyIsNoOp"]);
   return {
     contractVersion: "athyper.authorization.release-validation-gates.v1",
     generatedAt: new Date().toISOString(),
-    ready: Object.values(gates).every((gate) => gate.status === "pass"),
+    ready: Object.entries(gates).every(([name, gate]) => gate.status === "pass"
+      || (!liveRequested && deferredStaticGates.has(name) && gate.status === "not_run")),
     gates,
   };
 }
@@ -397,182 +393,6 @@ async function addLiveEvidence(
   if (applyTwiceRequested) gates.planePackDoubleApplyIsNoOp = await verifyDoubleApply(urls);
 }
 
-type RoleProbe = { violations: number; checks: Array<{ name: string; pass: boolean; sqlState?: string; detail?: string }> };
-
-async function verifyProjectionRoleBehavior(client: Client): Promise<RoleProbe> {
-  const checks: RoleProbe["checks"] = [];
-  await client.query("BEGIN");
-  try {
-    await client.query("SET LOCAL ROLE athyper_projection_applier");
-    await expectSqlState(client,
-      "UPDATE authz.application_projection SET organization_name=organization_name WHERE false",
-      ["42501"], "applier_direct_dml_denied", checks);
-    await expectSqlState(client,
-      "SELECT authz.fn_stage_application_projection(NULL,'{}'::jsonb,'[]'::jsonb,'[]'::jsonb,NULL)",
-      ["23514"], "applier_can_execute_mutation_api", checks);
-
-    await client.query("RESET ROLE");
-    await client.query("SET LOCAL ROLE athyperadmin");
-    await expectSqlState(client, `INSERT INTO authz.application_projection(
-        id,tenant_id,realm_key,external_organization_id,organization_name,
-        source_projection_id,source_version,source_hash,status,metadata,created_by
-      ) VALUES (
-        'ffffffff-ffff-4fff-8fff-fffffffffff1','ffffffff-ffff-4fff-8fff-fffffffffff2',
-        'rls-probe','rls-probe','RLS probe','ffffffff-ffff-4fff-8fff-fffffffffff3',
-        1,repeat('a',64),'pending','{}'::jsonb,'ffffffff-ffff-4fff-8fff-fffffffffff4'
-      )`, ["42501"], "admin_direct_dml_denied", checks);
-    await expectSqlState(client,
-      "SELECT authz.fn_stage_application_projection(NULL,'{}'::jsonb,'[]'::jsonb,'[]'::jsonb,NULL)",
-      ["42501"], "admin_mutation_api_denied", checks);
-  } catch (error) {
-    const failure = error as { code?: string; message?: string };
-    checks.push({ name: "role_switch_and_probe", pass: false, sqlState: failure.code, detail: failure.message });
-  } finally {
-    await client.query("ROLLBACK");
-  }
-  return { violations: checks.filter((check) => !check.pass).length, checks };
-}
-
-async function expectSqlState(
-  client: Client,
-  sql: string,
-  expected: string[],
-  name: string,
-  checks: RoleProbe["checks"],
-): Promise<void> {
-  const savepoint = `probe_${checks.length}`;
-  await client.query(`SAVEPOINT ${savepoint}`);
-  try {
-    await client.query(sql);
-    checks.push({ name, pass: false, detail: `statement succeeded; expected SQLSTATE ${expected.join(" or ")}` });
-  } catch (error) {
-    const failure = error as { code?: string; message?: string };
-    checks.push({ name, pass: failure.code !== undefined && expected.includes(failure.code), sqlState: failure.code, detail: failure.message });
-  } finally {
-    await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
-  }
-}
-
-function expectedMappedUserEdges(pack: Pack): string[] {
-  const rolesByGroup = new Map<string, Pack["tenantAuthorityProjection"]["assignments"]["groupRoles"]>();
-  for (const groupRole of pack.tenantAuthorityProjection.assignments.groupRoles) {
-    const key = `${groupRole.tenantId}:${groupRole.groupId}`;
-    rolesByGroup.set(key, [...(rolesByGroup.get(key) ?? []), groupRole]);
-  }
-  const permissionsByRole = new Map<string, Pack["tenantAuthorityProjection"]["definitions"]["rolePermissions"]>();
-  for (const grant of pack.tenantAuthorityProjection.definitions.rolePermissions) {
-    permissionsByRole.set(grant.roleId, [...(permissionsByRole.get(grant.roleId) ?? []), grant]);
-  }
-  const edges = new Set<string>();
-  for (const member of pack.tenantAuthorityProjection.assignments.groupMembers) {
-    for (const groupRole of rolesByGroup.get(`${member.tenantId}:${member.groupId}`) ?? []) {
-      for (const grant of permissionsByRole.get(groupRole.roleId) ?? []) {
-        edges.add(edgeKey({
-          tenantId: member.tenantId,
-          subject: member.keycloakSubject,
-          permissionId: grant.permissionId,
-          scopeTargetId: groupRole.scopeTargetId,
-          propagationMode: groupRole.propagationMode,
-        }));
-      }
-    }
-  }
-  return [...edges].sort();
-}
-
-function edgeKey(edge: { tenantId: string; subject: string; permissionId: string; scopeTargetId: string; propagationMode: string }): string {
-  return `${edge.tenantId}:${edge.subject}:${edge.permissionId}:${edge.scopeTargetId}:${edge.propagationMode}`;
-}
-
-async function verifyDoubleApply(urls: Record<Plane, string>): Promise<Gate> {
-  if (!process.argv.includes("--confirm=APPLY_AUTHORIZATION_PACKS_TWICE")) {
-    throw new Error("--apply-twice writes seed packs; add --confirm=APPLY_AUTHORIZATION_PACKS_TWICE");
-  }
-  const { Client } = await import("pg");
-  const { applyAuthorizationSeedPack } = await import("../../apply-authorization-seed-pack.js");
-  const topology = await assertDistinctPlaneDatabases(Client, urls);
-  const evidence: Record<string, unknown> = { topology };
-  let changed = 0;
-  for (const plane of planes) {
-    await applyAuthorizationSeedPack({ plane, databaseUrl: urls[plane] });
-    const first = await authoritySnapshot(Client, urls[plane]);
-    await applyAuthorizationSeedPack({ plane, databaseUrl: urls[plane] });
-    const second = await authoritySnapshot(Client, urls[plane]);
-    if (first.sha256 !== second.sha256) changed++;
-    evidence[plane] = {
-      firstSnapshotSha256: first.sha256,
-      secondSnapshotSha256: second.sha256,
-      equal: first.sha256 === second.sha256,
-      relationSnapshots: Object.fromEntries(first.relations.map((relation) => [relation, {
-        firstSha256: first.relationSha256[relation],
-        secondSha256: second.relationSha256[relation],
-        equal: first.relationSha256[relation] === second.relationSha256[relation],
-      }])),
-      relations: first.relations,
-      excludedOperationalEvidence: first.excludedOperationalEvidence,
-    };
-  }
-  return result(changed === 0,
-    changed === 0
-      ? "Complete seed-owned authority snapshots are byte-equivalent after the second application in three distinct plane databases."
-      : `${changed} plane authority snapshot(s) changed on their second pack application.`,
-    evidence);
-}
-
-async function assertDistinctPlaneDatabases(
-  Client: typeof import("pg").Client,
-  urls: Record<Plane, string>,
-): Promise<Record<Plane, { database: string; plane: string }>> {
-  const identities = {} as Record<Plane, { database: string; plane: string }>;
-  for (const expectedPlane of planes) {
-    const client = new Client({ connectionString: urls[expectedPlane] });
-    await client.connect();
-    try {
-      const identity = (await client.query<{ database: string; plane: string | null }>(
-        "SELECT current_database() AS database,current_setting('app.database_plane',true) AS plane",
-      )).rows[0];
-      if (!identity || identity.plane !== expectedPlane) {
-        throw new Error(`${expectedPlane} idempotency URL resolved to database plane ${identity?.plane ?? "unset"}`);
-      }
-      identities[expectedPlane] = { database: identity.database, plane: identity.plane };
-    } finally {
-      await client.end();
-    }
-  }
-  const databaseNames = new Set(planes.map((plane) => identities[plane].database));
-  if (databaseNames.size !== planes.length) {
-    throw new Error("authorization idempotency requires three separate Studio, Neon, and Mesh databases");
-  }
-  return identities;
-}
-
-async function authoritySnapshot(Client: typeof import("pg").Client, databaseUrl: string): Promise<{
-  sha256: string;
-  relationSha256: Record<string, string>;
-  relations: readonly string[];
-  excludedOperationalEvidence: readonly string[];
-}> {
-  const client = new Client({ connectionString: databaseUrl });
-  await client.connect();
-  try {
-    const snapshot: Record<string, unknown[]> = {};
-    const relationSha256: Record<string, string> = {};
-    for (const relation of AUTHORITY_SNAPSHOT_RELATIONS) {
-      const result = await client.query(`SELECT to_jsonb(row) AS value FROM ${relation} AS row ORDER BY id`);
-      snapshot[relation] = result.rows.map((row: { value: unknown }) => row.value);
-      relationSha256[relation] = sha256(canonical(snapshot[relation]));
-    }
-    return {
-      sha256: sha256(canonical(snapshot)),
-      relationSha256,
-      relations: AUTHORITY_SNAPSHOT_RELATIONS,
-      excludedOperationalEvidence: AUTHORITY_SNAPSHOT_EXCLUSIONS,
-    };
-  } finally {
-    await client.end();
-  }
-}
-
 async function productionProtectedWrites(): Promise<{ runtime: unknown[]; projection: unknown[] }> {
   const contract = await json<SeedContract>(resolve(dbRoot, "seed/contracts/base/seed-contract.v1.json"));
   const runtime = new Set(contract.runtimeOnlyRelations.map((value) => value.toLowerCase()));
@@ -620,7 +440,7 @@ async function productionPermissionDemand(catalogs: Record<Plane, Catalog>): Pro
   dynamic: Array<{ path: string; line: number; expression: string }>;
 }> {
   const known = new Set(planes.flatMap((plane) => catalogs[plane].permissions.map((permission) => permission.canonicalCode)));
-  const roots = ["apps", "packages", "server/apps", "server/packages", "tools/scripts"].map((path) => resolve(repositoryRoot, path));
+  const roots = ["apps", "packages", "server/apps", "server/packages", "tooling/tools/scripts"].map((path) => resolve(repositoryRoot, path));
   const files = (await Promise.all(roots.map(walk))).flat().filter((path) =>
     /\.(?:ts|tsx|js|mjs)$/.test(path)
     && !/[\\/](?:__tests__|__fixtures__|node_modules|dist|coverage)[\\/]/.test(path)

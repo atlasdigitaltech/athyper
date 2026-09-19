@@ -84,7 +84,7 @@ DECLARE
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
         'connector_instance', 'integration_endpoint', 'webhook_subscription',
-        'cycle_type', 'cycle_phase', 'cycle_task_category', 'cycle_task_template',
+        'process_selection_catalog_revision', 'process_selection_publication', 'cycle_type', 'cycle_phase', 'cycle_task_category', 'cycle_task_template',
         'cycle_task_dependency', 'cycle_cross_dependency', 'cycle_carryforward_rule',
         'cycle_template_revision'
     ]
@@ -255,6 +255,26 @@ CREATE POLICY policy_test_case_tenant_read ON control.policy_test_case
                 OR definition.tenant_id = shared.current_tenant_id_soft())
     ));
 
+ALTER TABLE control.policy_activation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.policy_activation FORCE ROW LEVEL SECURITY;
+CREATE POLICY policy_activation_admin_access ON control.policy_activation
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+CREATE POLICY policy_activation_tenant_read ON control.policy_activation
+    FOR SELECT TO athyperapp
+    USING (
+        tenant_id IS NULL
+        OR (shared.current_tenant_id_soft() IS NOT NULL
+            AND tenant_id = shared.current_tenant_id_soft())
+    );
+
+ALTER TABLE control.policy_evaluation_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.policy_evaluation_history FORCE ROW LEVEL SECURITY;
+CREATE POLICY policy_evaluation_history_admin_access ON control.policy_evaluation_history
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+CREATE POLICY policy_evaluation_history_tenant_read ON control.policy_evaluation_history
+    FOR SELECT TO athyperapp
+    USING (tenant_id = shared.current_tenant_id_soft());
+
 ALTER TABLE control.rounding_rule ENABLE ROW LEVEL SECURITY;
 ALTER TABLE control.rounding_rule FORCE ROW LEVEL SECURITY;
 
@@ -278,3 +298,43 @@ CREATE POLICY rounding_context_tenant_access
 CREATE POLICY rounding_context_seed_write
     ON control.rounding_context FOR ALL TO CURRENT_USER
     USING (true) WITH CHECK (true);
+
+ALTER TABLE control.ui_locale_catalog ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.ui_locale_catalog FORCE ROW LEVEL SECURITY;
+CREATE POLICY ui_locale_catalog_read ON control.ui_locale_catalog
+    FOR SELECT USING (true);
+CREATE POLICY ui_locale_catalog_runtime_write ON control.ui_locale_catalog
+    FOR INSERT TO athyperapp WITH CHECK (true);
+CREATE POLICY ui_locale_catalog_runtime_update ON control.ui_locale_catalog
+    FOR UPDATE TO athyperapp USING (true) WITH CHECK (true);
+CREATE POLICY ui_locale_catalog_seed_write ON control.ui_locale_catalog
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+ALTER TABLE master.tenant_locale_activation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.tenant_locale_activation FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_locale_activation_read ON master.tenant_locale_activation
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_locale_activation_write ON master.tenant_locale_activation
+    FOR ALL TO athyperapp
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_locale_activation_seed_write ON master.tenant_locale_activation
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+ALTER TABLE control.tenant_module_entitlement_override ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.tenant_module_entitlement_override FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_module_entitlement_override_access ON control.tenant_module_entitlement_override
+    FOR ALL USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_usage_limit_override_insert ON control.tenant_usage_limit_override
+    FOR INSERT TO athyperapp WITH CHECK (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_usage_limit_override_update ON control.tenant_usage_limit_override
+    FOR UPDATE TO athyperapp USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY feature_flag_override_insert ON control.feature_flag_override FOR INSERT TO athyperapp
+WITH CHECK(tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY feature_flag_override_update ON control.feature_flag_override FOR UPDATE TO athyperapp
+USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id_soft());
+ALTER TABLE control.supplier_activation_policy ENABLE ROW LEVEL SECURITY;
+CREATE POLICY supplier_activation_policy_tenant ON control.supplier_activation_policy USING(tenant_id=shared.current_tenant_id());

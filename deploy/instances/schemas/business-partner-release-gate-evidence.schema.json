@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/business-partner-release-gate-evidence-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "BusinessPartnerReleaseGateEvidence" },
+    "metadata": { "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "type": "string", "minLength": 3 } } },
+    "spec": {
+      "type": "object", "additionalProperties": false,
+      "required": ["gate", "status", "environment", "sourceRevision", "images", "recordedAt", "checks", "artifacts"],
+      "properties": {
+        "gate": { "enum": ["database", "domain-service", "cross-plane", "security-privacy", "ux", "operations", "ownership"] },
+        "status": { "const": "passed" },
+        "environment": { "enum": ["staging", "production"] },
+        "sourceRevision": { "type": "string", "pattern": "^[a-f0-9]{40}$", "not": { "pattern": "^0{40}$" } },
+        "images": { "type": "object", "minProperties": 5, "additionalProperties": { "type": "string", "pattern": "^[a-f0-9]{64}$", "not": { "pattern": "^0{64}$" } } },
+        "recordedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.+-]+Z$" },
+        "checks": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "boolean" } },
+        "artifacts": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["id", "uri", "sha256"],
+            "properties": {
+              "id": { "type": "string", "minLength": 2 },
+              "uri": { "type": "string", "minLength": 3 },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$", "not": { "pattern": "^0{64}$" } }
+            }
+          }
+        },
+        "measurements": { "type": "object", "additionalProperties": { "type": "number" } },
+        "canary": {
+          "type": "object", "additionalProperties": false,
+          "required": ["cohortPercent", "observationMinutes"],
+          "properties": {
+            "cohortPercent": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+            "observationMinutes": { "type": "number", "minimum": 0 }
+          }
+        },
+        "rollback": {
+          "type": "object", "additionalProperties": false,
+          "required": ["priorSourceRevision", "retainedImageSetSha256", "restoredImageSetSha256"],
+          "properties": {
+            "priorSourceRevision": { "type": "string", "pattern": "^[a-f0-9]{40}$", "not": { "pattern": "^0{40}$" } },
+            "retainedImageSetSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$", "not": { "pattern": "^0{64}$" } },
+            "restoredImageSetSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$", "not": { "pattern": "^0{64}$" } }
+          }
+        },
+        "approvals": {
+          "type": "array", "uniqueItems": true,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["role", "name", "decision", "recordedAt", "reference"],
+            "properties": {
+              "role": { "enum": ["neon", "mesh", "studio-iam", "security-privacy", "operations", "product"] },
+              "name": { "type": "string", "minLength": 3 },
+              "decision": { "const": "approved" },
+              "recordedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.+-]+Z$" },
+              "reference": { "type": "string", "minLength": 3 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

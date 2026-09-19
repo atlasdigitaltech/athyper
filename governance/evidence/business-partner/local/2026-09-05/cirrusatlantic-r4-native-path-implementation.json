@@ -1,0 +1,89 @@
+{
+  "recordedAt": "2026-09-05T05:54:34.015313+00:00",
+  "scope": "CirrusAtlantic development native case-contract publication and bank browser controls",
+  "status": "implemented_deployed_ready_for_manual_execution",
+  "productionQualified": false,
+  "fullR4JourneyComplete": false,
+  "images": [
+    {
+      "component": "api",
+      "image": "athyper-runtime-server:publication-dev",
+      "imageId": "sha256:22722257c35599529ee469c8582af4fe299f9bd727e140252a8308d0b81c37cd",
+      "health": "healthy"
+    },
+    {
+      "component": "worker",
+      "image": "athyper-runtime-server:publication-dev",
+      "imageId": "sha256:22722257c35599529ee469c8582af4fe299f9bd727e140252a8308d0b81c37cd",
+      "health": "healthy"
+    },
+    {
+      "component": "studio-web",
+      "image": "athyper-studio-web:publication-dev",
+      "imageId": "sha256:8b216c7bf95bda6837bf7874f70846d7ddf1719f2194fc6fec63a8c2ed0278bc",
+      "health": "healthy"
+    },
+    {
+      "component": "neon-web",
+      "image": "athyper-neon-web:publication-dev",
+      "imageId": "sha256:1ffefcc0bcb04bb6dfcb47bd5799e44f0a32f62ab7d5062a7127f96153d29a7e",
+      "health": "healthy"
+    }
+  ],
+  "migrations": [
+    {
+      "name": "20260905_studio_business_partner_case_contract.sql",
+      "sha256": "77d5b963ba369d7e194d5a62f25978ebe1b7532a4a277b17eb9b04af90e688f2",
+      "status": "applied",
+      "completedAt": "2026-09-05T05:46:42.22861+00:00"
+    },
+    {
+      "name": "20260905_neon_pinned_case_contracts.sql",
+      "sha256": "1f96121ca2e1e2e1462b5de5edbbe28badcdb44a6b51846e1ef1c4e25cde1125",
+      "status": "applied",
+      "completedAt": "2026-09-05T05:46:42.363399+00:00"
+    }
+  ],
+  "tests": {
+    "publicationTests": 78,
+    "studioBrowserComponentTests": 9,
+    "bankBrowserComponentTests": 4,
+    "bankServiceTests": 7,
+    "typechecks": [
+      "platform-host",
+      "Studio Business Partner",
+      "NEON Business Partner",
+      "browser relay"
+    ],
+    "productionImageBuilds": [
+      "runtime",
+      "studio",
+      "neon"
+    ],
+    "nativeTransactionalProofs": [
+      "Case-contract author/replay, cross-tenant denial, maker-checker, stale source rejection, immutable revision, approved release/replay",
+      "NEON-only compilation with dual-target worker configuration; Ed25519 schema and artifact signatures",
+      "Restricted-role NEON stage/verify/activation and exact active hash; stage/activation replay",
+      "Approved R4 cases materialize against an exact superseded contract",
+      "Governed bank case -> independent verification -> native application -> preferred remittance and linked projection; replay, self-verification denial, unverified apply denial, revoked source denial"
+    ],
+    "allNativeTestFixturesRolledBack": true,
+    "liveUnauthenticatedEndpointsReturn401": true,
+    "deployedBrowserControlLabelsVerified": true
+  },
+  "nativeTenantState": {
+    "caseContractRevisions": 0,
+    "caseContractReleaseLinks": 0
+  },
+  "manualApprovalReceipt": null,
+  "manualActivationReceipt": null,
+  "manualBankReconciliationReceipt": null,
+  "manualInstructions": "docs/runbooks/cirrusatlantic-r4-qualification.md",
+  "reviewPacket": "cirrusatlantic-r4-case-contract-review-scoped.json",
+  "remaining": [
+    "Manual author/save and independent owner review/approval",
+    "Verify real signing/deployment/consumer activation receipts for the returned release",
+    "Establish CirrusAtlantic MESH account link and bank disclosure fixture",
+    "Manual authenticated case and bank verification/application qualification"
+  ]
+}

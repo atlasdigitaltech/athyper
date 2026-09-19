@@ -4,20 +4,28 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./mesh-external-reference-code": "./src/mesh-external-reference-code.ts",
+    "./business-partner-account-bank-linkage": "./src/business-partner-account-bank-linkage.ts",
+    "./business-partner-profile-match": "./src/business-partner-profile-match.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration:bank-verification": "tsx src/__tests__/integration/business-partner-bank-verification.ts"
   },
   "dependencies": {
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-finance": "workspace:*",
     "@athyper/server-contract-jobs": "workspace:*",
+    "@athyper/server-contract-master-data": "workspace:*",
+    "@athyper/server-contract-metadata": "workspace:*",
+    "@athyper/server-contract-records": "workspace:*",
+    "@athyper/server-contract-secrets": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
     "@athyper/server-service-finance": "workspace:*",
-    "kysely": "^0.28.16"
+    "kysely": "^0.28.17"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

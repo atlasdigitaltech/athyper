@@ -3,7 +3,8 @@ import * as React from "react";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { COLOR_MODES, COLOR_TOKENS, DENSITY_MODES, DENSITY_TOKENS, REQUIRED_COLOR_TOKENS, ThemeScript, createThemeBootstrapScript, resolveColorMode } from "../../packages/platform/foundation/theme/src/index";
+import { COLOR_MODES, COLOR_TOKENS, DEFAULT_THEME_FAMILY, DENSITY_MODES, DENSITY_TOKENS, REQUIRED_COLOR_TOKENS, THEME_FAMILIES, ThemeScript, createThemeBootstrapScript, resolveColorMode } from "../../packages/platform/foundation/theme/src/index";
+import { ATLAS_MODERN_BRAND } from "../../packages/platform/foundation/brand/src/index";
 
 describe("foundation theme contract", () => {
   it("has every semantic token in light, dark, and high-contrast modes", () => {
@@ -13,6 +14,30 @@ describe("foundation theme contract", () => {
     for (const token of REQUIRED_COLOR_TOKENS) {
       const cssName = token.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
       assert.match(css, new RegExp(`--a-${cssName}:`), `missing CSS variable for ${token}`);
+    }
+  });
+
+  it("uses Atlas Modern as the shared default interaction theme", () => {
+    assert.deepEqual(THEME_FAMILIES, ["atlas-modern"]);
+    assert.equal(DEFAULT_THEME_FAMILY, "atlas-modern");
+    assert.equal(COLOR_TOKENS.light.primary, "var(--a-brand)");
+    assert.equal(COLOR_TOKENS.light.brand, ATLAS_MODERN_BRAND.colors.primary);
+    assert.equal(COLOR_TOKENS.light.primaryForeground, "var(--a-brand-foreground)");
+    assert.equal(COLOR_TOKENS.light.brandForeground, ATLAS_MODERN_BRAND.colors.primaryForeground);
+    assert.equal(COLOR_TOKENS.dark.brandHover, "color-mix(in srgb, var(--a-brand) 42%, white)");
+    assert.notEqual(COLOR_TOKENS.dark.primary, COLOR_TOKENS.dark.brandHover);
+    const iamTokens = readFileSync("deploy/config/iam/themes/neon/login/resources/css/iam.tokens.css", "utf8");
+    assert.match(iamTokens, /--a-theme-family:atlas-modern/);
+    assert.match(iamTokens, /--a-primary: var\(--a-brand\)/);
+    assert.match(iamTokens, /--a-brand: #234B84/);
+    assert.match(iamTokens, /--a-story-start: color-mix\(in srgb, var\(--a-brand\)/);
+    assert.match(iamTokens, /--plane-accent:var\(--a-primary\)/);
+    const iamResolver = readFileSync("deploy/config/iam/themes/neon/login/_theme-resolver.ftl", "utf8");
+    assert.match(iamResolver, /fallbackTheme = "atlas-modern"/);
+    for (const page of ["deploy/compose/instance/config/nginx/status.html", "deploy/compose/platform/outage/status.html"]) {
+      const html = readFileSync(page, "utf8");
+      assert.match(html, /data-theme-family="atlas-modern"/);
+      assert.match(html, /theme-color" content="#234B84"/);
     }
   });
 
@@ -38,7 +63,18 @@ describe("foundation theme contract", () => {
     const script = createThemeBootstrapScript({ sessionMode: "dark" });
     assert.match(script, /document\.documentElement/);
     assert.match(script, /dataset\.theme/);
+    assert.match(script, /dataset\.themeFamily/);
+    assert.match(script, /atlas-modern/);
+    assert.match(script, /m==="dark"\|\|m==="high-contrast"\?"dark":"light"/);
     assert.doesNotMatch(script, /<\/script/i);
+  });
+
+  it("lets operating-system preference determine the initial app theme", () => {
+    for (const plane of ["neon", "mesh", "studio"]) {
+      const layout = readFileSync(`apps/${plane}/app/layout.tsx`, "utf8");
+      assert.match(layout, /<ThemeScript \/>/);
+      assert.doesNotMatch(layout, /<ThemeScript[^>]*platformDefault="light"/);
+    }
   });
 
   it("defines focus, reduced-motion, touch, and forced-color safeguards", () => {

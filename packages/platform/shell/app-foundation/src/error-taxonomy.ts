@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { ApiTransportError } from "@athyper/platform-api-client";
 
 export type AppErrorKind =
@@ -5,6 +6,7 @@ export type AppErrorKind =
   | "required-action"
   | "permission-denied"
   | "context-mismatch"
+  | "not-found"
   | "conflict"
   | "validation"
   | "rate-limit"
@@ -44,10 +46,11 @@ export function classifyAppError(input: ClassifyAppErrorInput): AppErrorModel {
   const requestId = safeRequestId(facts.requestId);
   const common = { ...(facts.status ? { status: facts.status } : {}), ...(requestId ? { requestId } : {}), requiredActions };
 
-  if (facts.code === "AUTH_CONTEXT_MISMATCH") return model("context-mismatch", "Your access context changed", "Choose an active context before continuing.", "select-context", false, false, common);
   if (facts.status === 401 || facts.transportKind === "authentication") return model("authentication", "Sign in required", "Your session is no longer available. Sign in again to continue.", "login", false, false, common);
+  if (facts.code === "AUTH_CONTEXT_MISMATCH") return model("context-mismatch", "Your access context changed", "Choose an active context before continuing.", "select-context", false, false, common);
   if ((facts.status === 403 && REQUIRED_ACTION_CODES.has(facts.code ?? "")) || requiredActions.length > 0) return model("required-action", "Action required", "Complete the required identity action before continuing.", "complete-action", false, true, common);
   if (facts.status === 403 || facts.transportKind === "authorization") return model("permission-denied", "Access denied", "You do not have permission to view this resource.", "none", false, false, common);
+  if (facts.status === 404 || facts.transportKind === "not-found") return model("not-found", "Record not found", "This record does not exist, or it may have been moved or removed. Check the link or return to the workspace.", "none", false, false, common);
   if (facts.status === 409 || facts.transportKind === "conflict") return model("conflict", "This item changed", "Keep your input while you reload the latest version or compare changes.", "reload-compare", false, true, common);
   if (facts.status === 422 || facts.transportKind === "validation") return model("validation", "Check your entries", "Correct the highlighted fields and submit again. Your input has been kept.", "correct-fields", false, true, common);
   if (facts.status === 429 || facts.transportKind === "rate-limit") {
@@ -90,6 +93,6 @@ function safeDigest(value: unknown): string | undefined { return typeof value ==
 function cleanActions(values: readonly string[] | undefined): readonly string[] { return Object.freeze([...new Set((values ?? []).filter((value) => /^[A-Za-z0-9._:-]{1,80}$/.test(value)))]); }
 function parseRetryAfter(value: string | undefined, now = Date.now()): number | undefined {
   if (!value) return undefined;
-  const seconds = /^\d+$/.test(value.trim()) ? Number(value) : Math.ceil((Date.parse(value) - now) / 1_000);
+  const seconds = /^\d+$/.test(value.trim()) ? Number(value) : Math.ceil((parseInstant(value) - now) / 1_000);
   return Number.isFinite(seconds) && seconds > 0 ? Math.min(300, seconds) : undefined;
 }

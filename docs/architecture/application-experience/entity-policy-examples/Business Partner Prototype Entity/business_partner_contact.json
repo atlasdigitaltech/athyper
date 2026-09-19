@@ -1,0 +1,8 @@
+{
+  "schema": "athyper.entity-runtime-descriptor/2.0", "contractStatus": "proposed_for_review", "planeKey": "neon", "entityCode": "business_partner_contact", "descriptorKind": "child_collection",
+  "aggregate": { "key": "business_partner", "rootEntityCode": "business_partner" }, "ownership": { "ownerEntityCode": "business_partner", "ownerIdSource": "contact_link.entity_id", "entityTypes": ["business_partner", "master.business_partner"], "cardinality": "one_to_many" },
+  "storage": { "sourceObjects": ["master.contact_person", "master.contact_person_role", "master.contact_link", "master.contact_email", "master.contact_phone", "master.contact_person_identity_link"], "tenantField": "tenant_id" },
+  "fields": [{ "key": "name", "type": "person_name", "requiredOn": ["create", "update"] }, { "key": "roles", "type": "collection", "effectiveDated": true }, { "key": "emails", "type": "collection", "privacyClass": "personal" }, { "key": "phones", "type": "collection", "privacyClass": "personal" }, { "key": "isPrimary", "type": "boolean" }],
+  "businessContext": { "scopeKind": "inherited_from_owner", "requiredCoordinates": [] }, "operations": [{ "key": "read", "permission": "neon.business_partner.read", "scope": "tenant" }, { "key": "manage", "permission": "neon.business_partner.contact.update", "scope": "tenant" }],
+  "handlers": { "read": "neon.business_partner.contact.read.v1", "write": "neon.business_partner.contact.write.v1" }, "presentation": { "section": "Contacts", "component": "contact-person.v1" }, "serverPolicies": ["contact_privacy", "channel_verification", "effective_dates", "one_primary_per_purpose", "audit"]
+}

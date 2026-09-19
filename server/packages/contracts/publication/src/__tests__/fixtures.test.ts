@@ -12,6 +12,8 @@ describe("Publication artifact v1 frozen fixtures", () => {
     const parsed = JSON.parse(bytes.toString("utf8")) as unknown;
     const envelope = parsePublicationArtifactEnvelope(parsed);
     expect(envelope.targetPlane).toBe("neon");
+    expect(envelope.artifactKind).toBe("entity_runtime");
+    if(envelope.artifactKind!=="entity_runtime")throw new Error("Expected Entity runtime fixture");
     expect(envelope.payload.entityDescriptor.sourceContractHash).toBe(envelope.payload.entityContract.contractHash);
     expect(JSON.parse(JSON.stringify(envelope))).toEqual(parsed);
   });

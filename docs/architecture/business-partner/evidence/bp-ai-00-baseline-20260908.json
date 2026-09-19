@@ -1,0 +1,397 @@
+{
+  "schema": "bp-ai-baseline/1",
+  "capturedAt": "2026-09-08T14:49:54.446Z",
+  "checks": {
+    "containers": {
+      "status": "captured",
+      "data": [
+        {
+          "name": "athyper-dev-neon-web-1",
+          "image": "athyper-neon-web:bp360-width-20260908",
+          "status": "Up 31 minutes (healthy)"
+        },
+        {
+          "name": "athyper-dev-api-1",
+          "image": "athyper-runtime-server:bp360-panel-20260908",
+          "status": "Up About an hour (healthy)"
+        },
+        {
+          "name": "athyper-dev-atlas-atlas-inference-1",
+          "image": "32931b46719f",
+          "status": "Up 33 hours (healthy)"
+        },
+        {
+          "name": "athyper-dev-worker-1",
+          "image": "ee5dcff0fe70",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-dev-scheduler-1",
+          "image": "ee5dcff0fe70",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-dev-virusscan-1",
+          "image": "clamav/clamav:1.5.2",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-dev-memorycache-1",
+          "image": "redis:7.4.8-alpine",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-dev-docparser-1",
+          "image": "apache/tika:3.0.0.0-full",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-dev-objectstorage-1",
+          "image": "minio/minio:RELEASE.2025-09-07T16-13-09Z",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-dev-searchcore-1",
+          "image": "getmeili/meilisearch:v1.13",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-qa-neon-web-1",
+          "image": "dfd768be19cc",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-qa-api-1",
+          "image": "6eceee4552c7",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-qa-worker-1",
+          "image": "6eceee4552c7",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-qa-scheduler-1",
+          "image": "6eceee4552c7",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-qa-virusscan-1",
+          "image": "clamav/clamav:1.5.2",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-qa-memorycache-1",
+          "image": "redis:7.4.8-alpine",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-qa-objectstorage-1",
+          "image": "minio/minio:RELEASE.2025-09-07T16-13-09Z",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-qa-docparser-1",
+          "image": "apache/tika:3.0.0.0-full",
+          "status": "Up 34 hours (healthy)"
+        },
+        {
+          "name": "athyper-qa-searchcore-1",
+          "image": "getmeili/meilisearch:v1.13",
+          "status": "Up 34 hours (healthy)"
+        }
+      ]
+    },
+    "devDescriptor": {
+      "status": "captured",
+      "data": [
+        {
+          "release": 17,
+          "storage": {
+            "object": "business_partner",
+            "schema": "master",
+            "idField": "id",
+            "statusField": "status",
+            "tenantField": "tenant_id"
+          },
+          "operations": {
+            "read": {
+              "code": "read",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "export": {
+              "code": "export",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "import": {
+              "code": "import",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "add_role": {
+              "code": "add_role",
+              "permissionCode": "neon.relationship.entity_case.create"
+            },
+            "amend_partner": {
+              "code": "amend_partner",
+              "permissionCode": "neon.relationship.entity_case.create"
+            },
+            "navigate_manage": {
+              "code": "navigate_manage",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "navigate_review": {
+              "code": "navigate_review",
+              "permissionCode": "neon.relationship.entity_case.read"
+            },
+            "request_supplier": {
+              "code": "request_supplier",
+              "permissionCode": "neon.relationship.entity_case.create"
+            },
+            "configure_company": {
+              "code": "configure_company",
+              "permissionCode": "neon.relationship.entity_case.create"
+            },
+            "navigate_overview": {
+              "code": "navigate_overview",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "assign_organization": {
+              "code": "assign_organization",
+              "permissionCode": "neon.relationship.entity_case.create"
+            }
+          },
+          "descriptorHash": "e619e5e98922f092e84b0d4e89e6f9e6981c25017fd3a4cb4ee09f200e54d183",
+          "directoryScope": {
+            "mode": "tenant",
+            "filters": [
+              "organization",
+              "company"
+            ],
+            "quickFilters": [
+              {
+                "key": "partnerRole",
+                "label": "Role",
+                "options": [
+                  {
+                    "label": "Suppliers",
+                    "value": "supplier"
+                  },
+                  {
+                    "label": "Customers",
+                    "value": "customer"
+                  }
+                ],
+                "requires": [],
+                "emptyLabel": "All partners"
+              },
+              {
+                "key": "eligibleOperation",
+                "label": "Eligible for transactions",
+                "options": [
+                  {
+                    "label": "Eligible for orders",
+                    "value": "order"
+                  },
+                  {
+                    "label": "Eligible for invoices",
+                    "value": "invoice"
+                  },
+                  {
+                    "label": "Eligible for payments",
+                    "value": "payment"
+                  }
+                ],
+                "requires": [
+                  "partnerRole",
+                  "organization",
+                  "company"
+                ],
+                "emptyLabel": "Any eligibility"
+              }
+            ],
+            "schemaVersion": 1
+          },
+          "fieldPermissions": []
+        }
+      ]
+    },
+    "devVersionColumn": {
+      "status": "captured",
+      "data": "record_version:bigint"
+    },
+    "qaDescriptor": {
+      "status": "captured",
+      "data": [
+        {
+          "release": 8,
+          "storage": {
+            "object": "business_partner",
+            "schema": "master",
+            "idField": "id",
+            "statusField": "status",
+            "tenantField": "tenant_id"
+          },
+          "operations": {
+            "read": {
+              "code": "read",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "export": {
+              "code": "export",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "import": {
+              "code": "import",
+              "permissionCode": "neon.relationship.business_partner.read"
+            }
+          },
+          "descriptorHash": "7794e41558a6fa11606628fb6f30f94672830a927e5592d06f29eb060a661387",
+          "directoryScope": null,
+          "fieldPermissions": []
+        }
+      ]
+    },
+    "qaVersionColumn": {
+      "status": "captured",
+      "data": "record_version:bigint"
+    },
+    "modelConfiguration": {
+      "status": "captured",
+      "data": {
+        "schema": "atlas-local-inference/1",
+        "model": {
+          "upstream": "qwen3:8b",
+          "digest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "displayName": "Atlas RE 1.0 Local",
+          "publicId": "atlas-re-1.0-local"
+        },
+        "request": {
+          "num_ctx": 4096,
+          "num_predict": 1024,
+          "think": false
+        },
+        "cloudEnabled": false
+      }
+    },
+    "devRedis": {
+      "status": "captured",
+      "data": "maxmemory-policy\nnoeviction\nmaxmemory\n0"
+    },
+    "memorySnapshot": {
+      "status": "captured",
+      "data": "athyper-dev-searchcore-1\t18.66MiB / 1GiB\t0.07%\nathyper-dev-objectstorage-1\t111.1MiB / 1GiB\t0.00%\nathyper-dev-memorycache-1\t265.3MiB / 512MiB\t0.31%\nathyper-dev-atlas-atlas-inference-1\t4.231GiB / 10GiB\t10.48%"
+    },
+    "authenticatedReadProbes": {
+      "status": "captured",
+      "data": [
+        {
+          "persona": "neon",
+          "path": "/api/relay/atlas/admission",
+          "httpStatus": 401,
+          "elapsedMs": 30,
+          "authorizedRead": false
+        },
+        {
+          "persona": "neon",
+          "path": "/api/relay/entity-runtime/business_partner/list-descriptor",
+          "httpStatus": 401,
+          "elapsedMs": 4,
+          "authorizedRead": false
+        },
+        {
+          "persona": "neon",
+          "path": "/api/relay/entity-runtime/business_partner/list?limit=1",
+          "httpStatus": 401,
+          "elapsedMs": 3,
+          "authorizedRead": false
+        },
+        {
+          "persona": "neon-owner",
+          "path": "/api/relay/atlas/admission",
+          "httpStatus": 401,
+          "elapsedMs": 4,
+          "authorizedRead": false
+        },
+        {
+          "persona": "neon-owner",
+          "path": "/api/relay/entity-runtime/business_partner/list-descriptor",
+          "httpStatus": 401,
+          "elapsedMs": 3,
+          "authorizedRead": false
+        },
+        {
+          "persona": "neon-owner",
+          "path": "/api/relay/entity-runtime/business_partner/list?limit=1",
+          "httpStatus": 401,
+          "elapsedMs": 3,
+          "authorizedRead": false
+        },
+        {
+          "persona": "neon-athyper",
+          "path": "/api/relay/atlas/admission",
+          "httpStatus": 401,
+          "elapsedMs": 4,
+          "authorizedRead": false
+        },
+        {
+          "persona": "neon-athyper",
+          "path": "/api/relay/entity-runtime/business_partner/list-descriptor",
+          "httpStatus": 401,
+          "elapsedMs": 3,
+          "authorizedRead": false
+        },
+        {
+          "persona": "neon-athyper",
+          "path": "/api/relay/entity-runtime/business_partner/list?limit=1",
+          "httpStatus": 401,
+          "elapsedMs": 3,
+          "authorizedRead": false
+        }
+      ]
+    },
+    "providerBenchmark": {
+      "status": "captured",
+      "data": {
+        "kind": "synthetic-provider-only",
+        "samples": [
+          {
+            "sample": 1,
+            "firstTextMs": 12754,
+            "totalMs": 13402,
+            "promptTokens": 64,
+            "outputTokens": 25,
+            "loadMs": 12529,
+            "generationTokensPerSecond": 38.32,
+            "doneReason": "stop"
+          },
+          {
+            "sample": 2,
+            "firstTextMs": 24,
+            "totalMs": 452,
+            "promptTokens": 64,
+            "outputTokens": 25,
+            "loadMs": 1,
+            "generationTokensPerSecond": 58.5,
+            "doneReason": "stop"
+          },
+          {
+            "sample": 3,
+            "firstTextMs": 24,
+            "totalMs": 440,
+            "promptTokens": 64,
+            "outputTokens": 25,
+            "loadMs": 1,
+            "generationTokensPerSecond": 60.05,
+            "doneReason": "stop"
+          }
+        ],
+        "outputCap": 128,
+        "contextWindow": 4096,
+        "toolSchemasIncluded": false,
+        "authorizationTest": false,
+        "notes": "Sequential samples; first may include load cost. Not p95, concurrency or end-to-end Atlas latency."
+      }
+    }
+  },
+  "authenticatedBenchmarkAvailable": false
+}

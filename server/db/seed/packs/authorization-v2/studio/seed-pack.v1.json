@@ -31,6 +31,22 @@
     "version": "2.0.0",
     "operations": [
       {
+        "permissionId": "62980311-c596-5942-a5cf-69a97b2ac50a",
+        "canonicalPermissionCode": "studio.ai.agent.use",
+        "plane": "studio",
+        "entityCode": "agent",
+        "operationCode": "use",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "3e77e9ff164c90bc53024a46cdca9999f13ba2f3812fe061cfd7dbe65b035d8d",
+        "permissionKind": "capability",
+        "moduleCode": "aig"
+      },
+      {
         "permissionId": "37a1fe0e-8a21-5139-a783-61cbaeed9ce9",
         "canonicalPermissionCode": "studio.iam.application_projection.read",
         "plane": "studio",
@@ -455,6 +471,15 @@
     "defaultScopeBehavior": "deny_undeclared",
     "permissions": [
       {
+        "permissionCode": "studio.ai.agent.use",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
         "permissionCode": "studio.iam.application_projection.read",
         "scopes": [
           {
@@ -757,7 +782,7 @@
         ]
       }
     ],
-    "sha256": "8d04b85b5f9fe13dcb32758e7ee9d20cabd6df44fde772bf99a29e85694f5176"
+    "sha256": "65583ae45bb0ed956e1db14c989e6ddb9f3ab52f882fff805e87b410d8ab3e78"
   },
   "authority": {
     "version": "authorization.clean-slate.v1",
@@ -1918,7 +1943,7 @@
   },
   "identityContract": {
     "realm": "athyper",
-    "sourceSha256": "6a7f06733d4ac0ac0440faa40494f4b7e658f416e0cd802a89811eccae056b8a",
+    "sourceSha256": "47bdffb78e9dde8bc7bad9fe6425ebc6c2702f2fdb032f0e84d7177029605c3a",
     "enabledSubjectCount": 161,
     "mappedSubjectCount": 161,
     "unmanagedKeycloakUsers": "deny",

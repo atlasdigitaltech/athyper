@@ -1,0 +1,48 @@
+{
+  "capturedAt": "2026-09-09T19:28:15.144171+00:00",
+  "change": "Built-in entity-linked attachment owner admission for full Atlas host",
+  "state": "Uncommitted working tree; no deployment or live reindexing",
+  "verification": {
+    "attachmentTests": 40,
+    "hostTests": 10,
+    "typechecks": [
+      "attachments source and tests",
+      "platform host"
+    ],
+    "postgresqlPlanes": [
+      "neon",
+      "mesh",
+      "studio"
+    ],
+    "postgresqlRole": "SELECT-only application role for admission; synthetic parent/attachment authorization decisions, independently tested host Records wiring",
+    "checks": [
+      "parent denial",
+      "attachment permission denial",
+      "missing scan",
+      "stale attachment version",
+      "changed extracted text",
+      "removed parent link",
+      "Unicode chunk checksum"
+    ],
+    "reachability": "passed",
+    "diffCheck": "passed"
+  },
+  "scope": {
+    "defaultSourceKind": "attachment",
+    "sourceVersionFormat": "attachment.id + colon + attachment.sha256",
+    "maxExtractedUtf8Bytes": 1000000,
+    "maxParentLinks": 20,
+    "unsupported": [
+      "record and content sources require their own adapters",
+      "atlas.prompt and content.item links use separate ownership",
+      "missing required Records scope remains denied"
+    ]
+  },
+  "sourceSha256": {
+    "server/packages/services/attachments/src/retrieval-admission.ts": "5440f3c4d9558853faebc706c82c4813d6e7db6238aa6a24ec29af96039fb70d",
+    "server/packages/services/attachments/src/retrieval-admission.test.ts": "bb09928d992c2a2bdfe4d056cbc229fb6b9af25da4de7c9adcad7939a0c56946",
+    "server/apps/platform-host/src/composition/register-services.ts": "a80e9193e85cfbc1ca9964684851b8712540c2120508e6b4020c6e13ff57ebaa",
+    "server/apps/platform-host/src/composition/__tests__/ai-vertical.test.ts": "3100d9a6540188262a306677e26a7067cc99ca45d943058b513f9995f6714d99",
+    "server/apps/platform-host/scripts/db-verification/tests/integration/atlas/attachment-admission-qualification.mts": "170c8e15c8d80fc1acc6c6e8e8050630642ce1c376d79bdbceb1ed76dcaa52a3"
+  }
+}

@@ -1,0 +1,154 @@
+name: Infrastructure maintenance
+on:
+  pull_request:
+    paths:
+      - "deploy/compose/**"
+      - "deploy/aws/**"
+      - "deploy/config/**"
+      - "deploy/config/postgres/**"
+      - "deploy/config/telemetry/metrics/**"
+      - "deploy/stackctl/**"
+      - ".github/workflows/infrastructure-maintenance.yml"
+  workflow_dispatch:
+  workflow_call:
+  schedule:
+    - cron: "43 3 * * 1"
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.images.outputs.matrix }}
+      derived: ${{ steps.images.outputs.derived }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: images
+        run: |
+          echo "derived=$(node -e 'process.stdout.write(JSON.stringify(require("./deploy/compose/scripts/derived-infrastructure-images.json")))')" >> "$GITHUB_OUTPUT"
+          node deploy/compose/scripts/infrastructure-images.mjs > infrastructure-inventory.json
+          echo "matrix=$(node deploy/compose/scripts/infrastructure-images.mjs --matrix)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: infrastructure-inventory
+          path: infrastructure-inventory.json
+  scan:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan exact infrastructure digest
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: v0.74.0
+          image-ref: ${{ matrix.image }}
+          scanners: vuln
+          timeout: 20m
+          format: json
+          output: infrastructure-scan.json
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: infrastructure-scan-${{ matrix.id }}
+          path: infrastructure-scan.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Gate fixable HIGH and CRITICAL vulnerabilities
+        run: node deploy/compose/scripts/gate-infrastructure-scan.mjs infrastructure-scan.json
+  derived-scan:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.derived) }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t "${{ matrix.image }}" "${{ matrix.context }}"
+      - uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
+        with:
+          version: v0.74.0
+          image-ref: ${{ matrix.image }}
+          scanners: vuln
+          timeout: 20m
+          format: json
+          output: derived-scan.json
+          ignore-unfixed: false
+          exit-code: "0"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: derived-scan-${{ matrix.id }}
+          path: derived-scan.json
+          if-no-files-found: error
+      - run: node deploy/compose/scripts/gate-infrastructure-scan.mjs derived-scan.json
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - run: pnpm install --frozen-lockfile
+      - name: Validate AWS storage template
+        run: |
+          pipx run --spec cfn-lint==1.56.3 cfn-lint deploy/aws/object-storage/template.yaml
+      - run: node --test deploy/compose/tests/infrastructure-images.test.mjs deploy/stackctl/tests/rendered-bindings.test.mjs deploy/stackctl/tests/execution.test.mjs deploy/compose/tests/cloud-storage.test.mjs
+      - name: Verify Alertmanager email routing
+        run: |
+          for config in deploy/compose/operations/config/alertmanager.yaml deploy/compose/instance/config/alertmanager/alertmanager.yaml; do
+            docker run --rm --entrypoint amtool -v "$PWD/$config:/config.yaml:ro" prom/alertmanager:v0.32.0 check-config /config.yaml
+            docker run --rm --entrypoint amtool -v "$PWD/$config:/config.yaml:ro" prom/alertmanager:v0.32.0 config routes test --config.file=/config.yaml --verify.receivers=redis-mailpit service=memorycache instance=qa
+            docker run --rm --entrypoint amtool -v "$PWD/$config:/config.yaml:ro" prom/alertmanager:v0.32.0 config routes test --config.file=/config.yaml --verify.receivers=business-partner-mailpit service=business-partner instance=qa
+            docker run --rm --entrypoint amtool -v "$PWD/$config:/config.yaml:ro" prom/alertmanager:v0.32.0 config routes test --config.file=/config.yaml --verify.receivers=business-partner-mailpit service=business-partner-360 instance=qa
+            docker run --rm --entrypoint amtool -v "$PWD/$config:/config.yaml:ro" prom/alertmanager:v0.32.0 config routes test --config.file=/config.yaml --verify.receivers=record-transfer-mailpit service=record-transfer instance=qa
+            docker run --rm --entrypoint amtool -v "$PWD/$config:/config.yaml:ro" prom/alertmanager:v0.32.0 config routes test --config.file=/config.yaml --verify.receivers=default-mailpit alertname=SomeUnroutedFutureAlert
+          done
+      - name: Verify Redis, Business Partner and record-transfer alert behavior
+        run: |
+          for fixture in redis business-partner business-partner-operations record-transfer; do
+            docker run --rm --entrypoint promtool -v "$PWD:/workspace:ro" -w /workspace prom/prometheus:v3.11.2 test rules "deploy/compose/tests/prometheus/$fixture.test.yml"
+          done
+      - name: Build qualified infrastructure for regression tests
+        run: |
+          node -e 'const {execFileSync}=require("node:child_process");for(const x of require("./deploy/compose/scripts/derived-infrastructure-images.json").include)execFileSync("docker",["build","-t",x.image,x.context],{stdio:"inherit"})'
+      - run: docker build -t athyper/redis:7.4.8-hardened -f deploy/config/redis/Dockerfile.migration-source deploy/config/redis
+      - run: node --test deploy/compose/tests/redis.integration.test.mjs deploy/compose/tests/valkey-migration.integration.test.mjs deploy/compose/tests/seaweedfs.integration.test.mjs deploy/compose/tests/ingress.integration.test.mjs deploy/compose/tests/document-services.integration.test.mjs deploy/compose/tests/pgbouncer.integration.test.mjs
+        env:
+          ATHYPER_REDIS_TESTS: "true"
+          ATHYPER_SEAWEEDFS_TESTS: "true"
+          ATHYPER_INGRESS_TESTS: "true"
+          ATHYPER_DOCUMENT_IMAGE_TESTS: "true"
+          ATHYPER_PGBOUNCER_TESTS: "true"
+      - name: Build hardened PostgreSQL
+        run: docker build -t athyper/postgres:16.15-hardened deploy/config/postgres
+      - name: Scan the deployed PostgreSQL image
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8
+        with:
+          version: v0.74.0
+          image-ref: athyper/postgres:16.15-hardened
+          scanners: vuln
+          format: json
+          output: postgres-hardened-scan.json
+          ignore-unfixed: false
+          exit-code: "0"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: postgres-hardened-scan
+          path: postgres-hardened-scan.json
+      - run: node deploy/compose/scripts/gate-infrastructure-scan.mjs postgres-hardened-scan.json
+      - run: node --test deploy/compose/tests/postgres.integration.test.mjs
+        env:
+          ATHYPER_POSTGRES_TESTS: "true"
+      - name: Build optimized IAM image (includes provider tests)
+        run: docker build -t athyper/keycloak:integration deploy/config/iam
+      - run: node --test deploy/compose/tests/keycloak.integration.test.mjs
+        env:
+          ATHYPER_KEYCLOAK_TEST_IMAGE: athyper/keycloak:integration

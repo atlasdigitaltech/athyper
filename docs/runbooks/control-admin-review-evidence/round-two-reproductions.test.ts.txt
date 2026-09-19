@@ -1,0 +1,18 @@
+import {it,expect} from 'vitest';
+import {createRoundingService} from './rounding-control.js';
+import {RoundingResolver,roundFinanceDecimal} from '@athyper/server-service-finance';
+import {verifyBankRules} from './bank-validation.js';
+it('reproduces API and finance divergence for a JPY increment without explicit precision',async()=>{
+ const rule={id:'rule',tenantId:'tenant',version:1,code:'cash',name:'Cash',method:'ROUND_HALF_UP',roundingIncrement:'0.05',contexts:[{currencyCode:'JPY'}],status:'active'};
+ const service=createRoundingService({authorizer:{authorize:async()=>({allowed:true})},repositories:{require:()=>({list:async()=>[rule]})},cache:{invalidate:async()=>{}}} as any);
+ const api=await service.simulate({tenantId:'tenant',principalId:'actor',planeKey:'neon'} as any,{amount:'1.05',currencyCode:'JPY'});
+ const resolver=new RoundingResolver({listCandidates:async()=>[{contextId:'ctx',ruleId:'rule',ruleCode:'cash',method:'ROUND_HALF_UP',roundingIncrement:'0.05',revision:'1'}],getCurrencyDefaults:async()=>({minorUnits:0,revision:'1'})} as any);
+ const finance=roundFinanceDecimal('1.05',await resolver.resolve({tenantId:'tenant',currencyCode:'JPY'}));
+ expect(api.output).toBe('1.05');expect(finance).toBe('1');
+});
+it('reproduces fixtures passing before persistence restores the old direction',()=>{
+ const rule={id:'rule',version:2,code:'US.ACH',countryCode:'US',railCode:'ach',priority:10,accountRequired:true,bankRequired:false,bicAllowed:true,bicRequired:false,branchRequired:false,checksumValidated:false,fixtures:[],status:'active'} as any;
+ const input={countryCode:'US',railCode:'ach',accountIdentifier:'1234'};
+ expect(verifyBankRules([rule],input).valid).toBe(true);
+ expect(verifyBankRules([{...rule,direction:'outbound'}],input)).toEqual({valid:false,issues:['BANK_RULE_NOT_FOUND']});
+});
