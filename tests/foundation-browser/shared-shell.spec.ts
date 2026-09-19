@@ -8,7 +8,7 @@ const bundle = outputs.find((file) => file.path.endsWith(".js"))!.text;
 const bundledCss = outputs.find((file) => file.path.endsWith(".css"))?.text ?? "";
 async function mount(page: import("@playwright/test").Page, width = 900, empty = false, path = "/", query = "", direction: "ltr" | "rtl" = "ltr") { const errors: string[] = []; page.on("pageerror", (error) => errors.push(error.message)); await page.setViewportSize({ width, height: 700 }); await page.route("https://shell.test/**", (route) => route.request().url().endsWith("/api/auth/session/context") ? route.fallback() : route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="${direction === "rtl" ? "ar" : "en"}" dir="${direction}"><head><style>${bundledCss}\n${css}</style></head><body><div id="root"></div></body></html>` })); await page.goto(`https://shell.test${path}${empty ? "?empty" : query}`); await page.evaluate(bundle); if (empty) await expect(page.getByRole("heading", { name: "No applications available" })).toBeVisible(); else if (path === "/forbidden") await expect(page.getByRole("heading", { name: "Access denied" })).toBeVisible(); else await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible(); expect(errors).toEqual([]); }
 
-test("desktop shell exposes landmarks, sidebar profile, context, and logout", async ({ page }) => { await mount(page); await expect(page.getByRole("complementary", { name: "Application navigation" })).toBeVisible(); await expect(page.getByRole("navigation", { name: "Home and workspaces" })).toBeVisible(); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAttribute("href", "/home"); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAccessibleName("Athyper Test home"); await expect(page.locator(".athyper-shell__mobile-brand")).toBeHidden(); await expect(page.getByRole("main")).toBeVisible(); await expect(page.getByRole("contentinfo")).toContainText("Atlas Digital Technology Solutions"); await page.keyboard.press("Tab"); await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused(); await expect(page.locator("[data-slot]" )).toHaveCount(5); await expect(page.locator(".athyper-shell__business-context")).toContainText("Tenant Alpha"); await expect(page.locator(".athyper-shell__topbar")).not.toContainText("User One"); await page.getByRole("group").filter({ has: page.getByText("User One", { exact: true }) }).locator("summary").click(); await expect(page.getByText("user.one@example.test", { exact: true })).toBeVisible(); await expect(page.getByText("Organization", { exact: true })).toBeVisible(); await expect(page.getByText("Working company", { exact: true })).toBeVisible(); await expect(page.getByRole("link", { name: "Sign out" })).toBeVisible(); const results = await new AxeBuilder({ page }).analyze(); expect(results.violations.filter((item) => item.impact === "critical")).toEqual([]); });
+test("desktop shell exposes landmarks, sidebar profile, context, and logout", async ({ page }) => { await mount(page); await expect(page.getByRole("complementary", { name: "Application navigation" })).toBeVisible(); await expect(page.getByRole("navigation", { name: "Home and workspaces" })).toBeVisible(); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAttribute("href", "/home"); await expect(page.locator(".athyper-shell__rail-brand")).toHaveAccessibleName("Athyper Test home"); await expect(page.locator(".athyper-shell__mobile-brand")).toBeHidden(); await expect(page.getByRole("main")).toBeVisible(); await expect(page.getByRole("contentinfo")).toContainText("Atlas Digital Technology Solutions"); await page.keyboard.press("Tab"); await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused(); await expect(page.locator("[data-slot]" )).toHaveCount(6); await expect(page.locator(".athyper-shell__business-context")).toContainText("Tenant Alpha"); await expect(page.locator(".athyper-shell__topbar")).not.toContainText("User One"); await page.getByRole("group").filter({ has: page.getByText("User One", { exact: true }) }).locator("summary").click(); await expect(page.getByText("user.one@example.test", { exact: true })).toBeVisible(); await expect(page.getByText("Organization", { exact: true })).toBeVisible(); await expect(page.getByText("Working company", { exact: true })).toBeVisible(); await expect(page.getByRole("link", { name: "Sign out" })).toBeVisible(); const results = await new AxeBuilder({ page }).analyze(); expect(results.violations.filter((item) => item.impact === "critical")).toEqual([]); });
 test("persistent desktop brand stays fixed while only the navigation rail collapses", async ({ page }) => {
   await mount(page, 1280, false, "/", "?desktopBrand");
   const brand = page.locator(".athyper-shell__desktop-brand");
@@ -312,4 +312,28 @@ test("explicit collapse cookie survives unavailable local storage", async ({ pag
   await page.addInitScript(() => Object.defineProperty(Storage.prototype, "getItem", { value: () => { throw new DOMException("Blocked", "SecurityError"); } }));
   await mount(page, 900);
   await expect(page.locator(".athyper-shell")).toHaveAttribute("data-collapsed", "false");
+});
+
+test("Utilities opens with language and about sections and returns focus on close", async ({ page }) => {
+  await mount(page, 1280, false, "/", "?locales");
+  const utilities = page.getByRole("button", { name: "Utilities", exact: true });
+  await utilities.click();
+  const panel = page.getByRole("dialog", { name: "Utilities" });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Language & region" })).toBeVisible();
+  await expect(panel.getByRole("heading", { name: "Application information" })).toBeVisible();
+  await expect(panel).toContainText("Athyper Test");
+  await expect(panel).toContainText("Fixture workspace");
+  await expect(panel).toContainText("Atlas");
+  await page.keyboard.press("Escape");
+  await expect(panel).toHaveCount(0);
+  await expect(utilities).toBeFocused();
+});
+
+test("persistent desktop brand wordmark inverts to white under dark theme", async ({ page }) => {
+  await mount(page, 1280, false, "/", "?desktopBrand");
+  const wordmark = page.locator(".athyper-shell__desktop-brand-link .athyper-shell__product-wordmark img");
+  await expect(wordmark).toHaveCSS("filter", "none");
+  await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; });
+  await expect(wordmark).not.toHaveCSS("filter", "none");
 });

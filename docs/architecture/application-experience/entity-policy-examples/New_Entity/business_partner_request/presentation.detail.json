@@ -1,0 +1,42 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_surface",
+  "artifactKey": "business_partner_request/presentation.detail",
+  "entityCode": "business_partner_request",
+  "plane": "neon",
+  "surfaceKey": "detail",
+  "layout": {
+    "panels": [
+      "summary",
+      "identity",
+      "roleScope",
+      "sourceProvenance",
+      "validation",
+      "duplicates",
+      "evidence",
+      "workflowTimeline",
+      "applicationEvidence"
+    ],
+    "version": "2.0.0"
+  },
+  "dataAuthority": "neon.governed-request.v1",
+  "fieldDiff": {
+    "baseline": "pinned_original_snapshot",
+    "proposed": "persisted_draft",
+    "missingBaseline": "unavailable_never_invent",
+    "maskBeforeDiff": true
+  },
+  "policyManifest": {
+    "source": "server_rollup_of_pinned_core_and_operations",
+    "includeChildBindings": true,
+    "authority": false,
+    "redactRestrictedDiagnostics": true
+  },
+  "actions": [],
+  "dependencies": [
+    "business_partner_request/core"
+  ],
+  "artifactHash": "sha256:e296ec331047298addbf9a6e238edcbd03f42b57d3e43c081567d65710ec729f"
+}

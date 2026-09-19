@@ -18,7 +18,7 @@ import React,{useState} from 'react';import {createRoot} from 'react-dom/client'
 import {EntityRecord360Panel} from './packages/platform/entity/runtime/form-detail/src/record-360-panel';
 const sections=[{key:'identity',label:'Identity'},{key:'contacts',label:'Contacts'},{key:'addresses',label:'Addresses'}];
 const panel={sections:sections.map(s=>s.key),tabs:[{key:'360',label:'360 View',provider:'360'},{key:'activity',label:'Activity',provider:'activity',sectionKey:'activity'}],sidebar:[]};
-function App(){const [section,setSection]=useState('identity'),[tab,setTab]=useState('360'),[revision,setRevision]=useState(0);return <EntityRecord360Panel panel={panel} sections={sections} activeSection={section} activeTab={tab} navigationRevision={revision} onNavigate={(s,t)=>{setSection(s);setTab(t);setRevision(r=>r+1)}} onObserve={setSection} renderSection={key=><div style={{minHeight:700}}>{key} content</div>} renderSidebar={()=>null}/>}
+function App(){const [section,setSection]=useState('identity'),[tab,setTab]=useState('360'),[revision,setRevision]=useState(0);return <EntityRecord360Panel panel={panel} sections={sections} activeSection={section} activeTab={tab} navigationRevision={revision} onSelectTab={(t,preferred)=>{setTab(t);setSection(preferred??section)}} onSelectSection={s=>{setSection(s);setTab('360');setRevision(r=>r+1)}} onObserve={setSection} renderSection={key=><div style={{minHeight:700}}>{key} content</div>} renderSidebar={()=>null}/>}
 createRoot(document.getElementById('root')).render(<App/>);
 `,
   },

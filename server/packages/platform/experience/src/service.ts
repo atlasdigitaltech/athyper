@@ -32,8 +32,9 @@ import type {
   LocaleCatalogStatus,
   MeshNetworkAccountCatalog,
   NeonCapabilityGroup,
-  NeonOperatingOrganizationCapability,
   NeonOperatingOrganizationCatalog,
+  NeonOperatingOrganization,
+  NeonBusinessContextOptions,
   NeonWorkContextBootstrap,
 } from "./contracts.js";
 import type {
@@ -43,11 +44,19 @@ import type {
   ExperienceIdentityRecord,
   ExperienceInvalidationHooks,
   ExperienceLocaleCatalogGovernanceRecord,
+  ExperienceOperatingOrganizationRecord,
   ExperienceRepositoryProvider,
   ExperienceSurfaceProjectionRecord,
   ExperienceSurfaceReleaseRecord,
+  NeonActionCoordinate,
+  NeonActionPolicyV1,
+  NeonActionScopeKind,
   RouteSlugRedirectRecord,
 } from "./ports.js";
+import {
+  neonActionPolicyRegistry,
+  type NeonActionPolicyRegistryEntry,
+} from "./neon-action-policy-registry.js";
 
 import { ExperienceAccessError } from "@athyper/server-contract-experience";
 export { ExperienceAccessError } from "@athyper/server-contract-experience";
@@ -63,6 +72,20 @@ export interface ExperienceServiceOptions {
     readonly configurationRevision: string;
   }>;
   readonly now?: () => Date;
+  /** Aggregate mode is opt-in per published command permission and is false by default. */
+  readonly aggregateContextPermissionCodes?: ReadonlySet<string>;
+  /** Hand-authored half of NeonActionPolicyV1; defaults to the shipped registry. */
+  readonly actionPolicyRegistry?: Readonly<
+    Record<string, NeonActionPolicyRegistryEntry>
+  >;
+}
+
+/** Coordinates received by a command. They remain untrusted until this service validates them. */
+export interface NeonBusinessContextSelection {
+  readonly legalEntityId?: string;
+  readonly companyCodeId?: string;
+  readonly operatingOrganizationId?: string;
+  readonly allPermitted?: boolean;
 }
 
 const PLATFORM_PROFILE: ExperienceProfile = Object.freeze({
@@ -721,6 +744,122 @@ export function createExperienceService(options: ExperienceServiceOptions) {
         companies: Object.freeze(companies),
       });
     },
+    async neonBusinessContextOptions(
+      context: VerifiedRequestContext,
+      actionPermissionCode?: string,
+    ): Promise<NeonBusinessContextOptions> {
+      assertSnapshotBoundToContext(context);
+      if (context.planeKey !== "neon") deny("EXPERIENCE_NEON_CONTEXT_REQUIRED", "Business contexts are available only in Neon");
+      const repository = options.repositories.require("neon"), at = now();
+      const [rows, organizationRows, legalEntityRows] = await Promise.all([repository.readWorkContexts(context), repository.readOperatingOrganizations(context, at), repository.readLegalEntities(context)]);
+      const scopes = actionPermissionCode
+        ? context.permissions.authorizationScopes.filter((scope) => scope.permissionCode === actionPermissionCode)
+        : context.permissions.authorizationScopes;
+      const tenantWide = scopes.some((scope) => scope.tenantWide);
+      const companyIds = new Set(scopes.flatMap((scope) => scope.companyCodeIds));
+      const legalEntityIds = new Set(scopes.flatMap((scope) => scope.legalEntityIds));
+      const visible = rows.filter((row) => tenantWide || companyIds.has(row.companyCodeId) || legalEntityIds.has(row.legalEntityId));
+      const companies = visible.map((row) => Object.freeze({
+        companyCodeId: row.companyCodeId, code: row.companyCode, displayName: row.companyDisplayName,
+        legalEntityId: row.legalEntityId, legalEntityCode: row.legalEntityCode, legalEntityName: row.legalEntityName,
+        ...(row.countryCode ? { countryCode: row.countryCode } : {}), ...(row.logoAssetRef ? { logoAssetRef: row.logoAssetRef } : {}),
+        functionalCurrency: row.functionalCurrency,
+        capabilityGroups: capabilityGroups(scopes.filter((scope) => scope.tenantWide || scope.companyCodeIds.includes(row.companyCodeId) || scope.legalEntityIds.includes(row.legalEntityId)).map((scope) => scope.permissionCode)),
+      }));
+      // Legal Entities reachable through a visible company keep their existing,
+      // company-joined display data. An LE admitted only through a direct LE (or
+      // tenant-wide) grant, with zero visible companies under it, would otherwise be
+      // silently dropped — source those (and only those) from the LE catalog, which
+      // carries display data independent of Company Code visibility.
+      const legalEntitiesByCompany = new Map(companies.map((company) => [company.legalEntityId, Object.freeze({ legalEntityId: company.legalEntityId, code: company.legalEntityCode, displayName: company.legalEntityName, ...(company.logoAssetRef ? { logoAssetRef: company.logoAssetRef } : {}) })]));
+      const admittedLegalEntityIdsWithoutCompany = new Set([...(tenantWide ? legalEntityRows.map((entity) => entity.legalEntityId) : legalEntityIds)].filter((id) => !legalEntitiesByCompany.has(id)));
+      const legalEntitiesFromCatalog = legalEntityRows
+        .filter((entity) => admittedLegalEntityIdsWithoutCompany.has(entity.legalEntityId))
+        .map((entity) => Object.freeze({ legalEntityId: entity.legalEntityId, code: entity.code, displayName: entity.displayName, ...(entity.logoAssetRef ? { logoAssetRef: entity.logoAssetRef } : {}) }));
+      const legalEntities = [...legalEntitiesByCompany.values(), ...legalEntitiesFromCatalog].sort((a, b) => a.code.localeCompare(b.code));
+      const permittedCompanyIds = new Set(companies.map((company) => company.companyCodeId));
+      const permittedOrganizationIds = new Set(scopes.flatMap((scope) => scope.operatingOrganizationIds));
+      const organizations: readonly NeonOperatingOrganization[] = projectVisibleOrganizations(organizationRows, { tenantWide, permittedOrganizationIds, permittedCompanyIds });
+      return Object.freeze({
+        schemaVersion: 2,
+        revision: revision({ tenantId: context.tenantId, auth: authorizationRevision(context), actionPermissionCode: actionPermissionCode ?? null, rows: visible, organizations, legalEntitiesFromCatalog }),
+        tenantId: context.tenantId,
+        ...(actionPermissionCode ? { actionPermissionCode } : {}),
+        supportsAllPermitted: Boolean(actionPermissionCode && options.aggregateContextPermissionCodes?.has(actionPermissionCode) && companies.length > 1),
+        legalEntities: Object.freeze(legalEntities), companies: Object.freeze(companies), organizations: Object.freeze(organizations),
+      });
+    },
+    async neonActionPolicy(
+      context: VerifiedRequestContext,
+      actionPermissionCode: string,
+    ): Promise<NeonActionPolicyV1 | undefined> {
+      const binding = context.permissions.operationBindings?.find(
+        (item) => item.permissionCode === actionPermissionCode,
+      );
+      const derived = binding
+        ? deriveNeonActionScope(binding.requiredScopeKinds)
+        : undefined;
+      const registryEntry = (options.actionPolicyRegistry ?? neonActionPolicyRegistry)[
+        actionPermissionCode
+      ];
+      if (!derived || !registryEntry) return undefined;
+      return Object.freeze({
+        schemaVersion: 1 as const,
+        actionPermissionCode,
+        scopeKind: derived.scopeKind,
+        requiredCoordinates: derived.requiredCoordinates,
+        ...registryEntry,
+      });
+    },
+    async validateNeonBusinessContext(
+      context: VerifiedRequestContext,
+      actionPermissionCode: string,
+      selection: NeonBusinessContextSelection,
+      actionPolicy?: NeonActionPolicyV1,
+    ): Promise<Readonly<NeonBusinessContextSelection>> {
+      if (!/^[a-z][a-z0-9_.-]{1,126}$/.test(actionPermissionCode))
+        throw new ExperienceAccessError(400, "EXPERIENCE_CONTEXT_ACTION_INVALID", "Action permission code is invalid");
+      const options = await this.neonBusinessContextOptions(context, actionPermissionCode);
+      const companyForEntity = selection.companyCodeId ? options.companies.find((item) => item.companyCodeId === selection.companyCodeId) : undefined;
+      const legalEntityId = selection.legalEntityId?.trim() ?? companyForEntity?.legalEntityId;
+      if (!legalEntityId) {
+        // Type C: the action's published policy — not a bare tenantWide grant —
+        // decides whether "no coordinates at all" is a legitimate admission.
+        if (actionPolicy?.scopeKind === "tenant") {
+          if (selection.allPermitted && !options.supportsAllPermitted)
+            throw new ExperienceAccessError(403, "EXPERIENCE_AGGREGATE_NOT_PERMITTED", "Aggregate context is not permitted for this action");
+          const organization = selection.operatingOrganizationId
+            ? options.organizations.find((item) => item.id === selection.operatingOrganizationId)
+            : undefined;
+          if (selection.operatingOrganizationId && !organization)
+            throw new ExperienceAccessError(403, "EXPERIENCE_OPERATING_ORGANIZATION_NOT_PERMITTED", "Operating organization is not permitted for this action");
+          return Object.freeze({
+            ...(organization ? { operatingOrganizationId: organization.id } : {}),
+            ...(selection.allPermitted ? { allPermitted: true } : {}),
+          });
+        }
+        throw new ExperienceAccessError(400, "EXPERIENCE_LEGAL_ENTITY_REQUIRED", "Legal Entity or Company Code is required");
+      }
+      const legalEntity = options.legalEntities.find((item) => item.legalEntityId === legalEntityId);
+      if (!legalEntity)
+        throw new ExperienceAccessError(403, "EXPERIENCE_LEGAL_ENTITY_NOT_PERMITTED", "Legal Entity is not permitted for this action");
+      if (selection.allPermitted && !options.supportsAllPermitted)
+        throw new ExperienceAccessError(403, "EXPERIENCE_AGGREGATE_NOT_PERMITTED", "Aggregate context is not permitted for this action");
+      const company = selection.companyCodeId
+        ? options.companies.find((item) => item.companyCodeId === selection.companyCodeId && item.legalEntityId === legalEntity.legalEntityId)
+        : undefined;
+      if (selection.companyCodeId && !company)
+        throw new ExperienceAccessError(403, "EXPERIENCE_COMPANY_NOT_PERMITTED", "Company Code is not permitted for this Legal Entity and action");
+      const organization = selection.operatingOrganizationId
+        ? options.organizations.find((item) => item.id === selection.operatingOrganizationId)
+        : undefined;
+      if (selection.operatingOrganizationId && !organization)
+        throw new ExperienceAccessError(403, "EXPERIENCE_OPERATING_ORGANIZATION_NOT_PERMITTED", "Operating organization is not permitted for this action");
+      const entityCompanyIds = new Set(options.companies.filter((item) => item.legalEntityId === legalEntity.legalEntityId).map((item) => item.companyCodeId));
+      if (organization && !organization.companyAssignments.some((assignment) => assignment.companyCodeId === (company?.companyCodeId ?? "") || (!company && entityCompanyIds.has(assignment.companyCodeId))))
+        throw new ExperienceAccessError(403, "EXPERIENCE_CONTEXT_INCOMPATIBLE", "Operating organization is not assigned to the selected Legal Entity and Company Code");
+      return Object.freeze({ legalEntityId: legalEntity.legalEntityId, ...(company ? { companyCodeId: company.companyCodeId } : {}), ...(organization ? { operatingOrganizationId: organization.id } : {}), ...(selection.allPermitted ? { allPermitted: true } : {}) });
+    },
     async neonOperatingOrganizations(
       context: VerifiedRequestContext,
     ): Promise<NeonOperatingOrganizationCatalog> {
@@ -757,60 +896,26 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       const organizationIds = new Set(
         scopes.flatMap((scope) => scope.operatingOrganizationIds),
       );
-      const visible = organizations.flatMap((organization) => {
-        if (!tenantWide && !organizationIds.has(organization.id)) return [];
-        const assignments = organization.assignments.filter((assignment) =>
-          permittedCompanies.has(assignment.companyCodeId),
-        );
-        if (!assignments.length) return [];
-        return [
-          {
-            id: organization.id,
-            code: organization.code,
-            displayName: organization.displayName,
-            domain: organization.domain,
-            ...(organization.parentId
-              ? { parentId: organization.parentId }
-              : {}),
-            path: organization.path,
-            capabilities: operatingOrganizationCapabilities(
-              organization.domain,
-            ),
-            procurementProfileConfigured:
-              organization.procurementProfileConfigured,
-            salesProfileConfigured: organization.salesProfileConfigured,
-            companyAssignments: Object.freeze(
-              assignments.map((assignment) => ({
-                companyCodeId: assignment.companyCodeId,
-                participationRole: assignment.participationRole,
-                effectiveFrom: assignment.effectiveFrom,
-                ...(assignment.effectiveUntil
-                  ? { effectiveUntil: assignment.effectiveUntil }
-                  : {}),
-              })),
-            ),
-            defaults: Object.freeze({
-              ...(organization.leadCompanyCodeId &&
-              permittedCompanies.has(organization.leadCompanyCodeId)
-                ? { leadCompanyCodeId: organization.leadCompanyCodeId }
-                : {}),
-              ...(organization.bookingCompanyCodeId &&
-              permittedCompanies.has(organization.bookingCompanyCodeId)
-                ? { bookingCompanyCodeId: organization.bookingCompanyCodeId }
-                : {}),
-              ...(organization.invoicingCompanyCodeId &&
-              permittedCompanies.has(organization.invoicingCompanyCodeId)
-                ? {
-                    invoicingCompanyCodeId: organization.invoicingCompanyCodeId,
-                  }
-                : {}),
-              ...(organization.defaultCurrency
-                ? { currency: organization.defaultCurrency }
-                : {}),
-            }),
-          },
-        ];
+      const visible = projectVisibleOrganizations(organizations, {
+        tenantWide,
+        permittedOrganizationIds: organizationIds,
+        permittedCompanyIds: permittedCompanies,
       });
+      // Parents are presentation-only nodes. They carry no assignment and can
+      // never be selected for a Type A command merely because a child is visible.
+      const visibleIds = new Set(visible.map((organization) => organization.id));
+      const byId = new Map(organizations.map((organization) => [organization.id, organization]));
+      for (const direct of visible) {
+        let parentId = byId.get(direct.id)?.parentId;
+        while (parentId && !visibleIds.has(parentId)) {
+          const parent = byId.get(parentId);
+          if (!parent) break;
+          visible.push({ id: parent.id, code: parent.code, displayName: parent.displayName, organizationKind: parent.organizationKind, ...(parent.parentId ? { parentId: parent.parentId } : {}), path: parent.path, capabilities: parent.capabilities, procurementProfileConfigured: parent.procurementProfileConfigured, salesProfileConfigured: parent.salesProfileConfigured, companyAssignments: Object.freeze([]), defaults: Object.freeze({}) });
+          visibleIds.add(parent.id);
+          parentId = parent.parentId;
+        }
+      }
+      visible.sort((left, right) => left.path.join("\u0000").localeCompare(right.path.join("\u0000")) || left.code.localeCompare(right.code));
       return Object.freeze({
         schemaVersion: 1,
         revision: revision({
@@ -1503,15 +1608,105 @@ function capabilityGroups(
   }
   return Object.freeze([...groups].sort());
 }
-function operatingOrganizationCapabilities(
-  domain: string,
-): readonly NeonOperatingOrganizationCapability[] {
-  const capabilities: NeonOperatingOrganizationCapability[] = [];
-  if (domain === "procurement" || domain === "both")
-    capabilities.push("procurement");
-  if (domain === "sales" || domain === "both") capabilities.push("sales");
-  if (domain === "shared_services") capabilities.push("shared_services");
-  return Object.freeze(capabilities);
+/**
+ * Maps a compiler-published `EffectiveOperationBinding.requiredScopeKinds` set onto
+ * the doc's Type A/B/C scope kinds and required coordinates. Returns undefined when
+ * the binding's scope kinds don't map onto a published shape yet (e.g. legal_entity
+ * alone, with no company_code/operating_organization/tenant) — callers must treat an
+ * undefined result as "no policy available," never as tenant-wide.
+ */
+function deriveNeonActionScope(
+  requiredScopeKinds: readonly string[],
+): { readonly scopeKind: NeonActionScopeKind; readonly requiredCoordinates: readonly NeonActionCoordinate[] } | undefined {
+  const kinds = new Set(requiredScopeKinds);
+  if (kinds.has("tenant")) return { scopeKind: "tenant", requiredCoordinates: [] };
+  if (kinds.has("company_code"))
+    return {
+      scopeKind: "company",
+      requiredCoordinates: (
+        [
+          ["legal_entity", "legalEntityId"],
+          ["company_code", "companyCodeId"],
+          ["operating_organization", "operatingOrganizationId"],
+        ] as const
+      ).filter(([kind]) => kinds.has(kind)).map(([, coordinate]) => coordinate),
+    };
+  if (kinds.has("operating_organization"))
+    return {
+      scopeKind: "organization",
+      requiredCoordinates: (
+        [
+          ["legal_entity", "legalEntityId"],
+          ["operating_organization", "operatingOrganizationId"],
+        ] as const
+      ).filter(([kind]) => kinds.has(kind)).map(([, coordinate]) => coordinate),
+    };
+  return undefined;
+}
+/**
+ * An organization is visible whenever the caller's grant covers it directly (or is
+ * tenant-wide) — independent of whether any company assignment survives the company
+ * filter. `companyAssignments` stays filtered-but-allowed-to-be-empty: an org-only
+ * grant never implies access to the companies that organization happens to serve.
+ */
+function projectVisibleOrganizations(
+  organizationRows: readonly ExperienceOperatingOrganizationRecord[],
+  options: {
+    readonly tenantWide: boolean;
+    readonly permittedOrganizationIds: ReadonlySet<string>;
+    readonly permittedCompanyIds: ReadonlySet<string>;
+  },
+): NeonOperatingOrganization[] {
+  return organizationRows.flatMap((organization) => {
+    if (
+      !options.tenantWide &&
+      !options.permittedOrganizationIds.has(organization.id)
+    )
+      return [];
+    const assignments = organization.assignments.filter((assignment) =>
+      options.permittedCompanyIds.has(assignment.companyCodeId),
+    );
+    return [
+      {
+        id: organization.id,
+        code: organization.code,
+        displayName: organization.displayName,
+        organizationKind: organization.organizationKind,
+        ...(organization.parentId ? { parentId: organization.parentId } : {}),
+        path: organization.path,
+        capabilities: organization.capabilities,
+        procurementProfileConfigured: organization.procurementProfileConfigured,
+        salesProfileConfigured: organization.salesProfileConfigured,
+        companyAssignments: Object.freeze(
+          assignments.map((assignment) => ({
+            companyCodeId: assignment.companyCodeId,
+            participationRole: assignment.participationRole,
+            effectiveFrom: assignment.effectiveFrom,
+            ...(assignment.effectiveUntil
+              ? { effectiveUntil: assignment.effectiveUntil }
+              : {}),
+          })),
+        ),
+        defaults: Object.freeze({
+          ...(organization.leadCompanyCodeId &&
+          options.permittedCompanyIds.has(organization.leadCompanyCodeId)
+            ? { leadCompanyCodeId: organization.leadCompanyCodeId }
+            : {}),
+          ...(organization.bookingCompanyCodeId &&
+          options.permittedCompanyIds.has(organization.bookingCompanyCodeId)
+            ? { bookingCompanyCodeId: organization.bookingCompanyCodeId }
+            : {}),
+          ...(organization.invoicingCompanyCodeId &&
+          options.permittedCompanyIds.has(organization.invoicingCompanyCodeId)
+            ? { invoicingCompanyCodeId: organization.invoicingCompanyCodeId }
+            : {}),
+          ...(organization.defaultCurrency
+            ? { currency: organization.defaultCurrency }
+            : {}),
+        }),
+      },
+    ];
+  });
 }
 function resolveWorkspaces(
   catalog: ExperienceCatalogRecord,

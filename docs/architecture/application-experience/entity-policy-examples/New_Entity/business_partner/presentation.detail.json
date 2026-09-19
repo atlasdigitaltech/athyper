@@ -1,0 +1,563 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_surface",
+  "artifactKey": "business_partner/presentation.detail",
+  "entityCode": "business_partner",
+  "plane": "neon",
+  "surfaceKey": "detail_360",
+  "header": {
+    "titleField": "name",
+    "codeField": "code",
+    "statusField": "status"
+  },
+  "sections": [
+    {
+      "sectionKey": "overview",
+      "label": {
+        "labelKey": "bp.section.overview",
+        "defaultText": "Overview"
+      },
+      "presentationRef": "business_partner/presentation.section.overview.json",
+      "viewPermission": "neon.relationship.business_partner.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "identity",
+      "label": {
+        "labelKey": "bp.section.identity",
+        "defaultText": "Identity"
+      },
+      "presentationRef": "business_partner/presentation.section.identity.json",
+      "viewPermission": "neon.relationship.business_partner_identity.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "contacts",
+      "label": {
+        "labelKey": "bp.section.contacts",
+        "defaultText": "Contacts"
+      },
+      "presentationRef": "business_partner/presentation.section.contacts.json",
+      "viewPermission": "neon.relationship.business_partner_contact.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "addresses",
+      "label": {
+        "labelKey": "bp.section.addresses",
+        "defaultText": "Addresses"
+      },
+      "presentationRef": "business_partner/presentation.section.addresses.json",
+      "viewPermission": "neon.relationship.business_partner_address.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "identifiers-tax",
+      "label": {
+        "labelKey": "bp.section.identifiers-tax",
+        "defaultText": "Identifiers Tax"
+      },
+      "presentationRef": "business_partner/presentation.section.identifiers-tax.json",
+      "viewPermission": "neon.relationship.business_partner_identifier.read_masked",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "roles-scope",
+      "label": {
+        "labelKey": "bp.section.roles-scope",
+        "defaultText": "Roles Scope"
+      },
+      "presentationRef": "business_partner/presentation.section.roles-scope.json",
+      "viewPermission": "neon.relationship.business_partner.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "supplier-company",
+      "label": {
+        "labelKey": "bp.section.supplier-company",
+        "defaultText": "Supplier Company"
+      },
+      "presentationRef": "business_partner/presentation.section.supplier-company.json",
+      "viewPermission": "neon.relationship.business_partner.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "customer-company",
+      "label": {
+        "labelKey": "bp.section.customer-company",
+        "defaultText": "Customer Company"
+      },
+      "presentationRef": "business_partner/presentation.section.customer-company.json",
+      "viewPermission": "neon.relationship.business_partner.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "banking",
+      "label": {
+        "labelKey": "bp.section.banking",
+        "defaultText": "Banking"
+      },
+      "presentationRef": "business_partner/presentation.section.banking.json",
+      "viewPermission": "neon.relationship.business_partner_bank.read_masked",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "qualifications-certificates",
+      "label": {
+        "labelKey": "bp.section.qualifications-certificates",
+        "defaultText": "Qualifications Certificates"
+      },
+      "presentationRef": "business_partner/presentation.section.qualifications-certificates.json",
+      "viewPermission": "neon.relationship.business_partner_qualification.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "credit",
+      "label": {
+        "labelKey": "bp.section.credit",
+        "defaultText": "Credit"
+      },
+      "presentationRef": "business_partner/presentation.section.credit.json",
+      "viewPermission": "neon.relationship.business_partner_credit.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "workforce",
+      "label": {
+        "labelKey": "bp.section.workforce",
+        "defaultText": "Workforce"
+      },
+      "presentationRef": "business_partner/presentation.section.workforce.json",
+      "viewPermission": "neon.relationship.business_partner_workforce.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "requests",
+      "label": {
+        "labelKey": "bp.section.requests",
+        "defaultText": "Requests"
+      },
+      "presentationRef": "business_partner/presentation.section.requests.json",
+      "viewPermission": "neon.relationship.entity_case.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "activity",
+      "label": {
+        "labelKey": "bp.section.activity",
+        "defaultText": "Activity"
+      },
+      "presentationRef": "business_partner/presentation.section.activity.json",
+      "viewPermission": "neon.relationship.business_partner_activity.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "business-activity",
+      "label": {
+        "labelKey": "bp.section.business-activity",
+        "defaultText": "Business Activity"
+      },
+      "presentationRef": "business_partner/presentation.section.business-activity.json",
+      "viewPermission": "neon.relationship.business_partner.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "network",
+      "label": {
+        "labelKey": "bp.section.network",
+        "defaultText": "Network"
+      },
+      "presentationRef": "business_partner/presentation.section.network.json",
+      "viewPermission": "neon.relationship.business_partner_network.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "attachments",
+      "presentationRef": "business_partner/presentation.section.attachments.json",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "comments",
+      "presentationRef": "business_partner/presentation.section.comments.json",
+      "discoverableWhenDenied": false
+    }
+  ],
+  "actions": [
+    {
+      "operationKey": "request_change",
+      "placement": "toolbar",
+      "interaction": "start_flow"
+    },
+    {
+      "operationKey": "print_statement",
+      "placement": "menu",
+      "interaction": "command"
+    }
+  ],
+  "completenessPacks": [
+    {
+      "category": "organization",
+      "code": "organization_base",
+      "requirements": [
+        {
+          "actionCode": "amend_partner",
+          "code": "organization.legal_name",
+          "fieldCode": "partner.legalName",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.organization.legal.name.label",
+            "defaultText": "Add legal name"
+          },
+          "sectionCode": "identity",
+          "severity": "required"
+        },
+        {
+          "actionCode": "lifecycle",
+          "code": "organization.lifecycle",
+          "fieldCode": "partner.lifecycleStatus",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.organization.lifecycle.label",
+            "defaultText": "Review lifecycle"
+          },
+          "sectionCode": "identity",
+          "severity": "required"
+        },
+        {
+          "actionCode": "amend_partner",
+          "code": "organization.primary_address",
+          "fieldCode": "address.primary",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.organization.primary.address.label",
+            "defaultText": "Add primary address"
+          },
+          "requiresVerified": true,
+          "sectionCode": "addresses",
+          "severity": "required"
+        },
+        {
+          "actionCode": "amend_partner",
+          "code": "organization.primary_contact",
+          "fieldCode": "contact.primary",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.organization.primary.contact.label",
+            "defaultText": "Add primary contact"
+          },
+          "requiresVerified": true,
+          "sectionCode": "contacts",
+          "severity": "recommended"
+        },
+        {
+          "actionCode": "amend_partner",
+          "code": "organization.identifier",
+          "fieldCode": "identifier.primary",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.organization.identifier.label",
+            "defaultText": "Add verified identifier"
+          },
+          "requiresVerified": true,
+          "sectionCode": "identifiers-tax",
+          "severity": "recommended"
+        },
+        {
+          "actionCode": "add_role",
+          "code": "organization.commercial_role",
+          "fieldCode": "role.any_commercial",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.organization.commercial.role.label",
+            "defaultText": "Add supplier or customer role"
+          },
+          "sectionCode": "roles-scope",
+          "severity": "recommended"
+        }
+      ],
+      "scope": "global",
+      "version": 1
+    },
+    {
+      "category": "organization",
+      "code": "supplier_scope",
+      "requirements": [
+        {
+          "actionCode": "add_role",
+          "code": "supplier.role",
+          "fieldCode": "role.supplier",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.supplier.role.label",
+            "defaultText": "Add supplier role"
+          },
+          "sectionCode": "roles-scope",
+          "severity": "required"
+        },
+        {
+          "actionCode": "assign_organization",
+          "code": "supplier.organization",
+          "fieldCode": "scope.supplier.organization",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.supplier.organization.label",
+            "defaultText": "Assign procurement organization"
+          },
+          "sectionCode": "roles-scope",
+          "severity": "required"
+        }
+      ],
+      "role": "supplier",
+      "scope": "organization",
+      "version": 1
+    },
+    {
+      "category": "organization",
+      "code": "supplier_payable",
+      "requirements": [
+        {
+          "actionCode": "configure_company",
+          "code": "supplier.company",
+          "fieldCode": "company.supplier.profile",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.supplier.company.label",
+            "defaultText": "Configure supplier company"
+          },
+          "sectionCode": "supplier-company",
+          "severity": "required"
+        },
+        {
+          "actionCode": "change_bank",
+          "code": "supplier.bank",
+          "fieldCode": "bank.verified_presence",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.supplier.bank.label",
+            "defaultText": "Verify bank account"
+          },
+          "requiresVerified": true,
+          "sectionCode": "banking",
+          "severity": "required"
+        },
+        {
+          "actionCode": "qualification",
+          "code": "supplier.qualification",
+          "fieldCode": "qualification.current",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.supplier.qualification.label",
+            "defaultText": "Start qualification"
+          },
+          "requiresVerified": true,
+          "sectionCode": "qualifications-certificates",
+          "severity": "recommended"
+        },
+        {
+          "actionCode": "certification",
+          "code": "supplier.certificate",
+          "fieldCode": "certification.current",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.supplier.certificate.label",
+            "defaultText": "Add certification"
+          },
+          "requiresVerified": true,
+          "sectionCode": "qualifications-certificates",
+          "severity": "recommended"
+        }
+      ],
+      "role": "supplier",
+      "scope": "company",
+      "version": 1
+    },
+    {
+      "category": "organization",
+      "code": "customer_scope",
+      "requirements": [
+        {
+          "actionCode": "add_role",
+          "code": "customer.role",
+          "fieldCode": "role.customer",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.customer.role.label",
+            "defaultText": "Add customer role"
+          },
+          "sectionCode": "roles-scope",
+          "severity": "required"
+        },
+        {
+          "actionCode": "assign_organization",
+          "code": "customer.organization",
+          "fieldCode": "scope.customer.organization",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.customer.organization.label",
+            "defaultText": "Assign sales organization"
+          },
+          "sectionCode": "roles-scope",
+          "severity": "required"
+        }
+      ],
+      "role": "customer",
+      "scope": "organization",
+      "version": 1
+    },
+    {
+      "category": "organization",
+      "code": "customer_credit",
+      "requirements": [
+        {
+          "actionCode": "configure_company",
+          "code": "customer.company",
+          "fieldCode": "company.customer.profile",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.customer.company.label",
+            "defaultText": "Configure customer company"
+          },
+          "sectionCode": "customer-company",
+          "severity": "required"
+        },
+        {
+          "actionCode": "configure_company",
+          "code": "customer.credit",
+          "fieldCode": "credit.current",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.customer.credit.label",
+            "defaultText": "Open credit review"
+          },
+          "requiresVerified": true,
+          "sectionCode": "credit",
+          "severity": "recommended"
+        }
+      ],
+      "role": "customer",
+      "scope": "company",
+      "version": 1
+    },
+    {
+      "category": "person",
+      "code": "person_base",
+      "requirements": [
+        {
+          "actionCode": "amend_partner",
+          "code": "person.name",
+          "fieldCode": "person.name",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.person.name.label",
+            "defaultText": "Complete personal identity"
+          },
+          "sectionCode": "identity",
+          "severity": "required"
+        },
+        {
+          "actionCode": "amend_partner",
+          "code": "person.contact",
+          "fieldCode": "contact.primary",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.person.contact.label",
+            "defaultText": "Add primary contact"
+          },
+          "requiresVerified": true,
+          "sectionCode": "contacts",
+          "severity": "recommended"
+        },
+        {
+          "actionCode": "amend_partner",
+          "code": "person.identifier",
+          "fieldCode": "person.identifier.verified_presence",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.person.identifier.label",
+            "defaultText": "Add verified identity"
+          },
+          "requiresVerified": true,
+          "sectionCode": "identifiers-tax",
+          "severity": "recommended"
+        }
+      ],
+      "scope": "global",
+      "version": 1
+    },
+    {
+      "category": "person",
+      "code": "workforce_active",
+      "requirements": [
+        {
+          "actionCode": "add_role",
+          "code": "workforce.role",
+          "fieldCode": "role.workforce",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.workforce.role.label",
+            "defaultText": "Add workforce role"
+          },
+          "sectionCode": "roles-scope",
+          "severity": "required"
+        },
+        {
+          "actionCode": "change_employment",
+          "code": "workforce.employment",
+          "fieldCode": "employment.active",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.workforce.employment.label",
+            "defaultText": "Add active employment"
+          },
+          "requiresVerified": true,
+          "sectionCode": "workforce",
+          "severity": "required"
+        },
+        {
+          "actionCode": "change_employment",
+          "code": "workforce.assignment",
+          "fieldCode": "assignment.active",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.workforce.assignment.label",
+            "defaultText": "Add active assignment"
+          },
+          "requiresVerified": true,
+          "sectionCode": "workforce",
+          "severity": "required"
+        },
+        {
+          "actionCode": "change_employment",
+          "code": "workforce.onboarding",
+          "fieldCode": "onboarding.complete",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.detail.workforce.onboarding.label",
+            "defaultText": "Complete onboarding"
+          },
+          "requiresVerified": true,
+          "sectionCode": "workforce",
+          "severity": "recommended"
+        }
+      ],
+      "role": "workforce",
+      "scope": "workforce",
+      "version": 1
+    }
+  ],
+  "completenessEvaluation": {
+    "source": "server_facts",
+    "noImplicitOperationAuthority": true,
+    "remediationActionResolution": "registered_domain_operation_to_request_flow",
+    "missingResolver": "hide_action_with_diagnostic"
+  },
+  "contextControl": {
+    "placement": "workspace_navigation",
+    "synchronizedWithFilters": true
+  },
+  "excludedCapabilities": [
+    "risk"
+  ],
+  "restrictedValues": "masked_by_default",
+  "dependencies": [
+    "business_partner/core",
+    "business_partner/presentation.section.activity",
+    "business_partner/presentation.section.addresses",
+    "business_partner/presentation.section.attachments",
+    "business_partner/presentation.section.banking",
+    "business_partner/presentation.section.business-activity",
+    "business_partner/presentation.section.comments",
+    "business_partner/presentation.section.contacts",
+    "business_partner/presentation.section.credit",
+    "business_partner/presentation.section.customer-company",
+    "business_partner/presentation.section.identifiers-tax",
+    "business_partner/presentation.section.identity",
+    "business_partner/presentation.section.network",
+    "business_partner/presentation.section.overview",
+    "business_partner/presentation.section.qualifications-certificates",
+    "business_partner/presentation.section.requests",
+    "business_partner/presentation.section.roles-scope",
+    "business_partner/presentation.section.supplier-company",
+    "business_partner/presentation.section.workforce"
+  ],
+  "artifactHash": "sha256:6451b7ea6fc9aae07c1f63f20411062591af98561649d1a389d1484a9d04da5f"
+}

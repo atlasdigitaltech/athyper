@@ -8,6 +8,7 @@ import { ShellPersonalizationScopeProvider } from "./personalization-scope";
 import { AtlasAnswerProvider } from "@athyper/platform-ai-agent-ui";
 import { ShellHomeIdentityProvider } from "./home";
 export * from "./core";
+export { contextDepartureState, useContextDepartureGuard } from "./context-departure";
 export { ContentHeader, type ContentHeaderProps } from "./content-header";
 export { PageFrame, PageHeader, SectionNavigation, type PageFrameProps, type PageFrameWidth, type PageHeaderLevel, type PageHeaderProps, type SectionNavigationItem, type SectionNavigationProps } from "./page-foundation";
 export { PlatformHome, type PlatformHomeAction, type PlatformHomeProps, type PlatformHomeSearchItem, type PlatformHomeWorkspace } from "./home";

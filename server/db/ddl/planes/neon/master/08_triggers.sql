@@ -387,7 +387,7 @@ BEFORE UPDATE OF tenant_id, operating_organization_id ON master.procurement_orga
 FOR EACH ROW EXECUTE FUNCTION master.trg_guard_organization_identity();
 CREATE TRIGGER trg_procurement_organization_profile_updated_at BEFORE UPDATE
 ON master.procurement_organization_profile FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
-CREATE TRIGGER trg_procurement_organization_profile_domain
+CREATE TRIGGER trg_procurement_organization_profile_capability
 BEFORE INSERT OR UPDATE OF tenant_id, operating_organization_id, lead_company_code_id
 ON master.procurement_organization_profile
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_operating_organization_profile();
@@ -397,7 +397,7 @@ BEFORE UPDATE OF tenant_id, operating_organization_id ON master.sales_organizati
 FOR EACH ROW EXECUTE FUNCTION master.trg_guard_organization_identity();
 CREATE TRIGGER trg_sales_organization_profile_updated_at BEFORE UPDATE
 ON master.sales_organization_profile FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
-CREATE TRIGGER trg_sales_organization_profile_domain
+CREATE TRIGGER trg_sales_organization_profile_capability
 BEFORE INSERT OR UPDATE OF tenant_id, operating_organization_id, booking_company_code_id, invoicing_company_code_id
 ON master.sales_organization_profile
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_operating_organization_profile();

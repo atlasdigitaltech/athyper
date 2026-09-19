@@ -6,6 +6,7 @@ import { useAtlasBusinessContextPublisher } from "@athyper/platform-shell";
 import { ErrorSurface } from "@athyper/platform-shell-app-foundation";
 import { classifyAppError } from "@athyper/platform-shell-app-foundation/error-taxonomy";
 import { AppliedFilters, type AppliedFilterChip } from "./applied-filters";
+import { RequiredContextStatus } from "./required-context-status";
 import {
   useDirectoryFilters,
   DirectoryFilterEditor,
@@ -16,6 +17,7 @@ import {
 } from "./directory-filters";
 export {
   DirectoryFilterContext,
+  useDirectoryFilters,
   type DirectoryFilterAdapter,
 } from "./directory-filters";
 import {
@@ -491,14 +493,10 @@ function EntityApplicationContent({
             activePath={activePath}
           />
         }
+        contextControl={scopeControl}
       >
         {descriptor.scope.status === "context_required" ? (
-          <Card>
-            <h2>Choose a work context</h2>
-            {scopeControl ?? (
-              <p>Context selection is unavailable for this entity.</p>
-            )}
-          </Card>
+          <RequiredContextStatus scopeControlAvailable={Boolean(scopeControl)} />
         ) : (
           children
         )}
@@ -1004,14 +1002,7 @@ function EntityCollectionRuntime({
           </>
         ) : null}
         {scopeControl}
-        <Card className="a-entity-list__state">
-          <Badge tone="warning">Context required</Badge>
-          <h2>Choose a work context</h2>
-          <p>Select the required context to view this list.</p>
-          {!scopeControl ? (
-            <p>Context selection is unavailable for this entity.</p>
-          ) : null}
-        </Card>
+        <RequiredContextStatus scopeControlAvailable={Boolean(scopeControl)} />
       </PageFrame>
     );
   if (!state)

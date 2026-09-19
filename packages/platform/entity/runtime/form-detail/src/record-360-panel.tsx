@@ -16,15 +16,13 @@ export interface Record360Section {
 export function EntityRecord360ModeNavigation({
   panel,
   activeTab,
-  activeSection,
-  onNavigate,
+  onSelectTab,
   navigationId,
   navigationRef,
 }: {
   readonly panel: EntityRecord360PanelV1;
   readonly activeTab: string;
-  readonly activeSection: string;
-  readonly onNavigate: (section: string, tab: string) => void;
+  readonly onSelectTab: (tab: string, preferredSection?: string) => void;
   readonly navigationId: string;
   readonly navigationRef: RefObject<HTMLDivElement | null>;
 }) {
@@ -57,7 +55,7 @@ export function EntityRecord360ModeNavigation({
       aria-controls={`${navigationId}-content`}
       aria-selected={item.key === tab.key}
       tabIndex={item.key === tab.key ? 0 : -1}
-      onClick={() => onNavigate(item.sectionKey ?? activeSection, item.key)}
+      onClick={() => onSelectTab(item.key, item.sectionKey)}
     >
       {item.label}
     </button>)}
@@ -71,7 +69,8 @@ export function EntityRecord360Panel({
   activeSection,
   activeTab,
   navigationRevision,
-  onNavigate,
+  onSelectTab,
+  onSelectSection,
   onObserve,
   renderSection,
   renderSidebar,
@@ -83,7 +82,10 @@ export function EntityRecord360Panel({
   readonly activeSection: string;
   readonly activeTab: string;
   readonly navigationRevision: number;
-  readonly onNavigate: (section: string, tab: string) => void;
+  /** Changes record mode only; it must not initiate section scrolling. */
+  readonly onSelectTab: (tab: string, preferredSection?: string) => void;
+  /** Explicit left-rail navigation; this initiates scrolling and focus. */
+  readonly onSelectSection: (section: string) => void;
   readonly onObserve: (section: string) => void;
   readonly renderSection: (key: string) => ReactNode;
   readonly renderSidebar: (
@@ -131,7 +133,7 @@ export function EntityRecord360Panel({
   });
   return (
     <div ref={root} className="a-record-360">
-      {modeNavigationRef ? null : <EntityRecord360ModeNavigation panel={panel} activeTab={activeTab} activeSection={activeSection} onNavigate={onNavigate} navigationId={navigationId} navigationRef={tabsRoot} />}
+      {modeNavigationRef ? null : <EntityRecord360ModeNavigation panel={panel} activeTab={activeTab} onSelectTab={onSelectTab} navigationId={navigationId} navigationRef={tabsRoot} />}
       <div
         id={`${navigationId}-content`}
         role="tabpanel"
@@ -150,7 +152,7 @@ export function EntityRecord360Panel({
               label="360 sections"
               sections={rail}
               activeSection={activeSection}
-              onNavigate={(key) => onNavigate(key, overviewTab.key)}
+              onNavigate={onSelectSection}
             />
             <div className="a-record-360__sections">
               {rail.map((item, index) => (

@@ -1,7 +1,7 @@
 import type { ShellActivityTab } from "./activity-center";
 import type { ShellQuickAccessTab } from "./quick-access";
 
-export type HeaderActionKind = "search" | ShellActivityTab | "agent" | "more";
+export type HeaderActionKind = "search" | ShellActivityTab | "agent" | "utilities" | "more";
 export type ShellSurface =
   | { readonly kind: "none" }
   | { readonly kind: "navigation" }

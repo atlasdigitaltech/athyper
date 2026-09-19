@@ -12,6 +12,8 @@ export interface PageWorkspaceProps extends PageFrameProps {
   /** Keep header ownership with an ancestor while retaining status/body/action slots. */
   readonly contentOnly?: boolean;
   readonly navigation?: ReactNode;
+  /** Trailing control in the shared navigation band, such as workspace scope. */
+  readonly navigationContext?: ReactNode;
   /** Navigation remains owned by its runtime; this supplies shared spacing and presentation. */
   readonly navigationKind?:
     "application" | "record-mode" | "workflow" | "section";
@@ -23,11 +25,20 @@ export interface PageWorkspaceProps extends PageFrameProps {
   readonly actionOutcome?: ReactNode;
 }
 
+export type PageNavigationKind = "application" | "record-mode" | "workflow" | "section";
+export type PageNavigationBand = "content" | "shell";
+
+/** Shared navigation placement. Runtimes retain their own links, tabs and controllers. */
+export function PageNavigationSlot({ navigation, context, kind, band = "content" }: { readonly navigation?: ReactNode; readonly context?: ReactNode; readonly kind?: PageNavigationKind; readonly band?: PageNavigationBand }) {
+  return navigation || context ? <div className="athyper-page-workspace__navigation" data-slot="page-navigation" data-navigation-kind={kind} data-navigation-band={band}><div className="athyper-page-workspace__navigation-main">{navigation}</div>{context ? <div className="athyper-page-workspace__navigation-context" data-slot="workspace-context">{context}</div> : null}</div> : null;
+}
+
 /** Composition only: resource recovery, authorization, focus and history remain with the runtime. */
 export function PageWorkspace({
   header,
   contentOnly = false,
   navigation,
+  navigationContext,
   navigationKind,
   navigationBand = "content",
   status,
@@ -49,16 +60,7 @@ export function PageWorkspace({
           <PageHeader {...(header as PageHeaderProps)} titleId={titleId} />
         )
       ) : null}
-      {navigation ? (
-        <div
-          className="athyper-page-workspace__navigation"
-          data-slot="page-navigation"
-          data-navigation-kind={navigationKind}
-          data-navigation-band={navigationBand}
-        >
-    {navigation}
-        </div>
-      ) : null}
+      <PageNavigationSlot navigation={navigation} context={navigationContext} kind={navigationKind} band={navigationBand} />
       <div className="athyper-page-workspace__status" data-slot="page-status">
         {status}
       </div>
@@ -96,17 +98,22 @@ export interface PlanePageFrameProps {
   readonly description?: ReactNode;
   readonly actions?: ReactNode;
   readonly toolbar?: ReactNode;
+  readonly navigation?: ReactNode;
+  /** Trailing control in the shared navigation band, such as workspace scope. */
+  readonly navigationContext?: ReactNode;
   readonly contentOnly?: boolean;
   readonly className?: string;
   readonly children?: ReactNode;
 }
 
-/** Shared page frame for plane-local surfaces: avoids nesting a second main/h1 inside the shell's own Main. contentOnly defers header ownership to an ancestor (e.g. an intake step chrome); toolbar renders content search/filter controls above the body, per the shared page-toolbar convention. */
+/** Shared page frame for plane-local surfaces: avoids nesting a second main/h1 inside the shell's own Main. contentOnly defers header ownership to an ancestor (e.g. an intake step chrome), so navigation/navigationContext are not forwarded there. toolbar renders content search/filter controls above the body, per the shared page-toolbar convention. */
 export function PlanePageFrame({
   title,
   description,
   actions,
   toolbar,
+  navigation,
+  navigationContext,
   contentOnly = false,
   className,
   children,
@@ -119,6 +126,8 @@ export function PlanePageFrame({
   ) : (
     <PageWorkspace
       header={{ level: "collection", title, description, actions }}
+      navigation={navigation}
+      navigationContext={navigationContext}
       toolbar={toolbar}
       className={className}
     >

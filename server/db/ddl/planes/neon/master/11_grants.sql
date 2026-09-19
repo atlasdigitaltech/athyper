@@ -65,6 +65,7 @@ BEGIN
                master.procurement_organization_profile,
                master.sales_organization_profile,
                master.operating_organization_company_assignment,
+               master.operating_organization_capability,
                master.org_unit,
                master.profit_center,
                master.cost_center,

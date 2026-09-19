@@ -87,8 +87,21 @@ export interface NeonWorkContextBootstrap {
   readonly schemaVersion: 1; readonly revision: string; readonly tenantId: string;
   readonly supportsAllPermitted: boolean; readonly companies: readonly NeonWorkContextCompany[];
 }
+/**
+ * Version two is intentionally separate from the v1 header bootstrap.  It is
+ * the server-authorized option catalog used when a page declares one command
+ * permission; the client never supplies authority with a selected value.
+ */
+export interface NeonBusinessContextOptions {
+  readonly schemaVersion: 2; readonly revision: string; readonly tenantId: string;
+  readonly actionPermissionCode?: string;
+  readonly supportsAllPermitted: boolean;
+  readonly legalEntities: readonly { readonly legalEntityId: string; readonly code: string; readonly displayName: string; readonly logoAssetRef?: string }[];
+  readonly companies: readonly NeonWorkContextCompany[];
+  readonly organizations: readonly NeonOperatingOrganization[];
+}
 
-export type NeonOperatingOrganizationCapability = "procurement" | "sales" | "shared_services";
+export type NeonOperatingOrganizationCapability = "finance" | "procurement" | "people" | "sales" | "operations" | "warehouse" | "projects";
 export interface NeonOperatingOrganizationAssignment {
   readonly companyCodeId: string;
   readonly participationRole: string;
@@ -96,7 +109,7 @@ export interface NeonOperatingOrganizationAssignment {
   readonly effectiveUntil?: string;
 }
 export interface NeonOperatingOrganization {
-  readonly id: string; readonly code: string; readonly displayName: string; readonly domain: string;
+  readonly id: string; readonly code: string; readonly displayName: string; readonly organizationKind: "company_operations" | "business_operations" | "shared_operations";
   readonly parentId?: string; readonly path: readonly string[];
   readonly capabilities: readonly NeonOperatingOrganizationCapability[];
   readonly procurementProfileConfigured: boolean; readonly salesProfileConfigured: boolean;
@@ -195,15 +208,28 @@ export const neonWorkContextBootstrapSchema = {
   },
 } as const;
 
+export const neonBusinessContextOptionsSchema = {
+  $id: "https://schemas.athyper.dev/neon/business-context-options.v2.json",
+  type: "object", additionalProperties: false,
+  required: ["schemaVersion", "revision", "tenantId", "supportsAllPermitted", "legalEntities", "companies", "organizations"],
+  properties: {
+    schemaVersion: { const: 2 }, revision: { type: "string", minLength: 16, maxLength: 128 }, tenantId: { type: "string", format: "uuid" },
+    actionPermissionCode: { type: "string", pattern: "^[a-z][a-z0-9_.-]{1,126}$" }, supportsAllPermitted: { type: "boolean" },
+    legalEntities: { type: "array", items: { type: "object", additionalProperties: false, required: ["legalEntityId", "code", "displayName"], properties: { legalEntityId: { type: "string", format: "uuid" }, code: { type: "string", minLength: 2, maxLength: 63 }, displayName: { type: "string", minLength: 1, maxLength: 256 }, logoAssetRef: { type: "string", pattern: "^/[A-Za-z0-9][A-Za-z0-9_./-]*$", maxLength: 1024 } } } },
+    companies: neonWorkContextBootstrapSchema.properties.companies,
+    organizations: { type: "array", items: { type: "object", additionalProperties: false, required: ["id", "code", "displayName", "organizationKind", "path", "capabilities", "procurementProfileConfigured", "salesProfileConfigured", "companyAssignments", "defaults"], properties: { id: { type: "string", format: "uuid" }, code: { type: "string", minLength: 2, maxLength: 128 }, displayName: { type: "string", minLength: 1, maxLength: 256 }, organizationKind: { enum: ["company_operations", "business_operations", "shared_operations"] }, parentId: { type: "string", format: "uuid" }, path: { type: "array", minItems: 1, maxItems: 12, items: { type: "string", minLength: 1, maxLength: 256 } }, capabilities: { type: "array", uniqueItems: true, items: { enum: ["finance", "procurement", "people", "sales", "operations", "warehouse", "projects"] } }, procurementProfileConfigured: { type: "boolean" }, salesProfileConfigured: { type: "boolean" }, companyAssignments: { type: "array", items: { type: "object", additionalProperties: false, required: ["companyCodeId", "participationRole", "effectiveFrom"], properties: { companyCodeId: { type: "string", format: "uuid" }, participationRole: { type: "string", minLength: 1, maxLength: 64 }, effectiveFrom: { type: "string", format: "date" }, effectiveUntil: { type: "string", format: "date" } } } }, defaults: { type: "object", additionalProperties: false, properties: { leadCompanyCodeId: { type: "string", format: "uuid" }, bookingCompanyCodeId: { type: "string", format: "uuid" }, invoicingCompanyCodeId: { type: "string", format: "uuid" }, currency: { type: "string", minLength: 3, maxLength: 3 } } } } } },
+  },
+} as const;
+
 export const neonOperatingOrganizationCatalogSchema = {
   $id: "https://schemas.athyper.dev/neon/operating-organization-catalog.v1.json",
   type: "object", additionalProperties: false,
   required: ["schemaVersion", "revision", "tenantId", "effectiveAt", "organizations"],
   properties: {
     schemaVersion: { const: 1 }, revision: { type: "string", minLength: 16, maxLength: 128 }, tenantId: { type: "string", format: "uuid" }, effectiveAt: { type: "string", format: "date-time" },
-    organizations: { type: "array", items: { type: "object", additionalProperties: false, required: ["id", "code", "displayName", "domain", "path", "capabilities", "procurementProfileConfigured", "salesProfileConfigured", "companyAssignments", "defaults"], properties: {
-      id: { type: "string", format: "uuid" }, code: { type: "string", minLength: 2, maxLength: 128 }, displayName: { type: "string", minLength: 1, maxLength: 256 }, domain: { type: "string", minLength: 1, maxLength: 64 }, parentId: { type: "string", format: "uuid" },
-      path: { type: "array", minItems: 1, maxItems: 12, items: { type: "string", minLength: 1, maxLength: 256 } }, capabilities: { type: "array", uniqueItems: true, items: { enum: ["procurement", "sales", "shared_services"] } },
+    organizations: { type: "array", items: { type: "object", additionalProperties: false, required: ["id", "code", "displayName", "organizationKind", "path", "capabilities", "procurementProfileConfigured", "salesProfileConfigured", "companyAssignments", "defaults"], properties: {
+      id: { type: "string", format: "uuid" }, code: { type: "string", minLength: 2, maxLength: 128 }, displayName: { type: "string", minLength: 1, maxLength: 256 }, organizationKind: { enum: ["company_operations", "business_operations", "shared_operations"] }, parentId: { type: "string", format: "uuid" },
+      path: { type: "array", minItems: 1, maxItems: 12, items: { type: "string", minLength: 1, maxLength: 256 } }, capabilities: { type: "array", uniqueItems: true, items: { enum: ["finance", "procurement", "people", "sales", "operations", "warehouse", "projects"] } },
       procurementProfileConfigured: { type: "boolean" }, salesProfileConfigured: { type: "boolean" },
       companyAssignments: { type: "array", items: { type: "object", additionalProperties: false, required: ["companyCodeId", "participationRole", "effectiveFrom"], properties: { companyCodeId: { type: "string", format: "uuid" }, participationRole: { type: "string", minLength: 1, maxLength: 64 }, effectiveFrom: { type: "string", format: "date" }, effectiveUntil: { type: "string", format: "date" } } } },
       defaults: { type: "object", additionalProperties: false, properties: { leadCompanyCodeId: { type: "string", format: "uuid" }, bookingCompanyCodeId: { type: "string", format: "uuid" }, invoicingCompanyCodeId: { type: "string", format: "uuid" }, currency: { type: "string", minLength: 3, maxLength: 3 } } },

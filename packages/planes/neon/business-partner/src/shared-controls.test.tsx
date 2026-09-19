@@ -74,6 +74,85 @@ it("does not substitute a sole organization for an unavailable request organizat
   );
   expect(host.textContent).toBe("Unselected: org-b");
 });
+function PendingSelection() {
+  const {
+    selected,
+    pendingOperatingOrganizationId,
+    beginEdit,
+    updatePending,
+    applyPending,
+    discardPending,
+  } = useOrganizationSelection();
+  return (
+    <div>
+      <p>
+        committed:{selected || "none"} pending:
+        {pendingOperatingOrganizationId ?? "none"}
+      </p>
+      <button onClick={beginEdit}>begin</button>
+      <button onClick={() => updatePending("org-a")}>set-a</button>
+      <button onClick={() => updatePending("unavailable")}>set-bad</button>
+      <button onClick={applyPending}>apply</button>
+      <button onClick={discardPending}>discard</button>
+    </div>
+  );
+}
+it("does not commit an incompatible pending organization on apply", async () => {
+  await act(async () => root.render(<PendingSelection />));
+  expect(host.textContent).toContain("committed:org-a pending:none");
+  host.querySelector("button")!.click(); // begin
+  await act(async () => {});
+  (
+    Array.from(host.querySelectorAll("button")).find(
+      (button) => button.textContent === "set-bad",
+    ) as HTMLButtonElement
+  ).click();
+  await act(async () => {});
+  expect(host.textContent).toContain("pending:unavailable");
+  (
+    Array.from(host.querySelectorAll("button")).find(
+      (button) => button.textContent === "apply",
+    ) as HTMLButtonElement
+  ).click();
+  await act(async () => {});
+  // The invalid pending value must not have been committed.
+  expect(host.textContent).toContain("committed:org-a pending:unavailable");
+});
+it("commits a compatible pending organization and clears the pending edit", async () => {
+  await act(async () => root.render(<PendingSelection />));
+  const click = (label: string) =>
+    act(async () =>
+      (
+        Array.from(host.querySelectorAll("button")).find(
+          (button) => button.textContent === label,
+        ) as HTMLButtonElement
+      ).click(),
+    );
+  await click("begin");
+  mock.work.selection = { mode: "company", companyCodeId: "b" };
+  await act(async () => root.render(<PendingSelection />));
+  await click("set-a"); // org-a is not compatible with company b
+  await click("apply");
+  // apply() must reject an org incompatible with the current company.
+  expect(host.textContent).toContain("pending:org-a");
+  expect(host.textContent).not.toContain("committed:org-a pending:none");
+});
+it("discardPending clears the pending edit without changing the committed selection", async () => {
+  await act(async () => root.render(<PendingSelection />));
+  const click = (label: string) =>
+    act(async () =>
+      (
+        Array.from(host.querySelectorAll("button")).find(
+          (button) => button.textContent === label,
+        ) as HTMLButtonElement
+      ).click(),
+    );
+  await click("begin");
+  await click("set-bad");
+  expect(host.textContent).toContain("pending:unavailable");
+  await click("discard");
+  expect(host.textContent).toContain("committed:org-a pending:none");
+});
 it("uses a request's company instead of the global company", async () => {
   await act(async () =>
     root.render(

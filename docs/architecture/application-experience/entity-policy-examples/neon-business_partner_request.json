@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "kind": "neon.business-context.entity-policy",
+  "status": "draft_for_analysis",
+  "plane": "neon",
+  "entity": {
+    "code": "business_partner_request",
+    "class": "document",
+    "displayName": "Business Partner Request"
+  },
+  "scope": {
+    "kind": "organization",
+    "globalLegalEntityEffect": "limits_working_lens_and_eligible_organizations",
+    "recordOwnership": {
+      "tenantId": "required",
+      "owningLegalEntityId": "required",
+      "companyCodeId": "optional",
+      "operatingOrganizationId": "required"
+    },
+    "owningLegalEntityRule": {
+      "status": "proposed_v1_requires_approval",
+      "rule": "Persist one owning Legal Entity at creation. The chosen Operating Organization must have an active effective assignment to that Legal Entity. A blank Company Code does not mean all-company access.",
+      "historicalData": "Do not backfill from the active header selection. Migrate only from reliable historical evidence after the domain rule is approved."
+    },
+    "organizationEligibility": {
+      "assignment": "active_effective_company_assignment_required_when_company_is_present",
+      "capabilityByRequestedRole": {
+        "supplier": "procurement",
+        "customer": "sales"
+      },
+      "serverValidation": "validateNeonBusinessContext"
+    }
+  },
+  "workspace": {
+    "globalSelector": "legal_entity_lens",
+    "workspaceContext": {
+      "companyCode": "optional_when_policy_permits",
+      "operatingOrganization": "required"
+    },
+    "selectionOrder": ["legalEntity", "operatingOrganization", "companyCode_when_required"],
+    "standardView": "my_documents",
+    "supportedViews": ["my_documents", "my_team", "shared_with_me", "delegated_to_me", "all_accessible"],
+    "aggregateMode": {
+      "supported": false,
+      "reason": "Creation requires one responsible Operating Organization and one persisted owning Legal Entity."
+    }
+  },
+  "actions": {
+    "read": {
+      "permission": "neon.business_partner_request.read",
+      "requiredCoordinates": ["legalEntityId", "operatingOrganizationId"],
+      "contextValidation": "record_owning_legal_entity_and_record_authorization"
+    },
+    "createSupplierRequest": {
+      "permission": "neon.business_partner_request.supplier.create",
+      "requiredCoordinates": ["legalEntityId", "operatingOrganizationId"],
+      "requiredCapability": "procurement",
+      "contextValidation": "validateNeonBusinessContext"
+    },
+    "createCustomerRequest": {
+      "permission": "neon.business_partner_request.customer.create",
+      "requiredCoordinates": ["legalEntityId", "operatingOrganizationId"],
+      "requiredCapability": "sales",
+      "contextValidation": "validateNeonBusinessContext"
+    },
+    "submit": {
+      "permission": "neon.business_partner_request.submit",
+      "requiredCoordinates": ["legalEntityId", "operatingOrganizationId"],
+      "contextValidation": "persisted_record_context_and_current_authorization"
+    }
+  },
+  "draftContextChanges": {
+    "allowed": true,
+    "until": "before_submission",
+    "effect": "Revalidate requested role, company applicability, workflow routing, invitation data and attachments. Persist the new owning Legal Entity only with the accepted draft context.",
+    "afterSubmission": "correction_or_cancellation_process_required"
+  },
+  "authorization": {
+    "clientMetadataMayGrantAccess": false,
+    "serverIsAuthoritative": true,
+    "organizationGrantDoesNotImplyCompanyWideAuthority": true
+  }
+}

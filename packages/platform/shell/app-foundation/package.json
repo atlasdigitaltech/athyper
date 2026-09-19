@@ -23,6 +23,7 @@
     "@athyper/platform-shell-runtime": "workspace:*",
     "@athyper/platform-surface-kit": "workspace:*",
     "@athyper/platform-temporal": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
     "@athyper/platform-ui": "workspace:*",
     "@athyper/platform-iam-session": "workspace:*"
   },

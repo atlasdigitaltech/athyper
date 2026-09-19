@@ -12,15 +12,15 @@ DECLARE
 BEGIN
   SELECT p.tenant_id,(array_agg(p.id ORDER BY p.id))[1],(array_agg(p.id ORDER BY p.id))[2]
     INTO tenant,maker,checker FROM master.principal p WHERE p.status='active'
-     AND EXISTS(SELECT 1 FROM master.operating_organization o WHERE o.tenant_id=p.tenant_id AND o.status='active' AND o.domain IN('procurement','both'))
-     AND EXISTS(SELECT 1 FROM master.operating_organization o WHERE o.tenant_id=p.tenant_id AND o.status='active' AND o.domain IN('sales','both'))
+     AND EXISTS(SELECT 1 FROM master.operating_organization o JOIN master.operating_organization_capability c ON c.tenant_id=o.tenant_id AND c.operating_organization_id=o.id AND c.capability_code='procurement' AND c.status='active' WHERE o.tenant_id=p.tenant_id AND o.status='active')
+     AND EXISTS(SELECT 1 FROM master.operating_organization o JOIN master.operating_organization_capability c ON c.tenant_id=o.tenant_id AND c.operating_organization_id=o.id AND c.capability_code='sales' AND c.status='active' WHERE o.tenant_id=p.tenant_id AND o.status='active')
    GROUP BY p.tenant_id HAVING count(*)>=2 ORDER BY p.tenant_id LIMIT 1;
   SELECT candidate.id INTO other_tenant FROM master.tenant candidate
    WHERE candidate.id<>tenant ORDER BY candidate.id LIMIT 1;
   SELECT id INTO supplier_org FROM master.operating_organization
-   WHERE tenant_id=tenant AND status='active' AND domain IN('procurement','both') ORDER BY id LIMIT 1;
+   WHERE tenant_id=tenant AND status='active' AND EXISTS(SELECT 1 FROM master.operating_organization_capability c WHERE c.tenant_id=master.operating_organization.tenant_id AND c.operating_organization_id=master.operating_organization.id AND c.capability_code='procurement' AND c.status='active') ORDER BY id LIMIT 1;
   SELECT id INTO customer_org FROM master.operating_organization
-   WHERE tenant_id=tenant AND status='active' AND domain IN('sales','both') ORDER BY id LIMIT 1;
+   WHERE tenant_id=tenant AND status='active' AND EXISTS(SELECT 1 FROM master.operating_organization_capability c WHERE c.tenant_id=master.operating_organization.tenant_id AND c.operating_organization_id=master.operating_organization.id AND c.capability_code='sales' AND c.status='active') ORDER BY id LIMIT 1;
   IF tenant IS NULL OR maker=checker OR other_tenant IS NULL OR supplier_org IS NULL OR customer_org IS NULL THEN
     RAISE EXCEPTION 'G5 Business Partner matrix requires two actors, another tenant, and active procurement/sales organizations';
   END IF;

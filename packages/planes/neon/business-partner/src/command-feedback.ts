@@ -1,6 +1,7 @@
 import { ApiTransportError } from "@athyper/platform-api-client";
 import { useToasts } from "@athyper/platform-shell-app-foundation";
 import { useRef } from "react";
+import { useContextDepartureGuard } from "@athyper/platform-shell";
 import { businessLabel } from "./360/display-values";
 
 export function businessPartnerErrorMessage(
@@ -26,6 +27,7 @@ export function useCommandRunner(options: {
 }) {
   const toasts = useToasts();
   const running = useRef(false);
+  useContextDepartureGuard({ get busy() { return running.current; }, dirty: false });
   return async (
     name: string,
     command: () => Promise<unknown>,

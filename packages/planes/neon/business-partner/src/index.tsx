@@ -4,7 +4,7 @@ import { businessPartnerErrorMessage, useCommandRunner } from "./command-feedbac
 import { useOrganizationSelection } from "./use-organization-selection";
 import { SupplierProcessPreview } from "./supplier-process-preview";
 import { SupplierProcessCorrection } from "./supplier-process-correction";
-import { PageNavigation, PageResourceBoundary, PageWorkspace, useDeepLinkedTabState, useRecordBreadcrumb, useRecordFooterSources, useRegisterEntityTaskHeader, type PageResourceStatus } from "@athyper/platform-shell";
+import { useContextDepartureGuard, PageNavigation, PageResourceBoundary, PageWorkspace, useDeepLinkedTabState, useRecordBreadcrumb, useRecordFooterSources, useRegisterEntityTaskHeader, type PageResourceStatus } from "@athyper/platform-shell";
 import { BusinessPartnerPageFrame } from "./page-frame";
 import { RequestLifecycle, RequestWorkspaceOverview, RequestWorkspaceDetails, RequestActivity, requestKind, requestTab } from "./request-workspace";
 import { restoreProfileAnswers } from "./request-relationships";
@@ -43,6 +43,10 @@ import {
 import {
   useNeonOperatingOrganization,
   useNeonWorkContext,
+  useWorkspaceContextSummary,
+  WorkspaceContextControl,
+  WorkspaceContextStatus,
+  type WorkspaceContextControlHandle,
 } from "@athyper/product-neon-shell";
 import {
   useCallback,
@@ -52,6 +56,7 @@ import {
   useState,
   type FormEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { statusTone } from "./workflow";
 import {
@@ -515,9 +520,63 @@ function OrganizationField({
   );
 }
 
+/** Trailing nav-band control for BP's organization-scoped pages (design doc §10.1). Company stays a read-only summary of the active work context; only the operating organization is BP's own editable coordinate. */
+function BusinessPartnerWorkspaceContext({
+  selection,
+  controlRef,
+}: {
+  selection: ReturnType<typeof useOrganizationSelection>;
+  controlRef?: RefObject<WorkspaceContextControlHandle | null>;
+}) {
+  const work = useNeonWorkContext();
+  const company = work.companies.find(
+    (item) => item.companyCodeId === selection.companyCodeId,
+  );
+  const pendingOrganizationId =
+    selection.pendingOperatingOrganizationId ?? selection.selected;
+  const pendingOrganization = selection.compatible.find(
+    (item) => item.id === pendingOrganizationId,
+  );
+  const summary = useWorkspaceContextSummary({
+    companyLabel: company?.code,
+    organizationLabel: pendingOrganization?.displayName,
+    required: true,
+  });
+  const status =
+    selection.operating.status === "loading" || work.status === "loading"
+      ? "resolving"
+      : selection.operating.status === "error"
+        ? "error"
+        : "ready";
+  return (
+    <WorkspaceContextControl
+      ref={controlRef}
+      mode="editable"
+      status={status}
+      summary={summary}
+      pendingOperatingOrganizationId={pendingOrganizationId}
+      organizations={selection.compatible}
+      onOpenChange={(open) =>
+        open ? selection.beginEdit() : selection.discardPending()
+      }
+      onPendingChange={({ operatingOrganizationId }) =>
+        selection.updatePending(operatingOrganizationId ?? "")
+      }
+      onApply={() => selection.applyPending()}
+      error={
+        selection.operating.status === "error"
+          ? "Operating-organization access is unavailable"
+          : undefined
+      }
+      retry={selection.operating.retry}
+    />
+  );
+}
+
 export function BusinessPartnerRequestList() {
   const api = usePartnerApi(),
     selection = useOrganizationSelection(),
+    contextControl = useRef<WorkspaceContextControlHandle>(null),
     [status, setStatus] = useState<RequestStatus | "">(""),
     [items, setItems] = useState<readonly PartnerRequest[]>([]),
     [loading, setLoading] = useState(false),
@@ -569,13 +628,14 @@ export function BusinessPartnerRequestList() {
             </a>
           </div>
         }
+        navigationContext={
+          <BusinessPartnerWorkspaceContext
+            selection={selection}
+            controlRef={contextControl}
+          />
+        }
         toolbar={
           <Card className="bp-filter-bar">
-            <OrganizationSelect
-              selection={selection}
-              value={selection.selected}
-              onChange={selection.setSelected}
-            />
             <Field label="Status" htmlFor="bp-status-filter">
               <Select
                 id="bp-status-filter"
@@ -601,9 +661,11 @@ export function BusinessPartnerRequestList() {
         ) : selection.selected ? (
           <RequestTable items={items} />
         ) : (
-          <Empty
-            title="Choose an operating organization"
-            detail="Commercial requests are organization-scoped and contain supplier or customer data only."
+          <WorkspaceContextStatus
+            status="required"
+            message="Select an operating organization to view requests."
+            actionLabel="Choose organization"
+            onAction={() => contextControl.current?.open()}
           />
         )}
       </BusinessPartnerPageFrame>
@@ -697,6 +759,7 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
     [busy, setBusy] = useState(false),
     [dirty, setDirty] = useState(false),
     [error, setError] = useState<string>();
+  useContextDepartureGuard({ dirty: dirty || attachmentProblems.length > 0 || retryRequired, busy: busy || retryRequired });
   const navigation = useGuardedNavigation(dirty || busy || attachmentProblems.length > 0 || retryRequired),
     companyCodeId = savedRequest?.companyCodeId ?? (
       work.selection.mode === "company"
@@ -1173,6 +1236,7 @@ export function BusinessPartnerAggregateDetail({
 }) {
   const api = usePartnerApi(),
     selection = useOrganizationSelection(),
+    contextControl = useRef<WorkspaceContextControlHandle>(null),
     [aggregate, setAggregate] = useState<PartnerAggregate>(),
     [eligibility, setEligibility] = useState<PartnerEligibility>(),
     [error, setError] = useState<string>(),
@@ -1251,14 +1315,11 @@ export function BusinessPartnerAggregateDetail({
           </a>
         </div>
       }
-      toolbar={
-        <Card className="bp-filter-bar">
-          <OrganizationSelect
-            selection={selection}
-            value={selection.selected}
-            onChange={selection.setSelected}
-          />
-        </Card>
+      navigationContext={
+        <BusinessPartnerWorkspaceContext
+          selection={selection}
+          controlRef={contextControl}
+        />
       }
     >
       {error ? <ErrorNotice detail={error} /> : null}
@@ -1267,9 +1328,11 @@ export function BusinessPartnerAggregateDetail({
       ) : aggregate && eligibility ? (
         <AggregateTabs aggregate={aggregate} eligibility={eligibility} />
       ) : selection.selected ? null : (
-        <Empty
-          title="Choose an operating organization"
-          detail="Partner details are authorized and loaded within an organization scope."
+        <WorkspaceContextStatus
+          status="required"
+          message="Partner details are authorized and loaded within an organization scope."
+          actionLabel="Choose organization"
+          onAction={() => contextControl.current?.open()}
         />
       )}
     </BusinessPartnerPageFrame>
@@ -1775,32 +1838,6 @@ function RequestTable({ items }: { items: readonly PartnerRequest[] }) {
         </tbody>
       </table>
     </div>
-  );
-}
-function OrganizationSelect({
-  selection,
-  value,
-  onChange,
-}: {
-  selection: ReturnType<typeof useOrganizationSelection>;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <Field label="Operating organization" htmlFor="bp-list-organization">
-      <Select
-        id="bp-list-organization"
-        value={value}
-        onChange={(event) => onChange(event.currentTarget.value)}
-      >
-        <option value="">Select organization</option>
-        {selection.compatible.map((item) => (
-          <option key={item.id} value={item.id}>
-            {item.code} · {item.displayName}
-          </option>
-        ))}
-      </Select>
-    </Field>
   );
 }
 function Field({

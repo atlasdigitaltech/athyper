@@ -1138,6 +1138,7 @@ describe.skipIf(!enabled)(
         }),
         readFeatures: async () => [],
         readWorkContexts: async () => [],
+        readLegalEntities: async () => [],
         readOperatingOrganizations: async () => [],
         readNetworkAccounts: async () => [],
       };

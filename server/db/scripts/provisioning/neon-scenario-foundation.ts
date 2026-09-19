@@ -66,18 +66,19 @@ export async function applyNeonScenarioFoundation(
     }
     await client.query(`
       INSERT INTO master.operating_organization (
-        id,tenant_id,code,name,display_name,domain,parent_operating_organization_id,
+        id,tenant_id,code,name,display_name,organization_kind,parent_operating_organization_id,
         metadata,status,created_by
       ) VALUES ($1::uuid,$2::uuid,$3,$4,$4,$5,$8::uuid,$6::jsonb,'active',$7::uuid)
       ON CONFLICT (tenant_id,code) DO UPDATE SET
-        name=EXCLUDED.name,display_name=EXCLUDED.display_name,domain=EXCLUDED.domain,
+        name=EXCLUDED.name,display_name=EXCLUDED.display_name,organization_kind=EXCLUDED.organization_kind,
         metadata=EXCLUDED.metadata,status='active',updated_by=EXCLUDED.created_by
       WHERE (master.operating_organization.name,master.operating_organization.display_name,
-        master.operating_organization.domain,master.operating_organization.metadata,
+        master.operating_organization.organization_kind,master.operating_organization.metadata,
         master.operating_organization.status) IS DISTINCT FROM
-        (EXCLUDED.name,EXCLUDED.display_name,EXCLUDED.domain,EXCLUDED.metadata,EXCLUDED.status)
+        (EXCLUDED.name,EXCLUDED.display_name,EXCLUDED.organization_kind,EXCLUDED.metadata,EXCLUDED.status)
     `, [organizationId,
-      tenantId, organization.code, organization.name, organization.domain,
+      tenantId, organization.code, organization.name,
+      organization.parentCode ? "shared_operations" : "company_operations",
       JSON.stringify(seedMetadata(inputs, "neon")), actorId, parentId ?? null]);
     const actual = await one<{ id: string; parentId: string | null }>(client, `
       SELECT id::text AS id,parent_operating_organization_id::text AS "parentId"
@@ -87,6 +88,17 @@ export async function applyNeonScenarioFoundation(
       throw new Error(`operating organization hierarchy conflict: ${tenantCode}/${organization.code}`);
     }
     operatingOrganizationIds.set(organization.code, actual.id);
+    const capabilityCodes = organization.domain === "both"
+      ? ["finance", "procurement", "people", "sales", "operations", "warehouse", "projects"]
+      : organization.domain === "shared_services" ? ["finance", "people"]
+      : [organization.domain];
+    for (const capabilityCode of capabilityCodes) await client.query(`
+      INSERT INTO master.operating_organization_capability(
+        tenant_id,operating_organization_id,capability_code,effective_from,metadata,status,created_by
+      ) VALUES($1::uuid,$2::uuid,$3,DATE '2025-01-01',$4::jsonb,'active',$5::uuid)
+      ON CONFLICT(tenant_id,operating_organization_id,capability_code,effective_from) DO UPDATE SET
+        status='active',metadata=EXCLUDED.metadata,updated_by=EXCLUDED.created_by
+    `, [tenantId, actual.id, capabilityCode, JSON.stringify(seedMetadata(inputs, "neon")), actorId]);
   }
   for (const assignment of pack.operatingOrganizationCompanyAssignments) {
     const coordinate = await one<{ organizationId: string; companyId: string }>(client, `
@@ -308,4 +320,3 @@ async function one<Row extends object>(
   if (result.rows.length !== 1) throw new Error(`expected one row, found ${result.rows.length}`);
   return result.rows[0]!;
 }
-

@@ -1,0 +1,98 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "flow",
+  "artifactKey": "business_partner_request/flow.partner.archive",
+  "entityCode": "business_partner_request",
+  "plane": "neon",
+  "flowKey": "partner.archive",
+  "journey": "governance",
+  "draftEntityCode": "business_partner_request",
+  "materializesEntityCode": "business_partner",
+  "requestContract": {
+    "kind": "required_path_contract",
+    "requestKind": "partner.archive",
+    "domainOperation": "archive",
+    "requiredPaths": [
+      "targetBusinessPartnerId",
+      "reasonCode"
+    ],
+    "payloadSchemaAuthority": "registered_governed_request_validator",
+    "rejectUnknownPaths": true,
+    "fullPayloadSchemaNotImpliedByRequiredPaths": true,
+    "requiredCoordinates": []
+  },
+  "supportedSources": [
+    "internal",
+    "api"
+  ],
+  "sourceMappings": {
+    "internal": {
+      "allowedJourneys": [
+        "governance"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "principalId"
+      ],
+      "snapshotPinned": false,
+      "source": "internal",
+      "strategy": "declarative_mapping",
+      "version": "2.0.0",
+      "reviewDecision": "explicit_governance_scope_for_this_flow"
+    },
+    "api": {
+      "allowedJourneys": [
+        "governance"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "systemCode",
+        "entityId",
+        "payloadHash"
+      ],
+      "snapshotPinned": false,
+      "source": "api",
+      "strategy": "declarative_mapping",
+      "version": "2.0.0",
+      "reviewDecision": "explicit_governance_scope_for_this_flow"
+    }
+  },
+  "steps": [
+    {
+      "stepKey": "capture",
+      "presentationRef": "business_partner_request/presentation.section.form.request.json"
+    },
+    {
+      "stepKey": "evidence",
+      "presentationRef": "business_partner_request/presentation.section.evidence.json"
+    },
+    {
+      "stepKey": "review",
+      "presentationRef": "business_partner_request/presentation.review.json",
+      "operationKey": "submit"
+    }
+  ],
+  "persistence": {
+    "saveOperation": "save_draft",
+    "resume": "persisted_draft_and_pinned_release",
+    "releaseChange": "explicit_compatible_migration_or_finish_pinned",
+    "contextChange": "invalidate_validation_and_approval"
+  },
+  "serverValidation": {
+    "onSave": "partial_draft",
+    "onSubmit": "complete_schema_and_policy",
+    "onMaterialize": "revalidate_full_authority_and_context"
+  },
+  "dependencies": [
+    "business_partner_request/core",
+    "business_partner_request/operation",
+    "business_partner_request/presentation.review",
+    "business_partner_request/presentation.section.evidence",
+    "business_partner_request/presentation.section.form.request"
+  ],
+  "artifactHash": "sha256:6120c069dd3a1cddea58118066abcd7be2885e24e034c59ed32273e8078b8ebb"
+}

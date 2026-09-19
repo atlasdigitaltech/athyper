@@ -1,0 +1,61 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_surface",
+  "artifactKey": "business_partner_request/presentation.review",
+  "entityCode": "business_partner_request",
+  "plane": "neon",
+  "surfaceKey": "review",
+  "layout": {
+    "actions": [
+      "return",
+      "reject",
+      "approve"
+    ],
+    "noSelfApproval": true,
+    "panels": [
+      "reviewedPayload",
+      "fieldDiff",
+      "validation",
+      "duplicateResolution",
+      "evidence",
+      "readiness"
+    ],
+    "version": "2.0.0"
+  },
+  "dataAuthority": "neon.governed-request.v1",
+  "fieldDiff": {
+    "baseline": "pinned_original_snapshot",
+    "proposed": "persisted_draft",
+    "missingBaseline": "unavailable_never_invent",
+    "maskBeforeDiff": true
+  },
+  "policyManifest": {
+    "source": "server_rollup_of_pinned_core_and_operations",
+    "includeChildBindings": true,
+    "authority": false,
+    "redactRestrictedDiagnostics": true
+  },
+  "actions": [
+    {
+      "operationKey": "return",
+      "placement": "review_toolbar",
+      "enabledBy": "current_server_decision"
+    },
+    {
+      "operationKey": "reject",
+      "placement": "review_toolbar",
+      "enabledBy": "current_server_decision"
+    },
+    {
+      "operationKey": "approve",
+      "placement": "review_toolbar",
+      "enabledBy": "current_server_decision"
+    }
+  ],
+  "dependencies": [
+    "business_partner_request/core"
+  ],
+  "artifactHash": "sha256:77df918f4e099022a4a1ae001f5d2cb61e09c055d56af21bb555e9a9e041a508"
+}

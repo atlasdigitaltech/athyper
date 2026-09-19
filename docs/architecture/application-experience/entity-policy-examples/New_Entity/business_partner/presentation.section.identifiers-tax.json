@@ -1,0 +1,59 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.identifiers-tax",
+  "entityCode": "business_partner_identifier",
+  "plane": "neon",
+  "sectionKey": "identifiers-tax",
+  "rendererKey": "platform.related-collection.v1",
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.identifiers-tax.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/identifiers"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "business_partner_identifier/core.json",
+  "fieldBindings": [
+    {
+      "fieldKey": "business_partner_id"
+    },
+    {
+      "fieldKey": "identifier_value"
+    }
+  ],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner_identifier.read_masked",
+    "fieldPermissions": [
+      "neon.relationship.business_partner_tax.read_masked"
+    ],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [
+    "business_partner_identifier/core",
+    "business_partner_tax_registration/core"
+  ],
+  "additionalCoreRefs": [
+    "business_partner_tax_registration/core.json"
+  ],
+  "artifactHash": "sha256:88e48ce670650b8f8542e933b220f97d5c148203c8849418dd9af215d883aa68"
+}

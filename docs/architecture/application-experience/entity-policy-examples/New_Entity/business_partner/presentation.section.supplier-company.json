@@ -1,0 +1,62 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.supplier-company",
+  "entityCode": "supplier_company_profile",
+  "plane": "neon",
+  "sectionKey": "supplier-company",
+  "rendererKey": "platform.related-collection.v1",
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.supplier-company.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/company-configuration"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "supplier_company_profile/core.json",
+  "fieldBindings": [
+    {
+      "fieldKey": "supplier_id"
+    },
+    {
+      "fieldKey": "company_code_id"
+    },
+    {
+      "fieldKey": "currency_code"
+    },
+    {
+      "fieldKey": "payment_term_id"
+    },
+    {
+      "fieldKey": "status"
+    }
+  ],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [
+    "supplier_company_profile/core"
+  ],
+  "artifactHash": "sha256:25c089239d9144ef0ce819a3276ccb75a36b3cda4d7636510c69afe56209e9f9"
+}

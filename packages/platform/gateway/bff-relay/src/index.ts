@@ -464,6 +464,13 @@ export const NEON_WORK_CONTEXTS_OPERATION: RelayOperation = Object.freeze({
   requestClass: "json",
   requiresTenant: true,
 });
+export const NEON_BUSINESS_CONTEXT_OPTIONS_OPERATION: RelayOperation = Object.freeze({
+  id: "neon.business-context-options",
+  method: "GET",
+  path: "/api/neon/business-context-options",
+  requestClass: "json",
+  requiresTenant: true,
+});
 export const NEON_OPERATING_ORGANIZATIONS_OPERATION: RelayOperation =
   Object.freeze({
     id: "neon.operating-organizations",

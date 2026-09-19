@@ -388,7 +388,7 @@ CREATE TABLE master.operating_organization (
     name                  text                                   NOT NULL,
     display_name          text,
     description           text,
-    domain                master.operating_organization_domain_d NOT NULL,
+    organization_kind     text                                   NOT NULL DEFAULT 'business_operations',
     parent_operating_organization_id uuid,
     effective_from        date,
     effective_until       date,
@@ -409,6 +409,9 @@ CREATE TABLE master.operating_organization (
     CONSTRAINT operating_organization_name_chk CHECK (
         btrim(name) <> '' AND (display_name IS NULL OR btrim(display_name) <> '')
     ),
+    CONSTRAINT operating_organization_kind_chk CHECK (
+        organization_kind IN ('company_operations','business_operations','shared_operations')
+    ),
     CONSTRAINT operating_organization_parent_self_chk
         CHECK (parent_operating_organization_id IS DISTINCT FROM id),
     CONSTRAINT operating_organization_effective_range_chk CHECK (
@@ -427,7 +430,6 @@ COMMENT ON TABLE master.operating_organization IS
 CREATE TABLE master.procurement_organization_profile (
     tenant_id                uuid                  NOT NULL,
     operating_organization_id uuid                 NOT NULL,
-    organization_type        text                  NOT NULL,
     buying_model             master.buying_model_d NOT NULL DEFAULT 'federated',
     default_currency         character(3),
     lead_company_code_id     uuid,
@@ -439,8 +441,6 @@ CREATE TABLE master.procurement_organization_profile (
 
     CONSTRAINT procurement_organization_profile_pkey
         PRIMARY KEY (tenant_id, operating_organization_id),
-    CONSTRAINT procurement_organization_profile_type_chk
-        CHECK (btrim(organization_type) <> ''),
     CONSTRAINT procurement_organization_profile_metadata_object_chk
         CHECK (jsonb_typeof(metadata) = 'object'),
     CONSTRAINT procurement_organization_profile_audit_pair_chk
@@ -450,7 +450,6 @@ CREATE TABLE master.procurement_organization_profile (
 CREATE TABLE master.sales_organization_profile (
     tenant_id                uuid                   NOT NULL,
     operating_organization_id uuid                  NOT NULL,
-    organization_type        text                   NOT NULL,
     selling_model            master.selling_model_d NOT NULL DEFAULT 'federated',
     default_currency         character(3),
     booking_company_code_id  uuid,
@@ -463,8 +462,6 @@ CREATE TABLE master.sales_organization_profile (
 
     CONSTRAINT sales_organization_profile_pkey
         PRIMARY KEY (tenant_id, operating_organization_id),
-    CONSTRAINT sales_organization_profile_type_chk
-        CHECK (btrim(organization_type) <> ''),
     CONSTRAINT sales_organization_profile_metadata_object_chk
         CHECK (jsonb_typeof(metadata) = 'object'),
     CONSTRAINT sales_organization_profile_audit_pair_chk

@@ -14,11 +14,42 @@ import { createHttpClient, ApiTransportError, type ExperienceBootstrap, type Exp
 import { getBrowserQueryClient, PlatformQueryProvider, PrincipalQueryLifecycle, type DehydratedState, type QueryClient } from "@athyper/platform-query";
 import { AccessProvider, createAccessSnapshot, type AccessDiagnostic } from "@athyper/platform-shell-runtime";
 import { validateSurfaceOpen, type SurfaceFrame, type SurfaceKind } from "@athyper/platform-surface-kit";
+import { DENSITY_STORAGE_KEY, THEME_STORAGE_KEY, type ColorMode } from "@athyper/platform-theme/tokens";
 import { Toast, ToastRegion } from "@athyper/platform-ui";
 import * as React from "react";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-const AppearanceContext = createContext<ExperienceProfile | undefined>(undefined);
+export type AppearancePreference = Partial<Pick<ExperienceProfile, "appearanceMode" | "densityCode">>;
+export interface AppearanceProfileHandle { readonly profile: ExperienceProfile; readonly setPreference: (patch: AppearancePreference) => void; }
+const AppearanceContext = createContext<AppearanceProfileHandle | undefined>(undefined);
+/** Same keys the blocking ThemeScript reads before first paint (see @athyper/platform-theme); keep them in sync to avoid a themed-then-flash-to-light reload. */
+function storedColorMode(mode: ExperienceProfile["appearanceMode"]): ColorMode | undefined {
+  if (mode === "high_contrast") return "high-contrast";
+  if (mode === "light" || mode === "dark") return mode;
+  return undefined;
+}
+function profileColorMode(value: string | null): ExperienceProfile["appearanceMode"] | undefined {
+  if (value === "high-contrast") return "high_contrast";
+  if (value === "light" || value === "dark") return value;
+  return undefined;
+}
+function readAppearancePreference(): AppearancePreference {
+  try {
+    const appearanceMode = profileColorMode(localStorage.getItem(THEME_STORAGE_KEY));
+    const storedDensity = localStorage.getItem(DENSITY_STORAGE_KEY);
+    const densityCode = storedDensity === "comfortable" || storedDensity === "compact" ? storedDensity : undefined;
+    return Object.freeze({ ...(appearanceMode ? { appearanceMode } : {}), ...(densityCode ? { densityCode } : {}) });
+  } catch { return {}; }
+}
+function writeAppearancePreference(patch: AppearancePreference): void {
+  try {
+    if (patch.appearanceMode !== undefined) {
+      const mode = storedColorMode(patch.appearanceMode);
+      if (mode) localStorage.setItem(THEME_STORAGE_KEY, mode); else localStorage.removeItem(THEME_STORAGE_KEY);
+    }
+    if (patch.densityCode !== undefined) localStorage.setItem(DENSITY_STORAGE_KEY, patch.densityCode);
+  } catch { /* Keep the in-memory choice for this session. */ }
+}
 const SessionIdentityContext = createContext<Readonly<{ state: SanitizedSession["state"]; scope?: PrincipalQueryScope }> | undefined>(undefined);
 type SessionExpiry = Readonly<{ expiresAt?: string; idleExpiresAt?: string; absoluteExpiresAt?: string }>;
 const SessionExpiryContext = createContext<SessionExpiry | undefined>(undefined);
@@ -93,26 +124,33 @@ export function AppFoundationProviders(props: AppFoundationProvidersProps) {
 }
 
 function AppearanceProvider({ profile, children }: { readonly profile: ExperienceProfile; readonly children: ReactNode }) {
-  useEffect(() => {
+  const [preference, setPreferenceState] = useState<AppearancePreference>(() => (typeof window === "undefined" ? {} : readAppearancePreference()));
+  const effectiveProfile = useMemo(() => Object.freeze({ ...profile, ...preference }), [profile, preference]);
+  useLayoutEffect(() => {
     const root = document.documentElement;
     const dark = window.matchMedia("(prefers-color-scheme: dark)");
     const contrast = window.matchMedia("(forced-colors: active), (prefers-contrast: more)");
     const apply = () => {
-      const mode = resolveProfileColorMode(profile.appearanceMode, dark.matches, contrast.matches);
+      const mode = resolveProfileColorMode(effectiveProfile.appearanceMode, dark.matches, contrast.matches);
       root.dataset.theme = mode;
-      root.dataset.density = profile.densityCode;
+      root.dataset.density = effectiveProfile.densityCode;
       root.style.colorScheme = mode === "dark" || mode === "high-contrast" ? "dark" : "light";
     };
     apply();
-    if (profile.appearanceMode !== "system") return;
+    if (effectiveProfile.appearanceMode !== "system") return;
     dark.addEventListener("change", apply);
     contrast.addEventListener("change", apply);
     return () => {
       dark.removeEventListener("change", apply);
       contrast.removeEventListener("change", apply);
     };
-  }, [profile.appearanceMode, profile.densityCode]);
-  return <AppearanceContext.Provider value={profile}>{children}</AppearanceContext.Provider>;
+  }, [effectiveProfile.appearanceMode, effectiveProfile.densityCode]);
+  const setPreference = useCallback((patch: AppearancePreference) => {
+    writeAppearancePreference(patch);
+    setPreferenceState((current) => Object.freeze({ ...current, ...patch }));
+  }, []);
+  const handle = useMemo(() => Object.freeze({ profile: effectiveProfile, setPreference }), [effectiveProfile, setPreference]);
+  return <AppearanceContext.Provider value={handle}>{children}</AppearanceContext.Provider>;
 }
 
 export function resolveProfileColorMode(appearanceMode: ExperienceProfile["appearanceMode"], systemDark = false, systemHighContrast = false): "light" | "dark" | "high-contrast" {
@@ -248,6 +286,8 @@ function sessionExpiry(value: Pick<SanitizedSession, "expiresAt" | "idleExpiresA
 function required<T>(value: T | undefined, name: string): T { if (value === undefined) throw new Error(`${name} must be used inside AppFoundationProviders`); return value; }
 function developmentAccessDiagnostic(event: AccessDiagnostic): void { if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname.endsWith(".local"))) console.warn("[athyper/access]", event); }
 export const useAppearanceProfile = () => required(useContext(AppearanceContext), "useAppearanceProfile");
+/** Non-throwing variant for shared UI that may render outside AppFoundationProviders (e.g. isolated test fixtures). */
+export const useOptionalAppearanceProfile = () => useContext(AppearanceContext);
 export const useSessionIdentity = () => required(useContext(SessionIdentityContext), "useSessionIdentity");
 export const useSessionExpiry = () => required(useContext(SessionExpiryContext), "useSessionExpiry");
 export const useSessionActions = () => required(useContext(SessionActionsContext), "useSessionActions");

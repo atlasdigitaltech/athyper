@@ -86,7 +86,7 @@ export function BusinessPartner360Shell({
     [showTransactionContext, setShowTransactionContext] = useState(false),
     [requiredCoordinates, setRequiredCoordinates] =
       useState<readonly string[]>(),
-    [, setScrollRevision] = useState(0),
+    [sectionNavigationRevision, setSectionNavigationRevision] = useState(0),
     modeNavigationRef = useRef<HTMLDivElement>(null),
     modeNavigationId = useId();
   const url = readUrl();
@@ -222,6 +222,7 @@ export function BusinessPartner360Shell({
   const navigate = useCallback(
     (
       patch: Readonly<{ section?: string; roleLens?: RoleLens; tab?: string }>,
+      { scrollToSection = false }: Readonly<{ scrollToSection?: boolean }> = {},
     ) => {
       const next = new URL(window.location.href);
       if (patch.section) next.searchParams.set("section", patch.section);
@@ -232,6 +233,8 @@ export function BusinessPartner360Shell({
       }
       window.history.pushState({}, "", next);
       setRevision((value) => value + 1);
+      if (scrollToSection)
+        setSectionNavigationRevision((value) => value + 1);
     },
     [],
   );
@@ -246,7 +249,7 @@ export function BusinessPartner360Shell({
           : undefined) ??
         panel.tabs.find((tab) => tab.sectionKey === code)?.key ??
         overviewTab.key,
-      }),
+      }, { scrollToSection: true }),
     [navigate, panel, overviewTab.key],
   );
   const contextValue = useMemo<BusinessPartner360State | undefined>(
@@ -401,16 +404,24 @@ export function BusinessPartner360Shell({
     next.searchParams.set("section", code);
     next.searchParams.set("tab", overviewTab.key);
     window.history.replaceState(window.history.state, "", next);
-    setScrollRevision((value) => value + 1);
+    setRevision((value) => value + 1);
   };
-  const navigateRecordMode = (code: string, nextTab: string) =>
+  const navigateRecordMode = (nextTab: string, preferredSection?: string) =>
     navigate({
       section:
-        nextTab === overviewTab.key && !railSections.includes(code)
+        nextTab === overviewTab.key && !railSections.includes(preferredSection ?? section)
           ? (railSections[0] ?? "overview")
-          : code,
+          : (preferredSection ?? section),
       tab: nextTab,
     });
+  const navigateRecordSection = (code: string) =>
+    navigate(
+      {
+        section: code,
+        tab: overviewTab.key,
+      },
+      { scrollToSection: true },
+    );
   return (
     <BusinessPartner360Provider value={contextValue!}>
       <PageWorkspace
@@ -419,8 +430,7 @@ export function BusinessPartner360Shell({
           <EntityRecord360ModeNavigation
             panel={panel}
             activeTab={tab.key}
-            activeSection={section}
-            onNavigate={navigateRecordMode}
+            onSelectTab={navigateRecordMode}
             navigationId={modeNavigationId}
             navigationRef={modeNavigationRef}
           />
@@ -481,8 +491,9 @@ export function BusinessPartner360Shell({
           }))}
           activeSection={section}
           activeTab={tab.key}
-          navigationRevision={revision}
-          onNavigate={navigateRecordMode}
+          navigationRevision={sectionNavigationRevision}
+          onSelectTab={navigateRecordMode}
+          onSelectSection={navigateRecordSection}
           onObserve={observeSection}
           modeNavigationId={modeNavigationId}
           modeNavigationRef={modeNavigationRef}

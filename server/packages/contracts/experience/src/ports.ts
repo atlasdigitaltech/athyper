@@ -21,6 +21,14 @@ export interface ExperienceIdentityRecord {
   readonly membershipRevision?: string;
 }
 
+export interface ExperienceLegalEntityRecord {
+  readonly legalEntityId: string;
+  readonly code: string;
+  readonly displayName: string;
+  readonly logoAssetRef?: string;
+  readonly revision: string;
+}
+
 export interface ExperienceWorkContextRecord {
   readonly companyCodeId: string;
   readonly companyCode: string;
@@ -46,7 +54,8 @@ export interface ExperienceOperatingOrganizationRecord {
   readonly id: string;
   readonly code: string;
   readonly displayName: string;
-  readonly domain: string;
+  readonly organizationKind: "company_operations" | "business_operations" | "shared_operations";
+  readonly capabilities: readonly ("finance" | "procurement" | "people" | "sales" | "operations" | "warehouse" | "projects")[];
   readonly parentId?: string;
   readonly path: readonly string[];
   readonly procurementProfileConfigured: boolean;
@@ -190,6 +199,10 @@ export interface ExperiencePlaneRepository {
   readWorkContexts(
     context: VerifiedRequestContext,
   ): Promise<readonly ExperienceWorkContextRecord[]>;
+  /** Tenant-wide Legal Entity catalog, independent of Company Code visibility — required to admit a Legal-Entity-only grant with no matching company row. */
+  readLegalEntities(
+    context: VerifiedRequestContext,
+  ): Promise<readonly ExperienceLegalEntityRecord[]>;
   readOperatingOrganizations(
     context: VerifiedRequestContext,
     at: Date,

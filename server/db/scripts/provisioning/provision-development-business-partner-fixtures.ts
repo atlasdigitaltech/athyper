@@ -480,19 +480,27 @@ export async function provisionDevelopmentBusinessPartnerFixtures(options: {
       );
 
       for (const assignment of fixture.assignments) {
-        const organization = await one<{ id: string; domain: string }>(
+        const organization = await one<{ id: string; commercial: boolean }>(
           client,
           `
-          SELECT id::text,domain::text FROM master.operating_organization
-          WHERE tenant_id=$1::uuid AND code=$2 AND status='active'
+          SELECT organization.id::text,EXISTS(
+            SELECT 1 FROM master.operating_organization_capability capability
+            WHERE capability.tenant_id=organization.tenant_id
+              AND capability.operating_organization_id=organization.id
+              AND capability.capability_code IN ('procurement','sales')
+              AND capability.status='active'
+              AND capability.effective_from<=CURRENT_DATE
+              AND (capability.effective_until IS NULL OR capability.effective_until>CURRENT_DATE)
+          ) AS commercial FROM master.operating_organization organization
+          WHERE organization.tenant_id=$1::uuid AND organization.code=$2 AND organization.status='active'
         `,
           [coordinate.tenantId, assignment.organizationCode],
         );
         if (
-          !new Set(["procurement", "sales", "both"]).has(organization.domain)
+          !organization.commercial
         ) {
           throw new Error(
-            `business-partner fixture organization is not commercial: ${fixture.tenantCode}/${assignment.organizationCode}/${organization.domain}`,
+            `business-partner fixture organization has no commercial capability: ${fixture.tenantCode}/${assignment.organizationCode}`,
           );
         }
         await client.query(

@@ -15,7 +15,7 @@ import {
   intakeConditionMatches,
   type EntityIntakeFlowV1,
 } from "@athyper/contract-platform-entity-runtime";
-import { useRegisterEntityTaskHeader } from "@athyper/platform-shell";
+import { useRegisterEntityTaskHeader, useContextDepartureGuard } from "@athyper/platform-shell";
 import { Button } from "@athyper/platform-ui";
 import {
   assertIntakeReadyToSubmit,
@@ -100,6 +100,7 @@ export function EntityIntake({
   }, [dirty]);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string>();
+  useContextDepartureGuard({ dirty: dirty || presentation.saveState === "unsaved", busy });
   const step = flow.steps.find((s) => s.key === state.currentStep)!;
   const mounted = useRef(true);
   useEffect(() => {

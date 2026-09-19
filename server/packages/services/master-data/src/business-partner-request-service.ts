@@ -54,6 +54,8 @@ export interface BusinessPartnerRequestServiceOptions<Transaction> {
   readonly outbox: OutboxWriter<Transaction>;
   readonly onboardingCycles?: BusinessPartnerOnboardingCycleCoordinator<Transaction>;
   readonly validateIntake?: (command: CreateBusinessPartnerRequestCommand) => Promise<void>;
+  /** Shared admission check for Type A company/organization commands. */
+  readonly validateBusinessContext?: (command: CreateBusinessPartnerRequestCommand) => Promise<void>;
   readonly createRequestNo?: () => string;
 }
 
@@ -67,6 +69,7 @@ export function createBusinessPartnerRequestService<Transaction>(
     async preflightCreate(command) {
       assertContext(command.context);
       validateCreate(command);
+      await options.validateBusinessContext?.(command);
       await authorize(
         options.authorizer,
         command.context,
@@ -140,6 +143,7 @@ export function createBusinessPartnerRequestService<Transaction>(
     async create(command) {
       assertContext(command.context);
       validateCreate(command);
+      await options.validateBusinessContext?.(command);
       await authorize(
         options.authorizer,
         command.context,

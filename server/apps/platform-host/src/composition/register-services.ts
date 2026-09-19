@@ -3527,6 +3527,10 @@ export function registerServices(
       {
         supplierSubmission,
         guardAmendment: supplierEdits.guard,
+        ...(container.platform.experience ? {validateBusinessContext: async (command) => {
+          if (!command.operatingOrganizationId || !command.companyCodeId) return;
+          await container.platform.experience!.service.validateNeonBusinessContext(command.context, "neon.relationship.entity_case.create", {companyCodeId: command.companyCodeId, operatingOrganizationId: command.operatingOrganizationId});
+        }} : {}),
         authorizer: businessPartnerAuthorizer,
         repository,
         transactions,

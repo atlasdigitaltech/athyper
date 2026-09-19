@@ -1,4 +1,5 @@
 "use client";
+import { useContextDepartureGuard } from "@athyper/platform-shell";
 import { businessLabel } from "./360/display-values";
 
 import type {
@@ -359,6 +360,7 @@ export function DecisionDialog({
 }
 
 export function useGuardedNavigation(dirty: boolean) {
+  useContextDepartureGuard({ dirty, busy: false });
   const navigation = useApplicationNavigation();
   const [pendingHref, setPendingHref] = useState<string>();
   useEffect(() => {

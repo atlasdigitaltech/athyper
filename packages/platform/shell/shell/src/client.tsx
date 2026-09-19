@@ -81,6 +81,7 @@ export interface HeaderContextIdentityProps {
   readonly hoverLines?: readonly string[];
 }
 export interface ShellContextSelectorProps extends HeaderContextIdentityProps {
+  readonly selectionRevision?: string | number;
   readonly ariaLabel: string;
   readonly className?: string;
   readonly interactive: boolean;
@@ -439,6 +440,11 @@ export function ShellChrome({
                   setAtlasOpen((value) => !value);
                 }}
                 onActiveChange={changeHeaderAction}
+                applicationName={applicationName}
+                planeDescriptor={planeDescriptor}
+                currentLocale={currentLocale}
+                localePolicy={localePolicy}
+                onLocaleChange={onLocaleChange}
               />
             }
           />
@@ -856,6 +862,7 @@ function BusinessContext({
 }
 
 export function ShellContextSelector({
+  selectionRevision,
   ariaLabel,
   className,
   name,
@@ -881,6 +888,14 @@ export function ShellContextSelector({
     onCloseRef = useRef(onClose);
   onOpenRef.current = onOpen;
   onCloseRef.current = onClose;
+  const previousSelectionRevision = useRef(selectionRevision);
+  useEffect(() => {
+    if (previousSelectionRevision.current === selectionRevision) return;
+    previousSelectionRevision.current = selectionRevision;
+    if (setCoordinatedContext) setCoordinatedContext(contextId, false);
+    else if (details.current) details.current.open = false;
+    details.current?.querySelector("summary")?.focus();
+  }, [selectionRevision, contextId, setCoordinatedContext]);
   useEffect(
     () => () => setCoordinatedContext?.(contextId, false),
     [contextId, setCoordinatedContext],
@@ -1073,7 +1088,9 @@ export function HeaderContextIdentity({
       {showMark ? (
         safeLogo ? (
           <span className="athyper-context-identity__logo">
-            <img src={safeLogo} alt="" onError={() => setLogoFailed(true)} />
+            <span className="athyper-context-identity__logo-frame">
+              <img src={safeLogo} alt="" onError={() => setLogoFailed(true)} />
+            </span>
             {switchable ? <SwitchBadge /> : null}
           </span>
         ) : (

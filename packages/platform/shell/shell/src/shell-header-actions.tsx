@@ -7,10 +7,12 @@ import {
   MoreHorizontalIcon,
   InboxIcon,
   SearchIcon,
+  SettingsIcon,
   AtlasBrandIcon,
   CircleCheckIcon,
   resolveIcon,
 } from "@athyper/platform-icons";
+import type { SupportedLocale } from "@athyper/platform-i18n";
 import { ShellSurfaceBoundary } from "./shell-surface-boundary";
 import { activityCount } from "./activity-counts";
 import { useShellI18n } from "./shell-i18n";
@@ -20,6 +22,7 @@ import {
   ShellActivityCenter,
   type ShellActivityDataSource,
 } from "./activity-center";
+import { UtilitiesMenu } from "./shell-utilities-menu";
 
 export function HeaderActions({
   navigation,
@@ -28,6 +31,11 @@ export function HeaderActions({
   atlasOpen,
   onAtlasToggle,
   onActiveChange,
+  applicationName,
+  planeDescriptor,
+  currentLocale,
+  localePolicy,
+  onLocaleChange,
 }: {
   readonly navigation: DerivedShellNavigation;
   readonly activity?: ShellActivityDataSource;
@@ -35,6 +43,11 @@ export function HeaderActions({
   readonly atlasOpen: boolean;
   readonly onAtlasToggle: (opener: HTMLButtonElement) => void;
   readonly onActiveChange: (next?: HeaderActionKind) => void;
+  readonly applicationName: string;
+  readonly planeDescriptor?: string;
+  readonly currentLocale?: string;
+  readonly localePolicy?: Readonly<{ enabledLocales: readonly SupportedLocale[] }>;
+  readonly onLocaleChange?: (localeCode: SupportedLocale) => Promise<void>;
 }) {
   const t = useShellI18n().message;
   const [query, setQuery] = useState("");
@@ -54,7 +67,7 @@ export function HeaderActions({
     const shortcut = (event: KeyboardEvent) => {
       if (
         event.key === "Escape" &&
-        (active === "search" || active === "agent" || active === "more")
+        (active === "search" || active === "agent" || active === "utilities" || active === "more")
       )
         closeAction();
     };
@@ -67,7 +80,7 @@ export function HeaderActions({
         target.closest(".athyper-activity-center__scrim")
       )
         return;
-      if (active === "search" || active === "agent" || active === "more")
+      if (active === "search" || active === "agent" || active === "utilities" || active === "more")
         onActiveChange();
     };
     window.addEventListener("keydown", shortcut);
@@ -134,6 +147,12 @@ export function HeaderActions({
         onClick={(opener) => toggle("inbox", opener)}
       />
       <HeaderActionButton
+        kind="utilities"
+        label={t("shell.actions.utilities")}
+        active={active === "utilities"}
+        onClick={(opener) => toggle("utilities", opener)}
+      />
+      <HeaderActionButton
         kind="agent"
         label="Atlas"
         active={atlasOpen}
@@ -184,6 +203,12 @@ export function HeaderActions({
             active={false}
             count={unreadCount}
             onClick={(opener) => toggle("notifications", opener)}
+          />
+          <HeaderActionButton
+            kind="utilities"
+            label={t("shell.actions.utilities")}
+            active={false}
+            onClick={(opener) => toggle("utilities", opener)}
           />
           <HeaderActionButton
             kind="agent"
@@ -274,6 +299,30 @@ export function HeaderActions({
           </section>
         </ShellSurfaceBoundary>
       ) : null}
+      {active === "utilities" ? (
+        <ShellSurfaceBoundary label="Utilities recovery" onClose={closeAction}>
+          <section
+            id="header-utilities-panel"
+            className="athyper-shell__action-panel athyper-shell__action-panel--utilities"
+            role="dialog"
+            aria-label={t("shell.utilities.title")}
+          >
+            <header>
+              <div>
+                <strong>{t("shell.utilities.title")}</strong>
+              </div>
+              <kbd>Esc</kbd>
+            </header>
+            <UtilitiesMenu
+              applicationName={applicationName}
+              planeDescriptor={planeDescriptor}
+              currentLocale={currentLocale}
+              localePolicy={localePolicy}
+              onLocaleChange={onLocaleChange}
+            />
+          </section>
+        </ShellSurfaceBoundary>
+      ) : null}
     </div>
   );
 }
@@ -329,6 +378,7 @@ function HeaderGlyph({ kind }: { readonly kind: HeaderActionKind }) {
   if (kind === "search") return <SearchIcon />;
   if (kind === "notifications") return <BellIcon />;
   if (kind === "inbox") return <InboxIcon />;
+  if (kind === "utilities") return <SettingsIcon />;
   return <AtlasBrandIcon />;
 }
 function ActionEmpty({

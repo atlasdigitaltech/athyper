@@ -213,18 +213,25 @@ async function provisionR2Organization(
     environment: "local_acceptance",
   });
   await client.query(
-    `INSERT INTO master.operating_organization(id,tenant_id,code,name,domain,metadata,status,created_by)
-    VALUES($1,$2,'acceptance.bp.r2','Business Partner R2 acceptance','both',$3::jsonb,'active',$4)
+    `INSERT INTO master.operating_organization(id,tenant_id,code,name,organization_kind,metadata,status,created_by)
+    VALUES($1,$2,'acceptance.bp.r2','Business Partner R2 acceptance','shared_operations',$3::jsonb,'active',$4)
     ON CONFLICT(tenant_id,id) DO NOTHING`,
     [organizationId, context.tenant_id, metadata, context.actor_id],
   );
-  const organization = await one<{ domain: string; pack: string }>(
+  const organization = await one<{ pack: string }>(
     client,
-    `SELECT domain,metadata#>>'{_seed,pack}' pack FROM master.operating_organization WHERE tenant_id=$1 AND id=$2`,
+    `SELECT metadata#>>'{_seed,pack}' pack FROM master.operating_organization WHERE tenant_id=$1 AND id=$2`,
     [context.tenant_id, organizationId],
   );
-  if (organization.domain !== "both" || organization.pack !== PACK)
+  if (organization.pack !== PACK)
     throw new Error("R2 organization is not the owned dual-capability fixture");
+  await client.query(
+    `INSERT INTO master.operating_organization_capability(tenant_id,operating_organization_id,capability_code,effective_from,metadata,status,created_by)
+     SELECT $1,$2,capability, CURRENT_DATE,$3::jsonb,'active',$4
+     FROM unnest(ARRAY['procurement','sales']) capability
+     ON CONFLICT(tenant_id,operating_organization_id,capability_code,effective_from) DO UPDATE SET status='active',metadata=EXCLUDED.metadata,updated_by=EXCLUDED.created_by`,
+    [context.tenant_id, organizationId, metadata, context.actor_id],
+  );
   const companies = await client.query<{ id: string }>(
     `SELECT company_code_id::text id FROM master.operating_organization_company_assignment
     WHERE tenant_id=$1 AND operating_organization_id=$2 AND status='active' AND effective_from<=CURRENT_DATE
@@ -247,8 +254,8 @@ async function provisionR2Organization(
       ],
     );
   await client.query(
-    `INSERT INTO master.procurement_organization_profile(tenant_id,operating_organization_id,organization_type,default_currency,lead_company_code_id,created_by)
-    SELECT tenant_id,$2,'acceptance',default_currency,lead_company_code_id,$4 FROM master.procurement_organization_profile
+    `INSERT INTO master.procurement_organization_profile(tenant_id,operating_organization_id,default_currency,lead_company_code_id,created_by)
+    SELECT tenant_id,$2,default_currency,lead_company_code_id,$4 FROM master.procurement_organization_profile
     WHERE tenant_id=$1 AND operating_organization_id=$3 ON CONFLICT DO NOTHING`,
     [
       context.tenant_id,
@@ -258,8 +265,8 @@ async function provisionR2Organization(
     ],
   );
   await client.query(
-    `INSERT INTO master.sales_organization_profile(tenant_id,operating_organization_id,organization_type,default_currency,booking_company_code_id,invoicing_company_code_id,created_by)
-    SELECT $1,$2,'acceptance',functional_currency,id,id,$4 FROM master.company_code WHERE tenant_id=$1 AND id=$3 ON CONFLICT DO NOTHING`,
+    `INSERT INTO master.sales_organization_profile(tenant_id,operating_organization_id,default_currency,booking_company_code_id,invoicing_company_code_id,created_by)
+    SELECT $1,$2,functional_currency,id,id,$4 FROM master.company_code WHERE tenant_id=$1 AND id=$3 ON CONFLICT DO NOTHING`,
     [
       context.tenant_id,
       organizationId,

@@ -19,8 +19,12 @@ import {
 const NEON_APPLICATION_NAME = getPlaneBrand("neon").applicationName;
 import {
   useNeonOperatingOrganization,
+  useNeonWorkContext,
+  useWorkspaceContextSummary,
+  WorkspaceContextControl,
 } from "@athyper/product-neon-shell";
-import { type ReactNode } from "react";
+import { useDirectoryFilters } from "@athyper/platform-entity-list-view";
+import { useState, type ReactNode } from "react";
 import {
   NeonScopeAdapter,
   supportsNeonWorkContextResolver,
@@ -138,6 +142,7 @@ export function NeonEntityApplication({
 }
 export { EntityApplicationSection as NeonEntityApplicationSection };
 
+/** Nav-band scope control for entities that publish a workContext requirement (design doc §10.1). Stages Company Code / Operating Organization locally and commits both the shared directory adapter and the list's scope coordinate together on Apply. */
 function NeonRequiredContext({
   scope,
   value,
@@ -148,7 +153,32 @@ function NeonRequiredContext({
   readonly onChange: (value: EntityListScopeCoordinateV1 | undefined) => void;
 }) {
   const operating = useNeonOperatingOrganization();
+  const work = useNeonWorkContext();
+  const directory = useDirectoryFilters();
   const requirement = scope.workContext;
+  const committedCompanyCodeId = directory?.value.companyCodeIds?.[0];
+  const committedOrganizationId = value?.operatingOrganizationId;
+  const [pendingCompanyCodeId, setPendingCompanyCodeId] = useState<string>();
+  const [pendingOrganizationId, setPendingOrganizationId] = useState<string>();
+  const effectiveCompanyCodeId = pendingCompanyCodeId ?? committedCompanyCodeId;
+  const effectiveOrganizationId = pendingOrganizationId ?? committedOrganizationId;
+  const status =
+    operating.status === "loading" || work.status === "loading"
+      ? "resolving"
+      : operating.status === "error"
+        ? "error"
+        : "ready";
+  const organizationLabel = operating.organizations.find(
+    (item) => item.id === effectiveOrganizationId,
+  )?.displayName;
+  const companyLabel = work.companies.find(
+    (item) => item.companyCodeId === effectiveCompanyCodeId,
+  )?.code;
+  const summary = useWorkspaceContextSummary({
+    companyLabel,
+    organizationLabel,
+    required: true,
+  });
   if (!requirement) return null;
   // Registered readers currently require one organization. Unsupported contracts stay closed.
   if (
@@ -162,39 +192,46 @@ function NeonRequiredContext({
       </p>
     );
   return (
-    <div className="a-entity-list__scope">
-      <label>
-        Operating organization
-        <select
-          aria-label="Work context organization"
-          value={value?.operatingOrganizationId ?? ""}
-          disabled={
-            operating.status !== "ready" || !operating.organizations.length
-          }
-          onChange={(event) =>
-            onChange(
-              event.target.value
-                ? { operatingOrganizationId: event.target.value }
-                : undefined,
-            )
-          }
-        >
-          <option value="">
-            {operating.status === "loading"
-              ? "Loading organizations…"
-              : operating.status === "error"
-                ? "Organizations unavailable"
-                : !operating.organizations.length
-                  ? "No organizations available"
-                  : "Select organization"}
-          </option>
-          {operating.organizations.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.code} · {item.displayName}
-            </option>
-          ))}
-        </select>
-      </label>
-    </div>
+    <WorkspaceContextControl
+      mode="editable"
+      status={status}
+      summary={summary}
+      pendingCompanyCodeId={effectiveCompanyCodeId}
+      pendingOperatingOrganizationId={effectiveOrganizationId}
+      companies={work.companies}
+      organizations={operating.organizations}
+      onOpenChange={(open) => {
+        setPendingCompanyCodeId(open ? committedCompanyCodeId : undefined);
+        setPendingOrganizationId(open ? committedOrganizationId : undefined);
+      }}
+      onPendingChange={({ companyCodeId, operatingOrganizationId }) => {
+        setPendingCompanyCodeId(companyCodeId);
+        setPendingOrganizationId(operatingOrganizationId);
+      }}
+      onApply={() => {
+        const organizationId = pendingOrganizationId;
+        const organization = organizationId
+          ? operating.organizations.find((item) => item.id === organizationId)
+          : undefined;
+        const nextCompany =
+          organization?.companyAssignments.length === 1
+            ? organization.companyAssignments[0]?.companyCodeId
+            : pendingCompanyCodeId;
+        directory?.apply({
+          ...(directory?.value ?? {}),
+          operatingOrganizationIds: organizationId ? [organizationId] : [],
+          companyCodeIds: nextCompany ? [nextCompany] : [],
+        });
+        onChange(organizationId ? { operatingOrganizationId: organizationId } : undefined);
+        setPendingCompanyCodeId(undefined);
+        setPendingOrganizationId(undefined);
+      }}
+      error={
+        operating.status === "error"
+          ? "Operating-organization access is unavailable"
+          : undefined
+      }
+      retry={operating.retry}
+    />
   );
 }

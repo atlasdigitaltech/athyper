@@ -1084,28 +1084,26 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, master
 AS $$
 DECLARE
-    v_domain master.operating_organization_domain_d;
+    v_capability master.operating_organization_capability_d;
     v_company_ids uuid[];
     v_company_id uuid;
 BEGIN
-    SELECT organization.domain
-      INTO v_domain
-      FROM master.operating_organization AS organization
-     WHERE organization.tenant_id = NEW.tenant_id
-       AND organization.id = NEW.operating_organization_id;
-
-    IF v_domain IS NULL THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM master.operating_organization AS organization
+         WHERE organization.tenant_id = NEW.tenant_id
+           AND organization.id = NEW.operating_organization_id
+    ) THEN
         RAISE EXCEPTION 'Operating organization does not exist in tenant'
             USING ERRCODE = 'foreign_key_violation';
     END IF;
-    IF TG_TABLE_NAME = 'procurement_organization_profile'
-       AND v_domain NOT IN ('procurement', 'both') THEN
-        RAISE EXCEPTION 'Procurement profile requires procurement or both domain'
-            USING ERRCODE = 'check_violation';
-    END IF;
-    IF TG_TABLE_NAME = 'sales_organization_profile'
-       AND v_domain NOT IN ('sales', 'both') THEN
-        RAISE EXCEPTION 'Sales profile requires sales or both domain'
+    v_capability := CASE TG_TABLE_NAME WHEN 'procurement_organization_profile' THEN 'procurement' WHEN 'sales_organization_profile' THEN 'sales' END;
+    IF NOT EXISTS (
+        SELECT 1 FROM master.operating_organization_capability capability
+         WHERE capability.tenant_id=NEW.tenant_id AND capability.operating_organization_id=NEW.operating_organization_id
+           AND capability.capability_code=v_capability AND capability.status='active'
+           AND capability.effective_from<=CURRENT_DATE AND (capability.effective_until IS NULL OR capability.effective_until>CURRENT_DATE)
+    ) THEN
+        RAISE EXCEPTION 'Operating organization lacks required % capability', v_capability
             USING ERRCODE = 'check_violation';
     END IF;
 
@@ -3789,7 +3787,7 @@ AS $$
 DECLARE
     v_partner_id uuid;
     v_role master.partner_role_d;
-    v_domain master.operating_organization_domain_d;
+    v_capability master.operating_organization_capability_d;
 BEGIN
     v_partner_id := NEW.business_partner_id;
     v_role := NEW.partner_role;
@@ -3813,14 +3811,15 @@ BEGIN
     END IF;
 
     IF TG_TABLE_NAME = 'business_partner_operating_organization_assignment' THEN
-        SELECT domain INTO v_domain
-          FROM master.operating_organization
-         WHERE tenant_id = NEW.tenant_id
-           AND id = NEW.operating_organization_id;
-        IF (v_role = 'supplier' AND v_domain NOT IN ('procurement', 'both'))
-           OR (v_role = 'customer' AND v_domain NOT IN ('sales', 'both')) THEN
-            RAISE EXCEPTION 'Partner role % is incompatible with organization domain %',
-                v_role, v_domain
+        v_capability := CASE v_role WHEN 'supplier' THEN 'procurement' ELSE 'sales' END;
+        IF NOT EXISTS (
+            SELECT 1 FROM master.operating_organization_capability capability
+             WHERE capability.tenant_id=NEW.tenant_id AND capability.operating_organization_id=NEW.operating_organization_id
+               AND capability.capability_code=v_capability AND capability.status='active'
+               AND capability.effective_from<=CURRENT_DATE AND (capability.effective_until IS NULL OR capability.effective_until>CURRENT_DATE)
+        ) THEN
+            RAISE EXCEPTION 'Partner role % requires operating organization capability %',
+                v_role, v_capability
                 USING ERRCODE = 'check_violation';
         END IF;
     END IF;

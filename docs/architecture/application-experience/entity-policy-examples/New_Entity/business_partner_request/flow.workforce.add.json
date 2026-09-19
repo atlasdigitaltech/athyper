@@ -1,0 +1,149 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "flow",
+  "artifactKey": "business_partner_request/flow.workforce.add",
+  "entityCode": "business_partner_request",
+  "plane": "neon",
+  "flowKey": "workforce.add",
+  "journey": "workforce",
+  "draftEntityCode": "business_partner_request",
+  "materializesEntityCode": "business_partner",
+  "requestContract": {
+    "kind": "required_path_contract",
+    "requestKind": "workforce.add",
+    "domainOperation": "add_workforce",
+    "requiredPaths": [
+      "targetBusinessPartnerId",
+      "person.firstName",
+      "person.lastName",
+      "person.personalEmail",
+      "person.phone",
+      "person.consent",
+      "scope.legalEntityId",
+      "scope.companyCodeId",
+      "scope.orgUnitId",
+      "employment.startDate"
+    ],
+    "payloadSchemaAuthority": "registered_governed_request_validator",
+    "rejectUnknownPaths": true,
+    "fullPayloadSchemaNotImpliedByRequiredPaths": true,
+    "requiredCoordinates": [
+      "legalEntityId",
+      "companyCodeId",
+      "orgUnitId"
+    ]
+  },
+  "supportedSources": [
+    "internal",
+    "portal",
+    "import",
+    "api"
+  ],
+  "sourceMappings": {
+    "internal": {
+      "allowedJourneys": [
+        "supplier",
+        "customer",
+        "workforce"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "principalId"
+      ],
+      "snapshotPinned": false,
+      "source": "internal",
+      "strategy": "declarative_mapping",
+      "version": "2.0.0"
+    },
+    "portal": {
+      "allowedJourneys": [
+        "supplier",
+        "customer",
+        "workforce"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "invitationId",
+        "applicantPrincipalId"
+      ],
+      "snapshotPinned": false,
+      "source": "portal",
+      "strategy": "declarative_mapping",
+      "version": "2.0.0"
+    },
+    "import": {
+      "allowedJourneys": [
+        "supplier",
+        "customer",
+        "workforce"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "systemCode",
+        "entityId",
+        "payloadHash"
+      ],
+      "snapshotPinned": false,
+      "source": "import",
+      "strategy": "declarative_mapping",
+      "version": "2.0.0"
+    },
+    "api": {
+      "allowedJourneys": [
+        "supplier",
+        "customer",
+        "workforce"
+      ],
+      "destination": "business_partner_request",
+      "directMasterWrite": false,
+      "requiredProvenance": [
+        "systemCode",
+        "entityId",
+        "payloadHash"
+      ],
+      "snapshotPinned": false,
+      "source": "api",
+      "strategy": "declarative_mapping",
+      "version": "2.0.0"
+    }
+  },
+  "steps": [
+    {
+      "stepKey": "capture",
+      "presentationRef": "business_partner_request/presentation.section.form.workforceReview.json"
+    },
+    {
+      "stepKey": "evidence",
+      "presentationRef": "business_partner_request/presentation.section.evidence.json"
+    },
+    {
+      "stepKey": "review",
+      "presentationRef": "business_partner_request/presentation.review.json",
+      "operationKey": "submit"
+    }
+  ],
+  "persistence": {
+    "saveOperation": "save_draft",
+    "resume": "persisted_draft_and_pinned_release",
+    "releaseChange": "explicit_compatible_migration_or_finish_pinned",
+    "contextChange": "invalidate_validation_and_approval"
+  },
+  "serverValidation": {
+    "onSave": "partial_draft",
+    "onSubmit": "complete_schema_and_policy",
+    "onMaterialize": "revalidate_full_authority_and_context"
+  },
+  "dependencies": [
+    "business_partner_request/core",
+    "business_partner_request/operation",
+    "business_partner_request/presentation.review",
+    "business_partner_request/presentation.section.evidence",
+    "business_partner_request/presentation.section.form.workforceReview"
+  ],
+  "artifactHash": "sha256:632d14b84e222b8b51ba342c574124e45d16b4d8773e976788d30bb87a714b22"
+}

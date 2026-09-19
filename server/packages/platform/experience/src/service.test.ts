@@ -4,7 +4,7 @@ import { LOCALE_REGISTRY } from "@athyper/platform-i18n";
 import { createExactPlaneRepositoryProvider } from "@athyper/server-foundation/transaction";
 import { validateRuntimeSchema } from "@athyper/server-runtime-http";
 import { describe, expect, it } from "vitest";
-import { experienceBootstrapSchema, meshNetworkAccountCatalogSchema, neonOperatingOrganizationCatalogSchema } from "./contracts.js";
+import { experienceBootstrapSchema, meshNetworkAccountCatalogSchema, neonBusinessContextOptionsSchema, neonOperatingOrganizationCatalogSchema } from "./contracts.js";
 import type { ExperiencePlaneRepository } from "./ports.js";
 import { createExperienceInvalidationHooks, createExperienceService, createMemoryExperienceCache, ExperienceAccessError } from "./service.js";
 
@@ -23,6 +23,7 @@ function repository(overrides: Partial<ExperiencePlaneRepository> = {}): Experie
     async readCatalog() { return { planActive: true, planRevision: "plan:1", associations: [{ workspaceCode: "finance", workspaceName: "Finance", workspaceSortOrder: 2, moduleId, moduleCode: "invoicing", moduleName: "Invoicing", moduleSortOrder: 3, primary: true, revision: "catalog:1" }], permissions: [{ code: "finance.invoice.read", moduleId, revision: "permission:1" }] }; },
     async readFeatures() { return [{ id: "feature-1", code: "finance.invoice_v2", moduleId, kind: "release_gate", cohortStrategy: "principal_fnv1a_v2", defaultEnabled: false, overrideEnabled: true, metadata: {}, revision: "flag:1" }, { id: "feature-2", code: "finance.future", moduleId, kind: "release_gate", cohortStrategy: "principal_fnv1a_v2", defaultEnabled: true, metadata: { minimumClientVersion: "2.0.0" }, revision: "flag:2" }]; },
     async readWorkContexts(){return[];},
+    async readLegalEntities(){return[];},
     async readOperatingOrganizations(){return[];},
     async readNetworkAccounts(){return[];},
     ...overrides,
@@ -163,23 +164,125 @@ describe("experience effective-access projection", () => {
     await expect(service(repo).neonWorkContexts(context)).resolves.toMatchObject({companies:[],supportsAllPermitted:false});
   });
 
+  it("discovers first-class Legal Entities only through the selected command permission and fails aggregate mode closed",async()=>{
+    const companyA="50000000-0000-4000-8000-000000000001",companyB="50000000-0000-4000-8000-000000000002",legalA="60000000-0000-4000-8000-000000000001",legalB="60000000-0000-4000-8000-000000000002",action="neon.procurement.purchase_order.create";
+    const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:action,tenantWide:false,legalEntityIds:[legalA,legalB],companyCodeIds:[],operatingOrganizationIds:[],networkMembershipIds:[],visibility:"team" as const},{permissionCode:"neon.finance.invoice.read",tenantWide:false,legalEntityIds:[legalA],companyCodeIds:[],operatingOrganizationIds:[],networkMembershipIds:[],visibility:"team" as const}]}};
+    const repo=repository({async readWorkContexts(){return[{companyCodeId:companyA,companyCode:"alpha",companyDisplayName:"Alpha",legalEntityId:legalA,legalEntityCode:"le-alpha",legalEntityName:"Alpha Legal",functionalCurrency:"MYR",revision:"a"},{companyCodeId:companyB,companyCode:"beta",companyDisplayName:"Beta",legalEntityId:legalB,legalEntityCode:"le-beta",legalEntityName:"Beta Legal",functionalCurrency:"SGD",revision:"b"}];}});
+    const result=await service(repo).neonBusinessContextOptions(scoped,action);
+    expect(result).toMatchObject({schemaVersion:2,actionPermissionCode:action,supportsAllPermitted:false});expect(result.legalEntities.map(item=>item.legalEntityId)).toEqual([legalA,legalB]);expect(validateRuntimeSchema(neonBusinessContextOptionsSchema,result)).toBe(result);
+  });
+
+  it("allows aggregate context only for an explicitly published command permission",async()=>{
+    const action="neon.procurement.purchase_order.create",companyA="50000000-0000-4000-8000-000000000001",companyB="50000000-0000-4000-8000-000000000002",legalA="60000000-0000-4000-8000-000000000001";
+    const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:action,tenantWide:false,legalEntityIds:[legalA],companyCodeIds:[],operatingOrganizationIds:[],networkMembershipIds:[],visibility:"team" as const}]}};
+    const repo=repository({async readWorkContexts(){return[{companyCodeId:companyA,companyCode:"alpha",companyDisplayName:"Alpha",legalEntityId:legalA,legalEntityCode:"le-alpha",legalEntityName:"Alpha Legal",functionalCurrency:"MYR",revision:"a"},{companyCodeId:companyB,companyCode:"beta",companyDisplayName:"Beta",legalEntityId:legalA,legalEntityCode:"le-alpha",legalEntityName:"Alpha Legal",functionalCurrency:"MYR",revision:"b"}];}});
+    const value=createExperienceService({repositories:createExactPlaneRepositoryProvider({neon:repo}),aggregateContextPermissionCodes:new Set([action])});
+    expect((await value.neonBusinessContextOptions(scoped,action)).supportsAllPermitted).toBe(true);
+  });
+
+  it("rejects a forged company or incompatible operating organization before a command runs",async()=>{
+    const action="neon.procurement.purchase_order.create",companyA="50000000-0000-4000-8000-000000000001",companyB="50000000-0000-4000-8000-000000000002",legalA="60000000-0000-4000-8000-000000000001",organizationA="70000000-0000-4000-8000-000000000001";
+    const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:action,tenantWide:false,legalEntityIds:[legalA],companyCodeIds:[],operatingOrganizationIds:[organizationA],networkMembershipIds:[],visibility:"team" as const}]}};
+    const repo=repository({async readWorkContexts(){return[{companyCodeId:companyA,companyCode:"alpha",companyDisplayName:"Alpha",legalEntityId:legalA,legalEntityCode:"le-alpha",legalEntityName:"Alpha Legal",functionalCurrency:"MYR",revision:"a"},{companyCodeId:companyB,companyCode:"beta",companyDisplayName:"Beta",legalEntityId:"60000000-0000-4000-8000-000000000002",legalEntityCode:"le-beta",legalEntityName:"Beta Legal",functionalCurrency:"SGD",revision:"b"}];},async readOperatingOrganizations(){return[{id:organizationA,code:"procurement",displayName:"Procurement",organizationKind:"shared_operations",capabilities:["procurement"],path:["Procurement"],procurementProfileConfigured:true,salesProfileConfigured:false,assignments:[{companyCodeId:companyA,participationRole:"lead",effectiveFrom:"2026-01-01",revision:"assignment"}],revision:"organization"}];}});
+    const value=service(repo);
+    await expect(value.validateNeonBusinessContext(scoped,action,{legalEntityId:legalA,companyCodeId:companyA,operatingOrganizationId:organizationA})).resolves.toMatchObject({companyCodeId:companyA});
+    await expect(value.validateNeonBusinessContext(scoped,action,{legalEntityId:legalA,companyCodeId:companyB})).rejects.toMatchObject({status:403,code:"EXPERIENCE_COMPANY_NOT_PERMITTED"});
+  });
+
   it("intersects operating-organization and company authorization without member-company propagation",async()=>{
     const companyA="50000000-0000-4000-8000-000000000001",companyB="50000000-0000-4000-8000-000000000002",legalA="60000000-0000-4000-8000-000000000001",legalB="60000000-0000-4000-8000-000000000002",organizationA="70000000-0000-4000-8000-000000000001",organizationB="70000000-0000-4000-8000-000000000002";
     const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:"neon.procurement.purchase_order.create",tenantWide:false,legalEntityIds:[legalA],companyCodeIds:[],operatingOrganizationIds:[organizationA],networkMembershipIds:[],visibility:"team" as const}]}};
     const repo=repository({
       async readWorkContexts(){return[{companyCodeId:companyA,companyCode:"alpha",companyDisplayName:"Alpha",legalEntityId:legalA,legalEntityCode:"le-alpha",legalEntityName:"Alpha Legal",functionalCurrency:"MYR",revision:"company:a"},{companyCodeId:companyB,companyCode:"beta",companyDisplayName:"Beta",legalEntityId:legalB,legalEntityCode:"le-beta",legalEntityName:"Beta Legal",functionalCurrency:"SGD",revision:"company:b"}];},
-      async readOperatingOrganizations(){return[{id:organizationA,code:"global.buy",displayName:"Global Procurement",domain:"procurement",path:["Global Procurement"],procurementProfileConfigured:true,salesProfileConfigured:false,leadCompanyCodeId:companyA,assignments:[{companyCodeId:companyA,participationRole:"lead",effectiveFrom:"2026-01-01",revision:"assignment:a"},{companyCodeId:companyB,participationRole:"participant",effectiveFrom:"2026-01-01",revision:"assignment:b"}],revision:"organization:a"},{id:organizationB,code:"other.buy",displayName:"Other Procurement",domain:"procurement",path:["Other Procurement"],procurementProfileConfigured:true,salesProfileConfigured:false,assignments:[{companyCodeId:companyA,participationRole:"participant",effectiveFrom:"2026-01-01",revision:"assignment:c"}],revision:"organization:b"}];},
+      async readOperatingOrganizations(){return[{id:organizationA,code:"global.buy",displayName:"Global Procurement",organizationKind:"shared_operations",capabilities:["procurement"],path:["Global Procurement"],procurementProfileConfigured:true,salesProfileConfigured:false,leadCompanyCodeId:companyA,assignments:[{companyCodeId:companyA,participationRole:"lead",effectiveFrom:"2026-01-01",revision:"assignment:a"},{companyCodeId:companyB,participationRole:"participant",effectiveFrom:"2026-01-01",revision:"assignment:b"}],revision:"organization:a"},{id:organizationB,code:"other.buy",displayName:"Other Procurement",organizationKind:"shared_operations",capabilities:["procurement"],path:["Other Procurement"],procurementProfileConfigured:true,salesProfileConfigured:false,assignments:[{companyCodeId:companyA,participationRole:"participant",effectiveFrom:"2026-01-01",revision:"assignment:c"}],revision:"organization:b"}];},
     });
     const result=await service(repo).neonOperatingOrganizations(scoped);
     expect(result.organizations).toHaveLength(1);expect(result.organizations[0]).toMatchObject({id:organizationA,capabilities:["procurement"],defaults:{leadCompanyCodeId:companyA},companyAssignments:[{companyCodeId:companyA}]});
     expect(validateRuntimeSchema(neonOperatingOrganizationCatalogSchema,result)).toBe(result);
   });
 
-  it("does not infer company access from an operating-organization grant",async()=>{
+  it("surfaces an organization-only grant without inferring Company Code authority",async()=>{
     const organizationId="70000000-0000-4000-8000-000000000001";
     const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:"neon.procurement.purchase_order.create",tenantWide:false,legalEntityIds:[],companyCodeIds:[],operatingOrganizationIds:[organizationId],networkMembershipIds:[],visibility:"team" as const}]}};
-    const repo=repository({async readOperatingOrganizations(){return[{id:organizationId,code:"global.buy",displayName:"Global Procurement",domain:"procurement",path:["Global Procurement"],procurementProfileConfigured:true,salesProfileConfigured:false,assignments:[{companyCodeId:"50000000-0000-4000-8000-000000000001",participationRole:"participant",effectiveFrom:"2026-01-01",revision:"assignment:a"}],revision:"organization:a"}];}});
-    await expect(service(repo).neonOperatingOrganizations(scoped)).resolves.toMatchObject({organizations:[]});
+    const repo=repository({async readOperatingOrganizations(){return[{id:organizationId,code:"global.buy",displayName:"Global Procurement",organizationKind:"shared_operations",capabilities:["procurement"],path:["Global Procurement"],procurementProfileConfigured:true,salesProfileConfigured:false,assignments:[{companyCodeId:"50000000-0000-4000-8000-000000000001",participationRole:"participant",effectiveFrom:"2026-01-01",revision:"assignment:a"}],revision:"organization:a"}];}});
+    // The org itself is visible to an org-only grantee, but it grants no company
+    // authority: company assignments (which companies the org happens to serve)
+    // must not leak through, or a client could treat them as eligible companies.
+    const result=await service(repo).neonOperatingOrganizations(scoped);
+    expect(result.organizations).toHaveLength(1);
+    expect(result.organizations[0]).toMatchObject({id:organizationId,companyAssignments:[]});
+  });
+
+  it("surfaces an organization-only grant through neonBusinessContextOptions without inferring Company Code or Legal Entity authority",async()=>{
+    const action="neon.procurement.purchase_order.create",organizationId="70000000-0000-4000-8000-000000000001";
+    const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:action,tenantWide:false,legalEntityIds:[],companyCodeIds:[],operatingOrganizationIds:[organizationId],networkMembershipIds:[],visibility:"team" as const}]}};
+    const repo=repository({async readOperatingOrganizations(){return[{id:organizationId,code:"global.buy",displayName:"Global Procurement",organizationKind:"shared_operations",capabilities:["procurement"],path:["Global Procurement"],procurementProfileConfigured:true,salesProfileConfigured:false,assignments:[{companyCodeId:"50000000-0000-4000-8000-000000000001",participationRole:"participant",effectiveFrom:"2026-01-01",revision:"assignment:a"}],revision:"organization:a"}];}});
+    const result=await service(repo).neonBusinessContextOptions(scoped,action);
+    expect(result.organizations).toHaveLength(1);
+    expect(result.organizations[0]).toMatchObject({id:organizationId,companyAssignments:[]});
+    expect(result.companies).toEqual([]);
+    expect(result.legalEntities).toEqual([]);
+  });
+
+  it("discovers a Legal-Entity-only grant with zero visible companies under it",async()=>{
+    const action="neon.procurement.purchase_order.create",legalOnly="60000000-0000-4000-8000-000000000009";
+    const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:action,tenantWide:false,legalEntityIds:[legalOnly],companyCodeIds:[],operatingOrganizationIds:[],networkMembershipIds:[],visibility:"team" as const}]}};
+    const repo=repository({async readLegalEntities(){return[{legalEntityId:legalOnly,code:"le-only",displayName:"LE Only Legal",revision:"le:only"}];}});
+    const result=await service(repo).neonBusinessContextOptions(scoped,action);
+    expect(result.legalEntities).toEqual([{legalEntityId:legalOnly,code:"le-only",displayName:"LE Only Legal"}]);
+    expect(result.companies).toEqual([]);
+  });
+
+  it("makes the full tenant catalog visible for a tenant-wide grant, including a Legal Entity with no companies",async()=>{
+    const action="neon.procurement.purchase_order.create",companyA="50000000-0000-4000-8000-000000000001",legalA="60000000-0000-4000-8000-000000000001",legalEmpty="60000000-0000-4000-8000-000000000009";
+    const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:action,tenantWide:true,legalEntityIds:[],companyCodeIds:[],operatingOrganizationIds:[],networkMembershipIds:[],visibility:"all" as const}]}};
+    const repo=repository({
+      async readWorkContexts(){return[{companyCodeId:companyA,companyCode:"alpha",companyDisplayName:"Alpha",legalEntityId:legalA,legalEntityCode:"le-alpha",legalEntityName:"Alpha Legal",functionalCurrency:"MYR",revision:"a"}];},
+      async readLegalEntities(){return[{legalEntityId:legalEmpty,code:"le-empty",displayName:"Empty Legal",revision:"le:empty"}];},
+    });
+    const result=await service(repo).neonBusinessContextOptions(scoped,action);
+    expect(result.companies.map(item=>item.companyCodeId)).toEqual([companyA]);
+    expect(result.legalEntities.map(item=>item.legalEntityId).sort()).toEqual([legalA,legalEmpty].sort());
+  });
+
+  it("neonActionPolicy returns undefined unless both the DB-derived scope and the hand-authored registry entry are present",async()=>{
+    const action="neon.procurement.purchase_order.create";
+    const bound=(scopeKinds:readonly string[])=>({...context,permissions:{...context.permissions,operationBindings:[{entityCode:"purchase_order",operationKey:"create",permissionCode:action,decisionMode:"deterministic",requiredScopeKinds:scopeKinds}]}});
+    // Neither half present.
+    await expect(service(repository()).neonActionPolicy(context,action)).resolves.toBeUndefined();
+    // DB half present, registry half missing.
+    await expect(service(repository()).neonActionPolicy(bound(["company_code"]),action)).resolves.toBeUndefined();
+    // Registry half present (via the real shipped registry, which already covers
+    // "neon.relationship.entity_case.create"), DB half missing.
+    await expect(service(repository()).neonActionPolicy(context,"neon.relationship.entity_case.create")).resolves.toBeUndefined();
+    // Both halves present.
+    const value=createExperienceService({repositories:createExactPlaneRepositoryProvider({neon:repository()}),actionPolicyRegistry:{[action]:{aggregateMode:"unsupported",defaultStandardView:"my_documents",supportedBroaderViews:[],crossLegalEntity:"none",draftContextChanges:[]}}});
+    await expect(value.neonActionPolicy(bound(["company_code","operating_organization"]),action)).resolves.toMatchObject({schemaVersion:1,actionPermissionCode:action,scopeKind:"company",requiredCoordinates:["companyCodeId","operatingOrganizationId"],aggregateMode:"unsupported"});
+  });
+
+  it("derives Type B (organization) and Type C (tenant) scope kinds from published operation bindings",async()=>{
+    const action="neon.sourcing.request.create";
+    const value=createExperienceService({repositories:createExactPlaneRepositoryProvider({neon:repository()}),actionPolicyRegistry:{[action]:{aggregateMode:"unsupported",defaultStandardView:"my_documents",supportedBroaderViews:[],crossLegalEntity:"shared_organization",draftContextChanges:[]}}});
+    const orgScoped={...context,permissions:{...context.permissions,operationBindings:[{entityCode:"sourcing_request",operationKey:"create",permissionCode:action,decisionMode:"deterministic",requiredScopeKinds:["operating_organization"]}]}};
+    await expect(value.neonActionPolicy(orgScoped,action)).resolves.toMatchObject({scopeKind:"organization",requiredCoordinates:["operatingOrganizationId"]});
+    const tenantScoped={...context,permissions:{...context.permissions,operationBindings:[{entityCode:"sourcing_request",operationKey:"create",permissionCode:action,decisionMode:"deterministic",requiredScopeKinds:["tenant"]}]}};
+    await expect(value.neonActionPolicy(tenantScoped,action)).resolves.toMatchObject({scopeKind:"tenant",requiredCoordinates:[]});
+  });
+
+  it("admits a Type C selection with no Legal Entity or Company Code only when the action's published policy declares scopeKind tenant",async()=>{
+    const action="neon.reference.currency.read";
+    const scoped={...context,permissions:{...context.permissions,tenantWide:true,authorizationScopes:[{permissionCode:action,tenantWide:true,legalEntityIds:[],companyCodeIds:[],operatingOrganizationIds:[],networkMembershipIds:[],visibility:"all" as const}],operationBindings:[{entityCode:"currency",operationKey:"read",permissionCode:action,decisionMode:"deterministic",requiredScopeKinds:["tenant"]}]}};
+    const value=createExperienceService({repositories:createExactPlaneRepositoryProvider({neon:repository()}),actionPolicyRegistry:{[action]:{aggregateMode:"unsupported",defaultStandardView:"all_accessible",supportedBroaderViews:[],crossLegalEntity:"tenant_wide",draftContextChanges:[]}}});
+    const policy=await value.neonActionPolicy(scoped,action);
+    await expect(value.validateNeonBusinessContext(scoped,action,{},policy)).resolves.toEqual({});
+  });
+
+  it("still requires a Legal Entity for a tenant-wide grant when no policy is published for the action",async()=>{
+    const action="neon.reference.currency.read";
+    const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:action,tenantWide:true,legalEntityIds:[],companyCodeIds:[],operatingOrganizationIds:[],networkMembershipIds:[],visibility:"all" as const}]}};
+    // No operationBindings supplied at all: neonActionPolicy resolves undefined, so
+    // a bare tenantWide grant must not bypass the Legal Entity requirement.
+    await expect(service(repository()).validateNeonBusinessContext(scoped,action,{})).rejects.toMatchObject({status:400,code:"EXPERIENCE_LEGAL_ENTITY_REQUIRED"});
   });
 
   it("returns only Mesh accounts in the principal authorization snapshot and flags related visible accounts",async()=>{

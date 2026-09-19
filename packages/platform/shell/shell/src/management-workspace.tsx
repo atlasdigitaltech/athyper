@@ -2,12 +2,13 @@
 import React, { type ReactNode, type HTMLAttributes } from "react";
 import { PageFrame } from "./page-foundation";
 import { EntityPageLayout } from "./entity-page-layout";
-import { PageWorkspace } from "./page-workspace";
+import { PageNavigationSlot, PageWorkspace } from "./page-workspace";
 
 /** Shared collection chrome; record pages retain EntityPageLayout's ownership behavior. */
 export function ManagementWorkspace({
   header,
   navigation,
+  contextControl,
   status,
   toolbar,
   actions,
@@ -17,6 +18,7 @@ export function ManagementWorkspace({
 }: {
   readonly header: ReactNode;
   readonly navigation: ReactNode;
+  readonly contextControl?: ReactNode;
   readonly status?: ReactNode;
   readonly toolbar?: ReactNode;
   readonly actions?: ReactNode;
@@ -33,7 +35,7 @@ export function ManagementWorkspace({
     >
       <EntityPageLayout
         collectionHeader={header}
-        collectionNavigation={navigation}
+        collectionNavigation={<PageNavigationSlot navigation={navigation} context={contextControl} kind="application" band="shell" />}
       >
         <PageWorkspace
           contentOnly

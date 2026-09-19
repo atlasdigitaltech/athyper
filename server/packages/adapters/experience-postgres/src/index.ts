@@ -5,6 +5,7 @@ import type {
   ExperienceCatalogRecord,
   ExperienceFeatureRecord,
   ExperienceIdentityRecord,
+  ExperienceLegalEntityRecord,
   ExperienceLocalePolicyRecord,
   ExperienceNetworkAccountRecord,
   ExperienceOperatingOrganizationRecord,
@@ -343,6 +344,34 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
     });
   }
 
+  /** Tenant-wide Legal Entity catalog, independent of Company Code visibility. Admission filtering happens in the service layer, not here. */
+  async readLegalEntities(
+    context: VerifiedRequestContext,
+  ): Promise<readonly ExperienceLegalEntityRecord[]> {
+    if (context.planeKey !== "neon") return [];
+    return this.withContext(context, async (database) => {
+      const result = await sql<{
+        legalEntityId: string;
+        code: string;
+        displayName: string;
+        logoAssetRef: string | null;
+        revision: string;
+      }>`
+      SELECT le.id::text AS "legalEntityId", le.code AS code, COALESCE(NULLIF(btrim(le.display_name),''),le.name,le.code) AS "displayName", le.logo_asset_ref AS "logoAssetRef",
+             COALESCE(le.updated_at,le.created_at)::text AS revision
+      FROM master.legal_entity le
+      WHERE le.tenant_id=${context.tenantId}::uuid AND le.status='active' ORDER BY le.code,le.id
+    `.execute(database);
+      return result.rows.map((row) => ({
+        legalEntityId: row.legalEntityId,
+        code: row.code,
+        displayName: row.displayName,
+        ...(row.logoAssetRef ? { logoAssetRef: row.logoAssetRef } : {}),
+        revision: row.revision,
+      }));
+    });
+  }
+
   async readOperatingOrganizations(
     context: VerifiedRequestContext,
     at: Date,
@@ -353,7 +382,8 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
         id: string;
         code: string;
         displayName: string;
-        domain: string;
+        organizationKind: "company_operations" | "business_operations" | "shared_operations";
+        capabilities: ("finance" | "procurement" | "people" | "sales" | "operations" | "warehouse" | "projects")[];
         parentId: string | null;
         path: string[];
         procurementProfileConfigured: boolean;
@@ -362,9 +392,9 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
         bookingCompanyCodeId: string | null;
         invoicingCompanyCodeId: string | null;
         defaultCurrency: string | null;
-        companyCodeId: string;
-        participationRole: string;
-        effectiveFrom: string;
+        companyCodeId: string | null;
+        participationRole: string | null;
+        effectiveFrom: string | null;
         effectiveUntil: string | null;
         organizationRevision: string;
         assignmentRevision: string;
@@ -387,7 +417,7 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       )
       SELECT organization.id::text AS id,organization.code,
              COALESCE(NULLIF(btrim(organization.display_name),''),organization.name,organization.code) AS "displayName",
-             organization.domain::text AS domain,organization.parent_operating_organization_id::text AS "parentId",hierarchy.path,
+             organization.organization_kind::text AS "organizationKind",COALESCE(capabilities.codes,ARRAY[]::text[]) AS capabilities,organization.parent_operating_organization_id::text AS "parentId",hierarchy.path,
              (procurement.operating_organization_id IS NOT NULL) AS "procurementProfileConfigured",
              (sales.operating_organization_id IS NOT NULL) AS "salesProfileConfigured",
              procurement.lead_company_code_id::text AS "leadCompanyCodeId",sales.booking_company_code_id::text AS "bookingCompanyCodeId",
@@ -398,11 +428,12 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
              COALESCE(assignment.updated_at,assignment.created_at)::text AS "assignmentRevision"
         FROM hierarchy
         JOIN master.operating_organization organization ON organization.id=hierarchy.id AND organization.tenant_id=${context.tenantId}::uuid AND organization.status='active'
-        JOIN master.operating_organization_company_assignment assignment ON assignment.tenant_id=organization.tenant_id AND assignment.operating_organization_id=organization.id AND assignment.status='active'
+        LEFT JOIN master.operating_organization_company_assignment assignment ON assignment.tenant_id=organization.tenant_id AND assignment.operating_organization_id=organization.id AND assignment.status='active'
           AND assignment.effective_from<=${at}::date AND (assignment.effective_until IS NULL OR assignment.effective_until>${at}::date)
-        JOIN master.company_code company ON company.tenant_id=assignment.tenant_id AND company.id=assignment.company_code_id AND company.status='active'
+        LEFT JOIN master.company_code company ON company.tenant_id=assignment.tenant_id AND company.id=assignment.company_code_id AND company.status='active'
         LEFT JOIN master.procurement_organization_profile procurement ON procurement.tenant_id=organization.tenant_id AND procurement.operating_organization_id=organization.id
         LEFT JOIN master.sales_organization_profile sales ON sales.tenant_id=organization.tenant_id AND sales.operating_organization_id=organization.id
+        LEFT JOIN LATERAL (SELECT array_agg(capability.capability_code::text ORDER BY capability.capability_code::text) AS codes FROM master.operating_organization_capability capability WHERE capability.tenant_id=organization.tenant_id AND capability.operating_organization_id=organization.id AND capability.status='active' AND capability.effective_from<=${at}::date AND (capability.effective_until IS NULL OR capability.effective_until>${at}::date)) capabilities ON true
        ORDER BY hierarchy.path,organization.code,assignment.participation_role,company.code
     `.execute(database);
       const organizations = new Map<
@@ -411,18 +442,12 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       >();
       for (const row of result.rows) {
         const current = organizations.get(row.id);
-        const assignment = {
-          companyCodeId: row.companyCodeId,
-          participationRole: row.participationRole,
-          effectiveFrom: row.effectiveFrom,
-          ...(row.effectiveUntil ? { effectiveUntil: row.effectiveUntil } : {}),
-          revision: row.assignmentRevision,
-        };
+        const assignment = row.companyCodeId && row.participationRole && row.effectiveFrom ? { companyCodeId: row.companyCodeId, participationRole: row.participationRole, effectiveFrom: row.effectiveFrom, ...(row.effectiveUntil ? { effectiveUntil: row.effectiveUntil } : {}), revision: row.assignmentRevision } : undefined;
         if (current) {
           organizations.set(row.id, {
             ...current,
-            assignments: Object.freeze([...current.assignments, assignment]),
-            revision: `${current.revision}:${row.assignmentRevision}`,
+            assignments: assignment ? Object.freeze([...current.assignments, assignment]) : current.assignments,
+            revision: assignment ? `${current.revision}:${row.assignmentRevision}` : current.revision,
           });
           continue;
         }
@@ -432,7 +457,8 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
             id: row.id,
             code: row.code,
             displayName: row.displayName,
-            domain: row.domain,
+            organizationKind: row.organizationKind,
+            capabilities: Object.freeze([...row.capabilities]),
             ...(row.parentId ? { parentId: row.parentId } : {}),
             path: Object.freeze([...row.path]),
             procurementProfileConfigured: row.procurementProfileConfigured,
@@ -449,8 +475,8 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
             ...(row.defaultCurrency
               ? { defaultCurrency: row.defaultCurrency.trim() }
               : {}),
-            assignments: Object.freeze([assignment]),
-            revision: `${row.organizationRevision}:${row.assignmentRevision}`,
+            assignments: Object.freeze(assignment ? [assignment] : []),
+            revision: assignment ? `${row.organizationRevision}:${row.assignmentRevision}` : row.organizationRevision,
           }),
         );
       }

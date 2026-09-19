@@ -364,6 +364,8 @@ ALTER TABLE master.sales_organization_profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.sales_organization_profile FORCE ROW LEVEL SECURITY;
 ALTER TABLE master.operating_organization_company_assignment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.operating_organization_company_assignment FORCE ROW LEVEL SECURITY;
+ALTER TABLE master.operating_organization_capability ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.operating_organization_capability FORCE ROW LEVEL SECURITY;
 ALTER TABLE master.org_unit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.org_unit FORCE ROW LEVEL SECURITY;
 
@@ -401,6 +403,11 @@ CREATE POLICY tenant_access ON master.operating_organization_company_assignment 
     USING (tenant_id = shared.current_tenant_id_soft())
     WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY seed_write ON master.operating_organization_company_assignment FOR ALL TO CURRENT_USER
+    USING (true) WITH CHECK (true);
+CREATE POLICY tenant_access ON master.operating_organization_capability FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON master.operating_organization_capability FOR ALL TO CURRENT_USER
     USING (true) WITH CHECK (true);
 CREATE POLICY tenant_access ON master.org_unit FOR ALL
     USING (tenant_id = shared.current_tenant_id_soft())
@@ -482,6 +489,7 @@ BEGIN
             'procurement_organization_profile',
             'sales_organization_profile',
             'operating_organization_company_assignment',
+            'operating_organization_capability',
             'org_unit',
             'profit_center',
             'cost_center',

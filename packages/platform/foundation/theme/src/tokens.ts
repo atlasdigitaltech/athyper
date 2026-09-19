@@ -10,6 +10,10 @@ export type ColorMode = (typeof COLOR_MODES)[number];
 export type DensityMode = (typeof DENSITY_MODES)[number];
 export type ThemePreference = ColorMode | "system";
 
+/** Read by the blocking ThemeScript before first paint; keep in sync with any client-side preference writer. */
+export const THEME_STORAGE_KEY = "athyper.theme";
+export const DENSITY_STORAGE_KEY = "athyper.density";
+
 export const REQUIRED_COLOR_TOKENS = [
   "background",
   "foreground",

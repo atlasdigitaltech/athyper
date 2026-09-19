@@ -141,6 +141,12 @@ test("continuous navigation, real tabs, documents, and browser history", async (
   await expect.poll(() => page.locator('[data-record-section="banking"]').evaluate(
     (element) => element.getBoundingClientRect().top,
   )).toBeLessThan(200);
+  await page.getByRole("tab", { name: "Roles & scope", exact: true }).click();
+  await expect(page.getByRole("tab", { name: "Roles & scope", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Roles & scope", exact: true })).toBeFocused();
+  await page.getByRole("tab", { name: "360 View", exact: true }).click();
+  await expect(page.getByRole("tab", { name: "360 View", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "360 View", exact: true })).toBeFocused();
   await rail
     .getByRole("button", { name: "Qualifications & certificates" })
     .click();

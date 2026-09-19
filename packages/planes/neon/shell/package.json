@@ -13,7 +13,8 @@
     "./styles.css": "./src/styles.css"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@athyper/platform-api-client": "workspace:*",
@@ -30,8 +31,14 @@
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
+    "@types/jsdom": "21.1.7",
+    "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "jsdom": "^25.0.1",
     "react": "^19.2.5",
-    "typescript": "^6.0.3"
+    "react-dom": "^19.2.5",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
   }
 }

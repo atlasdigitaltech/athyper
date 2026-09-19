@@ -60,7 +60,7 @@ export async function provisionBusinessPartnerR5Fixtures(options: {
         `SELECT t.id tenant_id,p.id actor_id,o.id organization_id,c.id company_id,c.functional_currency,
       (SELECT id FROM master.payment_term WHERE tenant_id=t.id AND status='active' ORDER BY id LIMIT 1) payment_term_id
       FROM master.tenant t JOIN master.principal p ON p.tenant_id=t.id AND p.code=$2 AND p.status='active'
-      JOIN master.operating_organization o ON o.tenant_id=t.id AND o.code=$3 AND o.status='active' AND o.domain IN('sales','both')
+      JOIN master.operating_organization o ON o.tenant_id=t.id AND o.code=$3 AND o.status='active' AND EXISTS(SELECT 1 FROM master.operating_organization_capability capability WHERE capability.tenant_id=o.tenant_id AND capability.operating_organization_id=o.id AND capability.capability_code='sales' AND capability.status='active' AND capability.effective_from<=CURRENT_DATE AND (capability.effective_until IS NULL OR capability.effective_until>CURRENT_DATE))
       JOIN master.operating_organization_company_assignment a ON a.tenant_id=t.id AND a.operating_organization_id=o.id AND a.status='active' AND a.effective_from<=CURRENT_DATE AND (a.effective_until IS NULL OR a.effective_until>CURRENT_DATE)
       JOIN master.company_code c ON c.tenant_id=t.id AND c.id=a.company_code_id AND c.status='active' AND ($4::text IS NULL OR c.code=$4)
       WHERE t.code=$1 AND t.status='active' ORDER BY c.code LIMIT 1`,

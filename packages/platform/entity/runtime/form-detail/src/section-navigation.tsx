@@ -84,10 +84,15 @@ export function useEntitySectionScroll({
 }) {
   const callback = useRef(onObserve),
     threshold = useRef(getThreshold),
-    scrollingTo = useRef<string | undefined>(undefined);
+    scrollingTo = useRef<string | undefined>(undefined),
+    handledNavigationRevision = useRef<number | undefined>(undefined);
   callback.current = onObserve;
   threshold.current = getThreshold;
   useEffect(() => {
+    const initialNavigation = handledNavigationRevision.current === undefined;
+    const explicitNavigation = handledNavigationRevision.current !== navigationRevision;
+    if (!initialNavigation && !explicitNavigation) return;
+    handledNavigationRevision.current = navigationRevision;
     if (
       !root.current ||
       (navigationRevision === 0 && enabled && activeSection === initialSection)
