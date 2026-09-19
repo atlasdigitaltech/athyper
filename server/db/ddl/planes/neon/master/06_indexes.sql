@@ -246,6 +246,14 @@ CREATE UNIQUE INDEX business_partner_code_uq
 CREATE INDEX business_partner_name_idx
     ON master.business_partner (tenant_id, lower(name) text_pattern_ops);
 
+-- Prefix search uses the pattern-opclass indexes above.  Interactive sorting
+-- retains database-default collation through separate ordering indexes.
+CREATE INDEX business_partner_name_sort_idx
+    ON master.business_partner (tenant_id, lower(name));
+
+CREATE INDEX business_partner_code_sort_idx
+    ON master.business_partner (tenant_id, lower(code));
+
 CREATE INDEX business_partner_parent_idx
     ON master.business_partner (tenant_id, parent_business_partner_id)
     WHERE parent_business_partner_id IS NOT NULL;
