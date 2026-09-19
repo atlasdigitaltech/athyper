@@ -241,10 +241,10 @@ CREATE INDEX template_current_version_fk_idx
 
 -- Canonical counterparty identity and thin role lookup paths.
 CREATE UNIQUE INDEX business_partner_code_uq
-    ON master.business_partner (tenant_id, lower(code));
+    ON master.business_partner (tenant_id, lower(code) text_pattern_ops);
 
 CREATE INDEX business_partner_name_idx
-    ON master.business_partner (tenant_id, lower(name));
+    ON master.business_partner (tenant_id, lower(name) text_pattern_ops);
 
 CREATE INDEX business_partner_parent_idx
     ON master.business_partner (tenant_id, parent_business_partner_id)
@@ -256,7 +256,7 @@ CREATE INDEX business_partner_category_ownership_idx
     ON master.business_partner (tenant_id, partner_category, ownership_class, status);
 
 CREATE INDEX business_partner_registration_country_idx
-    ON master.business_partner (registration_country_code)
+    ON master.business_partner (tenant_id, registration_country_code)
     WHERE registration_country_code IS NOT NULL;
 
 CREATE INDEX business_partner_created_by_idx
