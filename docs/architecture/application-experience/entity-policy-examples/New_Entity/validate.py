@@ -161,6 +161,22 @@ permission_document = files['review/permission-catalog.json']
 permissions = {item['code']: item for item in permission_document['permissions']}
 registry_document = files['review/registry-catalog.json']
 registry = {(item['kind'], item['key']): item for item in registry_document['entries']}
+shape_document = files['review/shape-catalog.json']
+shape_catalog = {kind: {path: set(keys) for path, keys in paths.items()} for kind, paths in shape_document['shapes'].items()}
+
+def assert_closed_nested_shape(value, artifact_type, path=()):
+    if isinstance(value, dict):
+        allowed = shape_catalog[artifact_type].get('.'.join(path))
+        if allowed is None:
+            raise AssertionError((artifact_type, '.'.join(path), 'unrecognised normative object shape'))
+        unknown = set(value) - allowed
+        if unknown:
+            raise AssertionError((artifact_type, '.'.join(path), 'unknown normative property', sorted(unknown)))
+        for key, item in value.items():
+            assert_closed_nested_shape(item, artifact_type, path + (key,))
+    elif isinstance(value, list):
+        for item in value:
+            assert_closed_nested_shape(item, artifact_type, path + ('[]',))
 
 def permission_codes(value):
     if isinstance(value, dict):
@@ -226,6 +242,7 @@ for path, artifact in artifacts.items():
     if not (artifact['contractStatus'] == 'draft_for_review'):
         raise AssertionError(path)
     assert_localized(artifact, path)
+    assert_closed_nested_shape(artifact, artifact['artifactType'])
     assert_security_contracts(artifact, path)
     if not (artifact['artifactHash'] == digest({k: v for k, v in artifact.items() if k != 'artifactHash'})):
         raise AssertionError(path)

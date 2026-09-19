@@ -78,7 +78,7 @@ class ValidatorMutationTests(unittest.TestCase):
         self.fails('protected value must be masked_only', lambda root: self._edit_field(root, 'business_partner_tax_registration/core.json', 'registration_number', lambda field: field.update(readPolicy='authorized_projection')))
 
     def test_rejects_retired_protection_classification(self):
-        self.fails('retired protection classification', lambda root: self._edit_field(root, 'business_partner_tax_registration/core.json', 'registration_number', lambda field: field['protection'].update(classification='restricted')))
+        self.fails('unknown normative property', lambda root: self._edit_field(root, 'business_partner_tax_registration/core.json', 'registration_number', lambda field: field['protection'].update(classification='restricted')))
 
     def test_rejects_editable_server_number(self):
         self.fails('server-managed value must be readonly', lambda root: self._edit_field(root, 'business_partner/core.json', 'code', lambda field: field.update(uiFacets={'visibility':'visible','editability':'editable_in_governed_draft'})))
@@ -103,6 +103,9 @@ class ValidatorMutationTests(unittest.TestCase):
 
     def test_rejects_unknown_top_level_property(self):
         self.fails('closed-world schema violation', lambda root: self._edit(root, 'business_partner/core.json', lambda value: value.update(typoedSecurityFlag=True)))
+
+    def test_rejects_unknown_nested_property(self):
+        self.fails('unknown normative property', lambda root: self._edit(root, 'business_partner/presentation.section.contacts.json', lambda value: value['authorization'].update(enforceBeforeDateQuery=True)))
 
     def test_rejects_schema_version_or_plane_change(self):
         self.fails('closed-world schema violation', lambda root: self._edit(root, 'business_partner/core.json', lambda value: value.update(schemaVersion=9)))
