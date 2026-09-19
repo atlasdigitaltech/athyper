@@ -103,6 +103,8 @@ STORAGE_KINDS = {'handler_projection', 'field_projection', 'registered_service',
 def assert_security_contracts(value, path):
     """Validate security-sensitive nested contracts, including child collections."""
     if isinstance(value, dict):
+        if value.get('dataCategory') in {'personal_contact', 'bank_account'} and 'readPolicy' in value and 'protection' not in value:
+            raise AssertionError((path, 'sensitive data category requires protection'))
         if 'authorization' in value:
             authorization = value['authorization']
             if authorization.get('discoverableWhenDenied') is not False or authorization.get('enforceBeforeDataQuery') is not True:

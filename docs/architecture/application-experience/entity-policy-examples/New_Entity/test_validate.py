@@ -128,6 +128,12 @@ class ValidatorMutationTests(unittest.TestCase):
     def test_rejects_relaxed_section_authorization(self):
         self.fails('authorization must deny discovery and authorize before query', lambda root: self._edit(root, 'business_partner/presentation.section.contacts.json', lambda value: value['authorization'].update(enforceBeforeDataQuery=False)))
 
+    def test_rejects_unprotected_contact_channel(self):
+        self.fails('sensitive data category requires protection', lambda root: self._edit(root, 'business_partner/presentation.section.contacts.json', lambda value: next(field for field in value['childCollections'][1]['fields'] if field['key'] == 'value').pop('protection')))
+
+    def test_rejects_disabled_audit(self):
+        self.fails('audit capability must remain enabled', lambda root: self._edit(root, 'business_partner/core.json', lambda value: value['capabilities']['audit'].update(enabled=False)))
+
     def test_live_gate_connection_environment_is_url_only(self):
         spec = importlib.util.spec_from_file_location('live_gate', PACKAGE/'verify_live_schema.py')
         module = importlib.util.module_from_spec(spec)
