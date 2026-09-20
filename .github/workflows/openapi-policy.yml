@@ -1,8 +1,12 @@
 name: OpenAPI policy
 
 on:
+  # Feature branches are covered by pull_request. Triggering on every push too
+  # produced two identical runs, and two failure emails, for every commit on a
+  # branch with an open PR. Matches authorization-idempotency, brand-sync and
+  # service-layer-qualification, which already scope push to the trunk branches.
   push:
-    branches: ["**"]
+    branches: [main, develop]
   pull_request:
   workflow_call:
   workflow_dispatch:

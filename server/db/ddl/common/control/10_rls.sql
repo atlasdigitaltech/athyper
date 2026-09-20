@@ -337,4 +337,5 @@ WITH CHECK(tenant_id=shared.current_tenant_id_soft());
 CREATE POLICY feature_flag_override_update ON control.feature_flag_override FOR UPDATE TO athyperapp
 USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id_soft());
 ALTER TABLE control.supplier_activation_policy ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.supplier_activation_policy FORCE ROW LEVEL SECURITY;
 CREATE POLICY supplier_activation_policy_tenant ON control.supplier_activation_policy USING(tenant_id=shared.current_tenant_id());
