@@ -6,6 +6,7 @@
     "node": "24.19.0"
   },
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks || true",
     "devsimple": "node tooling/scripts/local-dev/dev-workspace.mjs source --preset devsimple",
     "devfull": "node tooling/scripts/local-dev/dev-workspace.mjs source --preset devfull",
     "dev:local": "node tooling/scripts/local-dev/cli.mjs",

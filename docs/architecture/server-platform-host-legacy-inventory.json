@@ -15,22 +15,22 @@
   },
   "dispositionManifest": "server/architecture/legacy-dispositions.json",
   "summary": {
-    "compose-services:new": 43,
+    "compose-services:new": 48,
     "configuration:deferred": 109,
     "configuration:migrated": 166,
-    "configuration:new": 230,
+    "configuration:new": 227,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
-    "database-commands:new": 96,
+    "database-commands:new": 97,
     "jobs:deferred": 1,
     "jobs:new": 69,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 235,
+    "operational-scripts:new": 316,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
-    "routes:new": 218,
+    "routes:new": 228,
     "schedules:migrated": 1,
     "schedules:new": 5
   },
@@ -275,6 +275,30 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "compose-services:jobqueue",
+      "category": "compose-services",
+      "key": "jobqueue",
+      "legacyLocations": [],
+      "currentLocations": [
+        "deploy/compose/instance/compose.yaml"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "compose-services:jobqueue-exporter",
+      "category": "compose-services",
+      "key": "jobqueue-exporter",
+      "legacyLocations": [],
+      "currentLocations": [
+        "deploy/compose/instance/compose.optional.yaml"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "compose-services:logging",
       "category": "compose-services",
       "key": "logging",
@@ -486,6 +510,30 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "compose-services:secretstore-cache",
+      "category": "compose-services",
+      "key": "secretstore-cache",
+      "legacyLocations": [],
+      "currentLocations": [
+        "deploy/compose/instance/compose.yaml"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "compose-services:secretstore-cache-exporter",
+      "category": "compose-services",
+      "key": "secretstore-cache-exporter",
+      "legacyLocations": [],
+      "currentLocations": [
+        "deploy/compose/instance/compose.optional.yaml"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "compose-services:secretstore-db-init",
       "category": "compose-services",
       "key": "secretstore-db-init",
@@ -504,6 +552,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "deploy/compose/operations/compose.yaml"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "compose-services:storage-console",
+      "category": "compose-services",
+      "key": "storage-console",
+      "legacyLocations": [],
+      "currentLocations": [
+        "deploy/compose/instance/compose.storage-console.yaml"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -1128,6 +1188,7 @@
         "server/apps/platform-host/scripts/db-verification/business-partner-360/manage-business-partner-360-rollout.ts",
         "server/apps/platform-host/scripts/db-verification/business-partner-360/run-business-partner-360-materialization-evidence.ts",
         "server/apps/platform-host/scripts/db-verification/provisioning/publish-development-business-partner-definition.ts",
+        "server/apps/platform-host/scripts/db-verification/provisioning/publish-development-compiled-entity-runtime.ts",
         "server/apps/platform-host/scripts/db-verification/tests/integration/business-partner-r2-scope.ts",
         "server/db/scripts/business-partner-360/collect-customer-downstream-evidence.ts",
         "server/db/scripts/business-partner-360/record-business-partner-360-rollout-observation.ts",
@@ -1445,6 +1506,7 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/scripts/db-verification/provisioning/publish-development-business-partner-definition.ts",
+        "server/apps/platform-host/scripts/db-verification/provisioning/publish-development-compiled-entity-runtime.ts",
         "server/db/scripts/provisioning/provision-development-business-partner-runtime.ts"
       ],
       "disposition": "new",
@@ -3093,54 +3155,6 @@
       "disposition": "migrated",
       "owner": "platform-host",
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
-    },
-    {
-      "identity": "configuration:bank_directory_authority_tenant_id",
-      "category": "configuration",
-      "key": "bank_directory_authority_tenant_id",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/composition/register-services.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:bank_directory_database_admin_url",
-      "category": "configuration",
-      "key": "bank_directory_database_admin_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/operations/banking/publish-bank-directory.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:bank_directory_disposable_test",
-      "category": "configuration",
-      "key": "bank_directory_disposable_test",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/publication/src/__tests__/integration/bank-directory.mjs"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:bank_directory_test_port",
-      "category": "configuration",
-      "key": "bank_directory_test_port",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/publication/src/__tests__/integration/bank-directory.mjs"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "configuration:base_url",
@@ -7110,6 +7124,18 @@
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
     },
     {
+      "identity": "configuration:reference_history_test_url",
+      "category": "configuration",
+      "key": "reference_history_test_url",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/__tests__/platform/reference-choice-history.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:renderer_base_url",
       "category": "configuration",
       "key": "renderer_base_url",
@@ -9315,6 +9341,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "database-commands:db:provision:neon:currency-runtime",
+      "category": "database-commands",
+      "key": "db:provision:neon:currency-runtime",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/package.json"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "database-commands:db:provision:studio",
       "category": "database-commands",
       "key": "db:provision:studio",
@@ -9354,18 +9392,6 @@
       "identity": "database-commands:db:provision:three-tenant-demo-auth",
       "category": "database-commands",
       "key": "db:provision:three-tenant-demo-auth",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/package.json"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "database-commands:db:publish:bank-directory",
-      "category": "database-commands",
-      "key": "db:publish:bank-directory",
       "legacyLocations": [],
       "currentLocations": [
         "server/db/package.json"
@@ -10679,6 +10705,18 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "database-commands:db:verify:migration-layout",
+      "category": "database-commands",
+      "key": "db:verify:migration-layout",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/package.json"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "database-commands:db:verify:neon:business-partner-360-materialization",
       "category": "database-commands",
       "key": "db:verify:neon:business-partner-360-materialization",
@@ -11785,6 +11823,678 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:20260906_identity_replay_approval",
+      "category": "operational-scripts",
+      "key": "20260906_identity_replay_approval",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260906_identity_replay_approval.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260906_mesh_exchange_readiness",
+      "category": "operational-scripts",
+      "key": "20260906_mesh_exchange_readiness",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260906_mesh_exchange_readiness.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260907_atlas_conversation_runtime_access",
+      "category": "operational-scripts",
+      "key": "20260907_atlas_conversation_runtime_access",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260907_atlas_conversation_runtime_access.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260907_lookup_reference_governance",
+      "category": "operational-scripts",
+      "key": "20260907_lookup_reference_governance",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260907_lookup_reference_governance.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260908_entity_saved_views",
+      "category": "operational-scripts",
+      "key": "20260908_entity_saved_views",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260908_entity_saved_views.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260908_entity_standard_view_defaults",
+      "category": "operational-scripts",
+      "key": "20260908_entity_standard_view_defaults",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260908_entity_standard_view_defaults.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260908_supplier_preference_normalized_scope",
+      "category": "operational-scripts",
+      "key": "20260908_supplier_preference_normalized_scope",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260908_supplier_preference_normalized_scope.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260909_atlas_tool_only_completion",
+      "category": "operational-scripts",
+      "key": "20260909_atlas_tool_only_completion",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260909_atlas_tool_only_completion.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_account_cache_isolation",
+      "category": "operational-scripts",
+      "key": "20260910_account_cache_isolation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_account_cache_isolation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_ai_call_usage_constraint",
+      "category": "operational-scripts",
+      "key": "20260910_ai_call_usage_constraint",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_ai_call_usage_constraint.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_ai_call_usage_preflight",
+      "category": "operational-scripts",
+      "key": "20260910_ai_call_usage_preflight",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_ai_call_usage_preflight.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_atlas_intent_feedback",
+      "category": "operational-scripts",
+      "key": "20260910_atlas_intent_feedback",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_atlas_intent_feedback.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_atlas_learning_common",
+      "category": "operational-scripts",
+      "key": "20260910_atlas_learning_common",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_atlas_learning_common.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_atlas_learning_studio",
+      "category": "operational-scripts",
+      "key": "20260910_atlas_learning_studio",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_atlas_learning_studio.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_authorization_successor_materializer",
+      "category": "operational-scripts",
+      "key": "20260910_authorization_successor_materializer",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_baseline_activation_precondition",
+      "category": "operational-scripts",
+      "key": "20260910_baseline_activation_precondition",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_baseline_activation_precondition.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_baseline_compilation_source",
+      "category": "operational-scripts",
+      "key": "20260910_baseline_compilation_source",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_baseline_compilation_source.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_baseline_publication_locking",
+      "category": "operational-scripts",
+      "key": "20260910_baseline_publication_locking",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_baseline_publication_locking.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_baseline_publication_materializer",
+      "category": "operational-scripts",
+      "key": "20260910_baseline_publication_materializer",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_baseline_publication_materializer.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_entity_baseline_import",
+      "category": "operational-scripts",
+      "key": "20260910_entity_baseline_import",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_entity_baseline_import.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_experience_foundation",
+      "category": "operational-scripts",
+      "key": "20260910_experience_foundation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_experience_foundation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_identity_replay_context_hardening",
+      "category": "operational-scripts",
+      "key": "20260910_identity_replay_context_hardening",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_identity_replay_context_hardening.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_mesh_capability_constraint_preflight",
+      "category": "operational-scripts",
+      "key": "20260910_mesh_capability_constraint_preflight",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_capability_constraint_preflight.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_mesh_command_hardening",
+      "category": "operational-scripts",
+      "key": "20260910_mesh_command_hardening",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_command_hardening.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_mesh_discovery_current_status",
+      "category": "operational-scripts",
+      "key": "20260910_mesh_discovery_current_status",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_discovery_current_status.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_mesh_global_baseline_import",
+      "category": "operational-scripts",
+      "key": "20260910_mesh_global_baseline_import",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/publication/20260910_mesh_global_baseline_import.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_mesh_tenant_fork_activation",
+      "category": "operational-scripts",
+      "key": "20260910_mesh_tenant_fork_activation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/publication/20260910_mesh_tenant_fork_activation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_mesh_tenant_fork_publication",
+      "category": "operational-scripts",
+      "key": "20260910_mesh_tenant_fork_publication",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/publication/20260910_mesh_tenant_fork_publication.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_metadata_activation_confirmation",
+      "category": "operational-scripts",
+      "key": "20260910_metadata_activation_confirmation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_metadata_activation_confirmation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_neon_attachment_knowledge_writer",
+      "category": "operational-scripts",
+      "key": "20260910_neon_attachment_knowledge_writer",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_neon_attachment_knowledge_writer.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_operation_projection_release_identity",
+      "category": "operational-scripts",
+      "key": "20260910_operation_projection_release_identity",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_operation_projection_release_identity.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_saved_view_legacy_grant_cleanup",
+      "category": "operational-scripts",
+      "key": "20260910_saved_view_legacy_grant_cleanup",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_saved_view_legacy_grant_cleanup.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_saved_view_runtime_grants",
+      "category": "operational-scripts",
+      "key": "20260910_saved_view_runtime_grants",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_saved_view_runtime_grants.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260910_tenant_view_isolation",
+      "category": "operational-scripts",
+      "key": "20260910_tenant_view_isolation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_tenant_view_isolation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260911_company_owned_case_draft",
+      "category": "operational-scripts",
+      "key": "20260911_company_owned_case_draft",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260911_company_owned_case_draft.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260911_company_owned_case_pilot",
+      "category": "operational-scripts",
+      "key": "20260911_company_owned_case_pilot",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260911_company_owned_case_pilot.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260911_derivative_scan_evidence",
+      "category": "operational-scripts",
+      "key": "20260911_derivative_scan_evidence",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260911_derivative_scan_evidence.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260911_restore_neon_account_bank_permission_reference",
+      "category": "operational-scripts",
+      "key": "20260911_restore_neon_account_bank_permission_reference",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/repair/reference-permissions/20260911_restore_neon_account_bank_permission_reference.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260911_runtime_restoration_hash_dependency",
+      "category": "operational-scripts",
+      "key": "20260911_runtime_restoration_hash_dependency",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/publication/20260911_runtime_restoration_hash_dependency.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260911_runtime_restoration_neon",
+      "category": "operational-scripts",
+      "key": "20260911_runtime_restoration_neon",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260911_runtime_restoration_neon.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260911_runtime_restoration_studio",
+      "category": "operational-scripts",
+      "key": "20260911_runtime_restoration_studio",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260911_runtime_restoration_studio.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260911_successor_active_baseline_sequence",
+      "category": "operational-scripts",
+      "key": "20260911_successor_active_baseline_sequence",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260911_successor_active_baseline_sequence.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_business_partner_reveal_audit_contract",
+      "category": "operational-scripts",
+      "key": "20260912_business_partner_reveal_audit_contract",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260912_business_partner_reveal_audit_contract.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_case_contract_initial_publication",
+      "category": "operational-scripts",
+      "key": "20260912_case_contract_initial_publication",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260912_case_contract_initial_publication.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_case_validation_guard",
+      "category": "operational-scripts",
+      "key": "20260912_case_validation_guard",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260912_case_validation_guard.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_company_pilot_approver_visibility",
+      "category": "operational-scripts",
+      "key": "20260912_company_pilot_approver_visibility",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260912_company_pilot_approver_visibility.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_company_pilot_lifecycle",
+      "category": "operational-scripts",
+      "key": "20260912_company_pilot_lifecycle",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260912_company_pilot_lifecycle.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_control_admin_foundation",
+      "category": "operational-scripts",
+      "key": "20260912_control_admin_foundation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260912_control_admin_foundation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_document_collection_publication",
+      "category": "operational-scripts",
+      "key": "20260912_document_collection_publication",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260912_document_collection_publication.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_finance_journal_activity_permission",
+      "category": "operational-scripts",
+      "key": "20260912_finance_journal_activity_permission",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/repair/reference-permissions/20260912_finance_journal_activity_permission.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_identity_saga_foundation",
+      "category": "operational-scripts",
+      "key": "20260912_identity_saga_foundation",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260912_identity_saga_foundation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_invalidation_scope_regex",
+      "category": "operational-scripts",
+      "key": "20260912_invalidation_scope_regex",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260912_invalidation_scope_regex.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_neon_case_lifecycle_restore",
+      "category": "operational-scripts",
+      "key": "20260912_neon_case_lifecycle_restore",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260912_neon_case_lifecycle_restore.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_protected_bank_display_suffix",
+      "category": "operational-scripts",
+      "key": "20260912_protected_bank_display_suffix",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260912_protected_bank_display_suffix.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260912_runtime_contract_code_identity",
+      "category": "operational-scripts",
+      "key": "20260912_runtime_contract_code_identity",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260912_runtime_contract_code_identity.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:20260913_reference_choice_recent",
+      "category": "operational-scripts",
+      "key": "20260913_reference_choice_recent",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260913_reference_choice_recent.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:account-isolation",
       "category": "operational-scripts",
       "key": "account-isolation",
@@ -11809,6 +12519,30 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "An operator command may be unavailable or may target obsolete paths.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "operational-scripts:address-region-materializer",
+      "category": "operational-scripts",
+      "key": "address-region-materializer",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/address-region-materializer.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:advanced-address-materializer",
+      "category": "operational-scripts",
+      "key": "advanced-address-materializer",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/advanced-address-materializer.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:ap-fk-orphans",
@@ -12822,6 +13556,30 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:business-partner-address-editor",
+      "category": "operational-scripts",
+      "key": "business-partner-address-editor",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/business-partner-address-editor.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:business-partner-bank-editor",
+      "category": "operational-scripts",
+      "key": "business-partner-bank-editor",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/business-partner-bank-editor.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:business-partner-bank-verification",
       "category": "operational-scripts",
       "key": "business-partner-bank-verification",
@@ -12846,6 +13604,42 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:business-partner-collection-presentations",
+      "category": "operational-scripts",
+      "key": "business-partner-collection-presentations",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/business-partner-collection-presentations.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:business-partner-compliance-requirement",
+      "category": "operational-scripts",
+      "key": "business-partner-compliance-requirement",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/business-partner-compliance-requirement.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:business-partner-data-surfaces",
+      "category": "operational-scripts",
+      "key": "business-partner-data-surfaces",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/business-partner-data-surfaces.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:business-partner-entity-case-cutover.test",
       "category": "operational-scripts",
       "key": "business-partner-entity-case-cutover.test",
@@ -12858,12 +13652,98 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:business-partner-entry-policy",
+      "category": "operational-scripts",
+      "key": "business-partner-entry-policy",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/business-partner-entry-policy.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:business-partner-full-profile",
+      "category": "operational-scripts",
+      "key": "business-partner-full-profile",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/business-partner-full-profile.ts",
+        "server/db/scripts/tests/integration/business-partner-full-profile.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:business-partner-incomplete-draft",
+      "category": "operational-scripts",
+      "key": "business-partner-incomplete-draft",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/business-partner-incomplete-draft.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:business-partner-intake-graph",
+      "category": "operational-scripts",
+      "key": "business-partner-intake-graph",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/business-partner-intake-graph.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:business-partner-labels",
+      "category": "operational-scripts",
+      "key": "business-partner-labels",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/business-partner-labels.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:business-partner-labels.test",
+      "category": "operational-scripts",
+      "key": "business-partner-labels.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/__tests__/provisioning/business-partner-labels.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:business-partner-live-catalog-parity",
       "category": "operational-scripts",
       "key": "business-partner-live-catalog-parity",
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/checks/ddl/business-partner-live-catalog-parity.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:business-partner-organization-identity",
+      "category": "operational-scripts",
+      "key": "business-partner-organization-identity",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/business-partner-organization-identity.ts",
+        "server/db/scripts/tests/integration/business-partner-organization-identity.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -13026,6 +13906,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:business-partner-request-capture",
+      "category": "operational-scripts",
+      "key": "business-partner-request-capture",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/business-partner-request-capture.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:business-partner-role-extension.test",
       "category": "operational-scripts",
       "key": "business-partner-role-extension.test",
@@ -13082,6 +13974,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/seed/canonical-catalog-v2-model.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:canonical-development-baseline",
+      "category": "operational-scripts",
+      "key": "canonical-development-baseline",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/canonical-development-baseline.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -13890,6 +14794,42 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:draft-save-history",
+      "category": "operational-scripts",
+      "key": "draft-save-history",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/upgrades/authoring/draft-save-history.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:drop-bank-directory-release-model",
+      "category": "operational-scripts",
+      "key": "drop-bank-directory-release-model",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/banking/drop-bank-directory-release-model.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:drop-studio-bank-directory-permissions",
+      "category": "operational-scripts",
+      "key": "drop-studio-bank-directory-permissions",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/banking/drop-studio-bank-directory-permissions.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:effective-lock-scenarios",
       "category": "operational-scripts",
       "key": "effective-lock-scenarios",
@@ -13924,6 +14864,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/tests/integration/entity-case-payload-validation.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:entity-case-validation-guard",
+      "category": "operational-scripts",
+      "key": "entity-case-validation-guard",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/entity-case-validation-guard.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -14623,6 +15575,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "An operator command may be unavailable or may target obsolete paths.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "operational-scripts:intake-choice-surfaces",
+      "category": "operational-scripts",
+      "key": "intake-choice-surfaces",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/intake-choice-surfaces.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:internal-workforce-iam-cross-plane",
@@ -15330,6 +16294,18 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "operational-scripts:migration-layout",
+      "category": "operational-scripts",
+      "key": "migration-layout",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/checks/ddl/migration-layout.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:move-atlas-ai-to-ai-schema",
       "category": "operational-scripts",
       "key": "move-atlas-ai-to-ai-schema",
@@ -15406,6 +16382,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:neon-case-submission-guard",
+      "category": "operational-scripts",
+      "key": "neon-case-submission-guard",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/neon-case-submission-guard.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:neon-finance-fx-defaults",
       "category": "operational-scripts",
       "key": "neon-finance-fx-defaults",
@@ -15472,18 +16460,6 @@
       "dueGate": "Gate F precondition"
     },
     {
-      "identity": "operational-scripts:nominate-directory-authority",
-      "category": "operational-scripts",
-      "key": "nominate-directory-authority",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/operations/banking/nominate-directory-authority.sql"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "operational-scripts:numbering",
       "category": "operational-scripts",
       "key": "numbering",
@@ -15530,18 +16506,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/tests/integration/meta-entity/numbering-test-artifacts.sql"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:ownership",
-      "category": "operational-scripts",
-      "key": "ownership",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/tests/integration/bank-directory/ownership.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -15974,6 +16938,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "An operator command may be unavailable or may target obsolete paths.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "operational-scripts:presentation-graph-helpers",
+      "category": "operational-scripts",
+      "key": "presentation-graph-helpers",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/presentation-graph-helpers.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:prisma-generate",
@@ -16412,24 +17388,24 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "operational-scripts:publish-bank-directory",
-      "category": "operational-scripts",
-      "key": "publish-bank-directory",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/db/scripts/operations/banking/publish-bank-directory.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "operational-scripts:publish-development-business-partner-definition",
       "category": "operational-scripts",
       "key": "publish-development-business-partner-definition",
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/scripts/db-verification/provisioning/publish-development-business-partner-definition.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:publish-development-compiled-entity-runtime",
+      "category": "operational-scripts",
+      "key": "publish-development-compiled-entity-runtime",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/db-verification/provisioning/publish-development-compiled-entity-runtime.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -16680,6 +17656,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "An operator command may be unavailable or may target obsolete paths.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "operational-scripts:reference-choice-history.test",
+      "category": "operational-scripts",
+      "key": "reference-choice-history.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/__tests__/platform/reference-choice-history.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:reference-relation-coverage",
@@ -17368,6 +18356,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:start-storage-console",
+      "category": "operational-scripts",
+      "key": "start-storage-console",
+      "legacyLocations": [],
+      "currentLocations": [
+        "deploy/compose/instance/scripts/start-storage-console.sh"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:start-web",
       "category": "operational-scripts",
       "key": "start-web",
@@ -17683,6 +18683,18 @@
       "disposition": "migrated",
       "owner": "platform-operations",
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
+    },
+    {
+      "identity": "operational-scripts:upgrade-candidate-output",
+      "category": "operational-scripts",
+      "key": "upgrade-candidate-output",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/checks/ddl/upgrade-candidate-output.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:validate-canonical-catalogs",
@@ -19239,6 +20251,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "routes:get /api/entity-runtime/:entitycode/reference-history",
+      "category": "routes",
+      "key": "get /api/entity-runtime/:entitycode/reference-history",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/platform/preferences/src/reference-choice-routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "routes:get /api/entity-runtime/:entitycode/views",
       "category": "routes",
       "key": "get /api/entity-runtime/:entitycode/views",
@@ -19398,6 +20422,78 @@
       "identity": "routes:get /api/meta-entity-authoring/change-sets/:id/graph",
       "category": "routes",
       "key": "get /api/meta-entity-authoring/change-sets/:id/graph",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "routes:get /api/meta-entity-authoring/change-sets/:id/history",
+      "category": "routes",
+      "key": "get /api/meta-entity-authoring/change-sets/:id/history",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "routes:get /api/meta-entity-authoring/change-sets/:id/history/:revision",
+      "category": "routes",
+      "key": "get /api/meta-entity-authoring/change-sets/:id/history/:revision",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "routes:get /api/meta-entity-authoring/inspection/address-preview-choices",
+      "category": "routes",
+      "key": "get /api/meta-entity-authoring/inspection/address-preview-choices",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "routes:get /api/meta-entity-authoring/inspection/releases",
+      "category": "routes",
+      "key": "get /api/meta-entity-authoring/inspection/releases",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "routes:get /api/meta-entity-authoring/inspection/releases/:id",
+      "category": "routes",
+      "key": "get /api/meta-entity-authoring/inspection/releases/:id",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "routes:get /api/meta-entity-authoring/inspection/releases/:id/activation",
+      "category": "routes",
+      "key": "get /api/meta-entity-authoring/inspection/releases/:id/activation",
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
@@ -26798,6 +27894,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "routes:post /api/entity-runtime/:entitycode/reference-history",
+      "category": "routes",
+      "key": "post /api/entity-runtime/:entitycode/reference-history",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/platform/preferences/src/reference-choice-routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "routes:post /api/entity-runtime/:entitycode/views",
       "category": "routes",
       "key": "post /api/entity-runtime/:entitycode/views",
@@ -27164,6 +28272,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/services/master-data/src/business-partner-governed-import-routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "routes:post /api/neon/business-partner-intake/protected-values",
+      "category": "routes",
+      "key": "post /api/neon/business-partner-intake/protected-values",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -27809,6 +28929,18 @@
       "identity": "routes:post /api/notifications/:id/read",
       "category": "routes",
       "key": "post /api/notifications/:id/read",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/platform/notifications/src/notification-routes.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "routes:post /api/notifications/preferences/email-consent",
+      "category": "routes",
+      "key": "post /api/notifications/preferences/email-consent",
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/platform/notifications/src/notification-routes.ts"

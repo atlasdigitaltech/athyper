@@ -3,23 +3,23 @@
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
 Registry SHA-256: `cca360b6ec2c32bc5cc5c1489517d5e43e175c10f97b509cbe4c51cffd5d4814`
-Files scanned / authorization-bearing: 10440 / 1429
+Files scanned / authorization-bearing: 6974 / 1395
 Registered authorization objects: 470
-Aggregated object references: 1118
+Aggregated object references: 1147
 Writer references: 136
-Contract/UI field references: 2345
-Permission definitions / uses: 85 / 2015
-Authorization-bearing routes: 11
+Contract/UI field references: 2274
+Permission definitions / uses: 85 / 2074
+Authorization-bearing routes: 17
 Keycloak mappers: 145
 Canonical capture sources: 0 ()
 Keycloak REST writer paths: 10
-Open gate findings: 0
+Open gate findings: 9
 
 ## Gate status
 
 | Gate | Findings |
 |---|---:|
-| Unknown authorization sources | 0 |
+| Unknown authorization sources | 9 |
 | Unknown authorization writers | 0 |
 | Unowned objects | 0 |
 | Unclassified writers | 0 |
@@ -61,7 +61,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | compiled.entity | `snapshot.entity_compiled` | neon | authorization_projection | metadata-platform | studio, neon | regenerate | 0 | 1 | 0 |
 | context.company_code | `master.company_code` | neon | authorization_scope | finance-platform | neon | keep_as_non_granting_scope_source | 2 | 59 | 11 |
 | context.legal_entity | `master.legal_entity` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 26 | 6 |
-| context.operating_organization | `master.operating_organization` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 3 | 46 | 12 |
+| context.operating_organization | `master.operating_organization` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 3 | 51 | 13 |
 | context.operating_organization_company | `master.operating_organization_company` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_membership | 0 | 1 | 0 |
 | context.principal_relationship | `master.principal_relationship` | neon | context_only | platform-iam | studio, neon | keep_non_authorizing | 0 | 2 | 0 |
 | context.team | `master.team` | neon | context_only | organization-platform | neon | keep_non_authorizing | 1 | 33 | 0 |
@@ -80,10 +80,10 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function.validate_delegation_permissions | `master.trg_validate_delegation_permissions` | neon | legacy_authorization_invariant | platform-iam | neon | remove_with_legacy_delegation | 0 | 0 | 0 |
 | function.visibility_scope | `master.get_effective_visibility_scope` | neon | legacy_scope_evaluator | platform-iam | neon | remove_after_shadow | 0 | 0 | 0 |
 | identity.legal_entity_binding | `master.legal_entity_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep_as_non_granting_identity_projection | 0 | 2 | 0 |
-| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 4 | 195 | 35 |
-| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 1 | 47 | 9 |
+| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 4 | 213 | 34 |
+| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 1 | 49 | 9 |
 | identity.principal_profile | `master.principal_profile` | neon | identity_profile | platform-iam | studio, neon | remove_duplicate_idp_fields | 1 | 27 | 0 |
-| identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 5 | 152 | 26 |
+| identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 5 | 156 | 26 |
 | identity.tenant_domain | `master.tenant_identity_domain` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 2 | 0 |
 | identity.tenant_provider | `master.tenant_identity_provider` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 2 | 0 |
 | legacy.access_grant | `master.access_grant` | neon | legacy_authorization | platform-iam | studio, neon, mesh | split_into_role_scope_override_acl | 0 | 2 | 0 |
@@ -574,9 +574,9 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `authz.trg_validate_delegation_activation` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:992 | `master.principal` |
 | function | `authz.trg_validate_group_member` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:704 | `master.principal` |
 | function | `authz.trg_validate_permission_publish` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:244 | — |
-| function | `control.capture_entitlement_plan` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:725 | — |
-| function | `control.effective_tenant_entitlement` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:770 | `master.tenant` |
-| function | `control.entitlement_plan_at` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:754 | — |
+| function | `control.capture_entitlement_plan` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:731 | — |
+| function | `control.effective_tenant_entitlement` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:776 | `master.tenant` |
+| function | `control.entitlement_plan_at` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:760 | — |
 | function | `control.fn_provision_external_workforce_exchange` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/control/07_functions.sql:695 | `master.principal`<br>`mesh.network_account` |
 | function | `control.fn_validate_owner_type_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/control/07_functions.sql:1 | `master.tenant` |
 | function | `control.fn_validate_owner_type_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/control/07_functions.sql:1 | `master.tenant` |
@@ -586,19 +586,24 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | trigger | `control.subscription_plan.subscription_plan_entitlement_version` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/08_triggers.sql:270 | — |
 | table | `control.tenant_module_entitlement_override` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/03_tables.sql:1503 | — |
 | trigger | `control.tenant_module_entitlement_override.tenant_module_entitlement_override_guard` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/08_triggers.sql:277 | — |
-| function | `control.trg_capture_entitlement_plan` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:746 | — |
-| function | `control.trg_guard_module_entitlement_override` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:712 | — |
+| function | `control.trg_capture_entitlement_plan` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:752 | — |
+| function | `control.trg_guard_module_entitlement_override` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:718 | — |
+| function | `control.trg_guard_process_task_rule_release` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/control/17_process_task_rule_publication.sql:26 | `master.principal`<br>`master.principal_identity_binding` |
 | function | `control.trg_validate_decision_scope` | structural_dependency | finance-platform+organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/control/07_functions.sql:856 | `master.company_code`<br>`master.operating_organization` |
-| function | `control.trg_version_entitlement_plan` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:682 | — |
-| function | `control.trg_version_entitlement_plan_components` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:690 | — |
+| function | `control.trg_version_entitlement_plan` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:688 | — |
+| function | `control.trg_version_entitlement_plan_components` | structural_dependency | metadata-platform+platform-iam+platform-runtime+policy-platform+workflow-platform | review_with_registered_dependency | server/db/ddl/common/control/07_functions.sql:696 | — |
+| function | `document.command_process_task_escalate` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_task_interactions.sql:187 | `master.principal` |
 | function | `document.fn_business_partner_request_approvers` | structural_dependency | finance-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_functions.sql:3941 | `master.company_code`<br>`master.operating_organization`<br>`master.principal` |
 | function | `document.fn_company_setup_case_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_functions.sql:5453 | `master.principal` |
-| function | `document.fn_company_setup_case_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20260912_company_pilot_approver_visibility.sql:4 | `master.principal` |
-| function | `document.fn_company_setup_case_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20260912_company_pilot_lifecycle.sql:212 | `master.principal` |
+| function | `document.fn_company_setup_case_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260912_company_pilot_lifecycle.sql:212 | `master.principal` |
+| function | `document.fn_company_setup_case_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260912_company_pilot_approver_visibility.sql:4 | `master.principal` |
 | function | `document.fn_workflow_sla_due_tenants` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/document/07_functions.sql:181 | `master.tenant` |
+| function | `document.fn_workflow_sla_due_tenants` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_task_interactions.sql:377 | `master.tenant` |
 | function | `document.fn_workforce_request_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_functions.sql:3144 | `master.principal` |
+| function | `document.process_case_reviewers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_functions.sql:5897 | `master.principal` |
+| function | `document.process_document_candidates` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_functions.sql:5858 | `master.principal` |
 | function | `document.trg_company_owned_case` | structural_dependency | finance-platform+organization-platform | review_with_registered_dependency | server/db/ddl/common/document/07_functions.sql:212 | `master.company_code`<br>`master.operating_organization` |
-| function | `document.trg_company_owned_case` | structural_dependency | finance-platform+organization-platform | review_with_registered_dependency | server/db/migrations/20260911_company_owned_case_pilot.sql:9 | `master.company_code`<br>`master.operating_organization` |
+| function | `document.trg_company_owned_case` | structural_dependency | finance-platform+organization-platform | review_with_registered_dependency | server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260911_company_owned_case_pilot.sql:9 | `master.company_code`<br>`master.operating_organization` |
 | table | `event.authorization_invalidation_outbox` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/03_tables.sql:409 | — |
 | trigger | `event.authorization_invalidation_outbox.trg_authorization_invalidation_immutable` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/08_triggers.sql:69 | — |
 | trigger | `event.authorization_invalidation_outbox.trg_authorization_invalidation_notify` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/08_triggers.sql:96 | — |
@@ -613,7 +618,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | trigger | `master.company_code.trg_company_code_identity_immutable` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:359 | `master.company_code` |
 | trigger | `master.company_code.trg_company_code_status_changed` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:361 | `master.company_code` |
 | trigger | `master.company_code.trg_company_code_updated_at` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:363 | `master.company_code` |
-| function | `master.fn_resolve_dimension_set` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:1329 | `master.company_code` |
+| function | `master.fn_resolve_dimension_set` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:1327 | `master.company_code` |
 | function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:854 | `master.principal`<br>`master.principal_identity_binding` |
 | function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:899 | `master.principal`<br>`master.principal_identity_binding` |
 | function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:895 | `master.principal`<br>`master.principal_identity_binding` |
@@ -624,17 +629,17 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | trigger | `master.legal_entity.trg_legal_entity_identity_immutable` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:347 | `master.legal_entity` |
 | trigger | `master.legal_entity.trg_legal_entity_status_changed` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:349 | `master.legal_entity` |
 | trigger | `master.legal_entity.trg_legal_entity_updated_at` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:351 | `master.legal_entity` |
-| trigger | `master.legal_entity.wave6_legal_entity_amendment` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1550 | `master.legal_entity` |
-| trigger | `master.legal_entity.wave6_legal_entity_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1548 | `master.legal_entity` |
-| trigger | `master.legal_entity.wave6_legal_entity_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1554 | `master.legal_entity` |
+| trigger | `master.legal_entity.wave6_legal_entity_amendment` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1556 | `master.legal_entity` |
+| trigger | `master.legal_entity.wave6_legal_entity_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1554 | `master.legal_entity` |
+| trigger | `master.legal_entity.wave6_legal_entity_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1560 | `master.legal_entity` |
 | view | `master.mv_company_postable_account` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/09_views.sql:26 | `master.company_code` |
 | trigger | `master.operating_organization.trg_operating_organization_hierarchy_cycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:379 | `master.operating_organization` |
 | trigger | `master.operating_organization.trg_operating_organization_identity_immutable` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:373 | `master.operating_organization` |
 | trigger | `master.operating_organization.trg_operating_organization_status_changed` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:375 | `master.operating_organization` |
 | trigger | `master.operating_organization.trg_operating_organization_updated_at` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:377 | `master.operating_organization` |
-| trigger | `master.operating_organization.wave6_operating_organization_amendment` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1551 | `master.operating_organization` |
-| trigger | `master.operating_organization.wave6_operating_organization_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1549 | `master.operating_organization` |
-| trigger | `master.operating_organization.wave6_operating_organization_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1555 | `master.operating_organization` |
+| trigger | `master.operating_organization.wave6_operating_organization_amendment` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1557 | `master.operating_organization` |
+| trigger | `master.operating_organization.wave6_operating_organization_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1555 | `master.operating_organization` |
+| trigger | `master.operating_organization.wave6_operating_organization_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1561 | `master.operating_organization` |
 | trigger | `master.principal_identity_binding.trg_principal_identity_binding_10_normalize` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/08_triggers.sql:204 | `master.principal_identity_binding` |
 | trigger | `master.principal_identity_binding.trg_principal_identity_binding_10_normalize` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:204 | `master.principal_identity_binding` |
 | trigger | `master.principal_identity_binding.trg_principal_identity_binding_10_normalize` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/08_triggers.sql:214 | `master.principal_identity_binding` |
@@ -666,7 +671,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | trigger | `master.principal.trg_principal_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:192 | `master.principal` |
 | trigger | `master.principal.trg_principal_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/08_triggers.sql:202 | `master.principal` |
 | function | `master.seed_audit_reason_catalog` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/audit/07_functions.sql:418 | `master.principal` |
-| function | `master.seed_condition_type_catalog` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:2823 | `master.principal` |
+| function | `master.seed_condition_type_catalog` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:2866 | `master.principal` |
 | trigger | `master.team_member.trg_team_member_10_normalize` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/master/08_triggers.sql:155 | `master.team_member` |
 | trigger | `master.team_member.trg_team_member_10_normalize` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:155 | `master.team_member` |
 | trigger | `master.team_member.trg_team_member_10_normalize` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/studio/master/08_triggers.sql:165 | `master.team_member` |
@@ -724,32 +729,31 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `master.trg_normalize_principal_identity_binding` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:729 | — |
 | function | `master.trg_normalize_principal_identity_binding` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:774 | — |
 | function | `master.trg_normalize_principal_identity_binding` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:770 | — |
-| function | `master.trg_sync_organization_scope_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4887 | `master.tenant` |
-| function | `master.trg_validate_business_partner_role` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:3786 | `master.operating_organization` |
-| function | `master.trg_validate_employment_contract` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4034 | `master.company_code` |
+| function | `master.trg_sync_organization_scope_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4918 | `master.tenant` |
+| function | `master.trg_validate_employment_contract` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4065 | `master.company_code` |
 | function | `master.trg_validate_identity_binding_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:768 | `master.principal` |
 | function | `master.trg_validate_identity_binding_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:813 | `master.principal` |
 | function | `master.trg_validate_identity_binding_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:809 | `master.principal` |
 | function | `master.trg_validate_operating_organization_profile` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:1081 | `master.operating_organization` |
-| function | `master.trg_validate_partner_profile_references` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:3234 | `master.company_code` |
+| function | `master.trg_validate_partner_profile_references` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:3275 | `master.company_code` |
 | function | `mesh.catalog_is_visible` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:217 | `mesh.network_relationship` |
 | function | `mesh.catalog_price_is_visible` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:315 | `mesh.network_relationship` |
 | function | `mesh.command_document_envelope_lifecycle` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1209 | `master.tenant`<br>`mesh.network_account`<br>`mesh.network_relationship` |
 | function | `mesh.command_issue_registration_exchange` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1783 | `mesh.network_account` |
-| function | `mesh.command_issue_registration_exchange` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260906_mesh_exchange_readiness.sql:247 | `mesh.network_account` |
+| function | `mesh.command_issue_registration_exchange` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260906_mesh_exchange_readiness.sql:247 | `mesh.network_account` |
 | function | `mesh.command_network_account_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:693 | `mesh.network_account` |
 | function | `mesh.command_network_relationship_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:857 | `mesh.network_relationship` |
 | function | `mesh.command_open_canonical_party_correlation_case` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2181 | `mesh.network_account` |
 | function | `mesh.command_registration_exchange_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1799 | `mesh.network_account` |
 | function | `mesh.command_relationship_capability_lifecycle` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1672 | `master.tenant`<br>`mesh.network_relationship` |
-| function | `mesh.command_relationship_capability_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260906_mesh_exchange_readiness.sql:215 | `mesh.network_relationship` |
-| function | `mesh.command_relationship_capability_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260910_mesh_command_hardening.sql:35 | `mesh.network_relationship` |
+| function | `mesh.command_relationship_capability_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260906_mesh_exchange_readiness.sql:215 | `mesh.network_relationship` |
+| function | `mesh.command_relationship_capability_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_command_hardening.sql:35 | `mesh.network_relationship` |
 | function | `mesh.command_request_network_relationship` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:762 | `mesh.network_relationship` |
 | function | `mesh.command_request_relationship_capability` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1647 | `mesh.network_relationship` |
-| function | `mesh.command_request_relationship_capability` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260906_mesh_exchange_readiness.sql:190 | `mesh.network_relationship` |
+| function | `mesh.command_request_relationship_capability` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260906_mesh_exchange_readiness.sql:190 | `mesh.network_relationship` |
 | function | `mesh.command_resolve_canonical_party_correlation_case` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2195 | `mesh.network_account` |
 | function | `mesh.command_retrieve_bank_protected_token` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2139 | `mesh.network_account`<br>`mesh.network_relationship` |
-| function | `mesh.command_retrieve_bank_protected_token` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260910_mesh_command_hardening.sql:149 | `mesh.network_account`<br>`mesh.network_relationship` |
+| function | `mesh.command_retrieve_bank_protected_token` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_mesh_command_hardening.sql:149 | `mesh.network_account`<br>`mesh.network_relationship` |
 | function | `mesh.fn_catalog_publication_snapshot` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:416 | `mesh.network_account`<br>`mesh.network_relationship` |
 | function | `mesh.fn_upsert_network_scope` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:884 | `master.tenant` |
 | function | `mesh.is_hardened_https_url` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1924 | `master.principal`<br>`mesh.network_account` |
@@ -804,21 +808,20 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `pg_temp.decide` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/scripts/tests/integration/supplier-preference-normalized-scope.sql:25 | `master.operating_organization` |
 | function | `pg_temp.expect_error` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/scripts/tests/integration/db-review/bank.sql:5 | `master.principal`<br>`mesh.network_account`<br>`mesh.network_relationship` |
 | function | `pg_temp.expect_error` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/scripts/tests/integration/db-review/mesh.sql:15 | `mesh.network_relationship` |
-| function | `pg_temp.must_fail` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/scripts/tests/integration/bank-directory/ownership.sql:4 | `master.principal` |
 | function | `pg_temp.r4_fail_outbox` | structural_dependency | finance-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/scripts/tests/integration/business-partner-r4-change-case.sql:3 | `master.company_code`<br>`master.legal_entity`<br>`master.operating_organization`<br>`master.principal` |
 | function | `pg_temp.r4_fail_outbox` | structural_dependency | finance-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/scripts/tests/integration/business-partner-r6-amendment.sql:3 | `master.company_code`<br>`master.legal_entity`<br>`master.operating_organization`<br>`master.principal` |
 | trigger | `publication.entity_authorization_successor_link.authorization_successor_link_immutable` | structural_dependency | publication | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql:35 | `publication.entity_authorization_successor_link` |
-| trigger | `publication.entity_authorization_successor_link.authorization_successor_link_immutable` | structural_dependency | publication | review_with_registered_dependency | server/db/migrations/20260910_authorization_successor_materializer.sql:37 | `publication.entity_authorization_successor_link` |
+| trigger | `publication.entity_authorization_successor_link.authorization_successor_link_immutable` | structural_dependency | publication | review_with_registered_dependency | server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql:37 | `publication.entity_authorization_successor_link` |
 | trigger | `publication.entity_authorization_successor_payload.authorization_successor_payload_immutable` | structural_dependency | publication | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql:19 | `publication.entity_authorization_successor_payload` |
-| trigger | `publication.entity_authorization_successor_payload.authorization_successor_payload_immutable` | structural_dependency | publication | review_with_registered_dependency | server/db/migrations/20260910_authorization_successor_materializer.sql:21 | `publication.entity_authorization_successor_payload` |
+| trigger | `publication.entity_authorization_successor_payload.authorization_successor_payload_immutable` | structural_dependency | publication | review_with_registered_dependency | server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql:21 | `publication.entity_authorization_successor_payload` |
 | function | `publication.fn_authorization_successor_compilation_source` | registered | publication | studio_compilation_reader_for_hash_pinned_approved_release | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql:89 | `publication.entity_authorization_successor_link` |
-| function | `publication.fn_authorization_successor_compilation_source` | registered | publication | studio_compilation_reader_for_hash_pinned_approved_release | server/db/migrations/20260910_authorization_successor_materializer.sql:86 | `publication.entity_authorization_successor_link` |
+| function | `publication.fn_authorization_successor_compilation_source` | registered | publication | studio_compilation_reader_for_hash_pinned_approved_release | server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql:86 | `publication.entity_authorization_successor_link` |
 | function | `publication.fn_prepare_authorization_successor` | registered | publication | studio_approved_release_materialization_with_maker_checker_and_tenant_checks | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql:41 | `publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
-| function | `publication.fn_prepare_authorization_successor` | registered | publication | studio_approved_release_materialization_with_maker_checker_and_tenant_checks | server/db/migrations/20260910_authorization_successor_materializer.sql:43 | `publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
-| function | `publication.fn_prepare_authorization_successor` | registered | publication | studio_approved_release_materialization_with_maker_checker_and_tenant_checks | server/db/migrations/20260911_successor_active_baseline_sequence.sql:2 | `publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
+| function | `publication.fn_prepare_authorization_successor` | registered | publication | studio_approved_release_materialization_with_maker_checker_and_tenant_checks | server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql:43 | `publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
+| function | `publication.fn_prepare_authorization_successor` | registered | publication | studio_approved_release_materialization_with_maker_checker_and_tenant_checks | server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260911_successor_active_baseline_sequence.sql:2 | `publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
 | function | `publication.fn_successor_canonical_json` | structural_dependency | platform-iam+publication | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql:2 | `master.tenant`<br>`publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
 | function | `publication.fn_successor_canonical_json` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/14_runtime_restoration.sql:3 | `master.tenant` |
-| function | `publication.fn_successor_canonical_json` | structural_dependency | platform-iam+publication | review_with_registered_dependency | server/db/migrations/20260910_authorization_successor_materializer.sql:4 | `master.tenant`<br>`publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
+| function | `publication.fn_successor_canonical_json` | structural_dependency | platform-iam+publication | review_with_registered_dependency | server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql:4 | `master.tenant`<br>`publication.entity_authorization_successor_link`<br>`publication.entity_authorization_successor_payload` |
 | table | `runtime_meta.authorization_epoch` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/runtime_meta/03_tables.sql:70 | — |
 | trigger | `runtime_meta.authorization_epoch.trg_authorization_epoch_coordinates_immutable` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/event/08_triggers.sql:46 | — |
 | function | `runtime_meta.trg_authorization_epoch_coordinates_immutable` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/event/07_functions.sql:107 | — |
@@ -829,33 +832,38 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 
 | Symbol | Classification | Artifact class | Path | Lines |
 |---|---|---|---|---|
-| `authorizeAccess` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2976 |
+| `authorizeAccess` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 3022 |
 | `authorizeAccess` | reviewed | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 606, 1573 |
 | `authorizeAccess` | reviewed | test | server/packages/services/master-data/src/__tests__/master-data-services.test.ts | 30, 38, 39, 113 |
 | `authorizeAccess` | reviewed | runtime | server/packages/services/master-data/src/services.ts | 34, 53, 94, 106, 117, 128, 154, 155, 156 |
-| `authorizeAdmin` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 5506 |
+| `authorizeAdmin` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 5858 |
 | `authorizeAdmin` | reviewed | test | server/packages/platform/ai/src/__tests__/atlas-experience-runtime-review.test.ts | 13 |
 | `authorizeAdmin` | reviewed | test | server/packages/platform/ai/src/__tests__/experience-routes.test.ts | 6 |
 | `authorizeAdmin` | reviewed | route | server/packages/platform/ai/src/atlas-experience-routes.ts | 8, 10 |
-| `authorizeAdmission` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 5809 |
+| `authorizeAdmission` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 6161 |
 | `authorizeAdmission` | reviewed | test | server/packages/platform/ai/src/__tests__/local-generation.test.ts | 31 |
 | `authorizeAdmission` | reviewed | runtime | server/packages/platform/ai/src/conversation-composition.ts | 20, 25, 80 |
 | `authorizeAdmission` | reviewed | runtime | server/packages/platform/ai/src/local-generation-composition.ts | 31, 34, 38, 41 |
+| `authorizeArtifact` | unclassified | runtime | server/apps/platform-host/src/composition/register-services.ts | 5793, 5810 |
+| `authorizeArtifact` | unclassified | runtime | server/apps/platform-host/src/composition/supplier-process-communications.ts | 37, 273, 651 |
+| `authorizeArtifact` | unclassified | runtime | server/apps/platform-host/src/composition/supplier-process-documents.ts | 275, 657 |
 | `authorizeAssignment` | reviewed | test | server/packages/services/master-data/src/__tests__/business-partner-company-relationships.test.ts | 9, 10 |
-| `authorizeAssignment` | reviewed | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 207, 1067 |
+| `authorizeAssignment` | reviewed | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 212, 1110 |
 | `authorizeAssignment` | reviewed | runtime | server/packages/services/master-data/src/kysely-business-partner-360-role-sections.ts | 341, 368 |
-| `authorizeCase` | reviewed | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 854, 894 |
-| `authorizeCase` | reviewed | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 159, 241, 497, 950 |
+| `authorizeCase` | reviewed | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 876, 916 |
+| `authorizeCase` | reviewed | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 164, 246, 543, 993 |
 | `authorizeCase` | reviewed | runtime | server/packages/services/master-data/src/kysely-business-partner-360-explainability.ts | 51, 125, 270, 273, 289 |
-| `authorizeCase` | reviewed | runtime | server/packages/services/master-data/src/kysely-business-partner-360-repository.ts | 149, 266 |
-| `authorizeCaseMutation` | reviewed | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 593, 654, 1006 |
-| `authorizeCaseRead` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 3360 |
-| `authorizeCaseRead` | reviewed | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 865 |
-| `authorizeCaseRead` | reviewed | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 312, 498, 504, 951, 957 |
+| `authorizeCase` | reviewed | runtime | server/packages/services/master-data/src/kysely-business-partner-360-repository.ts | 163, 280 |
+| `authorizeCaseMutation` | reviewed | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 627, 691, 1065 |
+| `authorizeCaseRead` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 3426 |
+| `authorizeCaseRead` | reviewed | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 887 |
+| `authorizeCaseRead` | reviewed | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 317, 544, 550, 994, 1000 |
 | `authorizeCaseRead` | reviewed | tool | tooling/scripts/verification/deploy-business-partner-worker.mjs | 210 |
+| `authorizeDelivery` | unclassified | runtime | server/apps/platform-host/src/composition/supplier-process-communications.ts | 534 |
+| `authorizeDelivery` | unclassified | runtime | server/packages/platform/notifications/src/durable-delivery.ts | 24 |
 | `authorizeDescriptorOperation` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 359, 458, 531, 656, 822, 913, 1229, 1335, 1370, 1584, 1717, 1936 |
 | `authorizeEntityActivation` | reviewed | test | server/packages/services/publication/src/__tests__/authorization-activation-hold.test.ts | 7 |
-| `authorizeEntityActivation` | reviewed | runtime | server/packages/services/publication/src/kysely-publication-authority-work.ts | 56, 647, 649 |
+| `authorizeEntityActivation` | reviewed | runtime | server/packages/services/publication/src/kysely-publication-authority-work.ts | 56, 613, 615 |
 | `authorizeEntityRelationship` | reviewed | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 17, 250 |
 | `authorizeEntityRelationship` | reviewed | runtime | server/packages/services/records/src/entity-authorization.ts | 355 |
 | `authorizeGateway` | reviewed | runtime | server/apps/platform-host/src/composition/business-partner-import-runtime.ts | 43 |
@@ -863,18 +871,22 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | `authorizeGateway` | reviewed | runtime | server/packages/services/master-data/src/business-partner-governed-import.ts | 37, 43 |
 | `authorizeImportMode` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 366, 465, 538, 829, 920, 1236, 1342, 1972 |
 | `authorizeListContextDiscovery` | reviewed | test | server/packages/services/records/src/__tests__/list-context-discovery.test.ts | 7, 71, 84, 91, 104, 120, 135 |
-| `authorizeListContextDiscovery` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 1, 242 |
+| `authorizeListContextDiscovery` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 2, 248 |
 | `authorizeListContextDiscovery` | reviewed | runtime | server/packages/services/records/src/list-context-discovery.ts | 16 |
 | `authorizeParent` | reviewed | runtime | server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts | 118, 146, 157 |
 | `authorizeParent` | reviewed | runtime | server/apps/platform-host/src/composition/atlas-document-grounding.ts | 51, 88, 97 |
-| `authorizeParent` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 5931 |
+| `authorizeParent` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 6283 |
 | `authorizeParent` | reviewed | test | server/packages/services/attachments/src/retrieval-admission.test.ts | 57, 62, 64, 70, 99, 103, 107 |
 | `authorizeParent` | reviewed | runtime | server/packages/services/attachments/src/retrieval-admission.ts | 32, 94 |
+| `authorizeRecipient` | unclassified | runtime | server/apps/platform-host/src/composition/supplier-process-communications.ts | 521 |
+| `authorizeRecipient` | unclassified | runtime | server/packages/platform/notifications/src/notification-planner.ts | 15, 49 |
 | `authorizeRecordListRead` | reviewed | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 2, 19, 33, 42, 52 |
-| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 61, 167, 249 |
+| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 64, 171, 255 |
 | `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/query-service.ts | 25, 88, 297, 378 |
 | `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/record-read-access.ts | 6 |
-| `authorizeVerification` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 2977 |
+| `authorizeRun` | unclassified | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 70 |
+| `authorizeSupplierActivationReadiness` | unclassified | runtime | server/packages/services/master-data/src/supplier-activation-readiness.ts | 9 |
+| `authorizeVerification` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 3023 |
 | `authorizeVerification` | reviewed | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 669, 779, 934, 1006 |
 | `authorizeVerification` | reviewed | test | server/packages/services/master-data/src/__tests__/master-data-services.test.ts | 35, 38 |
 | `authorizeVerification` | reviewed | runtime | server/packages/services/master-data/src/local-contact-challenge.ts | 38 |
@@ -884,11 +896,12 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | `getEffectiveModuleAccess` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 828 |
 | `requireAllow` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 1132 |
 | `requireCatalogPermission` | unclassified | tool | server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts | 57, 269 |
+| `requirePermission` | reviewed | runtime | server/apps/platform-host/src/provisioning/supplier-process-catalog.ts | 225 |
 | `requirePermission` | reviewed | route | server/packages/planes/neon/src/finance-http.ts | 80, 245, 342, 425 |
 | `requirePermission` | reviewed | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 55, 146, 185, 210, 237, 253, 268, 291, 312, 467 |
 | `requirePermission` | reviewed | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 35, 243 |
-| `requirePermission` | reviewed | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 38, 82, 122, 457 |
-| `requirePermission` | reviewed | runtime | server/packages/services/documents/src/document-service.ts | 30, 35, 90, 128 |
+| `requirePermission` | reviewed | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 38, 67, 107, 442 |
+| `requirePermission` | reviewed | runtime | server/packages/services/documents/src/document-service.ts | 37, 43, 103, 141 |
 | `requirePermission` | reviewed | runtime | server/packages/services/finance/src/planning/planning-service.ts | 8, 9, 14, 15, 24 |
 | `requirePermission` | reviewed | route | server/packages/services/publication/src/publication-routes.ts | 37, 46, 54, 62, 72, 81, 90, 107, 123, 136 |
 | `requirePermission` | reviewed | tool | tooling/scripts/verification/master-data-prerequisites.mjs | 51 |
@@ -898,7 +911,17 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 
 ## Unknown source findings
 
-None.
+| Type | Identity | Path | Lines |
+|---|---|---|---|
+| security_symbol | `authorizeArtifact` | server/apps/platform-host/src/composition/register-services.ts | 5793, 5810 |
+| security_symbol | `authorizeArtifact` | server/apps/platform-host/src/composition/supplier-process-communications.ts | 37, 273, 651 |
+| security_symbol | `authorizeDelivery` | server/apps/platform-host/src/composition/supplier-process-communications.ts | 534 |
+| security_symbol | `authorizeRecipient` | server/apps/platform-host/src/composition/supplier-process-communications.ts | 521 |
+| security_symbol | `authorizeArtifact` | server/apps/platform-host/src/composition/supplier-process-documents.ts | 275, 657 |
+| security_symbol | `authorizeRun` | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 70 |
+| security_symbol | `authorizeDelivery` | server/packages/platform/notifications/src/durable-delivery.ts | 24 |
+| security_symbol | `authorizeRecipient` | server/packages/platform/notifications/src/notification-planner.ts | 15, 49 |
+| security_symbol | `authorizeSupplierActivationReadiness` | server/packages/services/master-data/src/supplier-activation-readiness.ts | 9 |
 
 ## Known source anomalies
 
@@ -944,10 +967,11 @@ Capture DDLs:
 | `master.legal_entity` | insert | test | server/db/scripts/tests/integration/business-partner-r6-amendment.sql | 55 |
 | `master.legal_entity` | insert | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 239 |
 | `master.legal_entity` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 33 |
+| `master.operating_organization` | update | ddl | server/db/ddl/planes/neon/master/16_operating_organization_model.sql | 37 |
 | `master.operating_organization` | update | tool | server/db/scripts/business-partner-360/provision-business-partner-360-acceptance-fixtures.ts | 45 |
 | `master.operating_organization` | insert | tool | server/db/scripts/provisioning/neon-scenario-foundation.ts | 68 |
 | `master.operating_organization` | insert | tool | server/db/scripts/provisioning/provision-business-partner-r2-fixtures.ts | 216 |
-| `master.operating_organization` | update | tool | server/db/scripts/provisioning/provision-development-business-partner-fixtures.ts | 344 |
+| `master.operating_organization` | update | tool | server/db/scripts/provisioning/provision-development-business-partner-fixtures.ts | 343 |
 | `master.operating_organization` | insert | test | server/db/scripts/tests/integration/business-partner-r4-change-case.sql | 58 |
 | `master.operating_organization` | insert | test | server/db/scripts/tests/integration/business-partner-r5-fixture-foundation.sql | 12 |
 | `master.operating_organization` | insert | test | server/db/scripts/tests/integration/business-partner-r6-amendment.sql | 59 |
@@ -973,7 +997,7 @@ Capture DDLs:
 | `master.principal` | insert | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 327 |
 | `master.principal` | delete | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 430 |
 | `master.principal` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 270 |
-| `master.principal` | insert | test | server/db/scripts/tests/integration/ci-integrity.ts | 300, 407 |
+| `master.principal` | insert | test | server/db/scripts/tests/integration/ci-integrity.ts | 301, 408 |
 | `master.principal` | insert | test | server/db/scripts/tests/integration/db-review/bank.sql | 21 |
 | `master.principal` | insert | test | server/db/scripts/tests/integration/db-review/mesh.sql | 5 |
 | `master.principal` | insert | test | server/db/scripts/tests/integration/db-review/tenant-isolation.sql | 7 |
@@ -986,7 +1010,6 @@ Capture DDLs:
 | `master.principal` | insert | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 314 |
 | `master.principal` | update | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 320, 408 |
 | `master.principal` | insert | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 912 |
-| `master.principal` | insert | test | server/packages/services/publication/src/__tests__/integration/bank-directory.mjs | 21 |
 | `master.principal` | insert | test | server/packages/services/publication/src/__tests__/integration/business-partner-case-contract-publication.ts | 56 |
 | `master.principal` | insert | runtime | server/packages/test-utils/fixtures/rls-actors.sql | 23 |
 | `master.principal` | insert | tool | tooling/scripts/iam/provision-business-partner-v1-local.mjs | 217 |
@@ -1046,14 +1069,14 @@ Capture DDLs:
 | `mesh.network_relationship` | delete | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 427 |
 | `mesh.network_relationship` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 298 |
 | `mesh.network_relationship` | update | test | server/db/scripts/tests/integration/db-review/bank.sql | 45, 54 |
-| `mesh.network_relationship` | update | test | server/db/scripts/tests/integration/db-review/run.mjs | 189, 191 |
+| `mesh.network_relationship` | update | test | server/db/scripts/tests/integration/db-review/run.mjs | 192, 194 |
 | `mesh.network_relationship` | insert | runtime | server/packages/planes/mesh/src/network-relationship-import.ts | 37 |
 | `mesh.network_relationship` | update | runtime | server/packages/planes/mesh/src/network-relationship-import.ts | 31, 36 |
 | `control.entity_version` | update | test | server/db/scripts/tests/integration/effective-lock-scenarios.ts | 108, 132, 190 |
 | `control.authorization_capture_source` | insert | test | tooling/scripts/policy/authorization-inventory.test.ts | 335, 349, 353, 366 |
 | `publication.entity_authorization_successor_link` | insert | ddl | server/db/ddl/planes/studio/metadata/13_authorization_successor.sql | 84 |
-| `publication.entity_authorization_successor_link` | insert | runtime | server/db/migrations/20260910_authorization_successor_materializer.sql | 81 |
-| `publication.entity_authorization_successor_link` | insert | runtime | server/db/migrations/20260911_successor_active_baseline_sequence.sql | 45 |
+| `publication.entity_authorization_successor_link` | insert | tool | server/db/scripts/operations/upgrades/publication/20260910_authorization_successor_materializer.sql | 81 |
+| `publication.entity_authorization_successor_link` | insert | test | server/db/scripts/tests/integration/fixtures/legacy-upgrades/20260911_successor_active_baseline_sequence.sql | 45 |
 | `publication.entity_authorization_successor_payload` | insert | tool | tooling/scripts/verification/deploy-business-partner-successor-materializer.mjs | 56 |
 | `publication.entity_authorization_successor_payload` | insert | tool | tooling/scripts/verification/qualify-business-partner-successor-sql.mjs | 13, 16 |
 | `publication.entity_authorization_successor_payload` | update | tool | tooling/scripts/verification/qualify-business-partner-successor-sql.mjs | 20 |
@@ -1174,6 +1197,12 @@ Capture DDLs:
 | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/change-sets` | GET, POST | `studio.platform.catalog.manage` | — |
 | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/change-sets/:id/${name}` | POST | `studio.platform.catalog.manage` | — |
 | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/change-sets/:id/graph` | GET, PUT | `studio.platform.catalog.manage` | — |
+| server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/change-sets/:id/history` | GET | `studio.platform.catalog.manage` | — |
+| server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/change-sets/:id/history/:revision` | GET | `studio.platform.catalog.manage` | — |
+| server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/inspection/address-preview-choices` | GET | `studio.platform.catalog.manage` | — |
+| server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/inspection/releases` | GET | `studio.platform.catalog.manage` | — |
+| server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/inspection/releases/:id` | GET | `studio.platform.catalog.manage` | — |
+| server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/inspection/releases/:id/activation` | GET | `studio.platform.catalog.manage` | — |
 | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/releases/:id/activate` | POST | `studio.platform.catalog.manage` | — |
 | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | `/api/meta-entity-authoring/releases/:id/rollback` | POST | `studio.platform.catalog.manage` | — |
 | server/packages/platform/ai/src/atlas-experience-routes.ts | `<dynamic-or-mounted>` | UNKNOWN | `studio.platform.catalog.manage` | authorizeAdmin |
@@ -1186,12 +1215,6 @@ Capture DDLs:
 
 | Field | Artifact class | Path | Lines |
 |---|---|---|---|
-| `allowed` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/apps_neon_lib_auth_ts_0q7z0gp._.js | 1 |
-| `allowed` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/apps_neon_lib_auth_ts_0q7z0gp._.js | 1 |
-| `allowed` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/apps_neon_lib_auth_ts_0q7z0gp._.js | 1 |
-| `allowed` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/apps_neon_lib_auth_ts_0q7z0gp._.js | 1 |
-| `allowed` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/apps_neon_lib_auth_ts_0q7z0gp._.js | 1 |
-| `allowed` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/apps_neon_lib_auth_ts_0q7z0gp._.js | 1 |
 | `allowed` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/apps_studio_lib_auth_ts_0kr8_49._.js | 1 |
 | `allowed` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/apps_studio_lib_auth_ts_0kr8_49._.js | 1 |
 | `allowed` | keycloak | deploy/config/iam/realm-athyper-clean-slate.json | 2239, 2249, 2251, 2685, 2713, 2717, 2732, 2744, 2748 |
@@ -1248,9 +1271,12 @@ Capture DDLs:
 | `allowed` | runtime | governance/policy/reviews/entity-authorization-differences.dev.json | 161, 185, 521, 545, 569, 593, 617, 641, 665, 689 |
 | `allowed` | runtime | packages/contracts/platform/authorization/src/index.ts | 2, 7, 18, 21 |
 | `allowed` | runtime | packages/contracts/platform/entity-runtime/src/access-decision.ts | 3 |
+| `allowed` | runtime | packages/contracts/platform/entity-runtime/src/intake-surface-authoring.ts | 155, 158, 160, 161, 162 |
 | `allowed` | runtime | packages/contracts/platform/fixtures/authorization-snapshot.v1.json | 4 |
 | `allowed` | runtime | packages/contracts/platform/fixtures/platform-bootstrap.v1.json | 23 |
 | `allowed` | runtime | packages/planes/neon/business-partner/src/360/company-relationships.ts | 13 |
+| `allowed` | test | packages/planes/neon/business-partner/src/entity-lookup.test.tsx | 378 |
+| `allowed` | test | packages/planes/studio/business-partner/src/composition-configuration.test.ts | 136 |
 | `allowed` | runtime | packages/platform/shell/shell-runtime/src/core.ts | 28 |
 | `allowed` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 51 |
 | `allowed` | ui | packages/platform/shell/shell/src/home.tsx | 1772 |
@@ -1266,7 +1292,7 @@ Capture DDLs:
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts | 41, 90, 91 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 44, 112, 119, 149, 194, 199, 201, 203, 221, 225, 237, 245, 247, 262, 289, 295, 303, 310, 321, 326, 354, 390, 392, 414, 432, 448, 449, 513, 599, 617, 622, 653, 657 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-bound-import.test.ts | 15 |
-| `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-case-authority.test.ts | 40, 47, 60, 79 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-case-authority.test.ts | 40, 47, 60, 79, 88, 115, 132, 142, 148, 157, 194 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-company-native-authority.test.ts | 11, 27 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts | 24, 67, 108, 110, 119 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-read-policy.test.ts | 37, 101, 103, 126 |
@@ -1275,23 +1301,26 @@ Capture DDLs:
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 46, 163 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 22, 46, 52 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 41 |
-| `allowed` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5, 7, 10, 13, 17, 23, 24, 27 |
+| `allowed` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5, 7, 10, 13, 17, 23, 24, 27, 32, 33, 34, 36 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 13, 189 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts | 115, 288 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/atlas-document-grounding.ts | 87 |
-| `allowed` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 22, 48, 60, 71, 81, 92, 97, 107 |
-| `allowed` | runtime | server/apps/platform-host/src/composition/bank-directory-authorizer.ts | 12, 17, 22, 24, 32 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 236, 359, 376, 488, 496 |
-| `allowed` | runtime | server/apps/platform-host/src/composition/business-partner-case-authority.ts | 26 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/business-partner-case-authority.ts | 28, 65 |
 | `allowed` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 9, 17, 22, 25, 29, 34, 35 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/business-partner-definition-authorizer.ts | 9, 12, 14, 16 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/business-partner-export-runtime.ts | 13 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/business-partner-import-runtime.ts | 16, 56, 102 |
 | `allowed` | route | server/apps/platform-host/src/composition/finance-routes.ts | 41, 295 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/local-graph-preview.ts | 59 |
-| `allowed` | runtime | server/apps/platform-host/src/composition/meta-entity-authoring-authorizer.ts | 7, 9, 11, 15 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/meta-entity-authoring-authorizer.ts | 7, 9, 11, 15, 23, 25 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 525, 833 |
-| `allowed` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1362, 2125, 2133, 2310, 3093, 3100, 3110, 3120, 3133, 3146, 3153, 3168, 3175, 3209, 3263, 3274, 3278, 5507, 5510, 5511, 5669, 5673, 5818, 6604, 7241 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1395, 2158, 2166, 2343, 3139, 3146, 3156, 3166, 3179, 3192, 3199, 3214, 3221, 3255, 3309, 3320, 3324, 5859, 5862, 5863, 6021, 6025, 6170, 6963, 7514 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/supplier-process-communications.ts | 172, 573, 589 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/supplier-process-edit-policy.ts | 66 |
+| `allowed` | test | server/apps/platform-host/src/composition/supplier-process-task-authority.test.ts | 38 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/supplier-process-tasks.ts | 470 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/task-edit-policy-authoring.ts | 19 |
 | `allowed` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 158 |
 | `allowed` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 250 |
 | `allowed` | ddl | server/db/ddl/common/master/03_platform_tables.sql | 50 |
@@ -1317,7 +1346,8 @@ Capture DDLs:
 | `allowed` | test | server/packages/planes/mesh/src/network-account-context.test.ts | 8, 14 |
 | `allowed` | test | server/packages/planes/neon/src/__tests__/integration/business-partner-bank-verification.ts | 79 |
 | `allowed` | test | server/packages/planes/neon/src/business-partner-account-bank-linkage.test.ts | 6, 7 |
-| `allowed` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 508, 872, 1152 |
+| `allowed` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 512, 536, 896, 1176 |
+| `allowed` | test | server/packages/planes/neon/src/business-partner-intake-protection.test.ts | 8, 10 |
 | `allowed` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6, 23 |
 | `allowed` | runtime | server/packages/planes/neon/src/business-partner-profile-match.ts | 176 |
 | `allowed` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7, 23 |
@@ -1329,11 +1359,13 @@ Capture DDLs:
 | `allowed` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/graph-editor-routes.test.ts | 25 |
 | `allowed` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/learning-inbox.test.ts | 36 |
 | `allowed` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/learning-route-scope.test.ts | 11 |
-| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/deterministic.ts | 518, 1222 |
-| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/entity-authorization.ts | 86 |
-| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts | 654, 656 |
+| `allowed` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/release-inspection-routes.test.ts | 32, 69, 82, 98 |
+| `allowed` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/reviewer-read-routes.test.ts | 28, 31, 32 |
+| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/deterministic.ts | 521, 1228 |
+| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/entity-authorization.ts | 90 |
+| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts | 709, 711 |
 | `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/learning-inbox.ts | 129, 177, 204, 205, 373, 407, 430, 437 |
-| `allowed` | route | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 24, 32, 51, 72, 131, 148, 176, 189, 205, 282 |
+| `allowed` | route | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 25, 30, 39, 46, 55, 59, 70, 78, 98, 119, 178, 195, 223, 236, 256, 342 |
 | `allowed` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 26 |
 | `allowed` | runtime | server/packages/planes/studio/onboarding/src/maintenance.ts | 24 |
 | `allowed` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 8 |
@@ -1376,7 +1408,7 @@ Capture DDLs:
 | `allowed` | runtime | server/packages/platform/control-admin/src/bank-validation.ts | 9 |
 | `allowed` | runtime | server/packages/platform/control-admin/src/connector-control.ts | 10 |
 | `allowed` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 50 |
-| `allowed` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 462 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 447 |
 | `allowed` | runtime | server/packages/platform/control-admin/src/entitlement-control.ts | 10 |
 | `allowed` | runtime | server/packages/platform/control-admin/src/feature-control.ts | 33 |
 | `allowed` | runtime | server/packages/platform/control-admin/src/kysely-authorization-management-repository.ts | 227, 234 |
@@ -1385,14 +1417,18 @@ Capture DDLs:
 | `allowed` | runtime | server/packages/platform/control-admin/src/parameter-control.ts | 33 |
 | `allowed` | runtime | server/packages/platform/control-admin/src/rounding-control.ts | 40 |
 | `allowed` | runtime | server/packages/platform/control-admin/src/runtime-command-service.ts | 829 |
-| `allowed` | test | server/packages/platform/experience/src/service.test.ts | 16, 108, 151, 211, 223, 232, 281 |
-| `allowed` | runtime | server/packages/platform/experience/src/service.ts | 202, 249, 277, 971 |
+| `allowed` | test | server/packages/platform/experience/src/entity-operation-dispatcher.test.ts | 10, 46 |
+| `allowed` | runtime | server/packages/platform/experience/src/entity-operation-dispatcher.ts | 44 |
+| `allowed` | test | server/packages/platform/experience/src/entity-section-service.test.ts | 9 |
+| `allowed` | runtime | server/packages/platform/experience/src/entity-section-service.ts | 169 |
+| `allowed` | test | server/packages/platform/experience/src/service.test.ts | 16, 109, 152, 314, 326, 335, 384 |
+| `allowed` | runtime | server/packages/platform/experience/src/service.ts | 225, 272, 300, 1076 |
 | `allowed` | runtime | server/packages/platform/governance/src/compliance/legal-hold-service.ts | 78 |
 | `allowed` | runtime | server/packages/platform/governance/src/compliance/report-pack-service.ts | 368 |
-| `allowed` | test | server/packages/platform/governance/src/cycles/cycle-execution-services.test.ts | 146 |
-| `allowed` | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 142 |
+| `allowed` | test | server/packages/platform/governance/src/cycles/cycle-execution-services.test.ts | 185 |
+| `allowed` | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 153 |
 | `allowed` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
-| `allowed` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 54 |
+| `allowed` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 83 |
 | `allowed` | runtime | server/packages/platform/iam/src/__fixtures__/authorization-golden-corpus.v1.json | 15, 24, 34, 44, 51, 58, 64, 71, 78, 84, 91, 97, 103 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 12 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/iam-foundation.test.ts | 11, 12, 13, 14 |
@@ -1425,15 +1461,15 @@ Capture DDLs:
 | `allowed` | test | server/packages/platform/preferences/src/entity-views-routes.test.ts | 15 |
 | `allowed` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
 | `allowed` | runtime | server/packages/platform/search/src/document-search-service.ts | 18 |
-| `allowed` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 79 |
-| `allowed` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 74, 82, 140 |
+| `allowed` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 30, 87 |
+| `allowed` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 74, 82, 141 |
 | `allowed` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 125, 163, 164, 263, 264 |
 | `allowed` | route | server/packages/services/attachments/src/attachment-routes.ts | 330, 343, 364, 386 |
 | `allowed` | runtime | server/packages/services/attachments/src/retrieval-admission.ts | 117 |
 | `allowed` | test | server/packages/services/content/src/content-service.test.ts | 2 |
 | `allowed` | runtime | server/packages/services/content/src/content-service.ts | 4, 5 |
 | `allowed` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36, 101, 117 |
-| `allowed` | runtime | server/packages/services/documents/src/document-service.ts | 128 |
+| `allowed` | runtime | server/packages/services/documents/src/document-service.ts | 141 |
 | `allowed` | runtime | server/packages/services/finance/src/ledger/cross-book-posting-service.ts | 10, 25 |
 | `allowed` | runtime | server/packages/services/finance/src/planning/planning-service.ts | 9 |
 | `allowed` | test | server/packages/services/integration/src/__tests__/integration-routes.test.ts | 183 |
@@ -1442,9 +1478,9 @@ Capture DDLs:
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-explainability.test.ts | 4 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-policy.test.ts | 18, 20, 21, 104, 105 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-resources.test.ts | 132, 133 |
-| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 21, 274, 281, 361, 659, 660, 663, 664 |
-| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 27, 464, 497, 498, 499, 501, 502 |
-| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 6, 8 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 21, 274, 281, 383, 681, 682, 685, 686 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 29, 467, 504, 505, 506, 508, 509 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 7, 9, 24, 31 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-invitation-service.test.ts | 9 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-provider-projection.test.ts | 33, 63, 73, 74, 117, 118, 122, 131, 141, 200, 201, 213 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-reveal-affordances.test.ts | 22, 44, 81 |
@@ -1458,24 +1494,22 @@ Capture DDLs:
 | `allowed` | test | server/packages/services/master-data/src/__tests__/workforce-service.test.ts | 6, 16 |
 | `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts | 11 |
 | `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-policy.ts | 75, 105, 121, 143, 159 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 397, 1515 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 402, 1558 |
 | `allowed` | test | server/packages/services/master-data/src/business-partner-atlas-insights.test.ts | 9, 68 |
 | `allowed` | runtime | server/packages/services/master-data/src/business-partner-atlas-insights.ts | 24, 69, 70, 71 |
 | `allowed` | runtime | server/packages/services/master-data/src/business-partner-company-pilot.ts | 64, 75, 111 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1302 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1303 |
 | `allowed` | runtime | server/packages/services/master-data/src/business-partner-invitation-service.ts | 171 |
 | `allowed` | runtime | server/packages/services/master-data/src/business-partner-provider-projection.ts | 553, 561, 608, 609, 624, 632, 633, 635 |
-| `allowed` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 359 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 412, 1756 |
+| `allowed` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 361 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 432, 1835 |
 | `allowed` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 101 |
 | `allowed` | runtime | server/packages/services/master-data/src/master-data-authority.ts | 84, 88 |
 | `allowed` | runtime | server/packages/services/master-data/src/supplier-workforce-command-guard.ts | 51, 54 |
 | `allowed` | runtime | server/packages/services/master-data/src/supplier-workforce-requisition-service.ts | 18 |
 | `allowed` | runtime | server/packages/services/master-data/src/verification-authority.ts | 21 |
 | `allowed` | runtime | server/packages/services/master-data/src/workforce-service.ts | 43 |
-| `allowed` | route | server/packages/services/publication/src/bank-directory-routes.ts | 82, 87 |
 | `allowed` | route | server/packages/services/publication/src/business-partner-case-contract-routes.ts | 282 |
-| `allowed` | route | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 10, 11 |
 | `allowed` | route | server/packages/services/publication/src/business-partner-definition-routes.ts | 302 |
 | `allowed` | route | server/packages/services/publication/src/publication-routes.ts | 138 |
 | `allowed` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
@@ -1486,8 +1520,8 @@ Capture DDLs:
 | `allowed` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 46, 150, 153, 163 |
 | `allowed` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20, 39, 47, 113, 141, 150, 195, 237, 238 |
 | `allowed` | test | server/packages/services/records/src/__tests__/list-context-discovery.test.ts | 46, 47, 48, 72, 124 |
-| `allowed` | test | server/packages/services/records/src/__tests__/list-experience.test.ts | 88, 146, 276, 402 |
-| `allowed` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 44, 99 |
+| `allowed` | test | server/packages/services/records/src/__tests__/list-experience.test.ts | 88, 146, 288, 414, 549, 553 |
+| `allowed` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 44, 103, 120, 121 |
 | `allowed` | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 6, 19, 31, 32, 36, 41, 50 |
 | `allowed` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 44, 47, 141 |
 | `allowed` | test | server/packages/services/records/src/__tests__/snapshot-routes.test.ts | 14 |
@@ -1496,13 +1530,13 @@ Capture DDLs:
 | `allowed` | runtime | server/packages/services/records/src/actions/action-service.ts | 12 |
 | `allowed` | runtime | server/packages/services/records/src/entity-authorization.ts | 51, 215, 218, 234, 246, 262, 265, 289, 318, 349, 367, 372 |
 | `allowed` | runtime | server/packages/services/records/src/entity-backend-authorizer.ts | 212, 213, 238, 246, 249, 256, 271, 332, 344, 345, 359, 361, 377, 391, 416, 418, 422, 425 |
-| `allowed` | runtime | server/packages/services/records/src/entity-list-service.ts | 1079, 1084, 1096, 1101, 1102, 1138, 1142, 1172, 1249 |
+| `allowed` | runtime | server/packages/services/records/src/entity-list-service.ts | 1085, 1090, 1102, 1107, 1108, 1144, 1148, 1178, 1255 |
 | `allowed` | runtime | server/packages/services/records/src/field-validation.ts | 35 |
 | `allowed` | runtime | server/packages/services/records/src/lifecycle-service.ts | 20 |
 | `allowed` | runtime | server/packages/services/records/src/list-context-discovery.ts | 122 |
-| `allowed` | runtime | server/packages/services/records/src/list-experience.ts | 103, 117, 127, 135 |
+| `allowed` | runtime | server/packages/services/records/src/list-experience.ts | 104, 118, 128, 136 |
 | `allowed` | runtime | server/packages/services/records/src/mutation-service.ts | 35, 57, 61, 77, 82, 98, 112, 129 |
-| `allowed` | runtime | server/packages/services/records/src/navigation-context-discovery.ts | 63 |
+| `allowed` | runtime | server/packages/services/records/src/navigation-context-discovery.ts | 65 |
 | `allowed` | runtime | server/packages/services/records/src/query-service.ts | 45, 150, 271, 282, 593, 605 |
 | `allowed` | runtime | server/packages/services/records/src/record-read-access.ts | 11, 33, 38, 42, 75 |
 | `allowed` | route | server/packages/services/records/src/snapshots/snapshot-routes.ts | 18 |
@@ -1531,6 +1565,7 @@ Capture DDLs:
 | `allowed` | tool | tooling/scripts/verification/isolated-execution/import-policy.test.mjs | 3 |
 | `allowed` | tool | tooling/scripts/verification/qualify-business-partner-database-adapters.mts | 49, 61 |
 | `allowed` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 82, 111, 125, 185, 202, 207, 209, 217, 241 |
+| `allowed` | tool | tooling/scripts/verification/qualify-task-policy-authoring-db.mts | 25 |
 | `allowed` | tool | tooling/scripts/verification/verify-local-atlas-conversations.mts | 65 |
 | `allowed` | tool | tooling/scripts/verification/verify-local-atlas-generation-races.mts | 25 |
 | `allowed` | tool | tooling/scripts/verification/verify-local-atlas-generation.mts | 22, 44 |
@@ -1548,9 +1583,8 @@ Capture DDLs:
 | `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 23 |
 | `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 41 |
 | `authorizationScopes` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5 |
-| `authorizationScopes` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 27 |
 | `authorizationScopes` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 9 |
-| `authorizationScopes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 7246 |
+| `authorizationScopes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 7519 |
 | `authorizationScopes` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 161 |
 | `authorizationScopes` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 255 |
 | `authorizationScopes` | test | server/db/scripts/tests/integration/business-partner-bank-verification.ts | 80 |
@@ -1563,7 +1597,7 @@ Capture DDLs:
 | `authorizationScopes` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 3 |
 | `authorizationScopes` | test | server/packages/planes/neon/src/__tests__/integration/business-partner-bank-verification.ts | 83 |
 | `authorizationScopes` | test | server/packages/planes/neon/src/business-partner-account-bank-linkage.test.ts | 6 |
-| `authorizationScopes` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 508 |
+| `authorizationScopes` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 512 |
 | `authorizationScopes` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6 |
 | `authorizationScopes` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7 |
 | `authorizationScopes` | test | server/packages/planes/neon/src/finance-http.test.ts | 25 |
@@ -1581,8 +1615,8 @@ Capture DDLs:
 | `authorizationScopes` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
 | `authorizationScopes` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 362 |
 | `authorizationScopes` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1105 |
-| `authorizationScopes` | test | server/packages/platform/experience/src/service.test.ts | 16, 155, 168, 180, 187 |
-| `authorizationScopes` | runtime | server/packages/platform/experience/src/service.ts | 677, 739, 838 |
+| `authorizationScopes` | test | server/packages/platform/experience/src/service.test.ts | 16, 156, 169, 177, 185, 194, 206, 218, 229, 238, 274, 282, 290 |
+| `authorizationScopes` | runtime | server/packages/platform/experience/src/service.ts | 700, 756, 757, 878, 943 |
 | `authorizationScopes` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/identity-replay-routes.test.ts | 72 |
@@ -1596,55 +1630,27 @@ Capture DDLs:
 | `authorizationScopes` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `authorizationScopes` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
 | `authorizationScopes` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
-| `authorizationScopes` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 79 |
+| `authorizationScopes` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 87 |
 | `authorizationScopes` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 130 |
 | `authorizationScopes` | test | server/packages/services/content/src/content-service.test.ts | 2 |
 | `authorizationScopes` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
 | `authorizationScopes` | test | server/packages/services/master-data/src/__tests__/business-partner-360-resources.test.ts | 133 |
-| `authorizationScopes` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 2122 |
+| `authorizationScopes` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 24 |
+| `authorizationScopes` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 2187 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 86 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 51 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 51 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/list-context-discovery.test.ts | 18, 95 |
-| `authorizationScopes` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 35, 90 |
+| `authorizationScopes` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 35, 94, 141, 143 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 44 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
 | `authorizationScopes` | runtime | server/packages/services/records/src/list-context-discovery.ts | 79 |
-| `authorizationScopes` | runtime | server/packages/services/records/src/navigation-context-discovery.ts | 41 |
+| `authorizationScopes` | runtime | server/packages/services/records/src/navigation-context-discovery.ts | 43 |
 | `authorizationScopes` | test | tests/contracts/business-partner-independent-child.test.ts | 25 |
 | `authorizationScopes` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 89 |
-| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/0999rc2t4fc84.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/0l66v5ovp8lhq.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/0o9v9fe9piukx.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/1_w7smeqdn5iv.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/36cxx3gg4xrls.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/42x397h50yqoj.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal/static/chunks/1-wqrr3qesgmm.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal/static/chunks/12314vhhtdtjp.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal/static/chunks/13rkzslag_7xg.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal/static/chunks/1xv4mdgsqxfay.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal/static/chunks/23h51s6ooiokw.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-reveal/static/chunks/2cylf4ydydgi9.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-summary/static/chunks/0999rc2t4fc84.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-summary/static/chunks/0l66v5ovp8lhq.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-summary/static/chunks/0o9v9fe9piukx.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-summary/static/chunks/1_w7smeqdn5iv.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-summary/static/chunks/36cxx3gg4xrls.js | 1 |
-| `denied` | runtime | apps/neon/.next-bp-summary/static/chunks/42x397h50yqoj.js | 1 |
+| `denied` | runtime | apps/docs-internal/public/assets/examples/bp-ai-release/build-progress.json | 59 |
 | `denied` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_ai_agent-runtime_src_index_ts_1m59cra._.js | 1 |
 | `denied` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_shell_app-foundation_src_boundaries_tsx_0dawonp._.js | 1 |
 | `denied` | runtime | apps/studio/.next-bp-consolidated/standalone/apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_ai_agent-runtime_src_index_ts_1m59cra._.js | 1 |
@@ -1717,17 +1723,20 @@ Capture DDLs:
 | `denied` | runtime | packages/contracts/platform/ai/src/intent.ts | 4, 36, 64 |
 | `denied` | runtime | packages/contracts/platform/entity-runtime/src/access-decision.ts | 8 |
 | `denied` | test | packages/planes/neon/business-partner/src/case-experience.test.ts | 105 |
-| `denied` | test | packages/planes/studio/business-partner/src/authoring.test.tsx | 79 |
+| `denied` | test | packages/planes/studio/business-partner/src/authoring.test.tsx | 82 |
 | `denied` | test | packages/planes/studio/business-partner/src/case-contract-authoring.test.tsx | 19 |
 | `denied` | ui | packages/planes/studio/business-partner/src/case-contract-authoring.tsx | 32 |
+| `denied` | test | packages/planes/studio/business-partner/src/workbench.test.tsx | 212 |
+| `denied` | ui | packages/planes/studio/business-partner/src/workbench.tsx | 545 |
 | `denied` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 114 |
 | `denied` | runtime | packages/platform/iam/auth-bff/package.json | 12, 13, 18, 19, 24, 25 |
-| `denied` | runtime | packages/platform/iam/auth-bff/src/index.ts | 338 |
+| `denied` | runtime | packages/platform/iam/auth-bff/src/index.ts | 350 |
 | `denied` | runtime | packages/platform/iam/governance-review/package.json | 10, 11, 16, 17, 21, 22, 26, 27, 31, 32 |
 | `denied` | runtime | packages/platform/iam/session-store/package.json | 12, 13 |
 | `denied` | runtime | packages/platform/shell/activity-center-data/src/index.ts | 24, 31, 32 |
-| `denied` | runtime | packages/platform/shell/app-foundation/src/error-taxonomy.ts | 7, 51 |
-| `denied` | runtime | packages/platform/shell/shell/src/messages.ts | 9 |
+| `denied` | ui | packages/platform/shell/app-foundation/src/boundaries.tsx | 98 |
+| `denied` | runtime | packages/platform/shell/app-foundation/src/error-taxonomy.ts | 7, 52 |
+| `denied` | runtime | packages/platform/shell/shell/src/messages.ts | 12 |
 | `denied` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 151 |
 | `denied` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 166 |
 | `denied` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/retrieval.mts | 136 |
@@ -1745,14 +1754,14 @@ Capture DDLs:
 | `denied` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 23, 45 |
 | `denied` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 41 |
 | `denied` | test | server/apps/platform-host/src/composition/__tests__/mesh-exchange-readiness.postgres.test.ts | 33, 36 |
-| `denied` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5, 17 |
+| `denied` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5, 17, 33 |
 | `denied` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 186 |
 | `denied` | runtime | server/apps/platform-host/src/composition/atlas-document-grounding.ts | 142, 185 |
 | `denied` | runtime | server/apps/platform-host/src/composition/authorization-management-config.ts | 8, 99, 101 |
-| `denied` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 23 |
 | `denied` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 237, 359, 376, 488, 496 |
 | `denied` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 9 |
-| `denied` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1930, 5676, 7242 |
+| `denied` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1963, 6028, 7515 |
+| `denied` | test | server/apps/platform-host/src/composition/supplier-process-task-authority.test.ts | 27 |
 | `denied` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 159 |
 | `denied` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 251 |
 | `denied` | ddl | server/db/ddl/common/ai/05_constraints.sql | 219 |
@@ -1775,7 +1784,7 @@ Capture DDLs:
 | `denied` | runtime | server/packages/planes/mesh/src/business-partner-profile-publication.ts | 766 |
 | `denied` | test | server/packages/planes/neon/src/__tests__/integration/business-partner-bank-verification.ts | 80 |
 | `denied` | test | server/packages/planes/neon/src/business-partner-account-bank-linkage.test.ts | 6 |
-| `denied` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 1154 |
+| `denied` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 1178 |
 | `denied` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6 |
 | `denied` | runtime | server/packages/planes/neon/src/business-partner-profile-match.ts | 176 |
 | `denied` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7 |
@@ -1783,6 +1792,7 @@ Capture DDLs:
 | `denied` | test | server/packages/planes/neon/src/finance-http.test.ts | 21 |
 | `denied` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 48 |
 | `denied` | runtime | server/packages/planes/studio/meta-entity-authoring/src/baseline-publication.ts | 24, 27, 29, 30, 32, 35, 52, 54, 65, 67, 69, 71, 73, 75 |
+| `denied` | route | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 260 |
 | `denied` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 27 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 8 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/business-context.test.ts | 20 |
@@ -1817,9 +1827,10 @@ Capture DDLs:
 | `denied` | test | server/packages/platform/control-admin/src/connector-routes.test.ts | 81 |
 | `denied` | test | server/packages/platform/control-admin/src/entitlement-routes.test.ts | 59 |
 | `denied` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1101 |
-| `denied` | route | server/packages/platform/experience/src/routes.ts | 34 |
+| `denied` | test | server/packages/platform/experience/src/entity-section-service.test.ts | 12 |
+| `denied` | route | server/packages/platform/experience/src/routes.ts | 35 |
 | `denied` | test | server/packages/platform/experience/src/service.test.ts | 16 |
-| `denied` | test | server/packages/platform/governance/src/cycles/cycle-execution-services.test.ts | 146 |
+| `denied` | test | server/packages/platform/governance/src/cycles/cycle-execution-services.test.ts | 185 |
 | `denied` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/identity-replay-routes.test.ts | 69 |
@@ -1835,7 +1846,7 @@ Capture DDLs:
 | `denied` | test | server/packages/platform/notifications/src/__tests__/email-canary.test.ts | 56 |
 | `denied` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
 | `denied` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
-| `denied` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 79 |
+| `denied` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 87 |
 | `denied` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 126 |
 | `denied` | test | server/packages/services/attachments/src/retrieval-admission.test.ts | 96 |
 | `denied` | test | server/packages/services/content/src/content-service.test.ts | 2 |
@@ -1843,12 +1854,13 @@ Capture DDLs:
 | `denied` | test | server/packages/services/finance/src/ledger/business-partner-journal-activity.test.ts | 57, 58, 61 |
 | `denied` | test | server/packages/services/master-data/src/__tests__/business-partner-360-commercial-controls.test.ts | 9 |
 | `denied` | test | server/packages/services/master-data/src/__tests__/business-partner-360-policy.test.ts | 15, 17 |
-| `denied` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 2058 |
+| `denied` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 2079 |
+| `denied` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 24, 31, 32 |
 | `denied` | test | server/packages/services/master-data/src/__tests__/business-partner-provider-projection.test.ts | 73, 118 |
 | `denied` | test | server/packages/services/master-data/src/__tests__/business-partner-reveal-revocation.test.ts | 43, 44 |
 | `denied` | test | server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts | 1448, 1456, 1480, 1485 |
-| `denied` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1306 |
-| `denied` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 1766 |
+| `denied` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1307 |
+| `denied` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 1845 |
 | `denied` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 105 |
 | `denied` | runtime | server/packages/services/master-data/src/master-data-authority.ts | 84, 88 |
 | `denied` | runtime | server/packages/services/master-data/src/supplier-workforce-command-guard.ts | 52 |
@@ -1862,7 +1874,8 @@ Capture DDLs:
 | `denied` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 47, 304, 445 |
 | `denied` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 47, 154 |
 | `denied` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
-| `denied` | test | server/packages/services/records/src/__tests__/list-experience.test.ts | 274, 281 |
+| `denied` | test | server/packages/services/records/src/__tests__/list-experience.test.ts | 286, 293 |
+| `denied` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 144 |
 | `denied` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 44 |
 | `denied` | test | server/packages/services/records/src/__tests__/snapshot-service.test.ts | 31 |
 | `denied` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
@@ -1870,14 +1883,14 @@ Capture DDLs:
 | `denied` | runtime | server/packages/services/records/src/entity-authorization.ts | 98, 129, 135, 153, 161, 176, 181, 225, 236, 243, 253 |
 | `denied` | runtime | server/packages/services/records/src/entity-backend-authorizer.ts | 216, 249, 344 |
 | `denied` | runtime | server/packages/services/records/src/list-context-discovery.ts | 27, 44, 76, 124 |
-| `denied` | runtime | server/packages/services/records/src/list-experience.ts | 80, 82 |
+| `denied` | runtime | server/packages/services/records/src/list-experience.ts | 64, 81, 83 |
 | `denied` | test | tests/contracts/auth-session-foundation.test.ts | 96, 217 |
 | `denied` | test | tests/contracts/business-partner-independent-child.test.ts | 21, 68 |
 | `denied` | test | tests/contracts/home-personalization-phase3.test.ts | 27, 29, 30 |
 | `denied` | test | tests/contracts/trusted-device-authentication.test.ts | 28, 29, 30, 31 |
 | `denied` | test | tests/e2e/production/surface-matrix.spec.ts | 203 |
 | `denied` | test | tests/foundation-browser/error-boundaries.spec.ts | 5 |
-| `denied` | test | tests/foundation/error-boundaries.test.tsx | 13 |
+| `denied` | test | tests/foundation/error-boundaries.test.tsx | 59 |
 | `denied` | tool | tooling/scripts/policy/authorization-inventory.ts | 892 |
 | `denied` | tool | tooling/scripts/policy/verify-auth-session-phase3.mjs | 10 |
 | `denied` | tool | tooling/scripts/verification/bp-ai-authenticated-evidence.test.mjs | 26, 27, 31 |
@@ -1891,6 +1904,10 @@ Capture DDLs:
 | `denied` | tool | tooling/scripts/verification/provision-business-partner-r3-invitation.mjs | 81, 84 |
 | `denied` | tool | tooling/scripts/verification/qualify-atlas-f6-personas.mjs | 25, 26 |
 | `denied` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 85, 126, 136, 137, 152, 163, 164, 202, 207, 209, 217, 253 |
+| `denied` | tool | tooling/scripts/verification/qualify-supplier-process-correction-db.mts | 218, 222 |
+| `denied` | tool | tooling/scripts/verification/qualify-supplier-process-document-jobs-db.mts | 101, 107 |
+| `denied` | tool | tooling/scripts/verification/qualify-task-information-db.mts | 146 |
+| `denied` | tool | tooling/scripts/verification/qualify-task-policy-authoring-db.mts | 43 |
 | `denied` | ui | tooling/scripts/verification/render-boundary-fixture.tsx | 9 |
 | `denied` | tool | tooling/scripts/verification/review-business-partner-roles.mjs | 48 |
 | `denied` | tool | tooling/scripts/verification/verify-local-atlas-generation.mts | 44, 45, 58 |
@@ -1909,33 +1926,9 @@ Capture DDLs:
 | `matchedGrantId` | tool | tooling/scripts/policy/authorization-inventory.ts | 916 |
 | `matchedGroupId` | tool | tooling/scripts/policy/authorization-inventory.ts | 916 |
 | `matchedRoleId` | tool | tooling/scripts/policy/authorization-inventory.ts | 916 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/3s1cx-co3p7g9.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/42x397h50yqoj.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/43cf9c2ta28aj.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal/static/chunks/1-wqrr3qesgmm.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal/static/chunks/1he1c02z2s_09.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-reveal/static/chunks/3dsc6rk665jnx.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-summary/static/chunks/1iuri9db1_90v.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-summary/static/chunks/3s1cx-co3p7g9.js | 1 |
-| `permissionCode` | runtime | apps/neon/.next-bp-summary/static/chunks/42x397h50yqoj.js | 1 |
+| `permissionCode` | runtime | apps/docs-internal/public/assets/architecture/business-partner/evidence/bp-ai-00-baseline-20260908.json | 120, 124, 128, 132, 136, 140, 144, 148, 152, 156, 160, 237, 241, 245 |
+| `permissionCode` | runtime | apps/docs-internal/public/assets/architecture/business-partner/internal-supplier-onboarding-p0-evidence.json | 22, 27, 32, 37, 42, 47, 52, 57, 62, 67, 72, 77, 82, 87, 92, 97, 102, 107, 112, 117, 122, 127, 132, 137, 142, 147, 152, 157, 162, 167, 172, 177, 182, 187, 192, 197, 202, 207, 212, 217, 222, 227, 2532, 2536 |
+| `permissionCode` | runtime | apps/docs-internal/public/assets/architecture/business-partner/phase6-evidence/graph-fixture.json | 13 |
 | `permissionCode` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/061b_app_(shell)_mdg_business-partner_ai-experience_experience-editor_tsx_148ar3g._.js | 1 |
 | `permissionCode` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_ai_agent-runtime_src_index_ts_1m59cra._.js | 1 |
 | `permissionCode` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_shell_activity-center-data_src_index_ts_1xla4ly._.js | 1 |
@@ -1985,6 +1978,7 @@ Capture DDLs:
 | `permissionCode` | runtime | governance/policy/reports/business-partner-import-release.dev.json | 216, 220, 224, 228, 232, 236, 240, 244, 248, 252, 256, 260, 264, 268, 272, 276, 280, 284, 288, 292, 296, 300, 304, 308, 312, 316, 320, 324, 328, 332, 336, 340, 344, 348, 352, 356, 360, 364, 368, 372, 376, 380, 514, 550, 585, 621, 1532, 1541, 1550, 1559, 1568, 1577, 1586, 1596, 1606, 1616, 1626, 1636, 1646, 1656, 1666, 1676, 1686, 1696, 1706, 1716, 1726, 1736, 1746, 1756, 1766, 1776, 1786, 1796, 1805, 1814, 1824, 1834, 1844, 1854, 1864, 1874, 1884, 1894, 1904, 1914, 1924, 1934, 3055, 3088, 3121, 3154, 3187, 3220, 3255, 3288, 3323, 3358, 3393, 3428, 3470, 3505, 3540, 3578, 3611, 3644, 3677, 3710, 3743, 3776, 3809, 3842, 3882, 3915, 3948, 3988, 4021, 4054, 4088, 4122, 4157, 4190, 4225, 4260, 4295, 4330, 4365, 4399, 4440, 4480 |
 | `permissionCode` | runtime | governance/policy/reports/business-partner-native-authoring-publication.dev.json | 256, 260, 264, 268, 272, 276, 280, 284, 288, 292, 296, 300, 304, 308, 312, 316, 320, 324, 328, 332, 336, 340, 344, 348, 352, 356, 360, 364, 368, 372, 376, 380, 384, 388, 392, 396, 400, 404, 408, 412, 416, 420, 424, 428, 432, 436, 440, 444, 448, 452, 456, 589, 625, 660, 695, 1635, 1644, 1653, 1662, 1671, 1680, 1689, 1699, 1709, 1719, 1729, 1739, 1749, 1759, 1769, 1779, 1789, 1799, 1809, 1819, 1829, 1839, 1849, 1859, 1869, 1879, 1889, 1899, 1909, 1918, 1927, 1937, 1947, 1956, 1965, 1974, 1983, 1992, 2002, 2012, 2022, 2032, 2042, 2052, 2062, 2072, 2082, 2092, 2102, 2112, 2122, 2259, 2297, 2334, 2376, 2389, 2431, 2444, 2486, 2499, 2538, 2580, 2591, 2635, 2646, 2690, 2701, 2745, 2756, 2800, 2811, 2862, 2875, 2912, 2949, 2988, 3027, 3064, 3101, 3138, 3175, 3212, 3249, 3286, 3323, 3367, 3404, 3441, 3485, 3522, 3559, 3597, 3635, 3673, 3711, 3749, 3787, 3825, 3862, 3897, 3934, 3971, 4008, 4045, 4082, 4121, 4159, 4202, 4215, 4251, 4296, 4340 |
 | `permissionCode` | runtime | governance/policy/reports/business-partner-native-authoring-publication.dev.snapshot.json | 19, 38, 57, 76, 95, 114, 133, 152, 171, 190, 209, 228, 247, 266, 285, 304, 323, 342, 361, 380, 399, 418, 437, 456, 475, 494, 513, 532, 551, 570, 589, 608, 627, 646, 665, 684, 703, 722, 741, 760, 779, 798, 817, 836, 855, 874, 893, 912, 931, 950, 969, 988, 1007, 1026, 1045, 1064, 1083, 1102, 1121, 1140, 1159, 1178, 1197, 1216, 1235, 1254, 1273, 1292, 1311, 1330, 1349, 1368, 1387, 1406, 1425, 1444, 1463, 1482, 1501, 1520, 1539, 1558, 1577, 1596, 1615, 1634, 1653, 1672, 1691, 1710, 1729, 1748, 1767, 1786, 1805, 1824, 1843, 1862, 1881, 1900, 1919, 1938, 1957, 1976, 1995, 2014, 2033, 2052, 2071, 2090, 2109, 2128, 2147, 2166, 2185, 2204, 2223, 2242, 2261, 2280, 2299, 2318, 2337, 2356, 2375, 2394, 2413, 2432, 2451, 2470, 2489, 2508, 2527, 2546, 2565, 2584, 2603, 2622, 2641, 2660, 2679, 2698, 2717, 2736, 2755, 2774, 2793, 2812, 2831, 2850, 2869, 2888, 2907, 2926, 2945, 2964, 2983, 3002, 3021, 3040, 3059, 3078, 3097, 3116, 3135, 3154, 3173, 3192, 3211, 3230, 3249, 3268, 3287, 3306, 3325, 3344, 3363, 3382, 3401, 3420, 3439, 3458, 3477, 3496, 3515, 3534, 3553, 3572, 3591, 3610, 3629, 3648, 3667, 3686, 3705, 3724, 3743, 3762, 3781, 3800, 3819, 3838, 3857, 3876, 3895, 3914, 3933, 3952, 3971, 3990, 4009, 4028, 4047, 4066, 4085, 4104, 4123, 4142, 4161, 4180, 4199, 4218, 4237, 4256, 4275, 4294, 4313, 4332, 4351, 4370, 4389, 4408, 4427, 4446, 4465, 4484, 4503, 4522, 4541, 4560, 4579, 4598, 4617, 4636, 4655, 4674, 4693, 4712, 4731, 4750, 4769, 4788, 4807, 4826, 4845, 4864, 4883, 4902, 4921, 4940, 4959, 4978, 4997, 5016, 5035, 5054, 5073, 5092, 5111, 5130, 5149, 5168, 5187, 5206, 5225, 5244, 5263, 5282, 5301, 5320, 5339, 5358, 5377, 5396, 5415, 5649, 5653, 5657, 5661, 5665, 5669, 5673, 5677, 5681, 5685, 5689, 5822, 5858, 5893, 5928, 6865, 6880, 6895, 6910, 6925, 6940, 6955, 6970, 6985, 7242, 7246, 7250, 7254, 7258, 7262, 7266, 7270, 7274, 7278, 7282, 7286, 7419, 7455, 7490, 7525, 8462, 8477, 8492, 8507, 8522, 8537, 8552, 8567, 8582, 8597 |
+| `permissionCode` | runtime | governance/policy/reports/business-partner-permission-cleanup-inventory-20260912.dev.json | 52, 61, 70, 79, 88, 97, 107, 117, 127, 137, 147, 157, 167, 177, 187, 197, 207, 217, 227, 237, 247, 257, 267, 277, 287, 297, 307, 316, 325, 335, 345, 355, 365, 375, 385, 395, 405, 415, 425, 435, 445, 455 |
 | `permissionCode` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.3a22a0df96a2.dev.json | 123, 158, 193, 228, 263, 298, 333, 370, 407, 442, 479, 516, 551, 588, 625, 660, 697, 734, 771, 808, 843, 880, 917, 952, 987, 1022, 1057, 1094, 1129, 1164, 1201, 1238, 1273, 1308, 1345, 1382, 1419, 1456, 1493, 1528, 1565, 1602, 1637, 1674, 1711, 1746, 1781, 1816, 1851, 1888, 1925, 1962, 1999, 2034, 2069, 2104, 2139, 2176, 2213, 2248, 2285, 2322, 2357, 2394, 2431, 2466, 2503, 2540, 2577, 2614, 2649, 2686, 2723, 2758, 2793, 2828, 2863, 2900, 2935, 2970, 3007, 3044, 3079, 3114, 3151, 3188, 3225, 3262, 3299, 3334, 3371, 3408, 3443, 3480, 3517, 3552, 3587, 3622, 3657, 3694, 3731, 3768, 3805, 3840, 3877, 3914, 3951, 3988, 4025, 4062, 4097, 4132, 4167, 4202, 4237, 4274, 4311, 4348, 4385, 4422, 4459, 4496, 4533, 4570, 4607, 4644, 4681, 4716, 4753, 4791, 4828, 4865, 4900, 4937, 4974, 5011, 5048, 5085, 5122, 5159, 5196, 5233, 5268, 5305, 5342, 5379, 5417, 5454, 5489, 5526, 5563, 5600, 5637, 5674, 5711, 5748, 5785, 5822, 5859, 5896, 5933, 5968, 6005, 6043, 6080, 6117, 6152, 6189, 6226, 6263, 6300, 6337, 6374, 6411, 6448, 6485, 6520, 6557, 6594, 6631, 6669, 6706, 6745, 6784, 6823, 6861, 6900, 6939, 6977, 7014, 7049, 7084, 7119, 7156, 7193, 7230, 7267, 7304, 7341, 7378, 7415, 7452, 7489, 7526, 7563, 7598, 7635, 7673, 7710, 7747, 7782, 7819, 7856, 7893, 7930, 7967, 8004, 8041, 8078, 8115, 8150, 8187, 8224, 8261, 8299, 8336, 8371, 8406, 8441, 8478, 8515, 8552, 8589, 8626, 8663, 8700, 8737, 8774, 8811, 8848, 8885, 8920, 8957, 8995, 9032, 9069, 9104, 9141, 9178, 9215, 9252, 9289, 9326, 9363, 9400, 9437, 9472, 9509, 9546, 9583, 9621, 9658, 9693, 9728, 9763, 9800, 9837, 9874, 9911, 9948, 9985, 10022, 10059, 10096, 10133, 10170, 10207, 10242, 10279, 10317, 10354, 10391, 10426, 10463, 10500, 10537, 10574, 10611, 10648, 10685, 10722, 10759, 10794, 10831, 10868, 10905, 10943, 10980, 11015, 11050, 11085, 11122, 11159, 11196, 11233, 11270, 11307, 11344, 11381, 11418, 11455, 11492, 11529, 11564, 11601, 11639, 11676, 11713, 11748, 11785, 11822, 11859, 11896, 11933, 11970, 12007, 12044, 12081, 12116, 12153, 12190, 12227, 12265, 12302, 12337, 12372, 12407, 12444, 12481, 12518, 12555, 12592, 12629, 12666, 12703, 12740, 12777, 12814, 12851, 12886, 12923, 12961, 12998, 13035, 13070, 13107, 13144, 13181, 13218, 13255, 13292, 13329, 13366, 13403, 13438, 13475, 13512, 13549, 13587, 13624, 13662, 13697, 13732, 13767, 13804, 13841, 13878, 13915, 13952, 13989, 14026, 14063, 14100, 14137, 14174, 14211, 14246, 14283, 14321, 14358, 14395, 14430, 14467, 14504, 14541, 14578, 14615, 14652, 14689, 14726, 14763, 14798, 14835, 14872, 14909, 14947, 14984, 15019, 15054, 15089, 15126, 15163, 15200, 15237, 15274, 15311, 15348, 15385, 15422, 15459, 15496, 15533, 15568, 15605, 15643, 15680, 15717, 15752, 15789, 15826, 15863, 15900, 15937, 15974, 16011, 16048, 16085, 16120, 16157, 16194, 16231, 16269, 16306, 16341, 16376, 16411, 16448, 16485, 16522, 16559, 16596, 16633, 16670, 16707, 16744, 16781, 16818, 16855, 16890, 16927, 16965, 17002, 17039, 17074, 17111, 17148, 17185, 17222, 17259, 17296, 17333, 17370, 17407, 17442, 17479, 17516, 17553, 17591, 17628, 17663, 17698, 17733, 17770, 17807, 17844, 17881, 17918, 17955, 17992, 18029, 18066, 18103, 18140, 18177, 18212, 18249, 18287, 18324, 18361, 18396, 18433, 18470, 18507, 18544, 18581, 18618, 18655, 18692, 18729, 18764, 18801, 18838, 18875, 18913, 18950, 18985, 19020, 19055, 19092, 19129, 19166, 19203, 19240, 19277, 19314, 19351, 19388, 19425, 19462, 19499, 19534, 19571, 19609, 19646, 19683, 19718, 19755, 19792, 19829, 19866, 19903, 19940, 19977, 20014, 20051, 20086, 20123, 20160, 20197, 20235, 20272, 20307, 20342, 20377, 20414, 20451, 20488, 20525, 20562, 20599, 20636, 20673, 20710, 20747, 20784, 20821, 20856, 20893, 20931, 20968, 21005, 21040, 21077, 21114, 21151, 21188, 21225, 21262, 21299, 21336, 21373, 21408, 21445, 21482, 21519, 21557, 21596, 21619, 21642, 21665, 21688, 21711, 21734, 21757, 21780, 21803, 21826, 21849, 21872 |
 | `permissionCode` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.3fbbbaa37628.dev.json | 123, 158, 193, 228, 263, 298, 333, 368, 405, 442, 477, 514, 551, 586, 623, 660, 695, 732, 769, 806, 843, 878, 915, 952, 987, 1022, 1057, 1092, 1129, 1164, 1199, 1236, 1273, 1308, 1343, 1380, 1417, 1454, 1491, 1528, 1563, 1600, 1637, 1672, 1709, 1746, 1781, 1816, 1851, 1886, 1923, 1960, 1997, 2034, 2069, 2104, 2139, 2174, 2211, 2248, 2283, 2320, 2357, 2392, 2429, 2466, 2501, 2538, 2575, 2612, 2649, 2684, 2721, 2758, 2793, 2828, 2863, 2898, 2935, 2970, 3005, 3042, 3079, 3114, 3149, 3186, 3223, 3260, 3297, 3334, 3369, 3406, 3443, 3478, 3515, 3552, 3587, 3622, 3657, 3692, 3729, 3766, 3803, 3840, 3875, 3912, 3949, 3986, 4023, 4060, 4097, 4132, 4167, 4202, 4237, 4272, 4307, 4344, 4381, 4418, 4455, 4492, 4529, 4566, 4603, 4640, 4677, 4714, 4751, 4786, 4823, 4861, 4898, 4935, 4970, 5007, 5044, 5081, 5118, 5155, 5192, 5229, 5266, 5303, 5338, 5375, 5412, 5449, 5487, 5524, 5559, 5596, 5633, 5670, 5707, 5744, 5781, 5818, 5855, 5892, 5929, 5966, 6003, 6038, 6075, 6113, 6150, 6187, 6222, 6259, 6296, 6333, 6370, 6407, 6444, 6481, 6518, 6555, 6590, 6627, 6664, 6701, 6739, 6776, 6815, 6854, 6893, 6931, 6970, 7009, 7047, 7084, 7119, 7154, 7189, 7224, 7261, 7298, 7335, 7372, 7409, 7446, 7483, 7520, 7557, 7594, 7631, 7668, 7703, 7740, 7778, 7815, 7852, 7887, 7924, 7961, 7998, 8035, 8072, 8109, 8146, 8183, 8220, 8255, 8292, 8329, 8366, 8404, 8441, 8476, 8511, 8546, 8581, 8618, 8655, 8692, 8729, 8766, 8803, 8840, 8877, 8914, 8951, 8988, 9025, 9060, 9097, 9135, 9172, 9209, 9244, 9281, 9318, 9355, 9392, 9429, 9466, 9503, 9540, 9577, 9612, 9649, 9686, 9723, 9761, 9798, 9833, 9868, 9903, 9938, 9975, 10012, 10049, 10086, 10123, 10160, 10197, 10234, 10271, 10308, 10345, 10382, 10417, 10454, 10492, 10529, 10566, 10601, 10638, 10675, 10712, 10749, 10786, 10823, 10860, 10897, 10934, 10969, 11006, 11043, 11080, 11118, 11155, 11190, 11225, 11260, 11295, 11332, 11369, 11406, 11443, 11480, 11517, 11554, 11591, 11628, 11665, 11702, 11739, 11774, 11811, 11849, 11886, 11923, 11958, 11995, 12032, 12069, 12106, 12143, 12180, 12217, 12254, 12291, 12326, 12363, 12400, 12437, 12475, 12512, 12547, 12582, 12617, 12652, 12689, 12726, 12763, 12800, 12837, 12874, 12911, 12948, 12985, 13022, 13059, 13096, 13131, 13168, 13206, 13243, 13280, 13315, 13352, 13389, 13426, 13463, 13500, 13537, 13574, 13611, 13648, 13683, 13720, 13757, 13794, 13832, 13869, 13907, 13942, 13977, 14012, 14047, 14084, 14121, 14158, 14195, 14232, 14269, 14306, 14343, 14380, 14417, 14454, 14491, 14526, 14563, 14601, 14638, 14675, 14710, 14747, 14784, 14821, 14858, 14895, 14932, 14969, 15006, 15043, 15078, 15115, 15152, 15189, 15227, 15264, 15299, 15334, 15369, 15404, 15441, 15478, 15515, 15552, 15589, 15626, 15663, 15700, 15737, 15774, 15811, 15848, 15883, 15920, 15958, 15995, 16032, 16067, 16104, 16141, 16178, 16215, 16252, 16289, 16326, 16363, 16400, 16435, 16472, 16509, 16546, 16584, 16621, 16656, 16691, 16726, 16761, 16798, 16835, 16872, 16909, 16946, 16983, 17020, 17057, 17094, 17131, 17168, 17205, 17240, 17277, 17315, 17352, 17389, 17424, 17461, 17498, 17535, 17572, 17609, 17646, 17683, 17720, 17757, 17792, 17829, 17866, 17903, 17941, 17978, 18013, 18048, 18083, 18118, 18155, 18192, 18229, 18266, 18303, 18340, 18377, 18414, 18451, 18488, 18525, 18562, 18597, 18634, 18672, 18709, 18746, 18781, 18818, 18855, 18892, 18929, 18966, 19003, 19040, 19077, 19114, 19149, 19186, 19223, 19260, 19298, 19335, 19370, 19405, 19440, 19475, 19512, 19549, 19586, 19623, 19660, 19697, 19734, 19771, 19808, 19845, 19882, 19919, 19954, 19991, 20029, 20066, 20103, 20138, 20175, 20212, 20249, 20286, 20323, 20360, 20397, 20434, 20471, 20506, 20543, 20580, 20617, 20655, 20692, 20727, 20762, 20797, 20832, 20869, 20906, 20943, 20980, 21017, 21054, 21091, 21128, 21165, 21202, 21239, 21276, 21311, 21348, 21386, 21423, 21460, 21495, 21532, 21569, 21606, 21643, 21680, 21717, 21754, 21791, 21828, 21863, 21900, 21937, 21974, 22012 |
 | `permissionCode` | runtime | governance/policy/reports/business-partner-read-shadow-catl.admin.6ce0171efcfd.dev.json | 123, 158, 193, 228, 263, 298, 333, 370, 407, 442, 479, 516, 551, 588, 625, 660, 697, 734, 771, 808, 843, 880, 917, 952, 987, 1022, 1057, 1094, 1129, 1164, 1201, 1238, 1273, 1308, 1345, 1382, 1419, 1456, 1493, 1528, 1565, 1602, 1637, 1674, 1711, 1746, 1781, 1816, 1851, 1888, 1925, 1962, 1999, 2034, 2069, 2104, 2139, 2176, 2213, 2248, 2285, 2322, 2357, 2394, 2431, 2466, 2503, 2540, 2577, 2614, 2649, 2686, 2723, 2758, 2793, 2828, 2863, 2900, 2935, 2970, 3007, 3044, 3079, 3114, 3151, 3188, 3225, 3262, 3299, 3334, 3371, 3408, 3443, 3480, 3517, 3552, 3587, 3622, 3657, 3694, 3731, 3768, 3805, 3840, 3877, 3914, 3951, 3988, 4025, 4062, 4097, 4132, 4167, 4202, 4237, 4274, 4311, 4348, 4385, 4422, 4459, 4496, 4533, 4570, 4607, 4644, 4681, 4716, 4753, 4791, 4828, 4865, 4900, 4937, 4974, 5011, 5048, 5085, 5122, 5159, 5196, 5233, 5268, 5305, 5342, 5379, 5417, 5454, 5489, 5526, 5563, 5600, 5637, 5674, 5711, 5748, 5785, 5822, 5859, 5896, 5933, 5968, 6005, 6043, 6080, 6117, 6152, 6189, 6226, 6263, 6300, 6337, 6374, 6411, 6448, 6485, 6520, 6557, 6594, 6631, 6669, 6706, 6745, 6784, 6823, 6861, 6900, 6939, 6977, 7014, 7049, 7084, 7119, 7156, 7193, 7230, 7267, 7304, 7341, 7378, 7415, 7452, 7489, 7526, 7563, 7598, 7635, 7673, 7710, 7747, 7782, 7819, 7856, 7893, 7930, 7967, 8004, 8041, 8078, 8115, 8150, 8187, 8224, 8261, 8299, 8336, 8371, 8406, 8441, 8478, 8515, 8552, 8589, 8626, 8663, 8700, 8737, 8774, 8811, 8848, 8885, 8920, 8957, 8995, 9032, 9069, 9104, 9141, 9178, 9215, 9252, 9289, 9326, 9363, 9400, 9437, 9472, 9509, 9546, 9583, 9621, 9658, 9693, 9728, 9763, 9800, 9837, 9874, 9911, 9948, 9985, 10022, 10059, 10096, 10133, 10170, 10207, 10242, 10279, 10317, 10354, 10391, 10426, 10463, 10500, 10537, 10574, 10611, 10648, 10685, 10722, 10759, 10794, 10831, 10868, 10905, 10943, 10980, 11015, 11050, 11085, 11122, 11159, 11196, 11233, 11270, 11307, 11344, 11381, 11418, 11455, 11492, 11529, 11564, 11601, 11639, 11676, 11713, 11748, 11785, 11822, 11859, 11896, 11933, 11970, 12007, 12044, 12081, 12116, 12153, 12190, 12227, 12265, 12302, 12337, 12372, 12407, 12444, 12481, 12518, 12555, 12592, 12629, 12666, 12703, 12740, 12777, 12814, 12851, 12886, 12923, 12961, 12998, 13035, 13070, 13107, 13144, 13181, 13218, 13255, 13292, 13329, 13366, 13403, 13438, 13475, 13512, 13549, 13587, 13624, 13662, 13697, 13732, 13767, 13804, 13841, 13878, 13915, 13952, 13989, 14026, 14063, 14100, 14137, 14174, 14211, 14246, 14283, 14321, 14358, 14395, 14430, 14467, 14504, 14541, 14578, 14615, 14652, 14689, 14726, 14763, 14798, 14835, 14872, 14909, 14947, 14984, 15019, 15054, 15089, 15126, 15163, 15200, 15237, 15274, 15311, 15348, 15385, 15422, 15459, 15496, 15533, 15568, 15605, 15643, 15680, 15717, 15752, 15789, 15826, 15863, 15900, 15937, 15974, 16011, 16048, 16085, 16120, 16157, 16194, 16231, 16269, 16306, 16341, 16376, 16411, 16448, 16485, 16522, 16559, 16596, 16633, 16670, 16707, 16744, 16781, 16818, 16855, 16890, 16927, 16965, 17002, 17039, 17074, 17111, 17148, 17185, 17222, 17259, 17296, 17333, 17370, 17407, 17442, 17479, 17516, 17553, 17591, 17628, 17663, 17698, 17733, 17770, 17807, 17844, 17881, 17918, 17955, 17992, 18029, 18066, 18103, 18140, 18177, 18212, 18249, 18287, 18324, 18361, 18396, 18433, 18470, 18507, 18544, 18581, 18618, 18655, 18692, 18729, 18764, 18801, 18838, 18875, 18913, 18950, 18985, 19020, 19055, 19092, 19129, 19166, 19203, 19240, 19277, 19314, 19351, 19388, 19425, 19462, 19499, 19534, 19571, 19609, 19646, 19683, 19718, 19755, 19792, 19829, 19866, 19903, 19940, 19977, 20014, 20051, 20086, 20123, 20160, 20197, 20235, 20272, 20307, 20342, 20377, 20414, 20451, 20488, 20525, 20562, 20599, 20636, 20673, 20710, 20747, 20784, 20821, 20856, 20893, 20931, 20968, 21005, 21040, 21077, 21114, 21151, 21188, 21225, 21262, 21299, 21336, 21373, 21408, 21445, 21482, 21519, 21557, 21596, 21616, 21636, 21656, 21676, 21696, 21716, 21736, 21756, 21776, 21796, 21816, 21836 |
@@ -2009,6 +2003,8 @@ Capture DDLs:
 | `permissionCode` | runtime | governance/policy/reports/entity-authorization-difference-review.dev.json | 108, 154, 200, 246, 292, 338, 384, 430, 476, 522, 568, 614, 660, 706, 752, 798, 844, 890, 936, 982, 1028, 1074, 1120, 1166, 1212, 1258, 1304 |
 | `permissionCode` | runtime | governance/policy/reports/entity-authorization-inventory.dev.json | 1252, 1256, 1260, 1264, 1268, 1272, 1276, 1280, 1284, 1288, 1292, 1296, 2049, 2053, 2057, 2061, 2065, 2069, 2073, 2077, 2081, 2085, 2089, 2205, 3688, 3692, 3696 |
 | `permissionCode` | runtime | governance/policy/reports/entity-authorization-migration.dev.json | 46, 50, 54, 58, 62, 66, 70, 74, 78, 82, 86, 90, 94, 98, 102, 106, 110, 114, 118, 122, 126, 130, 134, 138, 142, 146, 150, 154, 158, 162, 166, 170, 174, 178, 182, 186, 190, 194, 198, 212, 216, 220, 224, 228, 232, 236, 240, 244, 248, 252, 256, 260, 264, 268, 272, 276, 280, 284, 288, 292, 296, 300, 304, 308, 312, 316, 320, 324, 328, 332, 336, 340, 344, 348, 352, 356, 360, 364, 368 |
+| `permissionCode` | runtime | governance/policy/reports/p9/2026-09-14T16-58-25.599Z-clean/1-supplier-onboarding-p9-native-form.dev.json | 236, 245, 254, 263, 272, 281, 291, 301, 311, 321, 331, 341, 351, 361, 371, 381, 391, 401, 411, 421, 431, 441, 451, 461, 471, 481, 491, 500, 509, 519, 529, 539, 549, 559, 569, 579, 589, 599, 609, 619, 629, 639, 3215, 3223, 3231, 3239, 3247, 3255, 3263, 3271, 3279, 3287, 3295, 3303, 3311, 3319, 3327, 3335, 3343, 3351, 3359, 3367, 3375, 3383, 3391, 3399, 3407, 3415, 3423, 3431, 3439, 3447, 3455, 3463, 3471, 3479, 3487, 3495, 3503, 3511, 3519, 3527, 3535, 3543, 4117, 4130, 4143, 4156, 4169, 4182, 4195, 4208, 4221, 4234, 4247, 4260, 4273, 4286, 4299, 4312, 4325, 4338, 4351, 4364, 4377, 4390, 4403, 4416, 4429, 4442, 4455, 4468, 4481, 4494, 4507, 4520, 4533, 4546, 4559, 4572, 4585, 4598, 4611, 4624, 4637, 4650, 10249, 10258, 10267, 10276, 10285, 10294, 10304, 10314, 10324, 10334, 10344, 10354, 10364, 10374, 10384, 10394, 10404, 10414, 10424, 10434, 10444, 10454, 10464, 10474, 10484, 10494, 10504, 10513, 10522, 10532, 10542, 10552, 10562, 10572, 10582, 10592, 10602, 10612, 10622, 10632, 10642, 10652 |
+| `permissionCode` | runtime | governance/policy/reports/supplier-onboarding-p9-native-form.dev.json | 236, 245, 254, 263, 272, 281, 291, 301, 311, 321, 331, 341, 351, 361, 371, 381, 391, 401, 411, 421, 431, 441, 451, 461, 471, 481, 491, 500, 509, 519, 529, 539, 549, 559, 569, 579, 589, 599, 609, 619, 629, 639, 3215, 3223, 3231, 3239, 3247, 3255, 3263, 3271, 3279, 3287, 3295, 3303, 3311, 3319, 3327, 3335, 3343, 3351, 3359, 3367, 3375, 3383, 3391, 3399, 3407, 3415, 3423, 3431, 3439, 3447, 3455, 3463, 3471, 3479, 3487, 3495, 3503, 3511, 3519, 3527, 3535, 3543, 4117, 4130, 4143, 4156, 4169, 4182, 4195, 4208, 4221, 4234, 4247, 4260, 4273, 4286, 4299, 4312, 4325, 4338, 4351, 4364, 4377, 4390, 4403, 4416, 4429, 4442, 4455, 4468, 4481, 4494, 4507, 4520, 4533, 4546, 4559, 4572, 4585, 4598, 4611, 4624, 4637, 4650, 10249, 10258, 10267, 10276, 10285, 10294, 10304, 10314, 10324, 10334, 10344, 10354, 10364, 10374, 10384, 10394, 10404, 10414, 10424, 10434, 10444, 10454, 10464, 10474, 10484, 10494, 10504, 10513, 10522, 10532, 10542, 10552, 10562, 10572, 10582, 10592, 10602, 10612, 10622, 10632, 10642, 10652 |
 | `permissionCode` | runtime | governance/policy/reviews/bp-consolidated-20260912/company-operations-handlers.candidate.json | 90, 100, 109, 119, 129, 139, 148, 158, 195, 202, 209, 216, 223, 230, 237, 244 |
 | `permissionCode` | runtime | governance/policy/reviews/bp-consolidated-20260912/company-operations-isolated-ids.candidate.json | 90, 98, 106, 114, 122, 130, 138, 146, 181, 188, 195, 202, 209, 216, 223, 230 |
 | `permissionCode` | runtime | governance/policy/reviews/bp-consolidated-20260912/company-operations.candidate.json | 90, 98, 106, 114, 122, 130, 138, 146, 181, 188, 195, 202, 209, 216, 223, 230 |
@@ -2039,13 +2035,23 @@ Capture DDLs:
 | `permissionCode` | runtime | governance/policy/reviews/business-partner-request-native-candidate-20260912.json | 102, 110, 119, 126, 188, 197 |
 | `permissionCode` | runtime | governance/policy/reviews/business-partner-reset-runtime.graph.dev.json | 165, 173, 181, 189, 197, 205, 213, 221, 229, 237, 245, 253, 261, 269, 277, 285, 293, 301, 309, 317, 325, 333, 341, 349, 357, 365, 373, 381, 389, 397, 405, 413, 421, 429, 437, 445, 453, 461, 469, 477, 485, 493, 1067, 1080, 1093, 1106, 1119, 1132, 1145, 1158, 1171, 1184, 1197, 1210, 1223, 1236, 1249, 1262, 1275, 1288, 1301, 1314, 1327, 1340, 1353, 1366, 1379, 1392, 1405, 1418, 1431, 1444, 1457, 1470, 1483, 1496, 1509, 1522, 1535, 1548, 1561, 1574, 1587, 1600, 1806, 1815, 1824, 1833, 1842, 1851, 1861, 1871, 1881, 1891, 1901, 1911, 1921, 1931, 1941, 1951, 1961, 1971, 1981, 1991, 2001, 2011, 2021, 2031, 2041, 2051, 2061, 2070, 2079, 2089, 2099, 2109, 2119, 2129, 2139, 2149, 2159, 2169, 2179, 2189, 2199, 2209, 2779, 2788, 2797, 2806, 2815, 2824, 2834, 2844, 2854, 2864, 2874, 2884, 2894, 2904, 2914, 2924, 2934, 2944, 2954, 2964, 2974, 2984, 2994, 3004, 3014, 3024, 3034, 3043, 3052, 3062, 3072, 3082, 3092, 3102, 3112, 3122, 3132, 3142, 3152, 3162, 3172, 3182, 3899, 3959, 3994, 4029, 4121, 4125, 4129, 4133, 4137, 4141, 4145, 4149, 4153, 4157, 4161, 4165, 4169, 4173, 4177, 4181, 4185, 4189, 4193, 4197, 4201, 4205, 4209, 4213, 4217, 4221, 4225, 4229, 4233, 4237, 4241, 4245, 4249, 4253, 4257, 4261, 4265, 4269, 4273, 4277, 4281, 4285, 5690, 5699, 5708, 5717, 5726, 5735, 5745, 5755, 5765, 5775, 5785, 5795, 5805, 5815, 5825, 5835, 5845, 5855, 5865, 5875, 5885, 5895, 5905, 5915, 5925, 5935, 5945, 5954, 5963, 5973, 5983, 5993, 6003, 6013, 6023, 6033, 6043, 6053, 6063, 6073, 6083, 6093, 6810, 6870, 6905, 6940, 7032, 7036, 7040, 7044, 7048, 7052, 7056, 7060, 7064, 7068, 7072, 7076, 7080, 7084, 7088, 7092, 7096, 7100, 7104, 7108, 7112, 7116, 7120, 7124, 7128, 7132, 7136, 7140, 7144, 7148, 7152, 7156, 7160, 7164, 7168, 7172, 7176, 7180, 7184, 7188, 7192, 7196 |
 | `permissionCode` | runtime | governance/policy/reviews/business-partner-target-read-grants.proposal.dev.json | 127, 137, 147, 157, 167, 177, 187, 197, 207, 217, 227, 237, 247, 257, 267, 277, 287, 297, 307, 317, 327, 337, 347, 357, 367, 377, 387 |
-| `permissionCode` | runtime | packages/contracts/platform/entity-list/src/experience.ts | 21, 215 |
+| `permissionCode` | runtime | governance/policy/reviews/internal-bank-native-review-correction.graph.dev.json | 377, 390, 403, 416, 429, 442, 455, 468, 481, 494, 507, 520, 533, 546, 559, 572, 585, 598, 611, 624, 637, 650, 663, 676, 689, 702, 715, 728, 741, 754, 767, 780, 793, 806, 819, 832, 845, 858, 871, 884, 897, 910, 923, 931, 939, 947, 955, 963, 971, 979, 987, 995, 1003, 1011, 1019, 1027, 1035, 1043, 1051, 1059, 1067, 1075, 1083, 1091, 1099, 1107, 1115, 1123, 1131, 1139, 1147, 1155, 1163, 1171, 1179, 1187, 1195, 1203, 1211, 1219, 1227, 1235, 1243, 1251, 2114, 2123, 2132, 2141, 2150, 2159, 2168, 2178, 2188, 2198, 2208, 2218, 2228, 2238, 2248, 2258, 2268, 2278, 2288, 2298, 2308, 2318, 2328, 2338, 2348, 2358, 2368, 2378, 2387, 2396, 2406, 2416, 2426, 2436, 2446, 2456, 2466, 2476, 2486, 2496, 2506, 2516, 2859, 2863, 2867, 2871, 2875, 2879, 2883, 2887, 2891, 2895, 2899, 2903, 2907, 2911, 2915, 2919, 2923, 2927, 2931, 2935, 2939, 2943, 2947, 2951, 2955, 2959, 2963, 2967, 2971, 2975, 2979, 2983, 2987, 2991, 2995, 2999, 3003, 3007, 3011, 3015, 3019, 3023, 3122, 3131, 3140, 3149, 3158, 3167, 3176, 3186, 3196, 3206, 3216, 3226, 3236, 3246, 3256, 3266, 3276, 3286, 3296, 3306, 3316, 3326, 3336, 3346, 3356, 3366, 3376, 3386, 3395, 3404, 3414, 3424, 3434, 3444, 3454, 3464, 3474, 3484, 3494, 3504, 3514, 3524, 3875, 3911, 3946, 3982, 6525, 6529, 6533, 6537, 6541, 6545, 6549, 6553, 6557, 6561, 6565, 6569, 6573, 6577, 6581, 6585, 6589, 6593, 6597, 6601, 6605, 6609, 6613, 6617, 6621, 6625, 6629, 6633, 6637, 6641, 6645, 6649, 6653, 6657, 6661, 6665, 6669, 6673, 6677, 6681, 6685, 6689, 6788, 6797, 6806, 6815, 6824, 6833, 6842, 6852, 6862, 6872, 6882, 6892, 6902, 6912, 6922, 6932, 6942, 6952, 6962, 6972, 6982, 6992, 7002, 7012, 7022, 7032, 7042, 7052, 7061, 7070, 7080, 7090, 7100, 7110, 7120, 7130, 7140, 7150, 7160, 7170, 7180, 7190, 7541, 7577, 7612, 7648 |
+| `permissionCode` | runtime | governance/policy/reviews/internal-bank-native-review.graph.dev.json | 377, 390, 403, 416, 429, 442, 455, 468, 481, 494, 507, 520, 533, 546, 559, 572, 585, 598, 611, 624, 637, 650, 663, 676, 689, 702, 715, 728, 741, 754, 767, 780, 793, 806, 819, 832, 845, 858, 871, 884, 897, 910, 923, 931, 939, 947, 955, 963, 971, 979, 987, 995, 1003, 1011, 1019, 1027, 1035, 1043, 1051, 1059, 1067, 1075, 1083, 1091, 1099, 1107, 1115, 1123, 1131, 1139, 1147, 1155, 1163, 1171, 1179, 1187, 1195, 1203, 1211, 1219, 1227, 1235, 1243, 1251, 2114, 2123, 2132, 2141, 2150, 2159, 2168, 2178, 2188, 2198, 2208, 2218, 2228, 2238, 2248, 2258, 2268, 2278, 2288, 2298, 2308, 2318, 2328, 2338, 2348, 2358, 2368, 2378, 2387, 2396, 2406, 2416, 2426, 2436, 2446, 2456, 2466, 2476, 2486, 2496, 2506, 2516, 2859, 2863, 2867, 2871, 2875, 2879, 2883, 2887, 2891, 2895, 2899, 2903, 2907, 2911, 2915, 2919, 2923, 2927, 2931, 2935, 2939, 2943, 2947, 2951, 2955, 2959, 2963, 2967, 2971, 2975, 2979, 2983, 2987, 2991, 2995, 2999, 3003, 3007, 3011, 3015, 3019, 3023, 3122, 3131, 3140, 3149, 3158, 3167, 3176, 3186, 3196, 3206, 3216, 3226, 3236, 3246, 3256, 3266, 3276, 3286, 3296, 3306, 3316, 3326, 3336, 3346, 3356, 3366, 3376, 3386, 3395, 3404, 3414, 3424, 3434, 3444, 3454, 3464, 3474, 3484, 3494, 3504, 3514, 3524, 3708, 3744, 3779, 3815, 6269, 6273, 6277, 6281, 6285, 6289, 6293, 6297, 6301, 6305, 6309, 6313, 6317, 6321, 6325, 6329, 6333, 6337, 6341, 6345, 6349, 6353, 6357, 6361, 6365, 6369, 6373, 6377, 6381, 6385, 6389, 6393, 6397, 6401, 6405, 6409, 6413, 6417, 6421, 6425, 6429, 6433, 6532, 6541, 6550, 6559, 6568, 6577, 6586, 6596, 6606, 6616, 6626, 6636, 6646, 6656, 6666, 6676, 6686, 6696, 6706, 6716, 6726, 6736, 6746, 6756, 6766, 6776, 6786, 6796, 6805, 6814, 6824, 6834, 6844, 6854, 6864, 6874, 6884, 6894, 6904, 6914, 6924, 6934, 7118, 7154, 7189, 7225 |
+| `permissionCode` | runtime | packages/contracts/platform/entity-list/src/experience.ts | 23, 217 |
 | `permissionCode` | runtime | packages/contracts/platform/entity-list/src/standard-views.ts | 17, 58 |
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/business-partner-case.v1.json | 14, 23, 32, 41, 50, 59, 68, 77, 86 |
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/business-partner.v1.json | 14, 23, 32, 41, 50, 59, 68, 78, 88, 98, 108, 118, 128, 138, 148, 158, 168, 178, 188, 198, 208, 218, 228, 238, 248, 258, 268, 278, 288, 297, 306, 316, 326, 335, 344, 353, 362, 371, 381, 391, 401, 411, 421, 431, 441, 451, 461, 471, 481, 491, 501 |
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/company-invoice.v1.json | 14, 23, 33, 43 |
 | `permissionCode` | runtime | packages/contracts/platform/fixtures/entity-authorization/independent-document.v1.json | 14, 23, 32 |
-| `permissionCode` | ui | packages/planes/neon/business-partner/src/360/components/network-section.tsx | 222 |
+| `permissionCode` | ui | packages/planes/neon/business-partner/src/360/components/network-section.tsx | 224 |
+| `permissionCode` | test | packages/planes/neon/business-partner/src/entity-lookup.test.tsx | 429 |
+| `permissionCode` | runtime | packages/planes/studio/business-partner/src/composition-configuration.fixture.ts | 12 |
+| `permissionCode` | test | packages/planes/studio/business-partner/src/composition-configuration.test.ts | 107, 112 |
+| `permissionCode` | runtime | packages/planes/studio/business-partner/src/composition-configuration.ts | 131, 132, 133 |
+| `permissionCode` | runtime | packages/planes/studio/business-partner/src/composition-model.ts | 24 |
+| `permissionCode` | test | packages/planes/studio/business-partner/src/workbench-editor.test.tsx | 19 |
+| `permissionCode` | runtime | packages/planes/studio/business-partner/src/workbench-model.ts | 162, 163 |
+| `permissionCode` | test | packages/planes/studio/business-partner/src/workbench.test.tsx | 123, 128 |
 | `permissionCode` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 138, 1328, 1329 |
 | `permissionCode` | runtime | packages/platform/shell/work-inbox/src/index.ts | 8, 15 |
 | `permissionCode` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/attachment-admission-qualification.mts | 55 |
@@ -2059,29 +2065,27 @@ Capture DDLs:
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 53, 90, 109, 152, 191, 219, 243, 254, 266, 301, 320, 331, 337, 356, 361, 400, 453, 528, 532, 544, 586, 605, 628, 640, 662 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-backend-intents.test.ts | 29, 33 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-backend-mapping.test.ts | 29, 33, 140, 159, 182 |
-| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-case-authority.test.ts | 28 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-case-authority.test.ts | 28, 105, 182 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-company-native-authority.test.ts | 36, 43 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts | 23, 24, 40, 59, 67, 74, 91, 110 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-read-policy.test.ts | 10, 15, 18, 23, 37, 46, 58, 67, 72, 104, 108, 137 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-reveal-policy.test.ts | 11, 20, 31, 46, 95, 100, 108, 134 |
-| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 106 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 110 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/finance-http-review.test.ts | 186 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 163, 164 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 24, 26, 28, 33, 48 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 42, 43, 71 |
-| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5, 10, 13, 17, 22, 27 |
+| `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5, 10, 13, 17, 22, 27, 32, 34, 36 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/metadata-records-vertical.test.ts | 35, 36, 37, 38, 40, 62 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts | 22 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts | 100, 112, 234, 274, 281, 312, 329, 338 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/atlas-document-grounding.ts | 84, 137, 180 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/atlas-semantic-index.ts | 57, 141, 312, 339, 359, 363 |
-| `permissionCode` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 4, 22, 30, 45, 56, 68, 78, 94, 102, 104 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/bank-directory-authorizer.ts | 10, 14, 15, 19 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-action-runtime.ts | 22, 45 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 126, 209, 212, 244, 251, 257, 269, 272, 279, 285, 298, 301, 308, 324, 332, 528, 531 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-backend-mapping.ts | 25, 28, 29, 56, 60, 61, 72, 76, 97, 149, 155, 174, 179, 181, 183, 210, 214, 215 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-bound-import.ts | 9, 28 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-case-authority.ts | 20 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-case-authority.ts | 22, 57 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-case-runtime.ts | 17, 42 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 4, 9, 10, 16, 22, 25, 29, 34, 35 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-definition-authorizer.ts | 6, 7, 8, 10 |
@@ -2089,31 +2093,39 @@ Capture DDLs:
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-import-runtime.ts | 17, 46, 93 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-permission-transitions.ts | 151 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-qualification-runtime.ts | 23 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-read-runtime.ts | 33, 43, 48 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-read-runtime.ts | 34, 44, 49 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-reveal-runtime.ts | 15 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/business-partner-target-read-policy.ts | 20, 32, 66, 67 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/entity-case-backend-mapping.ts | 22, 25 |
 | `permissionCode` | route | server/apps/platform-host/src/composition/finance-routes.ts | 105 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/local-graph-preview.ts | 57, 152, 270 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/meta-entity-authoring-authorizer.ts | 6, 7, 8, 12, 14, 17 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/local-graph-preview.ts | 57, 152, 269 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/meta-entity-authoring-authorizer.ts | 6, 7, 8, 12, 14, 17, 22, 23, 27 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 167, 188, 522, 830, 897 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-services.ts | 2124, 2130, 3030, 3043, 3050, 3054, 3059, 3087, 3098, 3104, 3116, 3125, 3138, 3151, 3159, 3173, 3181, 3202, 3205, 3206, 3217, 3260, 3271, 3434, 3439, 3603, 3625, 4553, 5737, 5815, 5952, 6602 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-services.ts | 2157, 2163, 3076, 3089, 3096, 3100, 3105, 3133, 3144, 3150, 3162, 3171, 3184, 3197, 3205, 3219, 3227, 3248, 3251, 3252, 3263, 3306, 3317, 3500, 3505, 3721, 3879, 3901, 4817, 6089, 6167, 6304, 6961 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/supplier-process-communications.ts | 162 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/supplier-process-documents.ts | 90, 116, 318 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/supplier-process-edit-policy.ts | 62 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/supplier-process-selection.ts | 91 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/supplier-process-tasks.ts | 86 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/task-edit-policy-authoring.ts | 18 |
 | `permissionCode` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 204 |
 | `permissionCode` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 442 |
 | `permissionCode` | ddl | server/db/ddl/common/authz/07_functions.sql | 1720, 1721, 1722, 1723, 1724, 1732, 1750, 1765 |
-| `permissionCode` | runtime | server/db/migrations/20260910_operation_projection_release_identity.sql | 18, 19, 20, 21, 22, 30, 48, 63 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts | 14, 31 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/exact-scope-compatibility.test.ts | 15 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/inventory-promotion.test.ts | 14, 40, 51 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/mesh-authorization-inventory.test.ts | 37, 149 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/neon-authorization-inventory.test.ts | 37 |
 | `permissionCode` | test | server/db/scripts/__tests__/provisioning/development-business-partner-runtime.test.ts | 25, 29 |
+| `permissionCode` | test | server/db/scripts/__tests__/provisioning/development-phase1-list-runtimes.test.ts | 18, 21 |
 | `permissionCode` | tool | server/db/scripts/checks/seeds/authorization-release-gates.ts | 22, 34, 48, 52, 96, 104, 106, 109, 111, 112, 113, 115, 127, 128, 129, 130, 143, 151, 152, 161, 417, 418, 426, 437, 438, 439, 454, 461, 462, 464, 475, 476, 477, 481, 482 |
 | `permissionCode` | tool | server/db/scripts/operations/studio/provision-meta-entity-authority.ts | 143, 151, 156, 158 |
+| `permissionCode` | tool | server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260910_operation_projection_release_identity.sql | 18, 19, 20, 21, 22, 30, 48, 63 |
 | `permissionCode` | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 648, 705, 706, 712, 713 |
+| `permissionCode` | tool | server/db/scripts/provisioning/business-partner-entry-policy.ts | 20 |
 | `permissionCode` | tool | server/db/scripts/provisioning/config/business-partner-request-standard-views.json | 44 |
-| `permissionCode` | tool | server/db/scripts/provisioning/provision-development-business-partner-runtime.ts | 56, 96, 105 |
-| `permissionCode` | tool | server/db/scripts/provisioning/provision-development-phase1-list-runtimes.ts | 18, 43, 66, 68, 77, 80 |
+| `permissionCode` | tool | server/db/scripts/provisioning/provision-development-business-partner-runtime.ts | 57, 95, 104 |
+| `permissionCode` | tool | server/db/scripts/provisioning/provision-development-phase1-list-runtimes.ts | 18, 37, 62, 85, 87, 96, 99 |
 | `permissionCode` | tool | server/db/scripts/provisioning/provision-three-tenant-demo-authorization.ts | 126, 128, 129, 136, 139, 140 |
 | `permissionCode` | tool | server/db/scripts/provisioning/publish-development-list-experience.ts | 125, 265, 343, 347, 349, 367, 403, 405, 520, 522, 584, 602, 612 |
 | `permissionCode` | tool | server/db/scripts/provisioning/publish-development-record-presentation.ts | 121, 124, 135, 136, 144, 152 |
@@ -2157,16 +2169,16 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/contracts/meta-entity-authoring/src/model.ts | 21, 32 |
 | `permissionCode` | test | server/packages/contracts/metadata/src/__tests__/entity-authorization.test.ts | 28, 30, 67, 69, 81, 86 |
 | `permissionCode` | test | server/packages/contracts/metadata/src/__tests__/entity-canonical-read-admission.test.ts | 9, 10, 76, 115, 124 |
-| `permissionCode` | runtime | server/packages/contracts/metadata/src/descriptors.ts | 226, 232, 242 |
+| `permissionCode` | runtime | server/packages/contracts/metadata/src/descriptors.ts | 260, 266, 276 |
 | `permissionCode` | runtime | server/packages/contracts/metadata/src/entity-authorization.ts | 19, 69, 144, 154, 332 |
 | `permissionCode` | runtime | server/packages/contracts/metadata/src/entity-canonical-read-admission.ts | 84 |
 | `permissionCode` | runtime | server/packages/contracts/records/src/mutation.ts | 70 |
-| `permissionCode` | runtime | server/packages/contracts/workflow/src/work-items.ts | 85 |
+| `permissionCode` | runtime | server/packages/contracts/workflow/src/work-items.ts | 86 |
 | `permissionCode` | runtime | server/packages/planes/mesh/src/business-partner-bank-disclosure.ts | 806, 813, 825 |
 | `permissionCode` | runtime | server/packages/planes/mesh/src/business-partner-network-exchange.ts | 629, 636, 644 |
 | `permissionCode` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 6 |
 | `permissionCode` | runtime | server/packages/planes/mesh/src/business-partner-profile-publication.ts | 759, 762, 766 |
-| `permissionCode` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 507, 508, 871, 1135, 1138, 1145, 1154 |
+| `permissionCode` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 511, 512, 535, 895, 1159, 1162, 1169, 1178 |
 | `permissionCode` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 23 |
 | `permissionCode` | runtime | server/packages/planes/neon/src/business-partner-profile-match.ts | 176 |
 | `permissionCode` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 23 |
@@ -2177,13 +2189,15 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/graph-preview.test.ts | 227 |
 | `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/learning-route-scope.test.ts | 11 |
 | `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/list-experience.test.ts | 55, 84 |
-| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/deterministic.ts | 1011 |
-| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/entity-authorization.ts | 69 |
+| `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/release-inspection-routes.test.ts | 31, 32, 81, 82 |
+| `permissionCode` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/reviewer-read-routes.test.ts | 26, 27 |
+| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/deterministic.ts | 1017 |
+| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/entity-authorization.ts | 70 |
 | `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/graph-dependencies.ts | 42 |
-| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts | 894, 911 |
+| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts | 949, 966 |
 | `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/learning-inbox.ts | 432, 436 |
-| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/list-experience.ts | 92 |
-| `permissionCode` | route | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 202, 280 |
+| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/list-experience.ts | 100 |
+| `permissionCode` | route | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 250, 253, 340 |
 | `permissionCode` | runtime | server/packages/planes/studio/onboarding/src/maintenance.ts | 23 |
 | `permissionCode` | runtime | server/packages/planes/studio/src/catalog-metadata-reader.ts | 26 |
 | `permissionCode` | test | server/packages/planes/studio/src/metadata-draft-import.test.ts | 3 |
@@ -2206,7 +2220,7 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/platform/control-admin/src/bank-validation.ts | 8, 9 |
 | `permissionCode` | runtime | server/packages/platform/control-admin/src/connector-control.ts | 10 |
 | `permissionCode` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 50 |
-| `permissionCode` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 460, 462 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 445, 447 |
 | `permissionCode` | runtime | server/packages/platform/control-admin/src/entitlement-control.ts | 9, 10 |
 | `permissionCode` | runtime | server/packages/platform/control-admin/src/feature-control.ts | 30, 33 |
 | `permissionCode` | test | server/packages/platform/control-admin/src/lookup-control.test.ts | 133 |
@@ -2214,12 +2228,16 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/platform/control-admin/src/parameter-control.ts | 30, 33 |
 | `permissionCode` | runtime | server/packages/platform/control-admin/src/rounding-control.ts | 36 |
 | `permissionCode` | runtime | server/packages/platform/control-admin/src/runtime-command-service.ts | 827, 829 |
-| `permissionCode` | test | server/packages/platform/experience/src/service.test.ts | 155, 168, 180, 187 |
-| `permissionCode` | runtime | server/packages/platform/experience/src/service.ts | 709 |
+| `permissionCode` | test | server/packages/platform/experience/src/entity-operation-dispatcher.test.ts | 7, 38 |
+| `permissionCode` | runtime | server/packages/platform/experience/src/entity-operation-dispatcher.ts | 43 |
+| `permissionCode` | test | server/packages/platform/experience/src/entity-page-planner.test.ts | 18 |
+| `permissionCode` | runtime | server/packages/platform/experience/src/entity-page-planner.ts | 165 |
+| `permissionCode` | test | server/packages/platform/experience/src/service.test.ts | 156, 169, 177, 185, 194, 206, 218, 229, 238, 250, 266, 268, 274, 282, 290 |
+| `permissionCode` | runtime | server/packages/platform/experience/src/service.ts | 732, 756, 767, 797 |
 | `permissionCode` | runtime | server/packages/platform/governance/src/compliance/legal-hold-service.ts | 78 |
 | `permissionCode` | runtime | server/packages/platform/governance/src/compliance/report-pack-service.ts | 366 |
-| `permissionCode` | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 142 |
-| `permissionCode` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 52 |
+| `permissionCode` | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 153 |
+| `permissionCode` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 81 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/__fixtures__/authorization-golden-corpus.v1.json | 13, 14, 19, 21, 22, 28, 31, 32, 38, 41, 42, 48, 50, 55, 57, 62, 63, 68, 70, 75, 77, 82, 88, 90, 95, 96, 101, 102 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 9, 32 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/iam-service.test.ts | 51 |
@@ -2239,25 +2257,26 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/platform/metadata/src/__tests__/entity-ai.test.ts | 5 |
 | `permissionCode` | test | server/packages/platform/metadata/src/__tests__/entity-authorization.test.ts | 36, 38 |
 | `permissionCode` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 5 |
-| `permissionCode` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 34, 38, 87 |
+| `permissionCode` | test | server/packages/platform/metadata/src/__tests__/native-list-application.test.ts | 14, 23 |
+| `permissionCode` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 36, 40, 94 |
 | `permissionCode` | test | server/packages/platform/metadata/src/distributed-descriptor-cache.test.ts | 16 |
-| `permissionCode` | runtime | server/packages/platform/metadata/src/native-runtime-projection.ts | 96, 100, 118 |
+| `permissionCode` | runtime | server/packages/platform/metadata/src/native-runtime-projection.ts | 144, 148, 166 |
 | `permissionCode` | runtime | server/packages/platform/notifications/src/notification-operations.ts | 227, 229, 233 |
 | `permissionCode` | test | server/packages/platform/policy/src/__tests__/policy-routes.test.ts | 130 |
 | `permissionCode` | route | server/packages/platform/policy/src/policy-routes.ts | 39, 79 |
 | `permissionCode` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 28, 34, 43 |
 | `permissionCode` | runtime | server/packages/platform/search/src/document-search-service.ts | 17, 51 |
 | `permissionCode` | test | server/packages/platform/workflow/src/__tests__/workflow-routes.test.ts | 61 |
-| `permissionCode` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 82 |
+| `permissionCode` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 30, 90 |
 | `permissionCode` | runtime | server/packages/platform/workflow/src/sla-automation.ts | 9, 12, 14 |
-| `permissionCode` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 140, 141 |
+| `permissionCode` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 141, 142 |
 | `permissionCode` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 147, 156, 160, 219, 261, 262 |
 | `permissionCode` | route | server/packages/services/attachments/src/attachment-routes.ts | 333, 340, 348, 361, 383, 385 |
 | `permissionCode` | test | server/packages/services/attachments/src/retrieval-admission.test.ts | 23, 77 |
 | `permissionCode` | runtime | server/packages/services/attachments/src/retrieval-admission.ts | 17, 103 |
 | `permissionCode` | runtime | server/packages/services/content/src/content-service.ts | 4 |
 | `permissionCode` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 37, 79, 101, 105, 116, 117 |
-| `permissionCode` | runtime | server/packages/services/documents/src/document-service.ts | 35, 128 |
+| `permissionCode` | runtime | server/packages/services/documents/src/document-service.ts | 43, 141 |
 | `permissionCode` | runtime | server/packages/services/finance/src/ledger/business-partner-journal-activity.ts | 31 |
 | `permissionCode` | runtime | server/packages/services/finance/src/ledger/gl-posting-service.ts | 17 |
 | `permissionCode` | test | server/packages/services/finance/src/shared/finance-foundation.test.ts | 83 |
@@ -2271,9 +2290,9 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-policy.test.ts | 17, 103 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-production-integrations.test.ts | 8 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-resources.test.ts | 132 |
-| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 280, 281, 356, 359, 657, 658 |
-| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 467, 495, 498 |
-| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 8 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 280, 281, 378, 381, 679, 680 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 470, 502, 505 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 9 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-invitation-service.test.ts | 13 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-provider-projection.test.ts | 34, 72, 86 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-reveal-affordances.test.ts | 23, 35, 44, 81 |
@@ -2285,16 +2304,16 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/workforce-service.test.ts | 16 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts | 8, 11, 35 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-policy.ts | 67, 82, 101, 112, 136, 151, 167 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 367, 394, 659, 1014, 1075, 1243, 1356, 1479, 1504, 1934, 2127, 2138 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 372, 399, 704, 1057, 1118, 1286, 1399, 1522, 1547, 1999, 2192, 2203 |
 | `permissionCode` | test | server/packages/services/master-data/src/business-partner-atlas-insights.test.ts | 9 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-atlas-insights.ts | 24 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-company-pilot.ts | 56, 59, 113, 119, 129 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1293, 1298, 1300, 1306 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1294, 1299, 1301, 1307 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-invitation-service.ts | 171 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-provider-projection.ts | 223, 542, 612 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 312, 409, 1743, 1748, 1753, 1761, 1766 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 332, 429, 1822, 1827, 1832, 1840, 1845 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 88, 93, 105 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/kysely-business-partner-case-repository.ts | 2048 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/kysely-business-partner-case-repository.ts | 2062 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/kysely-workforce-request-repository.ts | 61 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/master-data-authority.ts | 71, 75, 79, 82, 87 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/supplier-workforce-command-guard.ts | 25, 39, 44, 48 |
@@ -2304,14 +2323,12 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/services/master-data/src/worker-engagement-lifecycle-service.ts | 119, 166 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/workforce-service.ts | 43 |
 | `permissionCode` | test | server/packages/services/publication/src/__tests__/business-partner-company-case-contract.test.ts | 30, 103, 112, 136 |
-| `permissionCode` | test | server/packages/services/publication/src/__tests__/document-collection-compiler.test.ts | 46 |
+| `permissionCode` | test | server/packages/services/publication/src/__tests__/compiled-entity-collection-compiler.test.ts | 46 |
 | `permissionCode` | test | server/packages/services/publication/src/__tests__/entity-authorization-compiler.test.ts | 67, 76, 144, 193, 418, 608 |
-| `permissionCode` | route | server/packages/services/publication/src/bank-directory-routes.ts | 84 |
 | `permissionCode` | route | server/packages/services/publication/src/business-partner-case-contract-routes.ts | 273, 279 |
 | `permissionCode` | runtime | server/packages/services/publication/src/business-partner-company-case-contract.ts | 16, 119, 131, 187 |
-| `permissionCode` | route | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 10, 11 |
 | `permissionCode` | route | server/packages/services/publication/src/business-partner-definition-routes.ts | 293, 299 |
-| `permissionCode` | runtime | server/packages/services/publication/src/document-collection-compiler.ts | 65, 94, 96, 118, 127 |
+| `permissionCode` | runtime | server/packages/services/publication/src/compiled-entity-collection-compiler.ts | 65, 94, 96, 118, 127 |
 | `permissionCode` | runtime | server/packages/services/publication/src/entity-authorization-compiler.ts | 106, 181, 230 |
 | `permissionCode` | route | server/packages/services/publication/src/publication-routes.ts | 136, 138 |
 | `permissionCode` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 10 |
@@ -2324,7 +2341,7 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 18, 38, 39, 46, 47, 113, 119, 141, 146, 150, 190, 195, 199, 234, 236 |
 | `permissionCode` | test | server/packages/services/records/src/__tests__/list-context-discovery.test.ts | 9, 20, 33 |
 | `permissionCode` | test | server/packages/services/records/src/__tests__/list-experience.test.ts | 31, 59, 73, 124 |
-| `permissionCode` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 37, 64 |
+| `permissionCode` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 37, 68 |
 | `permissionCode` | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 13, 22, 35, 44, 53 |
 | `permissionCode` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 32, 33, 34, 35, 37, 40, 47, 140, 141 |
 | `permissionCode` | test | server/packages/services/records/src/__tests__/snapshot-service.test.ts | 12, 15, 29 |
@@ -2333,13 +2350,13 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/services/records/src/actions/action-service.ts | 12 |
 | `permissionCode` | runtime | server/packages/services/records/src/entity-authorization.ts | 118, 195, 206 |
 | `permissionCode` | runtime | server/packages/services/records/src/entity-backend-authorizer.ts | 133, 198, 266, 267, 268, 279, 280, 312, 321 |
-| `permissionCode` | runtime | server/packages/services/records/src/entity-list-service.ts | 349, 460, 736, 737, 741, 1080, 1087, 1168, 1169 |
+| `permissionCode` | runtime | server/packages/services/records/src/entity-list-service.ts | 355, 466, 742, 743, 747, 1086, 1093, 1174, 1175 |
 | `permissionCode` | runtime | server/packages/services/records/src/field-validation.ts | 34, 35 |
 | `permissionCode` | runtime | server/packages/services/records/src/lifecycle-service.ts | 17, 20 |
 | `permissionCode` | runtime | server/packages/services/records/src/list-context-discovery.ts | 34, 36, 47, 80, 107 |
-| `permissionCode` | runtime | server/packages/services/records/src/list-experience.ts | 31, 32, 43, 99, 111, 125, 133 |
+| `permissionCode` | runtime | server/packages/services/records/src/list-experience.ts | 31, 32, 43, 100, 112, 126, 134 |
 | `permissionCode` | runtime | server/packages/services/records/src/mutation-service.ts | 34, 35, 57, 61, 76, 77, 97, 98, 115, 118, 120 |
-| `permissionCode` | runtime | server/packages/services/records/src/navigation-context-discovery.ts | 16, 32, 42, 54 |
+| `permissionCode` | runtime | server/packages/services/records/src/navigation-context-discovery.ts | 16, 34, 44, 56 |
 | `permissionCode` | runtime | server/packages/services/records/src/query-service.ts | 141, 260, 395, 591, 594, 602 |
 | `permissionCode` | runtime | server/packages/services/records/src/record-read-access.ts | 14, 15, 21, 37, 41, 61, 62, 65 |
 | `permissionCode` | route | server/packages/services/records/src/snapshots/snapshot-routes.ts | 10, 18, 19 |
@@ -2401,7 +2418,7 @@ Capture DDLs:
 | `permissionCode` | tool | tooling/scripts/verification/setup-local-master-data-authority.mjs | 18, 20, 22 |
 | `permissionCodes` | test | server/apps/platform-host/src/composition/__tests__/finance-http-review.test.ts | 515 |
 | `permissionCodes` | route | server/apps/platform-host/src/composition/finance-routes.ts | 295 |
-| `permissionCodes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1362 |
+| `permissionCodes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1395 |
 | `permissionCodes` | test | server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts | 89, 190 |
 | `permissionCodes` | test | server/db/scripts/__tests__/authorization/exact-scope-compatibility.test.ts | 12, 28, 41, 62, 71, 97 |
 | `permissionCodes` | tool | server/db/scripts/provisioning/provision-development-northwind-mesh-fixture.ts | 258, 267, 268 |
@@ -2413,80 +2430,24 @@ Capture DDLs:
 | `permissionCodes` | runtime | server/packages/contracts/finance/src/commands.ts | 7 |
 | `permissionCodes` | route | server/packages/planes/neon/src/finance-http.ts | 426, 445 |
 | `permissionCodes` | test | server/packages/planes/neon/src/finance-jobs.test.ts | 6 |
-| `permissionCodes` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 13, 79 |
+| `permissionCodes` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 13, 87 |
 | `permissionCodes` | runtime | server/packages/services/finance/src/shared/permission-checker.ts | 6 |
-| `permissionCodes` | test | server/packages/services/master-data/src/__tests__/business-partner-case-view.test.ts | 62, 87, 96, 101, 113, 143, 147, 173, 186, 192 |
+| `permissionCodes` | test | server/packages/services/master-data/src/__tests__/business-partner-case-view.test.ts | 62, 87, 96, 101, 113, 143, 147, 173, 186, 192, 217, 226 |
 | `permissionCodes` | runtime | server/packages/services/master-data/src/business-partner-case-view.ts | 18, 201 |
-| `permissionCodes` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 359 |
+| `permissionCodes` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 361 |
 | `permissionCodes` | test | tests/contracts/business-partner-phase0-contracts.test.ts | 109 |
 | `permissionCodes` | tool | tooling/scripts/policy/authorization-inventory.ts | 183, 1198, 1202, 1236, 2542 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/apps_neon_app_(shell)_mdg_operation-review_review_tsx_1d41-5f._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_1otqo1d._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/apps_neon_app_(shell)_mdg_operation-review_review_tsx_1d41-5f._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_1otqo1d._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/0h-_i5jmlccmv.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/1uhwwbtoiv-f5.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/2-vwisattg7if.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/26vimz5ee2k3y.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/42x397h50yqoj.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/43cf9c2ta28aj.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/apps_neon_app_(shell)_mdg_operation-review_review_tsx_1d41-5f._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_1otqo1d._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/apps_neon_app_(shell)_mdg_operation-review_review_tsx_1d41-5f._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_1otqo1d._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/0awy4ee-qwf-4.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/0yta17jjywcsn.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/1-wqrr3qesgmm.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/316d2ipy869xg.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/3crtgwhu1xw_7.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/3dsc6rk665jnx.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/apps_neon_app_(shell)_mdg_operation-review_review_tsx_1d41-5f._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_1otqo1d._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/apps_neon_app_(shell)_mdg_operation-review_review_tsx_1d41-5f._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_1otqo1d._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_planes_neon_business-partner_src_index_tsx_1coj805._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_app-foundation_src_index_tsx_1he9vio._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_shell_app-foundation_src_server_ts_1zeump1._.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/static/chunks/0h-_i5jmlccmv.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/static/chunks/1iuri9db1_90v.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/static/chunks/1uhwwbtoiv-f5.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/static/chunks/2-vwisattg7if.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/static/chunks/26vimz5ee2k3y.js | 1 |
-| `permissions` | runtime | apps/neon/.next-bp-summary/static/chunks/42x397h50yqoj.js | 1 |
+| `permissions` | runtime | apps/docs-internal/.docs-manifest.json | 1688 |
+| `permissions` | runtime | apps/docs-internal/public/assets/architecture/business-partner/evidence/atlas-f0-baseline-dev-20260910.json | 46519 |
+| `permissions` | runtime | apps/docs-internal/public/assets/architecture/business-partner/evidence/atlas-f0-baseline-qa-20260910.json | 41703 |
+| `permissions` | runtime | apps/docs-internal/public/assets/architecture/business-partner/internal-supplier-onboarding-p6-evidence.json | 473, 487, 500 |
+| `permissions` | runtime | apps/docs-internal/public/assets/operations/evidence/valkey-immutable-images-20260912.json | 182 |
+| `permissions` | runtime | apps/docs-internal/public/assets/runbooks/master-data-launch/local-address-cancellation-acceptance-20260907.json | 213, 219, 225, 231, 237, 243, 249 |
+| `permissions` | runtime | apps/docs-internal/public/assets/runbooks/master-data-launch/local-lock-review-acceptance-20260907.json | 215, 221, 227, 233, 239, 245, 251 |
+| `permissions` | runtime | apps/docs-internal/public/assets/runbooks/master-data-launch/local-second-review-acceptance-20260907.json | 216, 222, 228, 234, 240, 246, 252 |
+| `permissions` | runtime | apps/docs-internal/public/assets/runbooks/master-data-launch/local-six-route-acceptance-20260907.json | 201, 207, 213, 219, 225, 231, 237 |
 | `permissions` | ui | apps/neon/app/(shell)/mdg/operation-review/review.tsx | 10 |
+| `permissions` | ui | apps/neon/lib/experience-runtime.tsx | 217, 227 |
 | `permissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_06s1utk._.js | 1 |
 | `permissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_10hjbt7._.js | 1 |
 | `permissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_1bwuu0e._.js | 1 |
@@ -2552,6 +2513,10 @@ Capture DDLs:
 | `permissions` | runtime | governance/policy/reports/business-partner-target-catalog.installed.dev.json | 5 |
 | `permissions` | runtime | governance/policy/reports/business-partner-v2-exact-release.after-signing.dev.json | 1218, 1254, 1289, 1325 |
 | `permissions` | runtime | governance/policy/reports/business-partner-v2-exact-release.dev.json | 1218, 1254, 1289, 1325 |
+| `permissions` | runtime | governance/policy/reports/internal-bank-live-publication.dev.json | 90, 103 |
+| `permissions` | runtime | governance/policy/reports/supplier-communications-dev-access.dev.json | 13, 27, 40 |
+| `permissions` | runtime | governance/policy/reports/supplier-onboarding-dev-access.dev.json | 13, 27, 40 |
+| `permissions` | runtime | governance/policy/reports/task-rules-schema.dev.json | 17 |
 | `permissions` | runtime | governance/policy/reviews/bp-dependencies-20260912/studio-access.proposal.json | 29, 160, 216, 222 |
 | `permissions` | runtime | governance/policy/reviews/business-partner-affordance-count-execution-20260912-r2.proposal.dev.json | 63, 354, 394, 685, 725, 773, 840, 878, 913 |
 | `permissions` | runtime | governance/policy/reviews/business-partner-affordance-count-execution-20260912-r2.user-approval.dev.json | 13 |
@@ -2564,6 +2529,7 @@ Capture DDLs:
 | `permissions` | runtime | governance/policy/reviews/business-partner-company-image-correction-v2-20260912.proposal.dev.json | 24 |
 | `permissions` | runtime | governance/policy/reviews/business-partner-company-pilot-execution-access-20260912.proposal.dev.json | 28, 40 |
 | `permissions` | runtime | governance/policy/reviews/business-partner-consolidated-studio-access-20260912.proposal.dev.json | 29, 160, 213 |
+| `permissions` | runtime | governance/policy/reviews/business-partner-dev-operational-access-20260912.proposal.dev.json | 34, 57, 82, 93, 108, 124, 140, 149, 164, 180, 188, 204, 216 |
 | `permissions` | runtime | governance/policy/reviews/business-partner-enter-atlas-access-20260912.proposal.dev.json | 32, 64 |
 | `permissions` | runtime | governance/policy/reviews/business-partner-enter-correction-runtime-workflow.dev.json | 1581 |
 | `permissions` | runtime | governance/policy/reviews/business-partner-enter-correction.graph.dev.json | 3887, 3947, 3982, 4017, 6788, 6848, 6883, 6918 |
@@ -2603,27 +2569,37 @@ Capture DDLs:
 | `permissions` | runtime | governance/policy/reviews/business-partner-two-reviewer-recommendations.dev.json | 12035, 12122, 12209 |
 | `permissions` | runtime | governance/policy/reviews/business-partner-two-reviewer-recorded.dev.json | 13622, 13732, 13842 |
 | `permissions` | runtime | governance/policy/reviews/business-partner-v2-studio-authoring-grants.proposal.dev.json | 18, 29, 44 |
+| `permissions` | runtime | governance/policy/reviews/internal-bank-native-review-correction.graph.dev.json | 3872, 3908, 3943, 3979, 7538, 7574, 7609, 7645 |
+| `permissions` | runtime | governance/policy/reviews/internal-bank-native-review.graph.dev.json | 3705, 3741, 3776, 3812, 7115, 7151, 7186, 7222 |
 | `permissions` | test | packages/contracts/platform/ai/src/__tests__/business-context.test.ts | 35 |
 | `permissions` | test | packages/contracts/platform/ai/src/__tests__/protocol.test.ts | 21, 72 |
 | `permissions` | runtime | packages/contracts/platform/ai/src/intent.ts | 16 |
-| `permissions` | runtime | packages/contracts/platform/entity-list/src/experience.ts | 19, 211, 218, 219, 220, 301 |
-| `permissions` | ui | packages/planes/neon/business-partner/src/360/components/commercial-controls.tsx | 381 |
+| `permissions` | runtime | packages/contracts/platform/entity-list/src/experience.ts | 21, 213, 220, 221, 222, 303 |
+| `permissions` | ui | packages/planes/neon/business-partner/src/360/components/commercial-controls.tsx | 383 |
 | `permissions` | ui | packages/planes/neon/business-partner/src/bank-verification-controls.tsx | 17, 19 |
 | `permissions` | ui | packages/planes/neon/business-partner/src/banking-workspace.tsx | 14, 48 |
-| `permissions` | ui | packages/planes/neon/business-partner/src/index.tsx | 420, 433, 2618, 2619 |
-| `permissions` | ui | packages/planes/neon/business-partner/src/role-extension-experience.tsx | 90, 91 |
-| `permissions` | ui | packages/planes/studio/business-partner/src/bank-directory.tsx | 124, 125, 126 |
+| `permissions` | ui | packages/planes/neon/business-partner/src/index.tsx | 453, 466, 2210, 2211 |
+| `permissions` | ui | packages/planes/neon/business-partner/src/request-entry.tsx | 48, 57, 100, 138, 206 |
+| `permissions` | ui | packages/planes/neon/business-partner/src/role-extension-experience.tsx | 95, 96 |
+| `permissions` | ui | packages/planes/studio/business-partner/src/composition-configuration-controls.tsx | 54, 187 |
+| `permissions` | test | packages/planes/studio/business-partner/src/composition-configuration.test.ts | 124 |
+| `permissions` | runtime | packages/planes/studio/business-partner/src/composition-configuration.ts | 118, 130, 150, 151, 173 |
+| `permissions` | runtime | packages/planes/studio/business-partner/src/composition-model.ts | 22 |
+| `permissions` | ui | packages/planes/studio/business-partner/src/workbench-editor.tsx | 214 |
+| `permissions` | runtime | packages/planes/studio/business-partner/src/workbench-model.ts | 150, 156 |
+| `permissions` | ui | packages/planes/studio/business-partner/src/workbench-publication.tsx | 358 |
+| `permissions` | ui | packages/planes/studio/business-partner/src/workbench.tsx | 545, 644 |
 | `permissions` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 120, 1278, 1279, 1281, 1287 |
 | `permissions` | runtime | packages/platform/foundation/api-client/src/bootstrap.ts | 27, 50, 52 |
 | `permissions` | runtime | packages/platform/iam/governance-review/src/named-role-recommendations.mjs | 103 |
 | `permissions` | runtime | packages/platform/iam/identity-gate/src/workspace-showcase-data.ts | 664, 670, 672 |
-| `permissions` | ui | packages/platform/shell/app-foundation/src/index.tsx | 57, 58, 65, 125 |
+| `permissions` | ui | packages/platform/shell/app-foundation/src/index.tsx | 99, 100, 107, 174 |
 | `permissions` | runtime | packages/platform/shell/shell-runtime/src/core.ts | 8, 19, 32, 37, 38, 52, 53 |
 | `permissions` | ui | packages/platform/shell/shell/src/atlas-context-inspector.tsx | 75, 176 |
 | `permissions` | runtime | packages/platform/shell/shell/src/core.ts | 41, 133 |
 | `permissions` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 65 |
 | `permissions` | ui | packages/platform/shell/shell/src/home.tsx | 446, 1471, 1772 |
-| `permissions` | runtime | packages/platform/shell/shell/src/messages.ts | 9 |
+| `permissions` | runtime | packages/platform/shell/shell/src/messages.ts | 12 |
 | `permissions` | tool | server/apps/platform-host/scripts/db-verification/business-partner-360/verify-business-partner-360-reads.ts | 49, 166 |
 | `permissions` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/intent-feedback.mts | 142, 298, 299, 313 |
 | `permissions` | test | server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts | 157 |
@@ -2638,28 +2614,31 @@ Capture DDLs:
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts | 33 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 36, 87, 539, 540, 581 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-backend-intents.test.ts | 56 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-case-authority.test.ts | 100, 180 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-company-native-authority.test.ts | 23 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-import-runtime.test.ts | 63, 116 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-read-policy.test.ts | 33, 123, 133, 134 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/business-partner-target-reveal-policy.test.ts | 96, 117, 135, 141 |
-| `permissions` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 45 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 46 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/finance-http-review.test.ts | 55, 109, 110, 304, 447, 579, 581 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/iam-api-review.test.ts | 42, 161, 162, 163 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/iam-audit-vertical.test.ts | 25, 54, 95 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 22, 42, 44, 48, 51 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 39, 41, 42, 47, 52, 71 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/mesh-exchange-readiness.test.ts | 12 |
-| `permissions` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5, 15, 17 |
+| `permissions` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5, 15, 17, 33 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/metadata-records-vertical.test.ts | 45, 48, 89, 93, 96 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/policy-vertical.test.ts | 19 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 13 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts | 20, 21 |
-| `permissions` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 14, 92, 102 |
 | `permissions` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 229, 231, 235, 236, 237, 238, 239, 461, 462, 465 |
+| `permissions` | runtime | server/apps/platform-host/src/composition/business-partner-case-authority.ts | 52 |
 | `permissions` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 8, 34, 35 |
 | `permissions` | route | server/apps/platform-host/src/composition/finance-routes.ts | 41, 295 |
-| `permissions` | runtime | server/apps/platform-host/src/composition/local-graph-preview.ts | 103, 121, 245 |
-| `permissions` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1259, 1288, 1296, 1308, 1362, 2308, 5507, 5510, 5511, 5673, 5676, 5679, 5682, 7233 |
+| `permissions` | runtime | server/apps/platform-host/src/composition/local-graph-preview.ts | 103, 121, 244 |
+| `permissions` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1292, 1321, 1329, 1341, 1395, 2341, 5859, 5862, 5863, 6025, 6028, 6031, 6034, 7506 |
+| `permissions` | runtime | server/apps/platform-host/src/composition/supplier-process-communications.ts | 72, 77, 78 |
+| `permissions` | runtime | server/apps/platform-host/src/composition/supplier-process-document-runtime.ts | 99, 129, 132 |
 | `permissions` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 150 |
 | `permissions` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 242 |
 | `permissions` | runtime | server/architecture/legacy-inventory-baseline.json | 1206, 4401, 4403, 4405, 4527, 4529, 4530, 5433, 5435, 5457, 5459, 7011, 7013, 7931, 7933, 8155, 8157, 11853, 11855, 11877, 11879 |
@@ -2669,10 +2648,9 @@ Capture DDLs:
 | `permissions` | runtime | server/db/ddl/governed-entity-lifecycle-minimal-schema-review.v1.json | 133 |
 | `permissions` | ddl | server/db/ddl/planes/mesh/control/12_reference_seed.sql | 172 |
 | `permissions` | ddl | server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql | 97, 277, 299, 329, 351, 384, 401, 408, 460, 508, 522 |
-| `permissions` | ddl | server/db/ddl/planes/neon/master/03_tables.sql | 1965 |
-| `permissions` | ddl | server/db/ddl/planes/studio/authz/14_permission_reference_seed.sql | 142, 160 |
-| `permissions` | runtime | server/db/migrations/20260906_mesh_exchange_readiness.sql | 313, 337 |
-| `permissions` | runtime | server/db/migrations/20260912_company_pilot_lifecycle.sql | 239 |
+| `permissions` | ddl | server/db/ddl/planes/neon/master/03_tables.sql | 1972 |
+| `permissions` | ddl | server/db/ddl/planes/studio/authz/14_permission_reference_seed.sql | 142 |
+| `permissions` | runtime | server/db/migrations/inventory.json | 562, 729 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/authorization-clean-slate.test.ts | 21, 23, 41, 46, 152, 166 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/cirrusatlantic-demo-authorization.test.ts | 37, 49, 54, 63 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts | 76, 103, 131, 174 |
@@ -2686,13 +2664,15 @@ Capture DDLs:
 | `permissions` | tool | server/db/scripts/operations/provision-cirrusatlantic-bp-qa.sql | 7, 15, 20, 21 |
 | `permissions` | tool | server/db/scripts/operations/studio/provision-cirrusatlantic-meta-qa.sql | 21, 28, 31 |
 | `permissions` | tool | server/db/scripts/operations/studio/provision-cirrusatlantic-preview-reader-session.sql | 23, 30, 33 |
-| `permissions` | tool | server/db/scripts/operations/studio/provision-cirrusatlantic-preview-session.sql | 22, 29, 32 |
+| `permissions` | tool | server/db/scripts/operations/studio/provision-cirrusatlantic-preview-session.sql | 30, 37, 40 |
+| `permissions` | tool | server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260906_mesh_exchange_readiness.sql | 313, 337 |
+| `permissions` | tool | server/db/scripts/operations/upgrades/legacy-baseline-20260914/20260912_company_pilot_lifecycle.sql | 239 |
 | `permissions` | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 60, 644, 647, 693, 701, 713 |
 | `permissions` | tool | server/db/scripts/provisioning/cirrusatlantic-demo-authorization-model.ts | 9, 26, 45, 54, 63, 146, 147 |
-| `permissions` | tool | server/db/scripts/provisioning/provision-business-partner-r2-fixtures.ts | 311, 318, 331 |
+| `permissions` | tool | server/db/scripts/provisioning/provision-business-partner-r2-fixtures.ts | 318, 325, 338 |
 | `permissions` | tool | server/db/scripts/provisioning/provision-business-partner-r3-applicant.ts | 87, 94, 95, 111 |
 | `permissions` | tool | server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts | 114, 117, 118, 120, 138, 149, 172, 175, 176, 178, 216, 219, 220, 222, 413, 418, 435, 437, 455, 456, 471 |
-| `permissions` | tool | server/db/scripts/provisioning/provision-development-business-partner-runtime.ts | 346, 433, 445 |
+| `permissions` | tool | server/db/scripts/provisioning/provision-development-business-partner-runtime.ts | 347, 438, 450 |
 | `permissions` | tool | server/db/scripts/provisioning/provision-development-northwind-mesh-fixture.ts | 40, 267, 268, 269 |
 | `permissions` | tool | server/db/scripts/provisioning/provision-three-tenant-demo-authorization.ts | 135, 140, 161, 216, 226, 227 |
 | `permissions` | tool | server/db/scripts/provisioning/publish-development-list-experience.ts | 341, 367, 403, 405 |
@@ -2722,12 +2702,12 @@ Capture DDLs:
 | `permissions` | runtime | server/db/seed/packs/authorization-v2/neon/seed-pack.v1.json | 424 |
 | `permissions` | runtime | server/db/seed/packs/authorization-v2/studio/seed-pack.v1.json | 472 |
 | `permissions` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 42, 56 |
-| `permissions` | runtime | server/packages/adapters/experience-postgres/src/index.ts | 248 |
+| `permissions` | runtime | server/packages/adapters/experience-postgres/src/index.ts | 249 |
 | `permissions` | test | server/packages/contracts/ai/src/__tests__/business-context.test.ts | 35 |
 | `permissions` | runtime | server/packages/contracts/ai/src/experience-configuration.ts | 9 |
 | `permissions` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 12, 34, 35, 39 |
 | `permissions` | runtime | server/packages/contracts/auth/src/authorization.ts | 91 |
-| `permissions` | runtime | server/packages/contracts/experience/src/ports.ts | 145 |
+| `permissions` | runtime | server/packages/contracts/experience/src/ports.ts | 154 |
 | `permissions` | runtime | server/packages/contracts/finance/src/index.ts | 9 |
 | `permissions` | test | server/packages/contracts/metadata/src/__tests__/entity-ai.test.ts | 16 |
 | `permissions` | test | server/packages/planes/mesh/src/business-partner-bank-disclosure.test.ts | 5 |
@@ -2739,7 +2719,8 @@ Capture DDLs:
 | `permissions` | runtime | server/packages/planes/mesh/src/network-account-context.ts | 18 |
 | `permissions` | test | server/packages/planes/neon/src/__tests__/integration/business-partner-bank-verification.ts | 75 |
 | `permissions` | test | server/packages/planes/neon/src/business-partner-account-bank-linkage.test.ts | 6 |
-| `permissions` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 508 |
+| `permissions` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 512 |
+| `permissions` | test | server/packages/planes/neon/src/business-partner-intake-protection.test.ts | 8 |
 | `permissions` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6, 23, 36 |
 | `permissions` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7, 23, 35, 57 |
 | `permissions` | test | server/packages/planes/neon/src/finance-http.test.ts | 19 |
@@ -2749,7 +2730,7 @@ Capture DDLs:
 | `permissions` | runtime | server/packages/planes/neon/src/register-finance.ts | 289, 336, 348, 355, 380, 386, 391, 411, 469 |
 | `permissions` | test | server/packages/planes/studio/meta-entity-authoring/src/__tests__/list-experience.test.ts | 84 |
 | `permissions` | runtime | server/packages/planes/studio/meta-entity-authoring/src/collection-relationship.ts | 30, 34, 38 |
-| `permissions` | runtime | server/packages/planes/studio/meta-entity-authoring/src/list-experience.ts | 84 |
+| `permissions` | runtime | server/packages/planes/studio/meta-entity-authoring/src/list-experience.ts | 92 |
 | `permissions` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 18 |
 | `permissions` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 8 |
 | `permissions` | test | server/packages/platform/ai/src/__tests__/business-context.test.ts | 14, 169, 385 |
@@ -2790,9 +2771,13 @@ Capture DDLs:
 | `permissions` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 48 |
 | `permissions` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1092, 1137 |
 | `permissions` | test | server/packages/platform/control-admin/src/rounding-control.test.ts | 205 |
-| `permissions` | runtime | server/packages/platform/experience/src/contracts.ts | 74, 140, 172 |
-| `permissions` | test | server/packages/platform/experience/src/service.test.ts | 16, 23, 45, 70, 89, 92, 107, 108, 110, 113, 115, 130, 151, 155, 168, 180, 187, 211, 223, 232, 281 |
-| `permissions` | runtime | server/packages/platform/experience/src/service.ts | 195, 200, 202, 219, 228, 249, 277, 677, 739, 838, 951, 971, 990, 1007, 1009, 1010, 1137 |
+| `permissions` | runtime | server/packages/platform/experience/src/contracts.ts | 74, 153, 185 |
+| `permissions` | test | server/packages/platform/experience/src/entity-operation-dispatcher.test.ts | 10, 46 |
+| `permissions` | runtime | server/packages/platform/experience/src/entity-operation-dispatcher.ts | 44 |
+| `permissions` | test | server/packages/platform/experience/src/entity-section-service.test.ts | 9 |
+| `permissions` | runtime | server/packages/platform/experience/src/entity-section-service.ts | 169 |
+| `permissions` | test | server/packages/platform/experience/src/service.test.ts | 16, 23, 46, 71, 90, 93, 108, 109, 111, 114, 116, 131, 152, 156, 169, 177, 185, 194, 206, 218, 229, 238, 250, 266, 268, 274, 282, 290, 314, 326, 335, 384 |
+| `permissions` | runtime | server/packages/platform/experience/src/service.ts | 218, 223, 225, 242, 251, 272, 300, 700, 756, 757, 796, 878, 943, 1056, 1076, 1095, 1112, 1114, 1115, 1242 |
 | `permissions` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `permissions` | test | server/packages/platform/governance/src/routes/governance-routes.test.ts | 9 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 23, 27, 28 |
@@ -2810,14 +2795,15 @@ Capture DDLs:
 | `permissions` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 39, 41, 42, 43, 56, 74, 77, 80, 83, 91, 96, 141, 150, 164, 165, 251 |
 | `permissions` | test | server/packages/platform/metadata/src/__tests__/entity-ai.test.ts | 12 |
 | `permissions` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
-| `permissions` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 37 |
+| `permissions` | test | server/packages/platform/metadata/src/__tests__/native-list-application.test.ts | 14 |
+| `permissions` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 39 |
 | `permissions` | runtime | server/packages/platform/metadata/src/metadata-service.ts | 33 |
-| `permissions` | runtime | server/packages/platform/metadata/src/native-runtime-projection.ts | 36, 95 |
+| `permissions` | runtime | server/packages/platform/metadata/src/native-runtime-projection.ts | 86, 143 |
 | `permissions` | test | server/packages/platform/notifications/src/__tests__/notification-operations.test.ts | 44 |
 | `permissions` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
 | `permissions` | test | server/packages/platform/preferences/src/entity-views.test.ts | 8 |
 | `permissions` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
-| `permissions` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 79 |
+| `permissions` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 30, 87 |
 | `permissions` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 117 |
 | `permissions` | test | server/packages/services/content/src/content-service.test.ts | 2 |
 | `permissions` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
@@ -2843,9 +2829,9 @@ Capture DDLs:
 | `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-360-policy.test.ts | 118 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-360-resources.test.ts | 133 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 21 |
-| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 27, 474, 495, 570, 625, 651, 747, 815, 823, 827, 879, 919, 931, 934, 947, 1256, 1599, 1639, 1755, 1773, 1991, 2044, 2048 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 29, 479, 502, 577, 648, 674, 770, 838, 846, 850, 902, 942, 954, 957, 970, 1277, 1620, 1660, 1776, 1794, 2012, 2065, 2069 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-case-view.test.ts | 83 |
-| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 6, 8, 11, 14 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 7, 9, 12, 15, 24, 28, 31 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-invitation-service.test.ts | 2 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 40, 208, 234, 285, 471, 472 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 15, 28, 61, 76, 122 |
@@ -2857,16 +2843,16 @@ Capture DDLs:
 | `permissions` | test | server/packages/services/master-data/src/__tests__/worker-engagement-lifecycle-service.test.ts | 23 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/workforce-service.test.ts | 6, 16, 21, 22 |
 | `permissions` | runtime | server/packages/services/master-data/src/business-partner-360-route-contracts.ts | 97 |
-| `permissions` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 166, 178, 512, 549, 2073, 2077, 2083, 2092, 2102, 2112, 2122 |
+| `permissions` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 171, 183, 558, 595, 2138, 2142, 2148, 2157, 2167, 2177, 2187 |
 | `permissions` | runtime | server/packages/services/master-data/src/business-partner-atlas-insights.ts | 68, 70 |
 | `permissions` | runtime | server/packages/services/master-data/src/business-partner-case-view.ts | 201, 222, 225, 231, 239, 249, 255 |
-| `permissions` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 359 |
-| `permissions` | runtime | server/packages/services/master-data/src/kysely-business-partner-360-repository.ts | 160, 162, 196, 329, 346 |
+| `permissions` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 361 |
+| `permissions` | runtime | server/packages/services/master-data/src/kysely-business-partner-360-repository.ts | 174, 176, 210, 343, 360 |
 | `permissions` | runtime | server/packages/services/master-data/src/master-data-authority.ts | 78 |
 | `permissions` | test | server/packages/services/publication/src/__tests__/business-partner-company-case-contract.test.ts | 11 |
 | `permissions` | test | server/packages/services/publication/src/__tests__/studio-authority-ddl.test.ts | 9 |
 | `permissions` | runtime | server/packages/services/publication/src/business-partner-company-case-contract.ts | 117, 123, 127 |
-| `permissions` | runtime | server/packages/services/publication/src/document-collection-compiler.ts | 68, 79 |
+| `permissions` | runtime | server/packages/services/publication/src/compiled-entity-collection-compiler.ts | 68, 79 |
 | `permissions` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
 | `permissions` | test | server/packages/services/records/src/__tests__/canonical-read-backend.test.ts | 80 |
 | `permissions` | test | server/packages/services/records/src/__tests__/canonical-read-diagnostics.test.ts | 80 |
@@ -2876,17 +2862,17 @@ Capture DDLs:
 | `permissions` | test | server/packages/services/records/src/__tests__/entity-backend-isolated-execution.test.ts | 38, 152, 164 |
 | `permissions` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
 | `permissions` | test | server/packages/services/records/src/__tests__/list-context-discovery.test.ts | 14, 95, 139 |
-| `permissions` | test | server/packages/services/records/src/__tests__/list-experience.test.ts | 31, 68, 139, 168, 248, 299, 300, 303, 429 |
-| `permissions` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 31, 90 |
+| `permissions` | test | server/packages/services/records/src/__tests__/list-experience.test.ts | 31, 68, 139, 168, 260, 311, 312, 315, 441, 554, 559 |
+| `permissions` | test | server/packages/services/records/src/__tests__/navigation-context-discovery.test.ts | 31, 94, 139, 140, 143 |
 | `permissions` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 40, 44, 47, 134 |
 | `permissions` | test | server/packages/services/records/src/__tests__/snapshot-service.test.ts | 25 |
 | `permissions` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
 | `permissions` | runtime | server/packages/services/records/src/entity-authorization.ts | 100 |
 | `permissions` | runtime | server/packages/services/records/src/entity-backend-authorizer.ts | 228, 229, 230 |
-| `permissions` | runtime | server/packages/services/records/src/entity-list-service.ts | 1165, 1166, 1168, 1515, 1518 |
+| `permissions` | runtime | server/packages/services/records/src/entity-list-service.ts | 1171, 1172, 1174, 1521, 1524 |
 | `permissions` | runtime | server/packages/services/records/src/list-context-discovery.ts | 40, 41, 42, 79 |
 | `permissions` | runtime | server/packages/services/records/src/list-experience.ts | 26, 35 |
-| `permissions` | runtime | server/packages/services/records/src/navigation-context-discovery.ts | 20 |
+| `permissions` | runtime | server/packages/services/records/src/navigation-context-discovery.ts | 22 |
 | `permissions` | runtime | server/packages/services/records/src/query-service.ts | 441, 444 |
 | `permissions` | test | server/packages/services/records/src/transfer/export-preflight.test.ts | 6 |
 | `permissions` | runtime | server/packages/services/records/src/transfer/transfer-jobs.ts | 1255, 1259, 1263 |
@@ -2899,16 +2885,17 @@ Capture DDLs:
 | `permissions` | test | tests/contracts/home-personalization-phase3.test.ts | 19 |
 | `permissions` | test | tests/contracts/platform-catalog-experience.test.ts | 192 |
 | `permissions` | test | tests/contracts/query-provider-lifecycle.test.ts | 13 |
-| `permissions` | test | tests/contracts/shared-shell-navigation.test.ts | 45, 117, 164, 194, 197, 261, 664, 667, 668 |
+| `permissions` | test | tests/contracts/shared-shell-navigation.test.ts | 45, 117, 164, 194, 197, 261, 660, 663, 664 |
 | `permissions` | test | tests/contracts/studio-publication-navigation.test.ts | 7, 11 |
 | `permissions` | test | tests/foundation/access-gates-phase9.test.tsx | 6 |
-| `permissions` | tool | tooling/scripts/local-dev/graph-preview.integration.test.mts | 67, 78, 87, 91, 94, 102, 111, 187, 193, 194, 270, 307, 345, 360, 379 |
+| `permissions` | tool | tooling/scripts/local-dev/graph-preview.integration.test.mts | 67, 78, 87, 91, 94, 102, 111, 187, 193, 194, 270, 307, 345, 360, 379, 388, 390, 396 |
 | `permissions` | tool | tooling/scripts/policy/authorization-inventory.ts | 894, 966, 968, 1112, 1138, 1139, 1180, 1184 |
 | `permissions` | tool | tooling/scripts/policy/generate-development-url-catalogue.mjs | 208 |
 | `permissions` | tool | tooling/scripts/policy/host-capability-registry.mjs | 98 |
 | `permissions` | tool | tooling/scripts/policy/host-capability-registry.test.mjs | 32 |
 | `permissions` | tool | tooling/scripts/policy/verify-access-consumption-phase9.mjs | 12 |
 | `permissions` | tool | tooling/scripts/policy/verify-shared-shell-phase8.mjs | 14, 20 |
+| `permissions` | ui | tooling/scripts/verification/appearance-browser-entry.tsx | 9 |
 | `permissions` | tool | tooling/scripts/verification/apply-business-partner-release-19-test-grants.mjs | 26, 32 |
 | `permissions` | tool | tooling/scripts/verification/approve-business-partner-canonical-v2.mts | 113 |
 | `permissions` | tool | tooling/scripts/verification/approve-business-partner-case-correction.mts | 42 |
@@ -2931,6 +2918,7 @@ Capture DDLs:
 | `permissions` | tool | tooling/scripts/verification/entity-authorization/target-read-grants.mjs | 34, 39, 83 |
 | `permissions` | tool | tooling/scripts/verification/entity-authorization/target-read-grants.test.mjs | 44 |
 | `permissions` | tool | tooling/scripts/verification/install-business-partner-target-catalog.mjs | 32, 44, 53 |
+| `permissions` | tool | tooling/scripts/verification/install-task-rules-canonical-dev.mjs | 33 |
 | `permissions` | tool | tooling/scripts/verification/isolated-enter/access-dry-run.mjs | 97 |
 | `permissions` | tool | tooling/scripts/verification/isolated-enter/access-sql.mjs | 10, 12 |
 | `permissions` | tool | tooling/scripts/verification/isolated-enter/build-finance-reveal-candidate.mjs | 32, 33 |
@@ -2940,6 +2928,7 @@ Capture DDLs:
 | `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-company-correction-only-candidate.mjs | 92 |
 | `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-final-disposition-review.mjs | 218 |
 | `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-finance-reveal-access.mjs | 47, 98 |
+| `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-finance-reveal-candidate.mjs | 43 |
 | `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-manual-ui-access.mjs | 25, 30, 31, 53, 86 |
 | `permissions` | tool | tooling/scripts/verification/isolated-enter/prepare-neon-final-candidate.mjs | 108, 200 |
 | `permissions` | tool | tooling/scripts/verification/isolated-enter/preview-summary-open-work.mts | 119 |
@@ -2950,8 +2939,11 @@ Capture DDLs:
 | `permissions` | tool | tooling/scripts/verification/isolated-successor/authority-check.mjs | 70, 80, 81 |
 | `permissions` | tool | tooling/scripts/verification/isolated-successor/grants.mjs | 47, 49, 55, 81 |
 | `permissions` | tool | tooling/scripts/verification/isolated-successor/qualify-revocation.mjs | 220 |
+| `permissions` | tool | tooling/scripts/verification/manage-supplier-communications-dev-access.mts | 122, 130, 138, 141, 179 |
+| `permissions` | tool | tooling/scripts/verification/manage-supplier-onboarding-dev-access.mts | 122, 130, 138, 141, 179 |
 | `permissions` | tool | tooling/scripts/verification/master-data-prerequisites.mjs | 10, 11, 12, 13, 14, 15, 52, 60, 61, 62, 63, 65 |
 | `permissions` | tool | tooling/scripts/verification/master-data-prerequisites.test.mjs | 8 |
+| `permissions` | ui | tooling/scripts/verification/neon-context-browser-entry.tsx | 59 |
 | `permissions` | tool | tooling/scripts/verification/prepare-bp-ai-release.mjs | 35 |
 | `permissions` | tool | tooling/scripts/verification/prepare-business-partner-accepted-operations.mts | 44 |
 | `permissions` | tool | tooling/scripts/verification/prepare-business-partner-operation-reviews.mjs | 8 |
@@ -2981,6 +2973,8 @@ Capture DDLs:
 | `permissions` | tool | tooling/scripts/verification/verify-local-master-data-six-routes.mjs | 57, 123, 124 |
 | `permissions` | tool | tooling/tools/scripts/openapi-policy.test.mjs | 37 |
 | `permissions` | tool | tooling/tools/scripts/verify-deployed-openapi.mjs | 37 |
+| `persona` | runtime | apps/docs-internal/public/assets/architecture/business-partner/evidence/bp-ai-00-authenticated-20260909.json | 267 |
+| `persona` | runtime | apps/docs-internal/public/assets/architecture/business-partner/evidence/bp-ai-09-build-20260909.json | 181 |
 | `persona` | keycloak | deploy/config/iam/realm-athyper-demosetup.json | 1703, 1745, 1778, 1811, 1848, 1881, 1914, 1947, 1989, 2022, 2055, 2092, 2125, 2158, 2191, 2233, 2266, 2299, 2336, 2369, 2402, 2435, 2477, 2510, 2543, 2580, 2613, 2646, 2679, 2721, 2754, 2787, 2824, 2857, 2890, 2923, 2965, 2998, 3031, 3068, 3101, 3134, 3167, 3209, 3242, 3275, 3312, 3345, 3378, 3411, 3453, 3486, 3519, 3556, 3589, 3622, 3655, 3697, 3730, 3763, 3800, 3833, 3866, 3899, 3941, 3974, 4007, 4044, 4077, 4110, 4143, 4185, 4218, 4251, 4288, 4321, 4354, 4387, 4429, 4462, 4495, 4532, 4565, 4598, 4631, 4673, 4706, 4739, 4776, 4809, 4842, 4875, 4917, 4950, 4983, 5020, 5053, 5086, 5119, 5161, 5194, 5227, 5264, 5297, 5330, 5367, 5400, 5433, 5470, 5507, 5549, 5582, 5615, 5652, 5685, 5718, 5751, 5793, 5826, 5859, 5896, 5929, 5962, 5995, 6037, 6070, 6103, 6140, 6173, 6206, 6749, 6782, 6815 |
 | `persona` | runtime | governance/config/governance/authorization-data-disposition-policy.v1.json | 362 |
 | `persona` | runtime | governance/config/governance/authorization-legacy-freeze-baseline.v1.json | 6497, 6649, 6663, 6664, 6671, 6672, 6679, 6680, 6687, 6688, 6695, 6696, 6703, 6704, 6711, 6712, 6719, 6720, 6727, 6728, 6735, 6736, 6743, 6744, 6751, 6752, 6753, 6759, 6760, 6767, 6768, 6775, 6776, 6783, 6784, 6791, 6792, 6799, 6800, 7041, 7049, 7057 |
@@ -3004,7 +2998,7 @@ Capture DDLs:
 | `persona` | tool | tooling/scripts/verification/business-partner-ai-qualification.test.mjs | 65, 205, 210, 213 |
 | `persona` | tool | tooling/scripts/verification/complete-business-partner-ai-baseline.mjs | 108 |
 | `persona` | tool | tooling/scripts/verification/deploy-atlas-f6-persona-api.cjs | 5, 27, 28, 30, 35 |
-| `persona` | tool | tooling/scripts/verification/deploy-atlas-f6-persona-schema.mjs | 15, 21 |
+| `persona` | tool | tooling/scripts/verification/deploy-atlas-f6-persona-schema.mjs | 16, 22 |
 | `persona` | tool | tooling/scripts/verification/entity-authorization/policy-differences.mjs | 12, 14 |
 | `persona` | tool | tooling/scripts/verification/entity-authorization/policy-differences.test.mjs | 4 |
 | `persona` | tool | tooling/scripts/verification/isolated-enter/refresh-access.mjs | 114 |
@@ -3030,10 +3024,9 @@ Capture DDLs:
 | `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 23 |
 | `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 41 |
 | `planeExcluded` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5 |
-| `planeExcluded` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 25 |
 | `planeExcluded` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 239 |
 | `planeExcluded` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 9 |
-| `planeExcluded` | runtime | server/apps/platform-host/src/composition/register-services.ts | 5682, 7244 |
+| `planeExcluded` | runtime | server/apps/platform-host/src/composition/register-services.ts | 6034, 7517 |
 | `planeExcluded` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 163 |
 | `planeExcluded` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 253 |
 | `planeExcluded` | test | server/db/scripts/tests/integration/business-partner-bank-verification.ts | 79 |
@@ -3081,10 +3074,11 @@ Capture DDLs:
 | `planeExcluded` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `planeExcluded` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
 | `planeExcluded` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
-| `planeExcluded` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 79 |
+| `planeExcluded` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 87 |
 | `planeExcluded` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 128 |
 | `planeExcluded` | test | server/packages/services/content/src/content-service.test.ts | 2 |
 | `planeExcluded` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
+| `planeExcluded` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 24 |
 | `planeExcluded` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
 | `planeExcluded` | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 84 |
 | `planeExcluded` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 49 |
@@ -3109,10 +3103,9 @@ Capture DDLs:
 | `planLocked` | test | server/apps/platform-host/src/composition/__tests__/master-data-authority.test.ts | 23 |
 | `planLocked` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 41 |
 | `planLocked` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5 |
-| `planLocked` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 24, 102 |
 | `planLocked` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 238 |
 | `planLocked` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 9, 35 |
-| `planLocked` | runtime | server/apps/platform-host/src/composition/register-services.ts | 5679, 7243 |
+| `planLocked` | runtime | server/apps/platform-host/src/composition/register-services.ts | 6031, 7516 |
 | `planLocked` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 162 |
 | `planLocked` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 252 |
 | `planLocked` | test | server/db/scripts/tests/integration/business-partner-bank-verification.ts | 78 |
@@ -3160,10 +3153,11 @@ Capture DDLs:
 | `planLocked` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `planLocked` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
 | `planLocked` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
-| `planLocked` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 79 |
+| `planLocked` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 87 |
 | `planLocked` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 127 |
 | `planLocked` | test | server/packages/services/content/src/content-service.test.ts | 2 |
 | `planLocked` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
+| `planLocked` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 24 |
 | `planLocked` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
 | `planLocked` | test | server/packages/services/records/src/__tests__/entity-authorization.test.ts | 83 |
 | `planLocked` | test | server/packages/services/records/src/__tests__/entity-backend-authorizer.test.ts | 48 |
@@ -3181,9 +3175,8 @@ Capture DDLs:
 | `principalFingerprint` | test | server/apps/platform-host/src/composition/__tests__/bp-list-insights.test.ts | 37 |
 | `principalFingerprint` | test | server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts | 42 |
 | `principalFingerprint` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5 |
-| `principalFingerprint` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 18 |
 | `principalFingerprint` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 8 |
-| `principalFingerprint` | runtime | server/apps/platform-host/src/composition/register-services.ts | 7237 |
+| `principalFingerprint` | runtime | server/apps/platform-host/src/composition/register-services.ts | 7510 |
 | `principalFingerprint` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 154 |
 | `principalFingerprint` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 246 |
 | `principalFingerprint` | test | server/db/scripts/tests/integration/identity-replay-live.mjs | 454 |
@@ -3210,7 +3203,7 @@ Capture DDLs:
 | `principalFingerprint` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 353 |
 | `principalFingerprint` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1096 |
 | `principalFingerprint` | test | server/packages/platform/experience/src/service.test.ts | 16 |
-| `principalFingerprint` | runtime | server/packages/platform/experience/src/service.ts | 1007 |
+| `principalFingerprint` | runtime | server/packages/platform/experience/src/service.ts | 1112 |
 | `principalFingerprint` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 9 |
@@ -3221,7 +3214,7 @@ Capture DDLs:
 | `principalFingerprint` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `principalFingerprint` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
 | `principalFingerprint` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
-| `principalFingerprint` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 79 |
+| `principalFingerprint` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 87 |
 | `principalFingerprint` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 121 |
 | `principalFingerprint` | test | server/packages/services/content/src/content-service.test.ts | 2 |
 | `principalFingerprint` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
@@ -3233,21 +3226,9 @@ Capture DDLs:
 | `principalFingerprint` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
 | `principalFingerprint` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 44, 134 |
 | `principalFingerprint` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
-| `principalFingerprint` | runtime | server/packages/services/records/src/entity-list-service.ts | 1515 |
+| `principalFingerprint` | runtime | server/packages/services/records/src/entity-list-service.ts | 1521 |
 | `principalFingerprint` | runtime | server/packages/services/records/src/query-service.ts | 441 |
 | `principalFingerprint` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 78 |
-| `profileHash` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/_037dk03._.js | 1 |
-| `profileHash` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/_0wn60dv._.js | 1 |
-| `profileHash` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/_037dk03._.js | 1 |
-| `profileHash` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/_0wn60dv._.js | 1 |
-| `profileHash` | runtime | apps/neon/.next-bp-reveal/server/chunks/_0atf6s2._.js | 1 |
-| `profileHash` | runtime | apps/neon/.next-bp-reveal/server/chunks/_0kwp_fe._.js | 1 |
-| `profileHash` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/_0atf6s2._.js | 1 |
-| `profileHash` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/_0kwp_fe._.js | 1 |
-| `profileHash` | runtime | apps/neon/.next-bp-summary/server/chunks/_037dk03._.js | 1 |
-| `profileHash` | runtime | apps/neon/.next-bp-summary/server/chunks/_0wn60dv._.js | 1 |
-| `profileHash` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/_037dk03._.js | 1 |
-| `profileHash` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/_0wn60dv._.js | 1 |
 | `profileHash` | runtime | governance/policy/reports/business-partner-activation-publication.dev.json | 4407 |
 | `profileHash` | runtime | governance/policy/reports/business-partner-authorization-publication.dev.json | 4407 |
 | `profileHash` | runtime | governance/policy/reports/business-partner-canonical-v2-native-publication.dev.json | 895, 3533 |
@@ -3280,6 +3261,8 @@ Capture DDLs:
 | `profileHash` | runtime | governance/policy/reports/business-partner-two-reviewer-receipts.dev.json | 66, 105 |
 | `profileHash` | runtime | governance/policy/reports/business-partner-v2-exact-release.after-signing.dev.json | 12, 2464, 2893, 4027 |
 | `profileHash` | runtime | governance/policy/reports/business-partner-v2-exact-release.dev.json | 12, 2464, 2893, 4027 |
+| `profileHash` | runtime | governance/policy/reports/p9/2026-09-14T16-58-25.599Z-clean/1-supplier-onboarding-p9-native-form.dev.json | 977, 10990 |
+| `profileHash` | runtime | governance/policy/reports/supplier-onboarding-p9-native-form.dev.json | 977, 10990 |
 | `profileHash` | runtime | governance/policy/reviews/business-partner-canonical-v2-native-graph.dev.json | 2550, 2913 |
 | `profileHash` | runtime | governance/policy/reviews/business-partner-canonical-v2-native-graph.pre-native-hash.dev.json | 2550, 2913 |
 | `profileHash` | runtime | governance/policy/reviews/business-partner-canonical-v2-native.proposal.dev.json | 888 |
@@ -3291,6 +3274,8 @@ Capture DDLs:
 | `profileHash` | runtime | governance/policy/reviews/business-partner-release-20-workflow.dev.json | 57, 202, 257, 495, 550, 788, 843, 1081, 1136, 1374, 1429, 1669, 1724, 1963, 2018, 2259, 2314, 2556, 2611, 2853, 2908, 3150, 3205, 3454, 3509, 3751, 3806, 4048, 4103, 4345, 4400, 4663, 4718, 4924, 4979, 5218, 5273, 5512, 5567, 5806, 5861, 6100, 6155, 6394, 6449, 6688, 6743, 6982, 7037, 7283, 7338, 7577, 7632, 7871, 7926, 8172, 8227, 8464, 8519, 8755, 8810, 9049, 9104, 9345, 9400, 9641, 9696, 9921, 9976, 10201, 10256, 10480, 10535, 10759, 10814, 11040, 11095, 11335, 11390, 11635, 11690, 11932, 11987, 12229, 12284, 12526, 12581, 12823, 12878, 13116, 13171, 13398, 13453, 13680, 13735, 13962, 14017, 14267, 14322, 14569, 14624, 14870, 14925 |
 | `profileHash` | runtime | governance/policy/reviews/business-partner-release-20-workflow.pre-head-correction.dev.json | 53, 198, 253, 491, 546, 784, 839, 1077, 1132, 1370, 1425, 1665, 1720, 1959, 2014, 2255, 2310, 2552, 2607, 2849, 2904, 3146, 3201, 3450, 3505, 3747, 3802, 4044, 4099, 4341, 4396, 4659, 4714, 4920, 4975, 5214, 5269, 5508, 5563, 5802, 5857, 6096, 6151, 6390, 6445, 6684, 6739, 6978, 7033, 7279, 7334, 7573, 7628, 7867, 7922, 8168, 8223, 8460, 8515, 8751, 8806, 9045, 9100, 9341, 9396, 9637, 9692, 9917, 9972, 10197, 10252, 10476, 10531, 10755, 10810, 11036, 11091, 11331, 11386, 11631, 11686, 11928, 11983, 12225, 12280, 12522, 12577, 12819, 12874, 13112, 13167, 13394, 13449, 13676, 13731, 13958, 14013, 14263, 14318, 14565, 14620, 14866, 14921 |
 | `profileHash` | runtime | governance/policy/reviews/business-partner-reset-runtime.graph.dev.json | 2550, 3520, 5374, 6431 |
+| `profileHash` | runtime | governance/policy/reviews/internal-bank-native-review-correction.graph.dev.json | 5118, 5450, 6146, 8784 |
+| `profileHash` | runtime | governance/policy/reviews/internal-bank-native-review.graph.dev.json | 4951, 5283, 5890, 8361 |
 | `profileHash` | test | packages/contracts/platform/ai/src/__tests__/business-context.test.ts | 36 |
 | `profileHash` | runtime | packages/contracts/platform/authorization/src/index.ts | 2, 18 |
 | `profileHash` | runtime | packages/contracts/platform/fixtures/authorization-snapshot.v1.json | 3 |
@@ -3311,13 +3296,15 @@ Capture DDLs:
 | `profileHash` | test | server/apps/platform-host/src/composition/__tests__/master-data-vertical.test.ts | 40 |
 | `profileHash` | test | server/apps/platform-host/src/composition/__tests__/meta-entity-authoring-authorizer.test.ts | 5 |
 | `profileHash` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 14 |
-| `profileHash` | test | server/apps/platform-host/src/composition/bank-directory-authorizer.test.ts | 11, 19 |
 | `profileHash` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-deployment.ts | 222 |
 | `profileHash` | runtime | server/apps/platform-host/src/composition/business-partner-authorization-shadow.ts | 25, 69, 74, 104, 114, 229, 441 |
 | `profileHash` | test | server/apps/platform-host/src/composition/business-partner-definition-authorizer.test.ts | 7, 9 |
-| `profileHash` | runtime | server/apps/platform-host/src/composition/register-services.ts | 5770, 7221, 7230, 7237, 7238, 7239 |
+| `profileHash` | runtime | server/apps/platform-host/src/composition/register-services.ts | 6122, 7494, 7503, 7510, 7511, 7512 |
+| `profileHash` | runtime | server/apps/platform-host/src/composition/supplier-process-communications.ts | 78 |
+| `profileHash` | runtime | server/apps/platform-host/src/composition/supplier-process-document-runtime.ts | 133 |
 | `profileHash` | tool | server/apps/platform-host/src/scripts/qualify-document-infrastructure.ts | 148, 155 |
 | `profileHash` | tool | server/apps/platform-host/src/scripts/qualify-document-malware.ts | 240, 247 |
+| `profileHash` | tool | server/db/scripts/provisioning/business-partner-organization-identity.ts | 77 |
 | `profileHash` | test | server/db/scripts/tests/integration/identity-replay-live.mjs | 455 |
 | `profileHash` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `profileHash` | test | server/packages/contracts/ai/src/__tests__/business-context.test.ts | 36 |
@@ -3367,7 +3354,7 @@ Capture DDLs:
 | `profileHash` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 347, 354 |
 | `profileHash` | test | server/packages/platform/control-admin/src/kysely-entitlement-repository.postgres.test.ts | 1091, 1097 |
 | `profileHash` | test | server/packages/platform/experience/src/service.test.ts | 15, 16 |
-| `profileHash` | runtime | server/packages/platform/experience/src/service.ts | 105, 956, 1008 |
+| `profileHash` | runtime | server/packages/platform/experience/src/service.ts | 128, 1061, 1113 |
 | `profileHash` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 27 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
@@ -3380,12 +3367,12 @@ Capture DDLs:
 | `profileHash` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `profileHash` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
 | `profileHash` | test | server/packages/platform/search/src/__tests__/fixtures.ts | 1 |
-| `profileHash` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 79 |
+| `profileHash` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 87 |
 | `profileHash` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 115, 122 |
 | `profileHash` | test | server/packages/services/content/src/content-service.test.ts | 2 |
 | `profileHash` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
 | `profileHash` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 18 |
-| `profileHash` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 26 |
+| `profileHash` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 28 |
 | `profileHash` | test | server/packages/services/master-data/src/__tests__/business-partner-reveal-revocation.test.ts | 13, 20, 28, 60 |
 | `profileHash` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 14 |
 | `profileHash` | test | server/packages/services/master-data/src/__tests__/integration/governed-internal-business-partner-http.mjs | 132 |
@@ -3393,14 +3380,14 @@ Capture DDLs:
 | `profileHash` | test | server/packages/services/master-data/src/__tests__/supplier-workforce-requisition-service.test.ts | 2 |
 | `profileHash` | test | server/packages/services/master-data/src/__tests__/worker-engagement-iam-service.test.ts | 11 |
 | `profileHash` | test | server/packages/services/master-data/src/__tests__/worker-engagement-lifecycle-service.test.ts | 22 |
-| `profileHash` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 674, 1588 |
+| `profileHash` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 719, 1631 |
 | `profileHash` | test | server/packages/services/publication/src/__tests__/authenticated-entity-release-review.test.ts | 6 |
 | `profileHash` | test | server/packages/services/publication/src/__tests__/canonical-read-catalog.test.ts | 14 |
 | `profileHash` | test | server/packages/services/publication/src/__tests__/entity-authorization-compiler.test.ts | 598 |
 | `profileHash` | test | server/packages/services/publication/src/__tests__/entity-authorization-publication-review.test.ts | 3 |
 | `profileHash` | runtime | server/packages/services/publication/src/entity-authorization-compiler.ts | 41, 125 |
 | `profileHash` | runtime | server/packages/services/publication/src/entity-authorization-publication-review.ts | 24 |
-| `profileHash` | runtime | server/packages/services/publication/src/kysely-publication-authority-work.ts | 541 |
+| `profileHash` | runtime | server/packages/services/publication/src/kysely-publication-authority-work.ts | 507 |
 | `profileHash` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
 | `profileHash` | test | server/packages/services/records/src/__tests__/canonical-read-backend.test.ts | 51, 101 |
 | `profileHash` | test | server/packages/services/records/src/__tests__/canonical-read-diagnostics.test.ts | 51, 101 |
@@ -3412,7 +3399,7 @@ Capture DDLs:
 | `profileHash` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
 | `profileHash` | runtime | server/packages/services/records/src/entity-authorization-rollout.ts | 24, 83, 93, 123 |
 | `profileHash` | runtime | server/packages/services/records/src/entity-backend-authorizer.ts | 107, 161, 300, 347 |
-| `profileHash` | runtime | server/packages/services/records/src/entity-list-service.ts | 1517 |
+| `profileHash` | runtime | server/packages/services/records/src/entity-list-service.ts | 1523 |
 | `profileHash` | runtime | server/packages/services/records/src/query-service.ts | 443 |
 | `profileHash` | runtime | server/packages/test-utils/src/index.ts | 15, 22 |
 | `profileHash` | test | tests/contracts/api-client-transport.test.ts | 97 |
@@ -3437,51 +3424,22 @@ Capture DDLs:
 | `profileHash` | tool | tooling/scripts/verification/prepare-business-partner-canonical-v2.mts | 63 |
 | `profileHash` | tool | tooling/scripts/verification/qualify-business-partner-database-adapters.mts | 50, 63 |
 | `profileHash` | tool | tooling/scripts/verification/qualify-entity-authorization.mts | 72, 79 |
+| `profileHash` | tool | tooling/scripts/verification/qualify-supplier-onboarding-p9-minimum.mts | 49 |
+| `profileHash` | tool | tooling/scripts/verification/qualify-supplier-process-submission-db.mts | 54 |
+| `profileHash` | tool | tooling/scripts/verification/qualify-supplier-process-tasks-db.mts | 56 |
+| `profileHash` | tool | tooling/scripts/verification/qualify-task-information-db.mts | 31 |
+| `profileHash` | tool | tooling/scripts/verification/qualify-task-response-escalation-db.mts | 32 |
 | `profileHash` | tool | tooling/scripts/verification/stage-business-partner-authorization-adapter.mjs | 133 |
 | `profileHash` | tool | tooling/scripts/verification/stage-business-partner-v2-compiler.mjs | 133 |
 | `required_permission` | tool | tooling/scripts/policy/authorization-inventory.ts | 1112, 1135 |
-| `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/parsers.ts | 505, 507, 508, 509 |
+| `requiredPermission` | runtime | governance/policy/reports/internal-bank-live-publication.dev.json | 84 |
+| `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/parsers.ts | 507, 509, 510, 511 |
 | `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/types.ts | 165 |
-| `requiredPermission` | runtime | server/packages/services/records/src/entity-list-service.ts | 1113, 1125 |
+| `requiredPermission` | runtime | server/packages/services/records/src/entity-list-service.ts | 1119, 1131 |
 | `requiredPermission` | test | tests/contracts/entity-list-contract.test.ts | 118, 160 |
 | `requiredPermission` | tool | tooling/scripts/policy/authorization-inventory.ts | 1135 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/apps_neon_lib_experience-runtime_tsx_1s629-y._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_1otqo1d._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/apps_neon_lib_experience-runtime_tsx_1s629-y._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_1otqo1d._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/standalone/apps/neon/.next-bp-reveal-coordinates/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/2-vwisattg7if.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/26vimz5ee2k3y.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/3oehbfzpu53ca.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal-coordinates/static/chunks/42x397h50yqoj.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/apps_neon_lib_experience-runtime_tsx_1s629-y._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_1otqo1d._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/apps_neon_lib_experience-runtime_tsx_1s629-y._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_1otqo1d._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/standalone/apps/neon/.next-bp-reveal/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/0awy4ee-qwf-4.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/1-wqrr3qesgmm.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/200j3zfgjeu60.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-reveal/static/chunks/316d2ipy869xg.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/apps_neon_lib_experience-runtime_tsx_1s629-y._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_1otqo1d._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/apps_neon_lib_experience-runtime_tsx_1s629-y._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_1otqo1d._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_06der7v._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/standalone/apps/neon/.next-bp-summary/server/chunks/ssr/packages_platform_1wyi79c._.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/static/chunks/2-vwisattg7if.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/static/chunks/26vimz5ee2k3y.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/static/chunks/3oehbfzpu53ca.js | 1 |
-| `requiredPermissions` | runtime | apps/neon/.next-bp-summary/static/chunks/42x397h50yqoj.js | 1 |
-| `requiredPermissions` | ui | apps/neon/lib/experience-runtime.tsx | 50, 61, 72, 93, 104, 117 |
+| `requiredPermissions` | runtime | apps/docs-internal/public/assets/architecture/business-partner/evidence/atlas-f0-baseline-dev-20260910.json | 2436, 2450, 2464, 2478, 2492, 2506, 2520, 2534, 2548, 2562, 2576, 2590, 2604 |
+| `requiredPermissions` | ui | apps/neon/lib/experience-runtime.tsx | 51, 60, 69, 90, 101, 112 |
 | `requiredPermissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_06s1utk._.js | 1 |
 | `requiredPermissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_10hjbt7._.js | 1 |
 | `requiredPermissions` | runtime | apps/studio/.next-bp-consolidated/server/chunks/ssr/packages_platform_1cc665t._.js | 1 |
@@ -3519,7 +3477,7 @@ Capture DDLs:
 | `requiredPermissions` | tool | tooling/scripts/policy/verify-shared-shell-phase8.mjs | 12, 26 |
 | `requiredPermissions` | tool | tooling/scripts/verification/capture-atlas-foundation-baseline.mjs | 101 |
 | `requiredPermissions` | tool | tooling/scripts/verification/prepare-bp-ai-release.mjs | 35 |
-| `requiredPermissions` | ui | tooling/scripts/verification/shell-browser-entry.tsx | 6 |
+| `requiredPermissions` | ui | tooling/scripts/verification/shell-browser-entry.tsx | 8 |
 | `roleIds` | test | server/db/scripts/__tests__/provisioning/three-plane-provision.test.ts | 217, 227, 231 |
 | `roleIds` | tool | server/db/scripts/checks/seeds/authorization-release-gates.ts | 121, 126 |
 | `roleIds` | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 111, 117, 196, 198 |

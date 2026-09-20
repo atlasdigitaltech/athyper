@@ -2,7 +2,7 @@ name: OpenAPI policy
 
 on:
   push:
-    branches: ['**']
+    branches: ["**"]
   pull_request:
   workflow_call:
   workflow_dispatch:
@@ -40,6 +40,6 @@ jobs:
       - run: pnpm test:url-catalogue
       - run: pnpm openapi:bp360:check
       - run: pnpm --filter @athyper/server-runtime-http test
-      - run: pnpm --filter @athyper/server-service-master-data test -- src/__tests__/business-partner-360-route-contracts.test.ts
+      - run: pnpm --filter @athyper/server-service-master-data test src/__tests__/business-partner-360-route-contracts.test.ts
       - run: pnpm urls:check
       - run: pnpm openapi:check

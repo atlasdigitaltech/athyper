@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { artifactDirectory } from "../artifact-paths.mjs";
 import { sourceBinding } from "./ci-integrity-binding.mjs";
 
 export function verifyTestEvidence(report) {
@@ -84,7 +86,13 @@ export function verifyEvidence(report, commit, source = report.source) {
 }
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   verifyEvidence(
-    JSON.parse(readFileSync(process.argv[2], "utf8")),
+    JSON.parse(
+      readFileSync(
+        process.argv[2] ??
+          join(artifactDirectory("ci-integrity"), "database.json"),
+        "utf8",
+      ),
+    ),
     execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
     sourceBinding(),
   );

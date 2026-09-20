@@ -24,7 +24,7 @@ concurrency:
 env:
   NODE_VERSION: "24.19.0"
   PNPM_VERSION: "10.33.0"
-  ATHYPER_ARTIFACT_ROOT: ${{ github.workspace }}/../athyper-artifacts
+  ATHYPER_ARTIFACT_ROOT: ${{ runner.temp }}/athyper-artifacts
   ATHYPER_ARTIFACT_RUN_ID: ci
 
 jobs:
@@ -384,7 +384,7 @@ jobs:
       - name: Provision and verify disposable three-plane security and service suites
         run: pnpm verify:ci-database
       - name: Require substantive evidence from this commit
-        run: node tooling/scripts/verification/verify-ci-integrity-evidence.mjs "$ATHYPER_ARTIFACT_ROOT/ci-integrity/ci/database.json"
+        run: node tooling/scripts/verification/verify-ci-integrity-evidence.mjs
       - name: Upload database evidence
         if: always()
         uses: actions/upload-artifact@v4
