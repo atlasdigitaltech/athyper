@@ -243,15 +243,15 @@ These are the existing integration boundaries to inspect/extend, not instruction
 
 ### CA-00 — Baseline and replacement inventory
 
-- [ ] Snapshot current changed files and baseline version; preserve unrelated work.
-- [ ] Trace every existing UI, capability API, runtime dispatcher, reader, registry key, permission and schema consumer.
-- [ ] Inspect source schema and relevant consumers, including Studio-only history/report tables; identify direct cleanup needed for a fresh installation.
-- [ ] Identify metadata authoring persistence and publication mapping for capabilities; decide whether an additive capability member is needed.
-- [ ] Identify parent record admission for Business Partner and a real second entity; do not enable writes on Currency merely to manufacture reuse.
-- [ ] Reproduce direct download/association restrictions, uncertain-finalize retry and current preview protocol failures using safe local fixtures.
-- [ ] Record the active published release and actual supported operations; proposed JSON keys remain proposed until wired.
+- [x] Snapshot current changed files and baseline version; preserve unrelated work.
+- [x] Trace every existing UI, capability API, runtime dispatcher, reader, registry key, permission and schema consumer.
+- [x] Inspect source schema and relevant consumers, including Studio-only history/report tables; identify direct cleanup needed for a fresh installation.
+- [x] Identify metadata authoring persistence and publication mapping for capabilities; decide whether an additive capability member is needed.
+- [x] Identify parent record admission for Business Partner and a real second entity; do not enable writes on Currency merely to manufacture reuse.
+- [x] Reproduce direct download/association restrictions, uncertain-finalize retry and current preview protocol failures using safe local fixtures.
+- [x] Record the active published release and actual supported operations; proposed JSON keys remain proposed until wired.
 
-Exit: a short change map identifies the existing owners, required schema/code edits and local fixtures. No failing-gap dossier or live-data audit is required.
+Exit: complete — [CA-00 inventory](entity-comments-and-attachments-ca00-inventory.md) identifies the existing owners, required schema/code edits and local fixtures. No failing-gap dossier or live-data audit is required.
 
 ### CA-01 — Typed MetaEntity capability contracts
 
@@ -462,19 +462,19 @@ Definition of done:
 
 ### Completion record
 
-| Work package | Status  | Checks / remaining work                                                     |
-| ------------ | ------- | --------------------------------------------------------------------------- |
-| CA-00        | Planned | Prior review exists; refresh live/schema/consumer mapping at implementation |
-| CA-01        | Planned | Typed contract and compiler work required                                   |
-| CA-02        | Planned | Direct DDL/seed updates and fresh-database checks required                  |
-| CA-03        | Planned | Parent/audience admission qualification required                            |
-| CA-04        | Planned | Recovery/version/purge implementation required                              |
-| CA-05        | Planned | Basic reader exists; complete policy/revision projection required           |
-| CA-06        | Planned | HTML prototype exists; application surface work required                    |
-| CA-07        | Planned | Basic commands/composer exist; full shared experience required              |
-| CA-08        | Planned | Basic upload/download exist; full management required                       |
-| CA-09        | Planned | Provider mismatch recorded; live qualification required                     |
-| CA-10        | Planned | Cross-entity acceptance and cleanup required                                |
+| Work package | Status   | Checks / remaining work                                                                                                         |
+| ------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| CA-00        | Complete | [Baseline inventory](entity-comments-and-attachments-ca00-inventory.md); focused service/client checks pass; CA-01–CA-10 remain |
+| CA-01        | Planned  | Typed contract and compiler work required                                                                                       |
+| CA-02        | Planned  | Direct DDL/seed updates and fresh-database checks required                                                                      |
+| CA-03        | Planned  | Parent/audience admission qualification required                                                                                |
+| CA-04        | Planned  | Recovery/version/purge implementation required                                                                                  |
+| CA-05        | Planned  | Basic reader exists; complete policy/revision projection required                                                               |
+| CA-06        | Planned  | HTML prototype exists; application surface work required                                                                        |
+| CA-07        | Planned  | Basic commands/composer exist; full shared experience required                                                                  |
+| CA-08        | Planned  | Basic upload/download exist; full management required                                                                           |
+| CA-09        | Planned  | Provider mismatch recorded; live qualification required                                                                         |
+| CA-10        | Planned  | Cross-entity acceptance and cleanup required                                                                                    |
 
 ### Documentation validation
 
