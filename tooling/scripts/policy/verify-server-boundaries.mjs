@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { sourceImports as importSpecifiers } from "./source-imports.mjs";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { isTestFile } from "./test-file.mjs";
 import { fileURLToPath } from "node:url";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
@@ -101,6 +102,7 @@ if (existsSync(legacyOpenApiRoot)) {
 
 for (const file of walk(join(repoRoot, "server"))) {
   const relFile = toPosix(relative(repoRoot, file));
+  if (isTestFile(relFile)) continue;
   const source = readFileSync(file, "utf8");
   for (const specifier of importSpecifiers(source, file)) {
     const resolved = resolveRelativeImport(file, specifier);

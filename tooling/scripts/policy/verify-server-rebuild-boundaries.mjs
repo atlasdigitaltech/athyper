@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { sourceImports as imports } from "./source-imports.mjs";
+import { isTestFile } from "./test-file.mjs";
 import { builtinModules } from "node:module";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -241,6 +242,7 @@ export function analyzeServerRebuild(repoRoot) {
     const owner = packageForFile(file, packages);
     if (!owner) continue;
     const relFile = posix(relative(root, file));
+    if (isTestFile(relFile)) continue;
     const source = readFileSync(file, "utf8");
     if (
       segments(relative(owner.root, file)).some((part) =>
