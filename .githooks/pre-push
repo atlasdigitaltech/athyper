@@ -56,7 +56,7 @@ if command -v pnpm &>/dev/null; then
   fi
 fi
 
-# ââ Generated-artifact drift ââ
+# ── Generated-artifact drift ──
 # The fast subset of pnpm policy:static: checks whose only failure mode is a
 # stale committed artifact. Each has a one-command fix, so catching them here
 # costs seconds instead of a full CI round trip. The expensive architectural
@@ -73,7 +73,7 @@ if [ -z "$ATHYPER_SKIP_DRIFT" ] && command -v pnpm &>/dev/null; then
 
   check_drift() {
     if ! pnpm "$1" >/dev/null 2>&1; then
-      drift_failed="$drift_failed\n    pnpm $1  â  fix: pnpm $2"
+      drift_failed="$drift_failed\n    pnpm $1  →  fix: pnpm $2"
     fi
   }
 
@@ -86,7 +86,7 @@ if [ -z "$ATHYPER_SKIP_DRIFT" ] && command -v pnpm &>/dev/null; then
 
   if [ -n "$drift_failed" ]; then
     echo ""
-    echo "  â  Generated artifacts are stale. CI will reject this push."
+    echo "  ✖  Generated artifacts are stale. CI will reject this push."
     echo ""
     printf "  Stale:$drift_failed\n"
     echo ""
@@ -96,7 +96,7 @@ if [ -z "$ATHYPER_SKIP_DRIFT" ] && command -v pnpm &>/dev/null; then
     exit 1
   fi
 
-  echo "  â  Generated artifacts are in sync."
+  echo "  ✓  Generated artifacts are in sync."
   echo ""
 fi
 
