@@ -74,12 +74,8 @@ export function validateRequestCapture(
       (row.bankInstitutionId || row.bankBranchId)
     )
       fail("Unlisted banks cannot claim a directory match.");
-    if (
-      !draft &&
-      row.bankSource === "directory" &&
-      !row.bankInstitutionId
-    )
-      fail("Select a bank or enter an unlisted bank for review.");
+    if (!draft && row.bankSource === "directory" && !row.bankInstitutionId)
+      fail("Select a published bank or enter an unlisted bank for review.");
     if (row.currencyCode && !/^[A-Z]{3}$/.test(String(row.currencyCode)))
       fail("Account currency must be a three-letter code.");
     if (row.bic && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(String(row.bic)))
@@ -169,10 +165,23 @@ export async function linkRequestCaptureDocuments(
     }
   }
   for (const bank of input.extensions.bankAccounts ?? []) {
-    const capture = (await sql<{capture:Record<string,unknown>}>`SELECT validation_schema->'capture' capture FROM control.bank_account_validation_rule WHERE country_code=${String(bank.bankCountryCode ?? "")} AND status='active' AND validation_schema ? 'capture' ORDER BY priority DESC,code LIMIT 1`.execute(tx)).rows[0]?.capture;
+    const capture = (
+      await sql<{
+        capture: Record<string, unknown>;
+      }>`SELECT validation_schema->'capture' capture FROM control.bank_account_validation_rule WHERE country_code=${String(bank.bankCountryCode ?? "")} AND status='active' AND validation_schema ? 'capture' ORDER BY priority DESC,code LIMIT 1`.execute(
+        tx,
+      )
+    ).rows[0]?.capture;
     if (capture) {
-      if (bank.accountIdType && bank.accountIdType !== capture.accountType) fail("Account number format does not match the selected country.");
-      if (bank.clearingCode && typeof capture.routingPattern === "string" && capture.routingPattern && !new RegExp(capture.routingPattern).test(String(bank.clearingCode))) fail("Routing code does not match the selected country format.");
+      if (bank.accountIdType && bank.accountIdType !== capture.accountType)
+        fail("Account number format does not match the selected country.");
+      if (
+        bank.clearingCode &&
+        typeof capture.routingPattern === "string" &&
+        capture.routingPattern &&
+        !new RegExp(capture.routingPattern).test(String(bank.clearingCode))
+      )
+        fail("Routing code does not match the selected country format.");
     }
     if (!bank.bankInstitutionId) continue;
     const match = (

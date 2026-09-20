@@ -88,15 +88,14 @@ function expect(check, r, statuses) {
 try {
   const maker = await actor("catl.admin"),
     checker = await actor("catl.owner");
-  const form = expect(
-    "active-form",
-    await call(
-      maker,
-      "business-partner-definitions/active-request-form?kind=new_partner&sourceKind=manual&requestedRole=supplier",
-    ),
-    [200],
-  ).requestForm;
-  receipt.definition = form.definition;
+  // 2b50093f7 removed the active-request-form transport route as part of the
+  // compiled entity delivery consolidation, and its replacement
+  // (/api/entity-runtime/:entityCode/form-descriptor) reports a surface
+  // revision, not the {code, version, hash, releaseId} reference this flow
+  // pins. The create route resolves the published schema itself and treats
+  // expectedForm purely as an optimistic-concurrency guard, so the journey
+  // omits it here and still proves the guard rejects a stale reference below.
+  // Restore real form pinning once New and Edit consume the pinned Flow artifact.
   const name = `QA Candidate ${hash.slice(0, 12)}`;
   const payload = {
     idempotencyKey: `qa-bp:${hash}`,
@@ -106,7 +105,6 @@ try {
     requestedRole: "supplier",
     operatingOrganizationId: "a478f9c0-8226-5d22-9599-b8fb27a45180",
     companyCodeId: "793b6cb3-3c61-57c0-9562-2cbc288bd4cf",
-    expectedForm: form.definition,
     proposedPayload: {
       name,
       legalName: name,
@@ -172,7 +170,12 @@ try {
     await call(maker, "business-partner-cases", {
       ...payload,
       idempotencyKey: payload.idempotencyKey + ":stale",
-      expectedForm: { ...form.definition, hash: "0".repeat(64) },
+      expectedForm: {
+        code: "business_partner_request",
+        version: 1,
+        hash: "0".repeat(64),
+        releaseId: "11111111-1111-4111-8111-111111111111",
+      },
     }),
     [409],
   );
