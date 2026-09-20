@@ -7,14 +7,27 @@ import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata"
 import { authorizeListContextDiscovery } from "../list-context-discovery.js";
 const org = "11111111-1111-4111-8111-111111111111",
   permissionCode = "neon.relationship.entity_case.read";
-const context = {
+const context: VerifiedRequestContext = {
   tenantId: "tenant",
   principalId: "person",
   planeKey: "neon",
+  realmKey: "realm",
+  authEpoch: 1,
+  profileHash: "profile",
+  requestId: "request-1",
   permissions: {
     tenantId: "tenant",
     principalId: "person",
     planeKey: "neon",
+    principalFingerprint: "fingerprint",
+    profileHash: "profile",
+    schemaHash: "schema",
+    resolvedAt: 1,
+    allowed: [permissionCode],
+    denied: [],
+    planLocked: [],
+    planeExcluded: [],
+    entries: [],
     authorizationScopes: [
       {
         permissionCode,
@@ -23,15 +36,27 @@ const context = {
         legalEntityIds: [],
         networkMembershipIds: [],
         tenantWide: false,
-        visibility: "team",
+        visibility: "team" as const,
       },
     ],
   },
-} as VerifiedRequestContext;
+};
 const descriptor = {
+  schema: "athyper.entity-runtime-descriptor/1.0",
   entityCode: "business_partner_request",
+  planeKey: "neon",
+  releaseId: "release-1",
+  releaseNo: 1,
+  contractHash: "a".repeat(64),
+  compiledHash: "b".repeat(64),
+  storage: {
+    schema: "master",
+    object: "business_partner_request",
+    idField: "id",
+  },
+  fields: [],
   operations: { read: { code: "read", permissionCode } },
-} as EntityRuntimeDescriptor;
+} satisfies EntityRuntimeDescriptor;
 const resolution = {
   status: "context_required" as const,
   labels: [],
@@ -105,9 +130,10 @@ it("rejects candidates invalidated by the scope catalog", async () => {
       ...s.input,
       resolver: {
         resolve: async () => ({
-          status: "forbidden",
+          status: "forbidden" as const,
           code: "SCOPE_INVALID",
           message: "Unavailable",
+          labels: [],
         }),
       },
     }),

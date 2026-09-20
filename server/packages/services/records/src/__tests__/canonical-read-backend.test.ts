@@ -71,25 +71,37 @@ const runtime = parseEntityAuthorizationRuntime(
   },
   profile,
 );
-const context = {
+const context: VerifiedRequestContext = {
   tenantId: "tenant",
   principalId: "principal",
   planeKey: "neon",
   realmKey: "realm",
   authEpoch: 1,
+  profileHash: "profile",
+  requestId: "request-1",
   permissions: {
     tenantId: "tenant",
     principalId: "principal",
     planeKey: "neon",
+    principalFingerprint: "fingerprint",
+    profileHash: "profile",
+    schemaHash: "schema",
+    resolvedAt: 1,
+    allowed: [],
+    denied: [],
+    planLocked: [],
+    planeExcluded: [],
+    entries: [],
+    authorizationScopes: [],
     operationBindings: profile.operations.map((o) => ({
       entityCode: "entity",
       operationKey: o.key,
       permissionCode: o.permissionCode,
-      decisionMode: "authorize",
+      decisionMode: "authorize" as const,
       requiredScopeKinds: [],
     })),
   },
-} as VerifiedRequestContext;
+};
 function setup(
   constraint: "satisfied" | "denied" | "unavailable" = "satisfied",
   targetAllowed = true,
