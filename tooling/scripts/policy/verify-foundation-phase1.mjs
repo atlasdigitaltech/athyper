@@ -21,9 +21,12 @@ const packageRules = {
   theme: { allowed: ["react", "@athyper/platform-brand"] },
   icons: { allowed: ["react"] },
   ui: {
+    // react-day-picker is an accepted third-party calendar primitive; the
+    // stylesheet import rides the same specifier prefix.
     allowed: [
       "react",
       "react-dom",
+      "react-day-picker",
       "@athyper/platform-theme",
       "@athyper/platform-icons",
     ],
