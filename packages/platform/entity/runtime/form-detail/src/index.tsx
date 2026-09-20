@@ -77,3 +77,13 @@ export { CollectionSection, AddressesSection, ContactsSection, BankAccountsSecti
 export {EntityFormLayout} from "./form-layout";
 export {EntitySectionNavigation, useEntitySectionScroll, type EntitySectionItem} from "./section-navigation";
 export { EntitySectionWorkspace } from "./section-workspace";
+export {
+  useEntityRuntimeSectionWorkspace,
+  invalidateEntityRuntimeSectionCache,
+  type EntityRuntimeSectionState,
+  type EntityRuntimeWorkspaceState,
+} from "./use-section-resource";
+export { EntityRuntimeWorkspace, type EntityRuntimeHeaderNavigation } from "./entity-runtime-workspace";
+
+export { CompiledEntitySectionContent } from "./compiled-section-content";
+export * from "./registered-renderers";

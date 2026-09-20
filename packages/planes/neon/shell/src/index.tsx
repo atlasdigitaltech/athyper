@@ -48,7 +48,7 @@ import {
   updatePrincipalLocaleOperation,
 } from "@athyper/platform-api-client";
 import { useApiClient } from "@athyper/platform-shell-app-foundation";
-import { CheckIcon } from "@athyper/platform-icons";
+import { AtlasBrandIcon, CheckIcon } from "@athyper/platform-icons";
 import {
   ActivityCenterDataProvider,
   useActivityCenterDataSource,
@@ -507,7 +507,7 @@ function NeonContextContent({
   children: ReactNode;
 }) {
   if (work.status === "loading")
-    return <p role="status">{labels.loadingLegalEntities}</p>;
+    return <div className="neon-context-pending" aria-busy="true">{children}</div>;
   if (work.status === "error")
     return (
       <p role="alert">
@@ -542,6 +542,47 @@ function NeonContextContent({
     >
       {children}
     </div>
+  );
+}
+
+/**
+ * Opt-in boundary for routes whose UI is invalid until a legal entity is
+ * available. List surfaces should not use this: their scopePending contract
+ * already prevents descriptor and data requests while preserving table shape.
+ */
+export function NeonWorkContextGate({
+  children,
+  label = "Loading business context",
+}: {
+  readonly children: ReactNode;
+  readonly label?: string;
+}) {
+  const work = useNeonWorkContext();
+  if (work.status === "loading") return <NeonContextLoadingSurface label={label} />;
+  if (work.status === "error")
+    return <p role="alert">Business context is unavailable. Try again.</p>;
+  return <>{children}</>;
+}
+
+/** Header-scale feedback while the authorized workspace context is resolving. */
+function AtlasLoadingMark({ label }: { readonly label: string }) {
+  return (
+    <span className="neon-atlas-loading" role="status">
+      <span className="a-visually-hidden">{label}</span>
+      <AtlasBrandIcon size=".9rem" />
+    </span>
+  );
+}
+
+/** A context gate must preserve workspace geometry; an empty canvas looks stalled. */
+function NeonContextLoadingSurface({ label }: { readonly label: string }) {
+  return (
+    <section className="neon-context-loading" aria-busy="true" aria-label={label}>
+      <div className="neon-context-loading__heading" aria-hidden="true"><i /><span /><span /></div>
+      <div className="neon-context-loading__toolbar" aria-hidden="true"><i /><i /><i /></div>
+      <div className="neon-context-loading__table" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
+      <span className="a-visually-hidden" role="status">{label}</span>
+    </section>
   );
 }
 
@@ -786,7 +827,7 @@ function LegalEntitySelector({
     legalEntityLogoUrl: company.logoAssetRef,
   }));
   if (value.status === "loading")
-    return <span role="status">{labels.loadingLegalEntities}</span>;
+    return <AtlasLoadingMark label={labels.loadingLegalEntities} />;
   if (value.status === "error")
     return (
       <span role="alert">

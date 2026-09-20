@@ -344,8 +344,8 @@ CREATE INDEX organization_tax_registration_company_idx
 CREATE INDEX operating_organization_parent_idx
     ON master.operating_organization (tenant_id, parent_operating_organization_id)
     WHERE parent_operating_organization_id IS NOT NULL;
-CREATE INDEX operating_organization_domain_status_idx
-    ON master.operating_organization (tenant_id, domain, status, code);
+CREATE INDEX operating_organization_kind_status_idx
+    ON master.operating_organization (tenant_id, organization_kind, status, code);
 CREATE INDEX operating_organization_company_active_org_idx
     ON master.operating_organization_company_assignment
        (tenant_id, operating_organization_id, effective_from, effective_until, company_code_id)
@@ -551,6 +551,14 @@ CREATE INDEX bank_account_link_current_idx
        (tenant_id, owner_type, owner_id, purpose, is_primary)
     WHERE effective_until IS NULL;
 
+CREATE INDEX bank_account_house_config_company_idx
+    ON master.bank_account_house_config (tenant_id, company_code_id)
+    WHERE status = 'active';
+CREATE INDEX bank_account_house_payment_method_idx
+    ON master.bank_account_house_payment_method (tenant_id, house_config_id, payment_method_id);
+CREATE UNIQUE INDEX bank_account_house_payment_method_default_uq
+    ON master.bank_account_house_payment_method (tenant_id, house_config_id)
+    WHERE is_default AND effective_until IS NULL;
 CREATE INDEX bank_account_house_config_gl_idx
     ON master.bank_account_house_config (tenant_id, gl_account_id);
 CREATE INDEX bank_account_house_config_active_idx

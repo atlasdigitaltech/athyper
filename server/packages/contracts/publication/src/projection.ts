@@ -1,4 +1,8 @@
 export type PublicationPlane = "studio" | "neon" | "mesh";
+import type {
+  CompiledEntityArtifactV2,
+  CompiledEntityReleaseEnvelopeV2,
+} from "./artifact.js";
 export type PublicationCompatibilityLevel =
   | "breaking"
   | "backward_compatible"
@@ -44,6 +48,16 @@ export interface EntityDescriptorProjection {
 export interface EntityRuntimeProjection {
   readonly entityContract: EntityContractProjection;
   readonly entityDescriptor: EntityDescriptorProjection;
+}
+
+/** Prepared split-artifact projection. It is persisted/loaded as immutable release
+ * content; authorization and record data are resolved separately at request time. */
+export interface CompiledEntityRuntimeProjectionV2 {
+  /** Application root selected by this publication; child artifacts may model other entities. */
+  readonly entityCode: string;
+  readonly release: CompiledEntityReleaseEnvelopeV2;
+  readonly artifacts: readonly CompiledEntityArtifactV2[];
+  readonly generatedAt: string;
 }
 
 export const BUSINESS_PARTNER_DEFINITION_BUNDLE_SCHEMA_V1 =

@@ -1,5 +1,16 @@
 import { createHash } from "node:crypto";
 import type { EntityDescriptorCache, EntityDescriptorCoordinate, EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
+import {
+  parseCompiledEntityArtifact,
+  parseCompiledEntityReleaseEnvelope,
+  type CompiledEntityArtifactV2,
+  type CompiledEntityReleaseEnvelopeV2,
+} from "@athyper/server-contract-publication";
+import type {
+  CompiledEntityArtifactCache,
+  CompiledEntityArtifactReadCoordinate,
+  CompiledEntityReleaseCoordinate,
+} from "./artifact-resolution.js";
 import { parseEntityRuntimeDescriptor } from "./descriptor-parser.js";
 
 export interface DistributedDescriptorCacheStore {
@@ -11,6 +22,58 @@ export interface DistributedDescriptorCacheStore {
 export interface DistributedDescriptorCacheOptions {
   readonly namespace?: string;
   readonly invalidationNamespace?: string;
+}
+
+export interface DistributedCompiledEntityArtifactCacheOptions {
+  readonly namespace?: string;
+}
+
+/**
+ * Cache for immutable split-artifact IR. It is keyed by its tenant/plane/preview
+ * release coordinates only. Principal admission, access epoch, context and locale
+ * are browser/data projection concerns and never contaminate immutable IR reuse.
+ */
+export function createDistributedCompiledEntityArtifactCache(
+  store: DistributedDescriptorCacheStore,
+  options: DistributedCompiledEntityArtifactCacheOptions = {},
+): CompiledEntityArtifactCache {
+  const namespace = normalizeNamespace(options.namespace ?? "metadata:compiled-entity:v2");
+  return Object.freeze({
+    async getRelease(coordinate: CompiledEntityReleaseCoordinate) {
+      try {
+        const value = await store.get(compiledReleaseKey(namespace, coordinate));
+        return value === null ? undefined : parseCompiledEntityReleaseEnvelope(JSON.parse(value));
+      } catch {
+        return undefined;
+      }
+    },
+    async setRelease(coordinate: CompiledEntityReleaseCoordinate, release: CompiledEntityReleaseEnvelopeV2, ttlMs: number) {
+      try {
+        await store.set(compiledReleaseKey(namespace, coordinate), JSON.stringify(release), {
+          ttlSeconds: ttl(ttlMs),
+        });
+      } catch {
+        // The source remains authoritative when Redis is unavailable.
+      }
+    },
+    async getArtifact(input: CompiledEntityArtifactReadCoordinate) {
+      try {
+        const value = await store.get(compiledArtifactKey(namespace, input));
+        return value === null ? undefined : parseCompiledEntityArtifact(JSON.parse(value));
+      } catch {
+        return undefined;
+      }
+    },
+    async setArtifact(input: CompiledEntityArtifactReadCoordinate, artifact: CompiledEntityArtifactV2, ttlMs: number) {
+      try {
+        await store.set(compiledArtifactKey(namespace, input), JSON.stringify(artifact), {
+          ttlSeconds: ttl(ttlMs),
+        });
+      } catch {
+        // Best effort only; the reader re-verifies source content on a miss.
+      }
+    },
+  });
 }
 
 /**
@@ -112,4 +175,29 @@ function normalizeNamespace(value: string): string {
   const normalized = value.trim().replace(/:+$/u, "");
   if (!normalized || !/^[a-z0-9:_-]+$/iu.test(normalized)) throw new TypeError("Invalid cache namespace");
   return normalized;
+}
+
+function compiledReleaseKey(namespace: string, coordinate: CompiledEntityReleaseCoordinate): string {
+  return `${namespace}:release:${digest({
+    tenantId: coordinate.tenantId,
+    planeKey: coordinate.planeKey,
+    entityCode: coordinate.entityCode,
+    previewScopeKey: coordinate.previewScopeKey ?? null,
+    releaseId: coordinate.releaseId ?? null,
+    releaseHash: coordinate.releaseHash ?? null,
+  })}`;
+}
+function compiledArtifactKey(namespace: string, input: CompiledEntityArtifactReadCoordinate): string {
+  return `${namespace}:artifact:${digest({
+    releaseHash: input.release.releaseHash,
+    artifactKey: input.entry.artifactKey,
+    hash: input.entry.hash,
+  })}`;
+}
+function digest(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+function ttl(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 1) throw new TypeError("Compiled entity cache TTL must be positive");
+  return Math.max(1, Math.ceil(value / 1_000));
 }

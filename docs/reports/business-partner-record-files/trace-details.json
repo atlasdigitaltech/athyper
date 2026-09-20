@@ -1,0 +1,51 @@
+{
+  "date": "2026-09-21",
+  "seeds": [
+    "apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx",
+    "apps/neon/app/(shell)/mdg/business-partner/layout.tsx",
+    "apps/neon/app/(shell)/layout.tsx",
+    "apps/neon/app/layout.tsx",
+    "apps/neon/proxy.ts",
+    "apps/neon/app/api/relay/[...path]/route.ts",
+    "apps/neon/app/api/auth/touch/route.ts",
+    "apps/neon/app/api/auth/contexts/route.ts",
+    "apps/neon/app/api/auth/session/context/route.ts",
+    "apps/neon/app/api/auth/login/route.ts",
+    "apps/neon/app/api/auth/logout/route.ts",
+    "apps/neon/app/loading.tsx",
+    "apps/neon/app/(shell)/loading.tsx",
+    "apps/neon/app/not-found.tsx",
+    "apps/neon/app/error.tsx",
+    "apps/neon/app/(shell)/not-found.tsx",
+    "apps/neon/app/(shell)/error.tsx",
+    "apps/neon/app/global-error.tsx",
+    "server/packages/platform/experience/src/entity-runtime-routes.ts",
+    "server/packages/platform/experience/src/routes.ts",
+    "server/packages/platform/experience/src/service.ts",
+    "server/packages/platform/metadata/src/compiled-entity-reader.ts",
+    "server/packages/platform/metadata/src/runtime-descriptor-repository.ts",
+    "server/packages/platform/metadata/src/distributed-descriptor-cache.ts",
+    "server/packages/platform/metadata/src/metadata-service.ts",
+    "server/packages/services/master-data/src/business-partner-360-service.ts",
+    "server/packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+    "server/packages/services/master-data/src/business-partner-360-definition-resolver.ts",
+    "server/packages/services/master-data/src/business-partner-360-mesh-http-transport.ts",
+    "server/packages/services/master-data/src/secret-store-protected-value-resolver.ts",
+    "server/packages/services/master-data/src/business-partner-request-service.ts",
+    "server/packages/services/finance/src/ledger/business-partner-journal-activity.ts",
+    "server/packages/services/records/src/query-service.ts",
+    "server/packages/services/records/src/kysely-record-repository.ts",
+    "server/packages/platform/iam/src/iam-routes.ts",
+    "server/packages/platform/iam/src/iam-service.ts",
+    "server/apps/platform-host/src/composition/business-partner-definition-authorizer.ts"
+  ],
+  "unresolvedLocalImports": [],
+  "outsideRequestedRoots": [
+    "server/apps/platform-host/src/composition/business-partner-definition-authorizer.ts"
+  ],
+  "counts": {
+    "apps": 26,
+    "packages": 256,
+    "server/packages": 249
+  }
+}

@@ -7,7 +7,7 @@
     "ddlEvidence": [
       {
         "path": "server/db/ddl/planes/neon/master/06_indexes.sql",
-        "sha256": "8276ec64d3a2510e31b2170b2730fcc561396bcb6afdf5d60b1065ea59593b7a"
+        "sha256": "1569848d42e19a7a5182e38b7496878441ee8735245a5820a3ce106c2b3cd238"
       }
     ]
   },

@@ -1,8 +1,16 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { EntityDescriptorCoordinate, EntityRuntimeDescriptor } from "./descriptors.js";
+import type { EntityDescriptorCoordinate, EntityRuntimeDescriptor, EntityRuntimePageIntentV1 } from "./descriptors.js";
+import type { EntityRuntimeBootstrapV1 } from "@athyper/contract-platform-entity-runtime";
 
 export interface MetadataReader {
   getEntityDescriptor(context: VerifiedRequestContext, entityCode: string): Promise<EntityRuntimeDescriptor | null>;
+  /** Optional until the entity-runtime routes are introduced. This port defines the
+   * browser-safe bootstrap shape without registering an endpoint in Phase 1. */
+  getEntityRuntimeBootstrap?(
+    context: VerifiedRequestContext,
+    entityCode: string,
+    intent: EntityRuntimePageIntentV1,
+  ): Promise<EntityRuntimeBootstrapV1 | null>;
 }
 
 /** Plane-local projection reader. Implementations must not call Athyper at request time. */

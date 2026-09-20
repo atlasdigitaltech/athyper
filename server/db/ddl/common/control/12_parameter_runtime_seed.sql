@@ -21,11 +21,11 @@ END $seed_plane_guard$;
 
 -- First runtime parameter: applies at the next experience-bootstrap request.
 INSERT INTO control.parameter_definition(id,code,name,value_type,default_value,allowed_values,tenant_can_override,reload_mode,cache_ttl_seconds,created_by)
-VALUES(md5('control:parameter:experience.profile.default_density')::uuid,'experience.profile.default_density','Default experience density','enum','"comfortable"'::jsonb,'["comfortable","compact"]'::jsonb,true,'next_request',300,'00000000-0000-0000-0000-000000000000'::uuid)
+VALUES(md5('control:parameter:experience.profile.default_density')::uuid,'experience.profile.default_density','Default experience density','enum','"comfortable"'::jsonb,'["comfortable","compact","spacious"]'::jsonb,true,'next_request',300,'00000000-0000-0000-0000-000000000000'::uuid)
 ON CONFLICT(code) DO UPDATE SET name=EXCLUDED.name, value_type=EXCLUDED.value_type, default_value=EXCLUDED.default_value, allowed_values=EXCLUDED.allowed_values, tenant_can_override=EXCLUDED.tenant_can_override, reload_mode=EXCLUDED.reload_mode, cache_ttl_seconds=EXCLUDED.cache_ttl_seconds WHERE (control.parameter_definition.name, control.parameter_definition.value_type, control.parameter_definition.default_value, control.parameter_definition.allowed_values, control.parameter_definition.tenant_can_override, control.parameter_definition.reload_mode, control.parameter_definition.cache_ttl_seconds) IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.value_type, EXCLUDED.default_value, EXCLUDED.allowed_values, EXCLUDED.tenant_can_override, EXCLUDED.reload_mode, EXCLUDED.cache_ttl_seconds) ;
 DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM control.parameter_definition WHERE code='experience.profile.default_density' AND status='active' AND value_type='enum' AND reload_mode='next_request' AND NOT is_sensitive
- AND default_value IN ('"comfortable"'::jsonb,'"compact"'::jsonb) AND allowed_values @> '["comfortable","compact"]'::jsonb AND allowed_values <@ '["comfortable","compact"]'::jsonb) THEN
+ AND default_value IN ('"comfortable"'::jsonb,'"compact"'::jsonb,'"spacious"'::jsonb) AND allowed_values @> '["comfortable","compact","spacious"]'::jsonb AND allowed_values <@ '["comfortable","compact","spacious"]'::jsonb) THEN
  RAISE EXCEPTION 'Existing experience density parameter is incompatible; review it before deployment';
  END IF;
 END $$;

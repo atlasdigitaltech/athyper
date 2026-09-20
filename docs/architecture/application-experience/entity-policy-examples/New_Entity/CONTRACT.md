@@ -200,6 +200,26 @@ parity review; they cannot automatically grant fields additional read/write auth
 
 ## Release and implementation gates
 
+### Phase 1 executable contract boundary
+
+`@athyper/server-contract-publication` parses the five content artifact types and
+the release envelope before compiler or runtime adoption. The parser rejects an
+unknown normative top-level property and unsupported schema/type. Release validation
+matches every entry to the supplied immutable artifact hash, rejects missing
+dependencies, resolves child `coreRef`/`fieldBindings`, and requires every declared
+handler, renderer, resolver and evaluator to be present in the supplied registry.
+
+`@athyper/contract-platform-entity-runtime` defines the browser-safe bootstrap and
+resource envelopes. They carry a release pin, artifact hashes, resource identities,
+bounded result state/revision/cursor and advisory action availability. They never
+carry Core storage bindings, policy evaluator inputs, protected values, raw handler
+configuration, or a query expression. Server registration and HTTP routes begin in
+the later reader/runtime phase.
+
+Computed and aggregate fields are explicitly marked with `valueOrigin` and require a
+registered computation handler plus declared query support. They cannot be treated as
+storage columns or made filterable/sortable only through Presentation metadata.
+
 A release manifest uniquely pins every content artifact and dependency hash. Internal
 refs resolve locally. External service dependencies must resolve against trusted local
 registries, with concrete compatibility and version evidence before activation.

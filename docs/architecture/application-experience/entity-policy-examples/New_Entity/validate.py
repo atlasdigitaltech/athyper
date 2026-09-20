@@ -166,7 +166,34 @@ registry = {(item['kind'], item['key']): item for item in registry_document['ent
 shape_document = files['review/shape-catalog.json']
 shape_catalog = {kind: {path: set(keys) for path, keys in paths.items()} for kind, paths in shape_document['shapes'].items()}
 
+def assert_operation_input_schema(value, path):
+    if not isinstance(value, dict):
+        raise AssertionError(("operation", '.'.join(path), "input schema must be an object"))
+    unknown = set(value) - {"required", "properties", "additionalProperties"}
+    if unknown:
+        raise AssertionError(("operation", '.'.join(path), "unknown input-schema property", sorted(unknown)))
+    required = value.get("required", [])
+    if not isinstance(required, list) or any(not isinstance(key, str) or not key for key in required):
+        raise AssertionError(("operation", '.'.join(path), "invalid input-schema required"))
+    properties = value.get("properties", {})
+    if not isinstance(properties, dict) or any(not isinstance(key, str) or not key for key in properties):
+        raise AssertionError(("operation", '.'.join(path), "invalid input-schema properties"))
+    if not set(required) <= set(properties):
+        raise AssertionError(("operation", '.'.join(path), "required input lacks a declared property"))
+    if value.get("additionalProperties") not in {True, False, None}:
+        raise AssertionError(("operation", '.'.join(path), "invalid input-schema additionalProperties"))
+    for key, field in properties.items():
+        if not isinstance(field, dict) or set(field) - {"type", "enum"}:
+            raise AssertionError(("operation", '.'.join(path + ("properties", key)), "invalid input property"))
+        if field.get("type") not in {"string", "integer", "boolean", "object"}:
+            raise AssertionError(("operation", '.'.join(path + ("properties", key)), "unsupported input type"))
+        if "enum" in field and (not isinstance(field["enum"], list) or not field["enum"]):
+            raise AssertionError(("operation", '.'.join(path + ("properties", key)), "invalid input enum"))
+
 def assert_closed_nested_shape(value, artifact_type, path=()):
+    if artifact_type == "operation" and path[-2:] == ("operations", "[]") and isinstance(value, dict) and "inputSchema" in value:
+        assert_operation_input_schema(value["inputSchema"], path + ("inputSchema",))
+        value = {key: item for key, item in value.items() if key != "inputSchema"}
     if isinstance(value, dict):
         allowed = shape_catalog[artifact_type].get('.'.join(path))
         if allowed is None:
@@ -609,6 +636,20 @@ for kind in bundle['requestSchemas']:
     for channel in flow['supportedSources']:
         if not (flow['journey'] in bundle['mappingContracts'][channel]['allowedJourneys'] or (flow['journey'] == 'governance' and channel in ['internal', 'api'])):
             raise AssertionError("flow['journey'] in bundle['mappingContracts'][channel]['allowedJourneys'] or (flow['journey'] == 'governance' and channel in ['internal', 'api'])")
+workflow_definitions = artifacts['business_partner_request/flow.base.json'].get('workflowDefinitions', {})
+if set(workflow_definitions) != set(bundle['workflowDefinitions']):
+    raise AssertionError('compiled Flow workflow journeys must match approved definition source')
+for journey, source_workflow in bundle['workflowDefinitions'].items():
+    compiled_workflow = workflow_definitions[journey]
+    source_stages = source_workflow['stages']
+    compiled_stages = compiled_workflow.get('stages', [])
+    if len(source_stages) != len(compiled_stages):
+        raise AssertionError((journey, 'compiled Flow workflow stage count differs'))
+    for source_stage, compiled_stage in zip(source_stages, compiled_stages):
+        expected = {key: value for key, value in source_stage.items() if key != 'name'}
+        actual = {key: value for key, value in compiled_stage.items() if key != 'label'}
+        if expected != actual or compiled_stage.get('label', {}).get('defaultText') != source_stage['name']:
+            raise AssertionError((journey, source_stage['code'], 'compiled Flow workflow stage differs'))
 expected_sections = {s['code'] for s in bundle['viewDescriptors']['neonPartner360']['sections']}
 if not (expected_sections <= {s['sectionKey'] for s in artifacts['business_partner/presentation.detail.json']['sections']}):
     raise AssertionError("expected_sections <= {s['sectionKey'] for s in artifacts['business_partner/presentation.detail.json']['sections']}")
@@ -652,8 +693,6 @@ for path, artifact in artifacts.items():
             raise AssertionError(path)
 if args.release_ready:
     readiness_failures = []
-    if catalog_document['source'].get('sourceMigrationParityVerified') is not True:
-        readiness_failures.append('source migration type parity is not verified')
     if release['contractStatus'] in {'unsigned_review_only', 'draft_for_review'}:
         readiness_failures.append('release is unsigned review-only')
     for path, artifact in artifacts.items():

@@ -1,5 +1,9 @@
 import type { BusinessPartnerDefinitionBundleV1,PublicationCanonicalizer,PublicationPlane } from "@athyper/server-contract-publication";
 import { parseBusinessPartnerDefinitionBundle,BusinessPartnerDefinitionError } from "./business-partner-definition-service.js";
+import {
+  compileCompiledEntityArtifacts,
+  type CompiledEntityArtifactCompilationInputV2,
+} from "./compiled-entity-artifact-compiler.js";
 
 export const BUSINESS_PARTNER_DEFINITION_COMPILER_VERSION="2.0.0";
 export const BUSINESS_PARTNER_DEFINITION_REQUEST_KEYS=Object.freeze(["supplier.new","supplier.add","supplier.qualify","supplier.company","supplier.bank","customer.new","customer.add","customer.credit","customer.company"] as const);
@@ -15,6 +19,22 @@ export function compileBusinessPartnerDefinition(input:{readonly bundle:unknown;
  const sourceBundleHash=hash(input.canonicalizer,source),bundle=input.plane==="mesh"?meshProjection(source):source,compiledBundleHash=hash(input.canonicalizer,bundle);
  const report:BusinessPartnerDefinitionCompileReport={schema:"athyper.business-partner-definition-compile-report.v1",compilerVersion:BUSINESS_PARTNER_DEFINITION_COMPILER_VERSION,plane:input.plane,sourceBundleHash,compiledBundleHash,requestSchemaKeys:Object.keys(bundle.requestSchemas).sort(),mappingSources:Object.keys(bundle.mappingContracts).sort(),workflowJourneys:Object.keys(bundle.workflowDefinitions).sort(),omittedSections:input.plane==="mesh"?["person_fields","workforce_schemas","neon_forms","neon_views","operational_workflows","readiness_policy"]:[],deterministic:true,compatible:true};
  return Object.freeze({bundle:Object.freeze(bundle),sourceBundleHash,compiledBundleHash,report:Object.freeze(report)});
+}
+
+/**
+ * BP remains responsible for its governed-request authoring rules. This adapter
+ * validates that domain input first, then delegates artifact hashing, graph and
+ * registry validation to the generic compiler. It does not activate or publish.
+ */
+export function compileBusinessPartnerCompiledEntity(input: {
+ readonly definition: Parameters<typeof compileBusinessPartnerDefinition>[0];
+ readonly compiledEntity: Omit<CompiledEntityArtifactCompilationInputV2,"canonicalizer">;
+}) {
+ const definition=compileBusinessPartnerDefinition(input.definition);
+ const compiled=compileCompiledEntityArtifacts({...input.compiledEntity,canonicalizer:input.definition.canonicalizer});
+ if(compiled.artifacts.some(({artifact})=>artifact.plane!==input.definition.plane)||!compiled.release.targetPlanes.includes(input.definition.plane))
+  throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_COMPILED_ENTITY_PLANE_MISMATCH");
+ return Object.freeze({definition,compiled});
 }
 
 export function validateCompleteBusinessPartnerDefinition(value:unknown):BusinessPartnerDefinitionBundleV1{

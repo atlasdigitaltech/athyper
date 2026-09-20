@@ -95,7 +95,17 @@ def main():
     expected_database = catalog_document['source']['database']
     if identity['database'] != expected_database or environment['PGDATABASE'] != expected_database:
         sys.exit('BLOCKED: PostgreSQL connection database does not match reviewed catalog evidence.')
-    expected = catalog_document['columns']
+    # Some legacy/request storage is deliberately retained as pinned source-DDL
+    # evidence until its local table is deployed. It remains validated offline,
+    # but cannot be required from the active development container.
+    source_only_tables = {
+        item['table'] for item in catalog_document.get('ddlFallbacks', [])
+        if isinstance(item.get('table'), str)
+    }
+    expected = [
+        row for row in catalog_document['columns']
+        if row['table'] not in source_only_tables
+    ]
     errors = compare(expected, query_live(url, QUERY))
     expected_indexes = json.loads((ROOT/'review/index-catalog.json').read_text())['indexes']
     live_indexes = {(row['table'], row['name']): row for row in query_live(url, INDEX_QUERY)}

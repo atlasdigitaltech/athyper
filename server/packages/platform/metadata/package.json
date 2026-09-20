@@ -13,6 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@athyper/server-contract-publication": "workspace:*",
     "@athyper/server-contract-metadata": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "kysely": "^0.28.17",

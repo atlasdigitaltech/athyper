@@ -14,6 +14,9 @@ export type EntityFieldType =
   | "enum"
   | "reference"
   | "json";
+/** Stored fields and handler-backed facts are intentionally distinct. A computed
+ * field may be queryable only after a registered server projection declares it. */
+export type EntityFieldValueOrigin = "stored" | "computed" | "aggregate";
 export type EntityListFilterOperator =
   | "eq"
   | "ne"
@@ -80,6 +83,13 @@ export interface EntityFieldDescriptor {
   readonly key: string;
   readonly storagePath: string;
   readonly type: EntityFieldType;
+  readonly valueOrigin?: EntityFieldValueOrigin;
+  /** Required for computed/aggregate values; it is a registered server projection,
+   * never a browser-supplied SQL expression or storage path. */
+  readonly computation?: {
+    readonly handlerKey: string;
+    readonly querySupport: "none" | "filter" | "sort" | "filter_and_sort";
+  };
   readonly required: boolean;
   readonly writableOn: readonly ("create" | "patch")[];
   readonly filterable?: boolean;
@@ -109,6 +119,30 @@ export interface EntityFieldDescriptor {
       "count" | "sum" | "average" | "minimum" | "maximum"
     )[];
   };
+}
+
+/** Immutable content references needed to prepare a page intent. The browser sees
+ * only safe runtime projections; physical Core bindings remain server-only. */
+export interface CompiledEntityArtifactReferenceV1 {
+  readonly artifactKey: string;
+  readonly artifactType:
+    | "core"
+    | "operation"
+    | "presentation_surface"
+    | "presentation_section"
+    | "flow";
+  readonly hash: string;
+}
+export interface CompiledEntityReleaseDescriptorV1 {
+  readonly releaseId: string;
+  readonly releaseHash: string;
+  readonly artifacts: readonly CompiledEntityArtifactReferenceV1[];
+}
+export interface EntityRuntimePageIntentV1 {
+  readonly surfaceKey: string;
+  readonly recordId?: string;
+  readonly sectionKey?: string;
+  readonly flowKey?: string;
 }
 
 export interface EntityListDefaultStateDescriptor {
@@ -276,6 +310,8 @@ export interface EntityRuntimeDescriptor {
   readonly releaseNo: number;
   readonly contractHash: string;
   readonly compiledHash: string;
+  /** Present only after the split-artifact compiler has prepared this descriptor. */
+  readonly compiledRelease?: CompiledEntityReleaseDescriptorV1;
   readonly storage: {
     readonly schema: string;
     readonly object: string;

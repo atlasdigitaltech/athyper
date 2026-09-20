@@ -39,11 +39,13 @@
   "load": "on_visible",
   "requiredContext": "resolve_from_target_core",
   "dependencies": [],
-  "artifactHash": "sha256:eb7ae5fdd68141bd9c4bb32b5cbf44d55d13ac2dcbd565deb876d1a4aa42926e",
+  "artifactHash": "sha256:f5c8e6b97b1b68c2b8a6f33bc0836b211fab490d9e6a469af73b5bd8efb943a9",
   "contentModel": {
-    "kind": "registered_event_stream",
+    "kind": "typed_pull_event_resource",
     "handlerKey": "neon.bp.activity.timeline.v1",
-    "eventScope": "business_partner",
-    "implementationStatus": "draft_requires_handler_registration"
+    "eventEntityCode": "business_partner.activity",
+    "ownerEntityCode": "business_partner",
+    "paginationMode": "cursor",
+    "implementationStatus": "registered"
   }
 }

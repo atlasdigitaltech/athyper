@@ -8,6 +8,13 @@ runtime version. Handler and permission names marked proposed require registry
 verification before publication. Hashes are real hashes of these draft files;
 they are not evidence of a signed or activated release.
 
+The Phase 1 contract implementation now parses these five artifact shapes and the
+release envelope at the publication boundary. It validates closed normative
+top-level shapes, release membership, dependency references, registered handlers /
+renderers / resolvers / evaluators, and child Core field bindings. It also defines
+the browser-safe bootstrap/resource wire shapes. It does **not** publish these draft
+files, register an entity-runtime API, or replace an active Neon reader.
+
 ## Artifact boundaries
 
 | Type | Owns | Consumption |
@@ -312,9 +319,9 @@ storage types, inconsistent public types and conflicting translation keys.
 `review/storage-catalog.json` records independent read-only PostgreSQL catalog
 evidence. The local database lacks `document.business_partner_request`; that table
 uses a separately identified source-DDL fallback, bounded before the first table
-constraint, with a source-file digest. This is not proof of local migration parity.
-Recapture evidence after schema changes; production validation must query the target
-database. These are design checks, not integration or performance tests.
+constraint, with a source-file digest. Recapture evidence after schema changes and
+validate the active local Neon development database. These are design checks, not
+integration or performance tests.
 
 ## Audit correction decisions
 
@@ -336,8 +343,8 @@ database. These are design checks, not integration or performance tests.
 
 ## Explicitly deferred
 
-Production signing/canonicalization, target database migration parity, registered
-execution handlers, complete payload JSON Schemas, runtime benchmarks and actual
+Production signing/canonicalization, registered execution handlers, complete payload
+JSON Schemas, runtime benchmarks and actual
 activation remain implementation work. Tenant custom-field storage remains disabled.
 Cross-entity field-policy authoring is not implemented: request categorical policies
 are retained, and each child continues to require its own server authorization.
@@ -399,4 +406,6 @@ The Business Partner aggregate excludes banking and workforce relations until th
 
 The schema gate creates its libpq environment only from `NEON_SCHEMA_DATABASE_URL`: inherited `PG*` variables are stripped and unsupported URL parameters are rejected. It verifies the connected database name, reports the URL host/database on success, and rejects missing, invalid, or not-ready reviewed indexes.
 
-Before marking `sourceMigrationParityVerified` true, run `verify_source_migration_parity.py` with clean and upgraded PostgreSQL URLs. It compares every reviewed column’s type, base type, and nullability, and only updates the flag with `--write-evidence` after an exact match.
+Validate the active local Neon development database with `verify_live_schema.py`
+after changing reviewed storage bindings. It compares the reviewed catalog’s columns
+and indexes with that local target and does not require a separate baseline database.

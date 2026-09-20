@@ -746,6 +746,9 @@ importers:
       '@athyper/platform-entity-form-detail':
         specifier: workspace:*
         version: link:../../../platform/entity/runtime/form-detail
+      '@athyper/platform-icons':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/icons
       '@athyper/platform-shell':
         specifier: workspace:*
         version: link:../../../platform/shell/shell
@@ -3632,9 +3635,15 @@ importers:
       '@athyper/server-contract-experience':
         specifier: workspace:*
         version: link:../../contracts/experience
+      '@athyper/server-contract-publication':
+        specifier: workspace:*
+        version: link:../../contracts/publication
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
+      '@athyper/server-platform-metadata':
+        specifier: workspace:*
+        version: link:../metadata
       '@athyper/server-runtime-http':
         specifier: workspace:*
         version: link:../../runtime/http
@@ -3811,6 +3820,9 @@ importers:
       '@athyper/server-contract-metadata':
         specifier: workspace:*
         version: link:../../contracts/metadata
+      '@athyper/server-contract-publication':
+        specifier: workspace:*
+        version: link:../../contracts/publication
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation

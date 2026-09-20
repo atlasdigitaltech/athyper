@@ -80,7 +80,10 @@ export async function start(): Promise<void> {
       windowMs: 60_000,
       maxRequests: 100,
       sourceMaxRequests: 1_000,
-      exemptPaths: ["/livez", "/readyz", "/healthz", "/health", "/metrics"],
+      // Every protected page needs this cached, read-only projection before it
+      // can render. Do not let refreshes or development HMR consume the shared
+      // command/request budget before the experience service can serve its cache.
+      exemptPaths: ["/livez", "/readyz", "/healthz", "/health", "/metrics", "/api/platform/experience/bootstrap"],
       ...(container.adapters.redisCache
         ? {
             store: createRedisRateLimitStore(

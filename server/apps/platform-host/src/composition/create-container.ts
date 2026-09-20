@@ -56,6 +56,7 @@ import type {
   createExperienceService,
 } from "@athyper/server-platform-experience";
 import type { MetadataReader } from "@athyper/server-contract-metadata";
+import type { PinnedCompiledEntityReader } from "@athyper/server-platform-metadata";
 import type { PolicyService } from "@athyper/server-contract-policy";
 import type {
   RecordMutationService,
@@ -203,6 +204,8 @@ export interface Container {
     };
     authorizer?: Authorizer;
     metadata?: MetadataReader;
+    /** Shared immutable split-artifact reader; browser/data projections remain separate. */
+    compiledEntityReader?: PinnedCompiledEntityReader;
     policy?: PolicyService;
     governance?: {
       readonly consent: ChannelConsentService;

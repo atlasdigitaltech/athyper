@@ -9,7 +9,7 @@ import {
 import {
   compileDocumentCollection,
   withDocumentCollectionSource,
-} from "./document-collection-compiler.js";
+} from "./compiled-entity-collection-compiler.js";
 import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata";
 import type { EntityRuntimeProjection } from "@athyper/server-contract-publication";
 import { tryGetRequestContext } from "@athyper/server-foundation/context";
@@ -121,33 +121,6 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     let artifactKind: import("@athyper/server-contract-publication").PublicationArtifactKind =
       "business_partner_definition_bundle";
     let caseContract = false;
-    if (!result.rows.length) {
-      const banks =
-        await sql<Row>`SELECT pr.id publication_release_id,pr.release_key,pr.release_no,pr.release_kind,
-        pr.compatibility_level,pr.minimum_runtime_version,pr.created_at,pr.created_by,l.directory_release
-        FROM publication.release pr JOIN publication.bank_directory_release_link l ON l.publication_release_id=pr.id
-        JOIN publication.bank_directory_review review ON review.revision_id=l.revision_id AND review.decision='approved'
-        WHERE pr.id=${releaseId}::uuid AND pr.status IN('approved','published')`.execute(
-          this.options.database,
-        );
-      if (banks.rows.length) {
-        artifactKind = "bank_directory";
-        if (
-          !["studio", "neon", "mesh"].every((p) =>
-            this.options.targetPlanes.includes(p as PublicationPlane),
-          )
-        )
-          throw permanent("BANK_DIRECTORY_ALL_PLANES_REQUIRED");
-        result = {
-          ...banks,
-          rows: this.options.targetPlanes.map((plane) => ({
-            ...banks.rows[0]!,
-            plane_key: plane,
-          })),
-        };
-      }
-    }
-
     if (!result.rows.length) {
       const cases =
         await sql<Row>`SELECT pr.id publication_release_id,pr.tenant_id,pr.release_key,pr.release_no,pr.release_kind,
@@ -397,14 +370,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
               this.options.signingKeyId,
               this.options.canonicalizer,
             )
-          : artifactKind === "bank_directory"
-            ? buildBankDirectoryUnsigned(
-                row,
-                plane,
-                this.options.signingKeyId,
-                this.options.canonicalizer,
-              )
-            : buildBusinessPartnerDefinitionUnsigned(
+          : buildBusinessPartnerDefinitionUnsigned(
                 row,
                 plane,
                 this.options.signingKeyId,
@@ -473,7 +439,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       await sql`INSERT INTO publication.artifact_compilation
         (id,publication_release_id,plane_code,artifact_kind,unsigned_document,unsigned_hash,compiler_name,compiler_version,created_by)
         VALUES(${id}::uuid,${releaseId}::uuid,${plane},${artifactKind},${JSON.stringify(unsigned)}::jsonb,${unsignedHash},
-          ${artifactKind === "bank_directory" ? "athyper.bank-directory-artifact" : artifactKind === "entity_runtime" ? "athyper.entity-release-artifact" : "athyper.business-partner-definition-artifact"},'1.0.0',${string(row, artifactKind === "entity_runtime" ? "published_by" : "created_by")}::uuid)
+          ${artifactKind === "entity_runtime" ? "athyper.entity-release-artifact" : "athyper.business-partner-definition-artifact"},'1.0.0',${string(row, artifactKind === "entity_runtime" ? "published_by" : "created_by")}::uuid)
         ON CONFLICT(publication_release_id,plane_code,artifact_kind) DO NOTHING`.execute(
         this.options.database,
       );
@@ -902,49 +868,9 @@ function artifactKindValue(
 ): import("@athyper/server-contract-publication").PublicationArtifactKind {
   if (
     value !== "entity_runtime" &&
-    value !== "business_partner_definition_bundle" &&
-    value !== "bank_directory"
+    value !== "business_partner_definition_bundle"
   )
     throw permanent("PUBLICATION_ARTIFACT_KIND_INVALID");
   return value;
 }
 
-function buildBankDirectoryUnsigned(
-  row: Row,
-  plane: PublicationPlane,
-  signingKeyId: string,
-  canonicalizer: PublicationCanonicalizer,
-) {
-  const payload = object(row, "directory_release");
-  const coordinates = {
-    publicationKey: string(row, "release_key"),
-    releaseId: string(row, "publication_release_id"),
-    releaseNo: number(row, "release_no"),
-    targetPlane: plane,
-    artifactKind: "bank_directory" as const,
-  };
-  return {
-    envelope: {
-      schema: PUBLICATION_ARTIFACT_SCHEMA_V1,
-      ...coordinates,
-      releaseKind: string(row, "release_kind"),
-      generatedAt: date(row, "created_at"),
-      compatibilityLevel: string(row, "compatibility_level"),
-      payload,
-    },
-    manifest: {
-      artifactSchema: PUBLICATION_ARTIFACT_SCHEMA_V1,
-      mediaType: PUBLICATION_ARTIFACT_MEDIA_TYPE_V1,
-      ...coordinates,
-      payloadSha256: canonicalizer.sha256(
-        canonicalizer.canonicalBytes(payload),
-      ),
-      compiler: { name: "athyper.bank-directory-artifact", version: "1.0.0" },
-      contractSchemaVersion: "1.0.0",
-      descriptorSchemaVersion: "1.0.0",
-      signatureAlgorithm: "Ed25519",
-      signingKeyId,
-      createdAt: date(row, "created_at"),
-    },
-  };
-}

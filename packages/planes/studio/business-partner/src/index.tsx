@@ -10,7 +10,6 @@ export * from "./supplier-request-form-designer";
 export * from "./workflow-designer";
 
 export { BusinessPartnerCaseContractAuthoring } from "./case-contract-authoring";
-export { BankDirectoryWorkspace } from "./bank-directory";
 
 export { TaskEditPolicyAuthoring } from "./task-edit-policy-authoring";
 

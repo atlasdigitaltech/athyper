@@ -37,7 +37,7 @@ function readAppearancePreference(): AppearancePreference {
   try {
     const appearanceMode = profileColorMode(localStorage.getItem(THEME_STORAGE_KEY));
     const storedDensity = localStorage.getItem(DENSITY_STORAGE_KEY);
-    const densityCode = storedDensity === "comfortable" || storedDensity === "compact" ? storedDensity : undefined;
+    const densityCode = storedDensity === "comfortable" || storedDensity === "compact" || storedDensity === "spacious" ? storedDensity : undefined;
     return Object.freeze({ ...(appearanceMode ? { appearanceMode } : {}), ...(densityCode ? { densityCode } : {}) });
   } catch { return {}; }
 }

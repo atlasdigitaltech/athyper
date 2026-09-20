@@ -1201,6 +1201,21 @@ ALTER TABLE master.bank_account_house_config
     FOREIGN KEY (tenant_id, bank_account_link_id)
     REFERENCES master.bank_account_link (tenant_id, id) ON DELETE RESTRICT;
 ALTER TABLE master.bank_account_house_config
+    ADD CONSTRAINT bank_account_house_config_company_fk
+    FOREIGN KEY (tenant_id, company_code_id)
+    REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE master.bank_account_house_payment_method
+    ADD CONSTRAINT bank_account_house_payment_method_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
+ALTER TABLE master.bank_account_house_payment_method
+    ADD CONSTRAINT bank_account_house_payment_method_config_fk
+    FOREIGN KEY (tenant_id, house_config_id)
+    REFERENCES master.bank_account_house_config (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE master.bank_account_house_payment_method
+    ADD CONSTRAINT bank_account_house_payment_method_method_fk
+    FOREIGN KEY (tenant_id, payment_method_id)
+    REFERENCES master.payment_method (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE master.bank_account_house_config
     ADD CONSTRAINT bank_account_house_config_gl_fk
     FOREIGN KEY (tenant_id, gl_account_id)
     REFERENCES master.gl_account (tenant_id, id) ON DELETE RESTRICT;
@@ -1232,6 +1247,12 @@ BEGIN
             'ALTER TABLE master.bank_account_link ADD CONSTRAINT %I '
             'FOREIGN KEY (tenant_id, %I) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT',
             'bank_account_link_' || v_column || '_fk',
+            v_column
+        );
+        EXECUTE format(
+            'ALTER TABLE master.bank_account_house_payment_method ADD CONSTRAINT %I '
+            'FOREIGN KEY (tenant_id, %I) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT',
+            'bank_account_house_payment_method_' || v_column || '_fk',
             v_column
         );
     END LOOP;

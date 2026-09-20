@@ -10,7 +10,7 @@ export interface ExperienceProfile {
   readonly weekStart: number;
   readonly weekendDays: readonly number[];
   readonly appearanceMode: "system" | "light" | "dark" | "high_contrast";
-  readonly densityCode: "comfortable" | "compact";
+  readonly densityCode: "comfortable" | "compact" | "spacious";
 }
 
 export interface ExperienceLocalization {
@@ -167,7 +167,7 @@ export const experienceBootstrapSchema = {
         localeCode: { type: "string" }, languageCode: { type: "string" }, timezoneCode: { type: "string" },
         dateFormat: { type: "string" }, numberFormat: { type: "string" }, weekStart: { type: "integer", minimum: 0, maximum: 6 },
         weekendDays: { type: "array", uniqueItems: true, items: { type: "integer", minimum: 0, maximum: 6 } },
-        appearanceMode: { enum: ["system", "light", "dark", "high_contrast"] }, densityCode: { enum: ["comfortable", "compact"] },
+        appearanceMode: { enum: ["system", "light", "dark", "high_contrast"] }, densityCode: { enum: ["comfortable", "compact", "spacious"] },
       },
     },
     localization: {

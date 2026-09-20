@@ -43,7 +43,6 @@ export async function bankFormChoices(database: Kysely<any>, source: string) {
   const result = await sql<{
     id: string;
     branch_id: string | null;
-    release_id: string;
     name: string;
     country_code: string;
     branch_name: string | null;
@@ -59,7 +58,6 @@ export async function bankFormChoices(database: Kysely<any>, source: string) {
     label: row.branch_id ? row.branch_name! : row.name,
     data: {
       institutionId: row.id,
-      releaseId: row.release_id,
       countryCode: row.country_code.trim(),
       name: row.name,
       branch: row.branch_name ?? "",

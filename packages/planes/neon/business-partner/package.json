@@ -23,7 +23,8 @@
     "@athyper/platform-temporal": "workspace:*",
     "@athyper/platform-ui": "workspace:*",
     "@athyper/product-neon-shell": "workspace:*",
-    "@athyper/platform-entity-descriptor-client": "workspace:*"
+    "@athyper/platform-entity-descriptor-client": "workspace:*",
+    "@athyper/platform-icons": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"

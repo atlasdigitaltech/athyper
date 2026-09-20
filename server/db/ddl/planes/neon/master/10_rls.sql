@@ -721,7 +721,8 @@ DECLARE
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
         'bank_account', 'bank_account_link',
-        'bank_account_house_config'
+        'bank_account_house_config',
+        'bank_account_house_payment_method'
     ]
     LOOP
         EXECUTE format('ALTER TABLE master.%I ENABLE ROW LEVEL SECURITY', v_table);
@@ -742,7 +743,8 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         FOREACH v_table IN ARRAY ARRAY[
             'bank_account', 'bank_account_link',
-            'bank_account_house_config'
+            'bank_account_house_config',
+            'bank_account_house_payment_method'
         ]
         LOOP
             EXECUTE format(

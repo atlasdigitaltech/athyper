@@ -45,7 +45,9 @@ import {
   createBusinessPartnerCaseRuntimeRegistrations,
   assertBusinessPartnerCaseRuntimeSemantics,
 } from "./business-partner-case-runtime.js";
-import { createBusinessPartnerReadRuntimeRegistrations } from "./business-partner-read-runtime.js";
+import {
+  createBusinessPartnerReadRuntimeRegistrations,
+} from "./business-partner-read-runtime.js";
 import { createBusinessPartnerActionRuntimeRegistrations } from "./business-partner-action-runtime.js";
 import {
   createBusinessPartnerBoundImport,
@@ -84,13 +86,6 @@ import {
   createBusinessPartnerAuthorizationShadow,
   createBusinessPartnerShadowScopes,
 } from "./business-partner-authorization-shadow.js";
-import {
-  BankDirectoryService,
-  registerBankDirectoryRoutes,
-  registerBankDirectoryReferenceRoute,
-  reconcileBankDirectoryReferences,
-} from "@athyper/server-service-publication";
-import { createBankDirectoryAuthorizer } from "./bank-directory-authorizer.js";
 import { createAtlasBusinessContextResolver } from "@athyper/server-platform-ai";
 import { readFileSync } from "node:fs";
 import {
@@ -213,13 +208,23 @@ import {
   createExperienceInvalidationHooks,
   createExperienceService,
   createMemoryExperienceCache,
+  createEntityRuntimeResourceService,
+  createEntityOperationDispatcher,
+  EntityRuntimeOperationError,
+  EntityRuntimeResourceError,
+  registerEntityRuntimeRoutes,
   registerExperienceRoutes,
 } from "@athyper/server-platform-experience";
 import { KyselyExperiencePlaneRepository } from "@athyper/server-adapter-experience-postgres";
 import {
   createDistributedDescriptorCache,
+  createDistributedCompiledEntityArtifactCache,
   createMetadataService,
+  createRuntimeMetaCompiledEntityReleaseSource,
   createRuntimeDescriptorRepository,
+  PinnedCompiledEntityReader,
+  CompiledEntityFlowReader,
+  projectPinnedIntakeApplication,
 } from "@athyper/server-platform-metadata";
 import {
   createCachedPolicyRepository,
@@ -676,7 +681,6 @@ import {
   ROLLBACK_PUBLICATION_RELEASE_JOB,
   registerPublicationRoutes,
   registerBusinessPartnerDefinitionRoutes,
-  registerLocalBusinessPartnerDefinitionRoutes,
   VerifiedPublicationArtifactLoader,
 } from "@athyper/server-service-publication";
 import type { PublicationPlane } from "@athyper/server-contract-publication";
@@ -853,6 +857,7 @@ export function registerServices(
 ): void {
   let intakeReferenceRecord: ReturnType<typeof createEntityListService>["record"] | undefined;
   let intakeApplicationDescriptor: ReturnType<typeof createEntityListService>["applicationDescriptor"] | undefined;
+  let compiledBusinessPartnerApplicationDescriptor: ReturnType<typeof createEntityListService>["applicationDescriptor"] | undefined;
   const { iam, authorizer: baseAuthorizer, audit } = container.platform;
   if (!iam || !baseAuthorizer || !audit) return;
   const bpShadow =
@@ -1177,6 +1182,7 @@ export function registerServices(
                     records.surfaces,
                     providers,
                     caseScopes(),
+                    (context, entityCode, scopeCoordinate) => { const surfaces = records.surfaces; if (!surfaces) throw Error("BP_READ_RUNTIME_SERVICE_UNAVAILABLE"); if (!compiledBusinessPartnerApplicationDescriptor) throw Error("COMPILED_ENTITY_APPLICATION_DESCRIPTOR_UNAVAILABLE"); return compiledBusinessPartnerApplicationDescriptor(context, entityCode, scopeCoordinate); },
                   ),
                   ...createBusinessPartnerRevealRuntimeRegistrations(
                     providers,
@@ -2997,6 +3003,19 @@ export function registerServices(
         : {}),
     });
   container.platform.metadata = metadata;
+  // This reader has no BP-specific behavior. It resolves only verified, activated
+  // split artifacts; phase 5 injects it into the generic bootstrap/section service.
+  // Until a v2 payload is active it returns no release and cannot affect v1 reads.
+  container.platform.compiledEntityReader = new PinnedCompiledEntityReader({
+    source: createRuntimeMetaCompiledEntityReleaseSource({
+      databases: metadataDatabases,
+      withTenantTransaction: (planeKey, actor, work) =>
+        transactions.run(planeKey, actor, work),
+    }),
+    ...(container.adapters.redisCache
+      ? { cache: createDistributedCompiledEntityArtifactCache(container.adapters.redisCache) }
+      : {}),
+  });
   registerMasterData(
     container,
     {
@@ -3340,6 +3359,28 @@ export function registerServices(
         new KyselyLocalProjectionRepository(neonDatabase),
       canonicalizer: { canonicalBytes, sha256 },
     });
+    const compiledFlows = new CompiledEntityFlowReader(
+      container.platform.compiledEntityReader!,
+    );
+    compiledBusinessPartnerApplicationDescriptor = (context, _entityCode, scopeCoordinate) => projectPinnedIntakeApplication({
+      reader: container.platform.compiledEntityReader!,
+      coordinate: { tenantId: context.tenantId, principalId: context.principalId, planeKey: "neon", entityCode: "business_partner" },
+      entity: { code: "business_partner", label: "Business Partners", pluralLabel: "Business Partners" },
+      intake: { flowArtifactKey: "business_partner/flow.intake", formArtifactKeys: ["business_partner_request/presentation.section.form.request", "business_partner_request/presentation.section.form.supplierRequest"], flow: { key: "request_intake", title: "New business partner request", entryOperation: "request_supplier", completionOperation: "case_submit" } },
+      scope: {
+        status: "ready",
+        // Application descriptors admit scope fingerprints only as opaque hashes.
+        // This stable coordinate is also the cache boundary for a pinned Flow
+        // projection, so it must vary with tenant, entity and chosen context.
+        fingerprint: sha256(canonicalBytes({
+          planeKey: context.planeKey,
+          tenantId: context.tenantId,
+          entityCode: "business_partner",
+          scopeCoordinate: scopeCoordinate ?? {},
+        })),
+        labels: [],
+      },
+    });
     const protectedValues = container.adapters.secretStore
       ? createSecretStoreProtectedValueResolver(container.adapters.secretStore)
       : undefined;
@@ -3490,15 +3531,185 @@ export function registerServices(
             },
           ]),
       });
+    container.services.businessPartner360 = businessPartner360;
+    const entityRuntime = createEntityRuntimeResourceService({
+      reader: container.platform.compiledEntityReader!,
+      headers: {
+        async readHeader({ context, recordId, fieldKeys }) {
+          const header = await businessPartner360.header({ context, businessPartnerId: recordId });
+          const source: Record<string, unknown> = {
+            id: header.identity.id,
+            code: header.identity.code,
+            name: header.identity.name,
+            status: header.identity.lifecycleStatus,
+            partner_category: header.identity.category,
+          };
+          return Object.freeze({
+            revision: String(header.businessPartnerVersion),
+            values: Object.freeze(Object.fromEntries(fieldKeys.flatMap((key) => key in source ? [[key, source[key]]] : []))),
+          });
+        },
+      },
+      sections: {
+        get(handlerKey) {
+          // This is a domain registration map, not a BP-specific runtime reader. The
+          // generic service admits the section artifact and owns caching/transport.
+          // Each registered handler remains an independently authorized BP read.
+          const sectionCodes = {
+            "neon.bp.section.overview.v1": "overview",
+            "neon.bp.section.identity.v1": "identity",
+            "neon.bp.section.contacts.v1": "contacts",
+            "neon.bp.section.addresses.v1": "addresses",
+            "neon.bp.section.identifiers-tax.v1": "identifiers-tax",
+            "neon.bp.section.roles-scope.v1": "roles-scope",
+            "neon.bp.section.supplier-company.v1": "supplier-company",
+            "neon.bp.section.customer-company.v1": "customer-company",
+            "neon.bp.section.banking.v1": "banking",
+            "neon.bp.section.qualifications-certificates.v1": "qualifications-certificates",
+            "neon.bp.section.credit.v1": "credit",
+            "neon.bp.section.requests.v1": "requests",
+            "neon.bp.section.activity.v1": "activity",
+            "neon.bp.section.business-activity.v1": "business-activity",
+            "neon.bp.section.network.v1": "network",
+          } as const;
+          if (!Object.hasOwn(sectionCodes, handlerKey)) return undefined;
+          const sectionCode = sectionCodes[handlerKey as keyof typeof sectionCodes];
+          if (!sectionCode) return undefined;
+          return {
+            async read({ context, recordId, resourceContext }) {
+              const scope = {
+                ...(resourceContext?.operatingOrganizationId ? { operatingOrganizationId: resourceContext.operatingOrganizationId } : {}),
+                ...(resourceContext?.companyCodeId ? { companyCodeId: resourceContext.companyCodeId } : {}),
+                ...(resourceContext?.legalEntityId ? { legalEntityId: resourceContext.legalEntityId } : {}),
+                ...(resourceContext?.asOf ? { asOf: resourceContext.asOf } : {}),
+                ...(resourceContext?.roleLens === "all" || resourceContext?.roleLens === "supplier" || resourceContext?.roleLens === "customer" ? { roleLens: resourceContext.roleLens } : {}),
+              };
+              if (sectionCode === "overview") {
+                const result = await businessPartner360.overview({ context, businessPartnerId: recordId, ...scope });
+                return Object.freeze({ revision: String(result.businessPartnerVersion), data: Object.freeze({ state: "ready", values: result.values }) });
+              }
+              const result = await businessPartner360.section({ context, businessPartnerId: recordId, sectionCode, ...scope });
+              return Object.freeze({ revision: String(result.businessPartnerVersion), data: result });
+            },
+          };
+        },
+        getService(serviceKey) {
+          if (serviceKey === "platform.comments.v1") return {
+            async read({ context, core, recordId, limit, cursor }) {
+              const rows = await transactions.run(context.planeKey, context, async (tx) => (await sql<{ id: string; text: string; author_id: string; visibility: string; created_at: Date | string; updated_at: Date | string | null; parent_comment_id: string | null }>`SELECT id::text,comment_text text,commenter_id::text author_id,visibility,created_at,updated_at,parent_comment_id::text FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND context_type='entity' AND entity_type=${core.entityCode} AND entity_id=${recordId} AND status<>'deleted' AND (visibility<>'private' OR commenter_id=${context.principalId}::uuid) ${cursor ? sql`AND (created_at,id)<(SELECT created_at,id FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY created_at DESC,id DESC LIMIT ${limit + 1}`.execute(tx)).rows);
+              const items = rows.slice(0, limit).map((row) => Object.freeze({ id: row.id, text: row.text, authorId: row.author_id, visibility: row.visibility, createdAt: new Date(row.created_at).toISOString(), ...(row.updated_at ? { updatedAt: new Date(row.updated_at).toISOString() } : {}), ...(row.parent_comment_id ? { parentCommentId: row.parent_comment_id } : {}) }));
+              return Object.freeze({ revision: items[0]?.updatedAt ?? items[0]?.createdAt ?? `comments:${recordId}`, data: Object.freeze({ items, ...(rows.length > limit && items.at(-1)?.id ? { nextCursor: items.at(-1)!.id } : {}) }) });
+            },
+          };
+          if (serviceKey === "platform.attachments.v1") return {
+            async read({ context, core, recordId, limit, cursor }) {
+              const rows = await transactions.run(context.planeKey, context, async (tx) => (await sql<{ id: string; file_name: string; content_type: string | null; size_bytes: string | number | null; created_at: Date | string }>`SELECT attachment.id::text,attachment.file_name,attachment.content_type,attachment.size_bytes,attachment.created_at FROM document.attachment attachment JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id AND series.current_attachment_id=attachment.id JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id WHERE attachment.tenant_id=${context.tenantId}::uuid AND link.entity_type=${core.entityCode} AND link.entity_id=${recordId} AND attachment.is_active AND attachment.is_virus_scanned AND attachment.status='active' AND (attachment.expires_at IS NULL OR attachment.expires_at>clock_timestamp()) AND (link.pinned_attachment_id IS NULL OR link.pinned_attachment_id=attachment.id) ${cursor ? sql`AND (attachment.created_at,attachment.id)<(SELECT created_at,id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY attachment.created_at DESC,attachment.id DESC LIMIT ${limit + 1}`.execute(tx)).rows);
+              const items = rows.slice(0, limit).map((row) => Object.freeze({ id: row.id, fileName: row.file_name, ...(row.content_type ? { contentType: row.content_type } : {}), ...(row.size_bytes === null ? {} : { sizeBytes: Number(row.size_bytes) }), createdAt: new Date(row.created_at).toISOString() }));
+              return Object.freeze({ revision: items[0]?.createdAt ?? `attachments:${recordId}`, data: Object.freeze({ items, ...(rows.length > limit && items.at(-1)?.id ? { nextCursor: items.at(-1)!.id } : {}) }) });
+            },
+          };
+          return undefined;
+        },
+      },
+      summaries: {
+        get(provider) {
+          if (!new Set(["primary-contact", "primary-address", "relationship-summary", "governance-state"]).has(provider)) return undefined;
+          return {
+            async read({ context, core, recordId, resourceContext, requestCache }) {
+              if (core.entityCode !== "business_partner") throw new EntityRuntimeResourceError(503, "ENTITY_RUNTIME_SUMMARY_HANDLER_UNAVAILABLE");
+              const cacheKey = "business_partner:summary";
+              const source = requestCache.get(cacheKey) ?? Promise.resolve(businessPartner360.summary({
+                context,
+                businessPartnerId: recordId,
+                ...(resourceContext?.operatingOrganizationId ? { operatingOrganizationId: resourceContext.operatingOrganizationId } : {}),
+                ...(resourceContext?.companyCodeId ? { companyCodeId: resourceContext.companyCodeId } : {}),
+                ...(resourceContext?.legalEntityId ? { legalEntityId: resourceContext.legalEntityId } : {}),
+                ...(resourceContext?.asOf ? { asOf: resourceContext.asOf } : {}),
+                ...(resourceContext?.roleLens ? { roleLens: resourceContext.roleLens } : {}),
+              }));
+              requestCache.set(cacheKey, source);
+              const summary = await source as Awaited<ReturnType<typeof businessPartner360.summary>>;
+              if (provider === "primary-contact") return Object.freeze({ state: summary.primaryContact ? "ready" : "empty", value: summary.primaryContact ?? null });
+              if (provider === "primary-address") return Object.freeze({ state: summary.primaryAddress ? "ready" : "empty", value: summary.primaryAddress ?? null });
+              if (provider === "relationship-summary") return Object.freeze({ state: "ready", value: Object.freeze({ roles: summary.roles.map((role) => role.code), openWork: summary.openWork, sectionCounts: Object.fromEntries(summary.sections.flatMap((section) => section.count === undefined ? [] : [[section.code, section.count]])) }) });
+              return Object.freeze({ state: "ready", value: Object.freeze({ completeness: summary.completeness.status, percent: summary.completeness.percent, openWork: summary.openWork }) });
+            },
+          };
+        },
+      },
+    });
+    const entityOperations = createEntityOperationDispatcher({
+      reader: container.platform.compiledEntityReader!,
+      artifacts: {
+        resolve({ entityCode, operationKey }) {
+          if (entityCode === "business_partner_request" && (operationKey === "submit" || operationKey === "materialize"))
+            return { releaseEntityCode: "business_partner", operationEntityCode: "business_partner_request" };
+          return undefined;
+        },
+      },
+      handlers: {
+        get(handlerKey) {
+          const requests = () => {
+            const service = container.services.businessPartnerRequests;
+            if (!service) throw new EntityRuntimeOperationError(503, "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+            return service;
+          };
+          const createForPartner = (kind: "amend_partner" | "add_supplier" | "add_customer" | "assign_organization" | "configure_company") => ({
+            async execute({ context, recordId, expectedVersion, idempotencyKey, input }: { readonly context: VerifiedRequestContext; readonly recordId: string; readonly expectedVersion?: number; readonly idempotencyKey?: string; readonly input: Readonly<Record<string, unknown>> }) {
+              const header = await businessPartner360.header({ context, businessPartnerId: recordId });
+              if (header.businessPartnerVersion !== expectedVersion)
+                throw new EntityRuntimeOperationError(409, "ENTITY_RUNTIME_OPERATION_VERSION_CONFLICT");
+              const request = await requests().create({
+                ...input,
+                context,
+                idempotencyKey: idempotencyKey!,
+                kind,
+                source: { kind: "manual" },
+                targetBusinessPartnerId: recordId,
+              } as never);
+              return Object.freeze({
+                requestId: request.request.id, version: request.request.rowVersion, status: request.request.status, replayed: request.replayed,
+                changedResources: [
+                  { entityCode: "business_partner_request", recordId: request.request.id, revision: request.request.rowVersion, kinds: ["request", "action_summary"] },
+                  { entityCode: "business_partner", recordId, revision: header.businessPartnerVersion, kinds: ["action_summary"], sectionKeys: kind === "add_supplier" ? ["roles-scope", "supplier-company"] : kind === "add_customer" ? ["roles-scope", "customer-company"] : ["roles-scope"] },
+                ],
+              });
+            },
+          });
+          if (handlerKey === "neon.bp.governed-request.create.v1") return createForPartner("amend_partner");
+          if (handlerKey === "neon.bp.governed-request.role-extension.v1") return {
+            async execute(input) {
+              const role = input.input.requestedRole;
+              if (role !== "supplier" && role !== "customer") throw new EntityRuntimeOperationError(400, "ENTITY_RUNTIME_OPERATION_INPUT_VALUE_INVALID");
+              return createForPartner(role === "supplier" ? "add_supplier" : "add_customer").execute(input);
+            },
+          };
+          if (handlerKey === "neon.bp.governed-request.organization-scope.v1") return createForPartner("assign_organization");
+          if (handlerKey === "neon.bp.governed-request.company-scope.v1") return createForPartner("configure_company");
+          if (handlerKey === "neon.bp.governed-request.submit.v1") return {
+            async execute({ context, recordId, expectedVersion, idempotencyKey }) {
+              const result = await requests().submit({ context, requestId: recordId, expectedVersion: expectedVersion!, idempotencyKey: idempotencyKey! });
+              return Object.freeze({ requestId: result.request.id, version: result.request.rowVersion, status: result.request.status, replayed: result.replayed, changedResources: [{ entityCode: "business_partner_request", recordId, revision: result.request.rowVersion, kinds: ["request", "action_summary"] }, ...(result.request.targetBusinessPartnerId ? [{ entityCode: "business_partner", recordId: result.request.targetBusinessPartnerId, kinds: ["action_summary"] }] : [])] });
+            },
+          };
+          if (handlerKey === "neon.bp.governed-request.materialize.v1") return {
+            async execute({ context, recordId, expectedVersion, idempotencyKey }) {
+              const result = await requests().apply({ context, requestId: recordId, expectedVersion: expectedVersion!, idempotencyKey: idempotencyKey! });
+              return Object.freeze({ requestId: result.request.id, version: result.request.rowVersion, status: result.request.status, replayed: result.replayed, materialization: result.materialization, changedResources: [{ entityCode: "business_partner_request", recordId, revision: result.request.rowVersion, kinds: ["request", "action_summary"] }, { entityCode: "business_partner", recordId: result.materialization.businessPartnerId, kinds: ["header", "action_summary", "section"], sectionKeys: result.materialization.partnerRole === "supplier" ? ["roles-scope", "supplier-company"] : result.materialization.partnerRole === "customer" ? ["roles-scope", "customer-company"] : ["roles-scope"] }] });
+            },
+          };
+          return undefined;
+        },
+      },
+    });
     container.platform.httpRegistrars.push((application) =>
-      registerLocalBusinessPartnerDefinitionRoutes(application, {
+      registerEntityRuntimeRoutes(application, {
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
-        authorizer: businessPartnerAuthorizer,
-        consumer: localDefinitions,
+        service: entityRuntime,
+        operations: entityOperations,
       }),
     );
-    container.services.businessPartner360 = businessPartner360;
     const supplierSelectionOptions = {
       authorizer: businessPartnerAuthorizer, repository, transactions, audit,
       authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext,
@@ -3537,24 +3748,12 @@ export function registerServices(
         schemas: {
           async resolve(input) {
             try {
-              return await transactions.run(
-                "neon",
-                {
-                  tenantId: input.context.tenantId,
-                  principalId: input.context.principalId,
-                },
-                async (transaction) =>
-                  new LocalBusinessPartnerDefinitionConsumer({
-                    local: new KyselyLocalProjectionRepository(transaction),
-                    canonicalizer: { canonicalBytes, sha256 },
-                  }).requestSchema({
-                    kind: input.kind,
-                    sourceKind: input.sourceKind,
-                    ...(input.requestedRole
-                      ? { requestedRole: input.requestedRole }
-                      : {}),
-                  }),
-              );
+              const selection = businessPartnerFlowSelection(input.kind, input.requestedRole);
+              return await compiledFlows.requestSchema({
+                tenantId: input.context.tenantId, principalId: input.context.principalId,
+                planeKey: "neon", entityCode: "business_partner", flowEntityCode: "business_partner_request", flowKey: selection.flowKey,
+                sourceKind: input.sourceKind,
+              });
             } catch (error) {
               throw new MasterDataError(
                 503,
@@ -3574,15 +3773,11 @@ export function registerServices(
             }>`SELECT principal_id::text FROM document.fn_entity_case_approvers(${input.context.tenantId}::uuid,${input.request.operatingOrganizationId!}::uuid,${input.request.companyCodeId ?? null}::uuid,${input.context.principalId}::uuid)`.execute(
               transaction,
             );
-            const artifact = await new LocalBusinessPartnerDefinitionConsumer({
-              local: new KyselyLocalProjectionRepository(transaction),
-              canonicalizer: { canonicalBytes, sha256 },
-            }).workflow({
-              kind: input.request.kind,
-              proposedPayload: input.request.proposedPayload,
-              ...(input.request.requestedRole
-                ? { requestedRole: input.request.requestedRole }
-                : {}),
+            const selection = businessPartnerFlowSelection(input.request.kind, input.request.requestedRole);
+            const artifact = await compiledFlows.workflow({
+              tenantId: input.context.tenantId, principalId: input.context.principalId,
+              planeKey: "neon", entityCode: "business_partner", flowEntityCode: "business_partner_request", flowKey: selection.flowKey,
+              journey: selection.journey, proposedPayload: input.request.proposedPayload,
             });
             const approverPrincipalIds = candidates.rows.map(
               (row) => row.principal_id,
@@ -3888,24 +4083,12 @@ export function registerServices(
         schemas: {
           async resolve(input) {
             try {
-              return await transactions.run(
-                "neon",
-                {
-                  tenantId: input.context.tenantId,
-                  principalId: input.context.principalId,
-                },
-                async (transaction) =>
-                  new LocalBusinessPartnerDefinitionConsumer({
-                    local: new KyselyLocalProjectionRepository(transaction),
-                    canonicalizer: { canonicalBytes, sha256 },
-                  }).requestSchema({
-                    kind: input.kind,
-                    sourceKind: input.sourceKind,
-                    ...(input.requestedRole
-                      ? { requestedRole: input.requestedRole }
-                      : {}),
-                  }),
-              );
+              const selection = businessPartnerFlowSelection(input.kind, input.requestedRole);
+              return await compiledFlows.requestSchema({
+                tenantId: input.context.tenantId, principalId: input.context.principalId,
+                planeKey: "neon", entityCode: "business_partner", flowEntityCode: "business_partner_request", flowKey: selection.flowKey,
+                sourceKind: input.sourceKind,
+              });
             } catch (error) {
               throw new MasterDataError(
                 503,
@@ -5129,7 +5312,8 @@ export function registerServices(
       descriptor: (context, entity, query) => lists.applicationDescriptor(context, entity, parseEntityListScopeCoordinate(query)),
       store: createReferenceHistoryStore(transactions),
     }));
-    intakeApplicationDescriptor=lists.applicationDescriptor.bind(lists);
+    if (!compiledBusinessPartnerApplicationDescriptor) throw Error("COMPILED_ENTITY_APPLICATION_DESCRIPTOR_UNAVAILABLE");
+    intakeApplicationDescriptor=compiledBusinessPartnerApplicationDescriptor;
     intakeReferenceRecord=lists.record.bind(lists);
     const bookmarks = createRecordBookmarkService({
       transactions,
@@ -5203,6 +5387,13 @@ export function registerServices(
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
         lists,
+        applicationDescriptor: (context, entityCode, scopeCoordinate) => {
+          if (entityCode === "business_partner") {
+            if (!compiledBusinessPartnerApplicationDescriptor) throw Error("COMPILED_ENTITY_APPLICATION_DESCRIPTOR_UNAVAILABLE");
+            return compiledBusinessPartnerApplicationDescriptor(context, entityCode, scopeCoordinate);
+          }
+          return lists.applicationDescriptor(context, entityCode, scopeCoordinate);
+        },
       }),
     );
     container.platform.httpRegistrars.push((application) =>
@@ -6847,13 +7038,6 @@ function registerPublication(
       !container.adapters.publicationVerifier)
   )
     throw new Error("Publication artifact store and verifier are unavailable");
-  container.platform.httpRegistrars.push((application) =>
-    registerBankDirectoryReferenceRoute(application, {
-      authenticate: createIamAuthenticationMiddleware(iam),
-      readContext: readVerifiedRequestContext,
-      databases,
-    }),
-  );
   const authority = new KyselyPublicationAuthorityRepository(authorityDatabase);
   const projections: Partial<
     Record<PublicationPlane, KyselyLocalProjectionRepository>
@@ -6883,104 +7067,6 @@ function registerPublication(
       database,
       loader,
     );
-  }
-  const bankDirectory = new BankDirectoryService({
-    database: authorityDatabase,
-    authority,
-    inspectReferences: async (plane, references) => {
-      const database = databases[plane];
-      if (!database) throw new Error("BANK_DIRECTORY_PLANE_UNAVAILABLE");
-      return reconcileBankDirectoryReferences(database, references);
-    },
-    inspectPlane: async (plane, tenantId) => {
-      const database = databases[plane];
-      if (!database) return { available: false };
-      return database.transaction().execute(async (db) => {
-        await sql`SELECT set_config('app.current_tenant_id',${tenantId},true)`.execute(
-          db,
-        );
-        const row = (
-          await sql<{
-            id: string;
-            version: string;
-            content_hash: string;
-          }>`SELECT r.id,r.version,r.content_hash FROM shared.bank_directory_activation a JOIN shared.bank_directory_release r ON r.id=a.release_id WHERE a.singleton`.execute(
-            db,
-          )
-        ).rows[0];
-        const releases = (
-          await sql<{
-            id: string;
-            hash: string;
-          }>`SELECT id,encode(public.digest(payload::text,'sha256'),'hex') hash FROM shared.bank_directory_release ORDER BY version`.execute(
-            db,
-          )
-        ).rows;
-        return {
-          available: true,
-          releases,
-          ...(row
-            ? {
-                releaseId: row.id,
-                version: Number(row.version),
-                hash: row.content_hash,
-              }
-            : {}),
-        };
-      });
-    },
-  });
-  const directoryAuthorityTenant =
-    process.env["BANK_DIRECTORY_AUTHORITY_TENANT_ID"];
-  const directoryReconcileJob = "publication.bank-directory.reconcile";
-  if (directoryAuthorityTenant) {
-    if (!/^[0-9a-f-]{36}$/i.test(directoryAuthorityTenant))
-      throw new Error("BANK_DIRECTORY_AUTHORITY_TENANT_ID is invalid");
-    container.runtimes.jobs?.register(
-      PUBLICATION_MAINTENANCE_QUEUE,
-      directoryReconcileJob,
-      {
-        async handle() {
-          const result = await bankDirectory.reconcile(
-            directoryAuthorityTenant,
-            "",
-          );
-          return { status: "completed", output: result };
-        },
-      },
-    );
-    container.runtimes.jobDefinitions.push({
-      code: directoryReconcileJob,
-      owner: "@athyper/server-service-publication",
-      queue: PUBLICATION_MAINTENANCE_QUEUE,
-      name: directoryReconcileJob,
-      scope: "plane",
-      payloadSchema: { name: directoryReconcileJob, version: 1 },
-      timeoutMs: 60_000,
-      maxAttempts: 3,
-      executionRetentionDays: 90,
-    });
-    if (container.runtimes.scheduler && config.publication.recoveryEnabled)
-      container.runtimes.scheduledJobs.push({
-        scheduleId: "bank-directory-reconciliation",
-        queue: PUBLICATION_MAINTENANCE_QUEUE,
-        name: directoryReconcileJob,
-        data: {},
-        pattern: {
-          kind: "interval",
-          everyMs: config.publication.recoveryIntervalMs,
-        },
-        options: {
-          jobId: "publication:bank-directory-reconcile",
-          maxAttempts: 3,
-          payloadSchema: { name: directoryReconcileJob, version: 1 },
-          execution: {
-            planeKey: "studio",
-            scope: "plane",
-            principalId: "00000000-0000-0000-0000-000000000000",
-          },
-        },
-      });
   }
   container.services.publication = { authority, projections, orchestrators };
   container.runtimes.health.register("publication.database", async () => {
@@ -7344,14 +7430,6 @@ function registerPublication(
           service: companyCaseContracts,
           companyPilot: true,
         });
-      registerBankDirectoryRoutes(application, {
-        authenticate: createIamAuthenticationMiddleware(iam),
-        readContext: readVerifiedRequestContext,
-        authorizer: createBankDirectoryAuthorizer(bankDirectory),
-        audit,
-        jobs: container.runtimes.jobs!,
-        service: bankDirectory,
-      });
       registerBusinessPartnerDefinitionRoutes(application, {
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
@@ -7557,4 +7635,24 @@ function businessPartnerNotificationLifecycle(eventCode: string): string {
   ].includes(lifecycle)
     ? lifecycle
     : "other";
+}
+
+
+/** BP domain mapping stays at composition; generic metadata never knows request kinds. */
+function businessPartnerFlowSelection(kind: string, requestedRole?: string): { readonly flowKey: string; readonly journey: string } {
+  const commercial = () => { if (requestedRole !== "supplier" && requestedRole !== "customer") throw new MasterDataError(422, "BUSINESS_PARTNER_REQUEST_ROLE_REQUIRED", "A supplier or customer role is required."); return requestedRole; };
+  switch (kind) {
+    case "new_partner": { const role=commercial(); return {flowKey:`${role}.new`, journey:role}; }
+    case "add_supplier": return {flowKey:"supplier.add",journey:"supplier"};
+    case "add_customer": return {flowKey:"customer.add",journey:"customer"};
+    case "configure_company": { const role=commercial(); return {flowKey:`${role}.company`,journey:role}; }
+    case "change_bank": return {flowKey:"supplier.bank",journey:"supplier"};
+    case "activate_supplier": return {flowKey:"supplier.activate",journey:"supplier"};
+    case "amend_partner": return {flowKey:"partner.amend",journey:"governance"};
+    case "assign_organization": return {flowKey:"partner.assign",journey:"governance"};
+    case "deactivate": return {flowKey:"partner.deactivate",journey:"governance"};
+    case "reactivate": return {flowKey:"partner.reactivate",journey:"governance"};
+    case "archive": return {flowKey:"partner.archive",journey:"governance"};
+    default: throw new MasterDataError(422,"BUSINESS_PARTNER_REQUEST_KIND_UNDECLARED",`Request kind ${kind} is not declared.`);
+  }
 }

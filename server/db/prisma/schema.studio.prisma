@@ -6465,7 +6465,6 @@ model principal {
   job_execution_attempt                                                                                  job_execution_attempt[]
   job_execution_command                                                                                  job_execution_command[]
   record_edit_lock                                                                                       record_edit_lock[]
-  bank_directory_review                                                                                  bank_directory_review[]
   business_partner_case_contract_release_link                                                            business_partner_case_contract_release_link[]
   entity_number_allocation                                                                               entity_number_allocation[]
   entity_number_counter_entity_number_counter_created_byToprincipal                                      entity_number_counter[]                       @relation("entity_number_counter_created_byToprincipal")
@@ -6476,7 +6475,6 @@ model principal {
   mfa_credential_projection_mfa_credential_projection_updated_byToprincipal                              mfa_credential_projection[]                   @relation("mfa_credential_projection_updated_byToprincipal")
   usage_reservation_usage_reservation_tenant_id_created_byToprincipal                                    usage_reservation[]                           @relation("usage_reservation_tenant_id_created_byToprincipal")
   usage_reservation_usage_reservation_tenant_id_updated_byToprincipal                                    usage_reservation[]                           @relation("usage_reservation_tenant_id_updated_byToprincipal")
-  bank_directory_revision                                                                                bank_directory_revision[]
   business_partner_case_contract_revision                                                                business_partner_case_contract_revision[]
   compiled_artifact                                                                                      compiled_artifact[]
   content_item_version                                                                                   content_item_version[]
@@ -7088,7 +7086,6 @@ model tenant {
   job_execution_attempt                                          job_execution_attempt[]
   job_execution_command                                          job_execution_command[]
   record_edit_lock                                               record_edit_lock[]
-  bank_directory_authority                                       bank_directory_authority[]
   entity_runtime_restoration_link                                entity_runtime_restoration_link[]
   release                                                        release[]
   applied_release_payload                                        applied_release_payload[]
@@ -7100,7 +7097,6 @@ model tenant {
   mfa_credential_projection                                      mfa_credential_projection[]
   tenant_usage_counter                                           tenant_usage_counter[]
   usage_reservation                                              usage_reservation[]
-  bank_directory_revision                                        bank_directory_revision[]
   business_partner_case_contract_revision                        business_partner_case_contract_revision[]
   business_partner_definition_revision                           business_partner_definition_revision[]
   content_item_version                                           content_item_version[]
@@ -7334,79 +7330,81 @@ model entity_baseline_import_revocation {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an index with non-default null sort order and requires additional setup for migrations. Visit https://pris.ly/d/default-index-null-ordering for more info.
 model entity_change_set {
-  id                                                               String                                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                        String?                                   @db.Uuid
-  entity_id                                                        String                                    @db.Uuid
-  change_set_code                                                  String
-  branch_code                                                      String                                    @default("main")
-  base_release_id                                                  String?                                   @db.Uuid
-  parent_change_set_id                                             String?                                   @db.Uuid
-  status                                                           String                                    @default("draft")
-  lock_version                                                     BigInt                                    @default(0)
-  title                                                            String
-  change_summary                                                   String?
-  change_reason_code                                               String?
-  ticket_reference                                                 String?
-  submitted_at                                                     DateTime?                                 @db.Timestamptz(6)
-  submitted_by                                                     String?                                   @db.Uuid
-  reviewed_at                                                      DateTime?                                 @db.Timestamptz(6)
-  reviewed_by                                                      String?                                   @db.Uuid
-  approved_at                                                      DateTime?                                 @db.Timestamptz(6)
-  approved_by                                                      String?                                   @db.Uuid
-  rejected_at                                                      DateTime?                                 @db.Timestamptz(6)
-  rejected_by                                                      String?                                   @db.Uuid
-  rejection_reason                                                 String?
-  published_at                                                     DateTime?                                 @db.Timestamptz(6)
-  published_by                                                     String?                                   @db.Uuid
-  status_changed_at                                                DateTime?                                 @db.Timestamptz(6)
-  status_changed_by                                                String?                                   @db.Uuid
-  created_at                                                       DateTime                                  @default(now()) @db.Timestamptz(6)
-  created_by                                                       String                                    @db.Uuid
-  updated_at                                                       DateTime?                                 @db.Timestamptz(6)
-  updated_by                                                       String?                                   @db.Uuid
-  atlas_learning_inbox                                             atlas_learning_inbox[]
-  principal_entity_change_set_approved_byToprincipal               principal?                                @relation("entity_change_set_approved_byToprincipal", fields: [approved_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_approved_by_fk")
-  entity_release_entity_change_set_base_release_idToentity_release entity_release?                           @relation("entity_change_set_base_release_idToentity_release", fields: [base_release_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_base_release_fk")
-  principal_entity_change_set_created_byToprincipal                principal                                 @relation("entity_change_set_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "entity_change_set_created_by_fk")
-  entity                                                           entity                                    @relation(fields: [entity_id], references: [id], onUpdate: NoAction, map: "entity_change_set_entity_fk")
-  entity_change_set                                                entity_change_set?                        @relation("entity_change_setToentity_change_set", fields: [parent_change_set_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_parent_fk")
-  other_entity_change_set                                          entity_change_set[]                       @relation("entity_change_setToentity_change_set")
-  principal_entity_change_set_published_byToprincipal              principal?                                @relation("entity_change_set_published_byToprincipal", fields: [published_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_published_by_fk")
-  principal_entity_change_set_rejected_byToprincipal               principal?                                @relation("entity_change_set_rejected_byToprincipal", fields: [rejected_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_rejected_by_fk")
-  principal_entity_change_set_reviewed_byToprincipal               principal?                                @relation("entity_change_set_reviewed_byToprincipal", fields: [reviewed_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_reviewed_by_fk")
-  principal_entity_change_set_status_changed_byToprincipal         principal?                                @relation("entity_change_set_status_changed_byToprincipal", fields: [status_changed_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_status_changed_by_fk")
-  principal_entity_change_set_submitted_byToprincipal              principal?                                @relation("entity_change_set_submitted_byToprincipal", fields: [submitted_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_submitted_by_fk")
-  principal_entity_change_set_updated_byToprincipal                principal?                                @relation("entity_change_set_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_updated_by_fk")
-  entity_contract_test_case                                        entity_contract_test_case[]
-  entity_field                                                     entity_field[]
-  entity_field_policy_binding                                      entity_field_policy_binding[]
-  entity_flow                                                      entity_flow[]
-  entity_flow_step                                                 entity_flow_step[]
-  entity_key                                                       entity_key[]
-  entity_key_field                                                 entity_key_field[]
-  entity_lifecycle_binding                                         entity_lifecycle_binding[]
-  entity_lifecycle_operation_binding                               entity_lifecycle_operation_binding[]
-  entity_numbering_binding                                         entity_numbering_binding[]
-  entity_operation                                                 entity_operation[]
-  entity_operation_permission                                      entity_operation_permission[]
-  entity_operation_rule                                            entity_operation_rule[]
-  entity_operation_scope_binding                                   metadata_entity_operation_scope_binding[]
-  entity_policy_binding                                            entity_policy_binding[]
-  entity_relation                                                  entity_relation[]
-  entity_relation_field                                            entity_relation_field[]
-  entity_relation_target                                           entity_relation_target[]
-  entity_release_entity_release_change_set_idToentity_change_set   entity_release[]                          @relation("entity_release_change_set_idToentity_change_set")
-  entity_runtime_profile                                           entity_runtime_profile[]
-  entity_search_field                                              entity_search_field[]
-  entity_search_profile                                            entity_search_profile[]
-  entity_surface                                                   entity_surface[]
-  entity_surface_component_binding                                 entity_surface_component_binding[]
-  entity_surface_field_binding                                     entity_surface_field_binding[]
-  entity_surface_operation                                         entity_surface_operation[]
-  entity_surface_section                                           entity_surface_section[]
-  entity_contract_revision                                         entity_contract_revision[]
-  entity_contract_test_run                                         entity_contract_test_run[]
-  entity_numbering_test_artifact                                   entity_numbering_test_artifact[]
+  id                                                                             String                                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                      String?                                   @db.Uuid
+  entity_id                                                                      String                                    @db.Uuid
+  change_set_code                                                                String
+  branch_code                                                                    String                                    @default("main")
+  base_release_id                                                                String?                                   @db.Uuid
+  parent_change_set_id                                                           String?                                   @db.Uuid
+  status                                                                         String                                    @default("draft")
+  lock_version                                                                   BigInt                                    @default(0)
+  title                                                                          String
+  change_summary                                                                 String?
+  change_reason_code                                                             String?
+  ticket_reference                                                               String?
+  submitted_at                                                                   DateTime?                                 @db.Timestamptz(6)
+  submitted_by                                                                   String?                                   @db.Uuid
+  reviewed_at                                                                    DateTime?                                 @db.Timestamptz(6)
+  reviewed_by                                                                    String?                                   @db.Uuid
+  approved_at                                                                    DateTime?                                 @db.Timestamptz(6)
+  approved_by                                                                    String?                                   @db.Uuid
+  rejected_at                                                                    DateTime?                                 @db.Timestamptz(6)
+  rejected_by                                                                    String?                                   @db.Uuid
+  rejection_reason                                                               String?
+  published_at                                                                   DateTime?                                 @db.Timestamptz(6)
+  published_by                                                                   String?                                   @db.Uuid
+  status_changed_at                                                              DateTime?                                 @db.Timestamptz(6)
+  status_changed_by                                                              String?                                   @db.Uuid
+  created_at                                                                     DateTime                                  @default(now()) @db.Timestamptz(6)
+  created_by                                                                     String                                    @db.Uuid
+  updated_at                                                                     DateTime?                                 @db.Timestamptz(6)
+  updated_by                                                                     String?                                   @db.Uuid
+  atlas_learning_inbox                                                           atlas_learning_inbox[]
+  principal_entity_change_set_approved_byToprincipal                             principal?                                @relation("entity_change_set_approved_byToprincipal", fields: [approved_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_approved_by_fk")
+  entity_release_entity_change_set_base_release_idToentity_release               entity_release?                           @relation("entity_change_set_base_release_idToentity_release", fields: [base_release_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_base_release_fk")
+  principal_entity_change_set_created_byToprincipal                              principal                                 @relation("entity_change_set_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "entity_change_set_created_by_fk")
+  entity                                                                         entity                                    @relation(fields: [entity_id], references: [id], onUpdate: NoAction, map: "entity_change_set_entity_fk")
+  entity_change_set                                                              entity_change_set?                        @relation("entity_change_setToentity_change_set", fields: [parent_change_set_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_parent_fk")
+  other_entity_change_set                                                        entity_change_set[]                       @relation("entity_change_setToentity_change_set")
+  principal_entity_change_set_published_byToprincipal                            principal?                                @relation("entity_change_set_published_byToprincipal", fields: [published_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_published_by_fk")
+  principal_entity_change_set_rejected_byToprincipal                             principal?                                @relation("entity_change_set_rejected_byToprincipal", fields: [rejected_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_rejected_by_fk")
+  principal_entity_change_set_reviewed_byToprincipal                             principal?                                @relation("entity_change_set_reviewed_byToprincipal", fields: [reviewed_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_reviewed_by_fk")
+  principal_entity_change_set_status_changed_byToprincipal                       principal?                                @relation("entity_change_set_status_changed_byToprincipal", fields: [status_changed_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_status_changed_by_fk")
+  principal_entity_change_set_submitted_byToprincipal                            principal?                                @relation("entity_change_set_submitted_byToprincipal", fields: [submitted_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_submitted_by_fk")
+  principal_entity_change_set_updated_byToprincipal                              principal?                                @relation("entity_change_set_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "entity_change_set_updated_by_fk")
+  entity_contract_test_case                                                      entity_contract_test_case[]
+  entity_field                                                                   entity_field[]
+  entity_field_policy_binding                                                    entity_field_policy_binding[]
+  entity_flow                                                                    entity_flow[]
+  entity_flow_step                                                               entity_flow_step[]
+  entity_key                                                                     entity_key[]
+  entity_key_field                                                               entity_key_field[]
+  entity_lifecycle_binding                                                       entity_lifecycle_binding[]
+  entity_lifecycle_operation_binding                                             entity_lifecycle_operation_binding[]
+  entity_numbering_binding                                                       entity_numbering_binding[]
+  entity_operation                                                               entity_operation[]
+  entity_operation_permission                                                    entity_operation_permission[]
+  entity_operation_rule                                                          entity_operation_rule[]
+  entity_operation_scope_binding                                                 metadata_entity_operation_scope_binding[]
+  entity_policy_binding                                                          entity_policy_binding[]
+  entity_relation                                                                entity_relation[]
+  entity_relation_field                                                          entity_relation_field[]
+  entity_relation_target                                                         entity_relation_target[]
+  entity_release_entity_release_change_set_idToentity_change_set                 entity_release[]                          @relation("entity_release_change_set_idToentity_change_set")
+  entity_runtime_profile                                                         entity_runtime_profile[]
+  entity_search_field                                                            entity_search_field[]
+  entity_search_profile                                                          entity_search_profile[]
+  entity_surface                                                                 entity_surface[]
+  entity_surface_component_binding                                               entity_surface_component_binding[]
+  entity_surface_field_binding                                                   entity_surface_field_binding[]
+  entity_surface_operation                                                       entity_surface_operation[]
+  entity_surface_section                                                         entity_surface_section[]
+  entity_contract_revision                                                       entity_contract_revision[]
+  entity_contract_test_run                                                       entity_contract_test_run[]
+  entity_draft_save_entity_draft_save_change_set_idToentity_change_set           entity_draft_save[]                       @relation("entity_draft_save_change_set_idToentity_change_set")
+  entity_draft_save_entity_draft_save_tenant_id_change_set_idToentity_change_set entity_draft_save[]                       @relation("entity_draft_save_tenant_id_change_set_idToentity_change_set")
+  entity_numbering_test_artifact                                                 entity_numbering_test_artifact[]
 
   @@unique([entity_id, change_set_code], map: "entity_change_set_entity_code_uq")
   @@unique([tenant_id, id], map: "entity_change_set_tenant_id_uq")
@@ -9492,45 +9490,6 @@ model artifact_compilation {
   @@schema("publication")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model bank_directory_authority {
-  singleton Boolean @id @default(true)
-  tenant_id String  @db.Uuid
-  tenant    tenant  @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("publication")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model bank_directory_release_link {
-  publication_release_id                                                                             String                  @id @db.Uuid
-  revision_id                                                                                        String                  @unique @db.Uuid
-  tenant_id                                                                                          String                  @db.Uuid
-  directory_release                                                                                  Json
-  release                                                                                            release                 @relation(fields: [publication_release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  bank_directory_revision_bank_directory_release_link_revision_idTobank_directory_revision           bank_directory_revision @relation("bank_directory_release_link_revision_idTobank_directory_revision", fields: [revision_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  bank_directory_revision_bank_directory_release_link_tenant_id_revision_idTobank_directory_revision bank_directory_revision @relation("bank_directory_release_link_tenant_id_revision_idTobank_directory_revision", fields: [tenant_id, revision_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("publication")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model bank_directory_review {
-  revision_id                                                                                  String                  @id @db.Uuid
-  tenant_id                                                                                    String                  @db.Uuid
-  decision                                                                                     String
-  reason                                                                                       String
-  reviewed_by                                                                                  String                  @db.Uuid
-  reviewed_at                                                                                  DateTime                @default(now()) @db.Timestamptz(6)
-  bank_directory_revision_bank_directory_review_revision_idTobank_directory_revision           bank_directory_revision @relation("bank_directory_review_revision_idTobank_directory_revision", fields: [revision_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  principal                                                                                    principal               @relation(fields: [tenant_id, reviewed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
-  bank_directory_revision_bank_directory_review_tenant_id_revision_idTobank_directory_revision bank_directory_revision @relation("bank_directory_review_tenant_id_revision_idTobank_directory_revision", fields: [tenant_id, revision_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("publication")
-}
-
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model business_partner_case_contract_release_link {
   tenant_id                               String                                  @db.Uuid
@@ -9688,7 +9647,6 @@ model release {
   metadata                                    Json                                         @default("{}")
   artifact                                    artifact[]
   artifact_compilation                        artifact_compilation[]
-  bank_directory_release_link                 bank_directory_release_link?
   business_partner_case_contract_release_link business_partner_case_contract_release_link?
   business_partner_definition_release_link    business_partner_definition_release_link?
   entity_baseline_release_link                entity_baseline_release_link?
@@ -10062,128 +10020,79 @@ model usage_reservation {
   @@schema("runtime_meta")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model bank_branch {
-  id                  String                @id @db.Uuid
-  institution_id      String                @db.Uuid
-  created_at          DateTime              @default(now()) @db.Timestamptz(6)
-  bank_institution    bank_institution      @relation(fields: [institution_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  bank_branch_version bank_branch_version[]
+  id               String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  institution_id   String            @db.Uuid
+  name             String
+  country_code     String            @db.Char(2)
+  location         Json              @default("{}")
+  status           String            @default("active")
+  effective_from   DateTime          @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_until  DateTime?         @db.Date
+  source           String?
+  source_record_id String?
+  created_at       DateTime          @default(now()) @db.Timestamptz(6)
+  created_by       String            @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  updated_at       DateTime?         @db.Timestamptz(6)
+  updated_by       String?           @db.Uuid
+  country          country           @relation(fields: [country_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "bank_branch_country_fk")
+  bank_institution bank_institution  @relation(fields: [institution_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bank_branch_institution_fk")
+  bank_identifier  bank_identifier[]
 
-  @@unique([institution_id, id])
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model bank_branch_version {
-  release_id                   String                         @db.Uuid
-  branch_id                    String                         @db.Uuid
-  institution_id               String                         @db.Uuid
-  name                         String
-  country_code                 String                         @db.Char(2)
-  location                     Json
-  status                       String
-  effective_from               DateTime                       @db.Date
-  effective_until              DateTime?                      @db.Date
-  country                      country                        @relation(fields: [country_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
-  bank_branch                  bank_branch                    @relation(fields: [institution_id, branch_id], references: [institution_id, id], onDelete: NoAction, onUpdate: NoAction)
-  bank_institution_version     bank_institution_version       @relation(fields: [release_id, institution_id], references: [release_id, institution_id], onDelete: NoAction, onUpdate: NoAction)
-  bank_directory_source_record bank_directory_source_record[]
-  bank_identifier              bank_identifier[]
-
-  @@id([release_id, branch_id])
-  @@unique([release_id, institution_id, branch_id])
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model bank_directory_activation {
-  singleton              Boolean                @id @default(true)
-  release_id             String                 @db.Uuid
-  activated_at           DateTime               @default(now()) @db.Timestamptz(6)
-  bank_directory_release bank_directory_release @relation(fields: [release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model bank_directory_release {
-  id                           String                         @id @db.Uuid
-  version                      BigInt                         @unique
-  published_at                 DateTime                       @db.Timestamptz(6)
-  source_manifest              Json
-  payload                      Json
-  content_hash                 String
-  created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
-  bank_directory_activation    bank_directory_activation[]
-  bank_directory_source_record bank_directory_source_record[]
-  bank_institution_version     bank_institution_version[]
-
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model bank_directory_source_record {
-  release_id               String                   @db.Uuid
-  source                   String
-  source_record_id         String
-  institution_id           String                   @db.Uuid
-  branch_id                String?                  @db.Uuid
-  bank_directory_release   bank_directory_release   @relation(fields: [release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  bank_branch_version      bank_branch_version?     @relation(fields: [release_id, institution_id, branch_id], references: [release_id, institution_id, branch_id], onDelete: NoAction, onUpdate: NoAction)
-  bank_institution_version bank_institution_version @relation(fields: [release_id, institution_id], references: [release_id, institution_id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@id([release_id, source, source_record_id])
+  @@unique([institution_id, id], map: "bank_branch_institution_id_uq")
+  @@unique([source, source_record_id], map: "bank_branch_source_uq", where: raw("(source IS NOT NULL)"))
   @@schema("shared")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model bank_identifier {
-  release_id               String                   @db.Uuid
-  id                       String                   @db.Uuid
-  institution_id           String                   @db.Uuid
-  branch_id                String?                  @db.Uuid
-  scheme                   String
-  scheme_namespace         String
-  jurisdiction             String                   @db.Char(2)
-  value                    String
-  effective_from           DateTime                 @db.Date
-  effective_until          DateTime?                @db.Date
-  country                  country                  @relation(fields: [jurisdiction], references: [code], onDelete: NoAction, onUpdate: NoAction)
-  bank_branch_version      bank_branch_version?     @relation(fields: [release_id, institution_id, branch_id], references: [release_id, institution_id, branch_id], onDelete: NoAction, onUpdate: NoAction)
-  bank_institution_version bank_institution_version @relation(fields: [release_id, institution_id], references: [release_id, institution_id], onDelete: NoAction, onUpdate: NoAction)
+  id               String           @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  institution_id   String           @db.Uuid
+  branch_id        String?          @db.Uuid
+  scheme           String
+  scheme_namespace String
+  jurisdiction     String           @db.Char(2)
+  value            String
+  effective_from   DateTime         @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_until  DateTime?        @db.Date
+  created_at       DateTime         @default(now()) @db.Timestamptz(6)
+  created_by       String           @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  updated_at       DateTime?        @db.Timestamptz(6)
+  updated_by       String?          @db.Uuid
+  bank_branch      bank_branch?     @relation(fields: [institution_id, branch_id], references: [institution_id, id], onDelete: NoAction, onUpdate: NoAction, map: "bank_identifier_branch_fk")
+  bank_institution bank_institution @relation(fields: [institution_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bank_identifier_institution_fk")
+  country          country          @relation(fields: [jurisdiction], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "bank_identifier_jurisdiction_fk")
 
-  @@id([release_id, id])
-  @@schema("shared")
-}
-
-model bank_institution {
-  id                       String                     @id @db.Uuid
-  created_at               DateTime                   @default(now()) @db.Timestamptz(6)
-  bank_branch              bank_branch[]
-  bank_institution_version bank_institution_version[]
-
+  @@index([institution_id, branch_id], map: "bank_identifier_owner_idx")
   @@schema("shared")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model bank_institution_version {
-  release_id                   String                         @db.Uuid
-  institution_id               String                         @db.Uuid
-  name                         String
-  country_code                 String                         @db.Char(2)
-  institution_type             String
-  status                       String
-  effective_from               DateTime                       @db.Date
-  effective_until              DateTime?                      @db.Date
-  bank_branch_version          bank_branch_version[]
-  bank_directory_source_record bank_directory_source_record[]
-  bank_identifier              bank_identifier[]
-  country                      country                        @relation(fields: [country_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
-  bank_institution             bank_institution               @relation(fields: [institution_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  bank_directory_release       bank_directory_release         @relation(fields: [release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model bank_institution {
+  id               String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  name             String
+  country_code     String            @db.Char(2)
+  institution_type String            @default("bank")
+  status           String            @default("active")
+  effective_from   DateTime          @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_until  DateTime?         @db.Date
+  source           String?
+  source_record_id String?
+  created_at       DateTime          @default(now()) @db.Timestamptz(6)
+  created_by       String            @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
+  updated_at       DateTime?         @db.Timestamptz(6)
+  updated_by       String?           @db.Uuid
+  bank_branch      bank_branch[]
+  bank_identifier  bank_identifier[]
+  country          country           @relation(fields: [country_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "bank_institution_country_fk")
 
-  @@id([release_id, institution_id])
+  @@unique([source, source_record_id], map: "bank_institution_source_uq", where: raw("(source IS NOT NULL)"))
   @@schema("shared")
 }
 
@@ -10322,9 +10231,9 @@ model country {
   bank_format_rule             bank_format_rule[]
   address                      address[]
   tenant_profile               tenant_profile[]
-  bank_branch_version          bank_branch_version[]
+  bank_branch                  bank_branch[]
   bank_identifier              bank_identifier[]
-  bank_institution_version     bank_institution_version[]
+  bank_institution             bank_institution[]
   locale                       locale[]
   state_region                 state_region[]
 
@@ -10580,32 +10489,6 @@ model uom {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model bank_directory_revision {
-  id                                                                                                     String                       @id @db.Uuid
-  tenant_id                                                                                              String                       @db.Uuid
-  base_release_id                                                                                        String?                      @db.Uuid
-  input_json                                                                                             Json
-  payload                                                                                                Json
-  sources                                                                                                Json
-  content_hash                                                                                           String
-  validation_report                                                                                      Json
-  idempotency_key                                                                                        String
-  created_at                                                                                             DateTime                     @default(now()) @db.Timestamptz(6)
-  created_by                                                                                             String                       @db.Uuid
-  bank_directory_release_link_bank_directory_release_link_revision_idTobank_directory_revision           bank_directory_release_link? @relation("bank_directory_release_link_revision_idTobank_directory_revision")
-  bank_directory_release_link_bank_directory_release_link_tenant_id_revision_idTobank_directory_revision bank_directory_release_link? @relation("bank_directory_release_link_tenant_id_revision_idTobank_directory_revision")
-  bank_directory_review_bank_directory_review_revision_idTobank_directory_revision                       bank_directory_review?       @relation("bank_directory_review_revision_idTobank_directory_revision")
-  bank_directory_review_bank_directory_review_tenant_id_revision_idTobank_directory_revision             bank_directory_review?       @relation("bank_directory_review_tenant_id_revision_idTobank_directory_revision")
-  principal                                                                                              principal                    @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
-  tenant                                                                                                 tenant                       @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@unique([tenant_id, id])
-  @@unique([tenant_id, idempotency_key])
-  @@schema("snapshot")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model business_partner_case_contract_revision {
   id                                          String                                       @id @db.Uuid
   tenant_id                                   String                                       @db.Uuid
@@ -10857,6 +10740,24 @@ model entity_contract_test_run {
   @@unique([tenant_id, id], map: "entity_contract_test_run_tenant_id_uq")
   @@index([tenant_id, change_set_id, executed_at(sort: Desc)], map: "entity_contract_test_run_change_set_idx")
   @@index([tenant_id, revision_id], map: "entity_contract_test_run_revision_idx", where: raw("(revision_id IS NOT NULL)"))
+  @@schema("snapshot")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entity_draft_save {
+  change_set_id                                                                  String             @db.Uuid
+  lock_version                                                                   BigInt
+  tenant_id                                                                      String?            @db.Uuid
+  graph                                                                          Json
+  graph_hash                                                                     String
+  captured_at                                                                    DateTime           @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  captured_by                                                                    String             @db.Uuid
+  capture_kind                                                                   String
+  entity_change_set_entity_draft_save_change_set_idToentity_change_set           entity_change_set  @relation("entity_draft_save_change_set_idToentity_change_set", fields: [change_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  entity_change_set_entity_draft_save_tenant_id_change_set_idToentity_change_set entity_change_set? @relation("entity_draft_save_tenant_id_change_set_idToentity_change_set", fields: [tenant_id, change_set_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([change_set_id, lock_version])
   @@schema("snapshot")
 }
 

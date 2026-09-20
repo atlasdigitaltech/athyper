@@ -6,6 +6,7 @@ import {
 } from "@athyper/server-contract-metadata";
 import {
   parsePublicationArtifactEnvelope,
+  assertCompiledEntityRuntimePublication,
   PublicationContractError,
   type LoadedPublicationArtifact,
   type PublicationArtifactDocumentV1,
@@ -119,6 +120,13 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
         manifest.evidence?.["compileReportHash"] !== compileReportHash
       )
         throw failure("ARTIFACT_MANIFEST_INVALID");
+    }
+    if (envelope.artifactKind === "compiled_entity_runtime") {
+      try {
+        assertCompiledEntityRuntimePublication(envelope.payload);
+      } catch {
+        throw failure("ARTIFACT_PAYLOAD_INVALID");
+      }
     }
     const hasLearning =
       envelope.artifactKind === "entity_runtime" &&
@@ -289,11 +297,11 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
             descriptorSchemaVersion:
               envelope.payload.entityDescriptor.descriptorSchemaVersion,
           }
-        : envelope.artifactKind === "bank_directory"
-          ? {
-              payloadHash: envelope.payload.contentHash,
-              payloadSchemaVersion: "1.0.0",
-            }
+        : envelope.artifactKind === "compiled_entity_runtime"
+            ? {
+                payloadHash: manifest.payloadSha256,
+                payloadSchemaVersion: "2.0",
+              }
           : {
               definitionBundleHash: envelope.payload.bundleHash,
               definitionBundleSchemaVersion:

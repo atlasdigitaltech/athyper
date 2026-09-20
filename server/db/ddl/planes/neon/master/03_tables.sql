@@ -1418,6 +1418,7 @@ CREATE TABLE master.bank_account_house_config (
     id                    uuid                              NOT NULL DEFAULT shared.uuidv7(),
     tenant_id             uuid                              NOT NULL,
     bank_account_link_id  uuid                              NOT NULL,
+    company_code_id       uuid                              NOT NULL,
     gl_account_id         uuid                              NOT NULL,
     local_account_type    text,
     account_nickname      text,
@@ -1458,6 +1459,37 @@ CREATE TABLE master.bank_account_house_config (
     CONSTRAINT bank_account_house_config_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
+
+-- Payment methods a house-bank account may be used with. Direction must agree with the
+-- account's enabled uses; the payment method catalog itself stays in master.payment_method.
+CREATE TABLE master.bank_account_house_payment_method (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid        NOT NULL,
+    house_config_id       uuid        NOT NULL,
+    payment_method_id     uuid        NOT NULL,
+    is_default            boolean     NOT NULL DEFAULT false,
+    effective_from        date        NOT NULL DEFAULT CURRENT_DATE,
+    effective_until       date,
+    metadata              jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    created_by            uuid        NOT NULL,
+    updated_at            timestamptz,
+    updated_by            uuid,
+
+    CONSTRAINT bank_account_house_payment_method_pkey PRIMARY KEY (id),
+    CONSTRAINT bank_account_house_payment_method_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT bank_account_house_payment_method_uq
+        UNIQUE (tenant_id, house_config_id, payment_method_id, effective_from),
+    CONSTRAINT bank_account_house_payment_method_range_chk
+        CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT bank_account_house_payment_method_metadata_object_chk
+        CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT bank_account_house_payment_method_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE master.bank_account_house_payment_method IS
+  'Payment methods enabled for a house-bank configuration. A method must be active and match the configuration direction (outbound needs disbursement, inbound needs collection).';
 
 -- ============================================================================
 -- Neon payment method catalog.

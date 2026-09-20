@@ -12,6 +12,8 @@
     "./publication-orchestrator": "./src/publication-orchestrator.ts",
     "./business-partner-foundation-definition": "./src/business-partner-foundation-definition.ts",
     "./business-partner-definition-compiler": "./src/business-partner-definition-compiler.ts",
+    "./compiled-entity-artifact-compiler": "./src/compiled-entity-artifact-compiler.ts",
+    "./compiled-entity-collection-compiler": "./src/compiled-entity-collection-compiler.ts",
     "./business-partner-case-contract-service": "./src/business-partner-case-contract-service.ts"
   },
   "scripts": {
@@ -20,8 +22,7 @@
     "test": "vitest run",
     "test:integration:publication-authority-repository": "pnpm exec tsx src/__tests__/integration/publication-authority-repository.mjs",
     "test:integration:case-contract-publication": "tsx src/__tests__/integration/business-partner-case-contract-publication.ts",
-    "test:integration:three-plane": "pnpm exec tsx src/__tests__/integration/three-plane-local-projection.mjs",
-    "test:integration:bank-directory": "tsx src/__tests__/integration/bank-directory.mjs"
+    "test:integration:three-plane": "pnpm exec tsx src/__tests__/integration/three-plane-local-projection.mjs"
   },
   "dependencies": {
     "@athyper/server-contract-audit": "workspace:*",

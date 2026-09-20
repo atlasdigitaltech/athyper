@@ -1,7 +1,11 @@
+import { entityRuntimeClient } from "@athyper/platform-entity-descriptor-client";
+import type { HttpClient } from "@athyper/platform-api-client";
 import type { createBusinessPartnerClient, PartnerRequest } from "./client";
+
 /** Once a case exists, failures always return that case for correction instead of recreating it. */
 export async function submitBusinessPartnerIntake(
   api: ReturnType<typeof createBusinessPartnerClient>,
+  http: HttpClient,
   request: PartnerRequest,
 ) {
   try {
@@ -12,7 +16,14 @@ export async function submitBusinessPartnerIntake(
         detail:
           "Request saved. Resolve its validation findings before submitting.",
       };
-    await api.submit(request.id, checked.case.rowVersion);
+    await entityRuntimeClient.operation(http, {
+      entityCode: "business_partner_request",
+      recordId: request.id,
+      operationKey: "submit",
+      expectedVersion: checked.case.rowVersion,
+      idempotencyKey: crypto.randomUUID(),
+      input: {},
+    });
     return { submitted: true, detail: "Request submitted for approval." };
   } catch (cause) {
     return {

@@ -68,7 +68,7 @@ export interface ExperienceServiceOptions {
     context: VerifiedRequestContext,
     at: Date,
   ) => Promise<{
-    readonly densityCode: "comfortable" | "compact";
+    readonly densityCode: "comfortable" | "compact" | "spacious";
     readonly configurationRevision: string;
   }>;
   readonly now?: () => Date;
@@ -1833,7 +1833,7 @@ function appearance(
     : undefined;
 }
 function density(value: unknown): ExperienceProfile["densityCode"] | undefined {
-  return ["comfortable", "compact"].includes(String(value))
+  return ["comfortable", "compact", "spacious"].includes(String(value))
     ? (value as ExperienceProfile["densityCode"])
     : undefined;
 }

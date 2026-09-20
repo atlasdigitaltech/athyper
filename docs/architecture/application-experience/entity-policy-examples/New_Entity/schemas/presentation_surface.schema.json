@@ -30,6 +30,7 @@
     "fieldDiff": {},
     "header": {},
     "layout": {},
+    "navigation": {},
     "pageSizes": {},
     "plane": {
       "const": "neon"
@@ -43,6 +44,7 @@
     },
     "sections": {},
     "sort": {},
+    "summaryView": {},
     "surfaceKey": {}
   }
 }

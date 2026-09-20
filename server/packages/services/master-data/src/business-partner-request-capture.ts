@@ -29,7 +29,6 @@ export function validateRequestCapture(
       "bankSource",
       "bankInstitutionId",
       "bankBranchId",
-      "bankDirectoryReleaseId",
       "accountIdType",
       "protectedValueToken",
       "maskedValue",
@@ -67,24 +66,20 @@ export function validateRequestCapture(
       !["directory", "unlisted"].includes(String(row.bankSource))
     )
       fail("Bank selection source is invalid.");
-    for (const key of [
-      "bankInstitutionId",
-      "bankBranchId",
-      "bankDirectoryReleaseId",
-    ])
+    for (const key of ["bankInstitutionId", "bankBranchId"])
       if (row[key] && !uuid.test(String(row[key])))
-        fail("Bank directory coordinate is invalid.");
+        fail("Bank coordinate is invalid.");
     if (
       row.bankSource === "unlisted" &&
-      (row.bankInstitutionId || row.bankBranchId || row.bankDirectoryReleaseId)
+      (row.bankInstitutionId || row.bankBranchId)
     )
       fail("Unlisted banks cannot claim a directory match.");
     if (
       !draft &&
       row.bankSource === "directory" &&
-      (!row.bankInstitutionId || !row.bankDirectoryReleaseId)
+      !row.bankInstitutionId
     )
-      fail("Select a published bank or enter an unlisted bank for review.");
+      fail("Select a bank or enter an unlisted bank for review.");
     if (row.currencyCode && !/^[A-Z]{3}$/.test(String(row.currencyCode)))
       fail("Account currency must be a three-letter code.");
     if (row.bic && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(String(row.bic)))
@@ -180,14 +175,12 @@ export async function linkRequestCaptureDocuments(
       if (bank.clearingCode && typeof capture.routingPattern === "string" && capture.routingPattern && !new RegExp(capture.routingPattern).test(String(bank.clearingCode))) fail("Routing code does not match the selected country format.");
     }
     if (!bank.bankInstitutionId) continue;
-    if (!bank.bankDirectoryReleaseId)
-      fail("Bank directory release is required.");
     const match = (
       await sql<{
         name: string;
         country_code: string;
         branch_name: string | null;
-      }>`SELECT i.name,i.country_code,b.name branch_name FROM shared.bank_institution_version i LEFT JOIN shared.bank_branch_version b ON b.release_id=i.release_id AND b.institution_id=i.institution_id AND b.branch_id=${String(bank.bankBranchId ?? "") || null}::uuid AND b.status='active' AND b.effective_from<=CURRENT_DATE AND (b.effective_until IS NULL OR b.effective_until>CURRENT_DATE) WHERE i.release_id=${String(bank.bankDirectoryReleaseId)}::uuid AND i.institution_id=${String(bank.bankInstitutionId)}::uuid AND i.status='active' AND i.effective_from<=CURRENT_DATE AND (i.effective_until IS NULL OR i.effective_until>CURRENT_DATE)`.execute(
+      }>`SELECT i.name,i.country_code,b.name branch_name FROM shared.bank_institution i LEFT JOIN shared.bank_branch b ON b.institution_id=i.id AND b.id=${String(bank.bankBranchId ?? "") || null}::uuid AND b.status='active' AND b.effective_from<=CURRENT_DATE AND (b.effective_until IS NULL OR b.effective_until>CURRENT_DATE) WHERE i.id=${String(bank.bankInstitutionId)}::uuid AND i.status='active' AND i.effective_from<=CURRENT_DATE AND (i.effective_until IS NULL OR i.effective_until>CURRENT_DATE)`.execute(
         tx,
       )
     ).rows[0];
@@ -198,7 +191,7 @@ export async function linkRequestCaptureDocuments(
       (bank.bankBranchId &&
         (!match.branch_name || match.branch_name !== bank.branch))
     )
-      fail("Bank directory details do not match the selected reference.");
+      fail("Bank details do not match the selected reference.");
   }
   for (const doc of input.extensions.supportingDocuments ?? []) {
     if (!doc.attachmentId) continue;

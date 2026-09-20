@@ -336,6 +336,22 @@ export interface BusinessPartner360SafeError {
   readonly requestId?: string;
 }
 
+export interface BusinessPartner360Overview {
+  readonly businessPartnerVersion: number;
+  readonly values: Readonly<Record<string, unknown>>;
+}
+
+export interface BusinessPartner360Header {
+  readonly businessPartnerVersion: number;
+  readonly identity: Readonly<{
+    readonly id: string;
+    readonly code: string;
+    readonly category: BusinessPartner360PartyCategory;
+    readonly name: string;
+    readonly lifecycleStatus: string;
+  }>;
+}
+
 export interface BusinessPartner360Service {
   /** Read-only workflow readiness. Execution separately validates purpose,
    * child ownership and replay claims before returning a restricted value. */
@@ -345,6 +361,10 @@ export interface BusinessPartner360Service {
       readonly historical?: boolean;
     },
   ): Promise<"allowed" | "workflow_blocked" | "not_applicable">;
+  /** Bounded record admission/core projection used by generic runtime bootstrap. */
+  header(query: BusinessPartner360Query): Promise<BusinessPartner360Header>;
+  /** Bounded Overview projection; it never invokes summary fragments or completeness. */
+  overview(query: BusinessPartner360Query): Promise<BusinessPartner360Overview>;
   summary(query: BusinessPartner360Query): Promise<BusinessPartner360Summary>;
   section<T = unknown>(
     query: BusinessPartner360PageQuery & {

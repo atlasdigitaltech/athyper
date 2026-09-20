@@ -135,6 +135,23 @@ export class KyselyBusinessPartner360Repository implements BusinessPartner360Rep
       scopeResolved,
     };
   }
+  async readOverview(
+    input: { readonly tenantId: string; readonly businessPartnerId: string },
+    transaction: Tx,
+  ): Promise<Readonly<Record<string, unknown>> | null> {
+    const row = (
+      await sql<Row>`SELECT
+        id::text, code, name, registration_country_code::text, partner_category::text,
+        ownership_class::text, incorporation_date::text, website_url, description,
+        status::text, record_version, legal_form_value_id::text, business_type_value_id::text,
+        founded_year, employee_count, employee_count_as_of::text, employee_count_scope
+        FROM master.business_partner
+        WHERE tenant_id=${input.tenantId}::uuid AND id=${input.businessPartnerId}::uuid
+          AND partner_category='organization'
+        LIMIT 1`.execute(transaction)
+    ).rows[0];
+    return row ? Object.freeze({ ...row }) : null;
+  }
   async readFragments(
     input: Parameters<BusinessPartner360Repository<Tx>["readFragments"]>[0],
     transaction: Tx,

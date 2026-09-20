@@ -5,8 +5,8 @@ import { useEntityApplication, EntityApplicationSection } from "@athyper/platfor
 import { NeonEntityList } from "@athyper/product-neon-list-view";
 type ListDensity = "compact" | "comfortable" | "spacious";
 
-export function EntityApplicationRoute({entityCode,initialDensity,fallback}:{readonly entityCode:string;readonly initialDensity?:ListDensity;readonly fallback?:ReactNode}) {
-  const app=useEntityApplication(),path=usePathname();
+export function EntityApplicationRoute({entityCode,initialDensity,fallback,activePath}:{readonly entityCode:string;readonly initialDensity?:ListDensity;readonly fallback?:ReactNode;readonly activePath?:string}) {
+  const app=useEntityApplication(),pathname=usePathname(),path=activePath ?? pathname;
   const section=app?.descriptor.navigation?.find(item=>item.href===path || item.aliases.includes(path));
   if(section?.content) return <EntityApplicationSection key={section.key} sectionKey={section.key} initialDensity={initialDensity}/>;
   if(app?.descriptor.application && path===app.descriptor.application.basePath) return <EntityApplicationSection initialDensity={initialDensity}/>;

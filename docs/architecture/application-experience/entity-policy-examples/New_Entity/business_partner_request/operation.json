@@ -10,7 +10,6 @@
     {
       "key": "read",
       "permissionCode": "neon.business_partner_request.read",
-      "permissionStatus": "proposed_requires_catalog_verification",
       "execution": {
         "handlerKey": "neon.business_partner_request.read.v1",
         "registryRequired": true
@@ -20,12 +19,12 @@
         "resolverKey": "neon.business-context.v1",
         "denyUnresolved": true
       },
-      "idempotency": "not_applicable"
+      "idempotency": "not_applicable",
+      "permissionStatus": "proposed_requires_catalog_verification"
     },
     {
       "key": "create_draft",
       "permissionCode": "neon.business_partner_request.create_draft",
-      "permissionStatus": "proposed_requires_catalog_verification",
       "execution": {
         "handlerKey": "neon.business_partner_request.create_draft.v1",
         "registryRequired": true
@@ -35,12 +34,12 @@
         "resolverKey": "neon.business-context.v1",
         "denyUnresolved": true
       },
-      "idempotency": "required"
+      "idempotency": "required",
+      "permissionStatus": "proposed_requires_catalog_verification"
     },
     {
       "key": "save_draft",
       "permissionCode": "neon.business_partner_request.save_draft",
-      "permissionStatus": "proposed_requires_catalog_verification",
       "execution": {
         "handlerKey": "neon.business_partner_request.save_draft.v1",
         "registryRequired": true
@@ -50,14 +49,14 @@
         "resolverKey": "neon.business-context.v1",
         "denyUnresolved": true
       },
-      "idempotency": "required"
+      "idempotency": "required",
+      "permissionStatus": "proposed_requires_catalog_verification"
     },
     {
       "key": "submit",
-      "permissionCode": "neon.business_partner_request.submit",
-      "permissionStatus": "proposed_requires_catalog_verification",
+      "permissionCode": "neon.relationship.entity_case.submit",
       "execution": {
-        "handlerKey": "neon.business_partner_request.submit.v1",
+        "handlerKey": "neon.bp.governed-request.submit.v1",
         "registryRequired": true
       },
       "scopeBinding": {
@@ -65,12 +64,20 @@
         "resolverKey": "neon.business-context.v1",
         "denyUnresolved": true
       },
-      "idempotency": "required"
+      "idempotency": "required",
+      "inputSchema": {
+        "properties": {},
+        "additionalProperties": false
+      },
+      "targetBinding": {
+        "targetEntityCode": "business_partner_request",
+        "targetResolution": "route_record",
+        "clientSuppliedTargetEntityCode": "forbidden"
+      }
     },
     {
       "key": "return",
       "permissionCode": "neon.business_partner_request.return",
-      "permissionStatus": "proposed_requires_catalog_verification",
       "execution": {
         "handlerKey": "neon.business_partner_request.return.v1",
         "registryRequired": true
@@ -80,12 +87,12 @@
         "resolverKey": "neon.business-context.v1",
         "denyUnresolved": true
       },
-      "idempotency": "required"
+      "idempotency": "required",
+      "permissionStatus": "proposed_requires_catalog_verification"
     },
     {
       "key": "reject",
       "permissionCode": "neon.business_partner_request.reject",
-      "permissionStatus": "proposed_requires_catalog_verification",
       "execution": {
         "handlerKey": "neon.business_partner_request.reject.v1",
         "registryRequired": true
@@ -95,12 +102,12 @@
         "resolverKey": "neon.business-context.v1",
         "denyUnresolved": true
       },
-      "idempotency": "required"
+      "idempotency": "required",
+      "permissionStatus": "proposed_requires_catalog_verification"
     },
     {
       "key": "approve",
       "permissionCode": "neon.business_partner_request.approve",
-      "permissionStatus": "proposed_requires_catalog_verification",
       "execution": {
         "handlerKey": "neon.business_partner_request.approve.v1",
         "registryRequired": true
@@ -110,14 +117,14 @@
         "resolverKey": "neon.business-context.v1",
         "denyUnresolved": true
       },
-      "idempotency": "required"
+      "idempotency": "required",
+      "permissionStatus": "proposed_requires_catalog_verification"
     },
     {
       "key": "materialize",
-      "permissionCode": "neon.business_partner_request.materialize",
-      "permissionStatus": "proposed_requires_catalog_verification",
+      "permissionCode": "neon.relationship.entity_case.materialize",
       "execution": {
-        "handlerKey": "neon.business_partner_request.materialize.v1",
+        "handlerKey": "neon.bp.governed-request.materialize.v1",
         "registryRequired": true
       },
       "scopeBinding": {
@@ -125,7 +132,16 @@
         "resolverKey": "neon.business-context.v1",
         "denyUnresolved": true
       },
-      "idempotency": "required"
+      "idempotency": "required",
+      "inputSchema": {
+        "properties": {},
+        "additionalProperties": false
+      },
+      "targetBinding": {
+        "targetEntityCode": "business_partner_request",
+        "targetResolution": "route_record",
+        "clientSuppliedTargetEntityCode": "forbidden"
+      }
     }
   ],
   "policyBindings": [
@@ -772,5 +788,5 @@
     "idempotency": "one_per_materialization_receipt",
     "lifecycleTriggerExtensions": "requires_approved_transition_mapping"
   },
-  "artifactHash": "sha256:d585ac78975c84174fda70ca8531aec2c308d6366de11a43dc1a5e59828c77c0"
+  "artifactHash": "sha256:88b05474dab21ce572b2fc2add8a6a145ac0b64f5cae7a457e23217a4de4db78"
 }

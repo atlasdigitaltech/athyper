@@ -42,6 +42,151 @@
       }
     },
     {
+      "key": "assign_organization_scope",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "execution": {
+        "handlerKey": "neon.bp.governed-request.organization-scope.v1",
+        "registryRequired": true
+      },
+      "inputSchema": {
+        "required": [
+          "operatingOrganizationId",
+          "requestedRole",
+          "proposedPayload"
+        ],
+        "properties": {
+          "operatingOrganizationId": {
+            "type": "string"
+          },
+          "requestedRole": {
+            "type": "string",
+            "enum": [
+              "supplier",
+              "customer"
+            ]
+          },
+          "proposedPayload": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "scopeBinding": {
+        "scopeSource": "validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "requiredContextCoordinates": [
+          "operatingOrganizationId"
+        ],
+        "denyUnresolved": true
+      },
+      "idempotency": "required",
+      "targetBinding": {
+        "targetEntityCode": "business_partner",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
+    },
+    {
+      "key": "configure_company_scope",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "execution": {
+        "handlerKey": "neon.bp.governed-request.company-scope.v1",
+        "registryRequired": true
+      },
+      "inputSchema": {
+        "required": [
+          "operatingOrganizationId",
+          "requestedRole",
+          "companyCodeId",
+          "proposedPayload"
+        ],
+        "properties": {
+          "operatingOrganizationId": {
+            "type": "string"
+          },
+          "companyCodeId": {
+            "type": "string"
+          },
+          "requestedRole": {
+            "type": "string",
+            "enum": [
+              "supplier",
+              "customer"
+            ]
+          },
+          "proposedPayload": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "scopeBinding": {
+        "scopeSource": "validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "requiredContextCoordinates": [
+          "operatingOrganizationId"
+        ],
+        "denyUnresolved": true
+      },
+      "idempotency": "required",
+      "targetBinding": {
+        "targetEntityCode": "business_partner",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
+    },
+    {
+      "key": "request_role_extension",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "execution": {
+        "handlerKey": "neon.bp.governed-request.role-extension.v1",
+        "registryRequired": true
+      },
+      "inputSchema": {
+        "required": [
+          "operatingOrganizationId",
+          "requestedRole",
+          "proposedPayload"
+        ],
+        "properties": {
+          "operatingOrganizationId": {
+            "type": "string"
+          },
+          "companyCodeId": {
+            "type": "string"
+          },
+          "requestedRole": {
+            "type": "string",
+            "enum": [
+              "supplier",
+              "customer"
+            ]
+          },
+          "proposedPayload": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "scopeBinding": {
+        "scopeSource": "validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "requiredContextCoordinates": [
+          "operatingOrganizationId"
+        ],
+        "denyUnresolved": true
+      },
+      "idempotency": "required",
+      "targetBinding": {
+        "targetEntityCode": "business_partner",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
+    },
+    {
       "key": "print_statement",
       "permissionCode": "neon.relationship.business_partner.print",
       "permissionStatus": "proposed_requires_catalog_verification",
@@ -223,5 +368,5 @@
     "download": "short_lived_authorized_url",
     "linkKindsStatus": "validate_against_document_service_before_activation"
   },
-  "artifactHash": "sha256:91d59e8742a8025490684938d3bab24e723621a1bf9bcbae61079c4ce7f9c3e6"
+  "artifactHash": "sha256:58baf1ed4f6c559382373df6f74440d4fb8152b96d5f8d7547ece0e51643e67d"
 }

@@ -499,7 +499,8 @@
         "sourceMappingCatalog",
         "sourceMappingKeys",
         "steps",
-        "supportedSources"
+        "supportedSources",
+        "workflowDefinitions"
       ],
       "composition": [
         "cacheKey",
@@ -616,6 +617,132 @@
         "presentationRef",
         "presentationSlot",
         "stepKey"
+      ],
+      "workflowDefinitions": [
+        "customer",
+        "governance",
+        "supplier",
+        "workforce"
+      ],
+      "workflowDefinitions.customer": [
+        "escalation",
+        "sod",
+        "stages",
+        "version"
+      ],
+      "workflowDefinitions.customer.sod": [
+        "applicantCannotDecide",
+        "makerCannotDecide",
+        "mfaAtDecision"
+      ],
+      "workflowDefinitions.customer.stages.[]": [
+        "code",
+        "escalateAtMinutes",
+        "label",
+        "mode",
+        "noSelfApproval",
+        "quorum",
+        "remindersAtMinutes",
+        "slaMinutes"
+      ],
+      "workflowDefinitions.customer.stages.[].quorum": [
+        "kind",
+        "value"
+      ],
+      "workflowDefinitions.customer.stages.[].label": [
+        "defaultText",
+        "labelKey"
+      ],
+      "workflowDefinitions.governance": [
+        "escalation",
+        "sod",
+        "stages",
+        "version"
+      ],
+      "workflowDefinitions.governance.sod": [
+        "makerCannotDecide",
+        "mfaAtDecision"
+      ],
+      "workflowDefinitions.governance.stages.[]": [
+        "code",
+        "escalateAtMinutes",
+        "label",
+        "mode",
+        "noSelfApproval",
+        "quorum",
+        "remindersAtMinutes",
+        "slaMinutes"
+      ],
+      "workflowDefinitions.governance.stages.[].quorum": [
+        "kind"
+      ],
+      "workflowDefinitions.governance.stages.[].label": [
+        "defaultText",
+        "labelKey"
+      ],
+      "workflowDefinitions.supplier": [
+        "escalation",
+        "sod",
+        "stages",
+        "version"
+      ],
+      "workflowDefinitions.supplier.sod": [
+        "applicantCannotDecide",
+        "makerCannotDecide",
+        "mfaAtDecision"
+      ],
+      "workflowDefinitions.supplier.stages.[]": [
+        "code",
+        "escalateAtMinutes",
+        "label",
+        "mode",
+        "noSelfApproval",
+        "quorum",
+        "remindersAtMinutes",
+        "slaMinutes",
+        "when"
+      ],
+      "workflowDefinitions.supplier.stages.[].quorum": [
+        "kind",
+        "value"
+      ],
+      "workflowDefinitions.supplier.stages.[].label": [
+        "defaultText",
+        "labelKey"
+      ],
+      "workflowDefinitions.supplier.stages.[].when": [
+        "operator",
+        "path",
+        "value"
+      ],
+      "workflowDefinitions.workforce": [
+        "escalation",
+        "sod",
+        "stages",
+        "version"
+      ],
+      "workflowDefinitions.workforce.sod": [
+        "applicantCannotDecide",
+        "makerCannotDecide",
+        "mfaAtDecision",
+        "restrictedEvidencePurposeRequired"
+      ],
+      "workflowDefinitions.workforce.stages.[]": [
+        "code",
+        "escalateAtMinutes",
+        "label",
+        "mode",
+        "noSelfApproval",
+        "quorum",
+        "remindersAtMinutes",
+        "slaMinutes"
+      ],
+      "workflowDefinitions.workforce.stages.[].quorum": [
+        "kind"
+      ],
+      "workflowDefinitions.workforce.stages.[].label": [
+        "defaultText",
+        "labelKey"
       ]
     },
     "operation": {
@@ -738,6 +865,7 @@
         "draftEntityCode",
         "execution",
         "idempotency",
+        "inputSchema",
         "key",
         "ownerChangeIsolationRequired",
         "permissionCode",
@@ -752,6 +880,7 @@
       ],
       "operations.[].scopeBinding": [
         "denyUnresolved",
+        "requiredContextCoordinates",
         "resolverKey",
         "scopeSource"
       ],
@@ -1006,10 +1135,12 @@
         "bindingKey"
       ],
       "contentModel": [
-        "eventScope",
+        "eventEntityCode",
         "handlerKey",
         "implementationStatus",
-        "kind"
+        "kind",
+        "ownerEntityCode",
+        "paginationMode"
       ],
       "dataBinding": [
         "existingRoutes",
@@ -1179,6 +1310,7 @@
         "fieldDiff",
         "header",
         "layout",
+        "navigation",
         "pageSizes",
         "plane",
         "policyManifest",
@@ -1188,11 +1320,13 @@
         "schemaVersion",
         "sections",
         "sort",
+        "summaryView",
         "surfaceKey"
       ],
       "actions.[]": [
         "enabledBy",
         "interaction",
+        "label",
         "operationKey",
         "placement"
       ],
@@ -1260,6 +1394,37 @@
       "sort.[]": [
         "direction",
         "field"
+      ],
+      "actions.[].label": [
+        "labelKey",
+        "defaultText"
+      ],
+      "navigation": [
+        "tabs"
+      ],
+      "navigation.tabs.[]": [
+        "key",
+        "label",
+        "provider",
+        "sectionKey",
+        "sectionKeys"
+      ],
+      "navigation.tabs.[].label": [
+        "labelKey",
+        "defaultText"
+      ],
+      "summaryView": [
+        "cards"
+      ],
+      "summaryView.cards.[]": [
+        "key",
+        "label",
+        "provider",
+        "rendererKey"
+      ],
+      "summaryView.cards.[].label": [
+        "labelKey",
+        "defaultText"
       ]
     }
   }

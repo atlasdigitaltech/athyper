@@ -197,6 +197,8 @@ export const STUDIO_META_ENTITY_AUTHORING_RELAY_OPERATIONS: readonly RelayOperat
       maxBodyBytes: 4096,
     })),
   ]);
+
+
 export const STUDIO_AUTHORIZATION_MANAGEMENT_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
     {
@@ -216,7 +218,6 @@ export const STUDIO_AUTHORIZATION_MANAGEMENT_RELAY_OPERATIONS: readonly RelayOpe
       maxBodyBytes: 64 * 1024,
     })),
   ]);
-
 export const IAM_ME_OPERATION: RelayOperation = Object.freeze({
   id: "iam.me",
   method: "GET",
@@ -972,6 +973,36 @@ export const ENTITY_RECORD_TRANSITION_OPERATION: RelayOperation = Object.freeze(
     maxBodyBytes: 64 * 1024,
   },
 );
+export const ENTITY_RUNTIME_BOOTSTRAP_OPERATION: RelayOperation = Object.freeze({
+  id: "entity-runtime.bootstrap",
+  method: "GET",
+  path: "/api/entity-runtime/:entityCode/records/:recordId/bootstrap",
+  requestClass: "json",
+  requiresTenant: true,
+});
+export const ENTITY_RUNTIME_SUMMARY_OPERATION: RelayOperation = Object.freeze({
+  id: "entity-runtime.summary",
+  method: "GET",
+  path: "/api/entity-runtime/:entityCode/records/:recordId/summary",
+  requestClass: "json",
+  requiresTenant: true,
+});
+export const ENTITY_RUNTIME_SECTION_OPERATION: RelayOperation = Object.freeze({
+  id: "entity-runtime.section",
+  method: "GET",
+  path: "/api/entity-runtime/:entityCode/records/:recordId/sections/:sectionKey",
+  requestClass: "json",
+  requiresTenant: true,
+});
+export const ENTITY_RUNTIME_OPERATION: RelayOperation = Object.freeze({
+  id: "entity-runtime.operation",
+  method: "POST",
+  path: "/api/entity-runtime/:entityCode/records/:recordId/operations/:operationKey",
+  requestClass: "json",
+  requiresTenant: true,
+  idempotency: "required",
+  maxBodyBytes: 256 * 1024,
+});
 export const ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
     ENTITY_FORM_DESCRIPTOR_OPERATION,
@@ -980,6 +1011,10 @@ export const ENTITY_RECORD_RUNTIME_RELAY_OPERATIONS: readonly RelayOperation[] =
     ENTITY_RECORD_READ_OPERATION,
     ENTITY_RECORD_PATCH_OPERATION,
     ENTITY_RECORD_TRANSITION_OPERATION,
+    ENTITY_RUNTIME_BOOTSTRAP_OPERATION,
+    ENTITY_RUNTIME_SUMMARY_OPERATION,
+    ENTITY_RUNTIME_SECTION_OPERATION,
+    ENTITY_RUNTIME_OPERATION,
   ]);
 export const EXPERIENCE_SURFACE_READ_OPERATION: RelayOperation = Object.freeze({
   id: "experience-surfaces.read",
@@ -1099,14 +1134,6 @@ export const BUSINESS_PARTNER_REQUEST_CREATE_OPERATION: RelayOperation =
     requiresTenant: true,
     idempotency: "required",
     maxBodyBytes: 1024 * 1024,
-  });
-export const BUSINESS_PARTNER_REQUEST_FORM_OPERATION: RelayOperation =
-  Object.freeze({
-    id: "neon.business-partner-requests.form",
-    method: "GET",
-    path: "/api/neon/business-partner-definitions/active-request-form",
-    requestClass: "json",
-    requiresTenant: true,
   });
 export const BUSINESS_PARTNER_REQUEST_LIST_OPERATION: RelayOperation =
   Object.freeze({
@@ -1647,7 +1674,6 @@ export const BUSINESS_PARTNER_RELAY_OPERATIONS: readonly RelayOperation[] =
     ...(["view", "start", "decide", "cancel", "information", "escalate", "edit-preview"] as const).map(action => ({ id: `supplier.process-tasks.${action}`, method: action === "view" ? "GET" as const : "POST" as const, path: `/api/governance/process-tasks/cases/:caseId/${action}` as const, requestClass: "json" as const, requiresTenant: true, allowedQuery: [], ...(action !== "view" ? { idempotency: "required" as const, maxBodyBytes: action === "edit-preview" ? 65536 : 16384 } : {}) })),
     BUSINESS_PARTNER_GOVERNED_IMPORT_OPERATION,
     BUSINESS_PARTNER_360_COMMENT_CREATE_OPERATION,
-    BUSINESS_PARTNER_REQUEST_FORM_OPERATION,
     ...BUSINESS_PARTNER_CASE_RELAY_OPERATIONS,
     BUSINESS_PARTNER_AGGREGATE_READ_OPERATION,
     BUSINESS_PARTNER_360_SUMMARY_OPERATION,
@@ -2685,72 +2711,3 @@ export const ENTITY_VIEWS_RELAY_OPERATIONS: readonly RelayOperation[] =
     },
   ]);
 
-export const BANK_DIRECTORY_REFERENCE_OPERATION: RelayOperation = Object.freeze(
-  {
-    id: "bank-directory.reference",
-    method: "GET",
-    path: "/api/bank-directory/reference",
-    requestClass: "json",
-    requiresTenant: true,
-  },
-);
-export const STUDIO_BANK_DIRECTORY_RELAY_OPERATIONS: readonly RelayOperation[] =
-  Object.freeze([
-    {
-      id: "studio.bank-directory.references",
-      method: "POST",
-      path: "/api/studio/bank-directory/references",
-      requestClass: "json",
-      requiresTenant: true,
-      idempotency: "none",
-      maxBodyBytes: 256 * 1024,
-    },
-    {
-      id: "studio.bank-directory.list",
-      method: "GET",
-      path: "/api/studio/bank-directory",
-      requestClass: "json",
-      requiresTenant: true,
-    },
-    {
-      id: "studio.bank-directory.reconcile",
-      method: "GET",
-      path: "/api/studio/bank-directory/reconcile",
-      requestClass: "json",
-      requiresTenant: true,
-    },
-    {
-      id: "studio.bank-directory.import",
-      method: "POST",
-      path: "/api/studio/bank-directory/import",
-      requestClass: "json",
-      requiresTenant: true,
-      idempotency: "required",
-      maxBodyBytes: 256 * 1024,
-    },
-    {
-      id: "studio.bank-directory.get",
-      method: "GET",
-      path: "/api/studio/bank-directory/:revisionId",
-      requestClass: "json",
-      requiresTenant: true,
-    },
-    {
-      id: "studio.bank-directory.resume",
-      method: "POST",
-      path: "/api/studio/bank-directory/:revisionId/resume",
-      requestClass: "json",
-      requiresTenant: true,
-      idempotency: "required",
-      maxBodyBytes: 8192,
-    },
-    {
-      id: "studio.bank-directory.review",
-      method: "POST",
-      path: "/api/studio/bank-directory/:revisionId/review",
-      requestClass: "json",
-      requiresTenant: true,
-      idempotency: "required",
-      maxBodyBytes: 8192,
-    },
-  ]);

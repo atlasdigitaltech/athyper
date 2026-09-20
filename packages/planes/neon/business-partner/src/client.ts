@@ -7,7 +7,7 @@ import {
   parseGovernedCaseView,
   type GovernedCaseViewV1,
 } from "@athyper/contract-platform-entity-runtime";
-import { parsePublishedRequestForm, type RequestFormDefinition } from "./request-form-descriptor";
+import type { RequestFormDefinition } from "./request-form-descriptor";
 import type { RequestRelationshipExtensions } from "./request-relationships";
 
 export type RequestStatus =
@@ -403,11 +403,6 @@ const createRequest = createOperation<
   idempotency: "required",
   parse: parseMutation,
 });
-const readRequestForm = createOperation({
-  method: "GET",
-  path: "/api/neon/business-partner-definitions/active-request-form",
-  parse: parsePublishedRequestForm,
-});
 const listRequests = createOperation<readonly PartnerRequest[]>({
   method: "GET",
   path: "/api/neon/business-partner-cases",
@@ -451,26 +446,6 @@ const validateRequest = createOperation<
   idempotency: "required",
   parse: parseCaseMutation,
 });
-const submitRequest = createOperation<
-  Readonly<{
-    case: GovernedCaseViewV1;
-    request: PartnerRequest;
-    workflow?: Readonly<{
-      requestId: string;
-      stageId: string;
-      workItemId: string;
-    }>;
-    process?: Readonly<{ cycleRunId: string; attemptId: string; attemptNumber: number; selectionId: string; profile: "simple" | "standard" | "enhanced"; reviewPackJobId: string; documentStatus: "pending" }>;
-    replayed: boolean;
-  }>,
-  Readonly<{ expectedVersion: number; idempotencyKey: string }>
->({
-  method: "POST",
-  path: ({ caseId }) =>
-    `/api/neon/business-partner-cases/${encodePathSegment(caseId)}/submit`,
-  idempotency: "required",
-  parse: parseCaseMutation,
-});
 const decideRequest = createOperation<
   Readonly<{
     case: GovernedCaseViewV1;
@@ -490,31 +465,6 @@ const decideRequest = createOperation<
   method: "POST",
   path: ({ caseId }) =>
     `/api/neon/business-partner-cases/${encodePathSegment(caseId)}/decisions`,
-  idempotency: "required",
-  parse: parseCaseMutation,
-});
-const applyRequest = createOperation<
-  Readonly<{
-    case: GovernedCaseViewV1;
-    request: PartnerRequest;
-    materialization: Readonly<{
-      businessPartnerId: string;
-      partnerRole: "supplier" | "customer";
-      roleId: string;
-      supplierId?: string;
-      customerId?: string;
-      companyProfileId?: string;
-      operatingOrganizationAssignmentId?: string;
-    bankVerificationId?: string;
-      snapshotId: string;
-    }>;
-    replayed: boolean;
-  }>,
-  Readonly<{ expectedVersion: number; idempotencyKey: string }>
->({
-  method: "POST",
-  path: ({ caseId }) =>
-    `/api/neon/business-partner-cases/${encodePathSegment(caseId)}/materialize`,
   idempotency: "required",
   parse: parseCaseMutation,
 });
@@ -673,7 +623,6 @@ const activateSupplier = createOperation<
 
 export function createBusinessPartnerClient(http: HttpClient) {
   return Object.freeze({
-    requestForm: (signal?: AbortSignal) => http.request(readRequestForm, { signal }),
     create: (draft: PartnerRequestDraft, key = commandKey("create")) =>
       http.request(createRequest, {
         body: {
@@ -768,16 +717,6 @@ export function createBusinessPartnerClient(http: HttpClient) {
         body: { expectedVersion },
         idempotencyKey: key,
       }),
-    submit: (
-      requestId: string,
-      expectedVersion: number,
-      key = commandKey("submit"),
-    ) =>
-      http.request(submitRequest, {
-        params: { caseId: requestId },
-        body: { expectedVersion, idempotencyKey: key },
-        idempotencyKey: key,
-      }),
     decide: (
       requestId: string,
       input: Omit<Parameters<typeof decide>[0], "idempotencyKey">,
@@ -794,16 +733,6 @@ export function createBusinessPartnerClient(http: HttpClient) {
           reason: input.reason,
           idempotencyKey: key,
         },
-        idempotencyKey: key,
-      }),
-    apply: (
-      requestId: string,
-      expectedVersion: number,
-      key = commandKey("apply"),
-    ) =>
-      http.request(applyRequest, {
-        params: { caseId: requestId },
-        body: { expectedVersion, idempotencyKey: key },
         idempotencyKey: key,
       }),
     aggregate: (

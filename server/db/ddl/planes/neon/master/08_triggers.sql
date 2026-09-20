@@ -931,7 +931,7 @@ FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 CREATE TRIGGER trg_house_bank_config_validate
 BEFORE INSERT OR UPDATE OF
-    bank_account_link_id, gl_account_id, status
+    bank_account_link_id, company_code_id, gl_account_id, status
 ON master.bank_account_house_config
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_house_bank_config();
 CREATE TRIGGER trg_house_bank_config_default
@@ -941,13 +941,22 @@ BEFORE INSERT OR UPDATE OF
 ON master.bank_account_house_config
 FOR EACH ROW EXECUTE FUNCTION master.trg_guard_house_bank_default();
 
+CREATE TRIGGER trg_house_payment_method_updated_at
+BEFORE UPDATE ON master.bank_account_house_payment_method
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_house_payment_method_validate
+BEFORE INSERT OR UPDATE OF house_config_id, payment_method_id
+ON master.bank_account_house_payment_method
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_house_payment_method();
+
 DO $$
 DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
         'bank_account', 'bank_account_link',
-        'bank_account_house_config'
+        'bank_account_house_config',
+        'bank_account_house_payment_method'
     ]
     LOOP
         EXECUTE format(

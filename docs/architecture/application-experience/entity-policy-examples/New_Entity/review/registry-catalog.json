@@ -162,7 +162,32 @@
     },
     {
       "kind": "handler",
+      "key": "neon.bp.governed-request.company-scope.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
       "key": "neon.bp.governed-request.create.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.governed-request.materialize.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.governed-request.organization-scope.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.governed-request.role-extension.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.governed-request.submit.v1",
       "status": "requires_registry_publication"
     },
     {
@@ -497,6 +522,16 @@
     },
     {
       "kind": "renderer",
+      "key": "platform.address.editor.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.address.summary.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
       "key": "platform.attachments.v1",
       "status": "requires_registry_publication"
     },
@@ -508,6 +543,16 @@
     {
       "kind": "renderer",
       "key": "platform.contact-channels.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.contact.editor.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.contact.summary.v1",
       "status": "requires_registry_publication"
     },
     {
@@ -538,6 +583,16 @@
     {
       "kind": "renderer",
       "key": "platform.request-evidence.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.summary.metrics.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "renderer",
+      "key": "platform.summary.status.v1",
       "status": "requires_registry_publication"
     },
     {

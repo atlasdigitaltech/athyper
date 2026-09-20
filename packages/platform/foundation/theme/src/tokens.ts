@@ -5,7 +5,7 @@ export type ThemeFamily = (typeof THEME_FAMILIES)[number];
 export const DEFAULT_THEME_FAMILY: ThemeFamily = ATLAS_MODERN_BRAND.id;
 
 export const COLOR_MODES = ["light", "dark", "high-contrast"] as const;
-export const DENSITY_MODES = ["compact", "comfortable"] as const;
+export const DENSITY_MODES = ["compact", "comfortable", "spacious"] as const;
 export type ColorMode = (typeof COLOR_MODES)[number];
 export type DensityMode = (typeof DENSITY_MODES)[number];
 export type ThemePreference = ColorMode | "system";
@@ -145,10 +145,10 @@ export const COLOR_TOKENS: Readonly<Record<ColorMode, ColorTokenSet>> =
       primary: "color-mix(in srgb, var(--a-brand) 32%, white)",
       primaryForeground: "color-mix(in srgb, var(--a-brand) 24%, black)",
       primaryHover: "var(--a-brand-hover)",
-      selectionStrong: "var(--a-primary)",
-      selectionStrongForeground: "var(--a-primary-foreground)",
-      selectionSubtle: "var(--a-brand-soft)",
-      selectionSubtleForeground: "var(--a-primary)",
+      selectionStrong: "#17345c",
+      selectionStrongForeground: "#b9d4ff",
+      selectionSubtle: "#17345c",
+      selectionSubtleForeground: "#b9d4ff",
       panelBackground: "var(--a-surface)",
       panelHeaderBackground: "var(--a-surface-raised)",
       panelToolbarBackground: "var(--a-muted)",
@@ -260,6 +260,12 @@ export const DENSITY_TOKENS = Object.freeze({
     touchTarget: "2.75rem",
     space: "0.5rem",
     pageGap: "1.5rem",
+  }),
+  spacious: Object.freeze({
+    controlHeight: "3rem",
+    touchTarget: "3rem",
+    space: "0.75rem",
+    pageGap: "2rem",
   }),
 });
 

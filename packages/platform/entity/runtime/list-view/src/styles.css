@@ -1,4 +1,6 @@
 .a-entity-list{display:grid;gap:var(--a-space-3);min-width:0}
+.a-entity-list__header{position:relative;padding-block-end:var(--a-space-3)}
+.a-entity-list__header::after{position:absolute;inset-inline:calc(-1 * clamp(var(--a-space-6),3vw,var(--a-space-10)));inset-block-end:0;height:var(--a-border-width);background:var(--a-border);content:""}
 .a-entity-list__pagination>div,.a-entity-list__toolbar-actions{display:flex;gap:var(--a-space-2)}
 .a-entity-list__chrome{position:sticky;z-index:4;inset-block-start:var(--shell-content-top,var(--shell-topbar,0));display:grid;gap:var(--a-space-2);padding-block:var(--a-space-1) var(--a-space-2);background:var(--a-background)}
 .a-entity-list__context-row,.a-entity-list__query-row{display:flex;align-items:center;min-width:0;gap:var(--a-space-3)}
@@ -51,8 +53,9 @@
 .a-entity-list__table-wrap[aria-busy=true],.a-entity-list__cards[aria-busy=true]{opacity:.72}
 .a-entity-list__table{width:100%;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
 .a-entity-list__table th,.a-entity-list__table td{padding:var(--a-space-3);border-block-end:var(--a-border-width) solid var(--a-border);text-align:start;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:22rem}
-.a-entity-list--compact .a-entity-list__table th,.a-entity-list--compact .a-entity-list__table td{padding-block:var(--a-space-2)}
-.a-entity-list--spacious .a-entity-list__table th,.a-entity-list--spacious .a-entity-list__table td{padding-block:var(--a-space-4)}
+.a-entity-list--compact .a-entity-list__table tr{height:2.5rem}.a-entity-list--compact .a-entity-list__table th,.a-entity-list--compact .a-entity-list__table td{min-height:2.5rem;padding-block:.5rem}
+.a-entity-list--comfortable .a-entity-list__table tr{height:3.125rem}.a-entity-list--comfortable .a-entity-list__table th,.a-entity-list--comfortable .a-entity-list__table td{min-height:3.125rem;padding-block:.75rem}
+.a-entity-list--spacious .a-entity-list__table tr{height:3.75rem}.a-entity-list--spacious .a-entity-list__table th,.a-entity-list--spacious .a-entity-list__table td{min-height:3.75rem;padding-block:1rem}
 .a-entity-list__table th{position:sticky;z-index:2;inset-block-start:0;background:var(--a-muted);color:var(--a-muted-foreground);font-size:var(--a-font-size-sm);font-weight:var(--a-font-weight-strong)}
 .a-entity-list__table th button{display:inline-flex;align-items:center;gap:.25rem;border:0;padding:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;cursor:pointer}
 .a-entity-list__table th button:hover{color:var(--a-foreground)}
@@ -468,6 +471,8 @@
 .a-entity-list__view-dialog [hidden]{display:none}
 
 .a-entity-list__scope-bar { padding:.75rem 0; } @media(max-width:700px) { .a-entity-list__scope-bar {display:none;} }
+/* Scope renderers may return null; remove the empty grid item and its gap. */
+.a-entity-list__scope-bar:empty{display:none}
 
 /* Field-aware filter editors keep long operators and range inputs readable. */
 .a-entity-list__filter-range-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--a-space-2)}

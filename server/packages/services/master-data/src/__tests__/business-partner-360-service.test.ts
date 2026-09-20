@@ -303,6 +303,28 @@ function fixture(
   });
 }
 describe("Business Partner 360 secure core", () => {
+  it("reads the bounded header without loading fragments", async () => {
+    const repository = new MemoryRepository(core("organization", ["supplier"]));
+    let fragmentsRead = 0;
+    const original = repository.readFragments.bind(repository);
+    repository.readFragments = async (...input) => { fragmentsRead += 1; return original(...input); };
+    const service = createBusinessPartner360Service({
+      authorizer: { async authorize() { return { allowed: true }; } } as never,
+      repository,
+      transactions: { async run(_plane, _actor, work) { return work({}); } },
+      definitions: { async resolve() { return { code: "business_partner.onboarding" as const, version: "1.0.0", hash: "a".repeat(64) }; } },
+      now: () => new Date("2026-08-30T01:00:00.000Z"),
+    });
+    await expect(service.header({ context, businessPartnerId: ids.bp })).resolves.toMatchObject({
+      businessPartnerVersion: 3,
+      identity: { id: ids.bp, code: "BP.TEST", name: "Example Partner", lifecycleStatus: "active" },
+    });
+    await expect(service.overview({ context, businessPartnerId: ids.bp })).resolves.toMatchObject({
+      businessPartnerVersion: 3,
+      values: { id: ids.bp, code: "BP.TEST", name: "Example Partner", status: "active" },
+    });
+    expect(fragmentsRead).toBe(0);
+  });
   it.each([
     [
       "supplier",

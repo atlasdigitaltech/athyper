@@ -5,6 +5,7 @@ import type {
 } from "@athyper/server-contract-publication";
 import { BusinessPartnerDefinitionError } from "./business-partner-definition-service.js";
 import { validateCompleteBusinessPartnerDefinition } from "./business-partner-definition-compiler.js";
+import type { EntityDefinitionSource } from "./entity-definition-source.js";
 
 export const BUSINESS_PARTNER_ONBOARDING_PUBLICATION_KEY =
   "studio.business_partner.definition.business_partner.onboarding";
@@ -12,10 +13,11 @@ export const BUSINESS_PARTNER_ONBOARDING_PUBLICATION_KEY =
 export class LocalBusinessPartnerDefinitionConsumer {
   constructor(
     private readonly options: {
-      readonly local: Pick<
+      readonly local?: Pick<
         LocalProjectionRepository,
         "findActiveBusinessPartnerDefinition"
       >;
+      readonly source?: EntityDefinitionSource<import("@athyper/server-contract-publication").BusinessPartnerDefinitionProjection>;
       readonly canonicalizer: PublicationCanonicalizer;
       readonly publicationKey?: string;
     },
@@ -123,11 +125,10 @@ export class LocalBusinessPartnerDefinitionConsumer {
     };
   }
   private async active() {
-    const projection =
-      await this.options.local.findActiveBusinessPartnerDefinition?.(
-        this.options.publicationKey ??
-          BUSINESS_PARTNER_ONBOARDING_PUBLICATION_KEY,
-      );
+    const publicationKey = this.options.publicationKey ?? BUSINESS_PARTNER_ONBOARDING_PUBLICATION_KEY;
+    const projection = this.options.source
+      ? await this.options.source.findActive(publicationKey)
+      : await this.options.local?.findActiveBusinessPartnerDefinition?.(publicationKey);
     if (!projection)
       throw new BusinessPartnerDefinitionError(
         "BUSINESS_PARTNER_DEFINITION_LOCAL_ACTIVE_REQUIRED",
@@ -149,19 +150,19 @@ export interface MeshOrganizationProfileSchema {
 export class LocalMeshBusinessPartnerDefinitionConsumer {
   constructor(
     private readonly options: {
-      readonly local: Pick<
+      readonly local?: Pick<
         LocalProjectionRepository,
         "findActiveBusinessPartnerDefinition"
       >;
+      readonly source?: EntityDefinitionSource<import("@athyper/server-contract-publication").BusinessPartnerDefinitionProjection>;
       readonly publicationKey?: string;
     },
   ) {}
   async organizationProfileSchema(): Promise<MeshOrganizationProfileSchema> {
-    const projection =
-      await this.options.local.findActiveBusinessPartnerDefinition?.(
-        this.options.publicationKey ??
-          BUSINESS_PARTNER_ONBOARDING_PUBLICATION_KEY,
-      );
+    const publicationKey = this.options.publicationKey ?? BUSINESS_PARTNER_ONBOARDING_PUBLICATION_KEY;
+    const projection = this.options.source
+      ? await this.options.source.findActive(publicationKey)
+      : await this.options.local?.findActiveBusinessPartnerDefinition?.(publicationKey);
     if (!projection)
       throw new BusinessPartnerDefinitionError(
         "BUSINESS_PARTNER_DEFINITION_LOCAL_ACTIVE_REQUIRED",
@@ -258,6 +259,9 @@ function commercialRole(role?: string) {
 }
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function localizedText(value: unknown): string | undefined {
+  return record(value) && typeof value.defaultText === "string" ? value.defaultText : undefined;
 }
 function workflowStage(
   stage: Record<string, unknown>,

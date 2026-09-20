@@ -10,6 +10,8 @@ export interface EntityRecordPresentationV1 {
   readonly schemaVersion: 1;
   readonly related?: readonly RelatedPresentationV1[];
   readonly panel?: EntityRecord360PanelV1;
+  /** Optional, provider-backed decision support shown beside any record mode. */
+  readonly summaryView?: EntityRecordSummaryViewV1;
   readonly iconKey?: string;
   readonly titleField: string;
   readonly codeField?: string;
@@ -32,6 +34,15 @@ export interface EntityRecordPresentationV1 {
     readonly label: string;
     readonly operationKey: string;
     readonly placement: "primary" | "secondary" | "overflow";
+  }[];
+}
+export interface EntityRecordSummaryViewV1 {
+  readonly schemaVersion: 1;
+  readonly cards: readonly {
+    readonly key: string;
+    readonly label: string;
+    readonly provider: string;
+    readonly rendererKey: string;
   }[];
 }
 export interface EntityRecordHeaderV1 {
@@ -105,12 +116,15 @@ export function parseEntityRecordPresentation(
   const raw = object(value);
   if (raw.schemaVersion !== 1)
     throw new TypeError("Invalid record presentation version");
+  const panel = raw.panel === undefined ? undefined : parseRecord360Panel(raw.panel);
+  const summaryView = raw.summaryView === undefined
+    ? summaryViewFromPanel(panel)
+    : parseRecordSummaryView(raw.summaryView);
   const result: EntityRecordPresentationV1 = {
     schemaVersion: 1,
     ...(raw.related === undefined ? {} : { related: parseRelatedPresentations(raw.related) }),
-    ...(raw.panel === undefined
-      ? {}
-      : { panel: parseRecord360Panel(raw.panel) }),
+    ...(panel ? { panel } : {}),
+    ...(summaryView ? { summaryView } : {}),
     titleField: key(raw.titleField),
     ...(raw.iconKey === undefined ? {} : { iconKey: key(raw.iconKey) }),
     ...(raw.codeField === undefined ? {} : { codeField: key(raw.codeField) }),
@@ -173,6 +187,39 @@ export function parseEntityRecordPresentation(
   if (result.actions.filter((item) => item.placement === "primary").length > 1)
     throw new TypeError("Only one primary record action is allowed");
   return Object.freeze(result);
+}
+
+/** Legacy 360 sidebars are projected as generic summary cards until republished. */
+function summaryViewFromPanel(panel?: EntityRecord360PanelV1): EntityRecordSummaryViewV1 | undefined {
+  if (!panel?.sidebar.length) return undefined;
+  return Object.freeze({
+    schemaVersion: 1,
+    cards: Object.freeze(panel.sidebar.map((item) => Object.freeze({
+      key: item.key,
+      label: item.label,
+      provider: item.provider,
+      rendererKey: item.provider === "primary-contact" ? "platform.contact.summary.v1" : "platform.address.summary.v1",
+    }))),
+  });
+}
+
+export function parseRecordSummaryView(value: unknown): EntityRecordSummaryViewV1 {
+  const raw = object(value);
+  if (raw.schemaVersion !== 1) throw new TypeError("Invalid record summary view version");
+  const rawCards = list(raw.cards);
+  if (rawCards.length > 12) throw new TypeError("Invalid record summary view cards");
+  const cards = rawCards.map((value) => {
+    const card = object(value);
+    return {
+      key: key(card.key),
+      label: text(card.label),
+      provider: key(card.provider),
+      rendererKey: key(card.rendererKey),
+    };
+  });
+  if (!cards.length || new Set(cards.map((card) => card.key)).size !== cards.length)
+    throw new TypeError("Invalid record summary view cards");
+  return Object.freeze({ schemaVersion: 1, cards: Object.freeze(cards) });
 }
 export function validateRecordPresentationReferences(
   presentation: EntityRecordPresentationV1,

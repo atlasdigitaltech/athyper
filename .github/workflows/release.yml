@@ -9,6 +9,10 @@ permissions:
   contents: write
 
 jobs:
+  bp-artifact-schema:
+    uses: ./.github/workflows/bp-artifact-schema-gate.yml
+    secrets:
+      NEON_SCHEMA_DATABASE_URL: ${{ secrets.NEON_SCHEMA_DATABASE_URL }}
   infrastructure-scan:
     permissions:
       contents: read
@@ -35,7 +39,7 @@ jobs:
   build:
     name: Build Release
     runs-on: ubuntu-latest
-    needs: [validate-tag, openapi-policy]
+    needs: [validate-tag, openapi-policy, bp-artifact-schema]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

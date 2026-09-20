@@ -6,6 +6,7 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   BUSINESS_PARTNER_DEFINITION_REQUEST_KEYS,
+  compileBusinessPartnerCompiledEntity,
   compileBusinessPartnerDefinition,
   createBusinessPartnerFoundationDefinition,
   LocalBusinessPartnerDefinitionConsumer,
@@ -22,6 +23,49 @@ const hashes = {
   meshMatch: "4".repeat(64),
 } as const;
 describe("WP12 Business Partner definitions", () => {
+  it("keeps BP authoring validation ahead of generic split-artifact compilation", () => {
+    const canonicalizer = {
+      canonicalBytes: (value: unknown) =>
+        new TextEncoder().encode(JSON.stringify(value)),
+      sha256: (value: Uint8Array) =>
+        `sha256:${createHash("sha256").update(value).digest("hex")}`,
+    };
+    const result = compileBusinessPartnerCompiledEntity({
+      definition: {
+        bundle: createBusinessPartnerFoundationDefinition(hashes),
+        plane: "neon",
+        canonicalizer,
+      },
+      compiledEntity: {
+        registry: {
+          handlers: new Set(["neon.bp.read.v1"]),
+          renderers: new Set<string>(), resolvers: new Set<string>(), evaluators: new Set<string>(),
+        },
+        artifacts: [{
+          ref: "business_partner/core.json",
+          content: {
+            schema: "athyper.compiled-entity-artifact/2.0-draft", schemaVersion: 2,
+            contractStatus: "draft_for_review", artifactType: "core", artifactKey: "business_partner/core",
+            entityCode: "business_partner", plane: "neon", dependencies: [], fields: [],
+          },
+        }, {
+          ref: "business_partner/operation.json",
+          content: {
+            schema: "athyper.compiled-entity-artifact/2.0-draft", schemaVersion: 2,
+            contractStatus: "draft_for_review", artifactType: "operation", artifactKey: "business_partner/operation",
+            entityCode: "business_partner", plane: "neon", dependencies: [],
+            operations: [{ key: "read", execution: { handlerKey: "neon.bp.read.v1" } }],
+          },
+        }],
+        release: { content: {
+          schema: "athyper.compiled-entity-release/2.0-draft", contractStatus: "unsigned_review_only",
+          releaseId: "business-partner-review", releaseNo: 1, targetPlanes: ["neon"], externalDependencies: [],
+        } },
+      },
+    });
+    expect(result.definition.report.plane).toBe("neon");
+    expect(result.compiled.report.artifactKeys).toEqual(["business_partner/core", "business_partner/operation"]);
+  });
   it("provides every P6 journey, source, policy and descriptor without instance data", () => {
     const bundle = createBusinessPartnerFoundationDefinition(hashes);
     expect(parseBusinessPartnerDefinitionBundle(bundle)).toEqual(bundle);

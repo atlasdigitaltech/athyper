@@ -67,3 +67,18 @@ CREATE INDEX IF NOT EXISTS icw_target_idx
 CREATE INDEX IF NOT EXISTS icw_active_pidx
     ON shared.industry_crosswalk (source_domain_code, source_code)
     WHERE is_active = true;
+
+-- ── §BNK  shared.bank_institution / bank_branch / bank_identifier ─────────
+CREATE INDEX IF NOT EXISTS bank_institution_country_name_idx
+    ON shared.bank_institution (country_code, lower(name));
+
+CREATE UNIQUE INDEX IF NOT EXISTS bank_institution_source_uq
+    ON shared.bank_institution (source, source_record_id)
+    WHERE source IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS bank_branch_source_uq
+    ON shared.bank_branch (source, source_record_id)
+    WHERE source IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS bank_identifier_owner_idx
+    ON shared.bank_identifier (institution_id, branch_id);

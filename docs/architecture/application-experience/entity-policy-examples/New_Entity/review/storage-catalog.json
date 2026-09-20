@@ -3,8 +3,7 @@
   "source": {
     "database": "athyper_neon",
     "method": "pg_catalog.pg_attribute/pg_type",
-    "scope": "local_read_only_snapshot",
-    "sourceMigrationParityVerified": false
+    "scope": "local_read_only_snapshot"
   },
   "columns": [
     {

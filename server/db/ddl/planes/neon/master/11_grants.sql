@@ -94,7 +94,8 @@ BEGIN
         GRANT SELECT ON master.v_company_postable_account TO athyperapp;
         GRANT SELECT, INSERT, UPDATE
             ON master.bank_account_link,
-               master.bank_account_house_config
+               master.bank_account_house_config,
+               master.bank_account_house_payment_method
             TO athyperapp;
         GRANT INSERT, UPDATE ON master.bank_account TO athyperapp;
         GRANT SELECT (

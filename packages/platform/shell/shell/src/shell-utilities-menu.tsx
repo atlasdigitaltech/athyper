@@ -41,10 +41,11 @@ export function UtilitiesMenu({
             label={t("shell.utilities.density")}
             value={appearance.profile.densityCode}
             options={[
-              { value: "comfortable", label: t("shell.utilities.densityComfortable") },
               { value: "compact", label: t("shell.utilities.densityCompact") },
+              { value: "comfortable", label: t("shell.utilities.densityComfortable") },
+              { value: "spacious", label: t("shell.utilities.densitySpacious") },
             ]}
-            onChange={(value) => setPreference({ densityCode: value as "comfortable" | "compact" })}
+            onChange={(value) => setPreference({ densityCode: value as "comfortable" | "compact" | "spacious" })}
           />
         </UtilitiesSection>
       ) : null}

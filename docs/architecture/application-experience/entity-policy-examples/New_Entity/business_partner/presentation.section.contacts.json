@@ -8,6 +8,10 @@
   "plane": "neon",
   "sectionKey": "contacts",
   "rendererKey": "platform.related-collection.v1",
+  "emptyState": {
+    "title": "No contacts yet",
+    "detail": "When contacts are added, they’ll appear here."
+  },
   "dataBinding": {
     "kind": "registered_service",
     "handlerKey": "neon.bp.section.contacts.v1",
@@ -43,7 +47,7 @@
     "contact_person/core",
     "contact_person/operation"
   ],
-  "artifactHash": "sha256:fdb37475f0b6bf2548f4c813a496131a272fc198c1d0ec386e7ab0c8ba7c03e2",
+  "artifactHash": "sha256:e5025fb295c36cf23844a63504a459f80ec53686d81345296e68f5b54b0d694f",
   "childCollections": [
     {
       "key": "contacts",
@@ -141,7 +145,7 @@
         }
       ],
       "load": "on_visible",
-      "implementationStatus": "draft_requires_handler_registration"
+      "implementationStatus": "registered"
     }
   ]
 }

@@ -1,5 +1,4 @@
 import { readAppEnvironment } from "./environment";
-import { BANK_DIRECTORY_REFERENCE_OPERATION } from "@athyper/platform-gateway-bff-relay";
 import {
   ACTIVITY_CENTER_RELAY_OPERATIONS,
   ATLAS_ANSWER_RELAY_OPERATIONS,
@@ -53,7 +52,6 @@ export function createAppRelay(
     ...options,
     plane: "mesh",
     operations: [
-      BANK_DIRECTORY_REFERENCE_OPERATION,
       IAM_ME_OPERATION,
       EXPERIENCE_BOOTSTRAP_OPERATION,
       PRINCIPAL_LOCALE_UPDATE_OPERATION,

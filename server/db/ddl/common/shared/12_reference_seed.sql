@@ -94,6 +94,7 @@ WHERE (shared.classification_scheme.name,
 \ir reference-data/009c_industry_code_naics_subsectors.sql
 \ir reference-data/009d_industry_crosswalk.sql
 \ir reference-data/009e_industry_code_keywords.sql
+\ir reference-data/010_bank_master.sql
 
 SELECT shared.validate_reference_seed();
 SET CONSTRAINTS ALL IMMEDIATE;

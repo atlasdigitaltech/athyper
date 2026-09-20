@@ -11,6 +11,8 @@ import { restoreProfileAnswers } from "./request-relationships";
 import { RequestAttachmentField, RequestAttachmentScope } from "./request-attachment-field";
 import { EntityDataSurface, EntityIntakeBackButton, EntityDraftSaveButton, dataSurfaceDefaults, dataSurfaceValues, EntityIntakeForm, useEntityIntake } from "@athyper/platform-entity-form-detail";
 import { createOperation, entityApplicationDescriptorOperation } from "@athyper/platform-api-client";
+import { entityRuntimeClient } from "@athyper/platform-entity-descriptor-client";
+import { invalidateEntityRuntimeSectionCache } from "@athyper/platform-entity-form-detail";
 import type { EntityIntakeSurfaceV1 } from "@athyper/contract-platform-entity-runtime";
 import { PartnerReferenceField } from "./partner-reference-field";
 import { requestFormFromSurface } from "./meta-request-form";
@@ -23,7 +25,6 @@ import {
   useApiClient,
   useSessionIdentity,
   useApplicationNavigation,
-  useFeature,
   usePermissions,
   useToasts,
 } from "@athyper/platform-shell-app-foundation";
@@ -69,7 +70,7 @@ import {
 } from "./client";
 import {
   serializeRequestForm,
-  type PublishedRequestForm,
+  type RequestFormDescriptor,
 } from "./request-form-descriptor";
 import {
   buildRelationshipExtensions,
@@ -78,7 +79,7 @@ import {
   type AddressDraft,
   type ContactDraft,
 } from "./request-relationships";
-import { BusinessPartner360Shell } from "./360/business-partner-360";
+import { BusinessPartnerRecordRuntime } from "./record-runtime";
 import {
   caseStatusUiState,
   DecisionDialog,
@@ -114,11 +115,7 @@ export function BusinessPartnerRecord({
 }: {
   readonly businessPartnerId: string;
 }) {
-  return useFeature("neon.business_partner.view_360") ? (
-    <BusinessPartner360Shell businessPartnerId={businessPartnerId} />
-  ) : (
-    <BusinessPartnerAggregateDetail businessPartnerId={businessPartnerId} />
-  );
+  return <BusinessPartnerRecordRuntime businessPartnerId={businessPartnerId} />;
 }
 
 export function BusinessPartnerScopeConfiguration({
@@ -134,7 +131,7 @@ export function BusinessPartnerScopeConfiguration({
   initialRole?: "supplier" | "customer";
   initialKind?: "assign_organization" | "configure_company";
 }) {
-  const api = usePartnerApi(),
+  const http = useApiClient(),
     work = useNeonWorkContext(),
     operating = useNeonOperatingOrganization(),
     toast = useToasts(),
@@ -210,24 +207,25 @@ export function BusinessPartnerScopeConfiguration({
                       : {}),
                   }),
             };
-      const result = await api.configureScope({
-        businessPartnerId,
-        kind,
-        role,
-        operatingOrganizationId: organizationId,
-        ...(companyCodeId ? { companyCodeId } : {}),
-        proposedPayload,
+      const bootstrap = await entityRuntimeClient.bootstrap(http, {
+        entityCode: "business_partner", recordId: businessPartnerId, surfaceKey: "detail",
       });
+      const receipt = await entityRuntimeClient.operation(http, {
+        entityCode: "business_partner", recordId: businessPartnerId,
+        operationKey: kind === "configure_company" ? "configure_company_scope" : "assign_organization_scope",
+        expectedVersion: Number(bootstrap.header.revision), idempotencyKey: crypto.randomUUID(),
+        input: {
+          requestedRole: role, operatingOrganizationId: organizationId,
+          ...(companyCodeId ? { companyCodeId } : {}), proposedPayload,
+        },
+      });
+      const requestId = typeof receipt.requestId === "string" ? receipt.requestId : undefined;
+      if (!requestId) throw new Error("The governed scope operation did not return a request identity.");
       toast.push({
-        tone: "success",
-        title: result.replayed
-          ? "Existing request opened"
-          : "Configuration request created",
-        detail: `${result.request.requestNo} must pass validation and independent approval.`,
+        tone: "success", title: receipt.replayed === true ? "Existing request opened" : "Configuration request created",
+        detail: "The request must pass validation and independent approval.",
       });
-      navigation.push(
-        `/mdg/business-partner/requests/${encodeURIComponent(result.request.id)}`,
-      );
+      navigation.push(`/mdg/business-partner/requests/${encodeURIComponent(requestId)}`);
     } catch (cause) {
       setError(message(cause));
       setBusy(false);
@@ -429,6 +427,18 @@ export function BusinessPartnerScopeConfiguration({
       </form>
     </BusinessPartnerPageFrame>
   );
+}
+
+function invalidateChangedRuntimeResources(value: unknown): void {
+  if (!Array.isArray(value)) return;
+  for (const resource of value) {
+    if (!resource || typeof resource !== "object") continue;
+    const item = resource as Record<string, unknown>;
+    if (item.entityCode !== "business_partner" || typeof item.recordId !== "string") continue;
+    const sections = Array.isArray(item.sectionKeys) ? item.sectionKeys.filter((key): key is string => typeof key === "string") : [];
+    for (const sectionKey of sections)
+      invalidateEntityRuntimeSectionCache({ cacheScope: "default", entityCode: "business_partner", recordId: item.recordId, surfaceKey: "detail", sectionKey });
+  }
 }
 
 function usePartnerApi() {
@@ -752,7 +762,7 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
     work = useNeonWorkContext(),
     toast = useToasts(),
     [organizationId, setOrganizationId] = useState(""),
-    [publishedForm, setPublishedForm] = useState<PublishedRequestForm>(),
+    [publishedForm, setPublishedForm] = useState<RequestFormDescriptor>(),
     [answers, setAnswers] = useState<Readonly<Record<string, unknown>>>({}),
     [surfaces, setSurfaces] = useState<readonly EntityIntakeSurfaceV1[]>([]),
     [loading, setLoading] = useState(true),
@@ -768,15 +778,17 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
   const loadPublishedForm = useCallback(() => {
     const controller = new AbortController();
     setLoading(true);
-    Promise.all([api.requestForm(controller.signal),http.request(entityApplicationDescriptorOperation,{params:{entityCode:"business_partner"},signal:controller.signal})])
-      .then(([result,application]) => {
+    http.request(entityApplicationDescriptorOperation,{params:{entityCode:"business_partner"},signal:controller.signal})
+      .then((application) => {
         if(controller.signal.aborted)return;
         const native=application.intakeSurfaces??[],details=native.find(s=>s.key==="intake_details");
         if(!details?.formLabels)throw Error("The published intake Details surface is unavailable.");
-        if (initialRequest && (initialRequest.case.definition.contentHash !== result.definition.hash || initialRequest.case.definition.version !== result.definition.version))
+        // The descriptor is a projection of the admitted compiled Flow/surfaces.
+        // Request creation re-resolves and validates its exact Flow schema server-side.
+        if (initialRequest && initialRequest.case.definition.version !== application.revision.release)
           throw Error(details.formLabels.incompatibleDraft ?? "The saved draft definition is unavailable.");
         setSurfaces(native);
-        setPublishedForm({...result,descriptor:requestFormFromSurface(details)});
+        setPublishedForm(requestFormFromSurface(details));
         setAnswers({...dataSurfaceDefaults(details,native),...(initialRequest?restoreProfileAnswers(details,native,initialRequest.request.proposedPayload,initialRequest.request.operatingOrganizationId):{})});
         if(initialRequest?.request.operatingOrganizationId)setOrganizationId(initialRequest.request.operatingOrganizationId);
         setError(undefined);
@@ -788,7 +800,7 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [api,http,initialRequest]);
+  }, [http,initialRequest]);
   useEffect(loadPublishedForm, [loadPublishedForm]);
   const headerLabels = surfaces.find(s=>s.key==="intake_details")?.formLabels;
   const setPresentation = intake?.setPresentation;
@@ -825,7 +837,7 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
         if(typeof value==='string'||typeof value==='number')data.set(key,String(value));
         else if(value===true)data.set(key,'on');
       }
-      const serialized = serializeRequestForm(publishedForm.descriptor, data, { includeEmpty: Boolean(savedRequest), existingPayload: savedRequest?.proposedPayload });
+      const serialized = serializeRequestForm(publishedForm, data, { includeEmpty: Boolean(savedRequest), existingPayload: savedRequest?.proposedPayload });
       const extensions = { ...await buildRelationshipExtensions(
         (values.addresses??[]) as readonly AddressDraft[],
         (values.contacts??[]) as readonly ContactDraft[],
@@ -860,7 +872,6 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
         operatingOrganizationId:
           organizationId || serialized.operatingOrganizationId,
         ...(companyCodeId ? { companyCodeId } : {}),
-        expectedForm: publishedForm.definition,
         proposedPayload: serialized.proposedPayload,
         ...(extensions ? { extensions } : {}),
       }, intakeCommandKey)};
@@ -878,7 +889,7 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
         window.history.replaceState(window.history.state, "", `/mdg/business-partner/requests/${encodeURIComponent(result.request.id)}/edit`);
         return;
       }
-      const completion = intake && submitRequest ? await submitBusinessPartnerIntake(api, result.request) : undefined;
+      const completion = intake && submitRequest ? await submitBusinessPartnerIntake(api, http, result.request) : undefined;
       toast.push({
         tone: completion && !completion.submitted ? "warning" : "success",
         title: completion?.submitted ? "Request submitted" : initialRequest ? "Draft saved" : ("replayed" in result && result.replayed) ? "Existing request opened" : "Request created",
@@ -910,10 +921,10 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
     >
       <BusinessPartnerPageFrame contentOnly={Boolean(intake)}
         title={
-          publishedForm?.descriptor.title ?? "New supplier onboarding request"
+          publishedForm?.title ?? "New supplier onboarding request"
         }
         description={
-          publishedForm?.descriptor.description ??
+          publishedForm?.description ??
           "Loading the published request definition."
         }
         actions={
@@ -932,7 +943,7 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
         ) : publishedForm ? (
           <EntityIntakeForm detailsBackPlacement="custom" detailsStep="details" reviewStep="review" submissionError={error}
             className="bp-form"
-            data-definition-release={publishedForm.definition.releaseId}
+            data-definition-release="compiled-application"
             onSubmit={submit}
             onSubmitCapture={(event)=>{try{dataSurfaceValues(surfaces.find(s=>s.key==="intake_details")!,surfaces,answers)}catch(cause){event.preventDefault();event.stopPropagation();setError(message(cause))}}}
           >
@@ -955,7 +966,7 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
               {savedRequest ? <Button type="button" variant="secondary" disabled={busy} onClick={()=>navigation.navigate(`/mdg/business-partner/requests/${encodeURIComponent(savedRequest.id)}`)}>{savedRequest.requestNo}</Button> : null}
               {surfaces.find(s=>s.key==="intake_details")?.formLabels?.saveDraft ? <EntityDraftSaveButton disabled={busy||!organizationId||attachmentProblems.length>0} onSave={()=>void submit(undefined,false)}>{busy ? surfaces.find(s=>s.key==="intake_details")!.formLabels!.savingDraft : retryRequired ? "Retry previous action" : surfaces.find(s=>s.key==="intake_details")!.formLabels!.saveDraft}</EntityDraftSaveButton>:null}
               <Button type="submit" loading={busy} disabled={!organizationId||retryRequired||attachmentProblems.length>0}>
-                {intake ? surfaces.find(s=>s.key==="intake_details")!.formLabels?.continue : publishedForm.descriptor.submitLabel}
+                {intake ? surfaces.find(s=>s.key==="intake_details")!.formLabels?.continue : publishedForm.submitLabel}
               </Button>
             </div>
           </EntityIntakeForm>
@@ -981,6 +992,7 @@ export function BusinessPartnerRequestDetail({
   readonly notificationPins?: {attemptId?:string;workItemId?:string;documentJobId?:string};
 }) {
   const api = usePartnerApi(),
+    http = useApiClient(),
     [view, setView] = useState<RequestView>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<string>(),
@@ -1010,6 +1022,14 @@ export function BusinessPartnerRequestDetail({
   }, [reload]);
   useRecordFooterSources(view?.provenance ?? []);
   const actions = view ? governedCaseActions(view.case) : [];
+  const runRuntimeOperation = useCallback(async (operationKey: "submit" | "materialize", request: RequestView["request"], expectedVersion: number) => {
+    const receipt = await entityRuntimeClient.operation(http, {
+      entityCode: "business_partner_request", recordId: request.id, operationKey,
+      expectedVersion, idempotencyKey: crypto.randomUUID(), input: {},
+    });
+    invalidateChangedRuntimeResources(receipt.changedResources);
+    return receipt;
+  }, [http]);
   const run = useCommandRunner({
     setBusy, setError, reload, errorMessage: message, blocked: Boolean(busy || loading),
     onStart: () => { setLastSuccess(false); setErrorState(undefined); },
@@ -1108,7 +1128,7 @@ export function BusinessPartnerRequestDetail({
             disabled={Boolean(busy) || loading}
             onClick={() =>
               void run("submit", () =>
-                api.submit(caseView.id, caseView.rowVersion),
+                runRuntimeOperation("submit", request, caseView.rowVersion),
               )
             }
           >
@@ -1151,7 +1171,7 @@ export function BusinessPartnerRequestDetail({
             disabled={Boolean(busy) || loading}
             onClick={() =>
               void run("apply", () =>
-                api.apply(caseView.id, caseView.rowVersion),
+                runRuntimeOperation("materialize", request, caseView.rowVersion),
               )
             }
           >

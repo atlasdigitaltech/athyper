@@ -2088,6 +2088,14 @@ BEGIN
             USING ERRCODE = 'foreign_key_violation';
     END IF;
 
+    -- company_code_id is derived from the link owner; a supplied value must agree.
+    IF NEW.company_code_id IS NOT NULL AND NEW.company_code_id <> v_company_id THEN
+        RAISE EXCEPTION
+            'House-bank company must match the company that owns the bank-account link'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    NEW.company_code_id := v_company_id;
+
     IF NEW.status = 'active'
        AND (NOT v_account_verified OR v_account_status <> 'active') THEN
         RAISE EXCEPTION
@@ -2126,6 +2134,43 @@ BEGIN
         RAISE EXCEPTION
             'House-bank GL is not currently postable for the company and account currency'
             USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_house_payment_method()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_direction text;
+    v_method_status text;
+    v_disbursement boolean;
+    v_collection boolean;
+BEGIN
+    SELECT method.direction, method.status
+      INTO v_direction, v_method_status
+      FROM master.payment_method AS method
+     WHERE method.tenant_id = NEW.tenant_id
+       AND method.id = NEW.payment_method_id;
+    SELECT config.is_disbursement_enabled, config.is_collection_enabled
+      INTO v_disbursement, v_collection
+      FROM master.bank_account_house_config AS config
+     WHERE config.tenant_id = NEW.tenant_id
+       AND config.id = NEW.house_config_id;
+
+    IF v_method_status IS DISTINCT FROM 'active' THEN
+        RAISE EXCEPTION 'Payment method must be active'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF (v_direction = 'outbound' AND NOT v_disbursement)
+       OR (v_direction = 'inbound' AND NOT v_collection)
+       OR (v_direction = 'both' AND NOT (v_disbursement OR v_collection)) THEN
+        RAISE EXCEPTION
+            'Payment method direction is not enabled on the house-bank configuration'
+            USING ERRCODE = 'check_violation';
     END IF;
     RETURN NEW;
 END;

@@ -20,6 +20,7 @@ export function createBusinessPartnerReadRuntimeRegistrations(
   records: Pick<EntityListService, "list" | "record" | "applicationDescriptor">,
   providers: BusinessPartner360Service,
   scopes: EntityScopeAdapter,
+  applicationDescriptor?: Pick<EntityListService, "applicationDescriptor">["applicationDescriptor"],
 ): readonly EntityAuthorizationRuntimeRegistration[] {
   const registration = (operation: EntityAuthorizationOperationV1, invoke: EntityAuthorizationRuntimeRegistration["handler"]["invoke"]): EntityAuthorizationRuntimeRegistration => ({
     entityCode: "business_partner", planeKey: "neon", operation,
@@ -43,7 +44,7 @@ export function createBusinessPartnerReadRuntimeRegistrations(
     entries.push(registration({ key, permissionCode: `neon.relationship.bp_target.${key}`, scope: "tenant.record.v1", target: "collection", effect: "read", requiresParentRead: false, requiresPreflight: false },
       (query: Parameters<RecordQueryService["list"]>[0]) => {
         if (query.context.planeKey !== "neon" || query.entityCode !== "business_partner") throw Error("BP_READ_RUNTIME_COORDINATE_MISMATCH");
-        return key === "enter" ? records.applicationDescriptor(query.context, query.entityCode, query.scopeCoordinate) : records.list(query);
+        return key === "enter" ? (applicationDescriptor ?? records.applicationDescriptor.bind(records))(query.context, query.entityCode, query.scopeCoordinate) : records.list(query);
       }));
   entries.push(registration({ key: "read", permissionCode: "neon.relationship.bp_target.read", scope: "tenant.record.v1", target: "existing", effect: "read", requiresParentRead: false, requiresPreflight: false },
     (query: Parameters<RecordQueryService["get"]>[0]) => {

@@ -46,3 +46,5 @@ export * from "./recent-choice";
 export * from "./validation-messages";
 
 export * from "./intake-flow-authoring";
+
+export * from "./runtime-resource";

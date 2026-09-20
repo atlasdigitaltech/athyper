@@ -9,7 +9,7 @@ const hash = "a".repeat(64),
       { key: "read", effect: "read", permissionCode: "target.read" },
       { key: "write", effect: "write", permissionCode: "target.write" },
     ],
-  } as EntityAuthorizationProfileV1;
+  } as unknown as EntityAuthorizationProfileV1;
 const contract = {
   schemaVersion: 1,
   kind: "entity_canonical_read_admission",

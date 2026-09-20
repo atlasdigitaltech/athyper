@@ -226,6 +226,9 @@ export function Card(props: HTMLAttributes<HTMLDivElement>) { return <div {...pr
 export function Badge({ tone = "neutral", ...props }: HTMLAttributes<HTMLSpanElement> & { readonly tone?: "neutral" | "success" | "warning" | "danger" }) { return <span {...props} className={cx("a-badge", `a-badge--${tone}`, props.className)} />; }
 export function Separator({ orientation = "horizontal", ...props }: HTMLAttributes<HTMLDivElement> & { readonly orientation?: "horizontal" | "vertical" }) { return <div role="separator" aria-orientation={orientation} {...props} className={cx("a-separator", `a-separator--${orientation}`, props.className)} />; }
 export function Skeleton({ label = "Loading", ...props }: HTMLAttributes<HTMLDivElement> & { readonly label?: string }) { return <div aria-busy="true" aria-label={label} {...props} className={cx("a-skeleton", props.className)} />; }
+export function LoadingDots({ label = "Loading", size = "small" }: { readonly label?: string; readonly size?: "small" | "large" }) {
+  return <span className={`a-loading-dots a-loading-dots--${size}`} role="status"><span className="a-visually-hidden">{label}</span><span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" /></span>;
+}
 export function VisuallyHidden(props: HTMLAttributes<HTMLSpanElement>) { return <span {...props} className={cx("a-visually-hidden", props.className)} />; }
 export function FocusGuard({ onFocus }: { readonly onFocus?: () => void }) { return <span tabIndex={0} aria-hidden="true" className="a-focus-guard" onFocus={onFocus} />; }
 export * from "./presentation";

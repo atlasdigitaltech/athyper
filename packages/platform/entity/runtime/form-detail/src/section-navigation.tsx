@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 export interface EntitySectionItem {
   readonly key: string;
   readonly label: string;
@@ -13,12 +13,15 @@ export function EntitySectionNavigation({
   onNavigate,
   label,
   className = "",
+  trailing,
 }: {
   sections: readonly EntitySectionItem[];
   activeSection: string;
   onNavigate: (key: string) => void;
   label: string;
   className?: string;
+  /** Optional adjacent control for the compact, selector-based navigation state. */
+  trailing?: ReactNode;
 }) {
   return (
     <nav className={`a-section-navigation ${className}`} aria-label={label}>
@@ -53,6 +56,7 @@ export function EntitySectionNavigation({
           </button>
         ))}
       </div>
+      {trailing ? <div className="a-section-navigation__trailing">{trailing}</div> : null}
     </nav>
   );
 }

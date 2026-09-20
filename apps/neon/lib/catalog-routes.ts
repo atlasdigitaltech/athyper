@@ -105,3 +105,77 @@ export function applyNeonEntityRoutes(
 export const neonCatalogRoutes = applyNeonEntityRoutes(
   PLATFORM_CATALOG_ROUTES.neon,
 );
+
+/**
+ * Public aliases are catalog-owned. The internal path is intentionally not a
+ * user-facing contract: proxy rewrites preserve the original address, query and
+ * browser history while the shared entity entry point renders the surface.
+ */
+export interface NeonEntityApplicationRoute {
+  readonly publicPath: string;
+  /** Additional public aliases that render the same shared application surface. */
+  readonly publicAliases?: readonly string[];
+  readonly internalPath: string;
+  readonly workspaceCode: string;
+  readonly moduleCode: string;
+  readonly entityCode: string;
+  readonly surfaceKey: string;
+}
+
+const entityApplicationRoutes: readonly NeonEntityApplicationRoute[] = Object.freeze([
+  Object.freeze({
+    publicPath: "/mdg/business-partner/manage",
+    publicAliases: Object.freeze([
+      "/mdg/business-partner",
+      "/mdg/business-partner/partners",
+      "/mdg/business-partner/business-partners",
+    ]),
+    internalPath: "/app/entity/business_partner/manage",
+    workspaceCode: "mdg",
+    moduleCode: "bp",
+    entityCode: "business_partner",
+    surfaceKey: "manage",
+  }),
+]);
+
+const publicRouteIndex = new Map(
+  entityApplicationRoutes.flatMap((route) => [
+    [route.publicPath, route] as const,
+    ...(route.publicAliases ?? []).map((path) => [path, route] as const),
+  ]),
+);
+const internalRouteIndex = new Map(
+  entityApplicationRoutes.map((route) => [route.internalPath, route]),
+);
+
+export function resolveNeonEntityApplicationPublicRoute(
+  pathname: string,
+): NeonEntityApplicationRoute | undefined {
+  return publicRouteIndex.get(normalizeEntityApplicationPath(pathname));
+}
+
+export function resolveNeonEntityApplicationInternalRoute(
+  entityCode: string,
+  segments: readonly string[] = [],
+): NeonEntityApplicationRoute | undefined {
+  return internalRouteIndex.get(
+    normalizeEntityApplicationPath(
+      `/app/entity/${entityCode}/${segments.join("/")}`,
+    ),
+  );
+}
+
+export function entityApplicationPublicPath(
+  entityCode: string,
+  segments: readonly string[] = [],
+): string | undefined {
+  return resolveNeonEntityApplicationInternalRoute(entityCode, segments)
+    ?.publicPath;
+}
+
+function normalizeEntityApplicationPath(value: string): string {
+  const pathname = value.replace(/\/+$/u, "") || "/";
+  if (!pathname.startsWith("/") || pathname.includes("//") || pathname.includes(".."))
+    throw new TypeError("Invalid entity application route path");
+  return pathname;
+}

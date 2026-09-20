@@ -17,6 +17,8 @@
     "@athyper/contract-platform-dashboard": "workspace:*",
     "@athyper/platform-i18n": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
+    "@athyper/server-contract-publication": "workspace:*",
+    "@athyper/server-platform-metadata": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
     "express": "^5.2.1",

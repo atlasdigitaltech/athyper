@@ -161,5 +161,288 @@
       "reviewDecision": "explicit_governance_scope_for_this_flow"
     }
   },
-  "artifactHash": "sha256:285220e899523c8f82062b3b0538bbef75da5a37e85a6fb4fb0cacdfd1a1e10a"
+  "artifactHash": "sha256:f90a6c76f91763c37dfa461fdb9296150b2c9997792116876c085c6ea26ed2e0",
+  "workflowDefinitions": {
+    "customer": {
+      "escalation": [
+        "stage_owner",
+        "sales_organization_owner",
+        "data_governance_owner"
+      ],
+      "sod": {
+        "applicantCannotDecide": true,
+        "makerCannotDecide": true,
+        "mfaAtDecision": true
+      },
+      "stages": [
+        {
+          "code": "stewardship",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.customer.stages.stewardship.label",
+            "defaultText": "Data stewardship"
+          }
+        },
+        {
+          "code": "compliance_consent",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "all"
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.customer.stages.compliance_consent.label",
+            "defaultText": "Compliance and consent"
+          }
+        },
+        {
+          "code": "sales_owner",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.customer.stages.sales_owner.label",
+            "defaultText": "Sales owner"
+          }
+        },
+        {
+          "code": "credit_review",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "percentage",
+            "value": 50
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.customer.stages.credit_review.label",
+            "defaultText": "Credit review"
+          }
+        }
+      ],
+      "version": "3.0.1"
+    },
+    "governance": {
+      "escalation": [
+        "data_governance_owner"
+      ],
+      "sod": {
+        "makerCannotDecide": true,
+        "mfaAtDecision": true
+      },
+      "stages": [
+        {
+          "code": "dependency_impact_review",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "all"
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.governance.stages.dependency_impact_review.label",
+            "defaultText": "Dependency impact review"
+          }
+        },
+        {
+          "code": "data_stewardship",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.governance.stages.data_stewardship.label",
+            "defaultText": "Data stewardship"
+          }
+        }
+      ],
+      "version": "3.0.1"
+    },
+    "supplier": {
+      "escalation": [
+        "stage_owner",
+        "operating_organization_owner",
+        "data_governance_owner"
+      ],
+      "sod": {
+        "applicantCannotDecide": true,
+        "makerCannotDecide": true,
+        "mfaAtDecision": true
+      },
+      "stages": [
+        {
+          "code": "stewardship",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.supplier.stages.stewardship.label",
+            "defaultText": "Data stewardship"
+          }
+        },
+        {
+          "code": "compliance_tax",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480,
+          "when": {
+            "operator": "not_equals",
+            "path": "ownershipClass",
+            "value": "internal"
+          },
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.supplier.stages.compliance_tax.label",
+            "defaultText": "Compliance and tax"
+          }
+        },
+        {
+          "code": "procurement_owner",
+          "escalateAtMinutes": 240,
+          "mode": "parallel",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "percentage",
+            "value": 25
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.supplier.stages.procurement_owner.label",
+            "defaultText": "Procurement owner"
+          }
+        }
+      ],
+      "version": "3.0.1"
+    },
+    "workforce": {
+      "escalation": [
+        "stage_owner",
+        "hr_business_partner",
+        "privacy_officer"
+      ],
+      "sod": {
+        "applicantCannotDecide": true,
+        "makerCannotDecide": true,
+        "mfaAtDecision": true,
+        "restrictedEvidencePurposeRequired": true
+      },
+      "stages": [
+        {
+          "code": "hr_review",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.workforce.stages.hr_review.label",
+            "defaultText": "HR review"
+          }
+        },
+        {
+          "code": "hiring_manager",
+          "escalateAtMinutes": 240,
+          "mode": "serial",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "any"
+          },
+          "remindersAtMinutes": [
+            120,
+            192
+          ],
+          "slaMinutes": 240,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.workforce.stages.hiring_manager.label",
+            "defaultText": "Hiring manager"
+          }
+        },
+        {
+          "code": "compliance_privacy",
+          "escalateAtMinutes": 480,
+          "mode": "parallel",
+          "noSelfApproval": true,
+          "quorum": {
+            "kind": "all"
+          },
+          "remindersAtMinutes": [
+            240,
+            384
+          ],
+          "slaMinutes": 480,
+          "label": {
+            "labelKey": "entity.business_partner_request.workflow.workforce.stages.compliance_privacy.label",
+            "defaultText": "Privacy compliance"
+          }
+        }
+      ],
+      "version": "3.0.1"
+    }
+  }
 }

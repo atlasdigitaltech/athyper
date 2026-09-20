@@ -110,7 +110,6 @@ export function applyBusinessPartnerBankEditor(source: MetaEntityGraph): MetaEnt
     clearOnChange: warning([
       "bankInstitutionId",
       "bankBranchId",
-      "bankDirectoryReleaseId",
       "bankName",
       "branch",
       "bic",
@@ -124,7 +123,6 @@ export function applyBusinessPartnerBankEditor(source: MetaEntityGraph): MetaEnt
       copyFields: [
         { from: "name", to: "bankName" },
         { from: "bic", to: "bic" },
-        { from: "releaseId", to: "bankDirectoryReleaseId" },
       ],
       emptyText:
         "No published banks are available for this country. Choose “Bank not listed” to enter details for review.",
@@ -149,16 +147,11 @@ export function applyBusinessPartnerBankEditor(source: MetaEntityGraph): MetaEnt
     },
     variants: [{ when: unlisted, widget: "hidden" }],
   });
-  add("bank_directory_release", "Bank directory release", "hidden", 99, {
-    valueKey: "bankDirectoryReleaseId",
-    maxLength: 36,
-  });
   const country = find("bankCountryCode");
   country.position = 0;
   country.displayConfig.clearOnChange = warning([
     "bankInstitutionId",
     "bankBranchId",
-    "bankDirectoryReleaseId",
     "bankName",
     "branch",
     "bic",

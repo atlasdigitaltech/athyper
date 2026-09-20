@@ -1,7 +1,16 @@
 import type { PlaneKey } from "@athyper/server-foundation/context";
 import type { EntityDescriptorRepository } from "@athyper/server-contract-metadata";
+import {
+  parseCompiledEntityArtifact,
+  parseCompiledEntityReleaseEnvelope,
+} from "@athyper/server-contract-publication";
 import { sql, type Kysely } from "kysely";
 import { parseEntityRuntimeDescriptor, type RuntimeDescriptorRow } from "./descriptor-parser.js";
+import type {
+  CompiledEntityArtifactReadCoordinate,
+  CompiledEntityReleaseCoordinate,
+  CompiledEntityReleaseSource,
+} from "./artifact-resolution.js";
 
 type Database = Kysely<Record<string, never>>;
 
@@ -43,4 +52,89 @@ export function createRuntimeDescriptorRepository(options: RuntimeDescriptorRepo
       return row ? parseEntityRuntimeDescriptor(row) : null;
     },
   };
+}
+
+/**
+ * Reads only activated v2 release payloads. A payload contains the signed release
+ * envelope and immutable artifacts; it is produced by publication, never compiled
+ * here. The JSON shape is intentionally explicit so a future object-store source can
+ * keep the same reader contract while fetching each artifact by its manifest hash.
+ */
+export function createRuntimeMetaCompiledEntityReleaseSource(
+  options: RuntimeDescriptorRepositoryOptions,
+): CompiledEntityReleaseSource {
+  return {
+    async findAdmittedRelease(coordinate: CompiledEntityReleaseCoordinate) {
+      const database = options.databases[coordinate.planeKey];
+      if (!database) throw new Error(`No runtime metadata database registered for ${coordinate.planeKey}`);
+      const execute = async (executor: Database) => sql<{ runtime_payload: unknown }>`
+        SELECT payload.payload_json::text AS runtime_payload
+          FROM runtime_meta.release_activation_head AS head
+          JOIN runtime_meta.applied_release AS applied
+            ON applied.id=head.applied_release_id AND applied.status='active'
+          JOIN runtime_meta.applied_release_payload AS payload
+            ON payload.applied_release_id=applied.id
+         WHERE payload.artifact_kind='compiled_entity_runtime'
+           AND payload.coordinates->>'entityCode'=${coordinate.entityCode}
+           AND (payload.tenant_id IS NULL OR payload.tenant_id=${coordinate.tenantId}::uuid)
+           AND (${coordinate.releaseId ?? null}::text IS NULL OR payload.payload_json->'release'->>'releaseId'=${coordinate.releaseId ?? null})
+           AND (${coordinate.releaseHash ?? null}::text IS NULL OR payload.payload_json->'release'->>'releaseHash'=${coordinate.releaseHash ?? null})
+         ORDER BY (payload.tenant_id IS NOT NULL) DESC, applied.activated_at DESC
+         LIMIT 1
+      `.execute(executor);
+      const result = options.withTenantTransaction
+        ? await options.withTenantTransaction(coordinate.planeKey, coordinate, execute)
+        : await execute(database);
+      const row = result.rows[0];
+      return row ? parseCompiledEntityReleaseEnvelope(releaseFromPayload(row.runtime_payload)) : null;
+    },
+    async findArtifact(input: CompiledEntityArtifactReadCoordinate) {
+      const planeKey = input.release.targetPlanes.length === 1 ? input.release.targetPlanes[0] : undefined;
+      if (!planeKey) throw new Error("COMPILED_ENTITY_RELEASE_PLANE_AMBIGUOUS");
+      const database = options.databases[planeKey];
+      if (!database) throw new Error(`No runtime metadata database registered for ${planeKey}`);
+      const execute = async (executor: Database) => sql<{ artifact: unknown }>`
+        SELECT artifact.value::text AS artifact
+          FROM runtime_meta.applied_release AS applied
+          JOIN runtime_meta.applied_release_payload AS payload
+            ON payload.applied_release_id=applied.id
+          CROSS JOIN LATERAL jsonb_array_elements(payload.payload_json->'artifacts') AS artifact(value)
+         WHERE applied.status='active'
+           AND payload.artifact_kind='compiled_entity_runtime'
+           AND payload.payload_json->'release'->>'releaseHash'=${input.release.releaseHash}
+           AND artifact.value->>'artifactKey'=${input.entry.artifactKey}
+         LIMIT 1
+      `.execute(executor);
+      const result = await execute(database);
+      const row = result.rows[0];
+      return row ? parseCompiledEntityArtifact(artifactFromPayload(row.artifact)) : null;
+    },
+  };
+}
+
+
+/** pg drivers differ: json/jsonb may arrive as an object or a serialized string. */
+function jsonValue(value: unknown): unknown {
+  let current = Buffer.isBuffer(value) ? value.toString("utf8") : value;
+  // Some pg type parsers return JSON text; some return a JSON string containing
+  // JSON. Normalize both representations before contract validation.
+  for (let pass = 0; pass < 2 && typeof current === "string"; pass += 1) {
+    try { current = JSON.parse(current) as unknown; } catch { throw new Error("COMPILED_ENTITY_RUNTIME_JSON_INVALID"); }
+  }
+  return current;
+}
+
+function releaseFromPayload(value: unknown): unknown {
+  const payload = jsonValue(value);
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error(`COMPILED_ENTITY_RUNTIME_PAYLOAD_INVALID:${typeof payload}`);
+  const release = (payload as Record<string, unknown>).release;
+  if (!release) throw new Error(`COMPILED_ENTITY_RUNTIME_RELEASE_MISSING:${Object.keys(payload as Record<string, unknown>).join(",")}`);
+  return jsonValue(release);
+}
+
+function artifactFromPayload(value: unknown): unknown {
+  const artifact = jsonValue(value);
+  if (!artifact || typeof artifact !== "object" || Array.isArray(artifact)) return artifact;
+  const content = (artifact as Record<string, unknown>).content;
+  return content && typeof content === "object" && !Array.isArray(content) ? content : artifact;
 }

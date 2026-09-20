@@ -29,6 +29,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CloseIcon,
+  LockIcon,
   LogOutIcon,
   MenuIcon,
   NetworkIcon,
@@ -1394,6 +1395,9 @@ function EmptyEntitlement() {
       className="athyper-shell__empty"
       aria-labelledby="empty-entitlement-title"
     >
+      <span className="athyper-shell__empty-mark" aria-hidden="true">
+        <Building2Icon size={24} />
+      </span>
       <h1 id="empty-entitlement-title">{t("shell.empty.noApps")}</h1>
       <p>{t("shell.empty.noAppsHelp")}</p>
       <a href="/select-context">{t("shell.empty.switch")}</a>
@@ -1407,6 +1411,9 @@ function ContextNotReady() {
       className="athyper-shell__empty"
       aria-labelledby="context-not-ready-title"
     >
+      <span className="athyper-shell__empty-mark" aria-hidden="true">
+        <RefreshCwIcon size={24} />
+      </span>
       <h1 id="context-not-ready-title">{t("shell.empty.contextNotReady")}</h1>
       <p>{t("shell.empty.contextNotReadyHelp")}</p>
       <a href="/select-context">{t("shell.empty.switch")}</a>
@@ -1420,6 +1427,9 @@ function ForbiddenRoute() {
       className="athyper-shell__empty"
       aria-labelledby="forbidden-route-title"
     >
+      <span className="athyper-shell__empty-mark" aria-hidden="true">
+        <LockIcon size={24} />
+      </span>
       <h1 id="forbidden-route-title">{t("shell.empty.denied")}</h1>
       <p>{t("shell.empty.deniedHelp")}</p>
       <a href="/">{t("shell.empty.available")}</a>

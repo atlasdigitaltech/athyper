@@ -11,6 +11,7 @@ This directory contains durable architecture decisions, current architecture gui
 
 - [Shared Application Experience — System Design](application-experience/system-design.md) — shared Neon, Mesh and Studio UI architecture, component inventory, entity reuse and package boundaries; local-build scope with future deployment work deferred.
 - [Shared Application Experience — Build Work Plan](application-experience/build-work-plan.md) — ordered local build and repository cleanup tasks with focused checks; no production rollout or formal decision gates.
+- [Record navigation and Summary View design](application-experience/record-navigation-and-summary-view-design.md) — proposed compiled-record navigation, URL state, optional layout views, and lazy summary-card contract.
 - `system-architecture-overview.md` — engineer-facing system architecture: design principles, layer diagram, multi-tenancy (RLS) model, physical database architecture, infrastructure and Docker Compose service inventory.
 - `frontend-first-business-module.md` — architectural boundary and readiness contract for the first frontend Business Partner module.
 - [Entity authorization adoption](../runbooks/entity-authorization-adoption.md) — implemented contract foundation, inventory/dry-run commands, grant-review constraint and remaining activation gates.

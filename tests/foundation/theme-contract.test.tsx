@@ -41,11 +41,11 @@ describe("foundation theme contract", () => {
     }
   });
 
-  it("has complete compact and comfortable density modes with accessible touch targets", () => {
-    assert.deepEqual(DENSITY_MODES, ["compact", "comfortable"]);
+  it("has complete compact, comfortable and spacious density modes with accessible touch targets", () => {
+    assert.deepEqual(DENSITY_MODES, ["compact", "comfortable", "spacious"]);
     for (const density of DENSITY_MODES) {
       assert.deepEqual(Object.keys(DENSITY_TOKENS[density]).sort(), ["controlHeight", "pageGap", "space", "touchTarget"]);
-      assert.equal(DENSITY_TOKENS[density].touchTarget, "2.75rem");
+      assert.ok(parseFloat(DENSITY_TOKENS[density].touchTarget) >= 2.75);
     }
   });
 

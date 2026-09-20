@@ -84,7 +84,7 @@ export function NewCustomerRequest() {
         );
       intake?.markSaved();
       const completion = intake
-        ? await submitBusinessPartnerIntake(api, result.request)
+        ? await submitBusinessPartnerIntake(api, http, result.request)
         : undefined;
       toast.push({
         tone: completion && !completion.submitted ? "warning" : "success",

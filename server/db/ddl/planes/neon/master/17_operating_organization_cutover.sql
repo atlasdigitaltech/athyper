@@ -3,6 +3,9 @@
 ALTER TABLE master.procurement_organization_profile DROP COLUMN IF EXISTS organization_type;
 ALTER TABLE master.sales_organization_profile DROP COLUMN IF EXISTS organization_type;
 ALTER TABLE master.operating_organization DROP COLUMN IF EXISTS domain;
+DROP INDEX IF EXISTS master.operating_organization_domain_status_idx;
+CREATE INDEX IF NOT EXISTS operating_organization_kind_status_idx
+  ON master.operating_organization (tenant_id, organization_kind, status, code);
 
 DO $rename_capability_triggers$
 BEGIN

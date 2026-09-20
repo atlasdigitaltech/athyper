@@ -19,8 +19,10 @@ import {
   type BusinessPartner360CompletenessActionCode,
   type BusinessPartner360ContactSummary,
   type BusinessPartner360GovernedAction,
+  type BusinessPartner360Header,
   type BusinessPartner360MaskedIdentifierSummary,
   type BusinessPartner360NetworkLocalData,
+  type BusinessPartner360Overview,
   type BusinessPartner360PartyCategory,
   type BusinessPartner360Query,
   type BusinessPartner360RoleLens,
@@ -153,6 +155,10 @@ export interface BusinessPartner360Repository<Transaction> {
     },
     transaction: Transaction,
   ): Promise<BusinessPartner360Core | null>;
+  readOverview?(
+    input: { readonly tenantId: string; readonly businessPartnerId: string },
+    transaction: Transaction,
+  ): Promise<Readonly<Record<string, unknown>> | null>;
   readFragments(
     input: {
       readonly authorizeCase?: (caseId: string) => Promise<boolean>;
@@ -447,6 +453,47 @@ export function createBusinessPartner360Service<Transaction>(options: {
       },
     ): Promise<BusinessPartnerAggregate>;
   } = {
+    async header(query): Promise<BusinessPartner360Header> {
+      return options.transactions.run(
+        "neon",
+        { tenantId: query.context.tenantId, principalId: query.context.principalId },
+        async (transaction) => {
+          const { core } = await resolve(query, transaction);
+          return Object.freeze({
+            businessPartnerVersion: core.version,
+            identity: Object.freeze({
+              id: core.id,
+              code: core.code,
+              category: core.category,
+              name: core.name,
+              lifecycleStatus: core.status,
+            }),
+          });
+        },
+      );
+    },
+    async overview(query): Promise<BusinessPartner360Overview> {
+      return options.transactions.run(
+        "neon",
+        { tenantId: query.context.tenantId, principalId: query.context.principalId },
+        async (transaction) => {
+          const { core } = await resolve(query, transaction);
+          const stored = await options.repository.readOverview?.({
+            tenantId: query.context.tenantId,
+            businessPartnerId: core.id,
+          }, transaction);
+          const values = stored ?? Object.freeze({
+            id: core.id,
+            code: core.code,
+            name: core.name,
+            partner_category: core.category,
+            status: core.status,
+            record_version: core.version,
+          });
+          return Object.freeze({ businessPartnerVersion: core.version, values: Object.freeze({ ...values }) });
+        },
+      );
+    },
     async summary(query) {
       return options.transactions.run(
         "neon",
@@ -1590,6 +1637,28 @@ export function createBusinessPartner360Service<Transaction>(options: {
   };
   return {
     ...service,
+    async overview(query): Promise<BusinessPartner360Overview> {
+      return options.transactions.run(
+        "neon",
+        { tenantId: query.context.tenantId, principalId: query.context.principalId },
+        async (transaction) => {
+          const { core } = await resolve(query, transaction);
+          const stored = await options.repository.readOverview?.({
+            tenantId: query.context.tenantId,
+            businessPartnerId: core.id,
+          }, transaction);
+          const values = stored ?? Object.freeze({
+            id: core.id,
+            code: core.code,
+            name: core.name,
+            partner_category: core.category,
+            status: core.status,
+            record_version: core.version,
+          });
+          return Object.freeze({ businessPartnerVersion: core.version, values: Object.freeze({ ...values }) });
+        },
+      );
+    },
     async summary(query) {
       query = await freshQuery(query);
       const result = await service.summary(query);

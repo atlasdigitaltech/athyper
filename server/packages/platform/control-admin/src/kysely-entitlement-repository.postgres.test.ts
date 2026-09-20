@@ -1224,7 +1224,7 @@ describe.skipIf(!enabled)(
           "compact",
         );
         const attempts = await Promise.all(
-          ["comfortable", "compact"].map((value) =>
+          ["spacious", "compact"].map((value) =>
             f.request("/experience.profile.default_density/value", {
               id: row.id,
               expectedVersion: row.version,

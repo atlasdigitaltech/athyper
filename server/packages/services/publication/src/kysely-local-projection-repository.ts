@@ -302,9 +302,9 @@ function assertArtifactCoordinates(
   const payloadPlane =
     envelope.artifactKind === "entity_runtime"
       ? envelope.payload.entityDescriptor.plane
-      : envelope.artifactKind === "bank_directory"
+      : envelope.artifactKind === "compiled_entity_runtime"
         ? envelope.targetPlane
-        : envelope.payload.plane;
+      : envelope.payload.plane;
   if (
     envelope.targetPlane !== deployment.targetPlane ||
     envelope.targetPlane !== payloadPlane
@@ -334,23 +334,29 @@ function assertArtifactCoordinates(
 }
 function projectionJson(artifact: PublicationArtifactDocumentV1) {
   const envelope = artifact.envelope;
-  if (envelope.artifactKind === "bank_directory") {
-    const b = envelope.payload;
+  if (envelope.artifactKind === "compiled_entity_runtime") {
+    const payload = envelope.payload;
     return {
       applied_release_payload: {
-        id: b.id,
+        // One immutable payload is allowed for one applied release. The outer
+        // publication release is the durable UUID identity; the inner compiled
+        // release retains its own content-addressed identity and hash.
+        id: envelope.releaseId,
         tenant_id: null,
-        artifact_kind: "bank_directory",
-        payload_schema_version: "1.0.0",
-        payload_hash: b.contentHash,
-        payload_json: b,
+        artifact_kind: envelope.artifactKind,
+        payload_schema_version: "2.0",
+        payload_hash: artifact.manifest.payloadSha256,
+        payload_json: payload,
         coordinates: {
-          release_id: b.id,
-          release_no: b.version,
+          release_id: envelope.releaseId,
+          release_no: envelope.releaseNo,
           publication_key: envelope.publicationKey,
           plane_code: envelope.targetPlane,
+          entityCode: payload.entityCode,
+          compiled_release_id: payload.release.releaseId,
+          compiled_release_hash: payload.release.releaseHash,
         },
-        generated_at: b.publishedAt,
+        generated_at: payload.generatedAt,
       },
     };
   }

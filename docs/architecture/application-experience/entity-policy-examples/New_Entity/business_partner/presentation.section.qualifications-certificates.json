@@ -8,6 +8,10 @@
   "plane": "neon",
   "sectionKey": "qualifications-certificates",
   "rendererKey": "platform.related-collection.v1",
+  "emptyState": {
+    "title": "No qualification certificates yet",
+    "detail": "When qualification certificates are added, they’ll appear here."
+  },
   "dataBinding": {
     "kind": "registered_service",
     "handlerKey": "neon.bp.section.qualifications-certificates.v1",

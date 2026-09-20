@@ -5,11 +5,9 @@ import { expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   api: {
-    requestForm: vi.fn(),
     patch: vi.fn(),
     create: vi.fn(),
     validate: vi.fn(),
-    submit: vi.fn(),
   },
   http: { request: vi.fn() },
   navigate: vi.fn(),
@@ -79,7 +77,7 @@ it.each([
   async (submitRequest, status) => {
     vi.clearAllMocks();
     (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
-    const definition = { hash: "hash", version: "1", releaseId: "release" };
+    const definition = { hash: "hash", version: 1, releaseId: "release" };
     const request = {
       id: "case-1",
       requestNo: "BP-1",
@@ -101,8 +99,7 @@ it.each([
         draftRetry: "Retry saving",
       },
     };
-    mocks.api.requestForm.mockResolvedValue({ definition });
-    mocks.http.request.mockResolvedValue({ intakeSurfaces: [surface] });
+    mocks.http.request.mockResolvedValue({ revision: { release: 1, descriptorHash: definition.hash, surfaceHash: definition.hash }, intakeSurfaces: [surface] });
     mocks.api.patch
       .mockRejectedValueOnce(
         new ApiTransportError(
@@ -116,7 +113,6 @@ it.each([
       validation: { valid: true },
       case: { rowVersion: 3 },
     });
-    mocks.api.submit.mockResolvedValue({});
     const container = document.createElement("div");
     document.body.append(container);
     const root = createRoot(container);
@@ -151,7 +147,10 @@ it.each([
       expect(mocks.api.patch.mock.calls[1]).toEqual(original);
       expect(mocks.api.create).not.toHaveBeenCalled();
       expect(mocks.api.validate).toHaveBeenCalledTimes(submitRequest ? 1 : 0);
-      expect(mocks.api.submit).toHaveBeenCalledTimes(submitRequest ? 1 : 0);
+      const runtimeSubmits = mocks.http.request.mock.calls.filter(
+        ([operation]) => operation?.method === "POST",
+      );
+      expect(runtimeSubmits).toHaveLength(submitRequest ? 1 : 0);
       if (submitRequest)
         expect(mocks.navigate).toHaveBeenCalledWith(
           "/mdg/business-partner/requests/case-1",

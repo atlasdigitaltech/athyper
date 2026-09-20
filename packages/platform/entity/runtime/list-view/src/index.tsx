@@ -188,6 +188,7 @@ interface EntityListPageAction {
 }
 
 interface EntityApplicationContextValue {
+  readonly setListInformation: (value: { description?: string; count?: string } | undefined) => void;
   readonly client: HttpClient;
   readonly descriptor: EntityApplicationDescriptorV1;
   readonly scopeCoordinate?: EntityListScopeCoordinateV1;
@@ -292,6 +293,25 @@ export interface EntityListRuntimeProps {
   readonly applicationName?: string;
 }
 
+/**
+ * Render the caller's scope control as its own component boundary.  Calling the
+ * callback directly from a list/application render lets a hook-using control
+ * change the parent's hook count when the descriptor arrives asynchronously.
+ */
+function ScopeControlRenderer({
+  render,
+  scope,
+  value,
+  onChange,
+}: {
+  readonly render: NonNullable<EntityListRuntimeProps["renderScopeControl"]>;
+  readonly scope: EntityListDescriptorV1["scope"];
+  readonly value?: EntityListScopeCoordinateV1;
+  readonly onChange: (value: EntityListScopeCoordinateV1 | undefined) => void;
+}) {
+  return <>{render({ scope, value, onChange })}</>;
+}
+
 export function EntityListRuntime(props: EntityListRuntimeProps) {
   const [selection, setSelection] = useState<{
     entityCode: string;
@@ -329,6 +349,7 @@ function EntityApplicationContent({
   applicationName,
 }: EntityListRuntimeProps) {
   const taskHeader = useEntityTaskHeader();
+  const [listInformation, setListInformation] = useState<{ description?: string; count?: string }>();
   const locale = useOptionalI18n()?.localization.uiLocale;
   const [descriptor, setDescriptor] = useState<EntityApplicationDescriptorV1>();
   const [scopeSnapshot, setScopeSnapshot] = useState<{
@@ -339,11 +360,12 @@ function EntityApplicationContent({
     scopeSnapshot?.entityCode === entityCode &&
     renderScopeControl &&
     onScopeCoordinateChange
-      ? renderScopeControl({
-          scope: scopeSnapshot.scope,
-          value: scopeCoordinate,
-          onChange: onScopeCoordinateChange,
-        })
+      ? <ScopeControlRenderer
+          render={renderScopeControl}
+          scope={scopeSnapshot.scope}
+          value={scopeCoordinate}
+          onChange={onScopeCoordinateChange}
+        />
       : providedScopeControl;
   const [error, setError] = useState<ApiTransportError>();
   const [attempt, setAttempt] = useState(0),
@@ -386,7 +408,7 @@ function EntityApplicationContent({
     return () => controller.abort();
   }, [client, authorityKey, scopePending, attempt]);
   const applicationContext = useMemo(() => descriptor ? {
-    client, descriptor, scopeCoordinate, scopeControl, renderScopeControl,
+    client, descriptor, scopeCoordinate, scopeControl, renderScopeControl, setListInformation,
   } : undefined, [client, descriptor, scopeCoordinate, scopeControl, renderScopeControl]);
   if (scopePending || !descriptor || loadedKey !== authorityKey)
     return (
@@ -397,7 +419,6 @@ function EntityApplicationContent({
         ) : null}
         <ListFrame
           title="Loading application"
-          headerOnly
           loading={!error}
           error={error}
           retry={() => setAttempt((value) => value + 1)}
@@ -430,7 +451,7 @@ function EntityApplicationContent({
           <PageHeader
             level="collection"
             title={taskHeader?.title ?? title}
-            description={taskHeader ? taskHeader.description : description}
+            description={taskHeader ? taskHeader.description : listHeaderInformation(listInformation?.description ?? description, listInformation?.count)}
             supportingRow={taskHeader?.supportingRow}
             metadata={taskHeader?.metadata}
             icon={<Icon />}
@@ -536,11 +557,12 @@ function EntityCollectionRuntime({
     scopeSnapshot?.entityCode === entityCode &&
     renderScopeControl &&
     onScopeCoordinateChange
-      ? renderScopeControl({
-          scope: scopeSnapshot.scope,
-          value: scopeCoordinate,
-          onChange: onScopeCoordinateChange,
-        })
+      ? <ScopeControlRenderer
+          render={renderScopeControl}
+          scope={scopeSnapshot.scope}
+          value={scopeCoordinate}
+          onChange={onScopeCoordinateChange}
+        />
       : providedScopeControl;
   const [state, setState] = useState<ListLocationStateV1>();
   const [page, setPage] = useState<EntityListResultV1>();
@@ -897,6 +919,21 @@ function EntityCollectionRuntime({
       : undefined,
   );
 
+  const publishListInformation = inherited?.setListInformation;
+  const listDescription = descriptor?.surface.header
+    ? descriptor.surface.header.description
+      ? resolveEntityText(descriptor.surface.header.description, locale)
+      : undefined
+    : descriptor?.surface.description;
+  const availableCount = !loading && !error && pageContextKey === `${authorityKey}:${serverQueryKey}`
+    ? listCountLabel(page) ?? (page && !page.pagination.hasNext && !state?.cursor && !(state?.pageIndex ?? 0) && cursorHistory.length === 0
+      ? new Intl.NumberFormat(locale).format(page.rows.length) : undefined) : undefined;
+  useEffect(() => {
+    if (!contentOnly || embedding || navigationOnly || !publishListInformation) return;
+    publishListInformation({ description: listDescription, count: availableCount });
+    return () => publishListInformation(undefined);
+  }, [contentOnly, embedding, navigationOnly, publishListInformation, listDescription, availableCount]);
+
   if (navigationOnly)
     return scopePending ||
       !descriptor ||
@@ -991,7 +1028,7 @@ function EntityCollectionRuntime({
             <PageHeader
               level="collection"
               title={title}
-              description={description}
+              description={listHeaderInformation(description)}
               icon={<HeaderIcon />}
               actions={headerActions}
             />
@@ -1090,7 +1127,6 @@ function EntityCollectionRuntime({
       });
     }
   };
-  const countLabel = listCountLabel(page);
 
   return (
     <FilterChoiceLoader.Provider
@@ -1133,15 +1169,8 @@ function EntityCollectionRuntime({
               className="a-entity-list__header"
               level="collection"
               title={title}
-              description={description}
+              description={listHeaderInformation(description, availableCount)}
               icon={<HeaderIcon />}
-              metadata={
-                <>
-                  {countLabel ? (
-                    <span aria-live="polite">{countLabel} records</span>
-                  ) : null}
-                </>
-              }
               actions={headerActions}
             />
             <EntityNavigation
@@ -4934,6 +4963,11 @@ function listCountLabel(page?: EntityListResultV1): string | undefined {
     ? undefined
     : `${page?.pagination.countMode === "approximate" ? "≈" : ""}${new Intl.NumberFormat().format(count)}`;
 }
+function listHeaderInformation(description?: string, count?: string): ReactNode {
+  const text = description?.trim();
+  if (!text && count === undefined) return undefined;
+  return <>{text ? <span>{text}</span> : null}{text && count !== undefined ? <span aria-hidden="true"> · </span> : null}{count !== undefined ? <span aria-live="polite">{count} records</span> : null}</>;
+}
 function groupedRows(
   page: EntityListResultV1,
   group: string | undefined,
@@ -5132,7 +5166,6 @@ function ListFrame({
         <ErrorState error={error} retry={retry} application={headerOnly} applicationName={applicationName} />
       ) : loading ? (
         <>
-          {!contentOnly ? <EntityNavigationSkeleton /> : null}
           {!headerOnly ? (
             <div className="a-entity-list__panel">
               <div className="a-entity-list__chrome" aria-hidden="true">

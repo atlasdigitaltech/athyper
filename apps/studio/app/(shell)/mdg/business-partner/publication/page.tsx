@@ -22,7 +22,6 @@ export default function BusinessPartnerPublicationPage() {
         metadata={<span>{businessPartnerDefinition.publicationKey}</span>}
       />
 <BusinessPartnerInspection tab="publication"/>
-      <p><a href="/mdg/bank-directory">Manage shared bank directory publication</a></p>
       <TaskEditPolicyAuthoring />
       <BusinessPartnerCaseContractAuthoring />
       <BusinessPartnerAuthoringWorkspace />

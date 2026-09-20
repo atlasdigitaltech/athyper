@@ -14,6 +14,8 @@ export interface PageHeaderProps extends Omit<HTMLAttributes<HTMLElement>, "titl
   readonly title: ReactNode;
   readonly description?: ReactNode;
   readonly icon?: ReactNode;
+  /** Logo images retain their proportions; portraits may fill the identity slot. */
+  readonly imageFit?: "contain" | "cover";
   readonly metadata?: ReactNode;
   readonly supportingRow?: ReactNode;
   readonly actions?: ReactNode;
@@ -35,8 +37,8 @@ export function PageFrame({ width = "content", titleId = "page-title", className
   return <section className={["athyper-page-frame", `athyper-page-frame--${width}`, className].filter(Boolean).join(" ")} aria-labelledby={titleId} {...props}>{children}</section>;
 }
 
-export function PageHeader({ level, context, title, description, icon, metadata, actions, supportingRow, titleId = "page-title", className, ...props }: PageHeaderProps) {
-  return <header className={["athyper-page-header", `athyper-page-header--${level}`, className].filter(Boolean).join(" ")} data-slot="page-header" aria-labelledby={titleId} {...props}>
+export function PageHeader({ level, context, title, description, icon, imageFit = "contain", metadata, actions, supportingRow, titleId = "page-title", className, ...props }: PageHeaderProps) {
+  return <header className={["athyper-page-header", `athyper-page-header--${level}`, className].filter(Boolean).join(" ")} data-slot="page-header" data-image-fit={imageFit} aria-labelledby={titleId} {...props}>
     {icon ? <span className="athyper-page-header__icon" aria-hidden="true">{icon}</span> : null}
     <div className="athyper-page-header__body">
       {context ? <p className="athyper-page-header__context">{context}</p> : null}

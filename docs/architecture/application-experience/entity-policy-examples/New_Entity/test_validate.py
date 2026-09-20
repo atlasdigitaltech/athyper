@@ -154,6 +154,9 @@ class ValidatorMutationTests(unittest.TestCase):
     def test_rejects_child_field_not_declared_by_child_core(self):
         self.fails('contacts', lambda root: self._edit(root, 'business_partner/presentation.section.contacts.json', lambda value: value['childCollections'][0]['fieldBindings'][0].update(fieldKey='not_a_contact_field')))
 
+    def test_rejects_missing_required_handler_registration(self):
+        self.fails('registry evidence missing', lambda root: self._edit(root, 'business_partner/operation.json', lambda value: value['operations'][0]['execution'].update(handlerKey='neon.bp.not_registered.v1')))
+
     def test_rejects_translation_key_with_conflicting_text(self):
         self.fails('conflicting translation key', lambda root: self._edit(root, 'business_partner/presentation.list.json', lambda value: value['queryPresentation']['quickFilters'][0].update(label={'labelKey':'entity.business_partner.core.fields.name.label','defaultText':'Different label'})))
 

@@ -47,14 +47,14 @@ export function createExperienceParameterConsumer(
         "Invalid experience density configuration",
       );
     }
-    if (value !== "comfortable" && value !== "compact")
+    if (value !== "comfortable" && value !== "compact" && value !== "spacious")
       throw new HttpError(
         503,
         "PARAMETER_CONSUMER_VALUE_INVALID",
         "Invalid experience density",
       );
     return {
-      densityCode: value as "comfortable" | "compact",
+      densityCode: value as "comfortable" | "compact" | "spacious",
       configurationRevision: JSON.stringify([
         d.id,
         d.revision,

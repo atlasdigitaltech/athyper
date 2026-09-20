@@ -6,8 +6,6 @@ import {
   readIntakeFormReview,
   useEntityIntake,
 } from "@athyper/platform-entity-form-detail";
-import { submitBusinessPartnerIntake } from "./intake-submit";
-
 import {
   useApiClient,
   useApplicationNavigation,
@@ -32,6 +30,7 @@ import {
   type ReactNode,
 } from "react";
 import { createBusinessPartnerClient, type PartnerAggregate } from "./client";
+import { entityRuntimeClient } from "@athyper/platform-entity-descriptor-client";
 
 export type CommercialRole = "supplier" | "customer";
 
@@ -178,37 +177,29 @@ function RoleExtensionForm({
     try {
       const code = requiredValue(data, "roleCode").toUpperCase();
       const type = requiredValue(data, "roleType");
-      const result = await api.extend(
-        {
-          businessPartnerId,
-          role,
-          operatingOrganizationId: organizationId,
-          ...(companyCodeId ? { companyCodeId } : {}),
-          proposedPayload:
-            role === "supplier"
-              ? { supplierCode: code, supplierType: type }
-              : { customerCode: code, customerType: type },
-        },
-        intakeCommandKey,
-      );
-      intake?.markSaved();
-      const completion = intake
-        ? await submitBusinessPartnerIntake(api, result.request)
-        : undefined;
-      toast.push({
-        tone: completion && !completion.submitted ? "warning" : "success",
-        title: completion?.submitted
-          ? "Role extension submitted"
-          : result.replayed
-            ? "Existing extension opened"
-            : "Role extension created",
-        detail:
-          completion?.detail ??
-          `${result.request.requestNo} reuses ${aggregate.businessPartner.code} and has an independent approval lifecycle.`,
+      const bootstrap = await entityRuntimeClient.bootstrap(http, {
+        entityCode: "business_partner", recordId: businessPartnerId, surfaceKey: "detail",
       });
-      navigation.push(
-        `/mdg/business-partner/requests/${encodeURIComponent(result.request.id)}`,
-      );
+      const receipt = await entityRuntimeClient.operation(http, {
+        entityCode: "business_partner", recordId: businessPartnerId,
+        operationKey: "request_role_extension",
+        expectedVersion: Number(bootstrap.header.revision), idempotencyKey: intakeCommandKey,
+        input: {
+          requestedRole: role, operatingOrganizationId: organizationId,
+          ...(companyCodeId ? { companyCodeId } : {}),
+          proposedPayload: role === "supplier"
+            ? { supplierCode: code, supplierType: type }
+            : { customerCode: code, customerType: type },
+        },
+      });
+      const requestId = typeof receipt.requestId === "string" ? receipt.requestId : undefined;
+      if (!requestId) throw new Error("The governed role-extension operation did not return a request identity.");
+      intake?.markSaved();
+      toast.push({
+        tone: "success", title: receipt.replayed === true ? "Existing extension opened" : "Role extension created",
+        detail: `${aggregate.businessPartner.code} now has an independently governed extension request.`,
+      });
+      navigation.push(`/mdg/business-partner/requests/${encodeURIComponent(requestId)}`);
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Unable to create extension",

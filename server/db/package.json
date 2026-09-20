@@ -142,8 +142,6 @@
     "test:integration:business-partner-r4-change-case": "tsx scripts/tests/integration/run-sql-file.ts scripts/tests/integration/business-partner-r4-change-case.sql",
     "test:integration:entity-case-payload-validation": "tsx scripts/tests/integration/run-sql-file.ts scripts/tests/integration/entity-case-payload-validation.sql",
     "test:integration:case-contract-publication": "node -e \"console.error('test:integration:case-contract-publication moved to server/packages/services/publication')\"",
-    "db:publish:bank-directory": "tsx scripts/operations/banking/publish-bank-directory.ts",
-    "test:integration:bank-directory": "tsx scripts/tests/integration/run-sql-file.ts scripts/tests/integration/bank-directory/ownership.sql",
     "test:integration:bank-verification": "node -e \"console.error('test:integration:bank-verification moved to server/packages/planes/neon')\"",
     "db:provision:neon:business-partner-r5-fixtures": "tsx scripts/provisioning/provision-business-partner-r5-fixtures.ts",
     "test:integration:business-partner-r6-delivery": "tsx scripts/tests/integration/business-partner-r6-delivery.ts",

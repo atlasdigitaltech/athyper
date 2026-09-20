@@ -37,8 +37,8 @@ planes/neon/control/02_domains.sql
 planes/neon/document/02_domains.sql
 planes/neon/ledger/02_domains.sql
 common/shared/03_tables.sql
-common/shared/03_bank_directory.sql
-common/shared/04_bank_directory_views.sql
+common/shared/03_bank_master.sql
+common/shared/04_bank_master_views.sql
 common/master/03_platform_tables.sql
 planes/neon/master/03_tables.sql
 common/snapshot/03_tables.sql
@@ -79,6 +79,8 @@ planes/neon/ledger/05_constraints.sql
 common/ai/05_constraints.sql
 common/shared/06_indexes.sql
 planes/neon/master/06_indexes.sql
+planes/neon/master/16_operating_organization_model.sql
+planes/neon/master/17_operating_organization_cutover.sql
 common/master/06_indexes.sql
 planes/neon/control/06_indexes.sql
 common/snapshot/06_indexes.sql
@@ -96,7 +98,6 @@ common/document/06_indexes.sql
 planes/neon/ledger/06_indexes.sql
 common/ai/06_indexes.sql
 common/shared/07_functions.sql
-common/shared/07_bank_directory.sql
 planes/neon/control/07_functions.sql
 common/control/07_functions.sql
 common/runtime_meta/07_functions.sql
@@ -188,6 +189,7 @@ planes/neon/master/12_platform_catalog_reference_seed.sql
 planes/neon/control/12_platform_catalog_reference_seed.sql
 planes/neon/authz/14_permission_reference_seed.sql
 planes/neon/authz/15_currency_reference_permission.sql
+planes/neon/authz/16_compiled_entity_runtime_permission.sql
 planes/neon/control/12_business_partner_360_feature_seed.sql
 common/authz/14_workflow_permission_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql
