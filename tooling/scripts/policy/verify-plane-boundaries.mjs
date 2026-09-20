@@ -18,8 +18,18 @@ const sourceExtensions = new Set([
   ".yml",
   ".conf",
 ]);
-const sourceFilenames = new Set(["Dockerfile", "Dockerfile.dev", "Dockerfile.prod"]);
-const ignoredDirectories = new Set(["node_modules", ".next", "dist", ".turbo", ".cache"]);
+const sourceFilenames = new Set([
+  "Dockerfile",
+  "Dockerfile.dev",
+  "Dockerfile.prod",
+]);
+const ignoredDirectories = new Set([
+  "node_modules",
+  ".next",
+  "dist",
+  ".turbo",
+  ".cache",
+]);
 
 const meshOnlyPackages = [
   {
@@ -130,21 +140,12 @@ const rules = [
   },
   {
     label: "Mesh",
-    roots: [
-      "apps/mesh",
-      "packages/planes/mesh",
-    ],
-    bannedPackages: [
-      ...neonOnlyPackages,
-      ...studioOnlyPackages,
-    ],
+    roots: ["apps/mesh", "packages/planes/mesh"],
+    bannedPackages: [...neonOnlyPackages, ...studioOnlyPackages],
   },
   {
     label: "Neon",
-    roots: [
-      "apps/neon",
-      "packages/planes/neon",
-    ],
+    roots: ["apps/neon", "packages/planes/neon"],
     bannedPackages: [
       ...removedNeonProductPackages,
       ...meshOnlyPackages,
@@ -153,10 +154,7 @@ const rules = [
   },
   {
     label: "Studio",
-    roots: [
-      "apps/studio",
-      "packages/planes/studio",
-    ],
+    roots: ["apps/studio", "packages/planes/studio"],
     bannedPackages: [
       ...meshOnlyPackages,
       ...removedNeonProductPackages,
@@ -185,7 +183,12 @@ const productTierDependencyPolicy = {
   "runtime-ui": ["design", "runtime-ui"],
 };
 
-const dependencySections = ["dependencies", "peerDependencies", "devDependencies", "optionalDependencies"];
+const dependencySections = [
+  "dependencies",
+  "peerDependencies",
+  "devDependencies",
+  "optionalDependencies",
+];
 
 const legacyRuntimePackages = [
   {
@@ -291,7 +294,9 @@ function collectProductPackagesByName() {
       const packageJsonPath = join(packageRoot, "package.json");
       if (!existsSync(packageJsonPath)) continue;
 
-      const manifest = JSON.parse(readFileSync(packageJsonPath, "utf8").replace(/^\uFEFF/, ""));
+      const manifest = JSON.parse(
+        readFileSync(packageJsonPath, "utf8").replace(/^\uFEFF/, ""),
+      );
       if (typeof manifest.name !== "string") continue;
 
       packagesByName.set(manifest.name, {
@@ -335,8 +340,14 @@ const disallowedRuntimeFoundationSegments = {
   workflow: "server/packages/services/workflow",
 };
 
-for (const [segment, target] of Object.entries(disallowedRuntimeFoundationSegments)) {
-  const legacyRuntimeDomainRoot = join(repoRoot, "server/packages/foundation", segment);
+for (const [segment, target] of Object.entries(
+  disallowedRuntimeFoundationSegments,
+)) {
+  const legacyRuntimeDomainRoot = join(
+    repoRoot,
+    "server/packages/foundation",
+    segment,
+  );
   if (existsSync(legacyRuntimeDomainRoot)) {
     violations.push(
       `Server: server/packages/foundation/${segment} exists; domain behavior belongs under ${target}`,
@@ -347,7 +358,12 @@ for (const [segment, target] of Object.entries(disallowedRuntimeFoundationSegmen
 const staleServerFoundationReferences = [
   "server/src/foundation",
   "server\\src\\foundation",
-  "src/foundation",
+  // Anchored with both separators so it matches a path INTO the retired
+  // server/src/foundation tree, but not a package's own module such as
+  // server/packages/contracts/finance/src/foundation.ts. No directory named
+  // src/foundation exists outside the retired tree.
+  "/src/foundation/",
+  "\\src\\foundation\\",
   "@src/foundation",
   "../foundation/",
   "./foundation/",
@@ -362,7 +378,9 @@ const staleServerFrameworkReferences = [
   "framework\\adapters",
 ];
 
-const staleRuntimeDomainReferences = Object.keys(disallowedRuntimeFoundationSegments).flatMap((segment) => [
+const staleRuntimeDomainReferences = Object.keys(
+  disallowedRuntimeFoundationSegments,
+).flatMap((segment) => [
   `runtime/foundation/${segment}`,
   `runtime\\foundation\\${segment}`,
 ]);
@@ -420,7 +438,11 @@ for (const relRoot of legacyRuntimeImportScanRoots) {
   if (!existsSync(absRoot)) continue;
 
   for (const file of walk(absRoot)) {
-    if (legacyRuntimeImportIgnoredRoots.some((ignoredRoot) => isUnderRelRoot(file, ignoredRoot))) {
+    if (
+      legacyRuntimeImportIgnoredRoots.some((ignoredRoot) =>
+        isUnderRelRoot(file, ignoredRoot),
+      )
+    ) {
       continue;
     }
 
@@ -440,12 +462,21 @@ for (const relRoot of legacyRuntimeImportScanRoots) {
 
 const productPackagesByName = collectProductPackagesByName();
 for (const [packageName, packageInfo] of productPackagesByName) {
-  if (!Object.prototype.hasOwnProperty.call(productTierDependencyPolicy, packageInfo.groupName)) {
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      productTierDependencyPolicy,
+      packageInfo.groupName,
+    )
+  ) {
     continue;
   }
 
-  const allowedGroups = new Set(productTierDependencyPolicy[packageInfo.groupName]);
-  const manifest = JSON.parse(readFileSync(packageInfo.packageJsonPath, "utf8").replace(/^\uFEFF/, ""));
+  const allowedGroups = new Set(
+    productTierDependencyPolicy[packageInfo.groupName],
+  );
+  const manifest = JSON.parse(
+    readFileSync(packageInfo.packageJsonPath, "utf8").replace(/^\uFEFF/, ""),
+  );
 
   for (const section of dependencySections) {
     const deps = manifest[section];
@@ -463,10 +494,12 @@ for (const [packageName, packageInfo] of productPackagesByName) {
 }
 
 if (violations.length > 0) {
-  fail([
-    "Plane package boundary violations:",
-    ...violations.map((violation) => `- ${violation}`),
-  ].join("\n"));
+  fail(
+    [
+      "Plane package boundary violations:",
+      ...violations.map((violation) => `- ${violation}`),
+    ].join("\n"),
+  );
 }
 
 console.log("Plane package boundaries verified.");

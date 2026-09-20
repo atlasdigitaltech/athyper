@@ -11,7 +11,7 @@ describe("job history retention", () => {
       assertDedicatedJobStore("redis://cache:6379/1", "redis://cache/0"),
     ).toThrow(/dedicated Redis/);
     expect(() =>
-      assertDedicatedJobStore("redis://jobqueue/0", "redis://memorycache/0"),
+      assertDedicatedJobStore("redis://jobqueue/0", "redis://memory-cache/0"),
     ).not.toThrow();
   });
   it("adds age limits to defaults and numeric producer overrides", () => {

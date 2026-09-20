@@ -1,3 +1,4 @@
+import prettier from "prettier";
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
@@ -6,18 +7,35 @@ import { readdirSync } from "node:fs";
 const root = resolve(import.meta.dirname, "../..");
 const normalize = (value) => value.replaceAll("\\", "/");
 const relPath = (value) => normalize(relative(root, value));
-const frontendSpine = JSON.parse(readFileSync(resolve(root, "governance/config/governance/frontend-spine-packages.json"), "utf8"));
+const frontendSpine = JSON.parse(
+  readFileSync(
+    resolve(root, "governance/config/governance/frontend-spine-packages.json"),
+    "utf8",
+  ),
+);
 
-const tracked = execFileSync("git", ["ls-files", "**/package.json", "package.json"], {
-  cwd: root,
-  encoding: "utf8",
-}).split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
+const tracked = execFileSync(
+  "git",
+  ["ls-files", "**/package.json", "package.json"],
+  {
+    cwd: root,
+    encoding: "utf8",
+  },
+)
+  .split(/\r?\n/)
+  .map((value) => value.trim())
+  .filter(Boolean);
 
 function discoverPackageFiles(directory) {
   if (!existsSync(directory)) return [];
   const result = [];
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    if (entry.name === "node_modules" || entry.name === ".git" || entry.name === "dist") continue;
+    if (
+      entry.name === "node_modules" ||
+      entry.name === ".git" ||
+      entry.name === "dist"
+    )
+      continue;
     const path = join(directory, entry.name);
     if (entry.isDirectory()) result.push(...discoverPackageFiles(path));
     else if (entry.name === "package.json") result.push(relPath(path));
@@ -25,13 +43,21 @@ function discoverPackageFiles(directory) {
   return result;
 }
 
-const packageFiles = [...new Set([
-  ...tracked.filter((file) => existsSync(resolve(root, file))),
-  // Include new, not-yet-tracked workspace packages in every active ownership
-  // area. Ownership validation must not depend on a package's first commit.
-  ...["apps", "packages", "server/apps", "server/db", "server/packages", "tooling"]
-    .flatMap((directory) => discoverPackageFiles(resolve(root, directory))),
-])];
+const packageFiles = [
+  ...new Set([
+    ...tracked.filter((file) => existsSync(resolve(root, file))),
+    // Include new, not-yet-tracked workspace packages in every active ownership
+    // area. Ownership validation must not depend on a package's first commit.
+    ...[
+      "apps",
+      "packages",
+      "server/apps",
+      "server/db",
+      "server/packages",
+      "tooling",
+    ].flatMap((directory) => discoverPackageFiles(resolve(root, directory))),
+  ]),
+];
 const manifests = packageFiles.map((file) => {
   const path = resolve(root, file);
   const canonicalPath = relPath(realpathSync(path));
@@ -46,10 +72,12 @@ const manifests = packageFiles.map((file) => {
 
 let active = [];
 try {
-  const command = process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : "pnpm";
-  const args = process.platform === "win32"
-    ? ["/d", "/s", "/c", "pnpm.cmd list -r --depth -1 --json"]
-    : ["list", "-r", "--depth", "-1", "--json"];
+  const command =
+    process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : "pnpm";
+  const args =
+    process.platform === "win32"
+      ? ["/d", "/s", "/c", "pnpm.cmd list -r --depth -1 --json"]
+      : ["list", "-r", "--depth", "-1", "--json"];
   const listed = spawnSync(command, args, {
     cwd: root,
     encoding: "utf8",
@@ -62,7 +90,13 @@ try {
 } catch {
   active = [];
 }
-const activeSet = new Set(active.flatMap((path) => [path, `${path}/package.json`, path === "" ? "package.json" : path]));
+const activeSet = new Set(
+  active.flatMap((path) => [
+    path,
+    `${path}/package.json`,
+    path === "" ? "package.json" : path,
+  ]),
+);
 
 const byName = new Map();
 for (const item of manifests) {
@@ -84,33 +118,47 @@ const categoryValues = [
 ];
 
 function appFromPath(path) {
-  const match = path.match(/^(?:apps|packages\/(?:products|planes))\/(neon|studio|mesh)(?:\/|$)/);
+  const match = path.match(
+    /^(?:apps|packages\/(?:products|planes))\/(neon|studio|mesh)(?:\/|$)/,
+  );
   return match?.[1] ?? null;
 }
 
 function classify(path, manifest) {
-  if (path.startsWith("packages/product-deprecated/")
-    || path.startsWith("server-backup/")
-    || path.startsWith("apps-backup/")
-    || path.startsWith("packages-backup/")
-    || path.startsWith(".local-backups/")) return "Deprecated";
+  if (
+    path.startsWith("packages/product-deprecated/") ||
+    path.startsWith("server-backup/") ||
+    path.startsWith("apps-backup/") ||
+    path.startsWith("packages-backup/") ||
+    path.startsWith(".local-backups/")
+  )
+    return "Deprecated";
   if (path.startsWith("server/")) return "Server-only";
   if (path.startsWith("apps/")) return "Application composition";
   if (path.startsWith("packages/planes/")) return "Product-specific";
   if (path.startsWith("packages/contracts/")) return "Shared contract";
   if (path.startsWith("packages/platform/")) return "Shared platform";
   if (path.startsWith("packages/domain/")) return "Shared domain";
-  if (path.startsWith("tooling/") || path === "package.json") return "Shared platform";
+  if (path.startsWith("tooling/") || path === "package.json")
+    return "Shared platform";
 
-  if (path.includes("api-contracts") || path.includes("runtime-contracts")
-    || path.includes("mesh-exchange-contracts") || path.includes("metadata-client")) {
+  if (
+    path.includes("api-contracts") ||
+    path.includes("runtime-contracts") ||
+    path.includes("mesh-exchange-contracts") ||
+    path.includes("metadata-client")
+  ) {
     return "Shared contract";
   }
-  if (path.startsWith("packages/shared/platform-auth/")) return "Shared platform";
+  if (path.startsWith("packages/shared/platform-auth/"))
+    return "Shared platform";
   if (path.startsWith("packages/shared/ui-platform/")) return "Shared platform";
-  if (path.startsWith("packages/shared/data-integration/")) return "Shared platform";
-  if (path.startsWith("packages/shared/runtime-domain/")) return "Shared domain";
-  if (path.startsWith("packages/shared/business-domain/")) return "Shared domain";
+  if (path.startsWith("packages/shared/data-integration/"))
+    return "Shared platform";
+  if (path.startsWith("packages/shared/runtime-domain/"))
+    return "Shared domain";
+  if (path.startsWith("packages/shared/business-domain/"))
+    return "Shared domain";
   if (path.startsWith("packages/shared/")) return "Shared platform";
   return manifest.private ? "Shared platform" : "Shared domain";
 }
@@ -121,14 +169,31 @@ function owner(path, category) {
   if (category === "Server-only") return "Runtime Server";
   if (path.startsWith("packages/contracts/")) return "Contract Platform";
   if (path.startsWith("packages/platform/")) return "Shared Platform";
-  if (path.startsWith("packages/shared/data-integration/")) return "Data Integration";
+  if (path.startsWith("packages/shared/data-integration/"))
+    return "Data Integration";
   if (path.startsWith("packages/shared/platform-auth/")) return "Platform Auth";
-  if (path.startsWith("packages/shared/runtime-domain/")) return "Runtime Domain";
+  if (path.startsWith("packages/shared/runtime-domain/"))
+    return "Runtime Domain";
   if (path.startsWith("packages/shared/ui-platform/")) return "UI Platform";
-  if (path.startsWith("packages/shared/business-domain/")) return "Business Domain";
+  if (path.startsWith("packages/shared/business-domain/"))
+    return "Business Domain";
   if (path.startsWith("packages/domain/")) return "Business Domain";
   if (path.startsWith("packages/shared/")) return "Shared Platform";
-  if (path.startsWith("deploy/") || path.startsWith("tooling/") || path.startsWith("packages/tooling/") || path === "package.json") return "Build Platform";
+  if (
+    path.startsWith("deploy/") ||
+    path.startsWith("tooling/") ||
+    path.startsWith("packages/tooling/") ||
+    path === "package.json"
+  )
+    return "Build Platform";
+  // Documentation sites are infrastructure, not product planes: they ship no
+  // plane runtime and no plane consumes them, so they sit with deploy/ and
+  // tooling/ under Build Platform rather than gaining an owner of their own.
+  if (path.startsWith("apps/docs-")) return "Build Platform";
+  // Governance data packages classify as Shared platform and are consumed by
+  // apps as workspace dependencies, so they take the same owner as the rest of
+  // that classification rather than a governance-specific one.
+  if (path.startsWith("governance/")) return "Shared Platform";
   if (category === "Deprecated") return "Retirement";
   return "Unassigned";
 }
@@ -137,11 +202,19 @@ function plane(path, category) {
   const app = appFromPath(path);
   if (app) return `${app} application plane`;
   if (category === "Server-only") return "Server plane";
-  if (path.startsWith("packages/shared/platform-auth/")) return "Identity/platform plane";
-  if (path.startsWith("packages/shared/data-integration/")) return "Integration plane";
-  if (path.startsWith("packages/shared/runtime-domain/")) return "Runtime plane";
-  if (path.startsWith("packages/shared/ui-platform/")) return "UI platform plane";
-  if (path.startsWith("packages/shared/business-domain/") || path.startsWith("packages/domain/")) return "Business domain plane";
+  if (path.startsWith("packages/shared/platform-auth/"))
+    return "Identity/platform plane";
+  if (path.startsWith("packages/shared/data-integration/"))
+    return "Integration plane";
+  if (path.startsWith("packages/shared/runtime-domain/"))
+    return "Runtime plane";
+  if (path.startsWith("packages/shared/ui-platform/"))
+    return "UI platform plane";
+  if (
+    path.startsWith("packages/shared/business-domain/") ||
+    path.startsWith("packages/domain/")
+  )
+    return "Business domain plane";
   if (category === "Deprecated") return "Legacy plane";
   return "Build plane";
 }
@@ -151,25 +224,39 @@ function targets(path, category) {
   if (app) return app;
   if (category === "Server-only") return "server";
   if (category === "Deprecated") return "none (retirement)";
-  if (path.startsWith("deploy/") || path.startsWith("tooling/") || path === "package.json") return "CI/build";
+  if (
+    path.startsWith("deploy/") ||
+    path.startsWith("tooling/") ||
+    path === "package.json" ||
+    path.startsWith("apps/docs-")
+  )
+    return "CI/build";
   return "neon, studio, mesh, server as consumed";
 }
 
 function proposedPath(item, duplicateItems) {
   if (item.isSourceAlias) return item.canonicalPath;
-  const activeCandidate = duplicateItems.find((candidate) => activeSet.has(candidate.path));
+  const activeCandidate = duplicateItems.find((candidate) =>
+    activeSet.has(candidate.path),
+  );
   if (activeCandidate) return activeCandidate.path;
-  if (item.path.startsWith("packages/product-deprecated/")) return "DELETE (deprecated package tree)";
+  if (item.path.startsWith("packages/product-deprecated/"))
+    return "DELETE (deprecated package tree)";
   return item.path;
 }
 
 function migration(item, category, duplicateItems) {
-  if (item.isSourceAlias) return `Remove source junction alias; canonical authority is ${item.canonicalPath}`;
-  if (category === "Deprecated") return "Scheduled for deletion after consumer retirement";
+  if (item.isSourceAlias)
+    return `Remove source junction alias; canonical authority is ${item.canonicalPath}`;
+  if (category === "Deprecated")
+    return "Scheduled for deletion after consumer retirement";
   if (duplicateItems.length > 1) {
-    return activeSet.has(item.path) ? "Canonical candidate; consolidate duplicate package names" : "Retired duplicate; remove after canonical verification";
+    return activeSet.has(item.path)
+      ? "Canonical candidate; consolidate duplicate package names"
+      : "Retired duplicate; remove after canonical verification";
   }
-  if (item.path.startsWith("packages/domain/")) return "Review shared-domain placement";
+  if (item.path.startsWith("packages/domain/"))
+    return "Review shared-domain placement";
   return "Inventory complete; no move in Phase 1";
 }
 
@@ -189,40 +276,53 @@ for (const item of manifests) {
   }
 }
 
-const rows = manifests.map((item) => {
-  const name = item.manifest.name ?? item.path;
-  const duplicateItems = byName.get(name) ?? [item];
-  const activeCandidate = duplicateItems.find((candidate) => activeSet.has(candidate.path));
-  const effectivePath = item.isSourceAlias
-    ? item.canonicalPath
-    : (activeCandidate?.path ?? item.path);
-  const category = classify(effectivePath, item.manifest);
-  const row = {
-    packageName: name,
-    physicalPath: item.path,
-    currentConsumers: (consumers.get(name) ?? []).sort(),
-    intendedOwner: owner(effectivePath, category),
-    runtimePlane: plane(effectivePath, category),
-    deploymentTargets: targets(effectivePath, category),
-    duplicateStatus: item.isSourceAlias
-      ? `Source junction alias -> ${item.canonicalPath}`
-      : duplicateItems.length > 1
-      ? `Duplicate name (${duplicateItems.length} physical manifests); ${activeSet.has(item.path) ? "active candidate" : "inactive/retired"}`
-      : (activeSet.has(item.path) ? "Unique active package" : "Not discovered by pnpm workspace"),
-    proposedFinalLocation: proposedPath(item, duplicateItems),
-    migrationStatus: migration(item, category, duplicateItems),
-    classification: category,
-    workspaceActive: activeSet.has(item.path),
-  };
-  if (!categoryValues.includes(row.classification)) throw new Error(`Unclassified package: ${item.path}`);
-  if (row.intendedOwner === "Unassigned") throw new Error(`Unowned package: ${item.path}`);
-  return row;
-}).sort((a, b) => a.physicalPath.localeCompare(b.physicalPath));
+const rows = manifests
+  .map((item) => {
+    const name = item.manifest.name ?? item.path;
+    const duplicateItems = byName.get(name) ?? [item];
+    const activeCandidate = duplicateItems.find((candidate) =>
+      activeSet.has(candidate.path),
+    );
+    const effectivePath = item.isSourceAlias
+      ? item.canonicalPath
+      : (activeCandidate?.path ?? item.path);
+    const category = classify(effectivePath, item.manifest);
+    const row = {
+      packageName: name,
+      physicalPath: item.path,
+      currentConsumers: (consumers.get(name) ?? []).sort(),
+      intendedOwner: owner(effectivePath, category),
+      runtimePlane: plane(effectivePath, category),
+      deploymentTargets: targets(effectivePath, category),
+      duplicateStatus: item.isSourceAlias
+        ? `Source junction alias -> ${item.canonicalPath}`
+        : duplicateItems.length > 1
+          ? `Duplicate name (${duplicateItems.length} physical manifests); ${activeSet.has(item.path) ? "active candidate" : "inactive/retired"}`
+          : activeSet.has(item.path)
+            ? "Unique active package"
+            : "Not discovered by pnpm workspace",
+      proposedFinalLocation: proposedPath(item, duplicateItems),
+      migrationStatus: migration(item, category, duplicateItems),
+      classification: category,
+      workspaceActive: activeSet.has(item.path),
+    };
+    if (!categoryValues.includes(row.classification))
+      throw new Error(`Unclassified package: ${item.path}`);
+    if (row.intendedOwner === "Unassigned")
+      throw new Error(`Unowned package: ${item.path}`);
+    return row;
+  })
+  .sort((a, b) => a.physicalPath.localeCompare(b.physicalPath));
 
 const outputDirectory = resolve(root, "docs/architecture");
 const jsonPath = resolve(outputDirectory, "package-ownership-matrix.json");
 const markdownPath = resolve(outputDirectory, "package-ownership-matrix.md");
-const counts = Object.fromEntries(categoryValues.map((category) => [category, rows.filter((row) => row.classification === category).length]));
+const counts = Object.fromEntries(
+  categoryValues.map((category) => [
+    category,
+    rows.filter((row) => row.classification === category).length,
+  ]),
+);
 
 const markdown = [
   "# Phase 1 — Package Ownership Matrix",
@@ -249,14 +349,18 @@ const markdown = [
   "",
   "| Package | Physical path | Owner | Classification | Runtime dependency budget | Workspace dependency budget |",
   "|---|---|---|---|---:|---:|",
-  ...frontendSpine.packages.map((item) => `| ${item.name} | ${item.path} | ${item.owner} | ${item.classification} | ${item.dependencyBudget.runtime} | ${item.dependencyBudget.workspace} |`),
+  ...frontendSpine.packages.map(
+    (item) =>
+      `| ${item.name} | ${item.path} | ${item.owner} | ${item.classification} | ${item.dependencyBudget.runtime} | ${item.dependencyBudget.workspace} |`,
+  ),
   "",
   "## Detailed matrix",
   "",
   "| Package | Physical path | Consumers | Owner | Runtime plane | Deployment targets | Duplicate status | Proposed final location | Migration status | Classification |",
   "|---|---|---|---|---|---|---|---|---|---|",
   ...rows.map((row) => {
-    const consumersText = row.currentConsumers.length > 0 ? row.currentConsumers.join("<br>") : "—";
+    const consumersText =
+      row.currentConsumers.length > 0 ? row.currentConsumers.join("<br>") : "—";
     return `| ${row.packageName} | ${row.physicalPath} | ${consumersText} | ${row.intendedOwner} | ${row.runtimePlane} | ${row.deploymentTargets} | ${row.duplicateStatus} | ${row.proposedFinalLocation} | ${row.migrationStatus} | ${row.classification} |`;
   }),
   "",
@@ -270,6 +374,32 @@ const markdown = [
   "- Windows source junctions are not deployment authorities; pnpm `node_modules` links are generated dependencies and are allowed.",
 ].join("\n");
 
-writeFileSync(jsonPath, JSON.stringify({ generatedAt: new Date().toISOString(), categoryValues, counts, frontendSpine, rows }, null, 2) + "\n");
-writeFileSync(markdownPath, markdown + "\n");
-console.log(`Wrote ${rows.length} package rows to ${relPath(markdownPath)} and ${relPath(jsonPath)}.`);
+// Emitted through Prettier so the generated files also satisfy
+// format:changed:check; otherwise every regeneration reverts the formatter and
+// the two gates fight over the same two files.
+const formatted = async (path, content) =>
+  prettier.format(content, {
+    ...(await prettier.resolveConfig(path)),
+    filepath: path,
+  });
+writeFileSync(
+  jsonPath,
+  await formatted(
+    jsonPath,
+    JSON.stringify(
+      {
+        generatedAt: new Date().toISOString(),
+        categoryValues,
+        counts,
+        frontendSpine,
+        rows,
+      },
+      null,
+      2,
+    ) + "\n",
+  ),
+);
+writeFileSync(markdownPath, await formatted(markdownPath, markdown + "\n"));
+console.log(
+  `Wrote ${rows.length} package rows to ${relPath(markdownPath)} and ${relPath(jsonPath)}.`,
+);
