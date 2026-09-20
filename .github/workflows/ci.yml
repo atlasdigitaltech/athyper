@@ -24,7 +24,7 @@ concurrency:
 env:
   NODE_VERSION: "24.19.0"
   PNPM_VERSION: "10.33.0"
-  ATHYPER_ARTIFACT_ROOT: ${{ runner.temp }}/athyper-artifacts
+  ATHYPER_ARTIFACT_ROOT: ${{ github.workspace }}-artifacts
   ATHYPER_ARTIFACT_RUN_ID: ci
 
 jobs:
