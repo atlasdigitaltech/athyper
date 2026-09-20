@@ -36,18 +36,38 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+// @ts-expect-error -- shared ESM policy helper, untyped by design.
+import {
+  compareToRatchet,
+  describeImprovements,
+  describeRegressions,
+  loadRatchet,
+  renderRatchet,
+  writeRatchet,
+} from "./violation-ratchet.mjs";
+
+const RATCHET_PATH =
+  "governance/config/governance/temporal-discipline-ratchet.json";
+const UPDATE_COMMAND = "pnpm policy:temporal-discipline --update-ratchet";
 
 const ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const QUIET = process.argv.includes("--quiet");
 
-const SCAN_ROOTS = [
-  "apps",
-  "packages",
-  "server",
-] as const;
+const SCAN_ROOTS = ["apps", "packages", "server"] as const;
 
 const FILE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts"]);
-const IGNORE_DIRS = new Set([".git", ".next", ".turbo", "coverage", "dist", "node_modules"]);
+const IGNORE_DIRS = new Set([
+  ".git",
+  ".next",
+  ".turbo",
+  "coverage",
+  "dist",
+  "node_modules",
+]);
+// Alternate Next.js distDir outputs (.next-bp-consolidated and friends) are
+// generated, exactly like .next/, and .gitignore already treats them as such.
+const ignoredDir = (name: string) =>
+  IGNORE_DIRS.has(name) || name.startsWith(".next-");
 
 const ALLOWLIST = [
   /^packages\/platform\/foundation\/temporal\//,
@@ -66,12 +86,14 @@ const RULES: Rule[] = [
   {
     name: "new-date-string-literal",
     pattern: /\bnew\s+Date\s*\(\s*(["'`])/g,
-    description: "new Date('string') parsing is timezone-ambiguous. Use parseInstant / parseBusinessDate from @athyper/platform-temporal.",
+    description:
+      "new Date('string') parsing is timezone-ambiguous. Use parseInstant / parseBusinessDate from @athyper/platform-temporal.",
   },
   {
     name: "date-parse",
     pattern: /\bDate\s*\.\s*parse\s*\(/g,
-    description: "Date.parse() is timezone-ambiguous. Use parseInstant / parseBusinessDate from @athyper/platform-temporal.",
+    description:
+      "Date.parse() is timezone-ambiguous. Use parseInstant / parseBusinessDate from @athyper/platform-temporal.",
   },
 ];
 
@@ -100,7 +122,7 @@ function walk(dir: string, out: string[] = []): string[] {
   if (!existsSync(dir)) return out;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
-      if (!IGNORE_DIRS.has(entry.name)) walk(join(dir, entry.name), out);
+      if (!ignoredDir(entry.name)) walk(join(dir, entry.name), out);
       continue;
     }
     const file = join(dir, entry.name);
@@ -109,7 +131,10 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-function lineColumnFor(content: string, index: number): { line: number; column: number } {
+function lineColumnFor(
+  content: string,
+  index: number,
+): { line: number; column: number } {
   const before = content.slice(0, index);
   const lines = before.split(/\r?\n/);
   return { line: lines.length, column: lines[lines.length - 1]!.length + 1 };
@@ -130,7 +155,13 @@ function scanFile(file: string): Finding[] {
     while ((m = rule.pattern.exec(content)) !== null) {
       const { line, column } = lineColumnFor(content, m.index);
       if (hasReasonedDisable(content, line)) continue;
-      findings.push({ file: toRepoPath(file), line, column, match: m[0], rule });
+      findings.push({
+        file: toRepoPath(file),
+        line,
+        column,
+        match: m[0],
+        rule,
+      });
     }
   }
   return findings;
@@ -148,17 +179,60 @@ function main(): void {
   }
 
   if (violations.length === 0) {
-    if (!QUIET) console.log(`temporal-discipline OK â€” scanned ${files.length} files, 0 violations.`);
+    if (!QUIET)
+      console.log(
+        `temporal-discipline OK â€” scanned ${files.length} files, 0 violations.`,
+      );
     return;
   }
 
-  console.error(`temporal-discipline FAILED â€” ${violations.length} violation(s):`);
-  for (const v of violations) {
-    console.error(`  ${v.file}:${v.line}:${v.column}  ${v.rule.name}  ${v.match.trim()}`);
+  const ratchetPath = join(ROOT, RATCHET_PATH);
+  const violationFiles = violations.map((v) => v.file);
+
+  if (process.argv.includes("--update-ratchet")) {
+    writeRatchet(
+      ratchetPath,
+      renderRatchet(
+        "policy:temporal-discipline",
+        violationFiles,
+        "Direct Date parsing predating @athyper/platform-temporal. Fix down; never up.",
+      ),
+    );
+    console.log(
+      `Wrote ${RATCHET_PATH}: ${violations.length} violation(s) across ${new Set(violationFiles).size} file(s).`,
+    );
+    return;
   }
-  console.error("\nFix by importing from @athyper/platform-temporal (parseInstant / parseBusinessDate).");
-  console.error("If genuinely unavoidable, suppress with: // eslint-disable-next-line no-direct-date-parse -- reason: <why>");
-  process.exit(1);
+
+  // The full report always prints, ratcheted or not: debt stays visible.
+  console.error(`temporal-discipline — ${violations.length} violation(s):`);
+  for (const v of violations) {
+    console.error(
+      `  ${v.file}:${v.line}:${v.column}  ${v.rule.name}  ${v.match.trim()}`,
+    );
+  }
+  console.error(
+    "\nFix by importing from @athyper/platform-temporal (parseInstant / parseBusinessDate).",
+  );
+  console.error(
+    "If genuinely unavoidable, suppress with: // eslint-disable-next-line no-direct-date-parse -- reason: <why>",
+  );
+
+  const comparison = compareToRatchet(loadRatchet(ratchetPath), violationFiles);
+  const regressions = describeRegressions(
+    "Temporal-discipline violations",
+    comparison,
+    UPDATE_COMMAND,
+  );
+  if (regressions) {
+    console.error("\n" + regressions);
+    process.exit(1);
+  }
+  const improvements = describeImprovements(comparison, UPDATE_COMMAND);
+  if (improvements) console.log(improvements);
+  console.log(
+    `temporal-discipline passed the ratchet: ${violations.length} known violation(s), none new.`,
+  );
 }
 
 main();

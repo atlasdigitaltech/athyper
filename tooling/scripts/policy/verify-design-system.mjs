@@ -2,6 +2,17 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  compareToRatchet,
+  describeImprovements,
+  describeRegressions,
+  loadRatchet,
+  renderRatchet,
+  writeRatchet,
+} from "./violation-ratchet.mjs";
+
+const RATCHET_PATH = "governance/config/governance/design-system-ratchet.json";
+const UPDATE_COMMAND = "pnpm policy:design-system --update-ratchet";
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -40,6 +51,20 @@ const arbitraryUtility =
 const hardcodedUiIcon =
   /[×⌕]|[\u{2190}-\u{21FF}\u{2500}-\u{27BF}\u{1F300}-\u{1FAFF}]/gu;
 
+// Generated output is never hand-authored, so it cannot violate an authoring
+// policy. Alternate Next.js distDir outputs (.next-bp-consolidated and friends)
+// are generated exactly like .next/, and .gitignore already treats them as such.
+function isGeneratedDirectory(name) {
+  return (
+    name === "node_modules" ||
+    name === "dist" ||
+    name === "coverage" ||
+    name === ".turbo" ||
+    name === ".next" ||
+    name.startsWith(".next-")
+  );
+}
+
 function lineOf(source, index = 0) {
   return source.slice(0, index).split("\n").length;
 }
@@ -56,12 +81,7 @@ async function filesBelow(root, relativeDirectory, extensions) {
   const files = [];
   for (const entry of entries) {
     const relative = path.posix.join(relativeDirectory, entry.name);
-    if (
-      entry.name === "node_modules" ||
-      entry.name === ".next" ||
-      entry.name === "dist"
-    )
-      continue;
+    if (isGeneratedDirectory(entry.name)) continue;
     if (entry.isDirectory())
       files.push(...(await filesBelow(root, relative, extensions)));
     else if (extensions.has(path.extname(entry.name))) files.push(relative);
@@ -141,17 +161,54 @@ export async function analyzeDesignSystem(options = {}) {
   return { violations };
 }
 
+// Each violation is formatted "<repo path>:<line> <detail>".
+function fileOf(violation) {
+  return String(violation).split(":")[0];
+}
+
 async function main() {
   const { violations } = await analyzeDesignSystem();
-  if (violations.length) {
+  const ratchetPath = path.join(repoRoot, RATCHET_PATH);
+  const files = violations.map(fileOf);
+
+  if (process.argv.includes("--update-ratchet")) {
+    writeRatchet(
+      ratchetPath,
+      renderRatchet(
+        "policy:design-system",
+        files,
+        "Hand-authored presentation debt predating the token system. Fix down; never up.",
+      ),
+    );
+    console.log(
+      `Wrote ${RATCHET_PATH}: ${violations.length} violation(s) across ${new Set(files).size} file(s).`,
+    );
+    return;
+  }
+
+  // The full report always prints, ratcheted or not: debt stays visible.
+  if (violations.length)
     console.error(
       "Design-system policy violations:\n" +
         violations.map((violation) => `- ${violation}`).join("\n"),
     );
+
+  const comparison = compareToRatchet(loadRatchet(ratchetPath), files);
+  const regressions = describeRegressions(
+    "Design-system violations",
+    comparison,
+    UPDATE_COMMAND,
+  );
+  if (regressions) {
+    console.error("\n" + regressions);
     process.exit(1);
   }
+  const improvements = describeImprovements(comparison, UPDATE_COMMAND);
+  if (improvements) console.log(improvements);
   console.log(
-    "Design-system policy passed: presentation colors and static styles are token-backed; UI icons use the shared Lucide-compatible system.",
+    violations.length
+      ? `Design-system policy passed the ratchet: ${violations.length} known violation(s), none new.`
+      : "Design-system policy passed: presentation colors and static styles are token-backed; UI icons use the shared Lucide-compatible system.",
   );
 }
 

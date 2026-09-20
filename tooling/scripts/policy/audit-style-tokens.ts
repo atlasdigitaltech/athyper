@@ -1,6 +1,18 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, relative, resolve } from "node:path";
+// @ts-expect-error -- shared ESM policy helper, untyped by design.
+import {
+  compareToRatchet,
+  describeImprovements,
+  describeRegressions,
+  loadRatchet,
+  renderRatchet,
+  writeRatchet,
+} from "./violation-ratchet.mjs";
+
+const RATCHET_PATH = "governance/config/governance/style-tokens-ratchet.json";
+const UPDATE_COMMAND = "pnpm policy:style-tokens:strict --update-ratchet";
 
 const ROOT = process.cwd();
 const STRICT = process.argv.includes("--strict");
@@ -32,6 +44,10 @@ const IGNORE_DIRS = new Set([
   "dist",
   "node_modules",
 ]);
+// Alternate Next.js distDir outputs (.next-bp-consolidated and friends) are
+// generated, exactly like .next/, and .gitignore already treats them as such.
+const ignoredDir = (name: string) =>
+  IGNORE_DIRS.has(name) || name.startsWith(".next-");
 
 type Severity = "error" | "warn";
 
@@ -283,7 +299,7 @@ function walk(dir: string, files: string[] = []): string[] {
 
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
-      if (!IGNORE_DIRS.has(entry.name)) walk(join(dir, entry.name), files);
+      if (!ignoredDir(entry.name)) walk(join(dir, entry.name), files);
       continue;
     }
 
@@ -371,17 +387,48 @@ function isMain(): boolean {
   }
 }
 
+function runStrictRatchet(errors: Finding[]): void {
+  const ratchetPath = join(ROOT, RATCHET_PATH);
+  const errorFiles = errors.map((finding) => finding.file);
+
+  if (process.argv.includes("--update-ratchet")) {
+    writeRatchet(
+      ratchetPath,
+      renderRatchet(
+        "policy:style-tokens:strict",
+        errorFiles,
+        "Unresolved token references predating the strict audit. Fix down; never up.",
+      ),
+    );
+    console.log(
+      `Wrote ${RATCHET_PATH}: ${errors.length} error finding(s) across ${new Set(errorFiles).size} file(s).`,
+    );
+    return;
+  }
+
+  const comparison = compareToRatchet(loadRatchet(ratchetPath), errorFiles);
+  const regressions = describeRegressions(
+    "Style token error findings",
+    comparison,
+    UPDATE_COMMAND,
+  );
+  if (regressions) {
+    console.error("\n" + regressions);
+    process.exit(1);
+  }
+  const improvements = describeImprovements(comparison, UPDATE_COMMAND);
+  if (improvements) console.log(improvements);
+  if (errors.length)
+    console.log(
+      `Strict style token audit passed the ratchet: ${errors.length} known error finding(s), none new.`,
+    );
+}
+
 if (isMain()) {
   const findings = collectFindings();
   printSummary(findings);
-
-  const errors = findings.filter(
-    (finding) => finding.rule.severity === "error",
-  );
-  if (STRICT && errors.length > 0) {
-    console.error(
-      `Strict style token audit failed with ${errors.length} error findings.`,
+  if (STRICT)
+    runStrictRatchet(
+      findings.filter((finding) => finding.rule.severity === "error"),
     );
-    process.exit(1);
-  }
 }
