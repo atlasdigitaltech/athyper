@@ -14791,7 +14791,7 @@
     {
       "path": "tooling/scripts/policy/verify-api-client-phase2.mjs",
       "artifactClass": "tool",
-      "sha256": "74a69288f7670e406b52f70852169fa7342ac992b3262e5b762d1c9af0d7453f"
+      "sha256": "ba8c4ac7ac5c3c8d608f98208a766cbdaa624f883296f8f2ccbc9ac4e6297912"
     },
     {
       "path": "tooling/scripts/policy/verify-auth-session-phase3.mjs",
@@ -36426,8 +36426,7 @@
       "path": "tooling/scripts/policy/verify-api-client-phase2.mjs",
       "artifactClass": "tool",
       "lines": [
-        10,
-        13
+        27
       ]
     },
     {

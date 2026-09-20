@@ -1506,7 +1506,7 @@ Capture DDLs:
 | `allowed` | test | tests/contracts/home-personalization-phase3.test.ts | 26, 28, 30 |
 | `allowed` | tool | tooling/scripts/local-dev/graph-preview.integration.test.mts | 255, 265, 279, 324 |
 | `allowed` | tool | tooling/scripts/policy/authorization-inventory.ts | 891, 1112, 1132 |
-| `allowed` | tool | tooling/scripts/policy/verify-api-client-phase2.mjs | 10, 13 |
+| `allowed` | tool | tooling/scripts/policy/verify-api-client-phase2.mjs | 27 |
 | `allowed` | tool | tooling/scripts/verification/entity-authorization/canonical-execution-evidence.mjs | 36, 37 |
 | `allowed` | tool | tooling/scripts/verification/entity-authorization/canonical-execution-evidence.test.mjs | 16, 18, 19, 26, 28, 29, 37, 48, 51, 69 |
 | `allowed` | tool | tooling/scripts/verification/entity-authorization/policy-differences.mjs | 3, 24 |

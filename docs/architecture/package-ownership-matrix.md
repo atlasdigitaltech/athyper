@@ -30,7 +30,7 @@ The Phase 0 frontend spine adds an explicit runtime/workspace dependency budget.
 | ----------------------------------------- | -------------------------------------------- | ----------------- | ----------------------------- | ------------------------: | --------------------------: |
 | @athyper/neon                             | apps/neon                                    | Neon              | Application composition       |                        27 |                          23 |
 | @athyper/mesh                             | apps/mesh                                    | Mesh              | Application composition       |                        22 |                          18 |
-| @athyper/studio                           | apps/studio                                  | Studio            | Application composition       |                        23 |                          19 |
+| @athyper/studio                           | apps/studio                                  | Studio            | Application composition       |                        25 |                          21 |
 | @athyper/contract-platform-api            | packages/contracts/platform/api              | Contract Platform | Shared contract               |                         0 |                           0 |
 | @athyper/contract-platform-auth-session   | packages/contracts/platform/auth-session     | Contract Platform | Shared contract               |                         0 |                           0 |
 | @athyper/contract-platform-authorization  | packages/contracts/platform/authorization    | Contract Platform | Shared contract               |                         0 |                           0 |
@@ -55,7 +55,7 @@ The Phase 0 frontend spine adds an explicit runtime/workspace dependency budget.
 | @athyper/platform-shell-app-foundation    | packages/platform/shell/app-foundation       | UI Platform       | Shared platform               |                        10 |                          10 |
 | @athyper/platform-shell                   | packages/platform/shell/shell                | UI Platform       | Shared platform               |                         8 |                           8 |
 | @athyper/platform-shell-runtime           | packages/platform/shell/shell-runtime        | UI Platform       | Shared platform               |                         2 |                           3 |
-| @athyper/product-neon-business-partner    | packages/planes/neon/business-partner        | Neon              | Product-specific              |                         9 |                           9 |
+| @athyper/product-neon-business-partner    | packages/planes/neon/business-partner        | Neon              | Product-specific              |                        11 |                          11 |
 | @athyper/product-neon-navigation          | packages/planes/neon/navigation              | Neon              | Product-specific              |                         2 |                           3 |
 | @athyper/product-neon-shell               | packages/planes/neon/shell                   | Neon              | Product-specific              |                         8 |                           8 |
 | @athyper/product-mesh-business-partner    | packages/planes/mesh/business-partner        | Mesh              | Product-specific              |                         7 |                           7 |

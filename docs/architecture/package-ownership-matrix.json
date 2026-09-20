@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-20T22:01:10.003Z",
+  "generatedAt": "2026-09-20T22:24:09.024Z",
   "categoryValues": [
     "Shared contract",
     "Shared platform",
@@ -47,8 +47,8 @@
         "owner": "Studio",
         "classification": "Application composition",
         "dependencyBudget": {
-          "runtime": 23,
-          "workspace": 19
+          "runtime": 25,
+          "workspace": 21
         }
       },
       {
@@ -297,8 +297,8 @@
         "owner": "Neon",
         "classification": "Product-specific",
         "dependencyBudget": {
-          "runtime": 9,
-          "workspace": 9
+          "runtime": 11,
+          "workspace": 11
         }
       },
       {
