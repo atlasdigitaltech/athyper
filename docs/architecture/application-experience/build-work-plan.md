@@ -11,6 +11,8 @@ the compiled-entity migration phases below are all planned until executed.
 
 Component and behavior rules remain defined in the accompanying [System Design](system-design.md).
 
+**Accepted follow-on workstream (2026-09-21):** [Metadata-controlled comments and attachments](entity-comments-and-attachments-build-plan.md). The user selected a shared drawer/content view with typed MetaEntity capabilities, shared service ownership and publication-time validation. Revision 3 uses comprehensive implementation, direct schema evolution, focused regressions and one final local acceptance pass. CA-00–CA-10 retain the detailed code/schema work while removing migration compatibility and production-readiness ceremony. Basic Phase 7 completion below does not imply completion of this newly accepted scope.
+
 ## Working rules retained
 
 - Reuse one shared `Main` / `PageWorkspace` and shared page-kind runtimes. Do not copy Business Partner layouts for new entities.
@@ -23,16 +25,16 @@ Component and behavior rules remain defined in the accompanying [System Design](
 
 ## Completion status
 
-| Task | Status | Result |
-| --- | --- | --- |
-| 1. Inspect current implementation | Complete | Located Business Partner collection, detail/360, intake, Studio composition, shared shell, page-frame, navigation, boundary, and CSS implementations. |
-| 2. Consolidate application foundation and shell | Complete | Shared startup/fatal adapters, global chrome, overlay coordination, preferences, Recent/Favorites, and footer registration were consolidated for current consumers. |
-| 3. Introduce `PageWorkspace` | Complete | Shared page header, navigation, status, body-boundary, content, overview, and action slots are available without changing established header or navigation owners. |
-| 4. Establish reusable runtime contracts | Complete | Current page/resource/section/panel boundary conventions and generic resolver paths are wired for the existing runtime families. |
+| Task                                                  | Status                                    | Result                                                                                                                                                                                                                 |
+| ----------------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Inspect current implementation                     | Complete                                  | Located Business Partner collection, detail/360, intake, Studio composition, shared shell, page-frame, navigation, boundary, and CSS implementations.                                                                  |
+| 2. Consolidate application foundation and shell       | Complete                                  | Shared startup/fatal adapters, global chrome, overlay coordination, preferences, Recent/Favorites, and footer registration were consolidated for current consumers.                                                    |
+| 3. Introduce `PageWorkspace`                          | Complete                                  | Shared page header, navigation, status, body-boundary, content, overview, and action slots are available without changing established header or navigation owners.                                                     |
+| 4. Establish reusable runtime contracts               | Complete                                  | Current page/resource/section/panel boundary conventions and generic resolver paths are wired for the existing runtime families.                                                                                       |
 | 5. Complete Business Partner shared-experience wiring | Complete for the available local fixtures | Business Partner remains a governed case-runtime entity and now uses the shared shell/PageWorkspace, boundary, footer, and provenance conventions. Mesh browser verification awaits a refreshed authenticated session. |
-| 6. Prove entity reuse | Complete | Currency is a real metadata-driven, read-only Neon collection/detail entity using the generic resolver, with no Currency-specific Neon page component or provider. |
-| 7. Optional utility work | Deferred | Knowledge/documents and other product utilities have no current consumer-driven requirement. |
-| 8. Dependency-safe cleanup | Complete for the current scope | Verified obsolete code was removed; remaining shared aliases, CSS, exports, and dependencies have live consumers. |
+| 6. Prove entity reuse                                 | Complete                                  | Currency is a real metadata-driven, read-only Neon collection/detail entity using the generic resolver, with no Currency-specific Neon page component or provider.                                                     |
+| 7. Optional utility work                              | Deferred                                  | Knowledge/documents and other product utilities have no current consumer-driven requirement.                                                                                                                           |
+| 8. Dependency-safe cleanup                            | Complete for the current scope            | Verified obsolete code was removed; remaining shared aliases, CSS, exports, and dependencies have live consumers.                                                                                                      |
 
 ## Delivered architecture
 
@@ -87,24 +89,18 @@ The following items are planned, not new implementation claims. Complete them in
 
 1. **Map descriptors and establish the baseline.** Complete. The source-verified map below covers the current route families. Existing overview/manage/requests route files already call `NeonEntityApplicationSection`; retain those thin adapters.
 
-| Route family | Entry and presentation owner | Descriptor / authorized operation | Scope, navigation and footer owner |
-| --- | --- | --- | --- |
-| Overview `/mdg/business-partner` | Thin route → `NeonEntityApplicationSection("overview")` → `EntityOverviewRuntime` | Published `business_partner` application entry `overview`; `neon.relationship.business_partner.read` | Application descriptor owns tab navigation and breadcrumb binding; shared application header owns the collection header; overview sources remain authorized backend data. |
-| Manage `/mdg/business-partner/manage?vid=system` | Thin route → `NeonEntityApplicationSection("manage")` → `EntityListRuntime` | Published `entity_list` for `business_partner`; `neon.relationship.business_partner.read` | Shared list runtime owns query/view/density; Neon context plus future Business Partner scope adapter owns permitted organization/role coordinates; collection header remains application-owned. |
-| Requests `/mdg/business-partner/requests?density=compact` | Thin route → `NeonEntityApplicationSection("review")` → `EntityListRuntime` | Published `task_list` for `business_partner_request`; `neon.relationship.entity_case.read` | Request view namespace stays separate from the partner list. The published workflow key is `supplier_onboarding`; operating-organization context is required by the request descriptor. |
-| New request `/mdg/business-partner/new` | `AuthorizedNewBusinessPartnerRequest` → `BusinessPartnerRequestEntry` → shared `EntityIntake` / `EntityIntakeForm` | `neon.relationship.entity_case.create`; published request form plus Business Partner intake surfaces | Task-header registration owns title, Cancel and draft state. Workflow steps and Details section navigation remain independent. `loadPublishedForm` supplies initial descriptor retry. |
-| Request detail `/mdg/business-partner/requests/:requestId` | Thin route → `BusinessPartnerRequestDetail` → `RequestDetailSurface` / `PageWorkspace` | Governed case view and case actions; request data includes provenance | `useDeepLinkedTabState` owns Overview/Details/Review/Activity history. `useRecordFooterSources(view.provenance)` owns request provenance. |
-| Record / 360 `/mdg/business-partner/:recordId` | Thin route → `BusinessPartnerRecord` → feature-selected 360 shell or aggregate detail | `neon.business_partner.view_360` determines the specialized 360 surface; aggregate reader supplies fallback | Record components own record header/section controller. `useRecordFooterSources(aggregate.provenance)` owns successful aggregate provenance. |
+| Route family                                               | Entry and presentation owner                                                                                       | Descriptor / authorized operation                                                                           | Scope, navigation and footer owner                                                                                                                                                              |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview `/mdg/business-partner`                           | Thin route → `NeonEntityApplicationSection("overview")` → `EntityOverviewRuntime`                                  | Published `business_partner` application entry `overview`; `neon.relationship.business_partner.read`        | Application descriptor owns tab navigation and breadcrumb binding; shared application header owns the collection header; overview sources remain authorized backend data.                       |
+| Manage `/mdg/business-partner/manage?vid=system`           | Thin route → `NeonEntityApplicationSection("manage")` → `EntityListRuntime`                                        | Published `entity_list` for `business_partner`; `neon.relationship.business_partner.read`                   | Shared list runtime owns query/view/density; Neon context plus future Business Partner scope adapter owns permitted organization/role coordinates; collection header remains application-owned. |
+| Requests `/mdg/business-partner/requests?density=compact`  | Thin route → `NeonEntityApplicationSection("review")` → `EntityListRuntime`                                        | Published `task_list` for `business_partner_request`; `neon.relationship.entity_case.read`                  | Request view namespace stays separate from the partner list. The published workflow key is `supplier_onboarding`; operating-organization context is required by the request descriptor.         |
+| New request `/mdg/business-partner/new`                    | `AuthorizedNewBusinessPartnerRequest` → `BusinessPartnerRequestEntry` → shared `EntityIntake` / `EntityIntakeForm` | `neon.relationship.entity_case.create`; published request form plus Business Partner intake surfaces        | Task-header registration owns title, Cancel and draft state. Workflow steps and Details section navigation remain independent. `loadPublishedForm` supplies initial descriptor retry.           |
+| Request detail `/mdg/business-partner/requests/:requestId` | Thin route → `BusinessPartnerRequestDetail` → `RequestDetailSurface` / `PageWorkspace`                             | Governed case view and case actions; request data includes provenance                                       | `useDeepLinkedTabState` owns Overview/Details/Review/Activity history. `useRecordFooterSources(view.provenance)` owns request provenance.                                                       |
+| Record / 360 `/mdg/business-partner/:recordId`             | Thin route → `BusinessPartnerRecord` → feature-selected 360 shell or aggregate detail                              | `neon.business_partner.view_360` determines the specialized 360 surface; aggregate reader supplies fallback | Record components own record header/section controller. `useRecordFooterSources(aggregate.provenance)` owns successful aggregate provenance.                                                    |
 
 Published application navigation comes from `server/db/scripts/provisioning/publish-development-list-experience.ts`: `overview`, `manage`, and `review` all belong to one `business_partner` application with base path `/mdg/business-partner`. The overview and manage permission is `neon.relationship.business_partner.read`; review uses `neon.relationship.entity_case.read`; new request is separately authorized by `neon.relationship.entity_case.create`.
 
-Authenticated baseline verified on 2026-09-18 with the refreshed Neon session: overview, manage with `vid=system`, requests with compact density, request detail `3a452faf-d2ca-44d0-a583-8ddcfb9a3110`, and record/360 `01a09f6c-ed2c-76b0-8aa9-e333eb385c0e` each returned HTTP 200, one expected `h1`, and no access-denied surface. The production journey checks now follow the shared role-selection / duplicate-check entry step before asserting published Supplier or Customer intake fields: 2 passed; Workforce and external-invitation checks were skipped because their required capability/fixture was not configured.
-2. **Complete application workspace composition.** Complete. `ManagementWorkspace` composes its existing collection/record owner handoff inside `PageWorkspace` and exposes shared status, toolbar, body, action and action-outcome slots. The body slot preserves existing list/overview ownership; list refresh/action messages remain in `EntityListRuntime`, where they belong. Studio Business Partner Bank Directory uses the shared status slot for its publication-sync indicator. The Business Partner overview, Manage, and Review & Approval adapters require no further outer slots: `EntityOverviewRuntime` owns dashboard data and actions; `EntityListRuntime` owns search, saved views, refresh, and table actions; the published application descriptor owns the collection-header New request action. Moving those controls outward would duplicate ownership. Focused ownership coverage, PageWorkspace browser coverage, shell/list typechecks, Studio Business Partner tests, and individual authenticated Supplier and Customer intake checks pass. A rapid combined browser run received an HTTP 429 from the protected experience bootstrap before the customer route rendered; retrying after the local throttle recovered passed, so this is recorded as bootstrap throttling rather than a route failure. Do not move list-table controls or saved-view state into the outer workspace. Preserve `EntityPageLayout` collection/record ownership and task-header registration. Keep request descriptors and saved-view namespaces distinct from record lists.
-3. **Extract domain scope adapters.** Complete. The Neon list package now selects a registered `business_partner` scope adapter rather than branching on Business Partner identity, role, and eligibility inside generic application/list orchestration. The common adapter retains organization/company directory state for ordinary entities; the Business Partner adapter owns `role` URL parsing, Supplier/Customer validation, compatible organization/company eligibility, and the complete eligibility coordinate. Known work-context resolvers are registered by identifier. Unknown required resolvers render unavailable and do not create an unscoped selector or query. Focused adapter and list-runtime tests plus both package typechecks pass.
-4. **Complete intake integration.** Complete. `EntityIntake` and `EntityIntakeForm` remain the common workflow and form owners; the existing Supplier and Customer submission adapters remain authoritative. Metadata-driven Supplier fields already register validation through `DataValidationProvider`, giving the shared summary, inline errors, per-section issue counts, reveal-and-focus links, and independent workflow/section navigation. The custom Customer sales-scope fields now register through the same `useDataValidation` contract, so a blocked review shows field-specific summary and inline errors instead of a late generic submit error. Validation-summary links are shared 24px touch targets. Existing intake-runtime coverage verifies review without mutation, retained input on Back, single final submission, draft resume, and Cancel dirty protection; retry/submission coverage verifies save and recovery. The authenticated Neon Customer route verifies role selection, published form entry, validation summary, link focus, and the surface accessibility contract. Save, submit, and approval remain distinct.
-5. **Complete request-detail integration.** Complete. `BusinessPartnerRequestDetail` retains its existing `PageWorkspace`, `PageNavigation`, `useDeepLinkedTabState`, governed-command runner, and provenance footer registration. Overview, Request details, Review, and Activity remain persistent tab panels addressed by their existing hash links; legacy Case/Validation/Workflow/Evidence/Result hashes still normalize to Review. `RequestLifecycle` is the compact shared progress surface above the tabs. The full Supplier onboarding journey, including its authorized actions, concurrent-command protection, refresh/recovery, readiness, documents, and activity content, now belongs in Review and is hidden in the other persistent tabs. Backend request status continues to distinguish approved-awaiting-completion, applied/completed, and failed outcomes; no client-side lifecycle inference was added. Authenticated Neon coverage verified Overview, Review, and Details hash navigation plus the shared-progress/journey placement.
-6. **Verify Business Partner completion.** Complete for the available local fixtures. The authenticated Neon walkthrough covers the supplied overview, `manage?vid=system`, compact request-list, intake, request detail, and record/360 routes. Existing application/list coverage retains density, filters, search, saved-view namespaces, Favorites, denied scope behavior, context replacement, and footer ownership. The authenticated 360 suite passed canonical deep links, Back/Forward, passive section selection, explicit focused selection, historical scope, superseded-request aborts, restricted-value exclusion, keyboard behavior, 200% reflow, and RTL. Supplier and Customer intake and request-detail checks passed. Studio Business Partner typecheck and its 78-test suite passed, including draft, unsaved-edit, focus, undo, and publication behavior. Mesh Business Partner typecheck passed. Mesh browser verification remains blocked: `tests/e2e/.auth/mesh-athyper.json` no longer establishes an authenticated Mesh tenant session; no session, permission, or network-account data was changed to bypass that check. Re-run `tests/e2e/mesh-review` after refreshing a valid Mesh session to verify the existing acting-account/network-workspace coverage. The optional sensitive-reveal and performance 360 cases were skipped because their dedicated fixtures/configuration were not supplied.
-7. **Close cleanup against the new wiring.** Complete. Route, export, registry, style, manifest, and test-consumer searches found no removable Business Partner or shared-workspace module. `BusinessPartnerPageFrame`, the shared workspace exports, scope adapters, validation API, lifecycle surface, journey workspace, sticky CSS, and package dependencies all have live consumers. The obsolete role-scope renderer and dispatch branch were already removed in Task 8; no further manifest update is required. Removed the redundant persistent-aside fragment left by the Review journey move. Route-level evidence now completes Task 5 for the available local fixtures. Reopen Task 8 only if a later replacement proves an active artifact unused.
+Authenticated baseline verified on 2026-09-18 with the refreshed Neon session: overview, manage with `vid=system`, requests with compact density, request detail `3a452faf-d2ca-44d0-a583-8ddcfb9a3110`, and record/360 `01a09f6c-ed2c-76b0-8aa9-e333eb385c0e` each returned HTTP 200, one expected `h1`, and no access-denied surface. The production journey checks now follow the shared role-selection / duplicate-check entry step before asserting published Supplier or Customer intake fields: 2 passed; Workforce and external-invitation checks were skipped because their required capability/fixture was not configured. 2. **Complete application workspace composition.** Complete. `ManagementWorkspace` composes its existing collection/record owner handoff inside `PageWorkspace` and exposes shared status, toolbar, body, action and action-outcome slots. The body slot preserves existing list/overview ownership; list refresh/action messages remain in `EntityListRuntime`, where they belong. Studio Business Partner Bank Directory uses the shared status slot for its publication-sync indicator. The Business Partner overview, Manage, and Review & Approval adapters require no further outer slots: `EntityOverviewRuntime` owns dashboard data and actions; `EntityListRuntime` owns search, saved views, refresh, and table actions; the published application descriptor owns the collection-header New request action. Moving those controls outward would duplicate ownership. Focused ownership coverage, PageWorkspace browser coverage, shell/list typechecks, Studio Business Partner tests, and individual authenticated Supplier and Customer intake checks pass. A rapid combined browser run received an HTTP 429 from the protected experience bootstrap before the customer route rendered; retrying after the local throttle recovered passed, so this is recorded as bootstrap throttling rather than a route failure. Do not move list-table controls or saved-view state into the outer workspace. Preserve `EntityPageLayout` collection/record ownership and task-header registration. Keep request descriptors and saved-view namespaces distinct from record lists. 3. **Extract domain scope adapters.** Complete. The Neon list package now selects a registered `business_partner` scope adapter rather than branching on Business Partner identity, role, and eligibility inside generic application/list orchestration. The common adapter retains organization/company directory state for ordinary entities; the Business Partner adapter owns `role` URL parsing, Supplier/Customer validation, compatible organization/company eligibility, and the complete eligibility coordinate. Known work-context resolvers are registered by identifier. Unknown required resolvers render unavailable and do not create an unscoped selector or query. Focused adapter and list-runtime tests plus both package typechecks pass. 4. **Complete intake integration.** Complete. `EntityIntake` and `EntityIntakeForm` remain the common workflow and form owners; the existing Supplier and Customer submission adapters remain authoritative. Metadata-driven Supplier fields already register validation through `DataValidationProvider`, giving the shared summary, inline errors, per-section issue counts, reveal-and-focus links, and independent workflow/section navigation. The custom Customer sales-scope fields now register through the same `useDataValidation` contract, so a blocked review shows field-specific summary and inline errors instead of a late generic submit error. Validation-summary links are shared 24px touch targets. Existing intake-runtime coverage verifies review without mutation, retained input on Back, single final submission, draft resume, and Cancel dirty protection; retry/submission coverage verifies save and recovery. The authenticated Neon Customer route verifies role selection, published form entry, validation summary, link focus, and the surface accessibility contract. Save, submit, and approval remain distinct. 5. **Complete request-detail integration.** Complete. `BusinessPartnerRequestDetail` retains its existing `PageWorkspace`, `PageNavigation`, `useDeepLinkedTabState`, governed-command runner, and provenance footer registration. Overview, Request details, Review, and Activity remain persistent tab panels addressed by their existing hash links; legacy Case/Validation/Workflow/Evidence/Result hashes still normalize to Review. `RequestLifecycle` is the compact shared progress surface above the tabs. The full Supplier onboarding journey, including its authorized actions, concurrent-command protection, refresh/recovery, readiness, documents, and activity content, now belongs in Review and is hidden in the other persistent tabs. Backend request status continues to distinguish approved-awaiting-completion, applied/completed, and failed outcomes; no client-side lifecycle inference was added. Authenticated Neon coverage verified Overview, Review, and Details hash navigation plus the shared-progress/journey placement. 6. **Verify Business Partner completion.** Complete for the available local fixtures. The authenticated Neon walkthrough covers the supplied overview, `manage?vid=system`, compact request-list, intake, request detail, and record/360 routes. Existing application/list coverage retains density, filters, search, saved-view namespaces, Favorites, denied scope behavior, context replacement, and footer ownership. The authenticated 360 suite passed canonical deep links, Back/Forward, passive section selection, explicit focused selection, historical scope, superseded-request aborts, restricted-value exclusion, keyboard behavior, 200% reflow, and RTL. Supplier and Customer intake and request-detail checks passed. Studio Business Partner typecheck and its 78-test suite passed, including draft, unsaved-edit, focus, undo, and publication behavior. Mesh Business Partner typecheck passed. Mesh browser verification remains blocked: `tests/e2e/.auth/mesh-athyper.json` no longer establishes an authenticated Mesh tenant session; no session, permission, or network-account data was changed to bypass that check. Re-run `tests/e2e/mesh-review` after refreshing a valid Mesh session to verify the existing acting-account/network-workspace coverage. The optional sensitive-reveal and performance 360 cases were skipped because their dedicated fixtures/configuration were not supplied. 7. **Close cleanup against the new wiring.** Complete. Route, export, registry, style, manifest, and test-consumer searches found no removable Business Partner or shared-workspace module. `BusinessPartnerPageFrame`, the shared workspace exports, scope adapters, validation API, lifecycle surface, journey workspace, sticky CSS, and package dependencies all have live consumers. The obsolete role-scope renderer and dispatch branch were already removed in Task 8; no further manifest update is required. Removed the redundant persistent-aside fragment left by the Review journey move. Route-level evidence now completes Task 5 for the available local fixtures. Reopen Task 8 only if a later replacement proves an active artifact unused.
 
 The intake and request-detail screenshots are review evidence; the affected Neon routes also have the authenticated browser evidence recorded above. Approved plus Completion Not Started is not by itself a defect; verify authoritative lifecycle state. Current source confirms `loadPublishedForm` supplies intake-flow retry, compact request progress remains shared above navigation, and the Supplier process belongs in Review. The generic Playwright global setup deliberately clears stored sessions when neither credentials nor explicit reuse are supplied. After refreshing `tests/e2e/.auth/neon.json`, run protected Neon checks with `PLAYWRIGHT_REUSE_AUTH_STATE=neon` and `PLAYWRIGHT_PRODUCTION_MATRIX=1`; this validates the interactive session rather than overwriting it. Do not run the generic production configuration without one of those authentication modes.
 
@@ -201,17 +197,17 @@ Unknown counts stay unknown; do not count every collection to populate tab badge
 These are target acceptance budgets, not measured performance claims. A resource
 query budget counts data reads separately from required identity/authorization work.
 
-| Intent | Compiled metadata needed | Data/service work | Forbidden side effects |
-| --- | --- | --- | --- |
-| Open Manage | Core, list presentation, read-admission/action summary | One bounded list query; counts only if requested | No child collection hydration, allocation or draft creation |
-| Open BP360 | Core, detail shell, initial section, read admission | One header/applicability resource; merge same-row Overview fields when permitted | No full 360 aggregation or per-tab count fan-out |
-| Open a deep-linked section | Same shell plus target section/child Core subset | Header plus that section; skip default Overview data when unnecessary | No intermediate tab loads |
-| Scroll/switch to section | Cached section descriptor and required child subset | One section request; bounded provider queries/independent result states | No unrelated section refresh |
-| Revisit a fresh section | Cache hit | Zero section network calls | No automatic command calls |
-| Open comments/attachments | Capability descriptor and owner authorization | Lazy list request with pagination | No create/upload/reservation/reveal |
-| Click New / Request change | Authorized operation and selected Flow | Explicit start/resume governed draft | No BP numbering allocation on render |
-| Materialize an approved request | Operation, lifecycle/validation/numbering bindings | Revalidate controls and allocate within the materialization transaction | No client-side sequence increment |
-| Execute reveal | Matching protected field + reveal operation | Explicit assurance/purpose/audited command | No prefetch, retry replay into cache, or plaintext in normal reads |
+| Intent                          | Compiled metadata needed                               | Data/service work                                                                | Forbidden side effects                                             |
+| ------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Open Manage                     | Core, list presentation, read-admission/action summary | One bounded list query; counts only if requested                                 | No child collection hydration, allocation or draft creation        |
+| Open BP360                      | Core, detail shell, initial section, read admission    | One header/applicability resource; merge same-row Overview fields when permitted | No full 360 aggregation or per-tab count fan-out                   |
+| Open a deep-linked section      | Same shell plus target section/child Core subset       | Header plus that section; skip default Overview data when unnecessary            | No intermediate tab loads                                          |
+| Scroll/switch to section        | Cached section descriptor and required child subset    | One section request; bounded provider queries/independent result states          | No unrelated section refresh                                       |
+| Revisit a fresh section         | Cache hit                                              | Zero section network calls                                                       | No automatic command calls                                         |
+| Open comments/attachments       | Capability descriptor and owner authorization          | Lazy list request with pagination                                                | No create/upload/reservation/reveal                                |
+| Click New / Request change      | Authorized operation and selected Flow                 | Explicit start/resume governed draft                                             | No BP numbering allocation on render                               |
+| Materialize an approved request | Operation, lifecycle/validation/numbering bindings     | Revalidate controls and allocate within the materialization transaction          | No client-side sequence increment                                  |
+| Execute reveal                  | Matching protected field + reveal operation            | Explicit assurance/purpose/audited command                                       | No prefetch, retry replay into cache, or plaintext in normal reads |
 
 Use one bootstrap response for authorized shell metadata and initial data, including
 only metadata missing from the browser's hash inventory when useful. SSR hydration
@@ -227,13 +223,13 @@ activation only. A capability being enabled is never an instruction to fetch it.
 
 ### Control-table reader and side-effect rules
 
-| Concern | Resolution rule | Authority |
-| --- | --- | --- |
-| Field validation | Static rules from pinned Core/Flow; dynamic checks on explicit validate/submit | Registered server validator and DB constraints |
-| Lifecycle | Cached immutable definition; current state and transition eligibility at command time | Existing governed case/workflow service |
-| Numbering | Cached immutable policy definition where valid; resolve current applicability during allocation | `control.numbering_policy`, DB counter and allocation receipt |
-| Qualifications/blocks/company and organization assignments | Read only for requested scope/action; apply effective date and current access | Current control/master records; never assumed immutable with IR |
-| Comments/attachments | Owner-scoped service permission and current content revision | Existing collaboration/attachment service |
+| Concern                                                    | Resolution rule                                                                                 | Authority                                                       |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Field validation                                           | Static rules from pinned Core/Flow; dynamic checks on explicit validate/submit                  | Registered server validator and DB constraints                  |
+| Lifecycle                                                  | Cached immutable definition; current state and transition eligibility at command time           | Existing governed case/workflow service                         |
+| Numbering                                                  | Cached immutable policy definition where valid; resolve current applicability during allocation | `control.numbering_policy`, DB counter and allocation receipt   |
+| Qualifications/blocks/company and organization assignments | Read only for requested scope/action; apply effective date and current access                   | Current control/master records; never assumed immutable with IR |
+| Comments/attachments                                       | Owner-scoped service permission and current content revision                                    | Existing collaboration/attachment service                       |
 
 Numbering definition resolution and sequence allocation are different operations.
 Reuse `allocateWithinTransaction` and the persisted allocation-ID receipt. Bind a
@@ -251,18 +247,18 @@ transport retries must reuse the original command key. Do not auto-retry reveals
 
 ### Appendix A component mapping
 
-| Existing component | Required adoption behavior |
-| --- | --- |
-| ApplicationProviders / query hydration | Share caches; no duplicate SSR/client bootstrap |
-| ApplicationBootstrapGate / PlatformShell | Identity/context only; no entity-specific fetch fan-out |
-| PageWorkspace | Own page identity, cancellation/reset, navigation, status and action slots |
-| PageHeader / BreadcrumbBar | Reuse one authorized header projection; no separate name reads |
-| PageNavigation / SectionNavigation | Preserve stable anchors, history, drafts and focus; manual activation for slow panels |
-| PageResourceBoundary | Handle failure of required bootstrap resource only |
-| PageSection / SectionBoundary | Lazy independent requests and retries; maintain scroll geometry |
-| OverviewPanel | Reuse authorized resources; don't duplicate section queries |
-| PageActionBar | Explicit commands only; disable actions when prerequisites fail |
-| PageInformationProvider | Publish actual resource revisions/freshness; clear on identity/access change |
+| Existing component                       | Required adoption behavior                                                            |
+| ---------------------------------------- | ------------------------------------------------------------------------------------- |
+| ApplicationProviders / query hydration   | Share caches; no duplicate SSR/client bootstrap                                       |
+| ApplicationBootstrapGate / PlatformShell | Identity/context only; no entity-specific fetch fan-out                               |
+| PageWorkspace                            | Own page identity, cancellation/reset, navigation, status and action slots            |
+| PageHeader / BreadcrumbBar               | Reuse one authorized header projection; no separate name reads                        |
+| PageNavigation / SectionNavigation       | Preserve stable anchors, history, drafts and focus; manual activation for slow panels |
+| PageResourceBoundary                     | Handle failure of required bootstrap resource only                                    |
+| PageSection / SectionBoundary            | Lazy independent requests and retries; maintain scroll geometry                       |
+| OverviewPanel                            | Reuse authorized resources; don't duplicate section queries                           |
+| PageActionBar                            | Explicit commands only; disable actions when prerequisites fail                       |
+| PageInformationProvider                  | Publish actual resource revisions/freshness; clear on identity/access change          |
 
 Layout, scroll/switch mode and responsive behavior remain explicitly configured.
 Do not infer layout from row counts or secretly replace scroll navigation with tabs.
@@ -306,29 +302,29 @@ extended when the owning behavior changes. Reuse existing package boundaries and
 entry points; introduce a helper file only when a cohesive extraction makes an
 existing large module clearer. Avoid new parallel runtimes or packages.
 
-| Existing files | Planned responsibility |
-| --- | --- |
-| `apps/neon/lib/entity-application-layout.tsx`; `apps/neon/lib/entity-application-route.tsx` | Thin route/application integration and hydration handoff |
-| `apps/neon/app/(shell)/mdg/business-partner/layout.tsx`; `manage/page.tsx`; `page.tsx`; `[recordId]/page.tsx`; `new/page.tsx`; `requests/page.tsx`; `requests/[requestId]/page.tsx` (last six relative to the BP route directory) | Preserve URLs; pass entity/surface/record identity to existing package adapters |
-| `packages/planes/neon/list-view/src/index.tsx` | Shared Neon application/list entry; replace BP identity branches with registered scope adapter |
-| `packages/platform/entity/runtime/list-view/src/index.tsx`; `state.ts`; `data-operations.tsx`; `scope-control.tsx` (same directory) | Descriptor-selected list queries, scoped cache and context/filter synchronization |
-| `packages/platform/entity/runtime/form-detail/src/record-360-panel.tsx`; `section-navigation.tsx`; `section-workspace.tsx`; `intake.tsx` (same directory) | Shared section lifecycle, navigation, boundaries, draft preservation |
-| `packages/platform/entity/runtime/descriptor-client/src/index.ts` | Typed bootstrap/section calls and action summaries; maintain governed-write distinction |
-| `packages/platform/foundation/query/src/core.ts`; `index.tsx` | Resource identity, in-flight deduplication, hydration, invalidation and cancellation |
-| `packages/contracts/platform/entity-runtime/src/record-360-panel.ts`; `record-presentation.ts`; `related-presentation.ts`; `intake.ts` (same directory) | Extend existing typed surface/action/provider contracts rather than duplicating schemas |
-| `packages/planes/neon/business-partner/src/360/business-partner-360.tsx`; `panel-definition.ts`; `section-registry.ts`; `business-partner-360-client.ts`; `business-partner-360-section-client.ts`; `use-audited-reveal.ts` (same directory) | BP provider adapter, demand-driven calls, specialization and reveal controls |
-| `packages/planes/neon/business-partner/src/request-entry.tsx`; `request-workspace.tsx`; `request-form-descriptor.ts`; `intake-submit.ts`; `request-attachment-field.tsx` (same directory) | Flow/operation consumption, explicit idempotent requests and upload actions |
-| `server/packages/contracts/publication/src/artifact.ts`; `projection.ts` (same directory) | Versioned split-artifact envelope and persisted projections |
-| `server/packages/services/publication/src/business-partner-definition-compiler.ts`; `document-collection-compiler.ts`; `publication-artifact-loader.ts`; `publication-artifact-store.ts`; `publication-orchestrator.ts`; `kysely-local-projection-repository.ts`; `business-partner-definition-consumer.ts` (same directory) | Reuse publication pipeline; extract shared artifact emission/resolution, retain BP authoring semantics |
-| `server/packages/platform/metadata/src/descriptor-parser.ts`; `metadata-service.ts`; `runtime-descriptor-repository.ts`; `distributed-descriptor-cache.ts`; `invalidation.ts` (same directory) | Typed pinned reader, per-artifact cache, profiles and activation invalidation |
-| `server/packages/adapters/cache-redis/src/redis-cache-adapter.ts`; `invalidation-generation.ts` | Existing Redis adapter/generation integration; change only if reader requires it |
-| `server/packages/platform/experience/src/contracts.ts`; `ports.ts`; `service.ts`; `routes.ts`; `neon-action-policy-registry.ts` (same directory) | Generic page planning/section orchestration and authorized API admission |
-| `server/packages/adapters/experience-postgres/src/index.ts` | Bounded list/header queries, SQL-pushed filtering/sorting and registered scope resolution |
-| `server/packages/services/master-data/src/business-partner-360-service.ts`; `business-partner-360-routes.ts`; `kysely-business-partner-360-repository.ts`; `kysely-business-partner-360-role-sections.ts`; `business-partner-360-policy.ts`; `business-partner-request-service.ts` (same directory) | Convert full summary orchestration into provider requests; preserve BP policy and governed materialization |
-| `server/packages/services/numbering/src/numbering-service.ts`; `kysely-numbering-repository.ts` | Allocation only at command stage, stable receipt replay and policy-reader integration |
-| `server/packages/platform/collaboration/src/collaboration-service.ts`; `collaboration-routes.ts` | Owner-authorized comment reads/commands; idempotency and targeted invalidation |
-| `server/packages/services/attachments/src/attachment-routes.ts`; `attachment-lifecycle.ts`; `kysely-attachment-repository.ts` | Lazy reads, explicit upload lifecycle and owner/resource invalidation |
-| `docs/architecture/application-experience/entity-policy-examples/New_Entity/README.md`; `CONTRACT.md`; `validate.py`; `verify_live_schema.py`; existing `business_partner/`, child and `platform/` JSON artifacts | Keep reviewed prototype, schemas, hashes and evidence consistent with implementation |
+| Existing files                                                                                                                                                                                                                                                                                                               | Planned responsibility                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `apps/neon/lib/entity-application-layout.tsx`; `apps/neon/lib/entity-application-route.tsx`                                                                                                                                                                                                                                  | Thin route/application integration and hydration handoff                                                   |
+| `apps/neon/app/(shell)/mdg/business-partner/layout.tsx`; `manage/page.tsx`; `page.tsx`; `[recordId]/page.tsx`; `new/page.tsx`; `requests/page.tsx`; `requests/[requestId]/page.tsx` (last six relative to the BP route directory)                                                                                            | Preserve URLs; pass entity/surface/record identity to existing package adapters                            |
+| `packages/planes/neon/list-view/src/index.tsx`                                                                                                                                                                                                                                                                               | Shared Neon application/list entry; replace BP identity branches with registered scope adapter             |
+| `packages/platform/entity/runtime/list-view/src/index.tsx`; `state.ts`; `data-operations.tsx`; `scope-control.tsx` (same directory)                                                                                                                                                                                          | Descriptor-selected list queries, scoped cache and context/filter synchronization                          |
+| `packages/platform/entity/runtime/form-detail/src/record-360-panel.tsx`; `section-navigation.tsx`; `section-workspace.tsx`; `intake.tsx` (same directory)                                                                                                                                                                    | Shared section lifecycle, navigation, boundaries, draft preservation                                       |
+| `packages/platform/entity/runtime/descriptor-client/src/index.ts`                                                                                                                                                                                                                                                            | Typed bootstrap/section calls and action summaries; maintain governed-write distinction                    |
+| `packages/platform/foundation/query/src/core.ts`; `index.tsx`                                                                                                                                                                                                                                                                | Resource identity, in-flight deduplication, hydration, invalidation and cancellation                       |
+| `packages/contracts/platform/entity-runtime/src/record-360-panel.ts`; `record-presentation.ts`; `related-presentation.ts`; `intake.ts` (same directory)                                                                                                                                                                      | Extend existing typed surface/action/provider contracts rather than duplicating schemas                    |
+| `packages/planes/neon/business-partner/src/360/business-partner-360.tsx`; `panel-definition.ts`; `section-registry.ts`; `business-partner-360-client.ts`; `business-partner-360-section-client.ts`; `use-audited-reveal.ts` (same directory)                                                                                 | BP provider adapter, demand-driven calls, specialization and reveal controls                               |
+| `packages/planes/neon/business-partner/src/request-entry.tsx`; `request-workspace.tsx`; `request-form-descriptor.ts`; `intake-submit.ts`; `request-attachment-field.tsx` (same directory)                                                                                                                                    | Flow/operation consumption, explicit idempotent requests and upload actions                                |
+| `server/packages/contracts/publication/src/artifact.ts`; `projection.ts` (same directory)                                                                                                                                                                                                                                    | Versioned split-artifact envelope and persisted projections                                                |
+| `server/packages/services/publication/src/business-partner-definition-compiler.ts`; `document-collection-compiler.ts`; `publication-artifact-loader.ts`; `publication-artifact-store.ts`; `publication-orchestrator.ts`; `kysely-local-projection-repository.ts`; `business-partner-definition-consumer.ts` (same directory) | Reuse publication pipeline; extract shared artifact emission/resolution, retain BP authoring semantics     |
+| `server/packages/platform/metadata/src/descriptor-parser.ts`; `metadata-service.ts`; `runtime-descriptor-repository.ts`; `distributed-descriptor-cache.ts`; `invalidation.ts` (same directory)                                                                                                                               | Typed pinned reader, per-artifact cache, profiles and activation invalidation                              |
+| `server/packages/adapters/cache-redis/src/redis-cache-adapter.ts`; `invalidation-generation.ts`                                                                                                                                                                                                                              | Existing Redis adapter/generation integration; change only if reader requires it                           |
+| `server/packages/platform/experience/src/contracts.ts`; `ports.ts`; `service.ts`; `routes.ts`; `neon-action-policy-registry.ts` (same directory)                                                                                                                                                                             | Generic page planning/section orchestration and authorized API admission                                   |
+| `server/packages/adapters/experience-postgres/src/index.ts`                                                                                                                                                                                                                                                                  | Bounded list/header queries, SQL-pushed filtering/sorting and registered scope resolution                  |
+| `server/packages/services/master-data/src/business-partner-360-service.ts`; `business-partner-360-routes.ts`; `kysely-business-partner-360-repository.ts`; `kysely-business-partner-360-role-sections.ts`; `business-partner-360-policy.ts`; `business-partner-request-service.ts` (same directory)                          | Convert full summary orchestration into provider requests; preserve BP policy and governed materialization |
+| `server/packages/services/numbering/src/numbering-service.ts`; `kysely-numbering-repository.ts`                                                                                                                                                                                                                              | Allocation only at command stage, stable receipt replay and policy-reader integration                      |
+| `server/packages/platform/collaboration/src/collaboration-service.ts`; `collaboration-routes.ts`                                                                                                                                                                                                                             | Owner-authorized comment reads/commands; idempotency and targeted invalidation                             |
+| `server/packages/services/attachments/src/attachment-routes.ts`; `attachment-lifecycle.ts`; `kysely-attachment-repository.ts`                                                                                                                                                                                                | Lazy reads, explicit upload lifecycle and owner/resource invalidation                                      |
+| `docs/architecture/application-experience/entity-policy-examples/New_Entity/README.md`; `CONTRACT.md`; `validate.py`; `verify_live_schema.py`; existing `business_partner/`, child and `platform/` JSON artifacts                                                                                                            | Keep reviewed prototype, schemas, hashes and evidence consistent with implementation                       |
 
 `apps/neon` remains route/layout/bootstrap composition. `apps/studio` continues to
 host the existing authoring UI; compiler changes live in server packages. Mesh is
@@ -401,15 +397,15 @@ section switch keyed by entity name, or comment/attachment/numbering effects.
 Initially use the existing layout bridge rather than introducing another nested
 entity layout. The shell and application provider must each mount once.
 
-| Public path | Internal path | Route intent |
-| --- | --- | --- |
-| `/mdg/business-partner` | `/app/entity/business_partner` | Default application overview |
-| `/mdg/business-partner/manage` | `/app/entity/business_partner/manage` | Partner collection |
-| `/mdg/business-partner/:recordId` | `/app/entity/business_partner/records/:recordId` | Partner detail |
-| `/mdg/business-partner/new` | `/app/entity/business_partner/new` | Start published intake flow |
-| `/mdg/business-partner/requests` | `/app/entity/business_partner/requests` | Governed request collection |
-| `/mdg/business-partner/requests/:requestId` | `/app/entity/business_partner/requests/:requestId` | Governed request detail |
-| `/mdg/organization-reference/currencies` | `/app/entity/currency/manage` | Reference collection |
+| Public path                                 | Internal path                                      | Route intent                 |
+| ------------------------------------------- | -------------------------------------------------- | ---------------------------- |
+| `/mdg/business-partner`                     | `/app/entity/business_partner`                     | Default application overview |
+| `/mdg/business-partner/manage`              | `/app/entity/business_partner/manage`              | Partner collection           |
+| `/mdg/business-partner/:recordId`           | `/app/entity/business_partner/records/:recordId`   | Partner detail               |
+| `/mdg/business-partner/new`                 | `/app/entity/business_partner/new`                 | Start published intake flow  |
+| `/mdg/business-partner/requests`            | `/app/entity/business_partner/requests`            | Governed request collection  |
+| `/mdg/business-partner/requests/:requestId` | `/app/entity/business_partner/requests/:requestId` | Governed request detail      |
+| `/mdg/organization-reference/currencies`    | `/app/entity/currency/manage`                      | Reference collection         |
 
 `entityCode` here identifies the application owner. The compiled application surface
 selects `business_partner_request` as its request-list/flow target; the client cannot
@@ -437,16 +433,16 @@ rewrite loops, including RSC/prefetch requests. No metadata/Redis/DB access in p
 All directories below already exist. Extend them instead of creating an
 `entity-aggregator`, `business-partner-runtime` or second descriptor-client package.
 
-| Directory | Existing file anchors and target ownership |
-| --- | --- |
-| `packages/contracts/platform/navigation/` | Existing catalog-route contract/resolver: typed application owner, surface, resource ID and canonical public path; reverse mapping for links |
-| `packages/contracts/platform/entity-runtime/src/` | `record-presentation.ts`, `record-360-panel.ts`, `related-presentation.ts`, `intake.ts`: serializable surface/provider/operation references and runtime route intent |
-| `packages/platform/entity/runtime/descriptor-client/src/` | `index.ts`: shared compiled-surface/bootstrap/section client; all entity metadata reads enter here |
-| `packages/platform/entity/runtime/list-view/src/` | `index.tsx`, `state.ts`, `data-operations.tsx`: generic application overview, lists, saved views, filters and list loading |
-| `packages/platform/entity/runtime/form-detail/src/` | `record-360-panel.tsx`, `section-workspace.tsx`, `section-navigation.tsx`, `intake.tsx`: generic detail/section/flow composition and demand-driven resource lifecycle |
-| `packages/platform/foundation/query/src/` | `core.ts`, `index.tsx`: cache hydration, deduplication, cancellation and resource invalidation |
-| `packages/planes/neon/list-view/src/` | `index.tsx`, `scope-adapters.tsx`: Neon context and registered scope adapters; no private BP metadata reader |
-| `packages/planes/neon/business-partner/src/` | Bank verification, role eligibility, governed requests and other BP business interactions; specialized UI only where domain behavior needs it |
+| Directory                                                 | Existing file anchors and target ownership                                                                                                                            |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/contracts/platform/navigation/`                 | Existing catalog-route contract/resolver: typed application owner, surface, resource ID and canonical public path; reverse mapping for links                          |
+| `packages/contracts/platform/entity-runtime/src/`         | `record-presentation.ts`, `record-360-panel.ts`, `related-presentation.ts`, `intake.ts`: serializable surface/provider/operation references and runtime route intent  |
+| `packages/platform/entity/runtime/descriptor-client/src/` | `index.ts`: shared compiled-surface/bootstrap/section client; all entity metadata reads enter here                                                                    |
+| `packages/platform/entity/runtime/list-view/src/`         | `index.tsx`, `state.ts`, `data-operations.tsx`: generic application overview, lists, saved views, filters and list loading                                            |
+| `packages/platform/entity/runtime/form-detail/src/`       | `record-360-panel.tsx`, `section-workspace.tsx`, `section-navigation.tsx`, `intake.tsx`: generic detail/section/flow composition and demand-driven resource lifecycle |
+| `packages/platform/foundation/query/src/`                 | `core.ts`, `index.tsx`: cache hydration, deduplication, cancellation and resource invalidation                                                                        |
+| `packages/planes/neon/list-view/src/`                     | `index.tsx`, `scope-adapters.tsx`: Neon context and registered scope adapters; no private BP metadata reader                                                          |
+| `packages/planes/neon/business-partner/src/`              | Bank verification, role eligibility, governed requests and other BP business interactions; specialized UI only where domain behavior needs it                         |
 
 Generic field/collection rendering comes from metadata. A descriptor capability
 references a registered domain function when declarative reading is insufficient.
@@ -455,17 +451,17 @@ BP provider that fetches every section. Unknown required functions fail closed.
 
 ### Server package ownership and names
 
-| Directory | Existing file anchors and target ownership |
-| --- | --- |
-| `server/packages/contracts/metadata/src/` | `descriptors.ts`, `ports.ts`: typed pinned compiled-model reader and fragment coordinates |
-| `server/packages/contracts/publication/src/` | `artifact.ts`, `projection.ts`: artifact family, hashes and release set |
-| `server/packages/services/publication/src/` | Existing compiler, loader, store and orchestrator: compile at publication, verify and activate consistently; BP authoring rules remain domain-specific |
-| `server/packages/platform/metadata/src/` | `metadata-service.ts`, `descriptor-parser.ts`, `runtime-descriptor-repository.ts`, `distributed-descriptor-cache.ts`: sole generic compiled-model read path |
-| `server/packages/platform/experience/src/` | `contracts.ts`, `ports.ts`, `service.ts`, `routes.ts`: page plan, bootstrap, bounded section orchestration and authorized action summaries |
-| `server/packages/adapters/experience-postgres/src/` | `index.ts`: parameterized declared projections and relation queries; allowlisted columns/operators and tenant-safe joins |
-| `server/packages/services/master-data/src/` | Existing BP request, eligibility, verification, protection and materialization services; business functions called through registered contracts |
-| `server/packages/services/numbering/src/` | Existing transactional allocation and replay receipts; never invoked by page reads |
-| `server/packages/platform/collaboration/src/` and `server/packages/services/attachments/src/` | Existing owner-scoped content reads and explicit commands; no BP-owned duplicate service |
+| Directory                                                                                     | Existing file anchors and target ownership                                                                                                                  |
+| --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `server/packages/contracts/metadata/src/`                                                     | `descriptors.ts`, `ports.ts`: typed pinned compiled-model reader and fragment coordinates                                                                   |
+| `server/packages/contracts/publication/src/`                                                  | `artifact.ts`, `projection.ts`: artifact family, hashes and release set                                                                                     |
+| `server/packages/services/publication/src/`                                                   | Existing compiler, loader, store and orchestrator: compile at publication, verify and activate consistently; BP authoring rules remain domain-specific      |
+| `server/packages/platform/metadata/src/`                                                      | `metadata-service.ts`, `descriptor-parser.ts`, `runtime-descriptor-repository.ts`, `distributed-descriptor-cache.ts`: sole generic compiled-model read path |
+| `server/packages/platform/experience/src/`                                                    | `contracts.ts`, `ports.ts`, `service.ts`, `routes.ts`: page plan, bootstrap, bounded section orchestration and authorized action summaries                  |
+| `server/packages/adapters/experience-postgres/src/`                                           | `index.ts`: parameterized declared projections and relation queries; allowlisted columns/operators and tenant-safe joins                                    |
+| `server/packages/services/master-data/src/`                                                   | Existing BP request, eligibility, verification, protection and materialization services; business functions called through registered contracts             |
+| `server/packages/services/numbering/src/`                                                     | Existing transactional allocation and replay receipts; never invoked by page reads                                                                          |
+| `server/packages/platform/collaboration/src/` and `server/packages/services/attachments/src/` | Existing owner-scoped content reads and explicit commands; no BP-owned duplicate service                                                                    |
 
 If extraction is needed, use responsibility names such as `section-query-plan.ts`
 inside the existing experience package or `artifact-resolution.ts` inside metadata.
@@ -525,33 +521,33 @@ library. Introduce files only as working extractions with migrated callers and t
 
 ### Module structure and ownership
 
-| Path | Action | Responsibility |
-| --- | --- | --- |
-| `apps/neon/proxy.ts` | Extend existing | Catalog-driven internal rewrite; preserve request-destination handling |
-| `apps/neon/lib/catalog-routes.ts` | Extend existing | Public URL catalog; no record or artifact queries |
-| `apps/neon/lib/entity-application-route.tsx` | Refactor existing | Dispatch validated surface intent to shared runtime |
-| `apps/neon/lib/entity-application-layout.tsx` | Refactor existing | One application-provider bridge inside existing shell |
-| `apps/neon/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx` | Add | Single thin entity route; public/internal coordinate validation |
-| `packages/platform/shell/shell/src/page-workspace.tsx` | Reuse | Existing Appendix A composition; no entity-specific metadata reader |
-| `packages/contracts/platform/entity-runtime/src/runtime-resource.ts` | Add if no equivalent existing contract | Typed bootstrap, section result, revision and invalidation wire contracts |
-| `packages/platform/entity/runtime/descriptor-client/src/index.ts` | Refactor existing | Public client exports and compatibility delegates |
-| `packages/platform/entity/runtime/descriptor-client/src/runtime-client.ts` | Extract from existing client | Typed shared read/command operations; no entity-specific endpoint construction |
-| `packages/platform/entity/runtime/form-detail/src/record-360-panel.tsx` | Refactor existing | Descriptor-selected detail surface using shared workspace/section components |
-| `packages/platform/entity/runtime/form-detail/src/section-workspace.tsx` | Refactor existing | Section state, independent boundaries and demand-driven resources |
-| `packages/platform/entity/runtime/form-detail/src/use-section-resource.ts` | Extract when wiring real callers | Cache subscription, cancellation, visibility/activation and retry; no domain rules |
-| `packages/platform/entity/runtime/list-view/src/index.tsx` | Refactor existing | Application/list presentation driven by the same pinned metadata |
-| `packages/planes/neon/list-view/src/scope-adapters.tsx` | Extend existing | Registered Neon scope behavior selected by validated capability |
-| `server/packages/platform/metadata/src/metadata-service.ts` | Refactor existing | Shared authoritative compiled-model reader |
-| `server/packages/platform/metadata/src/artifact-resolution.ts` | Extract from reader/consumer | Resolve fragments/profiles within one pinned release; no domain execution |
-| `server/packages/platform/metadata/src/distributed-descriptor-cache.ts` | Extend existing | Immutable fragment caching through existing Redis adapter |
-| `server/packages/platform/experience/src/entity-runtime-routes.ts` | Extract and register through existing routes | Entity bootstrap, section and operation transport; authenticated context |
-| `server/packages/platform/experience/src/entity-runtime-contracts.ts` | Add working schemas | Validate wire input/output against shared resource contract |
-| `server/packages/platform/experience/src/entity-page-planner.ts` | Extract from experience/BP orchestration | Authorized surface/resource plan; pure planning separated from resource reads |
-| `server/packages/platform/experience/src/entity-section-service.ts` | Extract from section orchestration | Execute bounded requested resources; no eager collection fan-out |
-| `server/packages/platform/experience/src/entity-operation-dispatcher.ts` | Extract existing dispatch plumbing | Validate operation binding and delegate to registered business service |
-| `server/packages/platform/experience/src/ports.ts` | Extend existing | Provider ports; keep platform independent of master-data service implementations |
-| `server/packages/adapters/experience-postgres/src/section-query-repository.ts` | Extract from adapter when required | Safe parameterized declarative collection/field queries |
-| `server/packages/services/master-data/src/` | Retain business functions; retire old orchestration | Governed requests, materialization, bank verification, eligibility and protected data |
+| Path                                                                           | Action                                              | Responsibility                                                                        |
+| ------------------------------------------------------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `apps/neon/proxy.ts`                                                           | Extend existing                                     | Catalog-driven internal rewrite; preserve request-destination handling                |
+| `apps/neon/lib/catalog-routes.ts`                                              | Extend existing                                     | Public URL catalog; no record or artifact queries                                     |
+| `apps/neon/lib/entity-application-route.tsx`                                   | Refactor existing                                   | Dispatch validated surface intent to shared runtime                                   |
+| `apps/neon/lib/entity-application-layout.tsx`                                  | Refactor existing                                   | One application-provider bridge inside existing shell                                 |
+| `apps/neon/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx`       | Add                                                 | Single thin entity route; public/internal coordinate validation                       |
+| `packages/platform/shell/shell/src/page-workspace.tsx`                         | Reuse                                               | Existing Appendix A composition; no entity-specific metadata reader                   |
+| `packages/contracts/platform/entity-runtime/src/runtime-resource.ts`           | Add if no equivalent existing contract              | Typed bootstrap, section result, revision and invalidation wire contracts             |
+| `packages/platform/entity/runtime/descriptor-client/src/index.ts`              | Refactor existing                                   | Public client exports and compatibility delegates                                     |
+| `packages/platform/entity/runtime/descriptor-client/src/runtime-client.ts`     | Extract from existing client                        | Typed shared read/command operations; no entity-specific endpoint construction        |
+| `packages/platform/entity/runtime/form-detail/src/record-360-panel.tsx`        | Refactor existing                                   | Descriptor-selected detail surface using shared workspace/section components          |
+| `packages/platform/entity/runtime/form-detail/src/section-workspace.tsx`       | Refactor existing                                   | Section state, independent boundaries and demand-driven resources                     |
+| `packages/platform/entity/runtime/form-detail/src/use-section-resource.ts`     | Extract when wiring real callers                    | Cache subscription, cancellation, visibility/activation and retry; no domain rules    |
+| `packages/platform/entity/runtime/list-view/src/index.tsx`                     | Refactor existing                                   | Application/list presentation driven by the same pinned metadata                      |
+| `packages/planes/neon/list-view/src/scope-adapters.tsx`                        | Extend existing                                     | Registered Neon scope behavior selected by validated capability                       |
+| `server/packages/platform/metadata/src/metadata-service.ts`                    | Refactor existing                                   | Shared authoritative compiled-model reader                                            |
+| `server/packages/platform/metadata/src/artifact-resolution.ts`                 | Extract from reader/consumer                        | Resolve fragments/profiles within one pinned release; no domain execution             |
+| `server/packages/platform/metadata/src/distributed-descriptor-cache.ts`        | Extend existing                                     | Immutable fragment caching through existing Redis adapter                             |
+| `server/packages/platform/experience/src/entity-runtime-routes.ts`             | Extract and register through existing routes        | Entity bootstrap, section and operation transport; authenticated context              |
+| `server/packages/platform/experience/src/entity-runtime-contracts.ts`          | Add working schemas                                 | Validate wire input/output against shared resource contract                           |
+| `server/packages/platform/experience/src/entity-page-planner.ts`               | Extract from experience/BP orchestration            | Authorized surface/resource plan; pure planning separated from resource reads         |
+| `server/packages/platform/experience/src/entity-section-service.ts`            | Extract from section orchestration                  | Execute bounded requested resources; no eager collection fan-out                      |
+| `server/packages/platform/experience/src/entity-operation-dispatcher.ts`       | Extract existing dispatch plumbing                  | Validate operation binding and delegate to registered business service                |
+| `server/packages/platform/experience/src/ports.ts`                             | Extend existing                                     | Provider ports; keep platform independent of master-data service implementations      |
+| `server/packages/adapters/experience-postgres/src/section-query-repository.ts` | Extract from adapter when required                  | Safe parameterized declarative collection/field queries                               |
+| `server/packages/services/master-data/src/`                                    | Retain business functions; retire old orchestration | Governed requests, materialization, bank verification, eligibility and protected data |
 
 File additions in this table supersede the earlier blanket preference for changing
 only existing files: they are bounded extractions inside established packages, not
@@ -569,14 +565,14 @@ The active compiled-reader transport family is `/api/entity-runtime`; it uses ex
 record paths and `surface`, avoiding a second versioned base path. Existing legacy BP
 360 routes are removed only after their callers migrate to these generic routes.
 
-| Active or planned method | Purpose |
-| --- | --- |
-| `GET /api/entity-runtime/:entityCode/records/:recordId/bootstrap?surface=...` | Active: authorized surface projection, release pin, header and admitted section plan |
-| `GET /api/entity-runtime/:entityCode/records/:recordId/sections/:sectionKey?surface=...` | Active: one independently authorized section resource |
-| `GET /api/entity-runtime/:entityCode/records?surface=...&cursor=...` | Planned bounded list pages/filter changes |
-| `POST /api/entity-runtime/:entityCode/records/:recordId/sections:batch` | Optional bounded read batch; explicitly read-only, never command-capable |
-| `POST /api/entity-runtime/:entityCode/operations/:operationKey` | Planned explicit create/start-flow command with validated target coordinates |
-| `POST /api/entity-runtime/:entityCode/records/:recordId/operations/:operationKey` | Planned explicit record command such as request-change or reveal |
+| Active or planned method                                                                 | Purpose                                                                              |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `GET /api/entity-runtime/:entityCode/records/:recordId/bootstrap?surface=...`            | Active: authorized surface projection, release pin, header and admitted section plan |
+| `GET /api/entity-runtime/:entityCode/records/:recordId/sections/:sectionKey?surface=...` | Active: one independently authorized section resource                                |
+| `GET /api/entity-runtime/:entityCode/records?surface=...&cursor=...`                     | Planned bounded list pages/filter changes                                            |
+| `POST /api/entity-runtime/:entityCode/records/:recordId/sections:batch`                  | Optional bounded read batch; explicitly read-only, never command-capable             |
+| `POST /api/entity-runtime/:entityCode/operations/:operationKey`                          | Planned explicit create/start-flow command with validated target coordinates         |
+| `POST /api/entity-runtime/:entityCode/records/:recordId/operations/:operationKey`        | Planned explicit record command such as request-change or reveal                     |
 
 All calls derive tenant/principal/plane from verified request context, not arbitrary
 payload fields. Resource requests carry the admitted release pin/context generation;
@@ -602,18 +598,18 @@ reads/reveals use no-store; no shared HTTP caching of authorized page responses.
 
 ### Appendix A contract-to-runtime mapping
 
-| Component | Compiled selection | Logic location |
-| --- | --- | --- |
-| ApplicationBootstrapGate | Application/plane references only | Existing application bootstrap; no per-entity loader |
-| PageWorkspace | Surface/context/resource identity | Shared surface adapter and query lifecycle |
-| PageHeader | Title/code/status field references | Shared header fed from bootstrap resource |
-| PageNavigation | Kind, public destinations and action/flow references | Shared navigation plus public route resolver |
-| PageLayout | Supported layout enum | Existing shell/layout components |
-| SectionNavigation | Stable section references and explicit mode | Existing section-navigation component |
-| PageSection | Fields/child collections, resource key and load policy | Shared section workspace/resource hook |
-| OverviewPanel | Optional summary resource references | Same resource cache; no duplicate query owner |
-| PageActionBar | Operation keys, placement and prerequisites | Shared actions plus operation dispatcher |
-| PageInformationProvider | Provenance/resource revision references | Existing page-information registration and cleanup |
+| Component                | Compiled selection                                     | Logic location                                       |
+| ------------------------ | ------------------------------------------------------ | ---------------------------------------------------- |
+| ApplicationBootstrapGate | Application/plane references only                      | Existing application bootstrap; no per-entity loader |
+| PageWorkspace            | Surface/context/resource identity                      | Shared surface adapter and query lifecycle           |
+| PageHeader               | Title/code/status field references                     | Shared header fed from bootstrap resource            |
+| PageNavigation           | Kind, public destinations and action/flow references   | Shared navigation plus public route resolver         |
+| PageLayout               | Supported layout enum                                  | Existing shell/layout components                     |
+| SectionNavigation        | Stable section references and explicit mode            | Existing section-navigation component                |
+| PageSection              | Fields/child collections, resource key and load policy | Shared section workspace/resource hook               |
+| OverviewPanel            | Optional summary resource references                   | Same resource cache; no duplicate query owner        |
+| PageActionBar            | Operation keys, placement and prerequisites            | Shared actions plus operation dispatcher             |
+| PageInformationProvider  | Provenance/resource revision references                | Existing page-information registration and cleanup   |
 
 Compile only these selections; accessibility, focus management, error boundaries,
 request cancellation and responsive geometry remain reusable code guarantees. A
@@ -698,14 +694,14 @@ shapes below form one transport contract; do not implement a second BP-specific
 version alongside it. Existing global bootstrap and capability services retain their
 own endpoints. API version, artifact schema version and release identity are separate.
 
-| Method and path under the base | Inputs | Output / behavior |
-| --- | --- | --- |
-| `GET /entities/:entityCode/bootstrap` | Validated `surfaceKey`; optional `recordId`, section intent, view, density and bounded list query | Admitted release pin, safe surface model, header/action summaries and initial resources |
-| `GET /entities/:entityCode/records` | Surface, admitted release, filters, sort, cursor and limit | Authorized projected rows and next cursor; no child expansion by default |
-| `GET /entities/:entityCode/records/:recordId/sections/:sectionKey` | Admitted release, section-specific filters/cursor/limit | Safe section presentation when needed, authorized data, revision and pagination |
-| `POST /entities/:entityCode/records/:recordId/sections:batch` | Bounded requested section keys and validated per-section read inputs | Optional later optimization; independent section outcomes, no command execution |
-| `POST /entities/:entityCode/operations/:operationKey` | Operation input, release identity, stable idempotency key when mutating | Explicit start/create operation; returns command receipt and actual target identity |
-| `POST /entities/:entityCode/records/:recordId/operations/:operationKey` | Operation input, admitted release, applicable expected version and idempotency key | Registered domain command; receipt, resulting versions and affected resources |
+| Method and path under the base                                          | Inputs                                                                                            | Output / behavior                                                                       |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `GET /entities/:entityCode/bootstrap`                                   | Validated `surfaceKey`; optional `recordId`, section intent, view, density and bounded list query | Admitted release pin, safe surface model, header/action summaries and initial resources |
+| `GET /entities/:entityCode/records`                                     | Surface, admitted release, filters, sort, cursor and limit                                        | Authorized projected rows and next cursor; no child expansion by default                |
+| `GET /entities/:entityCode/records/:recordId/sections/:sectionKey`      | Admitted release, section-specific filters/cursor/limit                                           | Safe section presentation when needed, authorized data, revision and pagination         |
+| `POST /entities/:entityCode/records/:recordId/sections:batch`           | Bounded requested section keys and validated per-section read inputs                              | Optional later optimization; independent section outcomes, no command execution         |
+| `POST /entities/:entityCode/operations/:operationKey`                   | Operation input, release identity, stable idempotency key when mutating                           | Explicit start/create operation; returns command receipt and actual target identity     |
+| `POST /entities/:entityCode/records/:recordId/operations/:operationKey` | Operation input, admitted release, applicable expected version and idempotency key                | Registered domain command; receipt, resulting versions and affected resources           |
 
 Use existing authentication/request-context and problem-response infrastructure.
 Tenant, principal and plane are derived from verified context. Query parameters
@@ -727,17 +723,17 @@ behavior. This phase is a short source inventory and local baseline, not a redes
 Work:
 
 - [x] Trace Manage, detail/360, intake, request list/detail, comments and attachments
-  from the Next route through the frontend client to the server handler/repository.
+      from the Next route through the frontend client to the server handler/repository.
 - [x] Identify which active metadata is published versus generated in a provider,
-  hardcoded in a panel definition or overridden by a local preview.
+      hardcoded in a panel definition or overridden by a local preview.
 - [x] Record current public aliases, dynamic route matches, query-state ownership,
-  shell/application provider mounts and hidden section fetches.
+      shell/application provider mounts and hidden section fetches.
 - [x] Tag each affected file `reuse`, `modify`, `extract`, `delete` or `retain-domain`.
-  In mixed files, identify functions to move rather than deleting the whole module.
+      In mixed files, identify functions to move rather than deleting the whole module.
 - [x] Locate import/export, route registration and test consumers of planned deletions.
 - [ ] Capture one BP Manage/detail browser network trace. Local authentication was not
-  available to this source-review session, so this remains browser verification work,
-  not a reason to delay the inventory.
+      available to this source-review session, so this remains browser verification work,
+      not a reason to delay the inventory.
 
 Primary files: `apps/neon/lib/entity-application-route.tsx`,
 `apps/neon/lib/entity-application-layout.tsx`, BP route files, Neon list-view
@@ -759,14 +755,14 @@ API registration, generated artifact, seed data or database object was changed.
 
 ##### Current route and provider ownership
 
-| Public URL / route family | Current Next entry and provider mount | Current reader or command owner | Phase action |
-| --- | --- | --- | --- |
-| `/mdg/business-partner`, `/manage`, `/partners`, `/business-partners` | `apps/neon/app/(shell)/mdg/business-partner/{page,manage/page,partners/page,business-partners/page}.tsx`; the layout mounts `EntityApplicationLayout`, then `NeonEntityApplication` | Shared application descriptor/list runtime; BP-only scope is added by `BusinessPartnerScopeAdapter` | `reuse` shared layout/list; `extract` BP scope rules into a registered domain adapter; `delete` the route alias pages after the catalog rewrite owns their redirects |
-| `/mdg/business-partner/:recordId` | `[recordId]/page.tsx` renders `BusinessPartnerRecord` | Feature-gated `BusinessPartner360Shell`, with fallback `BusinessPartnerAggregateDetail` | `modify` route to the generic entity route; `delete` both BP presentation shells after their metadata/runtime replacements work; `retain-domain` all registered BP reads and governed commands |
-| Record subroutes: `/supplier`, `/customer`, `/banking`, `/bank-verification`, `/roles/new`, `/scope/new` | Corresponding `[recordId]/*/page.tsx` files directly render BP components | Commercial controls, bank verification, role extension and scoped configuration | `modify` as operation/surface destinations; `retain-domain` the specialist operations and handlers; only remove a route wrapper after the generic route can dispatch the registered operation |
-| `/mdg/business-partner/new`, `/customer/new`, `/requests/new` | Route wrappers render `AuthorizedNewBusinessPartnerRequest` or `BusinessPartnerRequestEntry`; `requests/new` redirects to `new` | Existing Entity Intake plus BP request case client | `modify` to generic flow routing; `retain-domain` request/case materialization; `delete` duplicated alias wrapper after route catalog migration |
-| `/mdg/business-partner/requests`, `/requests/:requestId`, `/edit` | Requests list uses `NeonEntityApplicationSection`; detail/edit render BP request components | Governed BP request/case client and `BusinessPartnerRequestService` | `modify` read surfaces to compiled Flow/Operation metadata; `retain-domain` case lifecycle, validation, workflow, evidence and materialization |
-| `/mdg/business-partner/mesh-proposals` and public supplier application | Direct BP components | Mesh proposal/profile and applicant services | `retain-domain`; outside the first generic record-reader cutover |
+| Public URL / route family                                                                                | Current Next entry and provider mount                                                                                                                                               | Current reader or command owner                                                                     | Phase action                                                                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/mdg/business-partner`, `/manage`, `/partners`, `/business-partners`                                    | `apps/neon/app/(shell)/mdg/business-partner/{page,manage/page,partners/page,business-partners/page}.tsx`; the layout mounts `EntityApplicationLayout`, then `NeonEntityApplication` | Shared application descriptor/list runtime; BP-only scope is added by `BusinessPartnerScopeAdapter` | `reuse` shared layout/list; `extract` BP scope rules into a registered domain adapter; `delete` the route alias pages after the catalog rewrite owns their redirects                           |
+| `/mdg/business-partner/:recordId`                                                                        | `[recordId]/page.tsx` renders `BusinessPartnerRecord`                                                                                                                               | Feature-gated `BusinessPartner360Shell`, with fallback `BusinessPartnerAggregateDetail`             | `modify` route to the generic entity route; `delete` both BP presentation shells after their metadata/runtime replacements work; `retain-domain` all registered BP reads and governed commands |
+| Record subroutes: `/supplier`, `/customer`, `/banking`, `/bank-verification`, `/roles/new`, `/scope/new` | Corresponding `[recordId]/*/page.tsx` files directly render BP components                                                                                                           | Commercial controls, bank verification, role extension and scoped configuration                     | `modify` as operation/surface destinations; `retain-domain` the specialist operations and handlers; only remove a route wrapper after the generic route can dispatch the registered operation  |
+| `/mdg/business-partner/new`, `/customer/new`, `/requests/new`                                            | Route wrappers render `AuthorizedNewBusinessPartnerRequest` or `BusinessPartnerRequestEntry`; `requests/new` redirects to `new`                                                     | Existing Entity Intake plus BP request case client                                                  | `modify` to generic flow routing; `retain-domain` request/case materialization; `delete` duplicated alias wrapper after route catalog migration                                                |
+| `/mdg/business-partner/requests`, `/requests/:requestId`, `/edit`                                        | Requests list uses `NeonEntityApplicationSection`; detail/edit render BP request components                                                                                         | Governed BP request/case client and `BusinessPartnerRequestService`                                 | `modify` read surfaces to compiled Flow/Operation metadata; `retain-domain` case lifecycle, validation, workflow, evidence and materialization                                                 |
+| `/mdg/business-partner/mesh-proposals` and public supplier application                                   | Direct BP components                                                                                                                                                                | Mesh proposal/profile and applicant services                                                        | `retain-domain`; outside the first generic record-reader cutover                                                                                                                               |
 
 The existing top-level layout is currently one application provider mount:
 `BusinessPartnerLayout` → `EntityApplicationLayout(entityCode)` →
@@ -778,19 +774,19 @@ inside the generic entity orchestrator.
 
 ##### Actual registered read and metadata paths
 
-| Current HTTP path | Browser client / caller | Server registration and data owner | Replacement decision |
-| --- | --- | --- | --- |
-| Existing generic entity application/list/record descriptor and list endpoints | `NeonEntityApplication`, `BusinessPartnerRequestEntry`, `RequestWorkspaceDetails`, `PartnerReferenceField` | Existing descriptor/list platform services | `reuse`; the new bootstrap/section reader must use the same request context and descriptor admission model |
-| `GET /api/neon/business-partner-definitions/active-descriptors` | No active product UI caller found in this inventory | `LocalBusinessPartnerDefinitionConsumer` via `registerLocalBusinessPartnerDefinitionRoutes` | `delete` when all consumers use split-artifact release resolution; retain the consumer's admission rules until the replacement is proven |
-| `GET /api/neon/business-partner-definitions/active-request-form` | `packages/planes/neon/business-partner/src/client.ts` | Same local consumer; it overlays `local-definition-preview` for request flow/schema resolution | `extract` preview/admission behavior into the generic metadata reader; `delete` this BP-only transport route only after New and Edit use the pinned Flow artifact |
-| `GET /api/neon/business-partners/:id/360/summary` | `BusinessPartner360Shell` through `business-partner-360-client.ts` | `registerBusinessPartner360Routes` → `BusinessPartner360Service` → `KyselyBusinessPartner360Repository` | `delete` as a BP-specific aggregate endpoint after generic bootstrap supplies the same safe header, applicability, section/action summary and revision data |
-| `GET /api/neon/business-partners/:id/360/:section` | Six BP 360 clients and section components | Same route registration/service/repository plus section, role/company, commercial, explainability and network providers | `extract` each provider behind a registered section reader; `delete` this catch-all BP transport endpoint only as each compiled section maps to a supported registered reader |
-| `POST /api/neon/business-partners/:id/360/comments` | `ResourceSection` | BP 360 route delegates to the collaboration service | `delete` this wrapper after the generic runtime calls the existing collaboration capability API; `retain-domain` neither comment storage nor its authorization inside BP 360 |
-| `POST /api/neon/business-partners/:id/360/identifiers-tax/reveal` and `/banking/reveal` | Section/commercial clients and `use-audited-reveal` | BP 360 route/service, protected-value resolver and audit policy | `retain-domain` reveal authorization, purpose, expiry and audit; `modify` only the operation reference and client dispatch; no generic read/prefetch replacement |
-| `GET /api/neon/business-partner-cases` and legacy `/business-partner-requests`, `/:id`, `/:id/view` | BP `client.ts`, request list/detail/edit surfaces | `registerBusinessPartnerRequestRoutes` → `BusinessPartnerRequestService` | `retain-domain`; generic entity runtime dispatches a registered case reader/operation, never substitutes flat CRUD |
-| `GET /api/neon/business-partners/:id` | Legacy `BusinessPartnerAggregateDetail` fallback | Request routes delegate to `legacyAggregate` / request service | `delete` with the feature-gated legacy aggregate detail after generic bootstrap is live |
-| Eligibility, supplier activation, qualification, preference, customer designation/credit/lifecycle endpoints | BP commercial controls and dedicated pages | `business-partner-eligibility-routes.ts` and BP eligibility service | `retain-domain`; expose as registered action/read capability only where the compiled contract refers to it |
-| `/api/attachments/*` | Request attachment control and BP commercial download control | Existing attachment service | `retain-domain`; generic runtime references it as a lazy capability and must not proxy uploads/downloads through entity runtime |
+| Current HTTP path                                                                                            | Browser client / caller                                                                                    | Server registration and data owner                                                                                      | Replacement decision                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Existing generic entity application/list/record descriptor and list endpoints                                | `NeonEntityApplication`, `BusinessPartnerRequestEntry`, `RequestWorkspaceDetails`, `PartnerReferenceField` | Existing descriptor/list platform services                                                                              | `reuse`; the new bootstrap/section reader must use the same request context and descriptor admission model                                                                    |
+| `GET /api/neon/business-partner-definitions/active-descriptors`                                              | No active product UI caller found in this inventory                                                        | `LocalBusinessPartnerDefinitionConsumer` via `registerLocalBusinessPartnerDefinitionRoutes`                             | `delete` when all consumers use split-artifact release resolution; retain the consumer's admission rules until the replacement is proven                                      |
+| `GET /api/neon/business-partner-definitions/active-request-form`                                             | `packages/planes/neon/business-partner/src/client.ts`                                                      | Same local consumer; it overlays `local-definition-preview` for request flow/schema resolution                          | `extract` preview/admission behavior into the generic metadata reader; `delete` this BP-only transport route only after New and Edit use the pinned Flow artifact             |
+| `GET /api/neon/business-partners/:id/360/summary`                                                            | `BusinessPartner360Shell` through `business-partner-360-client.ts`                                         | `registerBusinessPartner360Routes` → `BusinessPartner360Service` → `KyselyBusinessPartner360Repository`                 | `delete` as a BP-specific aggregate endpoint after generic bootstrap supplies the same safe header, applicability, section/action summary and revision data                   |
+| `GET /api/neon/business-partners/:id/360/:section`                                                           | Six BP 360 clients and section components                                                                  | Same route registration/service/repository plus section, role/company, commercial, explainability and network providers | `extract` each provider behind a registered section reader; `delete` this catch-all BP transport endpoint only as each compiled section maps to a supported registered reader |
+| `POST /api/neon/business-partners/:id/360/comments`                                                          | `ResourceSection`                                                                                          | BP 360 route delegates to the collaboration service                                                                     | `delete` this wrapper after the generic runtime calls the existing collaboration capability API; `retain-domain` neither comment storage nor its authorization inside BP 360  |
+| `POST /api/neon/business-partners/:id/360/identifiers-tax/reveal` and `/banking/reveal`                      | Section/commercial clients and `use-audited-reveal`                                                        | BP 360 route/service, protected-value resolver and audit policy                                                         | `retain-domain` reveal authorization, purpose, expiry and audit; `modify` only the operation reference and client dispatch; no generic read/prefetch replacement              |
+| `GET /api/neon/business-partner-cases` and legacy `/business-partner-requests`, `/:id`, `/:id/view`          | BP `client.ts`, request list/detail/edit surfaces                                                          | `registerBusinessPartnerRequestRoutes` → `BusinessPartnerRequestService`                                                | `retain-domain`; generic entity runtime dispatches a registered case reader/operation, never substitutes flat CRUD                                                            |
+| `GET /api/neon/business-partners/:id`                                                                        | Legacy `BusinessPartnerAggregateDetail` fallback                                                           | Request routes delegate to `legacyAggregate` / request service                                                          | `delete` with the feature-gated legacy aggregate detail after generic bootstrap is live                                                                                       |
+| Eligibility, supplier activation, qualification, preference, customer designation/credit/lifecycle endpoints | BP commercial controls and dedicated pages                                                                 | `business-partner-eligibility-routes.ts` and BP eligibility service                                                     | `retain-domain`; expose as registered action/read capability only where the compiled contract refers to it                                                                    |
+| `/api/attachments/*`                                                                                         | Request attachment control and BP commercial download control                                              | Existing attachment service                                                                                             | `retain-domain`; generic runtime references it as a lazy capability and must not proxy uploads/downloads through entity runtime                                               |
 
 `server/apps/platform-host/src/composition/register-services.ts` is the confirmed
 mount point for both the local definition routes and BP 360 routes. A replacement
@@ -799,16 +795,16 @@ removing a route module alone would leave a stale registrar/import.
 
 ##### Presentation, metadata and query-state inventory
 
-| Item | Current source of truth | Classification and required treatment |
-| --- | --- | --- |
-| Application/list navigation, list surface and generic intake surface | Published generic entity descriptors consumed by `EntityApplicationSection`, `EntityListRuntime` and Entity Intake | `reuse`; enrich the shared contract rather than create a second BP descriptor reader |
-| Onboarding request form/schema/workflow | Active BP publication consumed by `LocalBusinessPartnerDefinitionConsumer`; it can overlay a local preview | `extract`; compilation and admission become split-artifact metadata behavior. Preview must still validate release/hash/handler registrations. |
-| 360 tab/section/sidebar layout | `src/360/panel-definition.ts` contains `BUSINESS_PARTNER_360_PANEL`; `realignPartnerPanel` mutates older layouts at runtime | `delete` after the compiled detail shell contains the migration-complete layout. Do not copy `realignPartnerPanel` into generic runtime; republish/fail obsolete layouts. |
-| Section labels and section-provider registration | `src/360/section-registry.ts` and `section-providers.ts` | `extract`; labels/presentation move to Presentation artifacts and provider checks to the server registration validator. Confirmed `governance` label is **Governance & ownership**. |
-| Summary header/section applicability, role lens and context state | 360 summary endpoint; browser reads `section`, `tab`, `roleLens`, `operatingOrganizationId`, `companyCodeId`, `legalEntityId`, `asOf` from URL | `modify`; generic PageWorkspace owns query parsing, history, cancellation and cache key. Domain provider resolves applicability with the authoritative context. |
-| Section resource state | Each BP component owns an effect, `AbortController`, cursor and retry state | `extract`; use generic section-resource ownership and independent boundaries. Preserve per-section cursor/retry and never turn a section switch into full aggregation. |
-| Comments and attachments | `ResourceSection` fetches only when that rendered section is active; comments can mutate from the same component | `extract`; generic lazy capability section uses the existing capability services. Keep mutation explicit and idempotent. |
-| Protected reveal values | Dedicated clients, purpose claims and audited reveal hook | `retain-domain`; only an explicit registered Operation can invoke this. It stays uncached and absent from normal metadata/data responses. |
+| Item                                                                 | Current source of truth                                                                                                                        | Classification and required treatment                                                                                                                                               |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Application/list navigation, list surface and generic intake surface | Published generic entity descriptors consumed by `EntityApplicationSection`, `EntityListRuntime` and Entity Intake                             | `reuse`; enrich the shared contract rather than create a second BP descriptor reader                                                                                                |
+| Onboarding request form/schema/workflow                              | Active BP publication consumed by `LocalBusinessPartnerDefinitionConsumer`; it can overlay a local preview                                     | `extract`; compilation and admission become split-artifact metadata behavior. Preview must still validate release/hash/handler registrations.                                       |
+| 360 tab/section/sidebar layout                                       | `src/360/panel-definition.ts` contains `BUSINESS_PARTNER_360_PANEL`; `realignPartnerPanel` mutates older layouts at runtime                    | `delete` after the compiled detail shell contains the migration-complete layout. Do not copy `realignPartnerPanel` into generic runtime; republish/fail obsolete layouts.           |
+| Section labels and section-provider registration                     | `src/360/section-registry.ts` and `section-providers.ts`                                                                                       | `extract`; labels/presentation move to Presentation artifacts and provider checks to the server registration validator. Confirmed `governance` label is **Governance & ownership**. |
+| Summary header/section applicability, role lens and context state    | 360 summary endpoint; browser reads `section`, `tab`, `roleLens`, `operatingOrganizationId`, `companyCodeId`, `legalEntityId`, `asOf` from URL | `modify`; generic PageWorkspace owns query parsing, history, cancellation and cache key. Domain provider resolves applicability with the authoritative context.                     |
+| Section resource state                                               | Each BP component owns an effect, `AbortController`, cursor and retry state                                                                    | `extract`; use generic section-resource ownership and independent boundaries. Preserve per-section cursor/retry and never turn a section switch into full aggregation.              |
+| Comments and attachments                                             | `ResourceSection` fetches only when that rendered section is active; comments can mutate from the same component                               | `extract`; generic lazy capability section uses the existing capability services. Keep mutation explicit and idempotent.                                                            |
+| Protected reveal values                                              | Dedicated clients, purpose claims and audited reveal hook                                                                                      | `retain-domain`; only an explicit registered Operation can invoke this. It stays uncached and absent from normal metadata/data responses.                                           |
 
 The 360 shell initially fetches only `summary`. It renders one selected section and
 that section's component issues its own request. This is already mostly lazy, but
@@ -820,20 +816,20 @@ aggregate fallback, which does a parallel aggregate plus eligibility read.
 
 ##### File disposition and downstream consumers
 
-| Files / functions | Tag | Phase 1+ disposition |
-| --- | --- | --- |
-| `apps/neon/lib/entity-application-route.tsx`, `entity-application-layout.tsx`, `apps/neon/lib/catalog-routes.ts`, `apps/neon/proxy.ts` | `modify` | Retain as the catalog/rewrite/application shell; add generic entity internal target without a BP page-specific provider. |
-| `apps/neon/app/(shell)/mdg/business-partner/**` | `modify` / eventual `delete` | Preserve public aliases through catalog rewrite. Replace page wrappers progressively; remove alias and wrapper files when the generic route covers their public destination. |
-| `packages/planes/neon/list-view/src/index.tsx` | `reuse` / `modify` | Keep shared list runtime and workspace context control; consume the registered scope policy rather than BP source imports. |
-| `packages/planes/neon/list-view/src/scope-adapters.tsx` | `extract` | Move `BusinessPartnerScopeAdapter`, `businessPartnerRoleFromDirectoryQuery` and `businessPartnerScopeCoordinate` to the Neon BP domain registration boundary; retain common adapter in shared list package. |
-| `packages/planes/neon/business-partner/src/360/{business-partner-360.tsx,panel-definition.ts,section-registry.ts,section-providers.ts,business-partner-360-context.tsx}` | `delete` / `extract` | Delete hardcoded shell/panel/registry/context after generic runtime owns them. Extract only BP-specific renderer/operation provider registrations that do not fit a standard field/collection renderer. |
-| `packages/planes/neon/business-partner/src/360/*-client.ts` and `components/{common-section,related-section,resource-section,role-company-sections,network-section,explainability-sections}.tsx` | `delete` / `extract` | Replace transport clients and generic-shaped renderers with shared section resources. Retain/registry-wrap specialized banking, role/company and governed-action renderers until their compiled bindings are supported. |
-| `packages/planes/neon/business-partner/src/{request-entry.tsx,request-workspace.tsx,request-form-descriptor.ts,intake-submit.ts,client.ts}` | `retain-domain` / `modify` | Keep BP case payload, validation, materialization and workflow semantics. Replace only BP-only descriptor/request-form loading with the shared pinned artifact reader. |
-| `server/packages/services/publication/src/{business-partner-definition-consumer.ts,business-partner-definition-consumer-routes.ts,local-definition-preview.ts}` | `extract` / eventual `delete` | Preserve verified active/preview admission and request-flow resolution; generalize it into the metadata/release reader, then remove BP-only transport/consumer code. |
-| `server/packages/platform/metadata/src/{metadata-service.ts,runtime-descriptor-repository.ts,distributed-descriptor-cache.ts}` | `reuse` / `modify` | Extend existing verified reader/cache; retain its rule that immutable descriptors are cached while current authorization and record data are not. |
-| `server/packages/services/master-data/src/business-partner-360-*.ts`, `kysely-business-partner-360-*.ts`, `business-partner-360-routes.ts` | `extract` / eventual `delete` | Rehome reusable registered readers behind the entity runtime section/operation registry, then delete BP 360 aggregation/route wrappers. Keep SQL/domain policy code where it supplies a real BP section or protected operation. |
-| `server/packages/services/master-data/src/{business-partner-request-*,business-partner-eligibility-*,kysely-business-partner-case-*,business-partner-invitation-*}` and plane BP bank/Mesh services | `retain-domain` | Governed case, lifecycle, policy, effective-date eligibility, protected bank and Mesh semantics remain registered BP business functions. |
-| `server/apps/platform-host/src/composition/register-services.ts` | `modify` | Replace BP-only definition/360 registrars only after their shared registrations and all callers are live. |
+| Files / functions                                                                                                                                                                                   | Tag                           | Phase 1+ disposition                                                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/neon/lib/entity-application-route.tsx`, `entity-application-layout.tsx`, `apps/neon/lib/catalog-routes.ts`, `apps/neon/proxy.ts`                                                              | `modify`                      | Retain as the catalog/rewrite/application shell; add generic entity internal target without a BP page-specific provider.                                                                                                        |
+| `apps/neon/app/(shell)/mdg/business-partner/**`                                                                                                                                                     | `modify` / eventual `delete`  | Preserve public aliases through catalog rewrite. Replace page wrappers progressively; remove alias and wrapper files when the generic route covers their public destination.                                                    |
+| `packages/planes/neon/list-view/src/index.tsx`                                                                                                                                                      | `reuse` / `modify`            | Keep shared list runtime and workspace context control; consume the registered scope policy rather than BP source imports.                                                                                                      |
+| `packages/planes/neon/list-view/src/scope-adapters.tsx`                                                                                                                                             | `extract`                     | Move `BusinessPartnerScopeAdapter`, `businessPartnerRoleFromDirectoryQuery` and `businessPartnerScopeCoordinate` to the Neon BP domain registration boundary; retain common adapter in shared list package.                     |
+| `packages/planes/neon/business-partner/src/360/{business-partner-360.tsx,panel-definition.ts,section-registry.ts,section-providers.ts,business-partner-360-context.tsx}`                            | `delete` / `extract`          | Delete hardcoded shell/panel/registry/context after generic runtime owns them. Extract only BP-specific renderer/operation provider registrations that do not fit a standard field/collection renderer.                         |
+| `packages/planes/neon/business-partner/src/360/*-client.ts` and `components/{common-section,related-section,resource-section,role-company-sections,network-section,explainability-sections}.tsx`    | `delete` / `extract`          | Replace transport clients and generic-shaped renderers with shared section resources. Retain/registry-wrap specialized banking, role/company and governed-action renderers until their compiled bindings are supported.         |
+| `packages/planes/neon/business-partner/src/{request-entry.tsx,request-workspace.tsx,request-form-descriptor.ts,intake-submit.ts,client.ts}`                                                         | `retain-domain` / `modify`    | Keep BP case payload, validation, materialization and workflow semantics. Replace only BP-only descriptor/request-form loading with the shared pinned artifact reader.                                                          |
+| `server/packages/services/publication/src/{business-partner-definition-consumer.ts,business-partner-definition-consumer-routes.ts,local-definition-preview.ts}`                                     | `extract` / eventual `delete` | Preserve verified active/preview admission and request-flow resolution; generalize it into the metadata/release reader, then remove BP-only transport/consumer code.                                                            |
+| `server/packages/platform/metadata/src/{metadata-service.ts,runtime-descriptor-repository.ts,distributed-descriptor-cache.ts}`                                                                      | `reuse` / `modify`            | Extend existing verified reader/cache; retain its rule that immutable descriptors are cached while current authorization and record data are not.                                                                               |
+| `server/packages/services/master-data/src/business-partner-360-*.ts`, `kysely-business-partner-360-*.ts`, `business-partner-360-routes.ts`                                                          | `extract` / eventual `delete` | Rehome reusable registered readers behind the entity runtime section/operation registry, then delete BP 360 aggregation/route wrappers. Keep SQL/domain policy code where it supplies a real BP section or protected operation. |
+| `server/packages/services/master-data/src/{business-partner-request-*,business-partner-eligibility-*,kysely-business-partner-case-*,business-partner-invitation-*}` and plane BP bank/Mesh services | `retain-domain`               | Governed case, lifecycle, policy, effective-date eligibility, protected bank and Mesh semantics remain registered BP business functions.                                                                                        |
+| `server/apps/platform-host/src/composition/register-services.ts`                                                                                                                                    | `modify`                      | Replace BP-only definition/360 registrars only after their shared registrations and all callers are live.                                                                                                                       |
 
 Tests are colocated extensively under `packages/planes/neon/business-partner/src/**`
 and `server/packages/services/{master-data,publication}/src/__tests__`. Before each
@@ -855,26 +851,26 @@ release envelope, with no schema invented separately inside BP UI or server read
 Work:
 
 - [x] Extend existing publication/metadata contracts with discriminated split-artifact
-  schemas. Reject unknown normative properties and unsupported required variants.
+      schemas. Reject unknown normative properties and unsupported required variants.
 - [x] Define surface/resource wire schemas in the entity runtime contract package;
-  share runtime-neutral types without importing server-only bindings into browser code.
+      share runtime-neutral types without importing server-only bindings into browser code.
 - [x] Define explicit layout/navigation, resource identity, load policy, owner linkage,
-  pagination, lookup references, applicability and action references.
+      pagination, lookup references, applicability and action references.
 - [x] Distinguish release integrity dependencies from the subset needed for a page
-  intent. Shared profile resolution uses documented precedence and cannot relax security.
+      intent. Shared profile resolution uses documented precedence and cannot relax security.
 - [x] Define typed computed/aggregate fields separately from stored columns; computed
-  properties cannot pretend to be DB columns. Declare queryable/sortable behavior
-  only when the server has a supported SQL/handler implementation.
+      properties cannot pretend to be DB columns. Declare queryable/sortable behavior
+      only when the server has a supported SQL/handler implementation.
 - [x] Check BP supplier/customer fields, contacts/channel schema, section labels,
-  child bindings, related-owner joins, sensitive fields and actual read permissions.
+      child bindings, related-owner joins, sensitive fields and actual read permissions.
 - [x] Validate recursive child collections, duplicate keys, relation coverage, source
-  usage, profile cycles, operation references, masking/reveal pairs and required
-  registration. Parent-authorized embedded sections need a resolvable parent binding,
-  not an unrestricted string escape from permission checks.
+      usage, profile cycles, operation references, masking/reveal pairs and required
+      registration. Parent-authorized embedded sections need a resolvable parent binding,
+      not an unrestricted string escape from permission checks.
 - [x] Keep shared UI guarantees in components. The JSON selects supported layout,
-  navigation and resource behavior; it does not redefine focus/error-boundary code.
+      navigation and resource behavior; it does not redefine focus/error-boundary code.
 - [x] List unsupported prototype properties as explicit follow-up or fail them when
-  required. Do not add empty speculative properties for future entities.
+      required. Do not add empty speculative properties for future entities.
 
 Files to modify: `server/packages/contracts/publication/src/artifact.ts`,
 `projection.ts`; `server/packages/contracts/metadata/src/descriptors.ts`, `ports.ts`;
@@ -935,16 +931,16 @@ compiler, rather than requiring hand-maintained deployment JSON.
 Work:
 
 - [x] Extend current compiler entry points to emit Core, Operation, surface, section
-  and selected Flow artifacts plus the release envelope.
+      and selected Flow artifacts plus the release envelope.
 - [x] Extract common compilation rules from BP-specific emission. Retain BP authoring
-  validation for actual BP semantics; do not turn its business checks into generic flags.
+      validation for actual BP semantics; do not turn its business checks into generic flags.
 - [x] Canonicalize and hash content; validate dependency closure, references and
-  supported renderer/handler contracts before storing the artifact set.
+      supported renderer/handler contracts before storing the artifact set.
 - [x] Preserve the existing authority/target projection architecture. The compiler is
-  pure: it cannot activate or replace a usable set. Activation remains with the
-  publication orchestrator after the v2 persistence/reader path is introduced.
+      pure: it cannot activate or replace a usable set. Activation remains with the
+      publication orchestrator after the v2 persistence/reader path is introduced.
 - [x] Generate fixtures deterministically and update prototype coverage. Do not embed
-  source test cases, provenance catalogs or unused fields into runtime Core.
+      source test cases, provenance catalogs or unused fields into runtime Core.
 - [x] Keep development preview explicit and scoped. Normal reads never compile.
 
 Files changed: publication package `compiled-entity-artifact-compiler.ts`,
@@ -994,19 +990,19 @@ set and the signed local-DEV publication activates as one pinned payload.
 Work:
 
 - [x] Resolve effective entity/release coordinates once per request and build an
-  artifact-key index. Fetch only fragments required by the surface/section/operation.
+      artifact-key index. Fetch only fragments required by the surface/section/operation.
 - [x] Resolve field and operation profiles once per input hash set and validate the
-  resolved result. Arrays/overrides follow the contract; never erase required policy.
+      resolved result. Arrays/overrides follow the contract; never erase required policy.
 - [x] Extend existing Redis cache support; coalesce concurrent loads and use verified
-  repository/store fallback on cache outage/corruption. No compile-on-miss path.
+      repository/store fallback on cache outage/corruption. No compile-on-miss path.
 - [ ] Separate immutable raw IR from authorized browser projections and record data.
-  Include effective tenant/plane/preview scope in artifact resolution and principal,
-  access epoch, context and locale in relevant data/projection keys.
+      Include effective tenant/plane/preview scope in artifact resolution and principal,
+      access epoch, context and locale in relevant data/projection keys.
 - [x] Keep admitted release pins stable across independent fragment reads. A missing
-  fragment does not trigger a silent switch to the latest release.
+      fragment does not trigger a silent switch to the latest release.
 - [ ] Refactor `business-partner-definition-consumer.ts` callers to use the shared
-  reader. Any BP request-schema interpretation that remains is a business adapter,
-  not a second artifact loader or cache.
+      reader. Any BP request-schema interpretation that remains is a business adapter,
+      not a second artifact loader or cache.
 
 Files: metadata package `metadata-service.ts`, `descriptor-parser.ts`,
 `runtime-descriptor-repository.ts`, `distributed-descriptor-cache.ts`, `invalidation.ts`;
@@ -1046,21 +1042,21 @@ application provider; no metadata or section data is read by a BP Next page.
 Work:
 
 - [x] Extend the existing navigation catalog with typed public-to-internal mappings
-  and reverse mapping for links. Keep `new`, `manage`, `requests` and other named
-  destinations ahead of record patterns; validate dynamic identifiers.
+      and reverse mapping for links. Keep `new`, `manage`, `requests` and other named
+      destinations ahead of record patterns; validate dynamic identifiers.
 - [x] Add the single optional catch-all entity page. Refactor the existing route and
-  layout bridges to accept a validated application/surface/record intent.
+      layout bridges to accept a validated application/surface/record intent.
 - [x] Extend `apps/neon/proxy.ts` for catalog rewrites, preserving its destination
-  header behavior. No DB/metadata reads in the proxy and no duplicate rewrite list.
+      header behavior. No DB/metadata reads in the proxy and no duplicate rewrite list.
 - [x] Preserve `vid`, density, filters, query strings, section fragments, history and
-  canonical public links. Handle direct internal URLs consistently and authorize
-  their resolved public intent; prevent redirect/rewrite loops.
+      canonical public links. Handle direct internal URLs consistently and authorize
+      their resolved public intent; prevent redirect/rewrite loops.
 - [x] Keep one `<main>`, `PageWorkspace`, page heading and primary scroll surface.
-  Use existing shell boundaries, application navigation and footer ownership.
+      Use existing shell boundaries, application navigation and footer ownership.
 - [x] Route Manage first. Migrate detail/intake/request URLs only when the corresponding
-  surface has a working adapter; do not route them into a placeholder.
+      surface has a working adapter; do not route them into a placeholder.
 - [ ] Let the existing generic catalog page retain module/home behavior. Remove its
-  duplicate entity rendering branch as those mappings move to the shared dispatcher.
+      duplicate entity rendering branch as those mappings move to the shared dispatcher.
 
 Files: `apps/neon/proxy.ts`, `lib/catalog-routes.ts`,
 `lib/entity-application-route.tsx`, `lib/entity-application-layout.tsx`, existing
@@ -1099,33 +1095,33 @@ one shared client/server path. This is the main replacement for BP hardcoded rea
 Work:
 
 - [x] Implement `entity-page-planner.ts` inside the experience package. It resolves
-  the admitted surface, fields, applicability dependencies and section/action plans.
+      the admitted surface, fields, applicability dependencies and section/action plans.
 - [ ] Implement the list route from the API table. The generic bootstrap and individual
-  section routes are registered and active; add a batch endpoint only when two real
-  callers benefit from coalescing.
+      section routes are registered and active; add a batch endpoint only when two real
+      callers benefit from coalescing.
 - [x] Refactor descriptor-client `index.ts`; extract `runtime-client.ts` for the
-  common bootstrap/section request-response operations and release/resource identities.
+      common bootstrap/section request-response operations and release/resource identities.
 - [ ] Build a safe query plan from allowlisted projections, typed filters and relation
-  bindings. Enforce tenant and owner linkage in every child query. Parameterize
-  values and validate identifiers; no client SQL/table/handler selection.
+      bindings. Enforce tenant and owner linkage in every child query. Parameterize
+      values and validate identifiers; no client SQL/table/handler selection.
 - [x] Start with header + Overview + Contacts. Merge overlapping BP-row projections
-  when safe; do not fetch header fields separately for breadcrumbs and title. The
-  browser migration remains the next vertical slice.
+      when safe; do not fetch header fields separately for breadcrumbs and title. The
+      browser migration remains the next vertical slice.
 - [ ] Migrate remaining sections: roles/company scope; addresses; classifications;
-  qualifications/certifications; masked bank/tax/identifiers; governance; activity.
-  Contact channel and composite projections need typed, verified owner mappings.
+      qualifications/certifications; masked bank/tax/identifiers; governance; activity.
+      Contact channel and composite projections need typed, verified owner mappings.
 - [ ] Retain specialized business reads only where declarative semantics are
-  insufficient, through registered ports. Do not hide the former full aggregator
-  behind a single generic provider key.
+      insufficient, through registered ports. Do not hide the former full aggregator
+      behind a single generic provider key.
 - [x] Implement the resource hook/section workspace: explicit initial/visible/active
-  loading, fresh-cache reuse, in-flight deduplication, cancel on identity changes,
-  independent retry and suppression of stale responses.
+      loading, fresh-cache reuse, in-flight deduplication, cancel on identity changes,
+      independent retry and suppression of stale responses.
 - [ ] Supply authorized section availability without disclosing restricted existence.
-  Keep counts unknown until requested/available; no global collection count fan-out.
+      Keep counts unknown until requested/available; no global collection count fan-out.
 - [x] Load selected deep-link content without loading intermediate sections. Preserve
-  scroll geometry, keyboard heading focus and draft state per Appendix A.
+      scroll geometry, keyboard heading focus and draft state per Appendix A.
 - [x] Define child-resource revision/invalidation independently of BP version. Role,
-  comment or attachment changes need not update the BP row to invalidate correctly.
+      comment or attachment changes need not update the BP row to invalidate correctly.
 
 Files: experience `contracts.ts`, `ports.ts`, `service.ts`, `routes.ts`; extract
 `entity-runtime-contracts.ts`, `entity-runtime-routes.ts`, `entity-page-planner.ts`,
@@ -1281,24 +1277,24 @@ the existing request workspace compatibility shape.
 Work:
 
 - [x] Resolve operation keys against the pinned entity contract; verify target,
-  current permission, context, expected version and declared input schema.
+      current permission, context, expected version and declared input schema.
 - [x] Implement the two operation routes. Extract `entity-operation-dispatcher.ts`
-  behind experience ports; register actual domain services at the composition root.
+      behind experience ports; register actual domain services at the composition root.
 - [x] Route request-change, role extension, scope/company configuration, submit and
-  materialization to existing BP services; no generic BP record create/patch bypass.
+      materialization to existing BP services; no generic BP record create/patch bypass.
 - [x] Bind selected Flow artifacts to shared intake/request workspace presentation.
-  Keep role-dependent capture, evidence and decision rules in validated contracts
-  plus registered domain functions. Save/resume uses persisted draft identity.
+      Keep role-dependent capture, evidence and decision rules in validated contracts
+      plus registered domain functions. Save/resume uses persisted draft identity.
 - [x] Resolve immutable validation/lifecycle definitions from IR while evaluating
-  current qualifications, blocks, assignment validity and authority at command time.
+      current qualifications, blocks, assignment validity and authority at command time.
 - [x] Reuse `allocateWithinTransaction`, the stable allocation identity and persisted
-  receipt. Allocate BP numbering at materialization; a separate request number, if
-  required, belongs to explicit request creation. Never allocate from an effect.
+      receipt. Allocate BP numbering at materialization; a separate request number, if
+      required, belongs to explicit request creation. Never allocate from an effect.
 - [x] Keep reveal explicit, current-authorized, purpose-bound and uncached. Do not
-  automatically retry a consumed single-use reveal request or store plaintext in
-  general section caches/history.
+      automatically retry a consumed single-use reveal request or store plaintext in
+      general section caches/history.
 - [x] Return actual changed resources and versions; invalidate their readers and
-  affected action summaries without refreshing every section.
+      affected action summaries without refreshing every section.
 
 Files: experience dispatcher/routes/ports and current composition registrations;
 BP `business-partner-request-service.ts`, eligibility/verification functions,
@@ -1353,17 +1349,17 @@ acceptance check is the only remaining Phase 7 work.
 Work:
 
 - [x] Bind published capability service keys to existing authorized platform clients.
-  Keep owner identity and scope explicit; entering a section only reads its resource.
+      Keep owner identity and scope explicit; entering a section only reads its resource.
 - [x] Load lists only when visible/activated; reuse fresh cache and paginate normally.
-  Opening a page with those sections hidden sends no collaboration query.
+      Opening a page with those sections hidden sends no collaboration query.
 - [x] Comment create/edit/delete and upload/reservation/finalization require explicit
-  commands with existing service permissions and retry semantics.
+      commands with existing service permissions and retry semantics.
 - [x] Resolve download URLs only for requested permitted files. Avoid placing signed
-  URLs, attachment bytes or sensitive comments in shared metadata caches.
+      URLs, attachment bytes or sensitive comments in shared metadata caches.
 - [x] Use comment/attachment revisions or targeted invalidation; do not depend only
-  on the BP record version. Refresh only affected capability resources after a command.
+      on the BP record version. Refresh only affected capability resources after a command.
 - [x] Keep activity a typed event resource; do not substitute identity fields or use
-  event-stream mounting to trigger business commands.
+      event-stream mounting to trigger business commands.
 
 Files: existing entity content/workflow UI adapters and descriptor-selected sections;
 `server/packages/platform/collaboration/src/collaboration-service.ts`,
@@ -1388,21 +1384,21 @@ functions rather than a private entity runtime.
 Work:
 
 - [ ] Search all imports, package exports, runtime registrations, API clients, route
-  aliases and tests for each remaining old BP reader/dispatcher endpoint.
+      aliases and tests for each remaining old BP reader/dispatcher endpoint.
 - [ ] Delete superseded files/methods/exports and registrations; remove test fixtures
-  used only by the deleted implementation, keeping business-rule regression cases.
+      used only by the deleted implementation, keeping business-rule regression cases.
 - [ ] Delete migrated Next BP page/layout implementations after public URL resolution
-  and specialized destination coverage are confirmed. Do not delete valid destinations
-  merely because they were absent from the first route table.
+      and specialized destination coverage are confirmed. Do not delete valid destinations
+      merely because they were absent from the first route table.
 - [ ] Reduce BP 360 components to any retained specialized business controls; standard
-  fields, collections, tabs and headers use shared components and compiled bindings.
+      fields, collections, tabs and headers use shared components and compiled bindings.
 - [ ] Remove obsolete dependencies/styles only after actual consumers disappear.
-  Do not mass-rename retained domain files or remove unrelated local changes.
+      Do not mass-rename retained domain files or remove unrelated local changes.
 - [ ] Reconcile prototype JSON, generated output, README, CONTRACT and this plan.
-  Mark supported versus deferred capabilities honestly; don't mark proposed handlers
-  implemented simply because their names occur in JSON.
+      Mark supported versus deferred capabilities honestly; don't mark proposed handlers
+      implemented simply because their names occur in JSON.
 - [ ] Record the final active public/API routes, retained BP business functions,
-  deleted files and one focused check result. Mark phases complete only when done.
+      deleted files and one focused check result. Mark phases complete only when done.
 
 API action: unregister replaced BP metadata/section APIs when no local callers remain;
 keep domain commands/capability APIs that are still the registered implementation.
@@ -1415,18 +1411,37 @@ data. A new supported section can be published without adding a BP reader/dispat
 
 ### Local phase status record
 
-| Phase | Status | Record when completed |
-| --- | --- | --- |
-| 0 Inventory | Planned | Actual caller/replacement map |
-| 1 Contract | Complete | Parser/check result and remaining unsupported properties |
-| 2 Compiler | Complete | Signed, published and active local-DEV BP v2 payload (93 artifacts) |
-| 3 Reader | Planned | Shared callers, cache/fallback check and deleted private loader |
-| 4 Routing | Planned | Working mappings and removed route wrappers |
-| 5 Reads | In progress | BP detail uses generic bootstrap/workspace and compiled field/collection rendering; specialized renderers, collaboration/workforce and v1 retirement remain |
-| 6 Commands | Implementation complete; acceptance pending | Active compiled release 7; generic dispatcher, governed registrations, Flow projection and targeted invalidation are in place. Run the seeded requester/approver/materializer local-DEV journey. |
+| Phase           | Status                                      | Record when completed                                                                                                                                                                                                                                                          |
+| --------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0 Inventory     | Planned                                     | Actual caller/replacement map                                                                                                                                                                                                                                                  |
+| 1 Contract      | Complete                                    | Parser/check result and remaining unsupported properties                                                                                                                                                                                                                       |
+| 2 Compiler      | Complete                                    | Signed, published and active local-DEV BP v2 payload (93 artifacts)                                                                                                                                                                                                            |
+| 3 Reader        | Planned                                     | Shared callers, cache/fallback check and deleted private loader                                                                                                                                                                                                                |
+| 4 Routing       | Planned                                     | Working mappings and removed route wrappers                                                                                                                                                                                                                                    |
+| 5 Reads         | In progress                                 | BP detail uses generic bootstrap/workspace and compiled field/collection rendering; specialized renderers, collaboration/workforce and v1 retirement remain                                                                                                                    |
+| 6 Commands      | Implementation complete; acceptance pending | Active compiled release 7; generic dispatcher, governed registrations, Flow projection and targeted invalidation are in place. Run the seeded requester/approver/materializer local-DEV journey.                                                                               |
 | 7 Collaboration | Implementation complete; acceptance pending | Published platform service-key resolution, generic owner-scoped reads, lazy paginated Comments/Attachments resources, stable attachment retry, visible comment command errors, and a typed pull-event Activity resource are wired. Run the local multi-actor acceptance check. |
-| 8 Cleanup | Planned | Deleted paths, retained domain functions and final smoke result |
+| 8 Cleanup       | Planned                                     | Deleted paths, retained domain functions and final smoke result                                                                                                                                                                                                                |
 
 Start with Phase 0 and Phase 1. Do not scaffold all proposed modules first: create
 each extraction when its phase introduces real callers. A phase can span small edits,
 but should end with one working path and the corresponding obsolete code removed.
+
+## Accepted follow-on — Metadata-controlled comments and attachments
+
+**Decision:** accepted 2026-09-21. **Implementation:** planned. **Design:** [Entity comments and attachments](entity-comments-and-attachments-design.md). **Execution checklist:** [CA-00–CA-10 build plan](entity-comments-and-attachments-build-plan.md).
+
+This work follows the basic Phase 7 capability integration. Keep existing working record navigation, registered domain admission and explicit platform service endpoints; do not create Business Partner-specific comment/file storage or another entity API family. The follow-on plan governs the new typed policy, state, history and management behavior. In particular, upload retry must query uncertain finalization outcome before restaging; preserving an ID alone is not a complete retry algorithm.
+
+| Workstream                            | Required result                                                                                                                                   | Status  |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Definition control — CA-00/CA-01      | Typed Core capabilities, attachment/comment policy bindings, strict schemas, registered handlers/permissions and immutable published dependencies | Planned |
+| Direct schema updates — CA-02         | Canonical DDL/seeds, shared revision history and one report/moderation path; fresh local installation; obsolete source definitions removed        | Planned |
+| Service enforcement — CA-03/CA-04     | Parent/audience/policy admission, immutable versions, outcome-aware retries, quotas and real retention/recovery scheduling                        | Planned |
+| Shared resource contracts — CA-05     | Scoped counts/lists/history/status, child revisions and direct API policy parity                                                                  | Planned |
+| Shared experience — CA-06/CA-07/CA-08 | Coordinated drawer/content/Summary surfaces, rich comments and document management driven by metadata                                             | Planned |
+| Local integration — CA-09/CA-10       | Real preview/extraction/search, one final BP journey, a small second-entity reuse check and focused cleanup                                       | Planned |
+
+Start with a short CA-00 source/consumer map and CA-01 contract decisions. Update canonical DDL, seeds, contracts and consumers together, verifying a fresh disposable local database. No historical-row migration, compatibility bridge, dual writer or staged rollout is needed before staging exists. The current local database/storage remains intact unless its reset is explicitly authorized. Keep UI metadata, operation rules and storage/service authority distinct. Metadata can restrict service capabilities; it cannot disable scanning, parent authorization, isolation or legal holds. Optional AI, new notification providers and multipart upload are outside the required initial integration.
+
+Each work package closes when implementation and affected typechecks/focused regressions pass and the relevant local check works; record changes, checks and remaining limitations briefly. Run one integrated local acceptance pass at CA-10, rerunning affected steps only when fixes require it. Do not repeat full suites or produce per-phase evidence dossiers, load certification or production readiness sign-off. Update this entry separately from historical Phase 7 acceptance. This documentation revision performs no application implementation, database reset or Docker reconfiguration.

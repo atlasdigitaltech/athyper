@@ -1,8 +1,12 @@
 # Entity App comments and attachments design
 
-Status: proposed; implementation and deployment are separate work. Reviewed 2026-09-21 against the current, uncommitted workspace and local Docker engine.
+Status: design direction accepted on 2026-09-21; implementation remains planned. Revision 3 retains typed MetaEntity capabilities, shared service ownership and strict publication validation while adopting comprehensive local implementation, direct schema evolution, focused regressions and one final local acceptance pass. Source/runtime findings below retain their original review date; they are not a fresh deployment verification.
 
-## 1. Recommendation
+Execution authority for this feature: [metadata-controlled build plan](entity-comments-and-attachments-build-plan.md). The parent [local build plan](build-work-plan.md) remains the overall execution record. Work packages CA-00–CA-10 supersede the preliminary phase numbering in this design.
+
+The project is local-only, before staging. Update source contracts, schema, seeds and consumers together; validate in a fresh disposable database. No historical-data conversion, compatibility bridge, rollout cohort or production-readiness package is required. The current local database/storage is not reset by this plan. Business audit/history, strict metadata validation and authorization remain required product behavior.
+
+## 1. Accepted design
 
 Use **one contextual right drawer with Comments and Files tabs**, available from every authorized record section. Provide **Open in content area** for sustained file management and long discussions, using the same components and resource state. Open document previews in a large viewer with a clear return action.
 
@@ -53,10 +57,10 @@ A preview appears while list rows still show “Security scan in progress.” Th
 | Content library          | `server/packages/services/content/src/content-routes.ts`                                    | Content items have their own ACL, version/link routes. Entity attachments should reuse the underlying series model without becoming content items automatically                                                    |
 | Atlas retrieval          | `server/packages/services/attachments/src/retrieval-admission.ts`                           | Current-parent authorization, hash/version and passage admission exist. Optional later experience; never substitute broad AI access for attachment permission                                                      |
 
-### Findings that gate release
+### Correctness gaps to resolve during the local build
 
 1. **Preview protocol mismatch, confirmed live.** `register-adapters.ts` gives PDF and preview adapters the same rendering URL. The PDF adapter uses Gotenberg; the preview adapter posts multipart data to `/render` and expects JSON/base64. From the DEV API container, Gotenberg returned `GET /health → 200`, `POST /render → 404`. Health alone cannot certify preview support.
-2. **Deployment/source network drift, confirmed by inspect.** Current parity Compose places parser/render and API/worker/scheduler on `document-services`. Inspected DEV and QA parser/render containers remain on `data`; runtime containers lack the proposed document-services membership. Reconcile the effective source-runtime overrides too, and recreate the group together in a separate rollout.
+2. **Deployment/source network drift, confirmed by inspect.** Current parity Compose places parser/render and API/worker/scheduler on `document-services`. Inspected DEV and QA parser/render containers remain on `data`; runtime containers lack the proposed document-services membership. Check effective local overrides and rebuild/restart the affected local services together when implementing. Historical container labels do not make a multi-environment rollout part of this build.
 3. **Parent authorization needs explicit admission.** Generic stage/status/download routes pass attachment IDs to the authorizer; stage does not pass the entity coordinate in the generic permission resource. Content-item staging has a dedicated ACL branch. Require verified parent access for entity uploads and every read, including direct download/preview URLs. Treat this as a code-path gap requiring end-to-end authorization tests, not a claim that every deployed role is exploitable.
 4. **Comment attachment association is insufficiently scoped.** `replaceRelations` checks active attachment membership within the tenant, but does not itself require authorized source ownership/parent access, checked scan state, expiry, or pin the referenced version. Harden association before enabling the rich composer widely.
 5. **Internal audience is not fully enforced by the compiled reader.** The inspected SQL excludes other authors' Private comments, but treats Internal like Public. Apply audience membership in the service, RLS strategy and nested resources, counts and notifications.
@@ -137,7 +141,7 @@ erDiagram
 
 Reuse `document.attachment_series`, `attachment`, `attachment_link`, `attachment_folder` and the existing derivative/collaboration tables. `attachment.id` identifies immutable bytes; `series.id` identifies the document over time; `link.id` identifies association to an authorized parent. Comments pin `pinned_attachment_id` to preserve evidence. Record links can follow current version. Superseding a series does not erase earlier comment evidence.
 
-Proposed additive fields/contracts, subject to migration review:
+Required field/contract changes to resolve during direct schema implementation:
 
 - Series display name and revision for rename/current-version concurrency; retain `original_filename` on immutable versions. A metadata field is acceptable only with schema validation and an update revision.
 - Link-level category, audience policy reference, revision and draft/committed association state where existing structures do not represent them. Avoid introducing a second, contradictory visibility flag on attachment bytes.
@@ -146,6 +150,75 @@ Proposed additive fields/contracts, subject to migration review:
 - Auditable version promotion and link/unlink events. Preserve legal hold, retention and canonical DB foundation generation workflow across planes.
 
 Authorization equation for an access path: verified plane/tenant + readable parent + allowed attachment operation + association audience + admitted lifecycle/version. Comment paths additionally require readable thread/comment. Resolve every path to a parent; UUID possession and same-tenant membership are insufficient. Explicit broader record links can grant access independently, so the sharing UI must explain when adding one broadens visibility.
+
+### MetaEntity controls the capability
+
+Comments and Files are typed, published capabilities of the parent entity. Core owns enabled state and service/owner identity; Operation and policy bindings own behavioral rules; Presentation owns drawer/content placement and controls. The compiler resolves these into one safe capability projection consumed by both layouts. Registered shared services remain the only authority for data mutations.
+
+Existing Core declarations and `attachmentBinding` are the starting point, not a second configuration system. Close their nested schemas, add a typed comment binding through an explicit schema revision, and reject unsupported normative properties. Shared policy dependencies must identify immutable versions/hashes within the admitted release graph. A name in JSON is not proof of an implemented handler.
+
+```mermaid
+flowchart LR
+  A[Studio MetaEntity change set] --> B[Typed Core, Operation and Presentation]
+  B --> C[Schema and semantic validation]
+  C --> D[Published immutable release]
+  D --> E[Authorized runtime projection]
+  E --> F[Shared drawer and content view]
+  D --> G[Shared service policy admission]
+  F --> G
+  G --> H[Canonical document and collaboration tables]
+```
+
+| Contract owner    | Required controls                                                                                                                            |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Core capability   | Explicit enabled state, known service/version, owner entity/admission binding, lazy activation                                               |
+| Attachment policy | MIME/byte/batch limits, categories/link kinds, audiences, folders, versions/pins, retention reference and allowed operations                 |
+| Comment policy    | Rich-text schema, text/depth limits, permitted/default audiences, edits/replies/mentions/reactions/reporting/drafts, attachment policy/count |
+| Presentation      | Drawer/content destinations, known renderers/fields/actions, labels and supported filters                                                    |
+| Runtime admission | Verified parent and audience, operation permission, active policy/release, lifecycle/version eligibility and tenant/service constraints      |
+
+The browser receives effective allowed actions and useful limits, not raw storage bindings or permission to bypass service rules. Direct capability API calls must resolve the same published policy as generic runtime dispatch. Definition changes during upload cannot weaken finalization: preserve admitted-policy evidence and recheck current access and mandatory restrictions. Historical comments retain pinned versions while reads use current authorization.
+
+Metadata may tighten platform constraints; it cannot disable scanning, tenant isolation, parent authorization, immutable file identity or legal holds. Disable absent capabilities by default. Validate default audience membership, active vocabulary codes, compatible policy dependencies and actual handler contracts. A temporary provider outage changes operational readiness; it does not rewrite the published definition.
+
+Reuse `metadata.entity_policy_binding`, operation/permission records, surface/component bindings and entity change sets/releases. Do not store feature flags in each business table or mix policy/presentation into `metadata.entity_runtime_profile`. CA-00/CA-01 must trace actual capability authoring persistence and add a narrowly scoped change-set member only if existing structures cannot represent the required contract.
+
+Shared file/comment resources can be registered in MetaEntity with service-backed facades. Generic table editing must never expose storage keys, hashes, scan outcomes, current-version pointers, quota counters or append-only evidence as user-editable fields. Operational satellite tables do not require a separate Entity App merely to be definition-controlled.
+
+### Table inventory
+
+The following is a source-defined inventory; CA-00 traces relevant readers/writers and CA-02 verifies a fresh schema installation. Bytes reside in object storage. `document.comment_type`, `document.comment_intent` and `document.reaction_type` used by the repository are lookup keys resolved through the control lookup service, not evidence of three additional physical tables.
+
+| Table                                  | Responsibility                                                 |
+| -------------------------------------- | -------------------------------------------------------------- |
+| `document.attachment_series`           | Logical file and current-version/lifecycle/retention authority |
+| `document.attachment`                  | Immutable file version, storage reference and processing state |
+| `document.attachment_link`             | Record/comment association and optional exact-version pin      |
+| `document.attachment_folder`           | Record-scoped organization hierarchy                           |
+| `document.attachment_derivative`       | Generated thumbnail/PDF/page rendition and processing evidence |
+| `document.attachment_legal_hold`       | Series-level deletion hold                                     |
+| `document.attachment_legal_hold_event` | Hold change evidence                                           |
+| `document.comment`                     | Current content, author, audience and thread                   |
+| `document.comment_draft`               | Principal-owned draft                                          |
+| `document.comment_feed_cursor`         | Principal read position/unread tracking                        |
+| `document.comment_mention`             | Mention recipients                                             |
+| `document.comment_reaction`            | Per-principal reactions                                        |
+| `event.comment_flag`                   | Canonical report intake used by the collaboration repository   |
+| `governance.comment_moderation`        | Canonical report review and decisions                          |
+
+Supporting tables include `runtime_meta.usage_reservation`, `runtime_meta.tenant_usage_counter`, `control.usage_metric_catalog`, `control.lookup_domain`, `control.lookup_value`, `event.outbox` and shared audit/notification/policy records. Content-library tables `document.content_item` and `document.content_item_link` are optional integration. `document.multipart_upload` and `document.multipart_upload_part` are conditional on a future multipart workflow. Generated `document.render_output` remains owned by document generation.
+
+See the [build plan table inventory](entity-comments-and-attachments-build-plan.md#3-table-inventory-and-ownership) for exact supporting tables, metadata authoring/runtime records, owner responsibilities and conditional scope. No new `comment_attachment` table is needed; use the existing link model with exact-version pins.
+
+### Studio revision and moderation overlap
+
+`document.comment_revision` and `document.comment_moderation_flag` currently appear in Studio-specific DDL. Their presence does not establish shared Neon/Mesh behavior or fully wired revision capture.
+
+Accepted target: define comment revision history in the shared canonical foundation; keep `event.comment_flag` plus `governance.comment_moderation` as the single reporting path. CA-02 updates source writers, triggers, constraints, RLS, grants and seeds together. History writes must be atomic with the current comment and cannot be bypassed by generic CRUD.
+
+Remove obsolete Studio source definitions after replacing their consumers, and seed revision/report examples directly into a fresh disposable database. No legacy row conversion, baseline backfill, source-to-target mapping or dual writer is required. History begins with data created under the new model. The existing local database remains intact unless an explicit reset is authorized; preserving selected old local records would be a separate targeted export/import task.
+
+The [direct schema and model-cleanup procedure](entity-comments-and-attachments-build-plan.md#6-direct-schema-evolution-and-studio-model-cleanup) defines the required local implementation.
 
 ## 6. Upload and processing lifecycle
 
@@ -204,7 +277,7 @@ Existing paths below are server routes; browsers use the established authenticat
 | `POST/DELETE /api/collab/drafts`                               | Draft writes/deletion; add authorized read/restore projection                                   |
 | `POST /api/collab/comments/mark-all-read`; `POST .../:id/flag` | Read markers and reporting                                                                      |
 
-Proposed new entity-generic resources, not existing endpoints:
+Additional resources require typed contracts and registered handlers. The paths below are preliminary logical sketches, not existing endpoints or an approved second entity API family. Use the existing `/api/platform/entity-runtime/v2` section resources for entity collections and extend capability-service routes only where required; CA-05 records the final operation-to-route mapping:
 
 - `GET /api/entities/:entityCode/:recordId/collaboration`: authorized counts, capabilities, audience policy and upload policy; lazy data, not full feeds.
 - `GET .../attachments`: cursor, category/type, folder, query, sort, permitted metadata, link/series/version IDs and processing summaries. Prefer extending the compiled section service rather than creating a parallel reader; endpoint shape must follow runtime conventions at implementation.
@@ -267,23 +340,24 @@ Preview implementation decision: retain Gotenberg's restricted HTML→PDF purpos
 
 Tika OCR requires suitable engine/language configuration and bounded workloads; see [Apache Tika OCR guidance](https://cwiki.apache.org/confluence/spaces/TIKA/pages/109454096/TikaOCR). Current source Compose names a Tika 4.0.0 hardened image; the older September 12 review mentioned 3.3.1.0. Inspected digest-only deployed image references do not by themselves establish which parser version is running. Verify version/configuration before qualifying OCR languages.
 
-Operational release gate: reconcile image digests and effective networks, run real conversion/extraction/scanning/authorized retrieval probes, then publish capability readiness separately from `/health`. No Docker services were changed during this review.
+Local functional check: inspect the affected provider/network configuration and exercise actual preview/extraction/scanning/authorized retrieval in CA-09 and the final journey. `/health` alone does not prove the provider protocol works. No production readiness report or optional operations-stack deployment is required. No Docker services were changed during this review.
 
 ## 9. Delivery sequence
 
-| Phase                       | Scope                                                                                                                                     | Exit condition                                                                                           |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 0 — admission and readiness | Parent/audience association admission, series predicates, retry semantics, preview protocol decision, network drift plan                  | Negative authorization scenarios pass; services tested through their actual protocols                    |
-| 1 — useful shared UI        | Drawer/content coordination, upload queue, compact Files, details/download, rich threads, audience, replies, reactions, drafts and counts | Both reference journeys work on Business Partner, including errors, keyboard and mobile                  |
-| 2 — previews and discovery  | Qualified derivative provider, image/PDF viewer, text extraction/OCR subset, record-scoped search                                         | Unsupported/failure states correct; no bytes before scan; derived jobs recover without duplicate outputs |
-| 3 — document management     | Rename, categories/folders, pinned versions, shared links, unlink, retention operations                                                   | Version races, pinned evidence, shared deletion and holds verified                                       |
-| 4 — broader reuse           | Second entity and other planes, optional notifications and Atlas citations                                                                | Published capabilities and audience isolation verified per entity/plane                                  |
+The accepted [detailed build plan](entity-comments-and-attachments-build-plan.md#7-work-breakdown-and-dependencies) replaces the preliminary five-phase proposal. All new work packages remain planned; the parent plan's basic collaboration wiring is a baseline, not completion of this expansion.
 
-Phase 1 may provide safe direct image/PDF viewing only after delivery headers and parent admission are qualified. Office conversion remains phase 2. Do not make notifications or AI a prerequisite for comments/files.
+| Sequence                                | Work packages                                                                            | Result                                                                     |
+| --------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Establish definition and data authority | CA-00 baseline; CA-01 typed definitions/compiler; CA-02 shared history/moderation schema | Strict published capability graph and reconciled canonical model           |
+| Enforce service behavior                | CA-03 admission; CA-04 lifecycle/recovery; CA-05 readers/projections                     | Parent/audience-safe commands, versions, processing and resource contracts |
+| Build shared experience                 | CA-06 drawer/content; CA-07 comments; CA-08 files                                        | One metadata-driven experience preserving state and business context       |
+| Qualify dependent services and reuse    | CA-09 preview/discovery; CA-10 integration/closure                                       | Actual provider verification, BP/second-entity evidence and safe cleanup   |
 
-Likely change ownership: shared UI and upload client in communications; entity bindings/navigation in form-detail and shell coordinator; page-plan extensions in entity-runtime contracts/metadata compiler; owner readers and commands in collaboration/attachments; orchestration in platform-host; additive canonical schema work in the DB generator/migrations; provider changes in preview/rendering adapters and Compose.
+Safe direct image/PDF viewing requires qualified parent admission and delivery headers. Office preview, multipart upload, new notification providers and AI are not assumed available. Record optional integrations separately; unsupported required actions must not activate. Physical schema work, compiler contracts and actual service support must precede dependent capability activation.
 
-## 10. Acceptance and rollout checklist
+## 10. Behavior coverage and simplified local acceptance
+
+The scenarios below describe product behavior to cover with focused regressions; they are not ten separate release gates or a requirement for an exhaustive browser matrix. The [build plan testing section](entity-comments-and-attachments-build-plan.md#8-focused-regression-tests-and-one-final-local-acceptance-pass) owns the small per-package checks and single final local journey. Use existing suites for deterministic failure cases and real local dependencies for the integrated successful path.
 
 1. Upload by browse/drop/paste; multiple successes/failures; zero-byte/oversized/unsupported files; cancellation and retry after lost finalize response; same ID never overwrites admitted bytes.
 2. Clean/infected/unavailable/stale scanner and encrypted/unsupported input; no preview/download while unchecked. Scanned derivative failure leaves original availability truthful.
@@ -293,10 +367,10 @@ Likely change ownership: shared UI and upload client in communications; entity b
 6. New version concurrency, comment pins old version, duplicate filenames, unlink shared file, legal hold, quota recovery, delete during processing and replayed outbox jobs.
 7. Expanded/drawer mode keeps draft/filters/selection; close restores Summary preference; Back/Forward/deep links and record switching do not leak stale data; no hidden-panel requests.
 8. Browser and transport qualification: CSRF, signed PUT CORS, actual progress, PDF byte ranges, expired URL refresh, safe Content-Disposition/content types, sandboxed viewer, phone/keyboard/zoom.
-9. PostgreSQL/RLS integration through real pools, SeaweedFS/ClamAV integration, real provider conversion and extraction, queue retry/recovery and audit/outbox behavior. Unit doubles do not replace these gates.
-10. Load targets to validate (proposed, not measured): first 25 rows p95 ≤500ms server time; drawer first usable state ≤1s excluding network; isolated 10 MiB upload finalize p95 ≤15s and first-page preview p95 ≤30s on the qualification profile. Tune after baseline and include peak memory and fairness under concurrent tenants.
+9. Fresh schema/seed installation, representative PostgreSQL/RLS checks through application pools and an actual local storage/scanner/preview/extraction journey. Keep queue/retry/audit failure cases in focused service tests; do not repeat the same fault campaign at each phase.
+10. Responsive behavior with the small local fixture: no unexplained hang, unbounded retry or memory failure. Formal p95/load benchmarks, capacity qualification and SLO sign-off are deferred; investigate observed performance problems as they arise.
 
-Roll out behind published entity capabilities. Enable Business Partner for a small internal group, observe failures/queue age/quota and privacy scenarios, then the second entity. Rollback disables new UI/actions and job producers while preserving admitted files, links and readable historical data. Drain or pause new job types safely; do not reverse additive schema by destroying user content.
+Update code/contracts/DDL/seeds together, build the fresh local schema, rebuild/restart affected services and publish current entity definitions. Run one Business Partner acceptance journey with permitted/denied actors and a small second-entity reuse check. Record changes, checks and remaining limitations. Fix and rebuild the disposable setup as needed; no compatibility deployment or rollback rehearsal is required. Current local data is preserved unless a reset is explicitly authorized, and normal application retention/recovery rules still protect data created under the new model.
 
 ## 11. Review evidence and limits
 
@@ -307,3 +381,11 @@ The associated [interactive layout prototype](../../prototypes/entity-comments-a
 ### Design artifact validation
 
 The standalone HTML prototype was exercised with headless Chromium at desktop and phone widths: drawer expand/collapse, preview open/close, comment submission, file filtering, simulated upload state transitions and Summary View visibility passed without browser script errors. Phone width had no horizontal overflow. The document's local links and inventory counts were validated. These checks validate the design artifact only; the application integration acceptance scenarios above remain implementation work.
+
+### Revision 2 acceptance record
+
+The user accepted the shared drawer/content choice, typed MetaEntity capabilities, shared service ownership, publication validation and the expanded table scope on 2026-09-21. Revision 2 recorded migration-style reconciliation, which is superseded by revision 3 below.
+
+### Revision 3 local-build simplification
+
+The accepted execution approach is comprehensive implementation, direct schema evolution, focused regression tests and one final local acceptance pass. Keep strict metadata/authorization controls and business history; remove migration compatibility, historical-data conversion and production-readiness ceremony. CA-00–CA-10 remain planned implementation tasks. This documentation revision performs no application changes, database reset or Docker restart.
