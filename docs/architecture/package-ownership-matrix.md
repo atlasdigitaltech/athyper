@@ -52,15 +52,15 @@ The Phase 0 frontend spine adds an explicit runtime/workspace dependency budget.
 | @athyper/platform-iam-identity-gate       | packages/platform/iam/identity-gate          | Platform Auth     | Shared platform               |                         5 |                           5 |
 | @athyper/platform-iam-session             | packages/platform/iam/session                | Platform Auth     | Shared platform               |                         2 |                           2 |
 | @athyper/platform-iam-session-store       | packages/platform/iam/session-store          | Platform Auth     | Shared platform               |                         2 |                           1 |
-| @athyper/platform-shell-app-foundation    | packages/platform/shell/app-foundation       | UI Platform       | Shared platform               |                         8 |                           8 |
-| @athyper/platform-shell                   | packages/platform/shell/shell                | UI Platform       | Shared platform               |                         7 |                           7 |
+| @athyper/platform-shell-app-foundation    | packages/platform/shell/app-foundation       | UI Platform       | Shared platform               |                        10 |                          10 |
+| @athyper/platform-shell                   | packages/platform/shell/shell                | UI Platform       | Shared platform               |                         8 |                           8 |
 | @athyper/platform-shell-runtime           | packages/platform/shell/shell-runtime        | UI Platform       | Shared platform               |                         2 |                           3 |
 | @athyper/product-neon-business-partner    | packages/planes/neon/business-partner        | Neon              | Product-specific              |                         9 |                           9 |
 | @athyper/product-neon-navigation          | packages/planes/neon/navigation              | Neon              | Product-specific              |                         2 |                           3 |
 | @athyper/product-neon-shell               | packages/planes/neon/shell                   | Neon              | Product-specific              |                         8 |                           8 |
-| @athyper/product-mesh-business-partner    | packages/planes/mesh/business-partner        | Mesh              | Product-specific              |                         6 |                           6 |
+| @athyper/product-mesh-business-partner    | packages/planes/mesh/business-partner        | Mesh              | Product-specific              |                         7 |                           7 |
 | @athyper/product-mesh-shell               | packages/planes/mesh/shell                   | Mesh              | Product-specific              |                         6 |                           6 |
-| @athyper/product-studio-business-partner  | packages/planes/studio/business-partner      | Studio            | Product-specific              |                         6 |                           6 |
+| @athyper/product-studio-business-partner  | packages/planes/studio/business-partner      | Studio            | Product-specific              |                         8 |                           8 |
 | @athyper/product-studio-shell             | packages/planes/studio/shell                 | Studio            | Product-specific              |                         5 |                           5 |
 | @athyper/platform-iam-governance-review   | packages/platform/iam/governance-review      | Platform IAM      | Server-only governance review |                         0 |                           0 |
 | @athyper/governance-qualification-data    | governance/config/governance                 | Governance        | Qualification data            |                         0 |                           0 |

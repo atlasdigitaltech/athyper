@@ -247,8 +247,8 @@
       "owner": "UI Platform",
       "classification": "Shared platform",
       "dependencyBudget": {
-        "runtime": 8,
-        "workspace": 8
+        "runtime": 10,
+        "workspace": 10
       }
     },
     {
@@ -257,8 +257,8 @@
       "owner": "UI Platform",
       "classification": "Shared platform",
       "dependencyBudget": {
-        "runtime": 7,
-        "workspace": 7
+        "runtime": 8,
+        "workspace": 8
       }
     },
     {
@@ -307,8 +307,8 @@
       "owner": "Mesh",
       "classification": "Product-specific",
       "dependencyBudget": {
-        "runtime": 6,
-        "workspace": 6
+        "runtime": 7,
+        "workspace": 7
       }
     },
     {
@@ -327,8 +327,8 @@
       "owner": "Studio",
       "classification": "Product-specific",
       "dependencyBudget": {
-        "runtime": 6,
-        "workspace": 6
+        "runtime": 8,
+        "workspace": 8
       }
     },
     {

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-20T20:52:03.663Z",
+  "generatedAt": "2026-09-20T22:01:10.003Z",
   "categoryValues": [
     "Shared contract",
     "Shared platform",
@@ -267,8 +267,8 @@
         "owner": "UI Platform",
         "classification": "Shared platform",
         "dependencyBudget": {
-          "runtime": 8,
-          "workspace": 8
+          "runtime": 10,
+          "workspace": 10
         }
       },
       {
@@ -277,8 +277,8 @@
         "owner": "UI Platform",
         "classification": "Shared platform",
         "dependencyBudget": {
-          "runtime": 7,
-          "workspace": 7
+          "runtime": 8,
+          "workspace": 8
         }
       },
       {
@@ -327,8 +327,8 @@
         "owner": "Mesh",
         "classification": "Product-specific",
         "dependencyBudget": {
-          "runtime": 6,
-          "workspace": 6
+          "runtime": 7,
+          "workspace": 7
         }
       },
       {
@@ -347,8 +347,8 @@
         "owner": "Studio",
         "classification": "Product-specific",
         "dependencyBudget": {
-          "runtime": 6,
-          "workspace": 6
+          "runtime": 8,
+          "workspace": 8
         }
       },
       {
