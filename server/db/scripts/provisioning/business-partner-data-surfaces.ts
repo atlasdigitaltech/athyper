@@ -201,6 +201,13 @@ export function businessPartnerDataSurfaces(
       input("contact", "departmentName", "Department", "text", {
         maxLength: 255,
       }),
+      input("contact", "roleCode", "Contact role", "text", {
+        maxLength: 63,
+        normalize: "lowercase",
+        placeholder: "accounts_payable",
+        helpText:
+          "Optional role used to route business communications for this partner.",
+      }),
       input("contact", "isPrimary", "Primary contact", "checkbox"),
       group(
         "channels",

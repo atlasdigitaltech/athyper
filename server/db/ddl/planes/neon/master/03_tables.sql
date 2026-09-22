@@ -2422,7 +2422,7 @@ CREATE TABLE master.person (
     CONSTRAINT person_pkey PRIMARY KEY (id),
     CONSTRAINT person_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT person_code_uq UNIQUE (tenant_id, code),
-    CONSTRAINT person_number_uq UNIQUE NULLS NOT DISTINCT (tenant_id, person_number),
+    CONSTRAINT person_number_uq UNIQUE (tenant_id, person_number),
     CONSTRAINT person_code_nonempty_chk CHECK (btrim(code) <> ''),
     CONSTRAINT person_name_nonempty_chk CHECK (btrim(name) <> ''),
     CONSTRAINT person_first_name_nonempty_chk CHECK (btrim(first_name) <> ''),

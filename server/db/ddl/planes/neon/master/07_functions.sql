@@ -5608,9 +5608,9 @@ SET search_path=pg_catalog,master,document,control,snapshot,shared
 SET row_security=on AS $$
 DECLARE
  payload jsonb; proposals jsonb; item jsonb; channel jsonb;
- owner_type_id uuid; address_id uuid; contact_id uuid; channel_id uuid;
+ owner_type_id uuid; contact_owner_type_id uuid; address_id uuid; contact_id uuid; channel_id uuid;
  primary_addresses integer; primary_contacts integer; primary_channels integer;
- evidence_hash text; profile_id uuid;
+ evidence_hash text; profile_id uuid; alias_language text;
 BEGIN
  IF NOT(OLD.status='approved' AND NEW.status='materialized' AND NEW.entity_code='master.business_partner'
    AND NEW.operation_code IN('register','new_partner') AND NEW.target_entity_id IS NOT NULL
@@ -5635,13 +5635,39 @@ BEGIN
   WHERE code='business_partner' AND (tenant_id IS NULL OR tenant_id=NEW.tenant_id)
   ORDER BY (tenant_id=NEW.tenant_id) DESC NULLS LAST LIMIT 1;
  IF owner_type_id IS NULL THEN RAISE EXCEPTION 'Business Partner owner type is unavailable' USING ERRCODE='data_exception'; END IF;
+ SELECT id INTO contact_owner_type_id FROM control.owner_type
+  WHERE code='contact_person' AND (tenant_id IS NULL OR tenant_id=NEW.tenant_id)
+  ORDER BY (tenant_id=NEW.tenant_id) DESC NULLS LAST LIMIT 1;
+ IF contact_owner_type_id IS NULL THEN RAISE EXCEPTION 'Contact person owner type is unavailable' USING ERRCODE='data_exception'; END IF;
 
  FOR item IN SELECT value FROM jsonb_array_elements(proposals->'addresses') LOOP
+  IF NOT EXISTS(SELECT 1 FROM shared.country country WHERE country.code=upper(btrim(item->>'countryCode')) AND country.status='active') THEN
+   RAISE EXCEPTION 'Address country must be an active supported country' USING ERRCODE='foreign_key_violation';
+  END IF;
+  IF NULLIF(item->>'stateRegionCode','') IS NOT NULL AND NOT EXISTS(
+    SELECT 1 FROM shared.state_region subdivision
+    WHERE subdivision.country_code=upper(btrim(item->>'countryCode'))
+      AND subdivision.code=upper(btrim(item->>'stateRegionCode'))
+      AND subdivision.status='active'
+  ) THEN
+   RAISE EXCEPTION 'Address subdivision must be active and belong to the selected country' USING ERRCODE='foreign_key_violation';
+  END IF;
+  IF item->>'regionEntryMode'='directory' AND NULLIF(item->>'stateRegionCode','') IS NULL THEN
+   RAISE EXCEPTION 'Directory region entry requires a subdivision code' USING ERRCODE='check_violation';
+  END IF;
+  IF item->>'regionEntryMode'='manual' AND NULLIF(item->>'stateRegionCode','') IS NOT NULL THEN
+   RAISE EXCEPTION 'Manual region entry cannot assert a subdivision code' USING ERRCODE='check_violation';
+  END IF;
+  IF NULLIF(item->>'timezoneCode','') IS NOT NULL AND NOT EXISTS(
+    SELECT 1 FROM shared.timezone timezone WHERE timezone.code=btrim(item->>'timezoneCode') AND timezone.status='active'
+  ) THEN
+   RAISE EXCEPTION 'Address timezone must be an active supported timezone' USING ERRCODE='foreign_key_violation';
+  END IF;
   address_id:=shared.uuidv7();
-  INSERT INTO master.address AS created_address(id,tenant_id,address_type,address_kind,building_name,floor,unit,house_number,street_name,po_box,po_box_city,po_box_postal_code,line1,line2,city,region,state_region_code,postal_code,country_code,normalized_hash,
+  INSERT INTO master.address AS created_address(id,tenant_id,address_type,address_kind,building_name,floor,unit,house_number,street_name,po_box,po_box_city,po_box_postal_code,line1,line2,city,region,state_region_code,postal_code,country_code,timezone_code,normalized_hash,
    formatted_address,validation_status,metadata,status,status_changed_at,status_changed_by,created_by)
   VALUES(address_id,NEW.tenant_id,item->>'purpose',COALESCE(NULLIF(item->>'addressKind',''),'street'),NULLIF(item->>'buildingName',''),NULLIF(item->>'floor',''),NULLIF(item->>'unit',''),NULLIF(item->>'houseNumber',''),NULLIF(item->>'streetName',''),NULLIF(item->>'poBox',''),CASE WHEN item->>'addressKind'='po_box' THEN NULLIF(item->>'city','') END,CASE WHEN item->>'addressKind'='po_box' THEN NULLIF(item->>'postalCode','') END,NULLIF(item->>'line1',''),NULLIF(item->>'line2',''),
-   NULLIF(item->>'city',''),NULLIF(item->>'region',''),NULLIF(item->>'stateRegionCode',''),NULLIF(item->>'postalCode',''),(item->>'countryCode')::character(2),item->>'normalizedHash',
+   NULLIF(item->>'city',''),NULLIF(item->>'region',''),NULLIF(upper(btrim(item->>'stateRegionCode')),''),NULLIF(item->>'postalCode',''),upper(btrim(item->>'countryCode'))::character(2),NULLIF(btrim(item->>'timezoneCode'),''),item->>'normalizedHash',
    NULLIF(concat_ws(', ',
     CASE WHEN item->>'addressKind'='po_box' THEN 'PO Box '||NULLIF(item->>'poBox','')
       WHEN NULLIF(item->>'line1','') IS NOT NULL OR NULLIF(item->>'line2','') IS NOT NULL THEN concat_ws(', ',NULLIF(item->>'line1',''),NULLIF(item->>'line2',''))
@@ -5677,7 +5703,7 @@ BEGIN
   FOR channel IN SELECT value FROM jsonb_array_elements(proposals->'contactChannels') WHERE value->>'contactClientItemKey'=item->>'clientItemKey' LOOP
    channel_id:=shared.uuidv7();
    INSERT INTO master.contact_link(id,tenant_id,owner_type_id,owner_id,channel_type,value,purpose,role_qualifier,is_primary,is_verified,metadata,status,created_by)
-   VALUES(channel_id,NEW.tenant_id,owner_type_id,NEW.target_entity_id,channel->>'channelType',channel->>'value',channel->>'purpose',contact_id::text,
+   VALUES(channel_id,NEW.tenant_id,contact_owner_type_id,contact_id,channel->>'channelType',channel->>'value',channel->>'purpose',NULL,
     COALESCE((channel->>'isPrimary')::boolean,false),false,jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'contactPersonId',contact_id,'clientItemKey',channel->>'clientItemKey'),'active',NEW.updated_by);
    evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',channel_id,'clientItemKey',channel->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
    INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
@@ -5687,9 +5713,16 @@ BEGIN
  -- Optional full-profile collections. Only explicit business columns are writable;
  -- approval/verification, tenant and owner coordinates are always service-owned.
  FOR item IN SELECT value FROM jsonb_array_elements(COALESCE(proposals->'aliases','[]'::jsonb)) LOOP
+  alias_language:=NULLIF(btrim(item->>'languageCode'),'');
+  IF alias_language IS NOT NULL THEN
+   IF alias_language !~* '^[a-z]{2,3}(-[a-z]{2})?$' THEN
+    RAISE EXCEPTION 'Alias language must be a base language or language-region locale' USING ERRCODE='check_violation';
+   END IF;
+   alias_language:=lower(split_part(alias_language,'-',1)) || CASE WHEN position('-' IN alias_language)>0 THEN '-'||upper(split_part(alias_language,'-',2)) ELSE '' END;
+  END IF;
   contact_id:=shared.uuidv7();
   INSERT INTO master.business_partner_alias(id,tenant_id,business_partner_id,alias_kind,alias_name,language_code,country_code,effective_from,effective_until,is_primary,metadata,created_by)
-  VALUES(contact_id,NEW.tenant_id,NEW.target_entity_id,item->>'aliasKind',item->>'aliasName',NULLIF(item->>'languageCode',''),NULLIF(item->>'countryCode',''),COALESCE(NULLIF(item->>'effectiveFrom','')::date,CURRENT_DATE),NULLIF(item->>'effectiveUntil','')::date,COALESCE((item->>'isPrimary')::boolean,false),jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id),NEW.updated_by) RETURNING id INTO profile_id;
+  VALUES(contact_id,NEW.tenant_id,NEW.target_entity_id,item->>'aliasKind',item->>'aliasName',alias_language,NULLIF(item->>'countryCode',''),COALESCE(NULLIF(item->>'effectiveFrom','')::date,CURRENT_DATE),NULLIF(item->>'effectiveUntil','')::date,COALESCE((item->>'isPrimary')::boolean,false),jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id),NEW.updated_by) RETURNING id INTO profile_id;
   evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
   INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
   VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.aliases['||(item->>'clientItemKey')||']','master.business_partner_alias',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
@@ -5698,23 +5731,42 @@ BEGIN
   IF (NULLIF(item->>'value','') IS NULL)=(NULLIF(item->>'protectedValueToken','') IS NULL) THEN
    RAISE EXCEPTION 'Exactly one identifier value or protected token is required' USING ERRCODE='check_violation';
   END IF;
-  IF item ? 'value' AND regexp_replace(lower(item->>'schemeCode'),'[_-]','','g') IN('nationalid','nationalidentifier','taxid','taxidentifier','passport','passportnumber') THEN
+ IF item ? 'value' AND regexp_replace(lower(item->>'schemeCode'),'[_-]','','g') IN('nationalid','nationalidentifier','taxid','taxidentifier','passport','passportnumber') THEN
    RAISE EXCEPTION 'Restricted identifiers require protected capture' USING ERRCODE='check_violation';
   END IF;
+  IF NULLIF(item->>'issuingCountryCode','') IS NOT NULL AND NOT EXISTS(
+    SELECT 1 FROM shared.country country
+    WHERE country.code=upper(btrim(item->>'issuingCountryCode'))
+      AND country.status='active'
+  ) THEN
+   RAISE EXCEPTION 'Identifier issuing country must be an active supported country' USING ERRCODE='foreign_key_violation';
+  END IF;
   INSERT INTO master.business_partner_identifier(tenant_id,business_partner_id,scheme_code,identifier_value,issuing_authority,issuing_country_code,issued_at,effective_until,is_primary,metadata,status,created_by)
-  VALUES(NEW.tenant_id,NEW.target_entity_id,item->>'schemeCode',CASE WHEN item ? 'protectedValueToken' THEN upper(item->>'valueHash') ELSE item->>'value' END,NULLIF(item->>'issuingAuthority',''),NULLIF(item->>'issuingCountryCode',''),NULLIF(item->>'effectiveFrom','')::date,NULLIF(item->>'effectiveUntil','')::date,COALESCE((item->>'isPrimary')::boolean,false),jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'protected',item ? 'protectedValueToken','protectedValueToken',item->>'protectedValueToken','maskedValue',item->>'maskedValue','valueHash',item->>'valueHash'),'draft',NEW.updated_by) RETURNING id INTO profile_id;
+  VALUES(NEW.tenant_id,NEW.target_entity_id,item->>'schemeCode',CASE WHEN item ? 'protectedValueToken' THEN upper(item->>'valueHash') ELSE item->>'value' END,NULLIF(item->>'issuingAuthority',''),NULLIF(upper(btrim(item->>'issuingCountryCode')),'')::character(2),NULLIF(item->>'effectiveFrom','')::date,NULLIF(item->>'effectiveUntil','')::date,COALESCE((item->>'isPrimary')::boolean,false),jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'protected',item ? 'protectedValueToken','protectedValueToken',item->>'protectedValueToken','maskedValue',item->>'maskedValue','valueHash',item->>'valueHash'),'draft',NEW.updated_by) RETURNING id INTO profile_id;
   evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
   INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
   VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.identifiers['||(item->>'clientItemKey')||']','master.business_partner_identifier',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
  END LOOP;
  FOR item IN SELECT value FROM jsonb_array_elements(COALESCE(proposals->'classifications','[]'::jsonb)) LOOP
   IF item->>'classificationKind'='commodity' THEN
+   IF NOT EXISTS(SELECT 1 FROM master.commodity_category category WHERE category.tenant_id=NEW.tenant_id AND category.id=(item->>'referenceId')::uuid AND category.status='active') THEN
+    RAISE EXCEPTION 'Commodity capability requires an active category owned by this tenant' USING ERRCODE='foreign_key_violation';
+   END IF;
+   IF item ? 'commodityCodeId' OR item ? 'crosswalkId' THEN
+    RAISE EXCEPTION 'Commodity capability selects a tenant category; code and crosswalk records are reference evidence only' USING ERRCODE='check_violation';
+   END IF;
    INSERT INTO master.business_partner_commodity_capability(tenant_id,business_partner_id,commodity_category_id,partner_role,effective_from,effective_until,metadata,status,created_by)
    VALUES(NEW.tenant_id,NEW.target_entity_id,(item->>'referenceId')::uuid,COALESCE(NULLIF(item->>'partnerRole',''),payload->>'requestedRole')::master.partner_role_d,COALESCE(NULLIF(item->>'effectiveFrom','')::date,CURRENT_DATE),NULLIF(item->>'effectiveUntil','')::date,jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id),'draft',NEW.updated_by) RETURNING id INTO profile_id;
   evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
   INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,source_member_path,target_authority_type,target_authority_id,transformation_code,transformation_version,evidence_hash,created_by)
   VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.classifications['||(item->>'clientItemKey')||']','master.business_partner_commodity_capability',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
   ELSIF item->>'classificationKind'='industry' THEN
+   IF item ? 'crosswalkId' THEN
+    RAISE EXCEPTION 'Industry crosswalks are reference evidence and cannot replace the selected industry code' USING ERRCODE='check_violation';
+   END IF;
+   IF NOT EXISTS(SELECT 1 FROM shared.industry_code code WHERE code.id=(item->>'referenceId')::uuid AND code.domain_code=item->>'domainCode' AND code.status='active') THEN
+    RAISE EXCEPTION 'Industry classification requires an active code in the selected domain' USING ERRCODE='foreign_key_violation';
+   END IF;
    INSERT INTO master.business_partner_industry_classification(tenant_id,business_partner_id,industry_domain_code,industry_code_id,assignment_kind,is_primary,effective_from,effective_until,metadata,status,created_by)
    VALUES(NEW.tenant_id,NEW.target_entity_id,item->>'domainCode',(item->>'referenceId')::uuid,'declared',COALESCE((item->>'isPrimary')::boolean,false),COALESCE(NULLIF(item->>'effectiveFrom','')::date,CURRENT_DATE),NULLIF(item->>'effectiveUntil','')::date,jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id),'draft',NEW.updated_by) RETURNING id INTO profile_id;
   evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
@@ -5730,6 +5782,9 @@ BEGIN
   VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.governanceRelations['||(item->>'clientItemKey')||']','master.business_partner_governance_relation',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
  END LOOP;
  FOR item IN SELECT value FROM jsonb_array_elements(COALESCE(proposals->'relationships','[]'::jsonb)) LOOP
+  IF (item->>'targetBusinessPartnerId')::uuid=NEW.target_entity_id THEN
+   RAISE EXCEPTION 'A Business Partner cannot relate to itself' USING ERRCODE='check_violation';
+  END IF;
   INSERT INTO master.business_partner_relationship(tenant_id,source_business_partner_id,target_business_partner_id,relationship_type_code,country_code,effective_from,effective_until,notes,metadata,status,created_by)
   VALUES(NEW.tenant_id,NEW.target_entity_id,(item->>'targetBusinessPartnerId')::uuid,item->>'relationshipTypeCode',NULLIF(item->>'countryCode',''),NULLIF(item->>'effectiveFrom','')::date,NULLIF(item->>'effectiveUntil','')::date,NULLIF(item->>'notes',''),jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id),'draft',NEW.updated_by) RETURNING id INTO profile_id;
   evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
@@ -5737,6 +5792,17 @@ BEGIN
   VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.relationships['||(item->>'clientItemKey')||']','master.business_partner_relationship',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
  END LOOP;
  FOR item IN SELECT value FROM jsonb_array_elements(COALESCE(proposals->'certifications','[]'::jsonb)) LOOP
+  IF NULLIF(item->>'attachmentId','') IS NOT NULL AND NOT EXISTS(
+    SELECT 1 FROM document.attachment attachment
+    JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id AND series.current_attachment_id=attachment.id
+    JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id
+    WHERE attachment.tenant_id=NEW.tenant_id AND attachment.id=(item->>'attachmentId')::uuid
+      AND attachment.status='active' AND attachment.is_active AND attachment.is_virus_scanned
+      AND (link.entity_type IN ('business_partner','master.business_partner') AND link.entity_id=NEW.target_entity_id::text
+        OR link.entity_type IN ('entity_case','document.entity_case') AND link.entity_id=NEW.id::text)
+  ) THEN
+   RAISE EXCEPTION 'Certification evidence must be a completed attachment linked to this partner or governing case' USING ERRCODE='foreign_key_violation';
+  END IF;
   INSERT INTO master.certification(tenant_id,owner_type,owner_id,certification_type_id,custom_name,certificate_number,certified_by,certified_location,document_attachment_id,effective_from,effective_until,metadata,status,created_by)
   VALUES(NEW.tenant_id,'business_partner',NEW.target_entity_id,NULLIF(item->>'certificationTypeId','')::uuid,NULLIF(item->>'customName',''),NULLIF(item->>'certificateNumberToken',''),NULLIF(item->>'certifiedBy',''),NULLIF(item->>'certifiedLocation',''),NULLIF(item->>'attachmentId','')::uuid,NULLIF(item->>'effectiveFrom','')::date,NULLIF(item->>'effectiveUntil','')::date,jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'protected',item ? 'certificateNumberToken','maskedCertificateNumber',item->>'maskedCertificateNumber'),'active',NEW.updated_by) RETURNING id INTO profile_id;
   evidence_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'targetId',profile_id,'clientItemKey',item->>'clientItemKey')::text,'UTF8'),'sha256'),'hex');
@@ -5744,8 +5810,28 @@ BEGIN
   VALUES(NEW.tenant_id,NEW.id,NEW.decision_snapshot_id,NEW.result_snapshot_id,'materialized_from','$.relationshipProposals.certifications['||(item->>'clientItemKey')||']','master.certification',profile_id,'neon.business_partner_relationships','1',evidence_hash,NEW.updated_by);
  END LOOP;
  FOR item IN SELECT value FROM jsonb_array_elements(COALESCE(proposals->'taxRegistrations','[]'::jsonb)) LOOP
-  IF NULLIF(item->>'protectedValueToken','') IS NULL OR length(item->>'protectedValueToken')>128 OR item ? 'value' OR COALESCE(item->>'valueHash','') !~ '^[a-f0-9]{64}$' THEN
+ IF NULLIF(item->>'protectedValueToken','') IS NULL OR length(item->>'protectedValueToken')>128 OR item ? 'value' OR COALESCE(item->>'valueHash','') !~ '^[a-f0-9]{64}$' THEN
    RAISE EXCEPTION 'Tax registration requires protected capture' USING ERRCODE='check_violation';
+  END IF;
+  IF NOT EXISTS(
+    SELECT 1 FROM master.tax_jurisdiction jurisdiction
+    JOIN shared.country country ON country.code=jurisdiction.country_code AND country.status='active'
+    LEFT JOIN shared.state_region subdivision ON subdivision.country_code=jurisdiction.country_code
+      AND subdivision.code=jurisdiction.state_region_code AND subdivision.status='active'
+    WHERE jurisdiction.tenant_id=NEW.tenant_id
+      AND jurisdiction.id=(item->>'jurisdictionId')::uuid
+      AND jurisdiction.status='active'
+      AND (jurisdiction.state_region_code IS NULL OR subdivision.id IS NOT NULL)
+  ) THEN
+   RAISE EXCEPTION 'Tax registration jurisdiction must be an active supported jurisdiction and subdivision' USING ERRCODE='foreign_key_violation';
+  END IF;
+  IF NULLIF(item->>'taxTypeId','') IS NOT NULL AND NOT EXISTS(
+    SELECT 1 FROM master.tax_type tax_type
+    WHERE tax_type.tenant_id=NEW.tenant_id
+      AND tax_type.id=(item->>'taxTypeId')::uuid
+      AND tax_type.status='active'
+  ) THEN
+   RAISE EXCEPTION 'Tax registration type must be an active type owned by this tenant' USING ERRCODE='foreign_key_violation';
   END IF;
   INSERT INTO master.business_partner_tax_registration(tenant_id,business_partner_id,jurisdiction_id,tax_type_id,registration_type_code,registration_number,effective_from,effective_until,is_primary,metadata,status,created_by)
   VALUES(NEW.tenant_id,NEW.target_entity_id,(item->>'jurisdictionId')::uuid,NULLIF(item->>'taxTypeId','')::uuid,item->>'registrationTypeCode',upper(item->>'valueHash'),NULLIF(item->>'effectiveFrom','')::date,NULLIF(item->>'effectiveUntil','')::date,COALESCE((item->>'isPrimary')::boolean,false),jsonb_build_object('sourceCaseId',NEW.id,'sourceSnapshotId',NEW.decision_snapshot_id,'protected',true,'protectedValueToken',item->>'protectedValueToken','maskedValue',item->>'maskedValue','valueHash',item->>'valueHash'),'draft',NEW.updated_by) RETURNING id INTO profile_id;

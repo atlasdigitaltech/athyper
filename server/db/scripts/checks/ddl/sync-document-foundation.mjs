@@ -6,8 +6,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const canonicalPath = resolve(root, "ddl/common/document/03_foundation_tables.sql");
 const planePaths = ["neon", "mesh", "studio"].map(plane => resolve(root, `ddl/planes/${plane}/document/03_tables.sql`));
 const tableNames = [
-  "attachment_series", "attachment", "attachment_folder", "attachment_link",
-  "comment", "comment_draft", "comment_feed_cursor", "comment_mention", "comment_reaction",
+  "attachment_series", "attachment", "attachment_folder", "attachment_workspace", "attachment_link",
+  "comment", "comment_revision", "comment_draft", "comment_feed_cursor", "comment_mention", "comment_reaction",
   "content_item", "content_item_link", "attachment_legal_hold", "attachment_legal_hold_event",
   "attachment_derivative",
 ];

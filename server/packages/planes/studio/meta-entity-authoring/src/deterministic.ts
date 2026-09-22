@@ -1,3 +1,4 @@
+import { capabilityArtifactMembers, parseCapabilityBinding, parseCapabilityDeclaration } from "@athyper/server-contract-publication";
 import { compileEntityIntakeSurfaces } from "@athyper/contract-platform-entity-runtime";
 import { compileEntityAi } from "./entity-ai.js";
 import { compileRuntimeRestoration } from "./runtime-restoration.js";
@@ -27,7 +28,7 @@ import {
   type EntityListFilterOperator,
 } from "@athyper/server-contract-metadata";
 
-export const META_ENTITY_COMPILER_VERSION = "1.0.0";
+export const META_ENTITY_COMPILER_VERSION = "1.1.0";
 
 export function canonicalJson(value: unknown): string {
   return JSON.stringify(canonicalValue(value));
@@ -86,6 +87,17 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
   if (issues.length)
     return { deterministic: true, contractHash, issues: sorted(issues) };
   const entityCode = graph.entity.entityCode;
+  const capabilityKeys = new Set<string>();
+  for (const [index, member] of (graph.capabilities ?? []).entries()) {
+    try {
+      if (!member || !["comments", "attachments"].includes(member.capabilityKey) || capabilityKeys.has(member.capabilityKey)) throw new Error("Unknown or duplicate capability");
+      if (Object.keys(member).some(key=>!["id","capabilityKey","declaration","binding"].includes(key))) throw new Error("Unknown capability member property");
+      capabilityKeys.add(member.capabilityKey);
+      const declaration = parseCapabilityDeclaration(member.declaration, member.capabilityKey, entityCode);
+      if(declaration.enabled) parseCapabilityBinding(member.binding, member.capabilityKey, entityCode);
+      else if(member.binding !== undefined) throw new Error("Disabled capability has policy");
+    } catch (error) { issues.push({code:"ENTITY_CAPABILITY_INVALID",path:`capabilities[${index}]`,message:error instanceof Error?error.message:"Invalid capability"}); }
+  }
   if (
     graph.entity.entityClass !== undefined &&
     ![
@@ -528,6 +540,7 @@ export function compileGraph(
     ...(collectionRelationship ? { collectionRelationship } : {}),
     ...(recordPresentation ? { recordPresentation } : {}),
     entity: graph.entity,
+    ...(graph.capabilities?.length ? capabilityArtifactMembers(graph.entity.entityCode, graph.capabilities) : {}),
     fields: graph.fields,
     keys: graph.keys ?? [],
     keyFields: graph.keyFields ?? [],
@@ -747,6 +760,7 @@ function uniqueKeys<T extends object>(
   });
 }
 const ORDER_INDEPENDENT_ARRAYS = new Set([
+  "capabilities",
   "classProfiles",
   "runtimeProfiles",
   "fields",
@@ -777,6 +791,7 @@ const ORDER_INDEPENDENT_ARRAYS = new Set([
 ]);
 const REQUIRED_ARRAY_BRANCHES = ["fields", "operations"] as const;
 const OPTIONAL_ARRAY_BRANCHES = [
+  "capabilities",
   "classProfiles",
   "runtimeProfiles",
   "keys",

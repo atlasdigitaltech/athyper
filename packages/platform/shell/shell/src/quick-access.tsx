@@ -1,9 +1,9 @@
 "use client";
 
-import { useModalIsolation } from "@athyper/platform-ui";
+import { FilterChipGroup, SearchField, PanelHeader, PanelTabs, PanelEmptyState, Button, Tooltip, useModalIsolation } from "@athyper/platform-ui";
 import { parseInstant } from "@athyper/platform-temporal";
 import * as React from "react";
-import { ChevronRightIcon, ClockIcon, CloseIcon, ContactRoundIcon, FileTextIcon, HistoryIcon, PanelsTopLeftIcon, SearchIcon, StarIcon } from "@athyper/platform-icons";
+import { ChevronRightIcon, ClockIcon, CloseIcon, ContactRoundIcon, FileTextIcon, HistoryIcon, PanelsTopLeftIcon, StarIcon } from "@athyper/platform-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { canAccessRoute, type DerivedShellNavigation } from "./core";
 import type { RecordBreadcrumbBinding } from "./route-state";
@@ -153,40 +153,23 @@ export function ShellQuickAccess({ plane = "shared", modal = false, activeTab, t
 
   const visibleCount = activeTab === "favourites" ? matchingFavourites.length : matchingRecent.length;
   const visibleNoun = activeTab === "favourites" ? "favourite" : recentKind;
-  const summary = `${visibleCount}${normalizedQuery ? " matching" : ""} ${visibleNoun}${visibleCount === 1 ? "" : "s"}`;
+  const showClearRecent = activeTab === "recent" && recent.length > 0 && canClearRecent && (!normalizedQuery || visibleCount > 0);
+  const summary = `${visibleCount} of ${activeTab === "favourites" ? favourites.length : recentCounts[recentKind]} ${visibleNoun}s`;
   return <aside ref={panel} id="athyper-quick-access" className="athyper-quick-access" role="dialog" aria-modal={modal} aria-labelledby="athyper-quick-access-title">
-    <header className="athyper-quick-access__header">
-      <span className="athyper-quick-access__hero-icon" aria-hidden="true"><StarIcon data-filled="true" /></span>
-      <span>
-        <strong id="athyper-quick-access-title">Quick access</strong>
-        <small>Your saved and recently opened work</small>
-      </span>
-      <button type="button" className="athyper-quick-access__close" aria-label="Close quick access" onClick={onClose}><CloseIcon /></button>
-    </header>
+    <PanelHeader icon={activeTab === "favourites" ? <StarIcon/> : <HistoryIcon/>} title="Quick access" titleId="athyper-quick-access-title" subtitle="Your saved and recently opened work" actions={<Tooltip portal side="bottom" label="Close Quick access"><button type="button" aria-label="Close quick access" onClick={onClose}><CloseIcon size={18}/></button></Tooltip>}/>
+    <PanelTabs label="Quick access views" value={activeTab} onValueChange={key=>onTabChange(key as ShellQuickAccessTab)} items={[{key:"favourites",label:"Favourites",count:favourites.length,id:"quick-access-tab-favourites",panelId:"quick-access-favourites"},{key:"recent",label:"Recent",count:recent.length,id:"quick-access-tab-recent",panelId:"quick-access-recent"}]}/>
 
-    <div className="athyper-quick-access__tabs" role="tablist" aria-label="Quick access views">
-      <TabButton tab="favourites" activeTab={activeTab} count={favourites.length} onSelect={onTabChange} />
-      <TabButton tab="recent" activeTab={activeTab} count={recent.length} onSelect={onTabChange} />
-    </div>
+    <SearchField className="athyper-quick-access__search" ref={search} label="Filter quick access items" value={query} onValueChange={setQuery} clearLabel="Clear filter" placeholder={activeTab === "favourites" ? "Search favourites" : "Search recent work"} maxLength={80} autoComplete="off"/>
 
-    <label className="athyper-quick-access__search">
-      <SearchIcon />
-      <span className="athyper-visually-hidden">Filter quick access items</span>
-      <input ref={search} type="search" value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder={activeTab === "favourites" ? "Search favourites" : "Search recent work"} maxLength={80} autoComplete="off" />
-      {query ? <button type="button" aria-label="Clear filter" onClick={() => setQuery("")}><CloseIcon /></button> : <kbd>/</kbd>}
-    </label>
 
-    {activeTab === "recent" ? <div className="athyper-quick-access__scope" aria-label="Recent item type">
-      <ScopeButton kind="record" label="Records" count={recentCounts.record} active={recentKind === "record"} onSelect={setRecentKind} />
-      <ScopeButton kind="page" label="Pages" count={recentCounts.page} active={recentKind === "page"} onSelect={setRecentKind} />
-    </div> : null}
+    {activeTab === "recent" ? <FilterChipGroup className="athyper-quick-access__scope" label="Recent item type" value={recentKind} onValueChange={value=>setRecentKind(value as ShellQuickAccessKind)} items={[{value:"record",label:"Records",count:recentCounts.record},{value:"page",label:"Pages",count:recentCounts.page}]}/> : null}
 
-    <div className="athyper-quick-access__summary" aria-live="polite">
-      <span>{summary}</span>
-      {activeTab === "recent" && recent.length && canClearRecent ? confirmClear
+    {(normalizedQuery && visibleCount > 0) || showClearRecent ? <div className="athyper-quick-access__summary" aria-live="polite">
+      <span>{normalizedQuery && visibleCount > 0 ? summary : null}</span>
+      {showClearRecent ? confirmClear
         ? <span className="athyper-quick-access__clear-confirm"><button type="button" onClick={() => setConfirmClear(false)}>Cancel</button><button type="button" onClick={clearRecent}>Clear all</button></span>
         : <button type="button" onClick={() => setConfirmClear(true)}>Clear all recent</button> : null}
-    </div>
+    </div> : null}
 
     <div className="athyper-quick-access__content" id={`quick-access-${activeTab}`} role="tabpanel" aria-labelledby={`quick-access-tab-${activeTab}`}>
       {activeTab === "favourites" && !favouriteGroups.length ? <QuickAccessEmpty variant="favourites" filtered={Boolean(normalizedQuery)} onClearFilter={() => setQuery("")} onShowRecent={() => { setQuery(""); onTabChange("recent"); }} /> : null}
@@ -237,20 +220,6 @@ function useDurableRecordFavourites(navigation: DerivedShellNavigation, disabled
 function mergeFavourites(durable: readonly ShellQuickAccessItem[], local: readonly ShellQuickAccessItem[]): readonly ShellQuickAccessItem[] { const hrefs = new Set(durable.map((item) => item.href)); return [...durable, ...local.filter((item) => !hrefs.has(item.href))]; }
 function readCookie(name: string): string | undefined { const prefix = `${name}=`; const value = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length); if (!value) return undefined; try { return decodeURIComponent(value); } catch { return undefined; } }
 
-function TabButton({ tab, activeTab, count, onSelect }: { readonly tab: ShellQuickAccessTab; readonly activeTab: ShellQuickAccessTab; readonly count: number; readonly onSelect: (tab: ShellQuickAccessTab) => void }) {
-  const label = tab === "favourites" ? "Favourites" : "Recent";
-  const selectPeer = () => {
-    const next: ShellQuickAccessTab = tab === "favourites" ? "recent" : "favourites";
-    onSelect(next);
-    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`#quick-access-tab-${next}`)?.focus());
-  };
-  return <button id={`quick-access-tab-${tab}`} type="button" role="tab" aria-selected={activeTab === tab} aria-controls={`quick-access-${tab}`} tabIndex={activeTab === tab ? 0 : -1} onClick={() => onSelect(tab)} onKeyDown={(event) => { if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); selectPeer(); } }}><span>{tab === "favourites" ? <StarIcon /> : <HistoryIcon />}{label}</span><b>{count}</b></button>;
-}
-
-function ScopeButton({ kind, label, count, active, onSelect }: { readonly kind: ShellQuickAccessKind; readonly label: string; readonly count: number; readonly active: boolean; readonly onSelect: (kind: ShellQuickAccessKind) => void }) {
-  return <button type="button" aria-pressed={active} onClick={() => onSelect(kind)}><span>{label}</span><b>{count}</b></button>;
-}
-
 function QuickAccessGroup({ label, items, favouriteHrefs, onToggleFavourite, onDismiss, showTime = false }: { readonly label: string; readonly items: readonly ShellQuickAccessItem[]; readonly favouriteHrefs: ReadonlySet<string>; readonly onToggleFavourite?: (item: ShellQuickAccessItem) => void; readonly onDismiss?: (item: ShellQuickAccessItem) => void; readonly showTime?: boolean }) {
   return <section className="athyper-quick-access__group" aria-labelledby={`quick-group-${slug(label)}`}>
     <header><strong id={`quick-group-${slug(label)}`}>{label}</strong><span>{items.length}</span></header>
@@ -275,16 +244,13 @@ function QuickAccessGroup({ label, items, favouriteHrefs, onToggleFavourite, onD
 
 function QuickAccessEmpty({ variant, filtered, recentKind, onShowRecent, onShowPeer, onClearFilter }: { readonly variant: ShellQuickAccessTab; readonly filtered: boolean; readonly recentKind?: ShellQuickAccessKind; readonly onShowRecent?: () => void; readonly onShowPeer?: () => void; readonly onClearFilter?: () => void }) {
   const favourites = variant === "favourites";
-  const title = filtered ? "No matching items" : favourites ? "Build your working set" : `No recent ${recentKind === "record" ? "records" : "pages"}`;
-  const detail = filtered ? "Try another name, code, or workspace." : favourites ? "Star something from Recent to keep important work one click away." : `Open ${recentKind === "record" ? "a business record" : "another workspace page"} and it will appear here automatically.`;
-  return <div className="athyper-quick-access__empty">
-    <span aria-hidden="true">{favourites ? <StarIcon /> : <HistoryIcon />}</span>
-    <strong>{title}</strong>
-    <p>{detail}</p>
-    {filtered && onClearFilter ? <button type="button" onClick={onClearFilter}>Clear search <ChevronRightIcon /></button> : null}
-    {!filtered && favourites && onShowRecent ? <button type="button" onClick={onShowRecent}>Browse recent work <ChevronRightIcon /></button> : null}
-    {!filtered && !favourites && onShowPeer ? <button type="button" onClick={onShowPeer}>Show recent {recentKind === "record" ? "pages" : "records"} <ChevronRightIcon /></button> : null}
-  </div>;
+  const title = filtered ? (favourites ? "No matching favourites" : "No matching recent items") : favourites ? "No favourites yet" : `No recent ${recentKind === "record" ? "records" : "pages"}`;
+  const detail = filtered ? "Try another name, code, or workspace." : favourites ? "Star an item in Recent to keep it here." : `Open ${recentKind === "record" ? "a business record" : "another workspace page"} and it will appear here automatically.`;
+  return <PanelEmptyState className="athyper-quick-access__empty" icon={favourites ? <StarIcon/> : <HistoryIcon/>} title={title} description={detail} action={<>
+    {filtered && onClearFilter ? <Button variant="secondary" type="button" onClick={onClearFilter}>Clear search</Button> : null}
+    {!filtered && favourites && onShowRecent ? <Button variant="secondary" type="button" onClick={onShowRecent}>Browse recent work <ChevronRightIcon /></Button> : null}
+    {!filtered && !favourites && onShowPeer ? <Button variant="secondary" type="button" onClick={onShowPeer}>Show recent {recentKind === "record" ? "pages" : "records"} <ChevronRightIcon /></Button> : null}
+  </>}/>;
 }
 
 export function quickAccessStorageKey(plane: string, tenantId: string, accountScope: string): string {

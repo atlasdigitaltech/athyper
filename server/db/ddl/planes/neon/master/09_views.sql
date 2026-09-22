@@ -249,7 +249,12 @@ LEFT JOIN LATERAL (
       FROM master.employment x
      WHERE x.tenant_id = e.tenant_id
        AND (x.employee_id = e.id OR (x.employee_id IS NULL AND x.person_id = e.person_id))
+       AND x.status = 'active'
+       AND x.employment_status IN ('active', 'suspended')
+       AND x.hire_date <= CURRENT_DATE
+       AND (x.termination_date IS NULL OR x.termination_date > CURRENT_DATE)
      ORDER BY
+       x.is_primary DESC,
        (x.employment_status = 'active') DESC,
        x.hire_date DESC,
        x.id
@@ -260,8 +265,12 @@ LEFT JOIN LATERAL (
       FROM master.work_assignment x
      WHERE x.tenant_id = e.tenant_id
        AND x.employee_id = e.id
+       AND x.employment_id = em.id
+       AND x.status = 'active'
+       AND x.effective_from <= CURRENT_DATE
+       AND (x.effective_until IS NULL OR x.effective_until > CURRENT_DATE)
      ORDER BY
-       (x.assignment_type = 'primary' AND x.status = 'active') DESC,
+       (x.assignment_type = 'primary') DESC,
        x.effective_from DESC,
        x.id
      LIMIT 1

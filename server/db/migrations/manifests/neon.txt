@@ -1,1 +1,2 @@
 # Canonical development baseline. Add only new post-baseline upgrades here.
+20260922_workforce_as_of_projection.sql

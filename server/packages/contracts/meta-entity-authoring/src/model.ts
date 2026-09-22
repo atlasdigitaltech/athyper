@@ -1,3 +1,4 @@
+import type { CapabilityDeclaration, CommentBinding, AttachmentBinding } from "@athyper/server-contract-publication";
 export type ChangeSetStatus = "draft" | "in_review" | "approved" | "rejected" | "abandoned" | "published";
 export type AuthoringPlane = "studio" | "neon" | "mesh";
 
@@ -43,7 +44,13 @@ export interface MetaEntityNumberingBinding { readonly id?:string;readonly bindi
 export interface MetaEntityClassProfile { readonly entityClass:string;readonly profileVersion:number;readonly fallbackName:string;readonly description:string;readonly defaultBackingKind:string;readonly defaultApiExposure:string;readonly defaultReadMode:string;readonly defaultWriteMode:string;readonly defaultConcurrencyMode:string;readonly defaultChangePolicy:string }
 export interface MetaEntityRuntimeProfile { readonly id?:string;readonly profileKey?:"default";readonly backingKind:string;readonly storagePlane?:AuthoringPlane;readonly storageSchema?:string;readonly storageObject?:string;readonly apiExposure:string;readonly readMode:string;readonly writeMode:string;readonly readHandlerKey?:string;readonly writeHandlerKey?:string;readonly createMode?:string;readonly concurrencyMode?:string;readonly recordVersionFieldKey?:string;readonly tenantFieldKey?:string;readonly softDeleteFieldKey?:string;readonly draftTtlHours?:number }
 
+export interface MetaEntityCapability {
+ readonly id?: string; readonly capabilityKey: "comments" | "attachments";
+ readonly declaration: CapabilityDeclaration; readonly binding?: CommentBinding | AttachmentBinding;
+}
+
 export interface MetaEntityGraph {
+ readonly capabilities?: readonly MetaEntityCapability[];
   readonly contractSchema: "athyper.meta-entity-contract/2.1";
   readonly entity: MetaEntityDescriptor;
   readonly classProfiles?:readonly MetaEntityClassProfile[];readonly runtimeProfiles?:readonly MetaEntityRuntimeProfile[];

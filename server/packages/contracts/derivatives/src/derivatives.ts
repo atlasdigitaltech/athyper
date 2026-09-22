@@ -196,6 +196,12 @@ export interface DerivativeRepository<Transaction> {
     tx: Transaction,
   ): Promise<void>;
 
+  /** Persists an exclusively-owned rendered key when its ready commit failed. */
+  recordPendingCleanup?(
+    input: { readonly id: string; readonly tenantId: string; readonly storageKey: string; readonly sha256: string; readonly principalId: string },
+    tx: Transaction,
+  ): Promise<void>;
+
   load(
     id: string,
     tenantId: string,

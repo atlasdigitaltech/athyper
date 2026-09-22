@@ -208,6 +208,7 @@ export class MetaEntityAuthoringService {
   }
 
   async publish(input: {
+    expectedSourceReleaseId?: string;
     changeSetId: string;
     expectedRevision: number;
     actorId: string;
@@ -241,6 +242,7 @@ export class MetaEntityAuthoringService {
     const signature = await this.options.signer.sign(compiled);
     const artifact: SignedMetaEntityArtifact = { ...compiled, ...signature };
     const release = await this.options.repository.createRelease({
+      ...(input.expectedSourceReleaseId ? { expectedSourceReleaseId: input.expectedSourceReleaseId } : {}),
       changeSetId: input.changeSetId,
       expectedRevision: input.expectedRevision,
       actorId: input.actorId,

@@ -5,11 +5,11 @@ export async function resolveIntakeFormChoices(
   surfaces: readonly EntityIntakeSurfaceV1[],
   resolve?: (
     sourceKey: string,
-  ) => Promise<readonly { value: string; label: string }[]>,
+  ) => Promise<readonly { value: string; label: string; data?: Readonly<Record<string, string | boolean | readonly string[]>> }[]>,
 ): Promise<readonly EntityIntakeSurfaceV1[]> {
   const sources = new Map<
     string,
-    Promise<readonly { value: string; label: string }[]>
+    Promise<readonly { value: string; label: string; data?: Readonly<Record<string, string | boolean | readonly string[]>> }[]>
   >();
   return Promise.all(
     surfaces.map(async (surface) => ({

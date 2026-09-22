@@ -128,6 +128,31 @@ CREATE TABLE document.attachment_folder (
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
 
+-- One compare-and-swap token for the record-scoped folder tree and its file
+-- associations. A folder creation has no pre-existing folder row to lock, so
+-- a per-record token is the authoritative concurrency boundary.
+CREATE TABLE document.attachment_workspace (
+    tenant_id     uuid        NOT NULL,
+    entity_type   text        NOT NULL,
+    entity_id     text        NOT NULL,
+    revision_no   integer     NOT NULL DEFAULT 1,
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    created_by    uuid        NOT NULL,
+    updated_at    timestamptz,
+    updated_by    uuid,
+
+    CONSTRAINT attachment_workspace_pkey PRIMARY KEY (tenant_id, entity_type, entity_id),
+    CONSTRAINT attachment_workspace_owner_chk
+        CHECK (
+            entity_type ~ '^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)?$'
+            AND btrim(entity_id) <> ''
+            AND length(entity_id) <= 512
+        ),
+    CONSTRAINT attachment_workspace_revision_chk CHECK (revision_no > 0),
+    CONSTRAINT attachment_workspace_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
 CREATE TABLE document.attachment_link (
     id            uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id     uuid        NOT NULL,
@@ -158,6 +183,7 @@ CREATE TABLE document.attachment_link (
 );
 
 CREATE TABLE document.comment (
+    revision_no integer NOT NULL DEFAULT 1 CHECK (revision_no > 0),
     id                    uuid                              NOT NULL DEFAULT shared.uuidv7(),
     tenant_id             uuid                              NOT NULL,
     context_type          text                              NOT NULL DEFAULT 'entity',
@@ -474,4 +500,32 @@ CREATE TABLE document.attachment_derivative (
         CHECK ((updated_at IS NULL) = (updated_by IS NULL)),
     CONSTRAINT attachment_derivative_idempotency_uq
         UNIQUE (tenant_id, attachment_id, derivative_type, rendition_code, source_sha256, specification_hash)
+);
+
+
+CREATE TABLE document.comment_revision (
+    id             uuid                              NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id      uuid                              NOT NULL,
+    comment_id     uuid                              NOT NULL,
+    revision_no    integer                           NOT NULL,
+    comment_text   text                              NOT NULL,
+    content_format document.comment_content_format_d NOT NULL DEFAULT 'plain',
+    content_json   jsonb,
+    content_html   text,
+    content_schema text,
+    visibility     document.comment_visibility_d NOT NULL,
+    status         text NOT NULL,
+    change_kind    text                              NOT NULL DEFAULT 'edit',
+    created_at     timestamptz                       NOT NULL DEFAULT now(),
+    created_by     uuid                              NOT NULL,
+
+    CONSTRAINT comment_revision_pkey PRIMARY KEY (id),
+    CONSTRAINT comment_revision_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT comment_revision_number_uq UNIQUE (tenant_id, comment_id, revision_no),
+    CONSTRAINT comment_revision_number_chk CHECK (revision_no > 0),
+    CONSTRAINT comment_revision_text_chk CHECK (btrim(comment_text) <> '' AND length(comment_text) <= 50000),
+    CONSTRAINT comment_revision_kind_chk CHECK (change_kind IN ('create', 'edit', 'moderate', 'restore', 'delete')),
+    CONSTRAINT comment_revision_content_json_chk CHECK (content_json IS NULL OR jsonb_typeof(content_json) = 'object'),
+    CONSTRAINT comment_revision_content_schema_chk
+        CHECK (content_schema IS NULL OR content_schema ~ '^athyper\.rich-text/[0-9]+\.[0-9]+$')
 );

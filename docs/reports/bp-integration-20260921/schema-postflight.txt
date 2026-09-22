@@ -1,0 +1,11 @@
+PASS: required Studio capability and Neon comment-history structures are present with constraints, triggers, and RLS.
+Pinned DDL evidence:
+  studio capability: server/db/ddl/planes/studio/metadata/03_tables.sql sha256=6d93fc20bb4e44070e72b34a1c38230421054b1d506f7dbcb20b4d0084057eaa
+  studio capability constraints: server/db/ddl/planes/studio/metadata/05_constraints.sql sha256=2d86bcefbcacae8643f71e6948f873e1ff8ca71514bbe94b4b00a931f4671533
+  studio capability rls: server/db/ddl/planes/studio/metadata/10_rls.sql sha256=bba7f2cff1c874c49f352af08445a24af69312d80c520179e42360aba0a76f8d
+  studio capability grants: server/db/ddl/planes/studio/metadata/11_grants.sql sha256=43e3a3cbe6933399a31d323be2b5e1e00fca76d016874ca77c8f24dc0c341cda
+  studio capability functions: server/db/ddl/planes/studio/metadata/07_functions.sql sha256=b0d294e4710b3cf6418b05e9bf7e0062456618833ba4d11924bdb1e6146153d2
+  studio capability triggers: server/db/ddl/planes/studio/metadata/08_triggers.sql sha256=7438de679d8cdc71f97254f762e23b6bbdede80effef83ccd04ce93df6b22762
+  neon comment history: server/db/ddl/common/document/03_foundation_tables.sql sha256=4fb9cab343287e544619deffe2ece2d0ace2e0392f351375e00d61571891b41f
+  neon comment integrity: server/db/ddl/common/document/12_collaboration_integrity.sql sha256=bfc926f1cd76e14e41c9c9a26018e6491021985db98bc969b6325bbf3db9d348
+  neon comment audience: server/db/ddl/planes/neon/document/10_rls.sql sha256=357ca8ccd1f4b98cbf83fa805c97bad599c0a41890b5518c8269bc26c5ac85f6

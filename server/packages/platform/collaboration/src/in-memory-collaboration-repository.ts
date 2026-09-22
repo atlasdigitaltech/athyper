@@ -83,6 +83,7 @@ export function createInMemoryCollaborationPersistence(
         intent: command.intent ?? "general",
         status: "open",
         createdAt: timestamp,
+        revision: 1,
       };
       tx.comments.set(id, comment);
       tx.mentions.set(id, mentionIds);
@@ -95,9 +96,7 @@ export function createInMemoryCollaborationPersistence(
         current.tenantId !== command.context.tenantId ||
         current.authorId !== command.context.principalId ||
         current.status === "deleted" ||
-        (command.expectedUpdatedAt &&
-          (current.updatedAt ?? current.createdAt) !==
-            command.expectedUpdatedAt)
+        current.revision !== command.expectedRevision
       )
         return null;
       const {
@@ -108,6 +107,7 @@ export function createInMemoryCollaborationPersistence(
       } = current;
       const updated = {
         ...base,
+        revision: current.revision + 1,
         text: command.text.trim(),
         format: command.format ?? current.format,
         ...(command.content ? { content: command.content } : {}),
@@ -119,7 +119,7 @@ export function createInMemoryCollaborationPersistence(
       };
       tx.comments.set(current.id, updated);
       tx.mentions.set(current.id, mentionIds);
-      return updated;
+      return { comment: updated, orphanedAttachmentIds: [] };
     },
     async softDelete(tenantId, id, principalId, tx) {
       const item = tx.comments.get(id);
@@ -132,6 +132,7 @@ export function createInMemoryCollaborationPersistence(
         return false;
       tx.comments.set(id, {
         ...item,
+        revision: item.revision + 1,
         status: "deleted",
         updatedAt: now().toISOString(),
       });
@@ -175,15 +176,16 @@ export function createInMemoryCollaborationPersistence(
             "Parent comment was not found in this context",
           );
       }
-      tx.drafts.set(
-        draftKey(
+      const key = draftKey(
           command.context.tenantId,
           command.context.principalId,
           command,
           command.parentCommentId,
-        ),
-        command,
-      );
+        );
+      const existing = tx.drafts.get(key) as (CreateCommentCommand & { readonly id?: string }) | undefined;
+      const id = typeof existing?.id === "string" ? existing.id : createId();
+      tx.drafts.set(key, { ...command, id } as CreateCommentCommand);
+      return id;
     },
     async deleteDraft(tenantId, principalId, coordinate, parentId, tx) {
       return tx.drafts.delete(

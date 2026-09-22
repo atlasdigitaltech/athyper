@@ -3649,14 +3649,14 @@ export const DEFAULT_EXPERIENCE_SURFACES = Object.freeze([
             "action": "catalog.navigate",
             "label": "Overview",
             "input": {
-              "path": "/people/core-hr"
+              "path": "/people/workforce"
             }
           },
           {
             "action": "catalog.navigate",
             "label": "ToDo",
             "input": {
-              "path": "/inbox?workspace=people&module=core-hr"
+              "path": "/inbox?workspace=people&module=workforce"
             }
           }
         ]

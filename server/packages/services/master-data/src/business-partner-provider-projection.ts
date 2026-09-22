@@ -49,7 +49,7 @@ const address = fields(
   "addresses_read",
   P.address,
   "items.*.",
-  `${common} purpose addressKind locality region postalCode countryCode formattedAddress primary validationStatus validationProvider validationConfidence validatedAt`,
+  `${common} purpose addressKind locality region stateRegionCode regionEntryMode postalCode countryCode timezoneCode formattedAddress primary validationStatus validationProvider validationConfidence validatedAt`,
 );
 const bank = fields(
   "bank_read",
@@ -295,7 +295,7 @@ export const businessPartnerProviderPolicies: Readonly<
       "identifier_read",
       P.identifierMasked,
       "items.*.",
-      `${common} kind schemeCode registrationTypeCode issuingAuthority issuingCountryCode jurisdictionCode sourceSystemCode externalEntityCode externalId externalCode primary verified revealable`,
+      `${common} kind schemeCode registrationTypeCode issuingAuthority issuingCountryCode jurisdictionCode taxTypeCode jurisdictionCountryCode jurisdictionStateRegionCode sourceSystemCode externalEntityCode externalId externalCode primary verified revealable`,
     ),
     [
       {

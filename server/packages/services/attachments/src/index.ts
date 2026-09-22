@@ -5,3 +5,5 @@ export * from "./quota.js";
 export * from "./kysely-attachment-quota-ledger.js";
 export * from "./quota-recovery.js";
 export * from "./retrieval-admission.js";
+
+export * from "./attachment-discovery-routes.js";

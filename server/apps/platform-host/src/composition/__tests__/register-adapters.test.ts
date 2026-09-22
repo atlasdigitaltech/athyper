@@ -522,7 +522,7 @@ describe("registerAdapters", () => {
     expect(container.adapters.searchIndex).toBeDefined();
     await lifecycle.signalReady();
     expect(tikaHealth).toHaveBeenCalledOnce();
-    expect(searchHealth).toHaveBeenCalledOnce();
+    expect(searchHealth).not.toHaveBeenCalled();
     expect(initialize).toHaveBeenCalledOnce();
     await lifecycle.shutdown("test");
     expect(tikaClose).toHaveBeenCalledOnce();
@@ -547,6 +547,7 @@ describe("registerAdapters", () => {
       createPdfRenderer: createPdfRenderer as never,
     });
     expect(container.adapters.pdfRenderer).toBe(pdfRenderer);
+    expect(container.adapters.previewRenderer).toBeUndefined();
     expect(createPdfRenderer).toHaveBeenCalledWith(hostConfig.rendering);
     await lifecycle.signalReady();
     expect(health).toHaveBeenCalledOnce();

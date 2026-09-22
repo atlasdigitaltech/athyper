@@ -26,7 +26,7 @@ async function harness() {
     remove: vi.fn(async () => true),
     putReaction: vi.fn(async () => true),
     deleteReaction: vi.fn(async () => true),
-    putDraft: vi.fn(async () => undefined),
+    putDraft: vi.fn(async () => "22222222-2222-4222-8222-222222222222"),
     deleteDraft: vi.fn(async () => true),
     markRead: vi.fn(async () => undefined),
     flag: vi.fn(async () => id),
@@ -70,7 +70,7 @@ describe("collaboration HTTP boundary", () => {
   it.each([
     ["POST", "/comments", { ...body, intent: 1 }],
     ["POST", "/comments", { ...body, content: [] }],
-    ["PATCH", `/comments/${id}`, { text: "edit", expectedUpdatedAt: 123 }],
+    ["PATCH", `/comments/${id}`, { text: "edit", expectedRevision: "bad" }],
     ["POST", "/comments/mark-all-read", { ...body, readAt: {} }],
     [
       "DELETE",
@@ -91,14 +91,14 @@ describe("collaboration HTTP boundary", () => {
     const h = await harness();
     const requests = [
       ["POST", "/comments", body, 201],
-      ["PATCH", `/comments/${id}`, { text: "edit" }, 200],
+      ["PATCH", `/comments/${id}`, { text: "edit", expectedRevision: 1 }, 200],
       ["DELETE", `/comments/${id}`, undefined, 204],
       ["POST", `/comments/${id}/flag`, { reasonCode: "spam" }, 201],
       ["POST", `/comments/${id}/reactions`, { code: "thumbs_up" }, 201],
       ["DELETE", `/comments/${id}/reactions/thumbs_up`, undefined, 200],
       ["POST", `/comments/${id}/replies`, body, 201],
       ["POST", "/comments/mark-all-read", body, 204],
-      ["POST", "/drafts", body, 204],
+      ["POST", "/drafts", body, 200],
       [
         "DELETE",
         "/drafts?entityType=content.item&entityId=article-1",

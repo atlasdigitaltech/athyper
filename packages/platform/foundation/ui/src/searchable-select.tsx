@@ -1,5 +1,6 @@
 "use client";
 import React, {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -13,6 +14,7 @@ export interface ReferenceOption {
   readonly value: string;
   readonly label: string;
   readonly group?: string;
+  readonly data?: Readonly<Record<string, string | boolean | readonly string[]>>;
 }
 export interface SearchableSelectMessages {
   readonly search: string;
@@ -101,6 +103,7 @@ export function SearchableSelect({
   label,
   value,
   options,
+  loadPage,
   recentValues = [],
   recentLimit = 5,
   onClearRecent,
@@ -125,10 +128,18 @@ export function SearchableSelect({
   readonly label: string;
   readonly value: string;
   readonly options: readonly ReferenceOption[];
+  /** Optional server directory. Static options remain available while it loads. */
+  readonly loadPage?: (input: {
+    readonly query: string;
+    readonly cursor?: string;
+    /** Resolves an existing persisted value, including a retired reference. */
+    readonly value?: string;
+    readonly signal: AbortSignal;
+  }) => Promise<{ readonly options: readonly ReferenceOption[]; readonly nextCursor?: string }>;
   readonly recentValues?: readonly string[];
   readonly recentLimit?: number;
   readonly onClearRecent?: () => void;
-  readonly onChange: (value: string) => void;
+  readonly onChange: (value: string, option?: ReferenceOption) => void;
   readonly disabled?: boolean;
   readonly required?: boolean;
   readonly placeholder?: string;
@@ -150,6 +161,13 @@ export function SearchableSelect({
   const [open, setOpen] = useState(false),
     [query, setQuery] = useState(""),
     [active, setActive] = useState(-1);
+  const [directory, setDirectory] = useState<{
+    readonly query: string;
+    readonly options: readonly ReferenceOption[];
+    readonly nextCursor?: string;
+    readonly loading: boolean;
+    readonly error?: string;
+  }>({ query: "", options: [], loading: false });
   const [position, setPosition] = useState({
     left: 0,
     top: 0,
@@ -158,13 +176,18 @@ export function SearchableSelect({
   });
   const searchInput = useRef<HTMLInputElement>(null),
     list = useRef<HTMLDivElement>(null);
+  const effectiveOptions = useMemo(() => {
+    const byValue = new Map(options.map((option) => [option.value, option]));
+    for (const option of directory.options) byValue.set(option.value, option);
+    return [...byValue.values()];
+  }, [directory.options, options]);
   const indexed = useMemo(
-    () => indexReferenceOptions(options, locale),
-    [options, locale],
+    () => indexReferenceOptions(effectiveOptions, locale),
+    [effectiveOptions, locale],
   );
   const byKey = useMemo(
-    () => new Map(options.map((option) => [option.value, option])),
-    [options],
+    () => new Map(effectiveOptions.map((option) => [option.value, option])),
+    [effectiveOptions],
   );
   const selected = byKey.get(value);
   const selectedKeys = new Set(multipleValues ?? [value]);
@@ -192,6 +215,39 @@ export function SearchableSelect({
         ),
       ];
   const activeOption = rows[active];
+  const loadDirectory = useCallback(async (nextQuery: string, cursor?: string, exactValue?: string) => {
+    if (!loadPage) return;
+    const controller = new AbortController();
+    setDirectory((current) => ({ ...current, loading: true, error: undefined }));
+    try {
+      const page = await loadPage({ query: nextQuery, ...(cursor ? { cursor } : {}), ...(exactValue ? { value: exactValue } : {}), signal: controller.signal });
+      setDirectory((current) => ({
+        query: nextQuery,
+        options: cursor && current.query === nextQuery
+          ? [...current.options, ...page.options.filter((option) => !current.options.some((item) => item.value === option.value))]
+          : page.options,
+        ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}),
+        loading: false,
+      }));
+    } catch (cause) {
+      setDirectory((current) => ({ ...current, loading: false, error: cause instanceof Error ? cause.message : "Lookup unavailable" }));
+    }
+  }, [loadPage]);
+  // An older saved reference can be retired and absent from the first page.
+  // Resolve it by its persisted identity so the closed control still renders a
+  // useful label; the server never offers retired rows in a normal search.
+  useEffect(() => {
+    if (!loadPage || !value || effectiveOptions.some((option) => option.value === value)) return;
+    void loadDirectory("", undefined, value);
+  }, [effectiveOptions, loadDirectory, loadPage, value]);
+  useEffect(() => {
+    if (!open || !loadPage) return;
+    const timer = window.setTimeout(
+      () => { void loadDirectory(query); },
+      query ? 180 : 0,
+    );
+    return () => window.clearTimeout(timer);
+  }, [loadDirectory, loadPage, open, query]);
   const close = () => {
     setOpen(false);
     setQuery("");
@@ -211,7 +267,8 @@ export function SearchableSelect({
     setActive(sorted.findIndex((option) => option.value === value));
   };
   const choose = (next: string) => {
-    if (disabled || !byKey.has(next)) return;
+    const option = byKey.get(next);
+    if (disabled || !option) return;
     if (multipleValues && onMultipleChange) {
       onMultipleChange(
         selectedKeys.has(next)
@@ -221,7 +278,7 @@ export function SearchableSelect({
       searchInput.current?.focus();
       return;
     }
-    onChange(next);
+    onChange(next, option);
     close();
     input.current?.focus();
   };
@@ -550,10 +607,18 @@ export function SearchableSelect({
                   ) : null}
                 </p>
               ) : null}
-              {!rows.length && !status ? (
+              {directory.nextCursor && !directory.loading ? (
+                <button type="button" className="a-reference-select__clear-recent" onClick={() => void loadDirectory(query, directory.nextCursor)}>
+                  Load more
+                </button>
+              ) : null}
+              {!rows.length && !status && !directory.loading && !directory.error ? (
                 <p className="a-reference-select__empty">
-                  {options.length ? messages.empty : messages.unavailable}
+                  {effectiveOptions.length ? messages.empty : messages.unavailable}
                 </p>
+              ) : null}
+              {directory.loading || directory.error ? (
+                <p className="a-reference-select__empty" role="status">{directory.loading ? "Loading…" : directory.error}</p>
               ) : null}
               {onClearRecent && recent.length ? (
                 <button
@@ -580,7 +645,7 @@ export function SearchableSelect({
         {open
           ? rows.length
             ? `${messages.results}: ${rows.length}`
-            : options.length
+            : effectiveOptions.length
               ? messages.empty
               : messages.unavailable
           : ""}

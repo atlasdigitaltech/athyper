@@ -282,97 +282,101 @@ export function BusinessPartnerRequestContent({
             </a>
           }
         >
-          {surface ? (
-            <EntityIntakeSurface
-              surface={surface}
-              answers={{ requested_role: role }}
-              onChange={changeRole}
-              lookupAdapters={lookupAdapters}
-            />
-          ) : (
-            <LegacyRequestedRole
-              role={role}
-              onChange={(value) => changeRole({ requested_role: value })}
-            />
-          )}
-          {role && !hasLookup ? (
-            <Card className="bp-section">
-              <h2>Find an existing partner</h2>
-              <p>
-                Search across suppliers and customers to reuse an existing
-                identity.
-              </p>
-              <form className="bp-form" onSubmit={search}>
-                <Label htmlFor="bp-partner-search">Partner name or code</Label>
-                <Input
-                  id="bp-partner-search"
-                  value={query}
-                  required
-                  onChange={(event) => {
-                    setQuery(event.currentTarget.value);
-                    resetSearch();
-                  }}
-                />
-                <Button
-                  type="submit"
-                  loading={busy}
-                  disabled={!query.trim() || busy}
-                >
-                  Search partners
-                </Button>
-              </form>
-              {error ? <p role="alert">{error}</p> : null}
-              {result ? (
-                <div aria-live="polite">
-                  <p>
-                    {result.rows.length
-                      ? "Select an existing partner to check its roles in your organization."
-                      : "No matching partners were found in your authorized directory."}
-                  </p>
-                  <ul>
-                    {result.rows.map((row) => (
-                      <li key={row.id}>
-                        <span>
-                          {String(
-                            row.values.displayName ??
-                              row.values.name ??
-                              row.values.legalName ??
-                              row.values.code ??
-                              row.id,
-                          )}
-                          {row.values.code ? ` · ${row.values.code}` : ""}
-                        </span>{" "}
-                        <Button
-                          variant="secondary"
-                          onClick={() => chooseTarget(row.id)}
-                        >
-                          Use existing partner
-                        </Button>{" "}
-                        <a
-                          href={`/mdg/business-partner/${encodeURIComponent(row.id)}`}
-                        >
-                          View partner
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                  {result.pagination.hasNext ? (
-                    <p>
-                      More matches are available. Refine your search before
-                      creating a new partner.
-                    </p>
-                  ) : null}
-                  <p>
-                    If this is a different organization, start a new {role}{" "}
-                    request.
-                  </p>
-                  <Button onClick={() => chooseTarget("new")}>
-                    New {role} request
+          <div className="bp-intake-partner">
+            {surface ? (
+              <EntityIntakeSurface
+                surface={surface}
+                answers={{ requested_role: role }}
+                onChange={changeRole}
+                lookupAdapters={lookupAdapters}
+              />
+            ) : (
+              <LegacyRequestedRole
+                role={role}
+                onChange={(value) => changeRole({ requested_role: value })}
+              />
+            )}
+            {role && !hasLookup ? (
+              <Card className="bp-section">
+                <h2>Find an existing partner</h2>
+                <p>
+                  Search across suppliers and customers to reuse an existing
+                  identity.
+                </p>
+                <form className="bp-intake-partner__search" onSubmit={search}>
+                  <div className="bp-field">
+                    <Label htmlFor="bp-partner-search">Partner name or code</Label>
+                    <Input
+                      id="bp-partner-search"
+                      value={query}
+                      required
+                      onChange={(event) => {
+                        setQuery(event.currentTarget.value);
+                        resetSearch();
+                      }}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    loading={busy}
+                    disabled={!query.trim() || busy}
+                  >
+                    Search partners
                   </Button>
-                </div>
-              ) : null}
-            </Card>
-          ) : null}
+                </form>
+                {error ? <p role="alert">{error}</p> : null}
+                {result ? (
+                  <div aria-live="polite">
+                    <p>
+                      {result.rows.length
+                        ? "Select an existing partner to check its roles in your organization."
+                        : "No matching partners were found in your authorized directory."}
+                    </p>
+                    <ul className="bp-intake-partner__results">
+                      {result.rows.map((row) => (
+                        <li key={row.id}>
+                          <span>
+                            {String(
+                              row.values.displayName ??
+                                row.values.name ??
+                                row.values.legalName ??
+                                row.values.code ??
+                                row.id,
+                            )}
+                            {row.values.code ? ` · ${row.values.code}` : ""}
+                          </span>{" "}
+                          <Button
+                            variant="secondary"
+                            onClick={() => chooseTarget(row.id)}
+                          >
+                            Use existing partner
+                          </Button>{" "}
+                          <a
+                            href={`/mdg/business-partner/${encodeURIComponent(row.id)}`}
+                          >
+                            View partner
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                    {result.pagination.hasNext ? (
+                      <p>
+                        More matches are available. Refine your search before
+                        creating a new partner.
+                      </p>
+                    ) : null}
+                    <p>
+                      If this is a different organization, start a new {role}{" "}
+                      request.
+                    </p>
+                    <Button onClick={() => chooseTarget("new")}>
+                      New {role} request
+                    </Button>
+                  </div>
+                ) : null}
+              </Card>
+            ) : null}
+          </div>
         </BusinessPartnerPageFrame>
       </div>
       {role && target ? (

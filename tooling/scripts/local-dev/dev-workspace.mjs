@@ -30,6 +30,20 @@ export const APPLICATIONS = [
 const project = "athyper-dev-source";
 const jsonRead = (path) => JSON.parse(readFileSync(path, "utf8"));
 const digest = (value) => createHash("sha256").update(value).digest("hex");
+export function configureDevPublication(config, preset, path = join(homedir(), ".athyper/instances/dev/secrets/dev-publication/server.json")) {
+  for (const name of ["api", "worker", "scheduler"]) {
+    const service = config.services[name];
+    if (!service) continue;
+    service.environment ??= {};
+    service.volumes = (service.volumes ?? []).filter(m => m.target !== "/run/dev-publication/server.json");
+    delete service.environment.ATHYPER_DEV_PUBLICATION_CONFIG;
+    service.environment.ATHYPER_DEV_PRESET = preset;
+    if (preset === "devfull" && existsSync(path)) {
+      service.volumes.push({ type: "bind", source: path, target: "/run/dev-publication/server.json", read_only: true });
+      service.environment.ATHYPER_DEV_PUBLICATION_CONFIG = "/run/dev-publication/server.json";
+    }
+  }
+}
 function run(args, options = {}) {
   const result = spawnSync(args[0], args.slice(1), {
     encoding: "utf8",
@@ -523,6 +537,7 @@ export async function main(args = process.argv.slice(2)) {
             process.getgid(),
             previewRoot,
           );
+      configureDevPublication(config, preset);
       // Keep all six definitions so devsimple can later return to devfull
       // even after the legacy containers have been removed.
       privateJson(fullFile, config);
@@ -699,6 +714,7 @@ export async function main(args = process.argv.slice(2)) {
             (mount) => mount.target !== checkout,
           );
         }
+        configureDevPublication(config, "devfull");
         const file = join(root, "container.compose.json");
         privateJson(file, config);
         mutate("compose", "-p", project, "-f", file, "config", "--quiet");

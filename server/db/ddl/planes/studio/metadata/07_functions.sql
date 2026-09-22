@@ -845,6 +845,7 @@ BEGIN
         + (SELECT count(*) FROM metadata.entity_surface_operation WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_operation_rule WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_flow WHERE change_set_id = p_change_set_id)
+        + (SELECT count(*) FROM metadata.entity_capability WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_policy_binding WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_field_policy_binding WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_contract_test_case WHERE change_set_id = p_change_set_id)

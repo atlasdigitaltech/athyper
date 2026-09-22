@@ -1,4 +1,5 @@
 "use client";
+import { WorkspaceSidePanelContext, type WorkspaceSidePanelRegistration } from "./workspace-side-panel";
 import { useAtlasContextNavigation } from "@athyper/platform-ai-agent-ui";
 import {
   GlobalAppBar,
@@ -189,6 +190,19 @@ export function ShellChrome({
     setQuickAccessTab,
     dismissTransient,
   } = useShellSurfaces();
+  const [atlasWidth, setAtlasWidth] = useState(420);
+  const [atlasWidthReady, setAtlasWidthReady] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem("athyper.atlas.panel.width"));
+      if (saved >= 360) setAtlasWidth(Math.min(560, saved));
+    } catch {}
+    setAtlasWidthReady(true);
+  }, []);
+  useEffect(() => {
+    if (!atlasWidthReady) return;
+    try { localStorage.setItem("athyper.atlas.panel.width", String(atlasWidth)); } catch {}
+  }, [atlasWidth, atlasWidthReady]);
   const [collapsed, setCollapsed] = useState(initialCollapsed),
     [observedPath, setPath] = useState("/");
   const routeState = useShellRoute(),
@@ -227,7 +241,7 @@ export function ShellChrome({
     setPath(window.location.pathname);
     const pinned = readShellPreference("athyper.atlas.pinned") === true;
     setAtlasPinned(pinned);
-    setAtlasOpen(pinned);
+    // Restore placement only. Opening Atlas requires an explicit user action.
     const stored = readShellPreference("athyper.shell.collapsed");
     if (stored !== undefined) {
       setCollapsed(stored);
@@ -328,8 +342,17 @@ export function ShellChrome({
     setAtlasPinned(next);
     writeShellPreference("athyper.atlas.pinned", next);
   };
+  const [sidePanel, setSidePanel] = useState<WorkspaceSidePanelRegistration>();
+  const claimSidePanel = useCallback((panel: WorkspaceSidePanelRegistration) => {
+    dismissTransient();
+    setAtlasOpen(false);
+    setSidePanel(panel);
+  }, [setAtlasOpen, dismissTransient]);
+  const releaseSidePanel = useCallback((id: string) => setSidePanel(current => current?.id === id ? undefined : current), []);
+  useEffect(() => { if (atlasOpen) setSidePanel(undefined); }, [atlasOpen]);
   const atlasVisible = atlasOpen && !path.startsWith("/atlas");
   return (
+    <WorkspaceSidePanelContext.Provider value={{ owner: atlasOpen ? "atlas" : sidePanel?.id, claim: claimSidePanel, release: releaseSidePanel }}>
     <ShellSurfaceContext.Provider value={{ surface, setContext }}>
       <AtlasSurfaceContext.Provider
         value={{
@@ -347,6 +370,8 @@ export function ShellChrome({
       >
         <div
           className="athyper-shell"
+          data-workspace-panel-pinned={Boolean(sidePanel?.pinned)}
+          style={{ "--atlas-panel": `${atlasWidth}px`, "--workspace-panel-width": `${sidePanel?.width ?? 420}px` } as React.CSSProperties}
           data-collapsed={collapsed}
           data-desktop-brand={persistentDesktopBrand}
           data-home-route={homeRoute}
@@ -580,6 +605,8 @@ export function ShellChrome({
                 ? {
                     breadcrumbs: crumbs,
                     mode: atlasFull ? "fullscreen" : "dock",
+                    width: atlasWidth,
+                    onWidthChange: setAtlasWidth,
                     planeName: applicationName,
                     currentPath: path,
                     pinned: atlasPinned && !compact,
@@ -651,6 +678,7 @@ export function ShellChrome({
         </div>
       </AtlasSurfaceContext.Provider>
     </ShellSurfaceContext.Provider>
+    </WorkspaceSidePanelContext.Provider>
   );
 }
 

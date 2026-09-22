@@ -33,3 +33,8 @@ export function HeadsetIcon(props: IconProps) { return <IconFrame {...props}><pa
 export function WrenchIcon(props: IconProps) { return <IconFrame {...props}><path d="M14 6a5 5 0 0 0-7 6L2 17l5 5 5-5a5 5 0 0 0 6-7l-3 3-4-4 3-3Z"/></IconFrame>; }
 export function BuildingKeyIcon(props: IconProps) { return <IconFrame {...props}><path d="M4 21V5h10v16M4 9H2v12M8 9h2M8 13h2M8 17h2M2 21h20"/><circle cx="18" cy="9" r="2"/><path d="M18 11v5h3"/></IconFrame>; }
 export function AssetIcon(props: IconProps) { return <IconFrame {...props}><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 6V3h8v3M8 18v3h8v-3M7 10h10M7 14h6"/></IconFrame>; }
+export function FolderPlusIcon(props: IconProps) { return <IconFrame {...props}><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M12 10v7M8.5 13.5h7"/></IconFrame>; }
+export function FolderInputIcon(props: IconProps) { return <IconFrame {...props}><path d="M3 8V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1M2 13h12m-3-3 3 3-3 3"/></IconFrame>; }
+export function PencilIcon(props: IconProps) { return <IconFrame {...props}><path d="m15 5 4 4M3 21l5-1L21 7a2.8 2.8 0 0 0-4-4L4 16l-1 5Z"/></IconFrame>; }
+export function ArchiveIcon(props: IconProps) { return <IconFrame {...props}><rect x="3" y="3" width="18" height="4" rx="1"/><path d="M5 7v14h14V7M10 11h4"/></IconFrame>; }
+export function UploadIcon(props: IconProps) { return <IconFrame {...props}><path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5"/></IconFrame>; }

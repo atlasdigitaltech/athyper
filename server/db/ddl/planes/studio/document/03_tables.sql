@@ -13,52 +13,7 @@ COMMENT ON TABLE document.attachment_link IS
 
 -- Append-only evidence for edits and moderation. The live comment remains the
 -- current projection; prior text is never destructively lost.
-CREATE TABLE document.comment_revision (
-    id             uuid                              NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id      uuid                              NOT NULL,
-    comment_id     uuid                              NOT NULL,
-    revision_no    integer                           NOT NULL,
-    comment_text   text                              NOT NULL,
-    content_format document.comment_content_format_d NOT NULL DEFAULT 'plain',
-    content_json   jsonb,
-    content_html   text,
-    content_schema text,
-    change_kind    text                              NOT NULL DEFAULT 'edit',
-    created_at     timestamptz                       NOT NULL DEFAULT now(),
-    created_by     uuid                              NOT NULL,
 
-    CONSTRAINT comment_revision_pkey PRIMARY KEY (id),
-    CONSTRAINT comment_revision_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT comment_revision_number_uq UNIQUE (tenant_id, comment_id, revision_no),
-    CONSTRAINT comment_revision_number_chk CHECK (revision_no > 0),
-    CONSTRAINT comment_revision_text_chk CHECK (btrim(comment_text) <> '' AND length(comment_text) <= 50000),
-    CONSTRAINT comment_revision_kind_chk CHECK (change_kind IN ('create', 'edit', 'moderate', 'restore')),
-    CONSTRAINT comment_revision_content_json_chk CHECK (content_json IS NULL OR jsonb_typeof(content_json) = 'object'),
-    CONSTRAINT comment_revision_content_schema_chk
-        CHECK (content_schema IS NULL OR content_schema ~ '^athyper\.rich-text/[0-9]+\.[0-9]+$')
-);
-
-CREATE TABLE document.comment_moderation_flag (
-    id             uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id      uuid        NOT NULL,
-    comment_id     uuid        NOT NULL,
-    reporter_id    uuid        NOT NULL,
-    reason_code    text        NOT NULL,
-    detail         text,
-    status         text        NOT NULL DEFAULT 'open',
-    resolution     jsonb       NOT NULL DEFAULT '{}'::jsonb,
-    resolved_at    timestamptz,
-    resolved_by    uuid,
-    created_at     timestamptz NOT NULL DEFAULT now(),
-    created_by     uuid        NOT NULL,
-
-    CONSTRAINT comment_moderation_flag_pkey PRIMARY KEY (id),
-    CONSTRAINT comment_moderation_flag_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT comment_moderation_flag_reason_chk CHECK (reason_code ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT comment_moderation_flag_status_chk CHECK (status IN ('open', 'reviewing', 'dismissed', 'actioned')),
-    CONSTRAINT comment_moderation_flag_resolution_chk CHECK (jsonb_typeof(resolution) = 'object'),
-    CONSTRAINT comment_moderation_flag_resolution_pair_chk CHECK ((resolved_at IS NULL) = (resolved_by IS NULL))
-);
 
 
 CREATE UNIQUE INDEX content_item_root_slug_uq

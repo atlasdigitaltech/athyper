@@ -1,0 +1,217 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.roles-scope",
+  "entityCode": "business_partner_operating_organization_assignment",
+  "plane": "neon",
+  "sectionKey": "roles-scope",
+  "rendererKey": "platform.related-collection.v1",
+  "emptyState": {
+    "title": "No role assignments yet",
+    "detail": "When role assignments are added, they’ll appear here."
+  },
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.roles-scope.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/roles"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "business_partner_operating_organization_assignment/core.json",
+  "fieldBindings": [],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [
+    "business_partner_operating_organization_assignment/core",
+    "business_partner_operating_organization_assignment/operation",
+    "business_partner_request/operation",
+    "customer/core",
+    "customer/operation",
+    "supplier/core",
+    "supplier/operation"
+  ],
+  "completenessPacks": [
+    {
+      "category": "organization",
+      "code": "supplier_scope",
+      "requirements": [
+        {
+          "actionCode": "add_role",
+          "code": "supplier.role",
+          "fieldCode": "role.supplier",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.roles-scope.completenessPacks.supplier_scope.requirements.supplier.role.label",
+            "defaultText": "Add supplier role"
+          },
+          "sectionCode": "roles-scope",
+          "severity": "required",
+          "factRef": {
+            "entityCode": "supplier",
+            "code": "COMPLETENESS_SUPPLIER_ROLE"
+          },
+          "enforcement": "informational"
+        },
+        {
+          "actionCode": "assign_organization",
+          "code": "supplier.organization",
+          "fieldCode": "scope.supplier.organization",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.roles-scope.completenessPacks.supplier_scope.requirements.supplier.organization.label",
+            "defaultText": "Assign procurement organization"
+          },
+          "sectionCode": "roles-scope",
+          "severity": "required",
+          "factRef": {
+            "entityCode": "supplier",
+            "code": "PROCUREMENT_ASSIGNMENT_EFFECTIVE"
+          },
+          "enforcement": "operation_gate",
+          "operationBindingRef": {
+            "artifactRef": "business_partner_request/operation.json",
+            "bindingKey": "supplier.readiness"
+          }
+        }
+      ],
+      "role": "supplier",
+      "scope": "organization",
+      "version": 1
+    },
+    {
+      "category": "organization",
+      "code": "customer_scope",
+      "requirements": [
+        {
+          "actionCode": "add_role",
+          "code": "customer.role",
+          "fieldCode": "role.customer",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.roles-scope.completenessPacks.customer_scope.requirements.customer.role.label",
+            "defaultText": "Add customer role"
+          },
+          "sectionCode": "roles-scope",
+          "severity": "required",
+          "factRef": {
+            "entityCode": "customer",
+            "code": "COMPLETENESS_CUSTOMER_ROLE"
+          },
+          "enforcement": "informational"
+        },
+        {
+          "actionCode": "assign_organization",
+          "code": "customer.organization",
+          "fieldCode": "scope.customer.organization",
+          "label": {
+            "labelKey": "entity.business_partner.presentation.section.roles-scope.completenessPacks.customer_scope.requirements.customer.organization.label",
+            "defaultText": "Assign sales organization"
+          },
+          "sectionCode": "roles-scope",
+          "severity": "required",
+          "factRef": {
+            "entityCode": "customer",
+            "code": "SALES_ASSIGNMENT_EFFECTIVE"
+          },
+          "enforcement": "operation_gate",
+          "operationBindingRef": {
+            "artifactRef": "business_partner_request/operation.json",
+            "bindingKey": "customer.readiness"
+          }
+        }
+      ],
+      "role": "customer",
+      "scope": "organization",
+      "version": 1
+    }
+  ],
+  "completenessEvaluation": {
+    "source": "server_contextual_facts",
+    "evaluate": "section_open_only",
+    "remediationActionResolution": "registered_domain_operation_to_request_flow",
+    "missingResolver": "hide_action_with_diagnostic",
+    "noImplicitOperationAuthority": true
+  },
+  "childCollections": [
+    {
+      "key": "supplier_role",
+      "entityCode": "supplier",
+      "coreRef": "supplier/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "supplier_code"
+        },
+        {
+          "fieldKey": "supplier_type"
+        },
+        {
+          "fieldKey": "status"
+        }
+      ],
+      "load": "on_visible",
+      "operationRef": "supplier/operation.json"
+    },
+    {
+      "key": "customer_role",
+      "entityCode": "customer",
+      "coreRef": "customer/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "customer_code"
+        },
+        {
+          "fieldKey": "customer_type"
+        },
+        {
+          "fieldKey": "status"
+        }
+      ],
+      "load": "on_visible",
+      "operationRef": "customer/operation.json"
+    },
+    {
+      "key": "operating_organization_assignments",
+      "entityCode": "business_partner_operating_organization_assignment",
+      "coreRef": "business_partner_operating_organization_assignment/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "operating_organization_id"
+        },
+        {
+          "fieldKey": "partner_role"
+        },
+        {
+          "fieldKey": "effective_from"
+        },
+        {
+          "fieldKey": "effective_until"
+        }
+      ],
+      "load": "on_visible",
+      "operationRef": "business_partner_operating_organization_assignment/operation.json"
+    }
+  ],
+  "artifactHash": "sha256:2693ff6dd640e902b80f4bf4471f87dcfb0142ee7203f374d6d1886dc5960513"
+}

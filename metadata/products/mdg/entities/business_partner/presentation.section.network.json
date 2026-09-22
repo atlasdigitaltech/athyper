@@ -1,0 +1,121 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.network",
+  "entityCode": "business_partner",
+  "plane": "neon",
+  "sectionKey": "network",
+  "rendererKey": "platform.related-collection.v1",
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.network.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/network"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "business_partner/core.json",
+  "fieldBindings": [],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner_network.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [
+    "business_partner/core",
+    "business_partner_relationship/core",
+    "business_partner_relationship/operation",
+    "business_partner_governance_relation/core",
+    "business_partner_governance_relation/operation"
+  ],
+  "artifactHash": "sha256:fc03361b06ea83f5aa1064e65f4ae310b8a5762fa789c19cadd70724975f7763",
+  "childCollections": [
+    {
+      "key": "commercial_relationships",
+      "entityCode": "business_partner_relationship",
+      "coreRef": "business_partner_relationship/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "source_business_partner_id"
+        },
+        {
+          "fieldKey": "target_business_partner_id"
+        },
+        {
+          "fieldKey": "relationship_type_code"
+        },
+        {
+          "fieldKey": "country_code"
+        },
+        {
+          "fieldKey": "effective_from"
+        },
+        {
+          "fieldKey": "effective_until"
+        },
+        {
+          "fieldKey": "status"
+        }
+      ],
+      "load": "on_visible",
+      "operationRef": "business_partner_relationship/operation.json",
+      "emptyState": {
+        "title": "No commercial relationships",
+        "detail": "Relationships are directional: the current partner may be the source or the target."
+      }
+    },
+    {
+      "key": "governance_relations",
+      "entityCode": "business_partner_governance_relation",
+      "coreRef": "business_partner_governance_relation/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "relation_type_code"
+        },
+        {
+          "fieldKey": "member_name"
+        },
+        {
+          "fieldKey": "member_type"
+        },
+        {
+          "fieldKey": "business_title"
+        },
+        {
+          "fieldKey": "ownership_pct"
+        },
+        {
+          "fieldKey": "appointed_date"
+        },
+        {
+          "fieldKey": "end_of_term"
+        },
+        {
+          "fieldKey": "status"
+        }
+      ],
+      "load": "on_visible",
+      "operationRef": "business_partner_governance_relation/operation.json"
+    }
+  ]
+}

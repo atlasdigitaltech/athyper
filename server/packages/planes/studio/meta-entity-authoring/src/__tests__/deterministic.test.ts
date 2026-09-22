@@ -71,7 +71,7 @@ describe("deterministic meta entity pipeline", () => {
     expect(first.descriptorHash).toBe(
       "b95907f0dc3f6b3c2e90a6ed1bd2cbecdbf4540fae93abfe73416ec44e99356c",
     );
-    expect(first.compiler.version).toBe("1.0.0");
+    expect(first.compiler.version).toBe("1.1.0");
   });
   it("reports stable reference errors", () => {
     const invalid = {

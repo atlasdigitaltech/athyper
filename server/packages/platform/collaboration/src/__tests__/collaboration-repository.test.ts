@@ -108,3 +108,17 @@ describe("collaboration SQL regressions", () => {
     expect(queries.some((query) => query.includes("INSERT"))).toBe(false);
   });
 });
+
+it("returns only deletion metadata for an authorized owner without querying revisions", async()=>{
+  const queries=await run([[{status:"deleted",deleted_at:"2026-09-22T06:00:00Z",deleted_by:context.principalId}]],async(repository,tx)=>{
+    await expect(repository.history!({context,commentId:command.parentCommentId},tx)).resolves.toEqual({items:[],deletion:{deletedAt:"2026-09-22T06:00:00.000Z",deletedBy:context.principalId}});
+  });
+  expect(queries).toHaveLength(1);
+  expect(queries[0]).toContain('commenter_id=');
+  expect(queries[0]).not.toContain('comment_revision');
+});
+it("denies history when the owner lookup fails",async()=>{
+  await run([[]],async(repository,tx)=>{
+    await expect(repository.history!({context,commentId:command.parentCommentId},tx)).rejects.toMatchObject({code:'HISTORY_UNAVAILABLE'});
+  });
+});

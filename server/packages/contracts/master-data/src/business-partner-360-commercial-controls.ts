@@ -67,7 +67,10 @@ export interface BusinessPartner360CommodityCodeItem {
   readonly code: string;
   readonly name: string;
   readonly mappingType: string;
+  readonly confidence?: number;
+  readonly provenance?: string;
   readonly primary: boolean;
+  readonly routingDefault: boolean;
 }
 export interface BusinessPartner360CommodityCapabilityItem {
   readonly id: string;

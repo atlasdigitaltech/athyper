@@ -337,3 +337,73 @@ test("persistent desktop brand wordmark inverts to white under dark theme", asyn
   await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; });
   await expect(wordmark).not.toHaveCSS("filter", "none");
 });
+
+test("quick access uses shared panel chrome, one empty state and keyboard tabs", async ({page})=>{
+  await mount(page,1280);
+  await page.getByRole("button",{name:"Open recent items"}).click();
+  const panel=page.getByRole("dialog",{name:"Quick access"});
+  const search=panel.getByRole("searchbox",{name:"Filter quick access items"});
+  await expect(panel.locator(".a-search-field")).toHaveCSS("height","40px");
+  await expect(search).toHaveCSS("font-size","14px");
+  await search.fill("nonmatching work");
+  await expect(panel.getByRole("heading",{name:"No matching recent items"})).toBeVisible();
+  await expect(panel.getByRole("button",{name:"Clear all recent",exact:true})).toHaveCount(0);
+  const empty=panel.locator(".a-panel-empty-state");
+  await expect(empty).toHaveCSS("border-top-style","solid");
+  await expect(empty.locator("p")).toHaveCSS("font-size","14px");
+  const clearSearch=empty.getByRole("button",{name:"Clear search",exact:true});
+  await expect(clearSearch).toHaveCSS("font-weight","400");
+  await expect(clearSearch.locator("svg")).toHaveCount(0);
+  await panel.getByRole("button",{name:"Clear filter",exact:true}).click();
+  await expect(search).toHaveValue("");
+  await expect(search).toBeFocused();
+  const recent=panel.getByRole("tab",{name:/Recent/});
+  await recent.focus();await page.keyboard.press("Home");
+  const favourites=panel.getByRole("tab",{name:/Favourites/});
+  await expect(favourites).toBeFocused();
+  await expect(favourites).toHaveAttribute("aria-selected","true");
+  await expect(panel.getByRole("heading",{name:"No favourites yet"})).toBeVisible();
+  await expect(panel.locator(".athyper-quick-access__summary")).toHaveCount(0);
+  const before=await panel.locator(".a-panel-header__icon").innerHTML();
+  await page.keyboard.press("End");
+  await expect(recent).toBeFocused();
+  await expect(recent).toHaveAttribute("aria-selected","true");
+  expect(await panel.locator(".a-panel-header__icon").innerHTML()).not.toBe(before);
+  await expect(panel.locator(".a-panel-header")).toBeVisible();
+  await expect(panel.locator(".a-panel-tabs")).toBeVisible();
+});
+
+test("activity center shares panel chrome and filtered empty-state recovery",async({page})=>{
+  await mount(page,1280,false,"/","?zero");
+  await page.getByRole("button",{name:/^Notifications/}).click();
+  const panel=page.getByRole("dialog",{name:"Activity center"});
+  await expect(panel.locator(".a-panel-header")).toBeVisible();
+  await expect(panel.locator(".a-panel-tabs")).toBeVisible();
+  await expect(panel.getByRole("heading",{name:"You’re all caught up"})).toBeVisible();
+  await panel.getByRole("button",{name:/^Unread/}).click();
+  await expect(panel.getByRole("heading",{name:"No unread notifications"})).toBeVisible();
+  await panel.getByRole("button",{name:"Show all",exact:true}).click();
+  await expect(panel.getByRole("heading",{name:"You’re all caught up"})).toBeVisible();
+  const notifications=panel.getByRole("tab",{name:/Notifications/});await notifications.focus();await page.keyboard.press("End");
+  await expect(panel.getByRole("tab",{name:/Inbox/})).toBeFocused();
+  await expect(panel.getByRole("heading",{name:"Your inbox is empty"})).toBeVisible();
+});
+
+test("activity access failures explain access and transient failures can retry",async({page})=>{
+  for(const status of [403,500]){
+    await mount(page,1280,false,"/",`?activityError=${status}`);
+    await page.getByRole("button",{name:/^Notifications/}).click();
+    const panel=page.getByRole("dialog",{name:"Activity center"}),alert=panel.getByRole("alert");
+    await expect(alert).toHaveAttribute("data-tone","error");
+    await expect(alert).not.toContainText("Request failed");
+    await expect(panel.getByRole("link",{name:/View all/})).toHaveCount(0);
+    if(status===403){
+      await expect(alert).toContainText("Contact your administrator");
+      await expect(panel.getByRole("button",{name:"Try again"})).toHaveCount(0);
+    }else{
+      await expect(alert).toContainText("Couldn’t load notifications");
+      await panel.getByRole("button",{name:"Try again"}).click();
+      expect(await page.evaluate(()=>(window as any).activityRetries)).toBe(1);
+    }
+  }
+});

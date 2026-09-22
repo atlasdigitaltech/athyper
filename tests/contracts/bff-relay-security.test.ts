@@ -137,7 +137,7 @@ describe("Phase 4 hardened BFF relay", () => {
     assert.equal(ATLAS_ANSWER_RELAY_OPERATIONS.some((item)=>item.path==="/api/attachments/:attachmentId/status"),true);
   });
   it("exposes published experience reads to every plane and Studio-only authoring relays",async()=>{assert.ok(ATLAS_ANSWER_RELAY_OPERATIONS.some((item)=>item.path==="/api/atlas/experience"));const studio=readFileSync(new URL("../../apps/studio/lib/relay.ts",import.meta.url),"utf8");assert.match(studio,/ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS/);assert.equal(ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS.filter((item)=>item.method!=="GET").every((item)=>item.idempotency==="required"),true);for(const plane of ["neon","mesh"]){const source=readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`,import.meta.url),"utf8");assert.doesNotMatch(source,/ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS/);}});
-  it("allowlists governed Atlas conversation history and lifecycle routes",()=>{for(const signature of [["GET","/api/atlas/threads"],["GET","/api/atlas/threads/:threadId/messages"],["GET","/api/atlas/threads/:threadId/export"],["PATCH","/api/atlas/threads/:threadId"],["POST","/api/atlas/threads/:threadId/archive"]]as const)assert.ok(ATLAS_ANSWER_RELAY_OPERATIONS.some((item)=>item.method===signature[0]&&item.path===signature[1]));assert.equal(ATLAS_ANSWER_RELAY_OPERATIONS.filter((item)=>item.method==="PATCH"||item.path.endsWith("/archive")).every((item)=>item.idempotency==="required"),true);});
+  it("allowlists governed Atlas conversation history and lifecycle routes",()=>{for(const signature of [["GET","/api/atlas/threads"],["GET","/api/atlas/threads/:threadId/messages"],["GET","/api/atlas/threads/:threadId/export"],["PATCH","/api/atlas/threads/:threadId"],["POST","/api/atlas/threads/:threadId/archive"]]as const)assert.ok(ATLAS_ANSWER_RELAY_OPERATIONS.some((item)=>item.method===signature[0]&&item.path===signature[1]));assert.equal(ATLAS_ANSWER_RELAY_OPERATIONS.filter((item)=>item.method==="PATCH"||(item.method==="POST"&&item.path.endsWith("/archive"))).every((item)=>item.idempotency==="required"),true);});
   it("registers descriptor and list reads in every plane that hosts the shared List View", () => {
     for (const plane of ["neon", "mesh", "studio"]) {
       const source = readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`, import.meta.url), "utf8");
@@ -351,4 +351,20 @@ describe("Phase 4 hardened BFF relay", () => {
   it("invalidates context mismatch without refresh loops and keeps diagnostics redacted", async () => {
     const auth = authority(); const diagnostics: RelayDiagnostic[] = []; const handler = relay({ authority: auth, diagnostics, fetch: async () => new Response(JSON.stringify({ code: "AUTH_CONTEXT_MISMATCH", detail: "secret-body" }), { status: 403, headers: { "content-type": "application/problem+json", "x-request-id": "request-7" } }) }); const response = await handler(new Request("https://neon.example/api/relay/iam/me", { headers: { cookie: "secret-cookie", authorization: "Bearer browser-secret" } }), context("iam", "me")); assert.equal(response.status, 401); assert.equal(response.headers.get("x-athyper-session-action"), "login"); assert.equal(auth.invalidated, 1); assert.equal(auth.refreshed, 0); const serialized = JSON.stringify(diagnostics); assert.doesNotMatch(serialized, /server-token|secret-cookie|browser-secret|secret-body/);
   });
+});
+
+
+it("registers attachment lifecycle mutations with mandatory replay keys and read-only archive preflight", () => {
+  for (const [method, path] of [
+    ["POST", "/api/attachments/stage"],
+    ["POST", "/api/attachments/:attachmentId/finalize"],
+    ["POST", "/api/attachments/:attachmentId/category"],
+    ["POST", "/api/attachments/:attachmentId/archive"],
+    ["DELETE", "/api/attachments/:attachmentId"],
+  ]) {
+    const operation = ATLAS_ANSWER_RELAY_OPERATIONS.find(item => item.method === method && item.path === path);
+    assert.ok(operation, `${method} ${path}`);
+    assert.equal(operation.idempotency, "required");
+  }
+  assert.ok(ATLAS_ANSWER_RELAY_OPERATIONS.some(item => item.method === "GET" && item.path === "/api/attachments/:attachmentId/archive"));
 });

@@ -1,0 +1,119 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.identity",
+  "entityCode": "business_partner",
+  "plane": "neon",
+  "sectionKey": "identity",
+  "rendererKey": "platform.fields.v1",
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.identity.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/identity"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "business_partner/core.json",
+  "fieldBindings": [
+    {
+      "fieldKey": "code"
+    },
+    {
+      "fieldKey": "name"
+    },
+    {
+      "fieldKey": "registration_country_code"
+    },
+    {
+      "fieldKey": "partner_category"
+    },
+    {
+      "fieldKey": "ownership_class"
+    },
+    {
+      "fieldKey": "legal_form_value_id"
+    },
+    {
+      "fieldKey": "incorporation_date"
+    },
+    {
+      "fieldKey": "website_url"
+    },
+    {
+      "fieldKey": "description"
+    },
+    {
+      "fieldKey": "status"
+    },
+    {
+      "fieldKey": "record_version"
+    }
+  ],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner_identity.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [
+    "business_partner/core",
+    "business_partner_alias/core",
+    "business_partner_alias/operation"
+  ],
+  "childCollections": [
+    {
+      "key": "aliases",
+      "entityCode": "business_partner_alias",
+      "coreRef": "business_partner_alias/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "alias_kind"
+        },
+        {
+          "fieldKey": "alias_name"
+        },
+        {
+          "fieldKey": "language_code"
+        },
+        {
+          "fieldKey": "country_code"
+        },
+        {
+          "fieldKey": "is_primary"
+        },
+        {
+          "fieldKey": "effective_from"
+        },
+        {
+          "fieldKey": "effective_until"
+        }
+      ],
+      "load": "on_visible",
+      "operationRef": "business_partner_alias/operation.json",
+      "emptyState": {
+        "title": "No alternate names",
+        "detail": "Effective legal, trading, former, and search names appear here."
+      }
+    }
+  ],
+  "artifactHash": "sha256:3c506fa817231afe44b3c3b3aa59772d2a451ec183f0d224596b9b4f959b5412"
+}

@@ -1,3 +1,4 @@
+import { EntityCapabilityPolicyError } from "./entity-capability-policy.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { registerContractRoute } from "@athyper/server-runtime-http";
 import type { Application, NextFunction, Request, RequestHandler, Response } from "express";
@@ -14,6 +15,7 @@ export function registerEntityRuntimeRoutes(app: Application, options: { readonl
       if (!value) { response.status(404).json(problem(404, "ENTITY_RUNTIME_RESOURCE_NOT_FOUND")); return; }
       response.setHeader("Cache-Control", "private, no-store").status(200).json(value);
     } catch (error) {
+      if (error instanceof EntityCapabilityPolicyError) { response.status(403).type("application/problem+json").json(problem(403,error.code)); return; }
       if (error instanceof EntityRuntimeResourceError || error instanceof EntityRuntimeOperationError) { response.status(error.status).type("application/problem+json").json(problem(error.status, error.code, error.message)); return; }
       next(error);
     }
@@ -39,6 +41,7 @@ function resourceContext(request: Request): EntityRuntimeResourceContext | undef
     ...(request.query.legalEntityId ? { legalEntityId: uuid(request.query.legalEntityId) } : {}),
     ...(typeof request.query.asOf === "string" && /^\d{4}-\d{2}-\d{2}$/.test(request.query.asOf) ? { asOf: request.query.asOf } : {}),
     ...(validRoleLens ? { roleLens: validRoleLens } : {}),
+    ...(request.query.threadRootId ? { threadRootId: uuid(request.query.threadRootId) } : {}),
   };
   return Object.keys(value).length ? value : undefined;
 }

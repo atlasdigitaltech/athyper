@@ -80,7 +80,7 @@ describe("compiled entity artifact compiler", () => {
 
   it("rebuilds the complete BP review package deterministically from hash-free authoring input", async () => {
     const root = new URL(
-      "../../../../../../docs/architecture/application-experience/entity-policy-examples/New_Entity/",
+      "../../../../../../metadata/products/mdg/entities/",
       import.meta.url,
     );
     const paths = await jsonPaths(root);
@@ -91,12 +91,13 @@ describe("compiled entity artifact compiler", () => {
     const artifactDocuments = documents.filter(({ value }) =>
       ["core", "operation", "presentation_surface", "presentation_section", "flow"].includes(String(value.artifactType)),
     );
-    const registryCatalog = documents.find(({ path }) => path === "review/registry-catalog.json")!.value;
+    const registryCatalog = JSON.parse(await readFile(new URL("../review/registry-catalog.json", root), "utf8"));
     const registryEntries = registryCatalog.entries as readonly { kind: string; key: string }[];
     const releaseDocument = documents.find(({ path }) => path === "business_partner/release.json")!.value;
     const result = compileCompiledEntityArtifacts({
       canonicalizer,
       registry: {
+        permissions: new Set(registryEntries.filter((entry) => entry.kind === "permission").map((entry) => entry.key)),
         handlers: new Set(registryEntries.filter((entry) => entry.kind === "handler").map((entry) => entry.key)),
         renderers: new Set(registryEntries.filter((entry) => entry.kind === "renderer").map((entry) => entry.key)),
         resolvers: new Set(registryEntries.filter((entry) => entry.kind === "resolver").map((entry) => entry.key)),
@@ -111,6 +112,7 @@ describe("compiled entity artifact compiler", () => {
     const repeated = compileCompiledEntityArtifacts({
       canonicalizer,
       registry: {
+        permissions: new Set(registryEntries.filter((entry) => entry.kind === "permission").map((entry) => entry.key)),
         handlers: new Set(registryEntries.filter((entry) => entry.kind === "handler").map((entry) => entry.key)),
         renderers: new Set(registryEntries.filter((entry) => entry.kind === "renderer").map((entry) => entry.key)),
         resolvers: new Set(registryEntries.filter((entry) => entry.kind === "resolver").map((entry) => entry.key)),
@@ -122,7 +124,7 @@ describe("compiled entity artifact compiler", () => {
       }),
       release: { content: without(releaseDocument, ["artifacts", "releaseHash"]) },
     });
-    expect(result.artifacts).toHaveLength(93);
+    expect(result.artifacts).toHaveLength(artifactDocuments.length);
     expect(result.releaseDocument).toEqual(repeated.releaseDocument);
     expect(result.artifacts.map((item) => item.artifact.artifactHash)).toEqual(
       repeated.artifacts.map((item) => item.artifact.artifactHash),

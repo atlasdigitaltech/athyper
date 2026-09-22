@@ -29,7 +29,7 @@ test.describe("session lifecycle", () => {
     expect(expiries.length, "authenticated session must publish a future expiry").toBeGreaterThan(0);
     const next = expiries.sort((left, right) => left.value - right.value)[0]!;
     await page.clock.fastForward(Math.max(0, next.value - now - 5 * 60_000) + 100);
-    await expect(page.getByRole("status").filter({ hasText: next.kind === "idle" ? "Session idle timeout approaching" : "Session ending soon" })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: next.kind === "idle" ? "Inactive session ending soon" : "Maximum session duration ending soon" })).toBeVisible();
   });
 
   test("cross-tab termination event redirects both tabs", async ({ context }, testInfo) => {

@@ -1,5 +1,10 @@
 # Draft Neon compiled entity descriptors
 
+The actively edited split-artifact package now lives in
+[metadata/products/mdg](../../../../metadata/products/mdg/README.md).
+The descriptor snapshots, original source bundle and older examples remaining
+here are historical/review evidence, not alternate canonical definitions.
+
 The three `*.entity_descriptor.compiled.json` files show the JSON intended for
 `runtime_meta.entity_descriptor.compiled_json` after Studio publishes an entity
 release and the Neon compiler has produced a plane-specific descriptor.

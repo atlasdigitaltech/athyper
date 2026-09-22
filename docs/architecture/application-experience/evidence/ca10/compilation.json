@@ -1,0 +1,18 @@
+{
+  "baseline": {
+    "row_version": 12,
+    "activated_at": "2026-09-21T13:03:18.397397+00:00",
+    "artifact_hash": "a6ba9c7fd8571b8efb234429f109891275c7c3896d966b0b47e468472701d1b0",
+    "publication_key": "metadata.compiled_entity.business_partner",
+    "source_release_no": 12,
+    "applied_release_id": "01a0c410-4f72-7b51-b702-b347e5c34559"
+  },
+  "changedArtifactKeys": [
+    "business_partner/operation",
+    "business_partner/presentation.section.attachments"
+  ],
+  "artifactCount": 95,
+  "releaseHash": "sha256:ebd9e51260f45c84d6d96b4cb5d60860a924205345af66629e7168fe7103be92",
+  "published": false,
+  "activated": false
+}

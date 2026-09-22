@@ -1,7 +1,8 @@
+import { MalwareDocumentUnsupportedError } from "@athyper/server-contract-malware-scanning";
 import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 import type { Application, RequestHandler } from "express";
-import { registerAttachmentRoutes } from "./attachment-routes.js";
+import { registerAttachmentRoutes, type AttachmentRouteOptions } from "./attachment-routes.js";
 import { QuotaExceededError } from "./quota.js";
 describe("attachment quota HTTP contract", () => {
   it("returns 429 problem details and Retry-After", async () => {
@@ -13,6 +14,7 @@ describe("attachment quota HTTP contract", () => {
       post: register,
       get: register,
       delete: register,
+      patch: register,
     } as unknown as Application;
     const policy = {
       kind: "attachment.storage" as const,
@@ -142,6 +144,7 @@ describe("Atlas attachment authorization", () => {
       post: register,
       get: register,
       delete: register,
+      patch: register,
     } as unknown as Application;
     const requests: Array<{
       permissionCode: string;
@@ -222,7 +225,7 @@ describe("Atlas attachment authorization", () => {
 
 describe("attachment route security regressions", () => {
   const attachmentId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-  function fixture(granted: string[], entityType?: string) {
+  function fixture(granted: string[], entityType?: string, authorizeCapability?: AttachmentRouteOptions["authorizeCapability"]) {
     const routes = new Map<string, RequestHandler>();
     const register = (path: string, ...handlers: RequestHandler[]) => {
       routes.set(path, handlers.at(-1)!);
@@ -244,8 +247,13 @@ describe("attachment route security regressions", () => {
         expiresAt: "2026-09-06T00:00:00Z",
       })),
       status: vi.fn(async () => record),
+      authorizedStatus: vi.fn(async () => record),
       finalize: vi.fn(async () => record),
       deactivate: vi.fn(async () => undefined),
+      unlink: vi.fn(async () => ({ unlinked: true, orphaned: false })),
+      rename: vi.fn(async () => record),
+      manageFolder: vi.fn(async () => ({ folderId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", revision: 2 })),
+      setCategory: vi.fn(async () => undefined),
       createAuthorizedDownload: vi.fn(async () => ({
         attachmentId,
         url: "https://download.test",
@@ -269,11 +277,13 @@ describe("attachment route security regressions", () => {
         post: register,
         get: register,
         delete: register,
+        patch: (path: string, ...handlers: RequestHandler[]) => register(`PATCH ${path}`, ...handlers),
       } as unknown as Application,
       {
         authenticate: (_req, _res, next) => next(),
         readContext: context,
         authorizer: { authorize },
+        ...(authorizeCapability ? {authorizeCapability} : {}),
         attachments,
         maxUploadBytes: 100,
         contentAcl: {
@@ -310,15 +320,78 @@ describe("attachment route security regressions", () => {
       contentAuthorize,
       output,
       next,
-      invoke: async (path: string, body: unknown = {}) => {
+      invoke: async (path: string, body: unknown = {}, idempotencyKey?: string) => {
         await routes.get(path)!(
-          { params: { attachmentId }, body } as never,
+          { params: { attachmentId }, body, get: (name: string) => name === "Idempotency-Key" ? idempotencyKey : undefined } as never,
           response as never,
           next,
         );
       },
     };
   }
+  it("returns a truthful non-retryable 422 when PDF inspection is unsupported", async()=>{
+    const f=fixture(["neon.collaboration.attachment.finalize"]);
+    f.attachments.finalize.mockRejectedValueOnce(new MalwareDocumentUnsupportedError());
+    await f.invoke("/api/attachments/:attachmentId/finalize",{contentType:"application/pdf"});
+    expect(f.output).toMatchObject({status:422,body:{code:"MALWARE_DOCUMENT_UNSUPPORTED",detail:expect.stringContaining("cannot be safely inspected")}});
+    expect(f.next).not.toHaveBeenCalled();
+  });
+  it("forwards the relay idempotency header into stage and finalize admission", async () => {
+    const authorizeCapability = vi.fn(async () => ({admittedReleaseHash:"release-hash",admittedPolicyHash:"policy-hash"}));
+    const f=fixture([],undefined,authorizeCapability);
+    await f.invoke("/api/attachments/stage",{attachmentId,fileName:"fixture.pdf",contentType:"application/pdf",sizeBytes:10,entityType:"business_partner",entityId:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"},"ca10-upload-key");
+    expect(authorizeCapability).toHaveBeenCalledWith(expect.anything(),"create",expect.objectContaining({idempotencyKey:"ca10-upload-key"}));
+    await f.invoke("/api/attachments/:attachmentId/finalize",{contentType:"application/pdf"},"ca10-upload-key");
+    expect(authorizeCapability).toHaveBeenCalledWith(expect.anything(),"finalize",expect.objectContaining({idempotencyKey:"ca10-upload-key"}));
+  });
+  it("uses the admitted entity capability for a staged record attachment", async () => {
+    const authorizeCapability = vi.fn(async () => ({
+      admittedReleaseHash: "release-hash",
+      admittedPolicyHash: "policy-hash",
+      entityType: "business_partner",
+      entityId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    }));
+    const f = fixture([], undefined, authorizeCapability);
+    await f.invoke("/api/attachments/stage", {
+      attachmentId,
+      fileName: "supplier.pdf",
+      contentType: "application/pdf",
+      sizeBytes: 10,
+      entityType: "business_partner",
+      entityId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    });
+    expect(f.output.status).toBe(201);
+    expect(f.attachments.stage).toHaveBeenCalledWith(expect.objectContaining({
+      admittedReleaseHash: "release-hash",
+      admittedPolicyHash: "policy-hash",
+    }));
+    expect(f.authorize).not.toHaveBeenCalled();
+  });
+  it("admits an explicit null destination when moving a file to Unfiled", async () => {
+    const f=fixture([],undefined,vi.fn(async()=>({admittedReleaseHash:"release",admittedPolicyHash:"policy",entityType:"business_partner",entityId:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"})));
+    await f.invoke("/api/attachments/folders",{command:"move",folderId:null,attachmentId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",entityType:"business_partner",entityId:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",expectedRevision:1,idempotencyKey:"unfile-command-0001"});
+    expect(f.output.status).toBe(200);
+    expect(f.attachments.manageFolder).toHaveBeenCalledWith(expect.anything(),expect.objectContaining({command:"move",folderId:null,expectedRevision:1}));
+  });
+  it("uses the admitted entity capability for record folders and categories", async () => {
+    const authorizeCapability = vi.fn(async () => ({
+      admittedReleaseHash: "release-hash",
+      admittedPolicyHash: "policy-hash",
+      entityType: "business_partner",
+      entityId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    }));
+    const f = fixture([], undefined, authorizeCapability);
+    const coordinate = { entityType: "business_partner", entityId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" };
+    await f.invoke("/api/attachments/folders", { command: "create", folderId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", name: "Evidence", expectedRevision: 1, idempotencyKey: "folder-command-0001", ...coordinate });
+    expect(f.output.status).toBe(200);
+    expect(f.attachments.manageFolder).toHaveBeenCalledOnce();
+    expect(f.attachments.manageFolder).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ expectedRevision: 1, idempotencyKey: "folder-command-0001", folderId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" }));
+    await f.invoke("/api/attachments/:attachmentId/category", { category: "evidence", ...coordinate });
+    expect(f.output.status).toBe(204);
+    expect(f.attachments.setCategory).toHaveBeenCalledOnce();
+    expect(f.authorize).not.toHaveBeenCalled();
+    expect((authorizeCapability.mock.calls as unknown as readonly [unknown, string][]).map((call) => call[1])).toEqual(["folder", "category"]);
+  });
   it.each([
     "/api/attachments/:attachmentId/finalize",
     "/api/attachments/:attachmentId/status",
@@ -333,6 +406,67 @@ describe("attachment route security regressions", () => {
       expect(f.attachments.deactivate).not.toHaveBeenCalled();
     },
   );
+  it("rejects direct finalization on capability denial before lifecycle mutation", async () => {
+    const f=fixture(["neon.collaboration.attachment.finalize"],undefined,async()=>{throw Object.assign(new Error("restricted policy detail"),{code:"ENTITY_CAPABILITY_DENIED"});});
+    await f.invoke("/api/attachments/:attachmentId/finalize",{contentType:"application/pdf"});
+    expect(f.output).toMatchObject({status:403,body:{code:"ENTITY_CAPABILITY_DENIED"}});
+    expect(JSON.stringify(f.output.body)).not.toContain("restricted policy detail");
+    expect(f.attachments.finalize).not.toHaveBeenCalled();
+    expect(f.next).not.toHaveBeenCalled();
+  });
+  it("uses the entity unlink command instead of the attachment lifecycle delete route", async () => {
+    const authorizeCapability = vi.fn(async () => ({
+      admittedReleaseHash: "release",
+      admittedPolicyHash: "policy",
+      entityType: "business_partner",
+      entityId: "44444444-4444-4444-8444-444444444444",
+    }));
+    const f = fixture(["document.attachment.delete"], undefined, authorizeCapability);
+    await f.invoke("/api/attachments/:attachmentId");
+    expect(f.output.status).toBe(204);
+    expect(authorizeCapability).toHaveBeenCalledWith(
+      expect.anything(),
+      "unlink",
+      { attachmentId },
+    );
+    expect(f.attachments.unlink).toHaveBeenCalledWith(
+      expect.objectContaining({ attachmentId }),
+      { entityType: "business_partner", entityId: "44444444-4444-4444-8444-444444444444" },
+    );
+    expect(f.attachments.deactivate).not.toHaveBeenCalled();
+  });
+  it("authorizes rename against the path identity with the admitted parent scope", async () => {
+    const authorizeCapability = vi.fn(async () => ({
+      entityType: "business_partner", entityId: "record-1", admittedReleaseHash: "release", admittedPolicyHash: "policy",
+    }));
+    const f = fixture([], undefined, authorizeCapability);
+    await f.invoke("PATCH /api/attachments/:attachmentId", {
+      attachmentId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      displayName: "Renamed", expectedSeriesRevision: "2026-09-22T00:00:00Z",
+    });
+    expect(authorizeCapability).toHaveBeenCalledWith(expect.anything(), "rename",
+      expect.objectContaining({ attachmentId }));
+    expect(f.attachments.rename).toHaveBeenCalledWith(expect.objectContaining({ attachmentId }), expect.anything());
+    expect(f.next).not.toHaveBeenCalled();
+  });
+  it("reads an admitted collaborator's status without the uploader-only legacy lookup", async () => {
+    const f = fixture([], undefined, async () => ({ entityType: "business_partner", entityId: "record-1", admittedReleaseHash: "release", admittedPolicyHash: "policy" }));
+    f.attachments.status.mockRejectedValue(new Error("Attachment not found"));
+    await f.invoke("/api/attachments/:attachmentId/status");
+    expect(f.output.status).toBe(200);
+    expect(f.attachments.authorizedStatus).toHaveBeenCalledOnce();
+    expect(f.attachments.status).not.toHaveBeenCalled();
+    expect(f.next).not.toHaveBeenCalled();
+  });
+  it("uses the path attachment ID for category authorization", async () => {
+    const authorizeCapability = vi.fn(async () => ({ entityType: "business_partner", entityId: "record-1", admittedReleaseHash: "release", admittedPolicyHash: "policy" }));
+    const f = fixture([], undefined, authorizeCapability);
+    await f.invoke("/api/attachments/:attachmentId/category", {
+      attachmentId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", entityType: "business_partner", entityId: "record-1", category: "evidence",
+    });
+    expect(authorizeCapability).toHaveBeenCalledWith(expect.anything(), "category", expect.objectContaining({ attachmentId }));
+    expect(f.attachments.setCategory).toHaveBeenCalledWith(expect.objectContaining({ attachmentId }), expect.anything());
+  });
   it("keeps Atlas access for an owned prompt attachment", async () => {
     const f = fixture(["neon.ai.agent.use"], "atlas.prompt");
     await f.invoke("/api/attachments/:attachmentId/finalize", {

@@ -297,6 +297,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
         "entity_lifecycle_operation_binding",
       ),
       policyBindings: await branch("entity_policy_binding"),
+      capabilities: await branch("entity_capability"),
       fieldPolicyBindings: await branch("entity_field_policy_binding"),
       numberingBindings: await branch("entity_numbering_binding"),
       tests: (await rows("entity_contract_test_case")).map((row) => {
@@ -469,6 +470,8 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
           tx,
         )
       ).rows[0];
+      if (input.expectedSourceReleaseId && previous?.id !== input.expectedSourceReleaseId)
+        throw Error("DEV_PUBLICATION_SOURCE_CHANGED");
       const releaseId = randomUUID(),
         releaseNo = previous ? Number(previous["release_no"]) + 1 : 1;
       await sql`INSERT INTO metadata.entity_release(id,tenant_id,entity_id,change_set_id,revision_id,release_no,release_kind,supersedes_release_id,rollback_of_release_id,contract_schema_code,contract_schema_version,contract_hash,revision_hash,release_hash,compatibility_level,target_planes,signature_algorithm,signing_key_id,contract_signature,published_by) VALUES(${releaseId}::uuid,${cs["tenant_id"] ?? null}::uuid,${cs["entity_id"]}::uuid,${input.changeSetId}::uuid,${revision["id"]}::uuid,${releaseNo},${input.releaseKind},${previous?.["id"] ?? null}::uuid,${input.rollbackOfReleaseId ?? null}::uuid,'athyper.meta-entity-contract','2.1',${input.artifact.contractHash},${revision["revision_hash"]},${input.artifact.descriptorHash},'backward_compatible',${input.targetPlanes}::text[],${input.artifact.signatureAlgorithm},${input.artifact.signingKeyId},${input.artifact.signature},${input.actorId}::uuid)`.execute(
@@ -596,6 +599,7 @@ async function replaceGraphInTransaction(
     "entity_lifecycle_operation_binding",
     "entity_field_policy_binding",
     "entity_policy_binding",
+    "entity_capability",
     "entity_flow_step",
     "entity_flow",
     "entity_operation_rule",
@@ -656,6 +660,7 @@ async function replaceGraphInTransaction(
     ["entity_flow", input.graph.flows ?? []],
     ["entity_flow_step", input.graph.flowSteps ?? []],
     ["entity_policy_binding", input.graph.policyBindings ?? []],
+    ["entity_capability", input.graph.capabilities ?? []],
     ["entity_field_policy_binding", input.graph.fieldPolicyBindings ?? []],
     ["entity_lifecycle_binding", input.graph.lifecycleBindings ?? []],
     [
@@ -777,6 +782,7 @@ const NUMERIC_PROPERTIES = new Set([
   "plannedRemovalReleaseNo",
 ]);
 const BRANCH_COLUMNS = {
+  entity_capability: ["id", "capabilityKey", "declaration", "binding"],
   entity_class_profile: [
     "entityClass",
     "profileVersion",

@@ -1,0 +1,15 @@
+{
+  "steps": [
+    "extracted fixture found through UI search",
+    "preview close confirmed",
+    "folder created",
+    "category saved and filtered",
+    "comment sent and composer cleared",
+    "inline reply sent without browser popup",
+    "reaction toggled"
+  ],
+  "errors": [],
+  "fixtureId": "ce5340eb-9c99-4598-bfc5-6cf24f695531",
+  "marker": "CA10 browser comment 1790050667787",
+  "success": true
+}

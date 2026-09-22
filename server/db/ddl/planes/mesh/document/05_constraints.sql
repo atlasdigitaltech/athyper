@@ -38,6 +38,18 @@ ALTER TABLE document.attachment_folder
     FOREIGN KEY (tenant_id, updated_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE document.attachment_workspace
+    ADD CONSTRAINT attachment_workspace_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_workspace
+    ADD CONSTRAINT attachment_workspace_created_by_fk
+    FOREIGN KEY (tenant_id, created_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_workspace
+    ADD CONSTRAINT attachment_workspace_updated_by_fk
+    FOREIGN KEY (tenant_id, updated_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
 ALTER TABLE document.attachment_link
     ADD CONSTRAINT attachment_link_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;

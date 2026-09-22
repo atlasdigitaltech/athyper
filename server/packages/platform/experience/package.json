@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@athyper/contract-platform-dashboard": "workspace:*",
+    "@athyper/contract-platform-entity-runtime": "workspace:*",
     "@athyper/platform-i18n": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-publication": "workspace:*",

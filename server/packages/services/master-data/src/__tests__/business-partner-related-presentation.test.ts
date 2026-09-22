@@ -40,6 +40,13 @@ const bindingParity: [
   Exclude<keyof typeof RELATED_RECORD_MODELS["contact-person.v1"]["channels"], keyof BusinessPartner360ContactItem["channels"][number]>,
   Exclude<keyof typeof RELATED_RECORD_MODELS["address-link.v1"]["timeline"], keyof BusinessPartner360AddressEventItem>
 ] extends [never, never, never, never] ? true : false = true;
+type ContactIdentityLeak = Extract<
+  "personId" | "identityId" | "authenticationPrincipalId" | "protectedProfile",
+  keyof BusinessPartner360ContactItem
+>;
+const contactIdentityIsNotProjected: ContactIdentityLeak extends never
+  ? true
+  : false = true;
 const summary = {
   identity: { id: "bp", displayName: "Partner", lifecycleStatus: "active" },
   roles: [],
@@ -97,5 +104,8 @@ describe("published related record profiles", () => {
     expect(addressFields.validatedAt).toBe("datetime");
     expect(channels.verified).toBe("boolean");
     expect(events.occurredAt).toBe("datetime");
+    // BP contact cards intentionally contain the safe person/contact projection,
+    // never the separately-authorized person identity link or profile.
+    expect(contactIdentityIsNotProjected).toBe(true);
   });
 });

@@ -433,6 +433,14 @@ describe("S3 object-storage adapter", () => {
     );
   });
 
+  it("binds preview delivery headers into the expiring signature", async () => {
+    const {adapter}=runtime();
+    await adapter.createDownloadUrl("preview.pdf",120,{contentType:"application/pdf",contentDisposition:'inline; filename="preview.pdf"'});
+    const command=sdkMocks.signedUrl.mock.calls[0]?.[1] as GetObjectCommand;
+    expect(command.input).toMatchObject({ResponseContentType:"application/pdf",ResponseContentDisposition:'inline; filename="preview.pdf"',ResponseCacheControl:"private, no-store"});
+    expect(sdkMocks.signedUrl.mock.calls[0]?.[2]).toEqual({expiresIn:120});
+  });
+
   it("signs browser URLs with the separately configured public client", async () => {
     const internal = { send: vi.fn(), destroy: vi.fn() } as unknown as S3Client;
     const signing = { send: vi.fn(), destroy: vi.fn() } as unknown as S3Client;

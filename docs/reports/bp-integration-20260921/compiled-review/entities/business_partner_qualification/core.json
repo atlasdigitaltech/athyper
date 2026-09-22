@@ -1,0 +1,232 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "business_partner_qualification/core",
+  "entityCode": "business_partner_qualification",
+  "plane": "neon",
+  "storage": {
+    "kind": "handler_projection",
+    "sourceObjects": [
+      "control.business_partner_qualification"
+    ],
+    "primaryObject": "control.business_partner_qualification",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "control.business_partner_qualification",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_qualification.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "partner_role",
+      "binding": {
+        "sourceObject": "control.business_partner_qualification",
+        "column": "partner_role"
+      },
+      "dataType": "string",
+      "storageType": "master.partner_role_d",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_qualification.core.fields.partner_role.label",
+        "defaultText": "Partner Role"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "qualification_type_code",
+      "binding": {
+        "sourceObject": "control.business_partner_qualification",
+        "column": "qualification_type_code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_qualification.core.fields.qualification_type_code.label",
+        "defaultText": "Qualification Type"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "decision",
+      "binding": {
+        "sourceObject": "control.business_partner_qualification",
+        "column": "decision"
+      },
+      "dataType": "string",
+      "storageType": "control.qualification_decision_d",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_qualification.core.fields.decision.label",
+        "defaultText": "Decision"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "decision_reason",
+      "binding": {
+        "sourceObject": "control.business_partner_qualification",
+        "column": "decision_reason"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_qualification.core.fields.decision_reason.label",
+        "defaultText": "Decision Reason"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "effective_from",
+      "binding": {
+        "sourceObject": "control.business_partner_qualification",
+        "column": "effective_from"
+      },
+      "dataType": "date",
+      "storageType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_qualification.core.fields.effective_from.label",
+        "defaultText": "Effective From"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "effective_until",
+      "binding": {
+        "sourceObject": "control.business_partner_qualification",
+        "column": "effective_until"
+      },
+      "dataType": "date",
+      "storageType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_qualification.core.fields.effective_until.label",
+        "defaultText": "Effective Until"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "next_review_at",
+      "binding": {
+        "sourceObject": "control.business_partner_qualification",
+        "column": "next_review_at"
+      },
+      "dataType": "date",
+      "storageType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_qualification.core.fields.next_review_at.label",
+        "defaultText": "Next Review Date"
+      },
+      "valueOrigin": "stored"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "company_optional",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "control.business_partner_qualification",
+      "column": "business_partner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "control.business_partner_qualification",
+      "column": "company_code_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "control.business_partner_qualification",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "control.business_partner_qualification",
+      "column": "operating_organization_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "control.business_partner_qualification",
+      "column": "row_version",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "control.business_partner_qualification",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:314fae4e5a952e6e04c687b361fad877c09972df93962f1298df8c90e93ca3f3"
+}

@@ -587,7 +587,7 @@ export const PLATFORM_CATALOG_ROUTES = Object.freeze({
       "modules": [
         {
           "code": "hr",
-          "routeSlug": "core-hr",
+          "routeSlug": "workforce",
           "name": "Core Human Resources",
           "iconKey": "id-card",
           "entities": []

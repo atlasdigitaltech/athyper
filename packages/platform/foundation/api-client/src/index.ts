@@ -7,6 +7,7 @@ export * from "./operating-organization";
 export * from "./network-account";
 export * from "./localization";
 export * from "./entity-list";
+export * from "./shared-reference-directory";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type RequestClass = "interactive" | "background" | "upload" | "download" | "stream";

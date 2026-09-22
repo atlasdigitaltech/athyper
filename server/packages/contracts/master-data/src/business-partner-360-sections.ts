@@ -76,8 +76,13 @@ export interface BusinessPartner360AddressItem {
   readonly lines: readonly string[];
   readonly locality?: string;
   readonly region?: string;
+  /** Full directory subdivision code when the address uses the country registry. */
+  readonly stateRegionCode?: string;
+  /** Directory selections and manual region text are intentionally distinct. */
+  readonly regionEntryMode?: "directory" | "manual";
   readonly postalCode?: string;
   readonly countryCode: string;
+  readonly timezoneCode?: string;
   readonly formattedAddress?: string;
   readonly primary: boolean;
   readonly validationStatus: string;
@@ -96,6 +101,11 @@ export interface BusinessPartner360IdentifierItem {
   readonly issuingAuthority?: string;
   readonly issuingCountryCode?: string;
   readonly jurisdictionCode?: string;
+  /** Tenant tax-type identity; absent only when the registration has no tax type. */
+  readonly taxTypeCode?: string;
+  /** Jurisdiction geography is reference evidence, never a substitute for its ID. */
+  readonly jurisdictionCountryCode?: string;
+  readonly jurisdictionStateRegionCode?: string;
   readonly sourceSystemCode?: string;
   readonly externalEntityCode?: string;
   readonly externalId?: string;

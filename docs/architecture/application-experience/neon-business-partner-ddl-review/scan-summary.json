@@ -1,0 +1,14 @@
+{
+  "manifest_files": 229,
+  "create_declarations": 580,
+  "later_drop_declarations": 11,
+  "requested_schema_tables": 278,
+  "requested_schema_counts": {
+    "shared": 15,
+    "master": 153,
+    "control": 110
+  },
+  "related_or_supporting_or_retired": 240,
+  "declared_reference_edges": 2706,
+  "authored_cores_in_requested_schemas": 19
+}

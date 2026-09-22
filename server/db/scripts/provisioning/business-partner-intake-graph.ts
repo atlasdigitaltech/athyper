@@ -5,6 +5,10 @@ import { withBusinessPartnerLabels } from "./business-partner-labels";
 import { withIntakeChoiceSurface, businessPartnerRoleSurface, withBusinessPartnerLookup } from "./intake-choice-surfaces";
 import { presentationUuid } from "./presentation-graph-helpers";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
+
+import { withBusinessPartnerIntakePresentations } from "@athyper/server-plane-studio-meta-entity-authoring";
+export { withBusinessPartnerIntakePresentations };
+
 function id(key: string) {
   return presentationUuid(key);
 }
@@ -100,5 +104,7 @@ export function provisionBusinessPartnerIntakeGraph(
 ): MetaEntityGraph {
   if (source.entity.entityCode !== "business_partner") throw Error("Business Partner graph required");
   const graph = form ? withBusinessPartnerDataSurfaces(withBusinessPartnerIntake(source), form) : source;
-  return withBusinessPartnerComplianceRequirement(withBusinessPartnerFullProfile(graph));
+  return withBusinessPartnerComplianceRequirement(
+    withBusinessPartnerFullProfile(withBusinessPartnerIntakePresentations(graph)),
+  );
 }

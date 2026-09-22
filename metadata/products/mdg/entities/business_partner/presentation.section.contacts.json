@@ -1,0 +1,151 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.contacts",
+  "entityCode": "contact_person",
+  "plane": "neon",
+  "sectionKey": "contacts",
+  "rendererKey": "platform.related-collection.v1",
+  "emptyState": {
+    "title": "No contacts yet",
+    "detail": "When contacts are added, they’ll appear here."
+  },
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.contacts.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/contacts"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "coreRef": "contact_person/core.json",
+  "fieldBindings": [],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner_contact.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [
+    "contact_person/core",
+    "contact_person/operation"
+  ],
+  "childCollections": [
+    {
+      "key": "contacts",
+      "entityCode": "contact_person",
+      "coreRef": "contact_person/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "contact_name"
+        },
+        {
+          "fieldKey": "business_title"
+        },
+        {
+          "fieldKey": "department_name"
+        },
+        {
+          "fieldKey": "is_primary"
+        },
+        {
+          "fieldKey": "status"
+        }
+      ],
+      "load": "on_visible",
+      "operationRef": "contact_person/operation.json"
+    },
+    {
+      "key": "channels",
+      "entityCode": "contact_channel",
+      "binding": {
+        "kind": "registered_aggregate_projection",
+        "handlerKey": "neon.bp.contact.channels.v1",
+        "sourceObjects": [
+          "master.contact_link",
+          "master.contact_email",
+          "master.contact_phone",
+          "master.contact_person_role"
+        ],
+        "ownerEntityCode": "business_partner",
+        "handlerRegistrationRequired": true
+      },
+      "rendererKey": "platform.contact-channels.v1",
+      "fields": [
+        {
+          "key": "channel_type",
+          "dataType": "string",
+          "readPolicy": "authorized_projection",
+          "sensitivity": "internal"
+        },
+        {
+          "key": "value",
+          "dataType": "string",
+          "readPolicy": "masked_only",
+          "protection": {
+            "normalProjection": {
+              "mode": "masked",
+              "maskedDisplay": "••••",
+              "plaintextInNormalQueries": false
+            },
+            "sensitivity": "restricted",
+            "dataCategory": "personal_contact"
+          },
+          "sensitivity": "restricted",
+          "dataCategory": "personal_contact"
+        },
+        {
+          "key": "purpose",
+          "dataType": "string",
+          "readPolicy": "authorized_projection",
+          "sensitivity": "internal"
+        },
+        {
+          "key": "is_primary",
+          "dataType": "boolean",
+          "readPolicy": "authorized_projection",
+          "sensitivity": "internal"
+        },
+        {
+          "key": "is_verified",
+          "dataType": "boolean",
+          "readPolicy": "authorized_projection",
+          "sensitivity": "internal"
+        },
+        {
+          "key": "effective_from",
+          "dataType": "datetime",
+          "readPolicy": "authorized_projection",
+          "sensitivity": "internal"
+        },
+        {
+          "key": "effective_until",
+          "dataType": "datetime",
+          "readPolicy": "authorized_projection",
+          "sensitivity": "internal"
+        }
+      ],
+      "load": "on_visible",
+      "implementationStatus": "registered"
+    }
+  ],
+  "artifactHash": "sha256:24c103560160fee3ca64f76e394e32ab960a762f7aae412cc718ef0aa5c85bf3"
+}

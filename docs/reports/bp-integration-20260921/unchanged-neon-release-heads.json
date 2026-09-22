@@ -1,0 +1,14 @@
+[
+  {
+    "publication_key": "metadata.compiled_entity.business_partner",
+    "applied_release_id": "01a0beaf-9018-7c88-b46c-8655150b62d9",
+    "source_release_no": 9,
+    "artifact_hash": "399e3dff9e492a0ce0e2b7a009e2fcd2077158c68716c8460e5053bf84be6163"
+  },
+  {
+    "publication_key": "metadata.entity.master_business_partner.44444444444444448444444444444444",
+    "applied_release_id": "01a09e9f-d13a-79cd-80d6-9abfc4911dbe",
+    "source_release_no": 2,
+    "artifact_hash": "33f6731e05a158bda4e2f42d11654e869c8152a4037aa64c60fe9253674eae14"
+  }
+]

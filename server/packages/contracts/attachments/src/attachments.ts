@@ -25,13 +25,19 @@ export interface AttachmentProvenance {
   readonly acquiredAt?: string;
 }
 export interface AttachmentUploadIntent extends AttachmentIdentity {
+  readonly admittedReleaseHash?: string;
+  readonly admittedPolicyHash?: string;
   readonly fileName: string;
   readonly contentType: string;
   readonly sizeBytes?: number;
   readonly entityType?: string;
   readonly entityId?: string;
+  /** Principal-scoped draft owner. A draft upload is not record-shared until comment association. */
+  readonly draftId?: string;
   readonly parentAttachmentId?: string;
   readonly seriesId?: string;
+  /** Required when staging a new version from a current series version. */
+  readonly expectedSeriesVersion?: number;
   readonly provenance?: AttachmentProvenance;
 }
 export interface StagedUpload {
@@ -61,6 +67,11 @@ export interface AttachmentLifecycleScheduler {
   schedulePurge(
     identity: AttachmentIdentity,
     options?: { readonly jobId: string },
+  ): Promise<void>;
+  /** A delayed, idempotent cleanup for an upload that never reaches finalize. */
+  scheduleStageExpiry?(
+    identity: AttachmentIdentity,
+    options: { readonly jobId: string; readonly delayMs: number },
   ): Promise<void>;
   scheduleSearchRemoval?(
     identity: AttachmentIdentity,

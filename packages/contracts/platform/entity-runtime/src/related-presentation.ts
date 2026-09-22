@@ -121,8 +121,11 @@ export const RELATED_RECORD_MODELS = {
       lines: "lines",
       locality: "string",
       region: "string",
+      stateRegionCode: "string",
+      regionEntryMode: "string",
       postalCode: "string",
       countryCode: "string",
+      timezoneCode: "string",
     },
     timeline: {
       eventType: "string",

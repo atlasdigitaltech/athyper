@@ -33,6 +33,17 @@ export function graphDependencies(
 ): readonly GraphDependency[] {
   const references: GraphDependency[] = [];
   const add = (reference: GraphDependency) => references.push(reference);
+  for (const capability of graph.capabilities ?? []) {
+    if (!capability.declaration.enabled || !capability.binding) continue;
+    add({kind:"handler",key:capability.binding.serviceKey});
+    add({kind:"resolver",key:capability.binding.admissionResolverKey});
+    for (const action of capability.binding.actions) {
+      add({kind:"handler",key:action.handlerKey});
+      add({kind:"permission",key:action.permissionCode});
+    }
+    for (const ref of [capability.binding.retentionPolicy, "audiencePolicy" in capability.binding ? capability.binding.audiencePolicy : undefined])
+      if(ref) add({kind:"policy",key:`${ref.artifactKey}@${ref.hash}`,plane:ref.plane});
+  }
   for (const target of graph.relationTargets ?? [])
     add({ kind: "entity", key: target.targetEntityId });
   for (const permission of graph.operationPermissions ?? []) {

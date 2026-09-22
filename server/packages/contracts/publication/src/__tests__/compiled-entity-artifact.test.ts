@@ -10,7 +10,7 @@ import {
 const fixture = (path: string) =>
   readFile(
     new URL(
-      `../../../../../../docs/architecture/application-experience/entity-policy-examples/New_Entity/${path}`,
+      `../../../../../../metadata/products/mdg/entities/${path}`,
       import.meta.url,
     ),
   ).then((bytes) => JSON.parse(bytes.toString("utf8")) as unknown);

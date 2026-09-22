@@ -1,0 +1,30 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "coreKind": "field_defaults_profile",
+  "artifactKey": "platform/core-field-defaults.v1",
+  "entityCode": "platform.core_field_defaults",
+  "plane": "neon",
+  "profileKey": "platform.core-field-defaults.v1",
+  "fieldDefaults": {
+    "readPolicy": "authorized_projection",
+    "writePolicy": "handler_only",
+    "uiFacets": {
+      "visibility": "visible",
+      "editability": "editable_in_governed_draft"
+    },
+    "authoringPolicy": {
+      "ownership": "system",
+      "customizationPolicy": "locked",
+      "securityMayOnlyTighten": true
+    },
+    "tenantConfig": {
+      "visibility": "readonly",
+      "controlLevel": "system_controlled"
+    }
+  },
+  "dependencies": [],
+  "artifactHash": "sha256:562eb3e2bdfe414092679dfb6537199e07785c20cc97177f717afd2807c72e24"
+}

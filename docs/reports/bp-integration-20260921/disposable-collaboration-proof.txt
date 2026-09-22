@@ -1,0 +1,29 @@
+BEGIN
+SET
+SET
+SET
+INSERT 0 1
+SET
+INSERT 0 1
+DO
+UPDATE 1
+DO
+INSERT 0 1
+INSERT 0 1
+UPDATE 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 2
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+DO
+SET
+DO
+SET
+DO
+RESET
+DO
+ROLLBACK
+CA02 revision, atomicity, canonical reporting and application-role isolation passed

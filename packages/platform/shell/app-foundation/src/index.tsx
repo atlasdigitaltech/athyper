@@ -15,7 +15,8 @@ import { getBrowserQueryClient, PlatformQueryProvider, PrincipalQueryLifecycle, 
 import { AccessProvider, createAccessSnapshot, type AccessDiagnostic } from "@athyper/platform-shell-runtime";
 import { validateSurfaceOpen, type SurfaceFrame, type SurfaceKind } from "@athyper/platform-surface-kit";
 import { DENSITY_STORAGE_KEY, THEME_STORAGE_KEY, type ColorMode } from "@athyper/platform-theme/tokens";
-import { Toast, ToastRegion } from "@athyper/platform-ui";
+import { ToastProvider, useToasts } from "./toasts";
+export { useToasts } from "./toasts";
 import * as React from "react";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -64,8 +65,6 @@ export interface ApplicationNavigation { push(href: string): void; replace(href:
 const ApplicationNavigationContext = createContext<ApplicationNavigation | undefined>(undefined);
 export function ApplicationNavigationProvider({ navigation, children }: { readonly navigation?: ApplicationNavigation; readonly children: ReactNode }) { return <ApplicationNavigationContext.Provider value={navigation}>{children}</ApplicationNavigationContext.Provider>; }
 
-interface ToastMessage { readonly id: string; readonly title: string; readonly detail?: string; readonly tone: "info" | "success" | "warning" | "danger"; }
-const ToastContext = createContext<Readonly<{ messages: readonly ToastMessage[]; push(message: Omit<ToastMessage, "id">): string; dismiss(id: string): void }> | undefined>(undefined);
 const SurfaceContext = createContext<Readonly<{ stack: readonly SurfaceFrame[]; open(frame: SurfaceFrame): void; close(id: string): void; closeTop(): void }> | undefined>(undefined);
 const ShellContext = createContext<Readonly<{ activeWorkspaceCode?: string; setActiveWorkspace(code?: string): void }> | undefined>(undefined);
 
@@ -174,13 +173,6 @@ function ApiClientProvider({ client, children }: { readonly client: HttpClient; 
 function PermissionProvider({ permissions, children }: { readonly permissions: readonly string[]; readonly children: ReactNode }) { const value = useMemo(() => new Set(permissions), [permissions]); return <PermissionContext.Provider value={value}>{children}</PermissionContext.Provider>; }
 function FeatureProvider({ features, children }: { readonly features: Readonly<Record<string, ExperienceFeature>>; readonly children: ReactNode }) { return <FeatureContext.Provider value={features}>{children}</FeatureContext.Provider>; }
 
-function ToastProvider({ children }: { readonly children: ReactNode }) {
-  const [messages, setMessages] = useState<readonly ToastMessage[]>([]), sequence = useRef(0);
-  const dismiss = useCallback((id: string) => setMessages((current) => current.filter((message) => message.id !== id)), []);
-  const push = useCallback((message: Omit<ToastMessage, "id">) => { const id = `toast-${++sequence.current}`; setMessages((current) => [...current, { ...message, id }]); return id; }, []);
-  const value = useMemo(() => ({ messages, push, dismiss }), [messages, push, dismiss]);
-  return <ToastContext.Provider value={value}>{children}<ToastRegion>{messages.map((message) => <Toast key={message.id} tone={message.tone} title={message.title}>{message.detail}</Toast>)}</ToastRegion></ToastContext.Provider>;
-}
 function SurfaceStackProvider({ children }: { readonly children: ReactNode }) {
   const [stack, setStack] = useState<readonly SurfaceFrame[]>([]);
   const open = useCallback((frame: SurfaceFrame) => setStack((current) => { const result = validateSurfaceOpen(current, frame.kind); if (!result.ok) throw new Error(result.reason); return [...current.filter((item) => item.id !== frame.id), frame]; }), []);
@@ -239,7 +231,7 @@ function SessionExpiryWarning() {
     const target = sessionExpiryWarningTarget(expiry); const warningKey = target ? `${target.kind}:${target.expiresAt}` : undefined;
     if (visibleWarning.current && visibleWarning.current.key !== warningKey) { dismiss(visibleWarning.current.id); visibleWarning.current = undefined; }
     if (!target || !warningKey) return;
-    const notify = () => { if (warnedFor.current === warningKey) return; warnedFor.current = warningKey; const time = new Date(target.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); const id = push(target.kind === "idle" ? { tone: "warning", title: "Session idle timeout approaching", detail: `You'll be signed out for inactivity at ${time}. Continue working to keep your session active.` } : { tone: "warning", title: "Session ending soon", detail: `Your security session ends at ${time}. Save your work before signing in again.` }); visibleWarning.current = { key: warningKey, id }; };
+    const notify = () => { if (warnedFor.current === warningKey) return; warnedFor.current = warningKey; const time = new Date(target.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); const id = push(target.kind === "idle" ? { tone: "warning", title: "Inactive session ending soon", detail: `You'll be signed out at ${time} due to inactivity. Continue working to keep your session active.` } : { tone: "warning", title: "Maximum session duration ending soon", detail: `Your session reaches its security limit at ${time}. Continuing to work will not extend it. Save your work and sign in again.` }); visibleWarning.current = { key: warningKey, id }; };
     const timer = window.setTimeout(notify, target.delayMs); return () => window.clearTimeout(timer);
   }, [expiry.idleExpiresAt, expiry.absoluteExpiresAt, push, dismiss]);
   return null;
@@ -299,7 +291,7 @@ export const usePermission = (code: string) => usePermissions().has(code);
 export const useFeatures = () => required(useContext(FeatureContext), "useFeatures");
 export const useFeature = (code: string) => useFeatures()[code]?.enabled === true;
 export const useApplicationNavigation = () => required(useContext(ApplicationNavigationContext), "useApplicationNavigation");
-export const useToasts = () => required(useContext(ToastContext), "useToasts");
+
 export const useSurfaceStack = () => required(useContext(SurfaceContext), "useSurfaceStack");
 export const useShellState = () => required(useContext(ShellContext), "useShellState");
 export type { SurfaceKind };

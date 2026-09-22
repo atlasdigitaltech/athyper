@@ -1,0 +1,119 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "locale/core",
+  "entityCode": "locale",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "primaryObject": "shared.locale",
+    "sourceObjects": [
+      "shared.locale"
+    ],
+    "idField": "code",
+    "tenantField": null,
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "code",
+      "binding": {
+        "sourceObject": "shared.locale",
+        "column": "code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.locale.core.fields.code.label",
+        "defaultText": "Code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "name",
+      "binding": {
+        "sourceObject": "shared.locale",
+        "column": "name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.locale.core.fields.name.label",
+        "defaultText": "Name"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "languageCode",
+      "binding": {
+        "sourceObject": "shared.locale",
+        "column": "language_code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.locale.core.fields.languageCode.label",
+        "defaultText": "Language"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "countryCode",
+      "binding": {
+        "sourceObject": "shared.locale",
+        "column": "country_code"
+      },
+      "dataType": "string",
+      "storageType": "character(2)",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.locale.core.fields.countryCode.label",
+        "defaultText": "Country"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "shared_reference"
+  },
+  "referencePicker": {
+    "valueField": "code",
+    "labelField": "name",
+    "displayFormat": "{name} ({code})",
+    "allowedTokens": [
+      "name",
+      "code"
+    ],
+    "load": "bounded_lookup"
+  },
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:c21f1fa65b5c56f4fa2bb2613f98cd57117eb293b4ad1df5574cd336891680c4"
+}

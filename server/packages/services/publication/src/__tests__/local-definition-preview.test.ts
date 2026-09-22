@@ -114,7 +114,7 @@ describe("isolated cosmetic metadata preview", () => {
       (await saveLocalDefinitionPreview(root, revision, baseline)).state,
     ).toBe("active");
     const after = await consumer.workflow({ kind: "add_supplier" });
-    expect(after.stages[0].slaMinutes).toBe(75);
+    expect(after.stages[0]?.slaMinutes).toBe(75);
     expect(after.hash).not.toBe(before.hash);
     revision.id = "12000000-0000-4000-8000-000000000008";
     revision.bundle.formDescriptors.supplierRequest.title =

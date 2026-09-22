@@ -2,7 +2,7 @@
 
 import { BellIcon, CheckIcon, ChevronRightIcon, CircleCheckIcon, ClipboardCheckIcon, InboxIcon, InfoIcon, WarningIcon } from "@athyper/platform-icons";
 import { activityCount } from "./activity-counts";
-import { Drawer } from "@athyper/platform-ui";
+import { Drawer, FilterChipGroup, PanelTabs, PanelEmptyState, Button } from "@athyper/platform-ui";
 import * as React from "react";
 import { useState } from "react";
 
@@ -45,6 +45,7 @@ export interface ShellActivityDataSource {
   readonly hasMoreInbox?: boolean;
   readonly loading?: boolean;
   readonly error?: string;
+  readonly errorStatus?: number;
   readonly notificationsHref?: string;
   readonly inboxHref?: string;
   readonly pushEnrollmentStatus?: ShellPushEnrollmentStatus;
@@ -80,42 +81,29 @@ export function ShellActivityCenter({ activeTab, dataSource, onTabChange, onClos
     ? groupItems(visibleNotifications)
     : groupItems(visibleInbox);
   const fullPageHref = activeTab === "notifications" ? dataSource?.notificationsHref : dataSource?.inboxHref;
+  const accessDenied = dataSource?.errorStatus === 403 || (!dataSource?.errorStatus && /\b403\b|forbidden/i.test(dataSource?.error ?? ""));
   const content = <>{dataSource?.loading ? <ActivityLoading/> : null}
-    {!dataSource?.loading && dataSource?.error ? <ActivityError message={dataSource.error} onRetry={dataSource.onRetry}/> : null}
+    {!dataSource?.loading && dataSource?.error ? <ActivityError tab={activeTab} accessDenied={accessDenied} onRetry={dataSource.onRetry}/> : null}
     {!dataSource?.loading && !dataSource?.error && groups.map((group) => <section className="athyper-activity-center__group" key={group.label}>
       <header><strong>{group.label}</strong><span>{group.items.length}</span></header>
       <ul>{group.items.map((item) => <li key={item.id}>{activeTab === "notifications"
         ? <NotificationRow item={item as ShellNotificationItem} onMarkRead={dataSource?.onMarkNotificationRead}/>
         : <InboxRow item={item as ShellInboxItem} onComplete={dataSource?.onCompleteInboxItem}/>}</li>)}</ul>
     </section>)}
-    {!dataSource?.loading && !dataSource?.error && !groups.length ? <ActivityEmpty tab={activeTab} filtered={activeTab === "notifications" ? notificationScope === "unread" : inboxScope === "priority"}/> : null}</>;
+    {!dataSource?.loading && !dataSource?.error && !groups.length ? <ActivityEmpty onShowAll={()=>activeTab === "notifications" ? setNotificationScope("all") : setInboxScope("all")} tab={activeTab} filtered={activeTab === "notifications" ? notificationScope === "unread" : inboxScope === "priority"}/> : null}</>;
 
   return <Drawer.Root open onOpenChange={(open) => { if (!open) onClose(); }}><Drawer.Panel id="athyper-activity-center" size="standard" variant="activity" mobilePresentation="fullscreen" className="athyper-activity-center">
-    <Drawer.Header className="athyper-activity-center__header" icon={<span className="athyper-activity-center__hero" data-tab={activeTab}><ActivityGlyph kind={activeTab}/></span>} title="Activity center" description="Updates and work that need your attention" closeLabel="Close activity center"/>
-    <Drawer.Tabs value={activeTab} onValueChange={(value) => onTabChange(value as ShellActivityTab)}>
-      <Drawer.Navigation className="athyper-activity-center__tabs" aria-label="Activity type"><Drawer.TabList className="athyper-activity-center__tab-list">
-        <ActivityTab label="Notifications" kind="notifications" count={unreadCount}/>
-        <ActivityTab label="Inbox" kind="inbox" count={activityCount(dataSource, "inbox")}/>
-      </Drawer.TabList></Drawer.Navigation>
-
+    <Drawer.Header appearance="panel" icon={<ActivityGlyph kind={activeTab}/>} title="Activity center" description="Updates and work that need your attention" closeLabel="Close activity center"/>
+    <PanelTabs label="Activity type" value={activeTab} onValueChange={value=>onTabChange(value as ShellActivityTab)} items={(["notifications","inbox"] as const).map(key=>{const count=activityCount(dataSource,key),label=key==="notifications"?"Notifications":"Inbox";return {key,label,count,id:`athyper-activity-tab-${key}`,panelId:`athyper-activity-content-${key}`,accessibleLabel:`${label}${count===undefined?", count unavailable":`, ${count}`}`};})}/>
       <Drawer.Toolbar className="athyper-activity-center__toolbar">
-        <div className="athyper-activity-center__filters" aria-label={`${activeTab === "notifications" ? "Notification" : "Inbox"} filters`}>
-          {activeTab === "notifications" ? <>
-            <FilterButton label="All" count={countsReady ? notifications.length : undefined} active={notificationScope === "all"} onClick={() => setNotificationScope("all")}/>
-            <FilterButton label="Unread" count={unreadCount} active={notificationScope === "unread"} onClick={() => setNotificationScope("unread")}/>
-          </> : <>
-            <FilterButton label="All" count={countsReady ? inbox.length : undefined} active={inboxScope === "all"} onClick={() => setInboxScope("all")}/>
-            <FilterButton label="Priority" count={countsReady ? priorityCount : undefined} active={inboxScope === "priority"} onClick={() => setInboxScope("priority")}/>
-          </>}
-        </div>
+        <FilterChipGroup label={activeTab === "notifications" ? "Notification filters" : "Inbox filters"} value={activeTab === "notifications" ? notificationScope : inboxScope} onValueChange={value=>activeTab === "notifications" ? setNotificationScope(value as "all"|"unread") : setInboxScope(value as "all"|"priority")} items={activeTab === "notifications" ? [{value:"all",label:"All",count:countsReady?notifications.length:undefined},{value:"unread",label:"Unread",count:unreadCount}] : [{value:"all",label:"All",count:countsReady?inbox.length:undefined},{value:"priority",label:"Priority",count:countsReady?priorityCount:undefined}]}/>
         {activeTab === "notifications" ? <div className="athyper-activity-center__toolbar-actions">
           {unreadCount !== undefined && unreadCount > 0 && dataSource?.onMarkAllNotificationsRead ? <button className="athyper-activity-center__quiet-action" type="button" onClick={() => void dataSource.onMarkAllNotificationsRead?.()}>Mark all read</button> : null}
           <PushEnrollmentControl dataSource={dataSource}/>
         </div> : null}
       </Drawer.Toolbar>
-      <Drawer.Body className="athyper-activity-center__content" aria-live="polite"><Drawer.TabPanel id="athyper-activity-center-content" value="notifications" mount="lazy">{content}</Drawer.TabPanel><Drawer.TabPanel id="athyper-activity-center-content" value="inbox" mount="lazy">{content}</Drawer.TabPanel></Drawer.Body>
-      {fullPageHref ? <Drawer.Footer className="athyper-activity-center__footer"><a href={fullPageHref}>View all {activeTab}<ChevronRightIcon/></a></Drawer.Footer> : null}
-    </Drawer.Tabs>
+      <Drawer.Body className="athyper-activity-center__content" aria-live="polite"><div role="tabpanel" id={`athyper-activity-content-${activeTab}`} aria-labelledby={`athyper-activity-tab-${activeTab}`}>{content}</div></Drawer.Body>
+      {fullPageHref && !dataSource?.error ? <Drawer.Footer className="athyper-activity-center__footer"><a href={fullPageHref}>View all {activeTab}<ChevronRightIcon/></a></Drawer.Footer> : null}
   </Drawer.Panel></Drawer.Root>;
 }
 
@@ -125,14 +113,6 @@ function PushEnrollmentControl({dataSource}:{readonly dataSource?:ShellActivityD
   if(status==="denied")return <span className="athyper-activity-center__push-status" title="Allow notifications in browser settings to enable alerts">Alerts blocked</span>;
   if(status==="enabled")return <button className="athyper-activity-center__quiet-action" type="button" aria-pressed="true" onClick={()=>void dataSource.onDisableBrowserPush?.()}>Alerts on</button>;
   return <button className="athyper-activity-center__quiet-action" type="button" title={dataSource?.pushEnrollmentError} onClick={()=>void dataSource?.onEnableBrowserPush?.()}>Enable alerts</button>;
-}
-
-function ActivityTab({ label, kind, count }: { readonly label: string; readonly kind: ShellActivityTab; readonly count?: number }) {
-  return <Drawer.Tab data-count-state={count === undefined ? "unknown" : count === 0 ? "zero" : "known"} aria-label={`${label}${count === undefined ? ", count unavailable" : `, ${count}`}`} id={`athyper-activity-tab-${kind}`} value={kind} aria-controls="athyper-activity-center-content"><span><ActivityGlyph kind={kind}/>{label}</span>{count !== undefined && count > 0 ? <b aria-label={`${count} ${kind === "notifications" ? "unread" : "open"}`}>{formatCount(count)}</b> : null}</Drawer.Tab>;
-}
-
-function FilterButton({ label, count, active, onClick }: { readonly label: string; readonly count?: number; readonly active: boolean; readonly onClick: () => void }) {
-  return <button type="button" aria-pressed={active} onClick={onClick}>{label}{count === undefined ? <span aria-label="Count unavailable">—</span> : <span>{formatCount(count)}</span>}</button>;
 }
 
 function NotificationRow({ item, onMarkRead }: { readonly item: ShellNotificationItem; readonly onMarkRead?: (item: ShellNotificationItem) => void | Promise<void> }) {
@@ -159,22 +139,23 @@ function InboxRow({ item, onComplete }: { readonly item: ShellInboxItem; readonl
   </article>;
 }
 
-function ActivityEmpty({ tab, filtered }: { readonly tab: ShellActivityTab; readonly filtered: boolean }) {
+function ActivityEmpty({ tab, filtered, onShowAll }: { readonly tab: ShellActivityTab; readonly filtered: boolean; readonly onShowAll:()=>void }) {
   const notification = tab === "notifications";
-  const title = filtered ? (notification ? "No unread notifications" : "No priority work") : (notification ? "You're all caught up" : "Nothing needs your attention");
-  const detail = filtered ? "Switch to All to see the rest of your activity." : notification ? "Approvals, mentions, and important system changes will appear here." : "Assigned tasks, approvals, and conversations will appear here when action is needed.";
-  return <div className="athyper-activity-center__empty"><span aria-hidden="true"><ActivityGlyph kind={tab}/><CircleCheckIcon/></span><strong>{title}</strong><p>{detail}</p></div>;
+  const title = filtered ? (notification ? "No unread notifications" : "No priority work") : (notification ? "You’re all caught up" : "Your inbox is empty");
+  const detail = filtered ? "Show all to see the rest of your activity." : notification ? "New notifications will appear here." : "Work assigned to you will appear here.";
+  return <PanelEmptyState icon={<ActivityGlyph kind={tab}/>} title={title} description={detail} action={filtered?<Button variant="secondary" onClick={onShowAll}>Show all</Button>:undefined}/>;
 }
 
 function ActivityLoading() { return <div className="athyper-activity-center__loading" role="status"><span className="athyper-visually-hidden">Loading activity</span>{[0, 1, 2, 3].map((item) => <i key={item}/>)}</div>; }
-function ActivityError({ message, onRetry }: { readonly message: string; readonly onRetry?: () => void }) { return <div className="athyper-activity-center__error" role="alert"><span aria-hidden="true">!</span><strong>Activity couldn't be loaded</strong><p>{message}</p>{onRetry ? <button type="button" onClick={onRetry}>Try again</button> : null}</div>; }
+function ActivityError({ tab, accessDenied, onRetry }: { readonly tab:ShellActivityTab; readonly accessDenied:boolean; readonly onRetry?: () => void }) {
+  return <PanelEmptyState tone="error" role="alert" icon={accessDenied?<InfoIcon/>:<WarningIcon/>} title={accessDenied ? "Activity isn’t available for this account" : `Couldn’t load ${tab === "notifications" ? "notifications" : "your inbox"}`} description={accessDenied ? "Contact your administrator if you need access." : "Please try again."} action={!accessDenied && onRetry ? <Button variant="secondary" onClick={onRetry}>Try again</Button>:undefined}/>;
+}
 
 function groupItems<T extends { readonly groupLabel?: string }>(items: readonly T[]): readonly { readonly label: string; readonly items: readonly T[] }[] {
   const groups = new Map<string, T[]>();
   for (const item of items) { const label = item.groupLabel ?? "Recent"; groups.set(label, [...(groups.get(label) ?? []), item]); }
   return Array.from(groups, ([label, groupedItems]) => ({ label, items: groupedItems }));
 }
-function formatCount(count: number) { return count > 99 ? "99+" : String(count); }
 function ActivityGlyph({ kind }: { readonly kind: ShellActivityTab }) { return kind === "notifications" ? <BellIcon/> : <InboxIcon/>; }
 function NotificationToneGlyph({ tone }: { readonly tone: ShellNotificationTone }) { return tone === "critical" || tone === "warning" ? <WarningIcon/> : tone === "success" ? <CircleCheckIcon/> : <InfoIcon/>; }
 function InboxItemGlyph() { return <ClipboardCheckIcon/>; }

@@ -43,7 +43,7 @@ export interface ObjectStorage {
   ): Promise<AsyncIterable<Uint8Array>>;
   delete(key: string): Promise<void>;
   exists(key: string): Promise<boolean>;
-  createDownloadUrl(key: string, expirySeconds?: number): Promise<string>;
+  createDownloadUrl(key: string, expirySeconds?: number, delivery?: { readonly contentType: string; readonly contentDisposition: string }): Promise<string>;
   /** A short-lived PUT URL. Callers must use a tenant-scoped, non-public key. */
   createUploadUrl(key: string, expirySeconds?: number): Promise<string>;
   /** Server-side promotion avoids exposing active keys before malware processing. */

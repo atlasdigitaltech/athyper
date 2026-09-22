@@ -1,3 +1,10 @@
+import { commentDescendants } from "./comment-descendants.js";
+import { createEntityAttachmentAdmission, type AttachmentCapabilitySubject } from "./entity-attachment-admission.js";
+import { createAttachmentDiscoveryService, registerAttachmentDiscoveryRoutes } from "@athyper/server-service-attachments";
+import { createRecordParticipantResolver } from "@athyper/server-platform-experience";
+import { createKyselyPermissionResolver } from "@athyper/server-platform-iam";
+import { expireCommentDrafts } from "@athyper/server-platform-collaboration";
+import { createEntityCapabilityPolicy, EntityCapabilityPolicyError } from "@athyper/server-platform-experience";
 import { createMetaEntityActivationInspector } from "./meta-entity-activation-inspection.js";
 import { sweepSupplierInformation } from "./supplier-information-sla.js";
 import { createTaskEditPolicyAuthoring, mountTaskEditPolicyAuthoring } from "./task-edit-policy-authoring.js";
@@ -13,7 +20,7 @@ import { createSupplierProcessSubmission } from "./supplier-process-submission.j
 import { createKyselyProcessDocumentIntentPort } from "@athyper/server-platform-governance";
 import { createSupplierProcessSelectionService, mountSupplierProcessSelectionPreview } from "./supplier-process-selection.js";
 import { supplierRequirementSurface } from "@athyper/server-service-master-data";
-import { addressFormChoices, bankFormChoices, bankFormSources } from "@athyper/server-service-records";
+import { addressFormChoices, bankFormChoices, bankFormSources, createSharedReferenceDirectory, isSharedReferenceSourceKey, registerSharedReferenceDirectoryRoutes, requiresSharedReferenceDependency } from "@athyper/server-service-records";
 import { validateProfileIntake } from "@athyper/server-service-master-data";
 import {validateDataInput,dataFieldVisible} from "@athyper/server-contract-metadata";
 import { companySetupCaseInitialSchema } from "@athyper/server-service-publication";
@@ -41,6 +48,8 @@ import {
 } from "./business-partner-qualification-runtime.js";
 import { createBusinessPartnerRevealRuntimeRegistrations } from "./business-partner-reveal-runtime.js";
 import { createScopedMetaEntityAuthoringRepository } from "./scoped-meta-entity-authoring.js";
+import { createDevRuntimePublication } from "./dev-runtime-publication.js";
+import { loadDevPublicationConfiguration, registerDevPublicationRoutes } from "./dev-publication.js";
 import {
   createBusinessPartnerCaseRuntimeRegistrations,
   assertBusinessPartnerCaseRuntimeSemantics,
@@ -213,6 +222,7 @@ import {
   EntityRuntimeOperationError,
   EntityRuntimeResourceError,
   registerEntityRuntimeRoutes,
+  registerEntityIntakeOperationRoutes,
   registerExperienceRoutes,
 } from "@athyper/server-platform-experience";
 import { KyselyExperiencePlaneRepository } from "@athyper/server-adapter-experience-postgres";
@@ -474,10 +484,16 @@ import {
 } from "@athyper/server-service-documents";
 import {
   ATTACHMENT_MAINTENANCE_QUEUE,
+  EXPIRE_STAGED_ATTACHMENT_JOB,
   EXPIRE_ATTACHMENT_RESERVATIONS_JOB,
+  PURGE_ATTACHMENT_JOB,
+  RECONCILE_ATTACHMENT_RETENTION_JOB,
   createAttachmentLifecycle,
+  createAttachmentPurgeHandler,
   createAttachmentRetrievalAdmission,
   createAttachmentQuotaRecoveryHandler,
+  createAttachmentRetentionReconciliationHandler,
+  createAttachmentStageExpiryHandler,
   createConfiguredAttachmentQuotaPolicyResolver,
   createKyselyAttachmentQuotaLedger,
   createKyselyAttachmentRepository,
@@ -561,6 +577,8 @@ import {
   createBusinessPartnerInvitationExternalGuard,
   createBusinessPartnerInvitationService,
   createBusinessPartnerRequestService,
+  createBusinessPartnerIntakeCommandMapper,
+  createBusinessPartnerIntakeOperationProvider,
   createBusinessPartnerRequestValidator,
   createGovernedInternalBusinessPartnerCaseService,
   createSupplierActivationReevaluationHandler,
@@ -571,6 +589,7 @@ import {
   createWorkerEngagementLifecycleService,
   createHttpSupplierWorkforceDistributionEligibility,
   createWorkforceService,
+  createHrStage2Service,
   EXPIRE_BUSINESS_PARTNER_INVITATIONS_JOB,
   EXPIRE_SUPPLIER_QUALIFICATIONS_JOB,
   KyselyBusinessPartnerEligibilityRepository,
@@ -592,6 +611,7 @@ import {
   registerBusinessPartnerRequestRoutes,
   registerGovernedInternalBusinessPartnerRoutes,
   registerWorkforceRoutes,
+  registerHrStage2Routes,
   registerSupplierWorkforceRequisitionRoutes,
   registerWorkerEngagementIamRoutes,
   registerWorkerEngagementLifecycleRoutes,
@@ -3016,6 +3036,82 @@ export function registerServices(
       ? { cache: createDistributedCompiledEntityArtifactCache(container.adapters.redisCache) }
       : {}),
   });
+  const authorizeCapabilityParent = async ({context, entityCode, recordId}: import("@athyper/server-platform-experience").EntityCapabilityRequest) => {
+      if(entityCode==="workforce"&&context.planeKey==="neon"){
+        const rows=await transactions.run(context.planeKey,context,async tx=>(await sql<{company_code_id:string}>`
+          SELECT DISTINCT employment.company_code_id::text
+          FROM master.employee employee
+          JOIN master.employment employment ON employment.tenant_id=employee.tenant_id AND employment.employee_id=employee.id AND employment.status<>'archived'
+          WHERE employee.tenant_id=${context.tenantId}::uuid AND employee.id=${recordId}::uuid AND employee.status<>'archived'
+        `.execute(tx)).rows);
+        if(!rows.length)return false;
+        for(const row of rows)if(!(await authorizer.authorize({context,permissionCode:"neon.workforce.read",resource:{tenantId:context.tenantId,employeeId:recordId,companyCodeId:row.company_code_id}})).allowed)return false;
+        return Object.freeze({scopeResources:Object.freeze(rows.map(row=>Object.freeze({companyCodeId:row.company_code_id})))});
+      }
+      const descriptor = await metadata.getEntityDescriptor(context,entityCode);
+      const records = container.services.records?.queries;
+      if(!descriptor?.operations.read || !records || descriptor.planeKey !== context.planeKey) return false;
+      const found = await records.list({context,entityCode,recordIds:[recordId],fields:[descriptor.storage.idField],limit:1,countMode:"none",hydrateReferences:false});
+      if(found.data.length !== 1 || String(found.data[0]?.[descriptor.storage.idField]) !== recordId) return false;
+      // Collaboration permissions are granted at the owning Business Partner
+      // operating-organization scope. Resolve that scope from the admitted
+      // parent record so a browser cannot widen it with a query parameter.
+      if(entityCode !== "business_partner") return true;
+      const assignments = await transactions.run(context.planeKey,context,async tx =>
+        (await sql<{operating_organization_id:string}>`
+          SELECT DISTINCT assignment.operating_organization_id::text
+            FROM master.business_partner_operating_organization_assignment assignment
+           WHERE assignment.tenant_id=${context.tenantId}::uuid
+             AND assignment.business_partner_id=${recordId}::uuid
+             AND assignment.status='active'
+             AND assignment.effective_from<=CURRENT_DATE
+             AND (assignment.effective_until IS NULL OR assignment.effective_until>CURRENT_DATE)
+           ORDER BY 1
+        `.execute(tx)).rows,
+      );
+      if(!assignments.length) return false;
+      return Object.freeze({scopeResources:Object.freeze(assignments.map((assignment) =>
+        Object.freeze({operatingOrganizationId:assignment.operating_organization_id}),
+      ))});
+  };
+  const participantPermissions = createKyselyPermissionResolver({run:(identity,work)=>transactions.run(identity.planeKey,identity,work)});
+  const recordParticipants = createRecordParticipantResolver({
+    async candidates(input,query,limit) {
+      return transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{id:string;displayName:string}>`SELECT id::text,name AS "displayName" FROM master.principal WHERE tenant_id=${input.context.tenantId}::uuid AND status='active' AND name ILIKE ${"%"+query+"%"} ORDER BY name,id LIMIT ${limit}`.execute(tx)).rows);
+    },
+    async admit(input,principalId) {
+      const row=await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{auth_epoch:number}>`SELECT auth_epoch FROM master.principal WHERE tenant_id=${input.context.tenantId}::uuid AND id=${principalId}::uuid AND status='active'`.execute(tx)).rows[0]);
+      if(!row) return false;
+      // Build a fresh, baseline authorization subject. Never copy the requester's
+      // permissions, organization scope, or elevated authentication to a recipient.
+      const identity={planeKey:input.context.planeKey,realmKey:input.context.realmKey,tenantId:input.context.tenantId,principalId,authEpoch:row.auth_epoch,assurance:"baseline" as const};
+      try {
+        const permissions=await participantPermissions.resolve(identity);
+        const context={...identity,permissions,profileHash:permissions.profileHash,requestId:input.context.requestId};
+        return Boolean(await authorizeCapabilityParent({...input,context}));
+      } catch { return false; }
+    }
+  });
+  const capabilityPolicy = createEntityCapabilityPolicy({
+    reader: container.platform.compiledEntityReader!, authorizer,
+    authorizeParent: authorizeCapabilityParent,
+    audience: {
+      async loadComment({context,entityCode,recordId,commentId,includeDeleted}) {
+        return transactions.run(context.planeKey,context,async tx => (await sql<{id:string;entity_type:string;entity_id:string;commenter_id:string;visibility:"public"|"internal"|"private";parent_comment_id:string|null}>`SELECT id::text,entity_type,entity_id,commenter_id::text,visibility,parent_comment_id::text FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${commentId}::uuid AND entity_type=${entityCode} AND entity_id=${recordId} ${includeDeleted ? sql`` : sql`AND status<>'deleted'`}`.execute(tx)).rows[0] ?? null).then(row => row ? ({commentId:row.id,entityCode:row.entity_type,recordId:row.entity_id,authorId:row.commenter_id,visibility:row.visibility,...(row.parent_comment_id ? {parentCommentId:row.parent_comment_id} : {})}) : null);
+      },
+      isCurrentRecordParticipant: async (input) => Boolean(await authorizeCapabilityParent(input)),
+      validateMentions:(input,ids)=>recordParticipants.validate(input,ids),
+    },
+  });
+  let attachmentDiscovery: ReturnType<typeof createAttachmentDiscoveryService> | undefined;
+  const authorizeAttachmentCapability = createEntityAttachmentAdmission({
+    load: (context, attachmentId) => transactions.run(context.planeKey, context, async tx =>
+      (await sql<AttachmentCapabilitySubject>`SELECT attachment.metadata->>'entity_type' entity_type,attachment.metadata->>'entity_id' entity_id,attachment.admitted_policy_hash,attachment.content_type,attachment.size_bytes,attachment.draft_id::text,attachment.uploaded_by::text,EXISTS(SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id AND link.entity_type=attachment.metadata->>'entity_type' AND link.entity_id=attachment.metadata->>'entity_id') has_record_link,(SELECT link.entity_id FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.pinned_attachment_id=attachment.id AND link.entity_type='document.comment' AND link.link_kind='comment' LIMIT 1) comment_id FROM document.attachment attachment WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.id=${attachmentId}::uuid`.execute(tx)).rows[0]),
+    ownsDraft: (context, draftId, entityCode, recordId) => transactions.run(context.planeKey, context, async tx =>
+      Boolean((await sql`SELECT id FROM document.comment_draft WHERE tenant_id=${context.tenantId}::uuid AND id=${draftId}::uuid AND principal_id=${context.principalId}::uuid AND entity_type=${entityCode} AND entity_id=${recordId} AND expires_at>clock_timestamp()`.execute(tx)).rows[0])),
+    resolve: input => capabilityPolicy.resolve(input),
+  });
+
   registerMasterData(
     container,
     {
@@ -3303,6 +3399,17 @@ export function registerServices(
               "neon.workforce.pii.read",
               "neon.workforce.iam.retry",
               "neon.workforce.integration.import",
+              "neon.hr.setup.read",
+              "neon.hr.setup.write",
+              "neon.hr.setup.catalog.write",
+              "neon.hr.setup.catalog.publish",
+              "neon.hr.setup.publish",
+              "neon.hr.policy.country.write",
+              "neon.hr.policy.publish",
+              "neon.user.directory.read",
+              "neon.user.profile.request",
+              "neon.user.profile.review",
+              "neon.user.admin.write",
             ].includes(input.permissionCode)
           )
             return {
@@ -3533,6 +3640,7 @@ export function registerServices(
       });
     container.services.businessPartner360 = businessPartner360;
     const entityRuntime = createEntityRuntimeResourceService({
+      capabilities: capabilityPolicy,
       reader: container.platform.compiledEntityReader!,
       headers: {
         async readHeader({ context, recordId, fieldKeys }) {
@@ -3595,17 +3703,46 @@ export function registerServices(
         },
         getService(serviceKey) {
           if (serviceKey === "platform.comments.v1") return {
-            async read({ context, core, recordId, limit, cursor }) {
-              const rows = await transactions.run(context.planeKey, context, async (tx) => (await sql<{ id: string; text: string; author_id: string; visibility: string; created_at: Date | string; updated_at: Date | string | null; parent_comment_id: string | null }>`SELECT id::text,comment_text text,commenter_id::text author_id,visibility,created_at,updated_at,parent_comment_id::text FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND context_type='entity' AND entity_type=${core.entityCode} AND entity_id=${recordId} AND status<>'deleted' AND (visibility<>'private' OR commenter_id=${context.principalId}::uuid) ${cursor ? sql`AND (created_at,id)<(SELECT created_at,id FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY created_at DESC,id DESC LIMIT ${limit + 1}`.execute(tx)).rows);
-              const items = rows.slice(0, limit).map((row) => Object.freeze({ id: row.id, text: row.text, authorId: row.author_id, visibility: row.visibility, createdAt: new Date(row.created_at).toISOString(), ...(row.updated_at ? { updatedAt: new Date(row.updated_at).toISOString() } : {}), ...(row.parent_comment_id ? { parentCommentId: row.parent_comment_id } : {}) }));
-              return Object.freeze({ revision: items[0]?.updatedAt ?? items[0]?.createdAt ?? `comments:${recordId}`, data: Object.freeze({ items, ...(rows.length > limit && items.at(-1)?.id ? { nextCursor: items.at(-1)!.id } : {}) }) });
+            async read({ context, core, recordId, limit, cursor, resourceContext }) {
+              // Section admission has already established current record participation.
+              // Private rows remain author-only even for another record collaborator.
+              const threadRootId = resourceContext?.threadRootId;
+              const pageLimit = threadRootId ? Math.min(limit,20) : limit;
+              const descendants = (root: ReturnType<typeof sql>) => commentDescendants({tenantId:context.tenantId,principalId:context.principalId,entityType:core.entityCode,entityId:recordId,root});
+              const result = await transactions.run(context.planeKey, context, async (tx) => {
+                const [rows, draft, unread, total] = await Promise.all([
+                  (await sql<{ id: string; text: string; content_json: unknown; content_format: string; revision_no: number; author_id: string; author_display_name: string | null; visibility: string; status: string; report_status: string | null; viewer_report:Record<string,unknown>|null; decision_code: string | null; reactions: unknown; viewer_reactions: unknown; pinned_files: unknown; created_at: Date | string; updated_at: Date | string | null; parent_comment_id: string | null; reply_count: string; reply_to_name: string|null; reply_parent:{deleted:boolean;excerpt:string}|null; thread_depth: number }>`SELECT comment.id::text,comment.comment_text text,comment.content_json,comment.content_format,comment.revision_no,comment.commenter_id::text author_id,principal.name author_display_name,comment.visibility,comment.status,(SELECT flag.status FROM event.comment_flag flag WHERE flag.tenant_id=comment.tenant_id AND flag.comment_id=comment.id AND flag.reporter_principal_id=${context.principalId}::uuid ORDER BY flag.created_at DESC,flag.id DESC LIMIT 1) report_status,(SELECT jsonb_build_object('reason',flag.reason_code,'detail',flag.detail,'submittedAt',flag.created_at,'status',COALESCE(moderation.status::text,flag.status::text),'decision',moderation.decision_code) FROM event.comment_flag flag LEFT JOIN governance.comment_moderation moderation ON moderation.tenant_id=flag.tenant_id AND moderation.comment_flag_id=flag.id WHERE flag.tenant_id=comment.tenant_id AND flag.comment_id=comment.id AND flag.reporter_principal_id=${context.principalId}::uuid ORDER BY flag.created_at DESC,flag.id DESC LIMIT 1) viewer_report,(SELECT moderation.decision_code FROM event.comment_flag flag JOIN governance.comment_moderation moderation ON moderation.tenant_id=flag.tenant_id AND moderation.comment_flag_id=flag.id WHERE flag.tenant_id=comment.tenant_id AND flag.comment_id=comment.id AND flag.reporter_principal_id=${context.principalId}::uuid ORDER BY flag.created_at DESC,flag.id DESC LIMIT 1) decision_code,COALESCE((SELECT jsonb_agg(jsonb_build_object('code',reaction_type,'count',count)) FROM (SELECT reaction_type,count(*) count FROM document.comment_reaction reaction WHERE reaction.tenant_id=comment.tenant_id AND reaction.comment_id=comment.id GROUP BY reaction_type) grouped),'[]'::jsonb) reactions,COALESCE((SELECT jsonb_agg(reaction_type) FROM document.comment_reaction reaction WHERE reaction.tenant_id=comment.tenant_id AND reaction.comment_id=comment.id AND reaction.principal_id=${context.principalId}::uuid),'[]'::jsonb) viewer_reactions,COALESCE((SELECT jsonb_agg(jsonb_build_object('attachmentId',attachment.id::text,'fileName',attachment.file_name,'version',attachment.version_no,'sizeBytes',attachment.size_bytes)) FROM document.attachment_link link JOIN document.attachment attachment ON attachment.tenant_id=link.tenant_id AND attachment.id=link.pinned_attachment_id WHERE link.tenant_id=comment.tenant_id AND link.entity_type='document.comment' AND link.entity_id=comment.id::text AND link.link_kind='comment'),'[]'::jsonb) pinned_files,${threadRootId ? sql`'0'::text` : sql`(SELECT count(*)::text FROM (${descendants(sql`comment.id`)}) replies)`} reply_count,(SELECT author.name FROM document.comment parent LEFT JOIN master.principal author ON author.tenant_id=parent.tenant_id AND author.id=parent.commenter_id WHERE parent.id=comment.parent_comment_id AND parent.tenant_id=comment.tenant_id AND parent.context_type=comment.context_type AND parent.entity_type=comment.entity_type AND parent.entity_id=comment.entity_id AND (parent.visibility IN ('public','internal') OR parent.commenter_id=${context.principalId}::uuid)) reply_to_name,(SELECT jsonb_build_object('deleted',parent.status='deleted','excerpt',CASE WHEN parent.status='deleted' THEN '' ELSE left(parent.comment_text,140) END) FROM document.comment parent WHERE parent.id=comment.parent_comment_id AND parent.tenant_id=comment.tenant_id AND parent.context_type=comment.context_type AND parent.entity_type=comment.entity_type AND parent.entity_id=comment.entity_id AND (parent.visibility IN ('public','internal') OR parent.commenter_id=${context.principalId}::uuid)) reply_parent,comment.thread_depth,comment.created_at,comment.updated_at,comment.parent_comment_id::text FROM document.comment comment LEFT JOIN master.principal principal ON principal.tenant_id=comment.tenant_id AND principal.id=comment.commenter_id WHERE comment.tenant_id=${context.tenantId}::uuid AND comment.context_type='entity' AND comment.entity_type=${core.entityCode} AND comment.entity_id=${recordId} AND (comment.visibility IN ('public','internal') OR comment.commenter_id=${context.principalId}::uuid) ${threadRootId ? sql`AND comment.id IN (${descendants(sql`${threadRootId}::uuid`)})` : sql`AND comment.parent_comment_id IS NULL`} ${cursor ? sql`AND (comment.created_at,comment.id)${threadRootId ? sql`>` : sql`<`}(SELECT created_at,id FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY comment.created_at ${threadRootId ? sql`ASC` : sql`DESC`},comment.id ${threadRootId ? sql`ASC` : sql`DESC`} LIMIT ${pageLimit + 1}`.execute(tx)).rows,
+                  (await sql<{ id: string; draft_text: string; content_format: string; content_json: unknown; content_schema: string | null; visibility: string; updated_at: Date | string | null; created_at: Date | string; parent_comment_id: string | null }>`SELECT id::text,draft_text,content_format,content_json,content_schema,visibility,updated_at,created_at,parent_comment_id::text FROM document.comment_draft WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid AND context_type='entity' AND entity_type=${core.entityCode} AND entity_id=${recordId} AND parent_comment_id IS NOT DISTINCT FROM ${threadRootId ?? null}::uuid AND expires_at>clock_timestamp() LIMIT 1`.execute(tx)).rows[0],
+                  (await sql<{ count: string | number }>`SELECT count(*)::text count FROM document.comment comment LEFT JOIN document.comment_feed_cursor cursor ON cursor.tenant_id=comment.tenant_id AND cursor.principal_id=${context.principalId}::uuid AND cursor.entity_type=comment.entity_type AND cursor.entity_id=comment.entity_id WHERE comment.tenant_id=${context.tenantId}::uuid AND comment.context_type='entity' AND comment.entity_type=${core.entityCode} AND comment.entity_id=${recordId} AND comment.status<>'deleted' AND comment.commenter_id<>${context.principalId}::uuid AND (comment.visibility IN ('public','internal') OR comment.commenter_id=${context.principalId}::uuid) AND comment.created_at>COALESCE(cursor.last_read_at,'-infinity'::timestamptz)`.execute(tx)).rows[0]?.count,
+                  (await sql<{ count: string | number }>`SELECT count(*)::text count FROM document.comment comment WHERE comment.tenant_id=${context.tenantId}::uuid AND comment.context_type='entity' AND comment.entity_type=${core.entityCode} AND comment.entity_id=${recordId} AND (comment.visibility IN ('public','internal') OR comment.commenter_id=${context.principalId}::uuid) ${threadRootId ? sql`AND comment.id IN (${descendants(sql`${threadRootId}::uuid`)})` : sql`AND comment.parent_comment_id IS NULL`}`.execute(tx)).rows[0]?.count,
+                ]);
+                return { rows, draft, unread: Number(unread ?? 0), total: Number(total ?? 0) };
+              });
+              const rows = result.rows;
+              const items = rows.slice(0, pageLimit).map((row) => Object.freeze({ id: row.id, replyCount: Number(row.reply_count), threadDepth: row.thread_depth, ...(row.reply_parent?{replyToDeleted:row.reply_parent.deleted,replyToExcerpt:row.reply_parent.excerpt}:{}), ...(row.reply_to_name?{replyToName:row.reply_to_name}:{}), text: row.status === "deleted" ? "" : row.text, ...(row.status !== "deleted" && row.content_format === "rich_json" && row.content_json ? { content: row.content_json, format: "rich_json" } : {}), revision: row.revision_no, authorId: row.author_id, ...(row.author_display_name ? { authorDisplayName: row.author_display_name } : {}), visibility: row.visibility, tombstone: row.status === "deleted", ...(row.report_status ? {reportStatus:row.report_status} : {}), ...(row.viewer_report?{viewerReport:row.viewer_report}:{}), ...(row.decision_code ? {moderationDecision:row.decision_code} : {}), reactions: row.status === "deleted" ? [] : row.reactions, viewerReactions: row.status === "deleted" ? [] : row.viewer_reactions, pinnedFiles: row.status === "deleted" ? [] : row.pinned_files, createdAt: new Date(row.created_at).toISOString(), ...(row.updated_at ? { updatedAt: new Date(row.updated_at).toISOString() } : {}), ...(row.parent_comment_id ? { parentCommentId: row.parent_comment_id } : {}) }));
+              const draft = result.draft ? Object.freeze({ id: result.draft.id, text: result.draft.draft_text, format: result.draft.content_format, ...(result.draft.content_json ? { content: result.draft.content_json } : {}), ...(result.draft.content_schema ? { contentSchema: result.draft.content_schema } : {}), visibility: result.draft.visibility, revision: new Date(result.draft.updated_at ?? result.draft.created_at).toISOString() }) : undefined;
+              return Object.freeze({ revision: createHash("sha256").update(JSON.stringify({items,draft,total:result.total,unread:result.unread})).digest("hex"), data: Object.freeze({ items, totalCount: result.total, unreadCount: result.unread, ...(threadRootId ? { threadRootId } : {}), ...(draft ? { draft } : {}), ...(rows.length > pageLimit && items.at(-1)?.id ? { nextCursor: items.at(-1)!.id } : {}) }) });
             },
           };
           if (serviceKey === "platform.attachments.v1") return {
             async read({ context, core, recordId, limit, cursor }) {
-              const rows = await transactions.run(context.planeKey, context, async (tx) => (await sql<{ id: string; file_name: string; content_type: string | null; size_bytes: string | number | null; created_at: Date | string }>`SELECT attachment.id::text,attachment.file_name,attachment.content_type,attachment.size_bytes,attachment.created_at FROM document.attachment attachment JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id AND series.current_attachment_id=attachment.id JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id WHERE attachment.tenant_id=${context.tenantId}::uuid AND link.entity_type=${core.entityCode} AND link.entity_id=${recordId} AND attachment.is_active AND attachment.is_virus_scanned AND attachment.status='active' AND (attachment.expires_at IS NULL OR attachment.expires_at>clock_timestamp()) AND (link.pinned_attachment_id IS NULL OR link.pinned_attachment_id=attachment.id) ${cursor ? sql`AND (attachment.created_at,attachment.id)<(SELECT created_at,id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY attachment.created_at DESC,attachment.id DESC LIMIT ${limit + 1}`.execute(tx)).rows);
-              const items = rows.slice(0, limit).map((row) => Object.freeze({ id: row.id, fileName: row.file_name, ...(row.content_type ? { contentType: row.content_type } : {}), ...(row.size_bytes === null ? {} : { sizeBytes: Number(row.size_bytes) }), createdAt: new Date(row.created_at).toISOString() }));
-              return Object.freeze({ revision: items[0]?.createdAt ?? `attachments:${recordId}`, data: Object.freeze({ items, ...(rows.length > limit && items.at(-1)?.id ? { nextCursor: items.at(-1)!.id } : {}) }) });
+              // A record can have several semantic links to a series.  The reader
+              // deliberately selects one current/pinned version per series so a
+              // drawer and content view cannot disagree by displaying duplicates.
+              const rows = await transactions.run(context.planeKey, context, async (tx) => (await sql<{ id: string; series_id: string; link_id: string; pinned_attachment_id: string | null; link_kind: string; folder_id: string | null; folder_name: string | null; category: string | null; version_no: number; file_name: string; display_name: string | null; content_type: string | null; size_bytes: string | number | null; status: string; created_at: Date | string; updated_at: Date | string | null; series_revision: string }>`WITH visible AS (SELECT DISTINCT ON (attachment.series_id) attachment.id::text,attachment.series_id::text,link.id::text link_id,link.pinned_attachment_id::text,link.link_kind,link.folder_id::text,folder.name folder_name,link.metadata->>'category' category,attachment.version_no,attachment.file_name,series.display_name,attachment.content_type,attachment.size_bytes,attachment.status,attachment.created_at,attachment.updated_at,series.revision_no::text series_revision FROM document.attachment attachment JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id LEFT JOIN document.attachment_folder folder ON folder.tenant_id=link.tenant_id AND folder.id=link.folder_id WHERE attachment.tenant_id=${context.tenantId}::uuid AND link.entity_type=${core.entityCode} AND link.entity_id=${recordId} AND attachment.id=COALESCE(link.pinned_attachment_id,series.current_attachment_id) AND attachment.is_active AND attachment.is_virus_scanned AND attachment.status='active' AND (attachment.expires_at IS NULL OR attachment.expires_at>clock_timestamp()) ${cursor ? sql`AND (attachment.created_at,attachment.id)<(SELECT created_at,id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY attachment.series_id,(link.pinned_attachment_id IS NOT NULL) DESC,link.created_at DESC,link.id DESC,attachment.created_at DESC,attachment.id DESC) SELECT * FROM visible ORDER BY created_at DESC,id DESC LIMIT ${limit + 1}`.execute(tx)).rows);
+              const pendingRows = await transactions.run(context.planeKey, context, async (tx) => (await sql<{ id: string; series_id: string; link_id: string; pinned_attachment_id: string | null; link_kind: string; folder_id: string | null; folder_name: string | null; category: string | null; version_no: number; file_name: string; display_name: string | null; content_type: string | null; size_bytes: string | number | null; status: string; created_at: Date | string; updated_at: Date | string | null; series_revision: string }>`SELECT attachment.id::text,attachment.series_id::text,link.id::text link_id,NULL::text pinned_attachment_id,link.link_kind,link.folder_id::text,folder.name folder_name,link.metadata->>'category' category,attachment.version_no,attachment.file_name,series.display_name,attachment.content_type,attachment.size_bytes,attachment.status,attachment.created_at,attachment.updated_at,series.revision_no::text series_revision FROM document.attachment attachment JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id LEFT JOIN document.attachment_folder folder ON folder.tenant_id=link.tenant_id AND folder.id=link.folder_id WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.uploaded_by=${context.principalId}::uuid AND link.entity_type=${core.entityCode} AND link.entity_id=${recordId} AND attachment.status IN ('pending','uploading','uploaded','processing','failed','quarantined','rejected') ${cursor ? sql`AND (attachment.created_at,attachment.id)<(SELECT created_at,id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY attachment.created_at DESC,attachment.id DESC LIMIT ${limit + 1}`.execute(tx)).rows);
+              // Pending transfer rows are private to the uploader, even when their
+              // eventual series is already associated with this shared record.
+              const allRows = [...rows, ...pendingRows].sort((left, right) => String(right.created_at).localeCompare(String(left.created_at)) || right.id.localeCompare(left.id));
+              const [folders, workspace] = await transactions.run(context.planeKey, context, async (tx) => Promise.all([
+                sql<{ id: string; name: string; parent_id: string | null }>`SELECT id::text,name,parent_id::text FROM document.attachment_folder WHERE tenant_id=${context.tenantId}::uuid AND entity_type=${core.entityCode} AND entity_id=${recordId} ORDER BY name,id`.execute(tx),
+                sql<{ revision_no: string }>`SELECT revision_no::text FROM document.attachment_workspace WHERE tenant_id=${context.tenantId}::uuid AND entity_type=${core.entityCode} AND entity_id=${recordId}`.execute(tx),
+              ]));
+              const folderItems=folders.rows.map((folder) => Object.freeze({ id: folder.id, name: folder.name, ...(folder.parent_id ? { parentId: folder.parent_id } : {}) }));
+              const workspaceRevision=workspace.rows[0]?.revision_no ?? "1";
+              const histories = new Map((await transactions.run(context.planeKey, context, async tx => Promise.all([...new Set(allRows.map(row => row.series_id))].map(async seriesId => [seriesId, (await sql<{ id: string; version_no: number; file_name: string; status: string; created_at: Date | string }>`SELECT id::text,version_no,file_name,status,created_at FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND series_id=${seriesId}::uuid ORDER BY version_no DESC,id DESC`.execute(tx)).rows] as const)))).map(([seriesId, history]) => [seriesId, history] as const));
+              const items = allRows.slice(0, limit).map((row) => Object.freeze({ id: row.id, seriesId: row.series_id, linkId: row.link_id, ...(row.pinned_attachment_id ? { pinnedAttachmentId: row.pinned_attachment_id } : {}), linkKind: row.link_kind, ...(row.folder_id ? { folderId: row.folder_id } : {}), ...(row.folder_name ? { folderName: row.folder_name } : {}), ...(row.category ? { category: row.category } : {}), version: row.version_no, fileName: row.file_name, ...(row.display_name ? { displayName: row.display_name } : {}), ...(row.content_type ? { contentType: row.content_type } : {}), ...(row.size_bytes === null ? {} : { sizeBytes: Number(row.size_bytes) }), processingStatus: row.status, revision: row.series_revision, createdAt: new Date(row.created_at).toISOString(), versionHistory: (histories.get(row.series_id) ?? []).map(version => Object.freeze({ id: version.id, version: version.version_no, fileName: version.file_name, status: version.status, createdAt: new Date(version.created_at).toISOString() })) }));
+              return Object.freeze({ revision: workspaceRevision, data: Object.freeze({ items, folders: folderItems, workspaceRevision, ...(allRows.length > limit && items.at(-1)?.id ? { nextCursor: items.at(-1)!.id } : {}) }) });
             },
           };
           return undefined;
@@ -3639,6 +3776,7 @@ export function registerServices(
       },
     });
     const entityOperations = createEntityOperationDispatcher({
+      capabilities: capabilityPolicy,
       reader: container.platform.compiledEntityReader!,
       artifacts: {
         resolve({ entityCode, operationKey }) {
@@ -3649,6 +3787,78 @@ export function registerServices(
       },
       handlers: {
         get(handlerKey) {
+          const capabilityHandler=/^platform\.(comments|attachments)\.([a-z_]+)\.v1$/.exec(handlerKey);
+          if(capabilityHandler) return {async execute(command) {
+            const {context,entityCode,recordId,input,expectedVersion,idempotencyKey}=command;
+            const action=capabilityHandler[2];
+            if(action === "read") {
+              if(typeof input.surfaceKey !== "string") throw new EntityRuntimeOperationError(400,"ENTITY_RUNTIME_OPERATION_INPUT_REQUIRED");
+              const resource=await entityRuntime.section({context,entityCode,recordId,surfaceKey:input.surfaceKey,sectionKey:capabilityHandler[1]!});
+              if(!resource) throw new EntityCapabilityPolicyError();
+              return {...resource};
+            }
+            if(capabilityHandler[1]==="comments") {
+              const service=container.services.collaboration;
+              if(!service) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+              if(action==="create") return {...await service.create({...input,context,entityType:entityCode,entityId:recordId,text:String(input.text ?? ""),idempotencyKey})};
+              if(action==="reply") return {...await service.create({...input,context,entityType:entityCode,entityId:recordId,text:String(input.text ?? ""),parentCommentId:String(input.parentCommentId ?? ""),idempotencyKey})};
+              if(action==="mention") { if(!service.participants) throw new EntityCapabilityPolicyError(); return {items:await service.participants({context,entityType:entityCode,entityId:recordId,query:String(input.query ?? ""),visibility:input.visibility === "private" ? "private" : input.visibility === "internal" ? "internal" : "public"})}; }
+              if(action==="draft") return {id:await service.putDraft({...input,context,entityType:entityCode,entityId:recordId,text:String(input.text ?? "")})};
+              const commentId=String(input.commentId ?? "");
+              const target=await transactions.run(context.planeKey,context,async tx=>(await sql`SELECT id FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${commentId}::uuid AND entity_type=${entityCode} AND entity_id=${recordId}`.execute(tx)).rows[0]);
+              if(!target) throw new EntityCapabilityPolicyError();
+              if(action==="history") { if(!service.history) throw new EntityCapabilityPolicyError(); return {...await service.history({context,commentId,...(typeof input.beforeRevision === "number" ? {beforeRevision:input.beforeRevision} : {})})}; }
+              if(action==="update_own") return {...await service.edit({...input,context,commentId,text:String(input.text ?? ""),expectedRevision:expectedVersion!})};
+              if(action==="archive_own") return {removed:await service.remove({context,commentId})};
+              if(action==="react") return {inserted:await service.putReaction({context,commentId,code:String(input.code ?? "")})};
+              if(action==="flag") return {id:await service.flag({context,commentId,reasonCode:String(input.reasonCode ?? ""),...(typeof input.detail === "string" ? {detail:input.detail} : {})})};
+            } else {
+              const service=container.services.attachments;
+              if(!service) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+              const attachmentId=String(input.attachmentId ?? "");
+              if (["preview","search","extract"].includes(action!)) {
+                if (!attachmentDiscovery) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+                if (action === "search") return attachmentDiscovery.search(context,{entityType:entityCode,entityId:recordId,q:String(input.q ?? ""),...(typeof input.after === "string" ? {after:input.after} : {})});
+                const scoped = await authorizeAttachmentCapability(context,action!,{attachmentId});
+                if (scoped?.entityType !== entityCode || scoped?.entityId !== recordId) throw new EntityCapabilityPolicyError();
+                if (action === "preview") return attachmentDiscovery.preview(context,{attachmentId,...(typeof input.rendition === "string" ? {rendition:input.rendition} : {})});
+                return attachmentDiscovery.extract(context,attachmentId);
+              }
+              const admission=await authorizeAttachmentCapability(context,action!,{...input,entityType:entityCode,entityId:recordId});
+              if(action!=="create") {
+                const targetAttachmentId=action==="version" ? String(input.parentAttachmentId ?? "") : attachmentId;
+                const target=await transactions.run(context.planeKey,context,async tx=>(await sql`SELECT id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${targetAttachmentId}::uuid AND metadata->>'entity_type'=${entityCode} AND metadata->>'entity_id'=${recordId}`.execute(tx)).rows[0]);
+                if(!target) throw new EntityCapabilityPolicyError();
+              }
+              const identity={planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId};
+              if(action==="create" || action==="version") {
+                const staged=await service.stage({...identity,...admission,entityType:entityCode,entityId:recordId,fileName:String(input.fileName ?? ""),contentType:String(input.contentType ?? ""),sizeBytes:Number(input.sizeBytes),...(typeof input.draftId === "string" ? {draftId:input.draftId} : {}),...(action==="version" ? {parentAttachmentId:String(input.parentAttachmentId ?? ""),expectedSeriesVersion:Number(input.expectedSeriesVersion)} : {})});
+                return {attachmentId:staged.attachmentId,uploadUrl:staged.uploadUrl,expiresAt:staged.expiresAt};
+              }
+              if(action==="finalize") {const result=await service.finalize(identity,String(input.contentType ?? ""),{authorizeCommit:async()=>{await authorizeAttachmentCapability(context,"finalize",{attachmentId,entityType:entityCode,entityId:recordId});}});return {attachmentId:result.id,status:result.status};}
+              if(action==="status") {const result=await (service.authorizedStatus ?? service.status)(identity);return {attachmentId:result.id,status:result.status};}
+              if(action==="download") return {...await service.createAuthorizedDownload(identity,120)};
+              if(action==="rename") {
+                if(!service.rename) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+                const renamed = await service.rename(identity,{displayName:String(input.displayName ?? ""),expectedSeriesRevision:String(input.expectedSeriesRevision ?? "")});
+                return {attachmentId:renamed.id,seriesId:renamed.seriesId,displayName:String(input.displayName ?? "").trim()};
+              }
+              if(action==="category") {
+                if(!service.setCategory) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+                await service.setCategory(identity,{entityType:entityCode,entityId:recordId,category:String(input.category ?? "") as "general" | "evidence"}); return {};
+              }
+              if(action==="folder") {
+                if(!service.manageFolder) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+                return {...await service.manageFolder(identity,{command:String(input.command ?? "") as "create" | "move" | "delete",entityType:entityCode,entityId:recordId,folderId:String(input.folderId ?? ""),expectedRevision:expectedVersion!,idempotencyKey:idempotencyKey!,...(typeof input.name==="string" ? {name:input.name} : {}),...(typeof input.parentFolderId==="string" ? {parentFolderId:input.parentFolderId} : {}),...(typeof input.attachmentId==="string" ? {attachmentId:input.attachmentId} : {})})};
+              }
+              if(action==="archive") { if(!service.archive) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE"); return {...await service.archive(identity)}; }
+              if(action==="unlink") {
+                if(!service.unlink) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+                return {...await service.unlink(identity,{entityType:entityCode,entityId:recordId})};
+              }
+            }
+            throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+          }};
           const requests = () => {
             const service = container.services.businessPartnerRequests;
             if (!service) throw new EntityRuntimeOperationError(503, "ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
@@ -3695,7 +3905,12 @@ export function registerServices(
           if (handlerKey === "neon.bp.governed-request.materialize.v1") return {
             async execute({ context, recordId, expectedVersion, idempotencyKey }) {
               const result = await requests().apply({ context, requestId: recordId, expectedVersion: expectedVersion!, idempotencyKey: idempotencyKey! });
-              return Object.freeze({ requestId: result.request.id, version: result.request.rowVersion, status: result.request.status, replayed: result.replayed, materialization: result.materialization, changedResources: [{ entityCode: "business_partner_request", recordId, revision: result.request.rowVersion, kinds: ["request", "action_summary"] }, { entityCode: "business_partner", recordId: result.materialization.businessPartnerId, kinds: ["header", "action_summary", "section"], sectionKeys: result.materialization.partnerRole === "supplier" ? ["roles-scope", "supplier-company"] : result.materialization.partnerRole === "customer" ? ["roles-scope", "customer-company"] : ["roles-scope"] }] });
+              return Object.freeze({ requestId: result.request.id, version: result.request.rowVersion, status: result.request.status, replayed: result.replayed, materialization: result.materialization, changedResources: [{ entityCode: "business_partner_request", recordId, revision: result.request.rowVersion, kinds: ["request", "action_summary"] }, { entityCode: "business_partner", recordId: result.materialization.businessPartnerId, kinds: ["header", "action_summary", "summary", "section"], sectionKeys: [
+                "roles-scope",
+                "contacts",
+                "addresses",
+                ...(result.materialization.partnerRole === "supplier" ? ["supplier-company"] : result.materialization.partnerRole === "customer" ? ["customer-company"] : []),
+              ] }] });
             },
           };
           return undefined;
@@ -3835,6 +4050,49 @@ export function registerServices(
         if(issues.length)throw new MasterDataError(422,"INTAKE_VALIDATION_FAILED","Please correct the invalid fields.",issues);
       }},
     );
+    const intakeProvider = createBusinessPartnerIntakeOperationProvider({
+      requests: businessPartnerRequests,
+      mapper: createBusinessPartnerIntakeCommandMapper({
+        requests: businessPartnerRequests,
+        descriptor: context => {
+          if (!intakeApplicationDescriptor) throw new MasterDataError(503, "ENTITY_INTAKE_UNAVAILABLE", "The published intake form is unavailable");
+          return intakeApplicationDescriptor(context, "business_partner");
+        },
+        readPartner: (context, id) => {
+          if (!intakeReferenceRecord) throw new MasterDataError(503, "ENTITY_INTAKE_UNAVAILABLE", "Partner lookup is unavailable");
+          return intakeReferenceRecord(context, "business_partner", id);
+        },
+        protect: (context, operatingOrganizationId, kind, value, bank) => {
+          const service = container.services.businessPartnerAccountBankLinkage;
+          if (!service) throw new MasterDataError(503, "ENTITY_INTAKE_PROTECTION_UNAVAILABLE", "Protected value capture is unavailable");
+          return service.protectIntakeValue({ context, operatingOrganizationId, kind, value, ...bank });
+        },
+        async preview(command, current) {
+          const preview = await transactions.run("neon", command.context, tx => supplierEdits.preview(command, tx));
+          if (preview.status === "legacy") return {
+            outcome: ["draft", "returned", "validation_failed"].includes(current.status) ? "reapproval-required" : "denied",
+            message: preview.message,
+          };
+          const result = preview.result!;
+          return { outcome: !preview.editableNow || !result.permitted ? "denied"
+            : result.changedPaths.length === 0 ? "unchanged"
+            : result.effect === "full_reapproval" ? "reapproval-required" : "metadata-only" };
+        },
+      }),
+    });
+    container.platform.httpRegistrars.push(application => registerEntityIntakeOperationRoutes(application, {
+      authenticate: createIamAuthenticationMiddleware(iam),
+      readContext: readVerifiedRequestContext,
+      providers: { get: ({ entityCode, flowKey }) => entityCode === "business_partner" && flowKey === "request_intake" ? {
+        async execute(input) {
+          try { return await intakeProvider.execute(input); }
+          catch (error) {
+            if (error instanceof MasterDataError) throw new HttpError(error.status, error.code, error.message);
+            throw error;
+          }
+        },
+      } : undefined },
+    }));
     const companyPilot = createBusinessPartnerCompanyPilotService({
       ...businessPartnerRequestOptions,
       repository: new KyselyBusinessPartnerCaseRepository(
@@ -4030,6 +4288,18 @@ export function registerServices(
       ...(protectedValues ? { protectedValues } : {}),
     });
     container.services.workforce = workforce;
+    const hrStage2=createHrStage2Service({
+      authorizer:businessPartnerAuthorizer,
+      transactions,
+      audit,
+    });
+    container.platform.httpRegistrars.push(application=>
+      registerHrStage2Routes(application,{
+        authenticate:createIamAuthenticationMiddleware(iam),
+        readContext:readVerifiedRequestContext,
+        service:hrStage2,
+      }),
+    );
     const supplierWorkforceEligibility =
       process.env["MESH_WORKFORCE_ELIGIBILITY_BASE_URL"] &&
       process.env["MESH_WORKFORCE_ELIGIBILITY_CREDENTIAL_REFERENCE"] &&
@@ -4723,6 +4993,22 @@ export function registerServices(
     createKyselyNotificationRepositories(transactions);
   if (Object.keys(metadataDatabases).length > 0) {
     const collaboration = createCollaborationService({
+      participants: input=>recordParticipants.search({context:input.context,entityCode:input.entityType,recordId:input.entityId,kind:"comments",action:"mention",input:{visibility:input.visibility}},input.query),
+      async authorizeCapability(action, input, value) {
+        let entityCode=input.entityType, recordId=input.entityId;
+        if(input.commentId) {
+          const row=await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{entity_type:string;entity_id:string}>`SELECT entity_type,entity_id FROM document.comment WHERE tenant_id=${input.context.tenantId}::uuid AND id=${input.commentId}::uuid`.execute(tx)).rows[0]);
+          entityCode=row?.entity_type;recordId=row?.entity_id;
+        }
+        if(entityCode === "content.item") { if(action === "mention" || action === "history") throw new EntityCapabilityPolicyError(); return; }
+        if(!entityCode || !recordId) throw new EntityCapabilityPolicyError();
+        const resolved=await capabilityPolicy.resolve({context:input.context,entityCode,recordId,kind:"comments",action,input:value});
+        if ("maxDepth" in resolved.binding && typeof value.parentCommentId === "string") {
+          const parent = await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{thread_depth:number}>`SELECT thread_depth FROM document.comment WHERE tenant_id=${input.context.tenantId}::uuid AND id=${value.parentCommentId}::uuid AND entity_type=${entityCode} AND entity_id=${recordId} AND status<>'deleted'`.execute(tx)).rows[0]);
+          if(!parent || parent.thread_depth + 1 > resolved.binding.maxDepth) throw new EntityCapabilityPolicyError();
+        }
+        return {defaultAudience: "defaultAudience" in resolved.binding ? resolved.binding.defaultAudience : undefined,draftRetentionDays: "draftRetentionDays" in resolved.binding ? resolved.binding.draftRetentionDays : undefined};
+      },
       authorizer,
       principals: createKyselyPrincipalDirectory(),
       repository: createKyselyCollaborationRepository(),
@@ -5250,18 +5536,26 @@ export function registerServices(
       formChoices: async (context, sourceKey) => {
         const database=metadataDatabases[context.planeKey];
         if(!database)throw Error("INTAKE_LOOKUP_DATABASE_UNAVAILABLE");
+        // Banking has its own capture projection until BP2-09. Other dependent
+        // shared references start empty and are loaded only after their parent
+        // field supplies an admitted scope.
         if((bankFormSources as readonly string[]).includes(sourceKey))return bankFormChoices(database,sourceKey);
-        if(sourceKey==="iso.currency"){
-          const result=await sql<{code:string;name:string}>`SELECT code,name FROM shared.currency WHERE status='active' ORDER BY name LIMIT 500`.execute(database);
-          return result.rows.map(row=>({value:row.code.trim(),label:row.name}));
+        if (isSharedReferenceSourceKey(sourceKey)) {
+          if (requiresSharedReferenceDependency(sourceKey)) return [];
+          const page = await createSharedReferenceDirectory(database).lookup({
+            sourceKey,
+            limit: 25,
+          });
+          return page.items.map(({ value, label, data }) => ({
+            value,
+            label,
+            ...(data ? { data } : {}),
+          }));
         }
-        if(sourceKey==="iso.country" || sourceKey==="shared.state_region")return addressFormChoices(database,sourceKey);
         if(context.planeKey!=="neon")throw Error("INTAKE_LOOKUP_SOURCE_UNREGISTERED");
         const tables:Record<string,string>={"neon.commodity_category":"master.commodity_category","neon.tax_jurisdiction":"master.tax_jurisdiction","neon.tax_type":"master.tax_type","neon.certification_type":"master.certification_type"};
         const table=tables[sourceKey];
-        const result=sourceKey==="shared.industry_code"
-          ?await sql<{id:string;code:string;name:string}>`SELECT id::text,domain_code||' '||code code,name FROM shared.industry_code WHERE status='active' ORDER BY domain_code,code LIMIT 2001`.execute(database)
-          :table?await sql<{id:string;code:string;name:string}>`SELECT id::text,code,name FROM ${sql.table(table)} WHERE tenant_id=${context.tenantId}::uuid AND status='active' ORDER BY name,id LIMIT 2001`.execute(database):undefined;
+        const result=table?await sql<{id:string;code:string;name:string}>`SELECT id::text,code,name FROM ${sql.table(table)} WHERE tenant_id=${context.tenantId}::uuid AND status='active' ORDER BY name,id LIMIT 2001`.execute(database):undefined;
         if(!result)throw Error("INTAKE_LOOKUP_SOURCE_UNREGISTERED");
         if(result.rows.length>2000)throw Error("INTAKE_LOOKUP_REQUIRES_PAGED_SOURCE");
         return result.rows.map(row=>({value:row.id,label:row.code+' · '+row.name}));
@@ -5312,7 +5606,17 @@ export function registerServices(
       descriptor: (context, entity, query) => lists.applicationDescriptor(context, entity, parseEntityListScopeCoordinate(query)),
       store: createReferenceHistoryStore(transactions),
     }));
-    if (!compiledBusinessPartnerApplicationDescriptor) throw Error("COMPILED_ENTITY_APPLICATION_DESCRIPTOR_UNAVAILABLE");
+    container.platform.httpRegistrars.push(application => registerSharedReferenceDirectoryRoutes(application, {
+      authenticate: createIamAuthenticationMiddleware(iam),
+      readContext: readVerifiedRequestContext,
+      directory: (context) => {
+        const database = metadataDatabases[context.planeKey];
+        if (!database) throw Error("REFERENCE_LOOKUP_DATABASE_UNAVAILABLE");
+        return createSharedReferenceDirectory(database);
+      },
+    }));
+    // Records can run without the optional BP composition (for example a
+    // metadata-only host). BP intake checks availability at its request boundary.
     intakeApplicationDescriptor=compiledBusinessPartnerApplicationDescriptor;
     intakeReferenceRecord=lists.record.bind(lists);
     const bookmarks = createRecordBookmarkService({
@@ -5581,7 +5885,6 @@ export function registerServices(
   if (
     container.runtimes.jobs &&
     contentExtractor &&
-    searchIndex &&
     objectStorage
   ) {
     const processing = createDocumentProcessingHandler({
@@ -5608,6 +5911,16 @@ export function registerServices(
     const search = createDocumentSearchService({
       authorizer,
       index: searchIndex,
+      authorizeHit: async (context, hit) => {
+        if (!hit.attachmentId) return false;
+        const live = await transactions.run(context.planeKey, context, async tx => (await sql`
+          SELECT 1 FROM document.attachment_link l JOIN document.attachment_series s ON s.tenant_id=l.tenant_id AND s.id=l.attachment_series_id
+          JOIN document.attachment a ON a.tenant_id=s.tenant_id AND a.id=coalesce(l.pinned_attachment_id,s.current_attachment_id)
+          WHERE l.tenant_id=${context.tenantId}::uuid AND l.entity_type=${hit.entityType} AND l.entity_id=${hit.entityId}
+          AND a.id=${hit.attachmentId}::uuid AND a.status='active' AND a.is_active AND a.is_virus_scanned LIMIT 1`.execute(tx)).rows.length > 0);
+        if (!live) return false;
+        try { return Boolean(await authorizeAttachmentCapability(context,"download",{attachmentId:hit.attachmentId})); } catch { return false; }
+      },
     });
     container.platform.search = search;
     container.platform.httpRegistrars.push((application) =>
@@ -5712,6 +6025,17 @@ export function registerServices(
         executionRetentionDays: 30,
       });
     }
+    if (container.runtimes.jobs && searchIndex) {
+      container.runtimes.jobs.register("documents.search-removal", "documents.search-remove", {
+        async handle(job) {
+          const value = job.data as { planeKey: string; tenantId: string; attachmentId: string };
+          if (!["neon", "studio", "mesh"].includes(value.planeKey) || !/^[0-9a-f-]{36}$/i.test(value.tenantId) || !/^[0-9a-f-]{36}$/i.test(value.attachmentId)) throw new Error("Invalid search removal scope");
+          await searchIndex.remove(`${value.planeKey}:${value.tenantId}:${value.attachmentId}`);
+          return {status:"completed"};
+        },
+      });
+      container.runtimes.jobDefinitions.push({code:"documents.search-remove",owner:"@athyper/server-service-attachments",queue:"documents.search-removal",name:"documents.search-remove",scope:"tenant",payloadSchema:{name:"documents.search-remove",version:1},timeoutMs:30000,maxAttempts:10,executionRetentionDays:30});
+    }
     const attachments = createAttachmentLifecycle({
       transactions,
       repository: attachmentRepository,
@@ -5720,7 +6044,12 @@ export function registerServices(
       quota,
       quotaPolicies,
       outbox: createDatabaseOutboxWriter("attachments"),
+      commandExecutions: createKyselyCommandExecutionStore(),
       scheduler: {
+        scheduleSearchRemoval: async (identity) => {
+          if (!container.runtimes.jobs || !searchIndex) return;
+          await container.runtimes.jobs.enqueue("documents.search-removal", "documents.search-remove", identity, {execution:{planeKey:identity.planeKey,scope:"tenant",tenantId:identity.tenantId,principalId:identity.principalId},payloadSchema:{name:"documents.search-remove",version:1},timeoutMs:30000,maxAttempts:10,backoff:{kind:"exponential",delayMs:1000},removeOnComplete:1000,removeOnFail:5000});
+        },
         scheduleExtraction: async (identity) => {
           await extractionScheduler?.schedule({ ...identity });
         },
@@ -5730,7 +6059,52 @@ export function registerServices(
             ...(options?.rebuild ? { rebuild: options.rebuild } : {}),
           });
         },
-        schedulePurge: async () => undefined,
+        schedulePurge: async (identity, options) => {
+          if (!container.runtimes.jobs) return;
+          await container.runtimes.jobs.enqueue(
+            ATTACHMENT_MAINTENANCE_QUEUE,
+            PURGE_ATTACHMENT_JOB,
+            identity,
+            {
+              jobId: options?.jobId,
+              maxAttempts: 5,
+              backoff: { kind: "exponential", delayMs: 5_000, jitter: 0.2 },
+              execution: {
+                planeKey: identity.planeKey,
+                scope: "tenant",
+                tenantId: identity.tenantId,
+                principalId: identity.principalId,
+              },
+              payloadSchema: { name: PURGE_ATTACHMENT_JOB, version: 1 },
+              // Deferred purges must be enqueueable again after a hold/retention expires.
+              removeOnComplete: true,
+              removeOnFail: 5_000,
+            },
+          );
+        },
+        scheduleStageExpiry: async (identity, options) => {
+          if (!container.runtimes.jobs) return;
+          await container.runtimes.jobs.enqueue(
+            ATTACHMENT_MAINTENANCE_QUEUE,
+            EXPIRE_STAGED_ATTACHMENT_JOB,
+            identity,
+            {
+              jobId: options.jobId,
+              delayMs: options.delayMs,
+              maxAttempts: 5,
+              backoff: { kind: "exponential", delayMs: 5_000, jitter: 0.2 },
+              execution: {
+                planeKey: identity.planeKey,
+                scope: "tenant",
+                tenantId: identity.tenantId,
+                principalId: identity.principalId,
+              },
+              payloadSchema: { name: EXPIRE_STAGED_ATTACHMENT_JOB, version: 1 },
+              removeOnComplete: 1_000,
+              removeOnFail: 5_000,
+            },
+          );
+        },
       },
       ...(config?.objectStorage.scanStreamTimeoutMs !== undefined
         ? { scanStreamTimeoutMs: config.objectStorage.scanStreamTimeoutMs }
@@ -5738,8 +6112,17 @@ export function registerServices(
     });
     lifecycle?.onShutdown(() => attachments.close());
     container.services.attachments = attachments;
+    attachmentDiscovery = createAttachmentDiscoveryService({
+      authorizeCapability:authorizeAttachmentCapability,transactions,storage:objectStorage,
+      ...(derivativeScheduler ? {schedule:input => derivativeScheduler.schedule(input)} : {}),
+      ...(extractionScheduler ? {extract:input => extractionScheduler.schedule(input)} : {}),
+    });
+    container.platform.httpRegistrars.push(application => registerAttachmentDiscoveryRoutes(application, {
+      authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,service:attachmentDiscovery!,
+    }));
     container.platform.httpRegistrars.push((application) =>
       registerAttachmentRoutes(application, {
+        authorizeCapability: authorizeAttachmentCapability,
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
         authorizer,
@@ -5756,6 +6139,16 @@ export function registerServices(
     if (container.runtimes.jobs) {
       container.runtimes.jobs.register(
         ATTACHMENT_MAINTENANCE_QUEUE,
+        EXPIRE_STAGED_ATTACHMENT_JOB,
+        createAttachmentStageExpiryHandler(attachments),
+      );
+      container.runtimes.jobs.register(
+        ATTACHMENT_MAINTENANCE_QUEUE,
+        PURGE_ATTACHMENT_JOB,
+        createAttachmentPurgeHandler(attachments),
+      );
+      container.runtimes.jobs.register(
+        ATTACHMENT_MAINTENANCE_QUEUE,
         EXPIRE_ATTACHMENT_RESERVATIONS_JOB,
         createAttachmentQuotaRecoveryHandler({
           transactions,
@@ -5763,6 +6156,71 @@ export function registerServices(
           attachments: attachmentRepository,
         }),
       );
+      container.runtimes.jobs.register(
+        ATTACHMENT_MAINTENANCE_QUEUE,
+        RECONCILE_ATTACHMENT_RETENTION_JOB,
+        createAttachmentRetentionReconciliationHandler({
+          claim: async ({ planeKey, batchSize }) => {
+            const database = metadataDatabases[planeKey];
+            if (!database) return [];
+            const limit = Math.min(500, Math.max(1, batchSize ?? 100));
+            return database.transaction().execute(async (tx) => {
+              const expiredDraftAttachments = await expireCommentDrafts(tx);
+              for (const item of expiredDraftAttachments) await createDatabaseOutboxWriter("collaboration").append({tenantId:item.tenantId,topic:"attachments.lifecycle",eventType:"attachments.orphaned",eventKey:`draft-expiry:${item.attachmentId}`,entityType:"document.attachment",entityId:item.attachmentId,aggregateType:"document.attachment",aggregateId:item.attachmentId,actorId:item.principalId,payload:{...item,planeKey,reason:"draft_expired"}},tx);
+              const result = await sql<{ tenant_id: string; id: string }>`SELECT attachment.tenant_id::text,attachment.id::text FROM document.attachment attachment WHERE attachment.status IN('expired','deleted','orphaned') AND attachment.storage_key<>'purged/'||attachment.id::text AND NOT EXISTS(SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id) AND NOT EXISTS(SELECT 1 FROM document.attachment_series series WHERE series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id AND series.retention_until>clock_timestamp()) AND COALESCE(attachment.retention_until,'-infinity'::timestamptz)<=clock_timestamp() AND NOT EXISTS(SELECT 1 FROM document.attachment_legal_hold hold WHERE hold.tenant_id=attachment.tenant_id AND hold.attachment_series_id=attachment.series_id AND hold.released_at IS NULL) ORDER BY attachment.status_changed_at NULLS LAST,attachment.created_at LIMIT ${limit} FOR UPDATE SKIP LOCKED`.execute(tx);
+              return result.rows.map((row) => ({
+                planeKey,
+                tenantId: row.tenant_id,
+                principalId: SYSTEM_PRINCIPAL_ID,
+                attachmentId: row.id,
+              }));
+            });
+          },
+          schedulePurge: async (identity) => {
+            await container.runtimes.jobs!.enqueue(
+              ATTACHMENT_MAINTENANCE_QUEUE,
+              PURGE_ATTACHMENT_JOB,
+              identity,
+              {
+                jobId: `attachment:${identity.attachmentId}:purge`,
+                maxAttempts: 5,
+                backoff: { kind: "exponential", delayMs: 5_000, jitter: 0.2 },
+                execution: {
+                  planeKey: identity.planeKey,
+                  scope: "tenant",
+                  tenantId: identity.tenantId,
+                  principalId: identity.principalId,
+                },
+                payloadSchema: { name: PURGE_ATTACHMENT_JOB, version: 1 },
+                removeOnComplete: true,
+                removeOnFail: 5_000,
+              },
+            );
+          },
+        }),
+      );
+      container.runtimes.jobDefinitions.push({
+        code: EXPIRE_STAGED_ATTACHMENT_JOB,
+        owner: "@athyper/server-service-attachments",
+        queue: ATTACHMENT_MAINTENANCE_QUEUE,
+        name: EXPIRE_STAGED_ATTACHMENT_JOB,
+        scope: "tenant",
+        payloadSchema: { name: EXPIRE_STAGED_ATTACHMENT_JOB, version: 1 },
+        timeoutMs: 60_000,
+        maxAttempts: 5,
+        executionRetentionDays: 30,
+      });
+      container.runtimes.jobDefinitions.push({
+        code: PURGE_ATTACHMENT_JOB,
+        owner: "@athyper/server-service-attachments",
+        queue: ATTACHMENT_MAINTENANCE_QUEUE,
+        name: PURGE_ATTACHMENT_JOB,
+        scope: "tenant",
+        payloadSchema: { name: PURGE_ATTACHMENT_JOB, version: 1 },
+        timeoutMs: 60_000,
+        maxAttempts: 5,
+        executionRetentionDays: 30,
+      });
       container.runtimes.jobDefinitions.push({
         code: EXPIRE_ATTACHMENT_RESERVATIONS_JOB,
         owner: "@athyper/server-service-attachments",
@@ -5774,6 +6232,42 @@ export function registerServices(
         maxAttempts: 5,
         executionRetentionDays: 30,
       });
+      container.runtimes.jobDefinitions.push({
+        code: RECONCILE_ATTACHMENT_RETENTION_JOB,
+        owner: "@athyper/server-service-attachments",
+        queue: ATTACHMENT_MAINTENANCE_QUEUE,
+        name: RECONCILE_ATTACHMENT_RETENTION_JOB,
+        scope: "plane",
+        payloadSchema: {
+          name: RECONCILE_ATTACHMENT_RETENTION_JOB,
+          version: 1,
+        },
+        timeoutMs: 60_000,
+        maxAttempts: 3,
+        executionRetentionDays: 30,
+      });
+      if (container.runtimes.scheduler)
+        for (const planeKey of Object.keys(metadataDatabases) as PlaneKey[])
+          container.runtimes.scheduledJobs.push({
+            scheduleId: `attachment-retention-reconciliation-${planeKey}`,
+            queue: ATTACHMENT_MAINTENANCE_QUEUE,
+            name: RECONCILE_ATTACHMENT_RETENTION_JOB,
+            data: { planeKey, batchSize: 100 },
+            pattern: { kind: "interval", everyMs: 5 * 60 * 1_000 },
+            options: {
+              jobId: `attachments:reconcile-retention:${planeKey}`,
+              maxAttempts: 3,
+              payloadSchema: {
+                name: RECONCILE_ATTACHMENT_RETENTION_JOB,
+                version: 1,
+              },
+              execution: {
+                planeKey,
+                scope: "plane",
+                principalId: SYSTEM_PRINCIPAL_ID,
+              },
+            },
+          });
     }
   }
   if (
@@ -6569,6 +7063,11 @@ function registerStudioAuthoring(
   authorizer: NonNullable<Container["platform"]["authorizer"]>,
   transactions: PlaneTransactionCoordinator<RecordTransaction>,
 ): void {
+  const devPublication = config?.mode === "api"
+    ? loadDevPublicationConfiguration(process.env, config.env)
+    : undefined;
+  if (devPublication && (!config?.publication.authoringEnabled || !container.platform.audit))
+    throw Error("DEV_PUBLICATION_AUTHORING_AND_AUDIT_REQUIRED");
   if (
     config?.publication.authoringEnabled &&
     (!database ||
@@ -6828,6 +7327,10 @@ function registerStudioAuthoring(
     ),
     publication,
   });
+  if (devPublication) container.platform.httpRegistrars.push(application =>
+    registerDevPublicationRoutes(application, {
+      config: devPublication, database, service, audit: container.platform.audit!,
+    }));
   container.platform.httpRegistrars.push((application) =>
     registerAtlasLearningInboxRoutes(application, {
       authenticate: createIamAuthenticationMiddleware(iam),
@@ -7028,6 +7531,12 @@ function registerPublication(
       authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, service: taskEditAuthoring,
     }));
   }
+  const devConfiguration = loadDevPublicationConfiguration(process.env, config.env);
+  const devRuntime = devConfiguration?.runtimeApproval && authorizationCompilation
+    ? createDevRuntimePublication({ environment: config.env, database: (container.adapters.athyperDatabase?.database ?? authorityDatabase) as Kysely<Record<string, never>>,
+        signingKeyId: config.publication.signingKeyId!, audit, compilation: authorizationCompilation })
+    : undefined;
+  if (devRuntime && authorizationCompilation) authorizationCompilation = { ...authorizationCompilation, review: devRuntime.review };
   const artifactRuntimeEnabled =
     config.publication.applyEnabled ||
     config.publication.compileEnabled ||
@@ -7066,6 +7575,14 @@ function registerPublication(
       authorityDatabase,
       database,
       loader,
+      async (deployment, loaded) => {
+        if (loaded.document.manifest.evidence?.authorizationReviewMode !== "development_auto_approval") return;
+        if (!devRuntime || deployment.targetEnvironment !== "local" || deployment.signingKeyId !== config.publication.signingKeyId)
+          throw Error("DEV_RUNTIME_ACTIVATION_DENIED");
+        const receipt = await devRuntime.authorizeActivation(deployment.sourceReleaseId);
+        if (receipt.receiptSha256 !== loaded.document.manifest.evidence.authorizationReviewReceiptSha256)
+          throw Error("DEV_RUNTIME_APPROVAL_CHANGED");
+      },
     );
   }
   container.services.publication = { authority, projections, orchestrators };
@@ -7189,6 +7706,7 @@ function registerPublication(
         return result.rows;
       },
       ...(authorizationCompilation ? { authorizationCompilation } : {}),
+      ...(devRuntime ? { authorizeEntityActivation: async (releaseId: string) => { await devRuntime.authorizeActivation(releaseId); } } : {}),
       database: authorityDatabase,
       authority,
       store: container.adapters.publicationArtifactStore!,

@@ -1,0 +1,134 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "commodity_crosswalk/core",
+  "entityCode": "commodity_crosswalk",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "primaryObject": "shared.commodity_crosswalk",
+    "sourceObjects": [
+      "shared.commodity_crosswalk"
+    ],
+    "idField": "id",
+    "tenantField": null,
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "shared.commodity_crosswalk",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.commodityCrosswalk.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "sourceDomainCode",
+      "binding": {
+        "sourceObject": "shared.commodity_crosswalk",
+        "column": "source_domain_code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.commodityCrosswalk.core.fields.sourceDomainCode.label",
+        "defaultText": "Source classification scheme"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "sourceCode",
+      "binding": {
+        "sourceObject": "shared.commodity_crosswalk",
+        "column": "source_code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.commodityCrosswalk.core.fields.sourceCode.label",
+        "defaultText": "Source code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "targetDomainCode",
+      "binding": {
+        "sourceObject": "shared.commodity_crosswalk",
+        "column": "target_domain_code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.commodityCrosswalk.core.fields.targetDomainCode.label",
+        "defaultText": "Target classification scheme"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "targetCode",
+      "binding": {
+        "sourceObject": "shared.commodity_crosswalk",
+        "column": "target_code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.commodityCrosswalk.core.fields.targetCode.label",
+        "defaultText": "Target code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "shared_reference"
+  },
+  "referencePicker": {
+    "valueField": "id",
+    "labelField": "sourceCode",
+    "displayFormat": "{sourceCode}",
+    "allowedTokens": [
+      "sourceCode"
+    ],
+    "load": "bounded_lookup"
+  },
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:67bc29da4cacfd683ef4261aafe5d4fab1cfaa049b94043eebab13b276620f3c"
+}

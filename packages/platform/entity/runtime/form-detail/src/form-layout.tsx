@@ -5,6 +5,8 @@ import {
   useEntitySectionScroll,
   type EntitySectionItem,
 } from "./section-navigation";
+import { EntityIntakeWorkspace } from "./intake-workspace";
+import type { EntityIntakeSurfaceV1 } from "@athyper/contract-platform-entity-runtime";
 /** Layout only: the owning workflow supplies data, permissions, persistence, and actions. */
 export function EntityFormLayout({
   sections,
@@ -12,6 +14,7 @@ export function EntityFormLayout({
   mode = "create",
   header,
   footer,
+  intakeWorkspace,
   children,
 }: {
   sections: readonly EntitySectionItem[];
@@ -19,6 +22,8 @@ export function EntityFormLayout({
   mode?: "create" | "amend" | "review" | "view";
   header?: ReactNode;
   footer?: ReactNode;
+  /** Published intake presentation. Omit to retain the plain section/content form layout. */
+  intakeWorkspace?: { readonly surface: EntityIntakeSurfaceV1; readonly guidance?: ReactNode; readonly status?: ReactNode; readonly actions?: ReactNode };
   children: ReactNode;
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -74,9 +79,7 @@ export function EntityFormLayout({
     });
     return () => observer.disconnect();
   }, [signature]);
-  return (
-    <div ref={root} className="a-form-layout" data-mode={mode}>
-      {header ? <div className="a-form-layout__header">{header}</div> : null}
+  const navigation = (
       <EntitySectionNavigation
         className="a-form-layout__navigation"
         label={navigationLabel}
@@ -90,8 +93,9 @@ export function EntityFormLayout({
           setRevision((r) => r + 1);
         }}
       />
-      <div className="a-form-layout__content">{children}</div>
-      {footer ? <div className="a-form-layout__footer">{footer}</div> : null}
-    </div>
   );
+  const content = <div className="a-form-layout__content">{children}</div>;
+  if (intakeWorkspace)
+    return <div ref={root}><EntityIntakeWorkspace surface={intakeWorkspace.surface} sectionNavigation={navigation} guidance={intakeWorkspace.guidance} status={intakeWorkspace.status} actions={intakeWorkspace.actions}>{content}</EntityIntakeWorkspace></div>;
+  return <div ref={root} className="a-form-layout" data-mode={mode}>{header ? <div className="a-form-layout__header">{header}</div> : null}{navigation}{content}{footer ? <div className="a-form-layout__footer">{footer}</div> : null}</div>;
 }

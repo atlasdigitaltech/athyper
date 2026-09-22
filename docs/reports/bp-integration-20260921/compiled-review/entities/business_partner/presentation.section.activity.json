@@ -1,0 +1,51 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "presentation_section",
+  "artifactKey": "business_partner/presentation.section.activity",
+  "entityCode": "business_partner",
+  "plane": "neon",
+  "sectionKey": "activity",
+  "rendererKey": "platform.activity-timeline.v1",
+  "dataBinding": {
+    "kind": "registered_service",
+    "handlerKey": "neon.bp.section.activity.v1",
+    "existingRoutes": [
+      "/api/neon/business-partners/:id/360/activity"
+    ],
+    "ownerEntityCode": "business_partner",
+    "scopeAuthority": "server",
+    "includeInAggregate": false
+  },
+  "fieldBindings": [],
+  "authorization": {
+    "viewPermission": "neon.relationship.business_partner_activity.read",
+    "fieldPermissions": [],
+    "discoverableWhenDenied": false,
+    "enforceBeforeDataQuery": true
+  },
+  "resourceStates": [
+    "loading",
+    "error",
+    "empty",
+    "restricted",
+    "ready"
+  ],
+  "pagination": {
+    "defaultLimit": 25,
+    "maxLimit": 100
+  },
+  "load": "on_visible",
+  "requiredContext": "resolve_from_target_core",
+  "dependencies": [],
+  "contentModel": {
+    "kind": "typed_pull_event_resource",
+    "handlerKey": "neon.bp.activity.timeline.v1",
+    "eventEntityCode": "business_partner.activity",
+    "ownerEntityCode": "business_partner",
+    "paginationMode": "cursor",
+    "implementationStatus": "registered"
+  },
+  "artifactHash": "sha256:f5c8e6b97b1b68c2b8a6f33bc0836b211fab490d9e6a469af73b5bd8efb943a9"
+}

@@ -28,15 +28,16 @@
     "@athyper/server-contract-audit": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-jobs": "workspace:*",
+    "@athyper/server-contract-metadata": "workspace:*",
     "@athyper/server-contract-object-storage": "workspace:*",
     "@athyper/server-contract-publication": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
+    "@athyper/server-platform-metadata": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
-    "kysely": "^0.28.17",
-    "@athyper/server-contract-metadata": "workspace:*",
-    "@athyper/server-platform-metadata": "workspace:*"
+    "kysely": "^0.28.17"
   },
   "devDependencies": {
+    "@athyper/server-adapter-publication-signing": "workspace:*",
     "@athyper/server-platform-audit": "workspace:*",
     "@types/node": "^25.6.0",
     "@types/pg": "^8.20.0",

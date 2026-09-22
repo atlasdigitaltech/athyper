@@ -383,3 +383,8 @@ ALTER TABLE metadata.entity_operation_scope_binding
         FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT,
     ADD CONSTRAINT entity_operation_scope_binding_updated_by_fk
         FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+ALTER TABLE metadata.entity_capability
+ ADD CONSTRAINT entity_capability_entity_fk FOREIGN KEY(entity_id) REFERENCES metadata.entity(id),
+ ADD CONSTRAINT entity_capability_changeset_fk FOREIGN KEY(change_set_id) REFERENCES metadata.entity_change_set(id),
+ ADD CONSTRAINT entity_capability_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id),
+ ADD CONSTRAINT entity_capability_actor_fk FOREIGN KEY(created_by) REFERENCES master.principal(id);

@@ -1273,3 +1273,17 @@ CREATE TABLE metadata.entity_operation_scope_binding (
 
 COMMENT ON TABLE metadata.entity_operation_scope_binding IS
   'Admin-authored, change-set-owned scope-coordinate recipe. Plane compilers freeze it into immutable artifacts; consumer authz tables are projections only.';
+-- A change-set member, not a runtime-profile extension. The same typed policy
+-- is projected into Core/Operation at publication; surfaces cannot override it.
+CREATE TABLE metadata.entity_capability (
+ id uuid NOT NULL DEFAULT shared.uuidv7() PRIMARY KEY,
+ tenant_id uuid, entity_id uuid NOT NULL, change_set_id uuid NOT NULL,
+ capability_key text NOT NULL CHECK(capability_key IN ('comments','attachments')),
+ declaration jsonb NOT NULL CHECK(jsonb_typeof(declaration)='object'),
+ binding jsonb CHECK(binding IS NULL OR jsonb_typeof(binding)='object'),
+ created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+ updated_at timestamptz, updated_by uuid,
+ UNIQUE NULLS NOT DISTINCT(tenant_id,id),
+ UNIQUE NULLS NOT DISTINCT(tenant_id,change_set_id,capability_key),
+ CHECK((updated_at IS NULL)=(updated_by IS NULL))
+);

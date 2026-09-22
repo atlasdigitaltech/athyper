@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_intake_review_deployment",
+  "capturedAt": "2026-09-21T07:24:57.355Z",
+  "packetRevision": "9527905506ab7867b60ff6cd943dd139893d42351224b6ce4c3b17cc3ba3f2fa",
+  "packetSha256": "0b9bf54490d7f43833e35e746afec9e364bb30d670e9509bf6a6ca09ce6331ed",
+  "composePath": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-intake-review-v2-20260921/review.compose.json",
+  "rollbackComposePath": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-enter-correction-review-20260911/review.compose.json",
+  "outputDirectory": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-intake-review-v2-20260921/review/output",
+  "applied": true,
+  "approvalsCreated": false,
+  "grantsChanged": false,
+  "activationAuthorized": false
+}

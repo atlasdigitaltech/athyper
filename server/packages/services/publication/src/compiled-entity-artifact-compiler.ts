@@ -1,5 +1,7 @@
 import {
   parseCompiledEntityArtifact,
+  capabilityArtifactMembers,
+  type EntityCapabilityAuthoringMember,
   parseCompiledEntityReleaseEnvelope,
   validateCompiledEntityRelease,
   type CompiledEntityArtifactV2,
@@ -20,6 +22,8 @@ export interface CompiledEntityReleaseAuthoringInputV2 {
   readonly content: Readonly<Record<string, unknown>>;
 }
 export interface CompiledEntityArtifactCompilationInputV2 {
+  /** Canonical saved Studio members, indexed by entity; absent for direct artifact authoring. */
+  readonly capabilityMembers?: Readonly<Record<string, readonly EntityCapabilityAuthoringMember[]>>;
   readonly artifacts: readonly CompiledEntityArtifactAuthoringInputV2[];
   readonly release: CompiledEntityReleaseAuthoringInputV2;
   readonly registry: CompiledEntityRegistry;
@@ -49,6 +53,18 @@ export function compileCompiledEntityArtifacts(
 ): CompiledEntityArtifactCompilationV2 {
   const seenRefs = new Set<string>();
   const compiled = input.artifacts.map((source) => {
+    const members=input.capabilityMembers?.[String(source.content.entityCode)];
+    if(members && ["core","operation"].includes(String(source.content.artifactType))) {
+      const mapped=capabilityArtifactMembers(String(source.content.entityCode),members);
+      if(source.content.artifactType==="core") {
+        const existing=source.content.capabilities as Record<string,unknown>|undefined;
+        if(existing && (existing.comments!==undefined || existing.attachments!==undefined)) throw new TypeError("CAPABILITY_POLICY_DUPLICATE_SOURCE");
+        source={...source,content:{...source.content,capabilities:{...existing,...mapped.capabilities}}};
+      } else {
+        if(source.content.commentBinding!==undefined||source.content.attachmentBinding!==undefined) throw new TypeError("CAPABILITY_POLICY_DUPLICATE_SOURCE");
+        source={...source,content:{...source.content,...mapped.operationBindings}};
+      }
+    }
     if (!source.ref.endsWith(".json") || seenRefs.has(source.ref))
       throw new TypeError("COMPILED_ENTITY_AUTHORING_REF_INVALID");
     seenRefs.add(source.ref);

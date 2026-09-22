@@ -47,3 +47,10 @@ test("activity counts distinguish unknown, zero and complete totals", () => {
   assert.equal(activityCount({ openInboxCount: NaN }, "inbox"), undefined);
   assert.equal(activityCount({ openInboxCount: 104 }, "inbox"), 104);
 });
+
+test("restoring a pinned placement leaves Atlas closed until explicitly opened", () => {
+  const restored=reduceShellOverlay(initialOverlayState,{type:"atlas",field:"pinned",value:true});
+  assert.equal(restored.atlas.pinned,true);
+  assert.equal(restored.atlas.open,false);
+  assert.equal(reduceShellOverlay(restored,{type:"atlas",field:"open",value:true}).atlas.open,true);
+});

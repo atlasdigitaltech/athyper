@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Workforce requests" };
 
 export default function WorkforceRequestsPage() {
   return (
-    <NeonRouteEntitlement workspaceCode="ppl" moduleCode="workforce">
+    <NeonRouteEntitlement workspaceCode="ppl" moduleCode="hr">
       <WorkforceRequestList />
     </NeonRouteEntitlement>
   );

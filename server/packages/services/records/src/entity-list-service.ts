@@ -100,7 +100,7 @@ export interface EntityListService {
 export const ENTITY_LIST_MAX_SORT_LEVELS = 3;
 
 export function createEntityListService(options: {
-  readonly formChoices?: (context: VerifiedRequestContext, sourceKey: string) => Promise<readonly {value:string;label:string}[]>;
+  readonly formChoices?: (context: VerifiedRequestContext, sourceKey: string) => Promise<readonly {value:string;label:string;data?:Readonly<Record<string,string|boolean|readonly string[]>>}[]>;
   readonly filterChoices?: (
     context: VerifiedRequestContext,
     fields: readonly EntityFieldDescriptor[],

@@ -19,20 +19,82 @@ export function applyBusinessPartnerAddressRegion(source: MetaEntityGraph): Meta
   const countryConfirmation = {
     mode: "dialog",
     title: "Change country to {next}?",
-    fields: ["stateRegionCode", "region"],
+    fields: [
+      "stateRegionCode",
+      {
+        field: "region",
+        preserveWhen: {
+          field: "address_region_mode",
+          operator: "equals",
+          value: "manual",
+        },
+      },
+    ],
     message:
-      "The current state or region will be cleared. Your street address, city, and postal code will remain; review them for the new country.",
+      "The selected subdivision will be cleared. A manually entered region is retained; review the address, city, and postal code for the new country.",
     confirmLabel: "Change country",
     cancelLabel: "Keep {previous}",
   };
   if (!surface) return graph;
+  if (surface.layoutConfig?.addressRegionVersion === 2) return graph;
+  const addTimezone = (region: any) => {
+    if (
+      graph.surfaceFieldBindings.some(
+        (binding: any) =>
+          binding.entitySurfaceId === surface.id &&
+          binding.displayConfig?.valueKey === "timezoneCode",
+      )
+    )
+      return;
+    const id = regionUid("address_timezone_code");
+    graph.fields.push({
+      id,
+      fieldKey: "address_timezone_code",
+      dataType: "string",
+      dataClassification: "internal",
+      typeConfig: { kind: "string" },
+      valueOrigin: "runtime",
+      writeMode: "mutable",
+      cardinality: "one",
+      status: "active",
+    });
+    graph.surfaceFieldBindings.push({
+      id: regionUid("binding.address_timezone_code"),
+      entitySurfaceId: surface.id,
+      entitySurfaceSectionId: region.entitySurfaceSectionId,
+      entityFieldId: id,
+      bindingKey: "address_timezone_code",
+      position: 60,
+      labelOverride: "Time zone",
+      columnSpan: 6,
+      widgetKey: "input",
+      displayConfig: {
+        valueKey: "timezoneCode",
+        widget: "select",
+        required: false,
+        lookup: {
+          sourceKey: "shared.timezone",
+          emptyText: "No active time zones are available.",
+        },
+      },
+      status: "active",
+    });
+  };
   if (surface.layoutConfig?.addressRegionVersion === 1) {
     const country = graph.surfaceFieldBindings.find(
       (b: any) =>
         b.entitySurfaceId === surface.id &&
         b.displayConfig?.valueKey === "countryCode",
     );
+    const region = graph.surfaceFieldBindings.find(
+      (binding: any) =>
+        binding.entitySurfaceId === surface.id &&
+        binding.displayConfig?.valueKey === "region",
+    );
     if (country) country.displayConfig.clearOnChange = countryConfirmation;
+    if (region) addTimezone(region);
+    surface.layoutConfig = { ...surface.layoutConfig, addressRegionVersion: 2 };
+    compileEntityIntakeSurfaces(graph);
     return graph;
   }
   const bindings = graph.surfaceFieldBindings.filter(
@@ -116,6 +178,12 @@ export function applyBusinessPartnerAddressRegion(source: MetaEntityGraph): Meta
       referenceRules: { field: "countryCode", label: "regionLabel" },
     },
   );
+  add("address_timezone_code", "timezoneCode", "Time zone", "select", 60, {
+    lookup: {
+      sourceKey: "shared.timezone",
+      emptyText: "No active time zones are available.",
+    },
+  });
   region.position = 31;
   region.labelOverride = "State / Province / Region";
   region.displayConfig = {
@@ -193,7 +261,7 @@ export function applyBusinessPartnerAddressRegion(source: MetaEntityGraph): Meta
       };
     }
   }
-  surface.layoutConfig = { ...surface.layoutConfig, addressRegionVersion: 1 };
+  surface.layoutConfig = { ...surface.layoutConfig, addressRegionVersion: 2 };
   compileEntityIntakeSurfaces(graph);
   return graph;
 }

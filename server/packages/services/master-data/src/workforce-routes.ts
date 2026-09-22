@@ -203,9 +203,42 @@ export function registerWorkforceRoutes(
           "companyCodeId",
         ),
         status: textOptional(request.query["status"]),
+        search: textOptional(request.query["search"]),
+        sort: enumerationOptional(request.query["sort"], ["name", "number", "status"] as const),
+        cursor: textOptional(request.query["cursor"]),
         limit: integerOptional(request.query["limit"]),
       }),
     ),
+  );
+  app.get(
+    "/api/neon/workforce/:employeeId/sections/:section",
+    options.authenticate,
+    route((request, context) =>
+      options.service.getSection({
+        context,
+        employeeId: uuid(request.params["employeeId"], "employeeId"),
+        section: enumeration(request.params["section"], ["team", "requests", "documents", "comments", "audit", "education", "priorEmployment"] as const),
+        companyCodeId: uuidOptional(request.query["companyCodeId"], "companyCodeId"),
+        cursor: textOptional(request.query["cursor"]),
+        limit: integerOptional(request.query["limit"]),
+      }),
+    ),
+  );
+  app.post(
+    "/api/neon/workforce/:employeeId/profile-records",
+    options.authenticate,
+    route((request, context) => {
+      const body=object(request.body);
+      return options.service.mutateProfile({
+        context,
+        employeeId:uuid(request.params["employeeId"],"employeeId"),
+        kind:enumeration(body["kind"],["education","priorEmployment"] as const),
+        ...(body["recordId"]!==undefined?{recordId:uuid(body["recordId"],"recordId")}:{}),
+        ...(body["expectedVersion"]!==undefined?{expectedVersion:integer(body["expectedVersion"],"expectedVersion")}:{}),
+        ...(body["archive"]===true?{archive:true}:{}),
+        ...(body["data"]!==undefined?{data:object(body["data"])}:{}),
+      });
+    }),
   );
   app.get(
     "/api/neon/workforce/:employeeId",
@@ -319,6 +352,7 @@ export function registerWorkforceRoutes(
           "payroll",
           "benefits",
           "compliance",
+          "health",
         ] as const),
         fields: stringArray(body["fields"]),
       });

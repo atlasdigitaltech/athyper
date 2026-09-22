@@ -56,6 +56,7 @@ export interface EntityRuntimeResourceContext {
   readonly legalEntityId?: string;
   readonly asOf?: string;
   readonly roleLens?: "all" | "supplier" | "customer";
+  readonly threadRootId?: string;
 }
 
 export interface EntityRuntimeHeaderResource {
@@ -84,7 +85,23 @@ export interface EntityRuntimeSectionPresentation {
   readonly fields: readonly Readonly<{ readonly key: string; readonly label?: Readonly<{ readonly labelKey: string; readonly defaultText: string }> }> [];
   readonly childCollections: readonly Readonly<{ readonly key: string; readonly rendererKey: string; readonly fields: readonly Readonly<{ readonly key: string; readonly label?: Readonly<{ readonly labelKey: string; readonly defaultText: string }> }> [] }> [];
 }
+/** Public allowlist shared by drawer and content consumers. */
+export interface EntityRuntimeCapability {
+  readonly schemaVersion: 1;
+  readonly layouts: readonly ("drawer" | "content")[];
+  readonly actions: readonly { readonly key: string; readonly concurrency: "none" | "revision"; readonly idempotency: "none" | "required" }[];
+  readonly maxTextLength?: number;
+  readonly maxDepth?: number;
+  readonly maxAttachments?: number;
+  readonly maxBatchCount?: number;
+  readonly allowedAudiences?: readonly ("public" | "private" | "internal")[];
+  readonly defaultAudience?: "public" | "private" | "internal";
+  readonly categories?: readonly string[];
+  readonly maxFileBytes?: number;
+  readonly allowedContentTypes?: readonly string[];
+}
 export interface EntityRuntimeSectionResource {
+  readonly capability?: EntityRuntimeCapability;
   readonly releaseId: string;
   readonly releaseHash: string;
   readonly sectionKey: string;
@@ -157,6 +174,7 @@ function resourceContextQuery(value?: EntityRuntimeResourceContext): Readonly<Re
     ...(value.legalEntityId ? { legalEntityId: value.legalEntityId } : {}),
     ...(value.asOf ? { asOf: value.asOf } : {}),
     ...(value.roleLens ? { roleLens: value.roleLens } : {}),
+    ...(value.threadRootId ? { threadRootId: value.threadRootId } : {}),
   };
 }
 
@@ -253,7 +271,37 @@ function parseSection(value: unknown): EntityRuntimeSectionResource {
     sectionKey: key(root.sectionKey, "entity runtime section key"),
     revision: text(root.revision, "entity runtime section revision"),
     presentation: parsePresentation(root.presentation),
+    ...(root.capability === undefined ? {} : {capability: parseCapability(root.capability)}),
     data: root.data,
+  });
+}
+
+function parseCapability(value: unknown): EntityRuntimeCapability {
+  const root = object(value, "entity capability");
+  if (root.schemaVersion !== 1) invalid("entity capability version");
+  const layouts = array(root.layouts, "capability layouts").map(value => {
+    if(value !== "drawer" && value !== "content") invalid("capability layout");
+    return value as "drawer" | "content";
+  });
+  const actions = array(root.actions, "capability actions").map(value => {
+    const action = object(value, "capability action");
+    if(action.concurrency !== "none" && action.concurrency !== "revision") invalid("capability concurrency");
+    if(action.idempotency !== "none" && action.idempotency !== "required") invalid("capability idempotency");
+    return {key: key(action.key,"capability action key"), concurrency:action.concurrency as "none" | "revision", idempotency:action.idempotency as "none" | "required"};
+  });
+  const positive = (value: unknown): number => { if(!Number.isSafeInteger(value) || Number(value)<1) invalid("capability limit"); return Number(value); };
+  const audience = (value: unknown): "public" | "private" | "internal" => {if(value!=="public" && value!=="private" && value!=="internal") invalid("capability audience");return value as "public" | "private" | "internal";};
+  const nonnegative = (value:unknown) => {if(value===0)return 0;return positive(value);};
+  return Object.freeze({schemaVersion:1,layouts,actions,
+    ...(root.maxDepth===undefined?{}:{maxDepth:nonnegative(root.maxDepth)}),
+    ...(root.maxAttachments===undefined?{}:{maxAttachments:nonnegative(root.maxAttachments)}),
+    ...(root.maxBatchCount===undefined?{}:{maxBatchCount:positive(root.maxBatchCount)}),
+    ...(root.categories===undefined?{}:{categories:array(root.categories,"capability categories").map(value=>key(value,"capability category"))}),
+    ...(root.allowedAudiences===undefined?{}:{allowedAudiences:array(root.allowedAudiences,"capability audiences").map(audience)}),
+    ...(root.defaultAudience===undefined?{}:{defaultAudience:audience(root.defaultAudience)}),
+    ...(root.maxTextLength === undefined ? {} : {maxTextLength:positive(root.maxTextLength)}),
+    ...(root.maxFileBytes === undefined ? {} : {maxFileBytes:positive(root.maxFileBytes)}),
+    ...(root.allowedContentTypes === undefined ? {} : {allowedContentTypes:array(root.allowedContentTypes,"capability MIME types").map(value=>text(value,"capability MIME type"))}),
   });
 }
 

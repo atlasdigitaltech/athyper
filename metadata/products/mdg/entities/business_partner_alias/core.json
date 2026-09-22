@@ -1,0 +1,242 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "business_partner_alias/core",
+  "entityCode": "business_partner_alias",
+  "plane": "neon",
+  "storage": {
+    "kind": "handler_projection",
+    "sourceObjects": [
+      "master.business_partner_alias"
+    ],
+    "primaryObject": "master.business_partner_alias",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.business_partner_alias",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_alias.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "business_partner_id",
+      "binding": {
+        "sourceObject": "master.business_partner_alias",
+        "column": "business_partner_id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_alias.core.fields.business_partner_id.label",
+        "defaultText": "Business Partner Id"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "alias_kind",
+      "binding": {
+        "sourceObject": "master.business_partner_alias",
+        "column": "alias_kind"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_alias.core.fields.alias_kind.label",
+        "defaultText": "Alias Kind"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "alias_name",
+      "binding": {
+        "sourceObject": "master.business_partner_alias",
+        "column": "alias_name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_alias.core.fields.alias_name.label",
+        "defaultText": "Alias"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "language_code",
+      "binding": {
+        "sourceObject": "master.business_partner_alias",
+        "column": "language_code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_alias.core.fields.language_code.label",
+        "defaultText": "Language or Locale"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "country_code",
+      "binding": {
+        "sourceObject": "master.business_partner_alias",
+        "column": "country_code"
+      },
+      "dataType": "string",
+      "storageType": "character(2)",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_alias.core.fields.country_code.label",
+        "defaultText": "Country"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "effective_from",
+      "binding": {
+        "sourceObject": "master.business_partner_alias",
+        "column": "effective_from"
+      },
+      "dataType": "date",
+      "storageType": "date",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_alias.core.fields.effective_from.label",
+        "defaultText": "Effective From"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "effective_until",
+      "binding": {
+        "sourceObject": "master.business_partner_alias",
+        "column": "effective_until"
+      },
+      "dataType": "date",
+      "storageType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_alias.core.fields.effective_until.label",
+        "defaultText": "Effective Until"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "is_primary",
+      "binding": {
+        "sourceObject": "master.business_partner_alias",
+        "column": "is_primary"
+      },
+      "dataType": "boolean",
+      "storageType": "boolean",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_alias.core.fields.is_primary.label",
+        "defaultText": "Primary"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "status",
+      "binding": {
+        "sourceObject": "master.business_partner_alias",
+        "column": "status"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_alias.core.fields.status.label",
+        "defaultText": "Status"
+      },
+      "valueOrigin": "stored"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "tenant",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.business_partner_alias",
+      "column": "business_partner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_alias",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:cc0024faf6a9fa5c5737fa214c795b2b96728db49641a3c3ef353d0bd01bcc85"
+}

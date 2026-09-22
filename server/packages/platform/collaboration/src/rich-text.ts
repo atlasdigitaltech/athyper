@@ -19,7 +19,7 @@ const CONTAINERS = new Set([
   "tableHeader",
   "tableCell",
 ]);
-const LEAVES = new Set(["text", "hardBreak", "mention", "attachmentImage"]);
+const LEAVES = new Set(["text", "hardBreak", "mention", "attachmentImage", "attachmentFile"]);
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SAFE_PROTOCOL = /^(https?:|mailto:)/i;
@@ -97,7 +97,7 @@ function validateNode(
     if (!UUID.test(id)) invalid("Mention principalId must be a UUID");
     state.mentions.add(id);
   }
-  if (node.type === "attachmentImage") {
+  if ((node.type === "attachmentImage" || node.type === "attachmentFile")) {
     const id = attr(node, "attachmentId");
     if (!UUID.test(id)) invalid("Image attachmentId must be a UUID");
     state.attachments.add(id);
@@ -130,6 +130,7 @@ function validateChildren(node: RichTextNode): void {
       "orderedList",
       "table",
       "attachmentImage",
+      "attachmentFile",
     ],
     paragraph: ["text", "hardBreak", "mention"],
     heading: ["text", "hardBreak", "mention"],
@@ -139,8 +140,8 @@ function validateChildren(node: RichTextNode): void {
     listItem: ["paragraph", "bulletList", "orderedList"],
     table: ["tableRow"],
     tableRow: ["tableHeader", "tableCell"],
-    tableHeader: ["paragraph", "bulletList", "orderedList", "attachmentImage"],
-    tableCell: ["paragraph", "bulletList", "orderedList", "attachmentImage"],
+    tableHeader: ["paragraph", "bulletList", "orderedList", "attachmentImage", "attachmentFile"],
+    tableCell: ["paragraph", "bulletList", "orderedList", "attachmentImage", "attachmentFile"],
   };
   const types = allowed[node.type] ?? [];
   if (
@@ -173,8 +174,8 @@ function plain(node: RichTextNode): string {
   if (node.type === "hardBreak") return "\n";
   if (node.type === "mention")
     return `@${typeof node.attrs?.["label"] === "string" ? node.attrs["label"] : "mention"}`;
-  if (node.type === "attachmentImage")
-    return `[Image: ${typeof node.attrs?.["alt"] === "string" ? node.attrs["alt"] : "attachment"}]`;
+  if ((node.type === "attachmentImage" || node.type === "attachmentFile"))
+    return `[${node.type === "attachmentFile" ? "Attachment" : "Image"}: ${typeof node.attrs?.["alt"] === "string" ? node.attrs["alt"] : "attachment"}]`;
   const separator =
     node.type === "tableRow"
       ? "\t"
@@ -196,9 +197,10 @@ function render(node: RichTextNode): string {
   if (node.type === "hardBreak") return "<br>";
   if (node.type === "mention")
     return `<span data-mention-principal="${escape(attr(node, "principalId"))}">@${escape(optionalAttr(node, "label") ?? "mention")}</span>`;
-  if (node.type === "attachmentImage") {
+  if ((node.type === "attachmentImage" || node.type === "attachmentFile")) {
     const id = escape(attr(node, "attachmentId"));
     const alt = escape(optionalAttr(node, "alt") ?? "Image attachment");
+    if (node.type === "attachmentFile") return `<span data-attachment-id="${id}" data-attachment-kind="file" data-attachment-alt="${alt}">Attachment: ${alt}</span>`;
     return `<img src="/api/attachments/${id}/content" data-attachment-id="${id}" alt="${alt}">`;
   }
   const tags: Record<string, string> = {

@@ -14,7 +14,7 @@ export default async function WorkforceRequestPage({
   const { requestId } = await params;
   if (!isEntityId(requestId)) notFound();
   return (
-    <NeonRouteEntitlement workspaceCode="ppl" moduleCode="workforce">
+    <NeonRouteEntitlement workspaceCode="ppl" moduleCode="hr">
       <WorkforceRequestDetail requestId={requestId} />
     </NeonRouteEntitlement>
   );

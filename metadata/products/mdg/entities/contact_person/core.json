@@ -1,0 +1,243 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "contact_person/core",
+  "entityCode": "contact_person",
+  "plane": "neon",
+  "storage": {
+    "kind": "handler_projection",
+    "sourceObjects": [
+      "master.contact_person"
+    ],
+    "primaryObject": "master.contact_person",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.contact_person",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.contact_person.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "contact_name",
+      "binding": {
+        "sourceObject": "master.contact_person",
+        "column": "contact_name"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.contact_person.core.fields.contact_name.label",
+        "defaultText": "Contact Name"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "business_title",
+      "binding": {
+        "sourceObject": "master.contact_person",
+        "column": "business_title"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.contact_person.core.fields.business_title.label",
+        "defaultText": "Business Title"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "department_name",
+      "binding": {
+        "sourceObject": "master.contact_person",
+        "column": "department_name"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.contact_person.core.fields.department_name.label",
+        "defaultText": "Department Name"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "is_primary",
+      "binding": {
+        "sourceObject": "master.contact_person",
+        "column": "is_primary"
+      },
+      "dataType": "boolean",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.contact_person.core.fields.is_primary.label",
+        "defaultText": "Is Primary"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "boolean"
+    },
+    {
+      "key": "status",
+      "binding": {
+        "sourceObject": "master.contact_person",
+        "column": "status"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.contact_person.core.fields.status.label",
+        "defaultText": "Status"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "inherited_owner",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [
+    {
+      "relationKey": "contact_person.roles",
+      "targetEntityCode": "contact_person_role",
+      "binding": {
+        "handlerKey": "neon.bp.section.contacts.v1",
+        "scopeContract": {
+          "targetResolution": "registered_handler",
+          "ownerMapping": {
+            "template": "direct_contact_person_owner",
+            "sourceObject": "master.contact_person_role",
+            "ownerColumn": "contact_person_id"
+          }
+        }
+      }
+    },
+    {
+      "relationKey": "contact_person.channels",
+      "targetEntityCode": "contact_channel",
+      "binding": {
+        "handlerKey": "neon.bp.contact.channels.v1",
+        "scopeContract": {
+          "targetResolution": "registered_handler",
+          "ownerMapping": {
+            "template": "polymorphic_contact_person_owner",
+            "sourceObject": "master.contact_link",
+            "ownerTypeColumn": "owner_type_id",
+            "ownerColumn": "owner_id"
+          }
+        }
+      }
+    }
+  ],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.contact_person",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.contact_person",
+      "column": "owner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.contact_person",
+      "column": "owner_type_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.contact_person",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "ownerBinding": {
+    "kind": "polymorphic",
+    "ownerTypeResolver": "platform.entity-type.v1",
+    "ownerTypeField": "owner_type_id",
+    "ownerIdField": "owner_id",
+    "tenantEqualityRequired": true,
+    "targetEntityCode": "business_partner",
+    "canonicalTargetUpdate": "governed_parent_command_only"
+  },
+  "artifactHash": "sha256:1cdc3fdbd099a453092ff6fe01cc4edde64f15bd6c2feffa77adbd03ef156944"
+}

@@ -1,4 +1,5 @@
 "use client";
+import { BusinessPartnerEditCollaboration } from "./edit-collaboration";
 import { businessLabel } from "./360/display-values";
 import { businessPartnerErrorMessage, useCommandRunner } from "./command-feedback";
 import { useOrganizationSelection } from "./use-organization-selection";
@@ -949,6 +950,7 @@ export function NewBusinessPartnerRequest({onDirty, onSaved, initialRequest}: {r
           >
             <EntityDataSurface sectionNavigation={{label: surfaces.find(s=>s.key==="intake_details")!.title, mode: "create"}} surface={surfaces.find(s=>s.key==="intake_details")!} surfaces={surfaces} answers={answers} disabled={busy || retryRequired}
               referenceHistory={{ client: http, entityCode: "business_partner" }}
+              referenceDirectory={{ client: http }}
               referenceChoiceScope={identity.scope ? { plane: identity.scope.plane, tenantId: identity.scope.tenantId, principalId: identity.scope.principalId, contextKey: JSON.stringify(work.selection) } : undefined}
               onChange={(next)=>{const details=surfaces.find(s=>s.key==="intake_details")!; const hiddenMessage=hiddenProfileChangeMessage(details,answers,next,surfaces);if(hiddenMessage){setError(hiddenMessage);return;}setAnswers(next);setSavedNotice(undefined);setDirty(true);onDirty?.();setIntakeCommandKey(crypto.randomUUID());intake?.markDirty();if(intake?.state.completed.includes("details"))intake.invalidate("details");setError(undefined)}}
               handlers={{"business_partner.account_holder":({field,value,onChange,id,name,disabled})=><Field label={field.label} htmlFor={id}><Input id={id} name={name} value={String(value??"")} required={field.required} maxLength={field.maxLength} disabled={disabled} onChange={event=>onChange(event.currentTarget.value)}/><Button type="button" className="a-bank-holder-copy" variant="secondary" disabled={disabled||!answers.name} onClick={()=>onChange(String(answers.name??""))}>{field.placeholder}</Button></Field>,"business_partner.attachment":props=><RequestAttachmentField {...props}/>,"business_partner.reference":props=><PartnerReferenceField {...props}/>,"business_partner.organization":({field,value,onChange,id,name,disabled})=><OrganizationField id={id} name={name} label={field.label} placeholder={field.placeholder} disabled={disabled} required={field.required} value={String(value??"")} onDefault={value=>{setOrganizationId(value);setAnswers(current=>({...current,[field.valueKey]:value}))}} onChange={value=>{setOrganizationId(value);onChange(value)}}/>}}/>
@@ -2126,6 +2128,7 @@ export function BusinessPartnerRequestEdit({
           </Button>
         }
       >
+        <BusinessPartnerEditCollaboration recordId={request.targetBusinessPartnerId}>
         <form
           className="bp-form"
           onSubmit={save}
@@ -2196,6 +2199,7 @@ export function BusinessPartnerRequestEdit({
             </Button>
           </div>
         </form>
+        </BusinessPartnerEditCollaboration>
         <UnsavedChangesDialog navigation={navigation} />
       </BusinessPartnerPageFrame>
     </div>

@@ -119,6 +119,20 @@ Critical draft/revision context remains in the page header/version selector; sav
 
 About Athyper displays deployed frontend release, plane, appropriate environment, optional build/support details, matching release notes and approved copyable diagnostics. Populate from build/deployment metadata, not a manually copied package version. Do not expose credentials, personal data or record content.
 
+### 5.4 Global action outcome toasts
+
+One shell-owned GlobalToastHost uses the existing ToastProvider/useToasts contract. It is independent of GlobalFooter and does not occupy the transient-surface channel. Completed mutation outcomes appear at the viewport bottom-center on all screen sizes, above safe areas and reserved fixed controls through shared placement offsets. They never shift page layout or take keyboard focus.
+
+Success messages use brief, specific authorized labels (for example, “Folder ‘Invoices’ deleted”), default to five seconds, and include an accessible manual dismiss control. Pause remaining time while hovered, focused, backgrounded or made inert by a modal. Announce each outcome once with polite live-region semantics; avoid a second live announcement from the stack container. Warning/security messages retain their existing persistent lifetime unless explicitly dismissed or resolved.
+
+Show only the latest routine transient success, replacing the previous routine success without displacing warnings or other persistent messages. Keep the surrounding host click-through and limit success titles to two visible lines while retaining the complete accessible text. Bound the overall stack to five messages and deduplicate matching active outcomes (explicit operation key when available, otherwise tone/title/detail). Prefer evicting older transient outcomes; success messages must not displace persistent warnings. This stack is temporary feedback, not durable notification history. Do not add Undo unless restoration is supported by the underlying operation.
+
+Authenticated context changes, including user, tenant, plane, authentication epoch or access invalidation, clear the stack through the existing keyed foundation boundary. Ignore notifications from disposed providers. Ordinary record navigation may retain a brief completed outcome; messages must identify their action/object without sensitive content excerpts.
+
+Validation, failed mutations, upload progress and file-level upload failures remain local. Do not duplicate the same success in an inline banner and toast. Preserve drafts on failures. Modals continue to contain focus and make the background inert: the toast host is not exempted. While isolated, defer visibility/announcements and pause expiry until the modal closes. A high z-index must never bypass focus or inertness rules.
+
+Adoption starts with Entity Comments and Attachments: comment/reply creation, comment edit/delete, folder create/delete, file rename/move/category, unlink/archive outcomes. Upload progress stays in its existing local queue. Adopt the same contract incrementally as Business Partner flows are completed; migration of unrelated applications is separate work.
+
 ## 6. Overlay and Atlas state machines
 
 `ShellOverlayHost` coordinates surfaces, not their business services. Popovers are anchored/nonmodal; modal dialogs/drawers contain focus and make background inert; docked panels keep page and panel usable.
@@ -498,6 +512,14 @@ Not every entity requires every kind. Do not create an entity package just to co
 Build generic layout/state primitives first or alongside the shared definition contract. Finalize the actual local schema before wiring the resolver, provider bindings and publication parser to it. Adapt Business Partner, then prove reuse with a second entity and Mesh. Keep a few meaningful failure tests: unknown required provider, invalid options/reference, unsupported page-kind/slot and access denial. Do not build historical deployment fixtures for a local-only runtime.
 
 Completion requires a second entity with metadata-only sections and a specialized registered provider, no copied chrome/boundaries/scroll/footer implementation, no entity conditionals in the resolver, and parity for permissions, state, navigation and mutations. These are foundations to evolve; generic onboarding is not certified by the existence of current runtimes.
+
+### Entity comments presentation contract
+
+Use one bottom composer for new comments and replies in side and full views. Reply selects the recipient and a short parent excerpt in that composer; Cancel reply restores the new-comment draft. Retain separate in-session drafts for each reply target. Keep a single composer outline and group audience, Send/Send reply, and Cancel reply controls together. Match Atlas’s rounded outer frame, theme-based border/shadow and focus treatment. Separate the writing area from a softly tinted footer with a thin divider; formatting/attachment/mention controls occupy its left side and audience/Cancel/Send its right side, wrapping as groups on narrow layouts. Apply the same presentation to inline editing.
+
+Display authorized descendants oldest first at one visual indentation level. Preserve the main comment surface. All ordinary replies share one softly tinted theme-derived surface, small rounded corners and modest padding without additional borders. Internal audience styling takes precedence; deleted replies remain compact and untinted. Parent references use two-line quoted strips with full text retained for accessibility. Left-aligned parent references show the author and a short excerpt and locate/highlight the loaded parent. Deleted parents show only “Replying to a deleted comment.” Parent navigation must not fetch an unbounded chain of pages. Reply pages are limited to 20; automatic refresh is limited to five pages, with remaining replies explicitly paginated. At depth five, explain the limit and offer an explicit reply to the main comment when it is available. This presentation does not change stored parent relationships or the existing maximum of five reply levels. Reply, Like/count, and Show/Hide reply count share the comment action row. Omit the reply-count control when the known count is zero. Composer actions run audience, Cancel reply, then Send reply. Comments filters share a responsive toolbar with sort order and Date/User grouping; group loaded roots without separating their replies. Full-view Return to side panel and Close controls join this toolbar; side-view navigation remains in its header. Refresh loaded thread pages after mutations while retaining expanded threads. Descendant traversal must enforce tenant, record, and audience restrictions at every ancestor.
+
+Pinned attachments use compact filename/metadata cards with preview and download actions. Suppress duplicate attachment placeholders only when the corresponding pinned card exists. Internal comments retain an explicit audience label as well as subtle theme styling. Reactions use a thumbs-up icon with a nonzero count, pressed state and Like/Remove like tooltips. Edit in place under the comment header with Cancel then Save changes, preserving the separate bottom draft. Revision review is available during an edit conflict; ordinary history remains a menu action. Use Report comment consistently, in a focused dialog with a required reason, optional additional context, neutral Cancel and primary Submit report. Successful submission closes the dialog and produces one global toast. Show a compact reporter-only pending/under-review/resolved status and View your report on the comment. The read-only report dialog contains the reporter’s reason, context, submission date and available outcome; internal moderation notes are not exposed. For existing reports, the menu offers View your report instead of another submission. Comment deletion requires a compact confirmation with neutral Cancel and destructive Delete comment. Keep a tombstone and existing replies after success. Authorized authors may view deletion metadata through View deletion details beside the deleted placeholder; deleted revision text remains inaccessible. Full view uses one bordered panel per root thread and a reading-width-aligned composer in normal document flow; side view keeps compact rows. Tooltips and long filenames must not cause horizontal scrolling. Completed mutations use the global toast contract; composer errors remain local.
 
 ## Appendix A. Detailed component and behavior inventory
 
@@ -945,6 +967,18 @@ ATHYPER SHARED APPLICATION EXPERIENCE — V1 DESIGN CONTRACT
 │   │       │           │       ├── Only active page owns the context slot
 │   │       │           │       ├── Clear on navigation/context/access change or unmount
 │   │       │           │       └── Critical revision/save state remains available in-page
+│   │       │           │
+│   │       │           ├── GlobalToastHost
+│   │       │           │   ├── Existing ToastProvider / useToasts; one shell-owned host
+│   │       │           │   ├── Viewport bottom-center on all screens; safe-area/control offsets
+│   │       │           │   ├── Specific success text; five-second default; accessible Dismiss
+│   │       │           │   ├── Pause on hover / focus / hidden document / modal isolation
+│   │       │           │   ├── Latest routine success only; bounded five-message stack; deduplicate
+│   │       │           │   ├── Persistent session warnings protected from success eviction
+│   │       │           │   ├── Polite outcome announcements; no focus stealing or layout shift
+│   │       │           │   ├── Context reset clears messages; disposed async publishers ignored
+│   │       │           │   ├── Modal inertness respected; no focus-trap exemption
+│   │       │           │   └── Errors/progress local; no duplicate inline success banner
 │   │       │           │
 │   │       │           └── ShellOverlayHost
 │   │       │               │

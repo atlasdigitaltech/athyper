@@ -23,11 +23,12 @@ const stage = createOperation<
     contentType: string;
     sizeBytes: number;
   }
->({ method: "POST", path: () => "/api/attachments/stage" });
+>({ method: "POST", path: () => "/api/attachments/stage", idempotency: "required" });
 const finalize = (id: string) =>
   createOperation<unknown, { contentType: string }>({
     method: "POST",
     path: () => `/api/attachments/${encodeURIComponent(id)}/finalize`,
+    idempotency: "required",
   });
 const status = (id: string) =>
   createOperation<{ status: string; fileName?: string }>({
@@ -126,9 +127,11 @@ export function RequestAttachmentField({
     setError(undefined);
     try {
       const contentType = file.type || "application/octet-stream";
+      const attachmentId = crypto.randomUUID();
       const staged = await http.request(stage, {
+        idempotencyKey: attachmentId,
         body: {
-          attachmentId: crypto.randomUUID(),
+          attachmentId,
           fileName: file.name,
           contentType,
           sizeBytes: file.size,
@@ -142,6 +145,7 @@ export function RequestAttachmentField({
       });
       if (!response.ok) throw Error(labels.uploadFailed);
       await http.request(finalize(staged.attachmentId), {
+        idempotencyKey: staged.attachmentId,
         body: { contentType },
       });
       const current = await http.request(status(staged.attachmentId), {});

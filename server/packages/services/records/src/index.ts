@@ -37,3 +37,10 @@ export * from "./entity-scope-adapter.js";
 export * from "./entity-backend-authorizer.js";
 export { addressFormChoices } from "./address-form-choices.js";
 export { bankFormChoices, bankFormSources } from "./bank-form-choices.js";
+export {
+  createSharedReferenceDirectory,
+  isSharedReferenceSourceKey,
+  requiresSharedReferenceDependency,
+  sharedReferenceDefinitions,
+} from "./shared-reference-directory.js";
+export { registerSharedReferenceDirectoryRoutes } from "./shared-reference-directory-routes.js";

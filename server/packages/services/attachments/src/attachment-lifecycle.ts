@@ -11,7 +11,7 @@ import type {
   SeriesRepository,
   StagedUpload,
 } from "@athyper/server-contract-attachments";
-import type { OutboxWriter } from "@athyper/server-contract-events";
+import { fingerprintCommand, parseIdempotencyKey, type CommandExecutionStore, type OutboxWriter } from "@athyper/server-contract-events";
 import type { MalwareScanner } from "@athyper/server-contract-malware-scanning";
 import type { ObjectStorage } from "@athyper/server-contract-object-storage";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
@@ -37,11 +37,22 @@ export interface AttachmentRecord {
   readonly expiresAt?: string;
   readonly retentionUntil?: string;
   readonly seriesId?: string;
+  readonly expectedSeriesVersion?: number;
+  readonly expectedCurrentAttachmentId?: string | null;
   readonly entityType?: string;
   readonly entityId?: string;
+  readonly pendingCleanupKeys?: readonly string[];
 }
 
 export interface AttachmentRepository<T> {
+  archiveOutcome?(identity: AttachmentIdentity, tx: T): Promise<{ readonly activeLinks: number; readonly legalHold: boolean }>;
+  archive?(identity: AttachmentIdentity, tx: T): Promise<{ readonly activeLinks: number; readonly legalHold: boolean }>;
+  setCategory?(identity: AttachmentIdentity, input: { readonly entityType: string; readonly entityId: string; readonly category: "general" | "evidence" }, tx: T): Promise<void>;
+  manageFolder?(
+    identity: AttachmentIdentity,
+    input: { readonly command: "create" | "move" | "delete"; readonly entityType: string; readonly entityId: string; readonly folderId: string | null; readonly expectedRevision: number; readonly name?: string; readonly parentFolderId?: string; readonly attachmentId?: string },
+    tx: T,
+  ): Promise<{ readonly revision: number | undefined }>;
   /** Serializes staging retries for one tenant-scoped attachment identity when supported. */
   lockForStaging?(identity: AttachmentIdentity, tx: T): Promise<void>;
   createStaged(
@@ -66,6 +77,8 @@ export interface AttachmentRepository<T> {
       sha256: string;
       sizeBytes: number;
       contentType: string;
+      expectedSeriesVersion?: number;
+      expectedCurrentAttachmentId?: string | null;
     },
     tx: T,
   ): Promise<AttachmentRecord>;
@@ -79,9 +92,36 @@ export interface AttachmentRepository<T> {
     reason: string,
     tx: T,
   ): Promise<void>;
-  expire(identity: AttachmentIdentity, tx: T): Promise<void>;
+  /** Entity attachment association removal. Production repositories must implement it. */
+  unlink?(
+    identity: AttachmentIdentity,
+    target: { readonly entityType: string; readonly entityId: string },
+    tx: T,
+  ): Promise<{ readonly unlinked: boolean; readonly orphaned: boolean }>;
+  /** Renames the series display label using the reader-issued series revision. */
+  rename?(
+    identity: AttachmentIdentity,
+    input: { readonly displayName: string; readonly expectedSeriesRevision: string },
+    tx: T,
+  ): Promise<AttachmentRecord | null>;
+  /** Returns whether the attachment series still has a live association. */
+  hasActiveLinks?(
+    identity: AttachmentIdentity,
+    tx: T,
+  ): Promise<boolean>;
+  /**
+   * Expires a still-staged record and reports whether this call changed it.
+   * A false result means a concurrent finalization, cancellation, or prior
+   * expiry won the race and must not release quota or publish an expiry event.
+   */
+  expire(identity: AttachmentIdentity, tx: T): Promise<boolean | void>;
   markPurged(identity: AttachmentIdentity, tx: T): Promise<void>;
   markPurgedForMaintenance?(identity: AttachmentIdentity, tx: T): Promise<void>;
+  /** All object keys owned by this attachment, including generated derivatives. */
+  purgeObjectKeys?(identity: AttachmentIdentity, tx: T): Promise<readonly string[]>;
+  listPendingObjectCleanup?(input: { tenantId: string; limit: number }, tx: T): Promise<readonly { attachmentId: string; keys: readonly string[] }[]>;
+  removePendingObjectCleanup?(identity: AttachmentIdentity, keys: readonly string[], tx: T): Promise<void>;
+  addPendingObjectCleanup?(identity: AttachmentIdentity, keys: readonly string[], tx: T): Promise<void>;
   listRetentionCandidates?(
     input: { tenantId: string; before: string; limit: number },
     tx: T,
@@ -96,6 +136,7 @@ export interface AttachmentLifecycleOptions<T> {
   readonly quota: AttachmentQuotaLedger<T>;
   readonly quotaPolicies: AttachmentQuotaPolicyResolver;
   readonly outbox: OutboxWriter<T>;
+  readonly commandExecutions?: CommandExecutionStore<T, { readonly folderId: string | null; readonly revision: number }>;
   readonly scheduler?: AttachmentLifecycleScheduler;
   readonly uploadUrlTtlSeconds?: number;
   readonly seriesRepository?: SeriesRepository<T>;
@@ -106,11 +147,20 @@ export interface AttachmentLifecycleOptions<T> {
 }
 
 export interface AttachmentFinalizeOptions {
+  /** Re-admit current record permissions and mandatory policy after the potentially long scan. */
+  readonly authorizeCommit?: () => Promise<void>;
   /** Aborting releases the in-flight download/scan stream instead of leaving it to idle out. */
   readonly signal?: AbortSignal;
 }
 
 export interface AttachmentLifecycle {
+  archiveOutcome?(identity: AttachmentIdentity): Promise<{ readonly activeLinks: number; readonly legalHold: boolean }>;
+  archive?(identity: AttachmentIdentity): Promise<{ readonly activeLinks: number; readonly legalHold: boolean }>;
+  setCategory?(identity: AttachmentIdentity, input: { readonly entityType: string; readonly entityId: string; readonly category: "general" | "evidence" }): Promise<void>;
+  manageFolder?(
+    identity: AttachmentIdentity,
+    input: { readonly command: "create" | "move" | "delete"; readonly entityType: string; readonly entityId: string; readonly folderId: string | null; readonly expectedRevision: number; readonly idempotencyKey: string; readonly name?: string; readonly parentFolderId?: string; readonly attachmentId?: string },
+  ): Promise<{ readonly folderId: string | null; readonly revision: number }>;
   stage(input: AttachmentUploadIntent): Promise<StagedUpload>;
   finalize(
     identity: AttachmentIdentity,
@@ -118,6 +168,8 @@ export interface AttachmentLifecycle {
     options?: AttachmentFinalizeOptions,
   ): Promise<AttachmentRecord>;
   status(identity: AttachmentIdentity): Promise<AttachmentRecord>;
+  /** Only after the owning record capability has admitted this exact attachment. */
+  authorizedStatus?(identity: AttachmentIdentity): Promise<AttachmentRecord>;
   createAuthorizedDownload(
     identity: AttachmentIdentity,
     expirySeconds?: number,
@@ -127,6 +179,14 @@ export interface AttachmentLifecycle {
     readonly expiresAt: string;
   }>;
   deactivate(identity: AttachmentIdentity, reason?: string): Promise<void>;
+  unlink?(
+    identity: AttachmentIdentity,
+    target: { readonly entityType: string; readonly entityId: string },
+  ): Promise<{ readonly unlinked: boolean; readonly orphaned: boolean }>;
+  rename?(
+    identity: AttachmentIdentity,
+    input: { readonly displayName: string; readonly expectedSeriesRevision: string },
+  ): Promise<AttachmentRecord>;
   expire(identity: AttachmentIdentity): Promise<void>;
   purge(identity: AttachmentIdentity): Promise<boolean>;
   cleanupRetention(
@@ -150,19 +210,86 @@ export function createAttachmentLifecycle<T>(
   const now = options.now ?? (() => new Date());
   const scanStreamTimeoutMs = options.scanStreamTimeoutMs ?? 5 * 60 * 1_000;
   const activeScanOperations = new Set<AbortController>();
+  async function purgeAttachment(identity: AttachmentIdentity, maintenance = false): Promise<boolean> {
+    return options.transactions.run(identity.planeKey, identity, async tx => {
+      // The production maintenance read locks both attachment and series until
+      // object deletion and the durable marker commit. FK link/hold inserts and
+      // series retention changes serialize against those row locks.
+      const current = await (options.repository.loadForMaintenance?.(identity, tx) ?? options.repository.load(identity, tx));
+      if (!current || !["expired", "deleted", "orphaned"].includes(current.status) ||
+          current.storageKey === `purged/${current.id}` || current.hasLegalHold ||
+          retentionActive(current.retentionUntil, now())) return false;
+      if (options.repository.hasActiveLinks && await options.repository.hasActiveLinks(identity, tx)) return false;
+      if (current.seriesId) {
+        if (options.legalHoldRepository && await options.legalHoldRepository.hasActiveHold(identity.tenantId, current.seriesId, tx)) return false;
+        const series = await options.seriesRepository?.load(identity.tenantId, current.seriesId, tx);
+        if (retentionActive(series?.retentionUntil ?? undefined, now())) return false;
+      }
+      // A storage failure must fail the job and retain its original key for retry.
+      // If the DB commit fails afterward, deleting the same key again is safe.
+      const objectKeys=[...new Set(await (options.repository.purgeObjectKeys?.(identity,tx) ?? [current.storageKey,...(current.pendingCleanupKeys ?? [])]))];
+      // The database marker is written only after every owned key is deleted.
+      // A failed delete leaves this manifest durable for a restart retry.
+      for (const key of objectKeys) await options.storage.delete(key);
+      if (maintenance) await options.repository.markPurgedForMaintenance!(identity, tx);
+      else await options.repository.markPurged(identity, tx);
+      await options.quota.release(identity, tx);
+      await appendLifecycleEvent(options.outbox, identity, "attachments.purged",
+        `attachment:${identity.attachmentId}:purged`, { sha256: current.sha256 }, tx);
+      return true;
+    });
+  }
   return {
+    async archiveOutcome(identity) {
+      if (!options.repository.archiveOutcome) throw new Error("Attachment repository does not support archive outcome");
+      return options.transactions.run(identity.planeKey,identity,tx=>options.repository.archiveOutcome!(identity,tx));
+    },
+    async archive(identity) {
+      if (!options.repository.archive) throw new Error("Attachment repository does not support archive");
+      const outcome=await options.transactions.run(identity.planeKey,identity,async tx=>{ const result=await options.repository.archive!(identity,tx); if(result.legalHold) throw new AttachmentConflictError("A legal hold prevents lifecycle archive"); await options.quota.release(identity,tx); await appendLifecycleEvent(options.outbox,identity,"attachments.archived",`attachment:${identity.attachmentId}:archived`,result,tx); return result; });
+      await options.scheduler?.scheduleSearchRemoval?.(identity,"archived");
+      await options.scheduler?.schedulePurge(identity,{jobId:`attachment:${identity.attachmentId}:purge`}); return outcome;
+    },
+    async setCategory(identity, input) {
+      if (!options.repository.setCategory || !["general", "evidence"].includes(input.category)) throw new TypeError("Attachment category is invalid");
+      await options.transactions.run(identity.planeKey, identity, async tx => { await options.repository.setCategory!(identity,input,tx); await appendLifecycleEvent(options.outbox,identity,"attachments.categorized",`attachment:${identity.attachmentId}:category:${input.category}`,{category:input.category},tx); });
+    },
+    async manageFolder(identity, input) {
+      if (!options.repository.manageFolder) throw new Error("Attachment repository does not support folders");
+      const key=parseIdempotencyKey(input.idempotencyKey);
+      if (!key.ok) throw new TypeError("Attachment folder idempotency key is invalid");
+      if (!options.commandExecutions) throw new Error("Attachment folder command receipts are unavailable");
+      const folderId = input.folderId;
+      if (!(input.command === "move" && folderId === null) && (typeof folderId !== "string" || !uuid(folderId)) || !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 1 || !["create", "move", "delete"].includes(input.command) || !input.entityType.trim() || !input.entityId.trim()) throw new TypeError("Attachment folder command is invalid");
+      if (input.command === "create" && (!input.name?.trim() || input.name.trim().length > 256)) throw new TypeError("Attachment folder name is invalid");
+      if (input.command === "move" && (!input.attachmentId || !uuid(input.attachmentId))) throw new TypeError("Attachment move requires an attachment");
+      return options.transactions.run(identity.planeKey, identity, async tx => {
+        const receipt=await options.commandExecutions!.begin({tenantId:identity.tenantId,commandCode:"attachments.folder",idempotencyKey:key.value,requestFingerprint:fingerprintCommand({principalId:identity.principalId,folderId,command:input.command,entityType:input.entityType,entityId:input.entityId,expectedRevision:input.expectedRevision,name:input.name,parentFolderId:input.parentFolderId,attachmentId:input.attachmentId}),actorPrincipalId:identity.principalId,sourceService:"attachments"},tx);
+        if(receipt.kind === "replay") return receipt.result;
+        if(receipt.kind !== "started") throw new AttachmentConflictError("Attachment folder command is already in progress or conflicts with a prior request");
+        const changed=await options.repository.manageFolder!(identity, { ...input, folderId }, tx);
+        if(changed.revision === undefined) throw new AttachmentConflictError("Attachment workspace has changed; refresh before retrying");
+        await appendLifecycleEvent(options.outbox, { ...identity, attachmentId: folderId ?? input.attachmentId! }, `attachments.folder_${input.command}`, `attachment-folder:${folderId}:${input.command}:${input.attachmentId ?? ""}`, { folderId, entityType: input.entityType, entityId: input.entityId }, tx);
+        const result={folderId,revision:changed.revision};
+        await options.commandExecutions!.complete(receipt.executionId,result,identity.principalId,tx);
+        return result;
+      });
+    },
     async stage(input) {
       validUpload(input);
       if (!input.sizeBytes || input.sizeBytes < 1)
         throw new TypeError("Attachment size is required");
-      const policy = await options.quotaPolicies.resolve(input);
       const key = stagingKey(input);
-      const expiresAt = new Date(
-        now().getTime() + policy.reservationTtlSeconds * 1000,
-      ).toISOString();
       await options.transactions.run(input.planeKey, input, async (tx) => {
         await options.repository.lockForStaging?.(input, tx);
         if (await options.repository.load(input, tx)) return;
+        // Resolve the current policy only for a new reservation. A retry of an
+        // already admitted upload must retain its original reservation and URL
+        // lifetime even if policy changed while the browser was transferring.
+        const policy = await options.quotaPolicies.resolve(input);
+        const expiresAt = new Date(
+          now().getTime() + policy.reservationTtlSeconds * 1000,
+        ).toISOString();
 
         // The quota reservation has a database foreign key to this resource. Keep both
         // writes in one transaction, but persist the parent attachment first so the FK
@@ -217,15 +344,24 @@ export function createAttachmentLifecycle<T>(
           "Attachment staging parameters do not match the existing upload",
         );
       }
+      if (!current.expiresAt)
+        throw new AttachmentConflictError("Attachment upload expiry is missing");
       const ttl = Math.min(
         uploadTtl,
         Math.floor(
-          (parseInstant(current.expiresAt ?? expiresAt) - now().getTime()) /
+          (parseInstant(current.expiresAt) - now().getTime()) /
             1000,
         ),
       );
       if (ttl < 1)
         throw new AttachmentConflictError("Attachment upload has expired");
+      await options.scheduler?.scheduleStageExpiry?.(input, {
+        jobId: `attachment:${input.attachmentId}:expire:${current.expiresAt}`,
+        delayMs: Math.max(
+          0,
+          parseInstant(current.expiresAt) - now().getTime(),
+        ),
+      });
       return {
         attachmentId: input.attachmentId,
         storageKey: current.storageKey,
@@ -334,13 +470,28 @@ export function createAttachmentLifecycle<T>(
             if (!latest) throw new Error("Attachment not found");
             if (latest.status === "active" && latest.isActive) return latest;
             awaitingUpload(latest, now());
+            await finalizeOptions?.authorizeCommit?.();
+            deadline.signal.throwIfAborted();
             await options.quota.commit(
               { ...identity, actualBytes: integrity.sizeBytes, policy },
               tx,
             );
             const finalized = await options.repository.finalizeClean(
               identity,
-              { storageKey: destinationKey, ...integrity, contentType },
+              {
+                storageKey: destinationKey,
+                ...integrity,
+                contentType,
+                ...(latest.expectedSeriesVersion !== undefined
+                  ? { expectedSeriesVersion: latest.expectedSeriesVersion }
+                  : {}),
+                ...(latest.expectedCurrentAttachmentId !== undefined
+                  ? {
+                      expectedCurrentAttachmentId:
+                        latest.expectedCurrentAttachmentId,
+                    }
+                  : {}),
+              },
               tx,
             );
             await appendLifecycleEvent(
@@ -372,16 +523,16 @@ export function createAttachmentLifecycle<T>(
         // do with the deadline at all, e.g. quarantine) would leave the stream open until the
         // timeout separately fires later.
         deadline.dispose();
-        await options.storage.delete(destinationKey).catch(() => undefined);
+        await recordPendingCleanup(options,identity,[destinationKey]);
         throw error;
       } finally {
         deadline.dispose();
       }
       if (saved.storageKey !== destinationKey) {
-        await options.storage.delete(destinationKey).catch(() => undefined);
+        await recordPendingCleanup(options,identity,[destinationKey]);
         return saved;
       }
-      await options.storage.delete(current.storageKey).catch(() => undefined);
+      await cleanPendingKeys(options, identity, [current.storageKey]);
       await dispatchFinalization(options.scheduler, identity, integrity.sha256);
       return saved;
     },
@@ -394,6 +545,30 @@ export function createAttachmentLifecycle<T>(
       );
       if (!current) throw new Error("Attachment not found");
       return current;
+    },
+
+    async authorizedStatus(identity) {
+      const current = await options.transactions.run(identity.planeKey, identity, tx =>
+        (options.repository.loadForDownload ?? options.repository.load)(identity, tx));
+      if (!current) throw new Error("Attachment not found");
+      return current;
+    },
+
+    async rename(identity, input) {
+      const displayName = input.displayName.trim();
+      if (!displayName || displayName.length > 1024)
+        throw new TypeError("Attachment display name must be between 1 and 1024 characters");
+      if (!/^[1-9][0-9]*$/.test(input.expectedSeriesRevision) || !Number.isSafeInteger(Number(input.expectedSeriesRevision)) || Number(input.expectedSeriesRevision) > 2_147_483_647)
+        throw new TypeError("A positive series revision is required");
+      if (!options.repository.rename)
+        throw new Error("Attachment repository does not support rename");
+      const renamed = await options.transactions.run(identity.planeKey, identity, async (tx) => {
+        const current = await options.repository.rename!(identity, { displayName, expectedSeriesRevision: input.expectedSeriesRevision }, tx);
+        if (!current) throw new AttachmentConflictError("Attachment series changed before it could be renamed");
+        await appendLifecycleEvent(options.outbox, identity, "attachments.renamed", `attachment:${identity.attachmentId}:rename:${input.expectedSeriesRevision}`, { displayName, seriesId: current.seriesId }, tx);
+        return current;
+      });
+      return renamed;
     },
 
     async createAuthorizedDownload(identity, expirySeconds = 120) {
@@ -438,7 +613,10 @@ export function createAttachmentLifecycle<T>(
       const expiresAt = new Date(now().getTime() + ttl * 1000).toISOString();
       return {
         attachmentId: current.id,
-        url: await options.storage.createDownloadUrl(current.storageKey, ttl),
+        url: await options.storage.createDownloadUrl(current.storageKey, ttl, {
+          contentType: "application/octet-stream",
+          contentDisposition: `attachment; filename="${(current.fileName ?? "attachment").replace(/[^a-zA-Z0-9 ._()-]/g, "_")}"`,
+        }),
         expiresAt,
       };
     },
@@ -463,17 +641,65 @@ export function createAttachmentLifecycle<T>(
           );
         },
       );
+      await options.scheduler?.scheduleSearchRemoval?.(identity, "deactivated");
       await options.scheduler?.schedulePurge(identity, {
         jobId: `attachment:${identity.attachmentId}:purge`,
       });
     },
 
-    async expire(identity) {
-      await options.transactions.run(
+    async unlink(identity, target) {
+      const result = await options.transactions.run(
         identity.planeKey,
         identity,
         async (tx) => {
-          await options.repository.expire(identity, tx);
+          await options.repository.lockForStaging?.(identity, tx);
+          if (!options.repository.unlink)
+            throw new Error("Attachment repository does not support unlink");
+          const outcome = await options.repository.unlink(identity, target, tx);
+          if (!outcome.unlinked) throw new AttachmentConflictError("Attachment link was not found");
+          await appendLifecycleEvent(
+            options.outbox,
+            identity,
+            "attachments.unlinked",
+            `attachment:${identity.attachmentId}:unlinked:${target.entityType}:${target.entityId}`,
+            { target, orphaned: outcome.orphaned },
+            tx,
+          );
+          if (outcome.orphaned) await appendLifecycleEvent(options.outbox, identity,
+            "attachments.orphaned", `attachment:${identity.attachmentId}:orphaned:${target.entityType}:${target.entityId}`,
+            { target, orphaned: true }, tx);
+          return outcome;
+        },
+      );
+      await options.scheduler?.scheduleSearchRemoval?.(identity, "unlinked");
+      if (result.orphaned)
+        await options.scheduler?.schedulePurge(identity, {
+          jobId: `attachment:${identity.attachmentId}:purge`,
+        });
+      return result;
+    },
+
+    async expire(identity) {
+      const current = await options.transactions.run(
+        identity.planeKey,
+        identity,
+        (tx) => options.repository.load(identity, tx),
+      );
+      // A delayed job may arrive after a successful finalize, retry, or manual
+      // cancellation. It must never expire an active attachment.
+      if (
+        !current ||
+        !["pending", "uploading", "uploaded"].includes(current.status) ||
+        !current.expiresAt ||
+        parseInstant(current.expiresAt) > now().getTime()
+      )
+        return;
+      const expired = await options.transactions.run(
+        identity.planeKey,
+        identity,
+        async (tx) => {
+          const changed = await options.repository.expire(identity, tx);
+          if (changed === false) return false;
           await options.quota.release(identity, tx);
           await appendLifecycleEvent(
             options.outbox,
@@ -483,69 +709,16 @@ export function createAttachmentLifecycle<T>(
             {},
             tx,
           );
+          return true;
         },
       );
+      if (!expired) return;
       await options.scheduler?.schedulePurge(identity, {
         jobId: `attachment:${identity.attachmentId}:purge`,
       });
     },
 
-    async purge(identity) {
-      const current = await options.transactions.run(
-        identity.planeKey,
-        identity,
-        (tx) => options.repository.load(identity, tx),
-      );
-      if (
-        !current ||
-        current.hasLegalHold ||
-        retentionActive(current.retentionUntil, now())
-      )
-        return false;
-      if (
-        current.seriesId &&
-        options.seriesRepository &&
-        options.legalHoldRepository
-      ) {
-        const [held, series] = await options.transactions.run(
-          identity.planeKey,
-          identity,
-          (tx) =>
-            Promise.all([
-              options.legalHoldRepository!.hasActiveHold(
-                identity.tenantId,
-                current.seriesId!,
-                tx,
-              ),
-              options.seriesRepository!.load(
-                identity.tenantId,
-                current.seriesId!,
-                tx,
-              ),
-            ]),
-        );
-        if (held || retentionActive(series?.retentionUntil ?? undefined, now()))
-          return false;
-      }
-      await options.storage.delete(current.storageKey).catch(() => undefined);
-      await options.transactions.run(
-        identity.planeKey,
-        identity,
-        async (tx) => {
-          await options.repository.markPurged(identity, tx);
-          await options.quota.release(identity, tx);
-          await appendLifecycleEvent(
-            options.outbox,
-            identity,
-            "attachments.purged",
-            `attachment:${identity.attachmentId}:purged`,
-            { sha256: current.sha256 },
-            tx,
-          );
-        },
-      );
-      return true;
-    },
+    purge: identity => purgeAttachment(identity),
 
     async cleanupRetention(input) {
       if (
@@ -558,6 +731,14 @@ export function createAttachmentLifecycle<T>(
         );
       const limit = Math.min(Math.max(input.limit ?? 100, 1), 1000);
       const before = input.before ?? now().toISOString();
+      const pending = options.repository.listPendingObjectCleanup
+        ? await options.transactions.run(input.planeKey,input,tx=>options.repository.listPendingObjectCleanup!({tenantId:input.tenantId,limit},tx))
+        : [];
+      let deferred = 0;
+      for (const candidate of pending) {
+        try { await cleanPendingKeys(options,{...input,attachmentId:candidate.attachmentId},candidate.keys); }
+        catch { deferred += 1; }
+      }
       const ids = await options.transactions.run(input.planeKey, input, (tx) =>
         options.repository.listRetentionCandidates!(
           { tenantId: input.tenantId, before, limit },
@@ -565,63 +746,9 @@ export function createAttachmentLifecycle<T>(
         ),
       );
       let purged = 0;
-      for (const attachmentId of ids) {
-        const identity = { ...input, attachmentId };
-        const current = await options.transactions.run(
-          input.planeKey,
-          identity,
-          (tx) => options.repository.loadForMaintenance!(identity, tx),
-        );
-        if (
-          !current ||
-          current.hasLegalHold ||
-          retentionActive(current.retentionUntil, now())
-        )
-          continue;
-        if (
-          current.seriesId &&
-          options.seriesRepository &&
-          options.legalHoldRepository
-        ) {
-          const [held, series] = await options.transactions.run(
-            input.planeKey,
-            identity,
-            (tx) =>
-              Promise.all([
-                options.legalHoldRepository!.hasActiveHold(
-                  input.tenantId,
-                  current.seriesId!,
-                  tx,
-                ),
-                options.seriesRepository!.load(
-                  input.tenantId,
-                  current.seriesId!,
-                  tx,
-                ),
-              ]),
-          );
-          if (
-            held ||
-            retentionActive(series?.retentionUntil ?? undefined, now())
-          )
-            continue;
-        }
-        await options.storage.delete(current.storageKey).catch(() => undefined);
-        await options.transactions.run(input.planeKey, identity, async (tx) => {
-          await options.repository.markPurgedForMaintenance!(identity, tx);
-          await options.quota.release(identity, tx);
-          await appendLifecycleEvent(
-            options.outbox,
-            identity,
-            "attachments.purged",
-            `attachment:${attachmentId}:purged`,
-            { sha256: current.sha256 },
-            tx,
-          );
-        });
-        purged += 1;
-      }
-      return { examined: ids.length, purged, deferred: ids.length - purged };
+      for (const attachmentId of ids)
+        if (await purgeAttachment({ ...input, attachmentId }, true)) purged += 1;
+      return { examined: ids.length + pending.length, purged, deferred: deferred + ids.length - purged };
     },
 
     async rebuildDerivatives(identity, control) {
@@ -772,11 +899,23 @@ function validUpload(input: AttachmentUploadIntent) {
   if (
     !uuid(input.attachmentId) ||
     !uuid(input.tenantId) ||
-    !uuid(input.principalId)
+    !uuid(input.principalId) ||
+    (input.draftId !== undefined && !uuid(input.draftId))
   )
     throw new TypeError("Attachment identity must contain UUIDs");
   if (!input.fileName.trim() || !input.contentType.trim())
     throw new TypeError("Attachment filename and content type are required");
+  if (
+    input.parentAttachmentId !== undefined &&
+    (!uuid(input.parentAttachmentId) ||
+      !Number.isSafeInteger(input.expectedSeriesVersion) ||
+      input.expectedSeriesVersion! < 1)
+  )
+    throw new TypeError(
+      "A version upload requires its parent attachment and expected series version",
+    );
+  if (input.expectedSeriesVersion !== undefined && !input.parentAttachmentId)
+    throw new TypeError("Expected series version requires a parent attachment");
 }
 function validRebuild(input: DerivativeRebuildControl) {
   if (
@@ -790,6 +929,25 @@ function uuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
   );
+}
+
+async function recordPendingCleanup<T>(options: AttachmentLifecycleOptions<T>, identity: AttachmentIdentity, keys: readonly string[]): Promise<void> {
+  if (!keys.length) return;
+  try {
+    for (const key of new Set(keys)) await options.storage.delete(key);
+  } catch {
+    // Compatibility adapters cannot persist the manifest, but must never mask
+    // the actual finalize failure. Production repositories implement this port.
+    if (options.repository.addPendingObjectCleanup)
+      await options.transactions.run(identity.planeKey,identity,tx=>options.repository.addPendingObjectCleanup!(identity,keys,tx));
+  }
+}
+
+async function cleanPendingKeys<T>(options: AttachmentLifecycleOptions<T>, identity: AttachmentIdentity, keys: readonly string[]): Promise<void> {
+  const unique=[...new Set(keys)];
+  for (const key of unique) await options.storage.delete(key);
+  if (unique.length && options.repository.removePendingObjectCleanup)
+    await options.transactions.run(identity.planeKey,identity,tx=>options.repository.removePendingObjectCleanup!(identity,unique,tx));
 }
 
 async function appendLifecycleEvent<T>(

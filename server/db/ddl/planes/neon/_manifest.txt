@@ -190,6 +190,7 @@ planes/neon/control/12_platform_catalog_reference_seed.sql
 planes/neon/authz/14_permission_reference_seed.sql
 planes/neon/authz/15_currency_reference_permission.sql
 planes/neon/authz/16_compiled_entity_runtime_permission.sql
+planes/neon/authz/17_workforce_permission_contract.sql
 planes/neon/control/12_business_partner_360_feature_seed.sql
 common/authz/14_workflow_permission_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql
@@ -229,6 +230,26 @@ planes/neon/ai/12_attachment_knowledge.sql
 planes/neon/document/07_task_interactions.sql
 common/control/17_process_task_rule_publication.sql
 planes/neon/master/18_business_partner_business_profile.sql
+common/document/12_collaboration_integrity.sql
 common/shared/99_security_definer_hardening.sql
 
 common/master/21_reference_choice_recent.sql
+
+common/document/13_processing_grants.sql
+planes/neon/document/14_workforce_case_reconciliation.sql
+planes/neon/master/22_employee_personal_profile.sql
+planes/neon/document/15_person_evidence_access_audit.sql
+planes/neon/document/16_workforce_request_offboarding.sql
+planes/neon/authz/18_workforce_profile_write.sql
+planes/neon/master/23_person_profile_write_grants.sql
+planes/neon/authz/19_workforce_collaboration_scope.sql
+planes/neon/authz/20_hr_stage2_permissions.sql
+planes/neon/master/24_hr_policy_applicability.sql
+planes/neon/authz/21_hr_stage2_followup_permissions.sql
+planes/neon/document/17_user_profile_review.sql
+planes/neon/master/25_hr_stage2_user_rls.sql
+planes/neon/master/26_hr_setup_publication.sql
+planes/neon/authz/22_hr_setup_governance_permissions.sql
+planes/neon/authz/23_hr_policy_simulate_permission.sql
+planes/neon/master/27_hr_setup_effective_refs.sql
+planes/neon/master/28_hr_setup_reference_guards.sql

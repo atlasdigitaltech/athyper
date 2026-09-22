@@ -15,6 +15,7 @@ import { useDataValidation, useValidationMessage } from "./data-validation";
 import { validateDataInput } from "@athyper/contract-platform-entity-runtime";
 import {
   ReferenceSelect,
+  type ReferenceDirectoryBinding,
   type ReferenceHistoryBinding,
   type ReferenceChoiceScope,
 } from "./reference-select";
@@ -67,6 +68,7 @@ export function EntityDataSurface({
   disabled = false,
   prefix = "",
   referenceHistory,
+  referenceDirectory,
   referenceChoiceScope,
   sectionNavigation,
   primaryField,
@@ -81,10 +83,15 @@ export function EntityDataSurface({
   disabled?: boolean;
   prefix?: string;
   referenceHistory?: Omit<ReferenceHistoryBinding, "surfaceKey" | "fieldKey">;
+  referenceDirectory?: Omit<ReferenceDirectoryBinding, "filters">;
   referenceChoiceScope?: ReferenceChoiceScope;
   sectionNavigation?: {
     readonly label: string;
     readonly mode?: "create" | "amend";
+    /** Server-trusted request/record status for the workspace header. */
+    readonly status?: ReactNode;
+    /** Metadata-authorized footer actions supplied by the owning intake runtime. */
+    readonly actions?: ReactNode;
   };
   primaryField?: string;
   primaryLabel?: string;
@@ -272,7 +279,7 @@ export function EntityDataSurface({
             if (!dataFieldVisible(f, surface, answers)) return null;
             const name = prefix ? `${prefix}.${f.valueKey}` : f.valueKey,
               fieldId = `${id}-${f.key}`,
-              update = (value: unknown) => {
+              update = (value: unknown, selectedOption?: { readonly value: string; readonly label: string; readonly data?: Readonly<Record<string, string | boolean | readonly string[]>> }) => {
                 if (f.control !== "input") {
                   onChange({ ...answers, [f.valueKey]: value });
                   return;
@@ -288,7 +295,21 @@ export function EntityDataSurface({
                   setPending({ field: f, value });
                   return;
                 }
-                onChange(changedDataInput(f, answers, value));
+                const optionField = selectedOption?.data
+                  ? {
+                      ...f,
+                      lookup: {
+                        ...f.lookup,
+                        options: [
+                          ...(f.lookup?.options ?? []).filter(
+                            (option) => option.value !== selectedOption.value,
+                          ),
+                          selectedOption,
+                        ],
+                      },
+                    }
+                  : f;
+                onChange(changedDataInput(optionField, answers, value, surface));
               };
             const style = {
               "--data-span": Math.min(f.columnSpan, section.columns ?? 12),
@@ -327,6 +348,7 @@ export function EntityDataSurface({
                         surface={item}
                         surfaces={surfaces}
                         referenceHistory={referenceHistory}
+                        referenceDirectory={referenceDirectory}
                         referenceChoiceScope={referenceChoiceScope}
                         answers={row}
                         prefix={name + "." + String(row.key)}
@@ -389,6 +411,7 @@ export function EntityDataSurface({
                         surface={item}
                         surfaces={surfaces}
                         referenceHistory={referenceHistory}
+                        referenceDirectory={referenceDirectory}
                         referenceChoiceScope={referenceChoiceScope}
                         answers={row}
                         prefix={name + "." + String(row.key)}
@@ -539,6 +562,17 @@ export function EntityDataSurface({
                         value={String(value)}
                         options={f.lookup?.options ?? []}
                         sourceKey={f.lookup?.sourceKey ?? f.key}
+                        directory={referenceDirectory && f.lookup?.sourceKey ? {
+                          ...referenceDirectory,
+                          filters: Object.fromEntries(
+                            (f.lookup.filterBy ?? []).flatMap((binding) => {
+                              const value = answers[binding.field];
+                              return typeof value === "string" && value.trim()
+                                ? [[binding.property, value.trim()]]
+                                : [];
+                            }),
+                          ),
+                        } : undefined}
                         recentScope={referenceChoiceScope}
                         recentPolicy={
                           f.lookup?.sourceKey
@@ -715,7 +749,7 @@ export function EntityDataSurface({
                   disabled={disabled}
                   onClick={() => {
                     onChange(
-                      changedDataInput(pending.field, answers, pending.value),
+                      changedDataInput(pending.field, answers, pending.value, surface),
                     );
                     closeChange();
                   }}
@@ -733,7 +767,7 @@ export function EntityDataSurface({
           <Button
             type="button"
             onClick={() => {
-              onChange(changedDataInput(pending.field, answers, pending.value));
+              onChange(changedDataInput(pending.field, answers, pending.value, surface));
               setPending(undefined);
             }}
           >
@@ -753,6 +787,7 @@ export function EntityDataSurface({
           sections={navigationSections}
           navigationLabel={sectionNavigation.label}
           mode={sectionNavigation.mode}
+          intakeWorkspace={surface.presentation ? { surface, status: sectionNavigation.status, actions: sectionNavigation.actions } : undefined}
         >
           {sectionContent}
         </EntityFormLayout>

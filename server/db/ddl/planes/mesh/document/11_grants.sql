@@ -13,6 +13,7 @@ BEGIN
         GRANT SELECT, INSERT, UPDATE, DELETE ON
             document.attachment,
             document.attachment_folder,
+            document.attachment_workspace,
             document.attachment_link,
             document.comment,
             document.comment_draft,

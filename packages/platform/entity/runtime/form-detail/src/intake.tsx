@@ -42,6 +42,43 @@ interface IntakePresentation {
   readonly exitLabel?: string;
   readonly lockedSteps?: readonly string[];
 }
+/** A receipt returned by the intake owner after a server commit. Never derive these values from form answers. */
+export interface EntityIntakeSaveReceipt {
+  readonly code?: string;
+  readonly recordId?: string;
+  readonly version?: string | number;
+  readonly savedAt?: string;
+  readonly statusLabel?: string;
+}
+/** Server edit-policy preview. `message` is the server's policy explanation, not a client-side inference. */
+export interface EntityIntakePolicyPreview {
+  readonly outcome: "unchanged" | "metadata-only" | "reapproval-required" | "denied";
+  readonly message?: string;
+}
+/** A capability is emitted only after the server has authorized the named operation for this intake. */
+export interface EntityIntakeOperation {
+  readonly operationKey: string;
+  readonly authorized: boolean;
+  readonly label?: string;
+  readonly href?: string;
+  readonly execute?: () => void | EntityIntakeSaveReceipt | Promise<void | EntityIntakeSaveReceipt>;
+}
+export interface EntityIntakeRuntimeState {
+  /** Values from the last durable server receipt. */
+  readonly receipt?: EntityIntakeSaveReceipt;
+  /** Values from the current server edit-policy preview. */
+  readonly policyPreview?: EntityIntakePolicyPreview;
+  /** Server-authorized capabilities. Client code may supply handlers, but cannot enable an operation itself. */
+  readonly operations?: Readonly<{
+    exit?: EntityIntakeOperation;
+    undo?: EntityIntakeOperation;
+    discard?: EntityIntakeOperation;
+    back?: EntityIntakeOperation;
+    saveDraft?: EntityIntakeOperation;
+    continue?: EntityIntakeOperation;
+    submit?: EntityIntakeOperation;
+  }>;
+}
 interface IntakeController {
   setPresentation(value: IntakePresentation): void;
   readonly flow: EntityIntakeFlowV1;
@@ -49,6 +86,7 @@ interface IntakeController {
   readonly busy: boolean;
   readonly sharedHeader: boolean;
   readonly lockedSteps: readonly string[];
+  readonly workspace: { readonly status?: ReactNode; readonly actions?: ReactNode };
   next(): void;
   go(key: string): void;
   invalidate(key: string): void;
@@ -58,6 +96,14 @@ interface IntakeController {
   assertReady(): void;
 }
 const EMPTY_ANSWERS = Object.freeze({});
+function policyOutcomeLabel(outcome: EntityIntakePolicyPreview["outcome"]) {
+  switch (outcome) {
+    case "unchanged": return "No policy-relevant changes";
+    case "metadata-only": return "Changes do not require reapproval";
+    case "reapproval-required": return "Changes require reapproval";
+    case "denied": return "Changes are not permitted";
+  }
+}
 const IntakeContext = createContext<IntakeController | undefined>(undefined);
 export function useEntityIntake() {
   return useContext(IntakeContext);
@@ -69,6 +115,7 @@ export function EntityIntake({
   answers = EMPTY_ANSWERS,
   initialCheckpoint,
   initialPresentation,
+  runtime,
   saveCheckpoint,
   cancelHref,
   children,
@@ -77,6 +124,8 @@ export function EntityIntake({
   readonly descriptorHash: string;
   readonly answers?: Readonly<Record<string, unknown>>;
   readonly initialPresentation?: IntakePresentation;
+  /** Server-backed state and capabilities for the generic header and action bar. */
+  readonly runtime?: EntityIntakeRuntimeState;
   readonly initialCheckpoint?: IntakeCheckpoint;
   readonly saveCheckpoint?: (checkpoint: IntakeCheckpoint) => Promise<void>;
   readonly cancelHref: string;
@@ -86,6 +135,7 @@ export function EntityIntake({
     initialIntakeCheckpoint(flow, descriptorHash, initialCheckpoint),
   );
   const [presentation, setPresentation] = useState<IntakePresentation>(initialPresentation ?? {});
+  const [committedReceipt, setCommittedReceipt] = useState<EntityIntakeSaveReceipt>();
   const [dirty, setDirty] = useState(false);
   const dirtyRef = useRef(false);
   useEffect(() => {
@@ -102,6 +152,7 @@ export function EntityIntake({
     [error, setError] = useState<string>();
   useContextDepartureGuard({ dirty: dirty || presentation.saveState === "unsaved", busy });
   const step = flow.steps.find((s) => s.key === state.currentStep)!;
+  const receipt = runtime?.receipt ?? committedReceipt;
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -156,6 +207,23 @@ export function EntityIntake({
       setError((cause as Error).message);
     }
   }
+  async function execute(operation: EntityIntakeOperation | undefined) {
+    if (!operation?.authorized || !operation.execute || busy) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const result = await operation.execute();
+      if (result) {
+        setCommittedReceipt(result);
+        dirtyRef.current = false;
+        setDirty(false);
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to complete the intake operation");
+    } finally {
+      if (mounted.current) setBusy(false);
+    }
+  }
   const navigation = (
     <nav className="athyper-section-nav a-management-navigation a-intake-progress" aria-label="Request progress">
       <ol>
@@ -196,29 +264,56 @@ export function EntityIntake({
       </ol>
     </nav>
   );
+  const saveLabel = busy
+    ? "Saving"
+    : dirty
+      ? "Unsaved changes"
+      : receipt
+        ? (receipt.statusLabel ?? "Saved")
+        : "Not saved";
+  const operationalStatus = runtime || receipt ? (
+    <div className="a-intake-identity" data-slot="intake-status">
+      {receipt?.code ? <span className="a-intake-reference">{receipt.code}</span> : null}
+      {receipt?.recordId ? <span className="a-intake-record-id">{receipt.recordId}</span> : null}
+      <span className="a-intake-save-status" data-state={dirty ? "unsaved" : "saved"} role="status">{saveLabel}</span>
+      {receipt?.version !== undefined ? <span>v{receipt.version}</span> : null}
+      {receipt?.savedAt ? <time dateTime={receipt.savedAt}>Saved {new Date(receipt.savedAt).toLocaleString()}</time> : null}
+      {runtime?.policyPreview ? <span data-policy-outcome={runtime.policyPreview.outcome}>{runtime.policyPreview.message ?? policyOutcomeLabel(runtime.policyPreview.outcome)}</span> : null}
+    </div>
+  ) : undefined;
+  const headerOperations = runtime?.operations;
+  const isGenericRuntime = Boolean(runtime || receipt);
+  const headerActions = <>
+    {headerOperations?.undo?.authorized ? <Button type="button" variant="secondary" disabled={busy} onClick={() => void execute(headerOperations.undo)}>{headerOperations.undo.label ?? "Undo"}</Button> : null}
+    {headerOperations?.discard?.authorized ? <Button type="button" variant="secondary" disabled={busy} onClick={() => void execute(headerOperations.discard)}>{headerOperations.discard.label ?? "Discard"}</Button> : null}
+    {headerOperations?.exit?.authorized && headerOperations.exit.href ? <a className="a-button a-button--secondary" href={headerOperations.exit.href}>{headerOperations.exit.label ?? "Exit"}</a> : headerOperations?.exit?.authorized && headerOperations.exit.execute ? <Button type="button" variant="secondary" disabled={busy} onClick={() => void execute(headerOperations.exit)}>{headerOperations.exit.label ?? "Exit"}</Button> : !isGenericRuntime ? <a className="a-button a-button--secondary" href={cancelHref} onClick={(event) => { if (busy || (dirty && !window.confirm("Discard the unsaved request details?"))) event.preventDefault(); }}>{presentation.exitLabel ?? "Cancel"}</a> : null}
+  </>;
+  const footerActions = <>
+    {headerOperations?.back?.authorized && flow.steps.findIndex((candidate) => candidate.key === state.currentStep) > 0 ? <Button type="button" variant="secondary" disabled={busy} onClick={() => { const index = flow.steps.findIndex((candidate) => candidate.key === state.currentStep); const previous = flow.steps[index - 1]; if (previous) go(previous.key); }}>{headerOperations.back.label ?? "Back"}</Button> : null}
+    {headerOperations?.saveDraft?.authorized ? <Button type="button" variant="secondary" disabled={busy} onClick={() => void execute(headerOperations.saveDraft)}>{headerOperations.saveDraft.label ?? "Save draft"}</Button> : null}
+    {flow.steps.at(-1)?.key === state.currentStep ? headerOperations?.submit?.authorized ? <Button type="submit" disabled={busy}>{headerOperations.submit.label ?? "Submit"}</Button> : null : headerOperations?.continue?.authorized ? <Button type="button" disabled={busy} onClick={next}>{headerOperations.continue.label ?? "Continue"}</Button> : null}
+  </>;
+  const workspace = useMemo(
+    () => runtime || receipt ? { status: operationalStatus, actions: footerActions } : {},
+    [runtime, receipt, operationalStatus, footerActions],
+  );
   const header = useMemo(
-    () => ({
+    () => {
+      // Guidance belongs in the workspace. Header Row 2 is reserved for operational state.
+      const legacySupportingRow = presentation.compact && (presentation.context || presentation.saveStatus) ? <><span className="a-intake-identity">{presentation.context}</span><span className="a-intake-save-status" data-state={presentation.saveState} role="status">{presentation.saveStatus}</span></> : undefined;
+      return {
       title: presentation.title ?? flow.title,
-      description: presentation.compact ? undefined : presentation.description ?? step.description ?? flow.description,
-      supportingRow: presentation.compact ? <><span className="a-intake-identity">{presentation.context}</span><span className="a-intake-save-status" data-state={presentation.saveState} role="status">{presentation.saveStatus}</span></> : undefined,
-      actions: (
-        <a
-          className="a-button a-button--secondary"
-          href={cancelHref}
-          onClick={(event) => {
-            if (
-              busy ||
-              (dirty && !window.confirm("Discard the unsaved request details?"))
-            )
-              event.preventDefault();
-          }}
-        >
-          {presentation.exitLabel ?? "Cancel"}
-        </a>
-      ),
+      description: operationalStatus
+        ? undefined
+        : presentation.compact
+          ? undefined
+          : presentation.description ?? step.description ?? flow.description,
+      supportingRow: operationalStatus ?? (presentation.compact ? legacySupportingRow : undefined),
+      actions: headerActions,
       navigation: <>{!presentation.compact && presentation.context ? <p className="a-intake-context" role="status">{presentation.context}</p> : null}{navigation}</>,
-    }),
-    [flow, state, busy, step, cancelHref, answers, dirty, presentation],
+    };
+    },
+    [flow, state, busy, step, cancelHref, answers, dirty, presentation, operationalStatus, headerActions],
   );
   const sharedHeader = useRegisterEntityTaskHeader(header);
   return (
@@ -230,6 +325,7 @@ export function EntityIntake({
         busy,
         sharedHeader,
         lockedSteps: presentation.lockedSteps ?? [],
+        workspace,
         next,
         go,
         invalidate: (key) => change(invalidateIntakeFrom(flow, state, key)),

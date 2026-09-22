@@ -520,6 +520,10 @@ importers:
         version: 6.0.3
 
   packages/contracts/neon/party:
+    dependencies:
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../platform/entity-runtime
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
@@ -734,6 +738,9 @@ importers:
 
   packages/planes/neon/business-partner:
     dependencies:
+      '@athyper/contract-neon-party':
+        specifier: workspace:*
+        version: link:../../../contracts/neon/party
       '@athyper/contract-platform-entity-runtime':
         specifier: workspace:*
         version: link:../../../contracts/platform/entity-runtime
@@ -1066,6 +1073,10 @@ importers:
         version: 6.0.3
 
   packages/platform/communications/collaboration-ui:
+    dependencies:
+      '@athyper/platform-ui':
+        specifier: workspace:*
+        version: link:../../foundation/ui
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -1156,6 +1167,9 @@ importers:
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../../foundation/api-client
+      '@athyper/platform-communications-collaboration-ui':
+        specifier: workspace:*
+        version: link:../../../communications/collaboration-ui
       '@athyper/platform-entity-descriptor-client':
         specifier: workspace:*
         version: link:../descriptor-client
@@ -1810,6 +1824,9 @@ importers:
 
   server/apps/platform-host:
     dependencies:
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../../packages/contracts/platform/entity-runtime
       '@athyper/server-adapter-ai-ollama':
         specifier: workspace:*
         version: link:../../packages/adapters/ai-ollama
@@ -2967,6 +2984,9 @@ importers:
       '@athyper/server-contract-metadata':
         specifier: workspace:*
         version: link:../metadata
+      '@athyper/server-contract-publication':
+        specifier: workspace:*
+        version: link:../publication
     devDependencies:
       '@types/node':
         specifier: ^25.6.0
@@ -3348,6 +3368,9 @@ importers:
       '@athyper/server-contract-metadata':
         specifier: workspace:*
         version: link:../../../contracts/metadata
+      '@athyper/server-contract-publication':
+        specifier: workspace:*
+        version: link:../../../contracts/publication
       express:
         specifier: ^5.2.1
         version: 5.2.1
@@ -3626,6 +3649,9 @@ importers:
       '@athyper/contract-platform-dashboard':
         specifier: workspace:*
         version: link:../../../../packages/contracts/platform/dashboard
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/entity-runtime
       '@athyper/platform-i18n':
         specifier: workspace:*
         version: link:../../../../packages/platform/foundation/i18n
@@ -4429,6 +4455,9 @@ importers:
 
   server/packages/services/master-data:
     dependencies:
+      '@athyper/contract-neon-party':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/neon/party
       '@athyper/contract-platform-entity-runtime':
         specifier: workspace:*
         version: link:../../../../packages/contracts/platform/entity-runtime
@@ -4546,6 +4575,9 @@ importers:
         specifier: ^0.28.17
         version: 0.28.17
     devDependencies:
+      '@athyper/server-adapter-publication-signing':
+        specifier: workspace:*
+        version: link:../../adapters/publication-signing
       '@athyper/server-platform-audit':
         specifier: workspace:*
         version: link:../../platform/audit
@@ -4588,6 +4620,9 @@ importers:
       '@athyper/server-contract-malware-scanning':
         specifier: workspace:*
         version: link:../../contracts/malware-scanning
+      '@athyper/server-contract-master-data':
+        specifier: workspace:*
+        version: link:../../contracts/master-data
       '@athyper/server-contract-metadata':
         specifier: workspace:*
         version: link:../../contracts/metadata
@@ -12041,7 +12076,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
+      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
     optional: true
 
   '@vitest/expect@4.1.4':

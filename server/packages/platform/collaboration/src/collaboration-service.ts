@@ -33,6 +33,8 @@ const PERMISSION = {
 } as const;
 
 export interface CollaborationServiceOptions<Transaction> {
+  readonly authorizeCapability?: (action: string, input: {readonly context: VerifiedRequestContext; readonly entityType?: string; readonly entityId?: string; readonly commentId?: string}, value: Readonly<Record<string, unknown>>) => Promise<{readonly draftRetentionDays?: number; readonly defaultAudience?: "public" | "private" | "internal"} | void>;
+  readonly participants?: NonNullable<CollaborationService["participants"]>;
   readonly authorizer: Authorizer;
   readonly principals: PrincipalDirectory;
   readonly repository: CollaborationRepository<Transaction>;
@@ -51,13 +53,32 @@ export function createCollaborationService<Transaction>(
   options: CollaborationServiceOptions<Transaction>,
 ): CollaborationService {
   return {
+    async participants(input) {
+      if(!options.authorizeCapability || !options.participants) throw new CollaborationError(403,"MENTIONS_UNAVAILABLE","Mentions are unavailable");
+      await options.authorizeCapability("mention",input,{visibility:input.visibility});
+      return options.participants(input);
+    },
+    async history(input) {
+      if ((input.limit !== undefined && (!Number.isSafeInteger(input.limit) || input.limit < 1)) || !uuid(input.commentId) || (input.beforeRevision !== undefined && (!Number.isSafeInteger(input.beforeRevision) || input.beforeRevision < 1)))
+        throw new CollaborationError(400, "INVALID_HISTORY_QUERY", "Invalid history cursor");
+      if (!options.authorizeCapability || !options.repository.history)
+        throw new CollaborationError(403, "HISTORY_UNAVAILABLE", "History is unavailable");
+      await options.authorizeCapability("history", input, {...input});
+      return transact(options, input.context, tx => options.repository.history!({...input,limit:Math.min(50,Math.max(1,input.limit ?? 20))},tx));
+    },
     async create(command) {
-      await requirePermission(
+      const initial = prepare(command);
+      // A reply is a separately admitted capability action.  It still shares the
+      // immutable create transaction, but cannot be smuggled through `create`
+      // when a definition has disabled replies.
+      const action = command.parentCommentId ? "reply" : "create";
+      const capability = await options.authorizeCapability?.(action, command, {...initial});
+      if (!capability) await requirePermission(
         options.authorizer,
         command.context,
         PERMISSION.create,
       );
-      const prepared = prepare(command);
+      const prepared = {...initial, visibility: command.visibility ?? capability?.defaultAudience ?? "public" as const};
       validateCoordinate(prepared);
       if (prepared.intent !== undefined) validateCode(prepared.intent);
       validateBody(prepared.text);
@@ -143,15 +164,15 @@ export function createCollaborationService<Transaction>(
       return result;
     },
     async edit(command) {
-      await requirePermission(
+      const capability = await options.authorizeCapability?.("update_own", command, {...prepare(command)});
+      if (!capability) await requirePermission(
         options.authorizer,
         command.context,
         PERMISSION.edit,
       );
-      const prepared = prepare({
-        ...command,
-        expectedUpdatedAt: timestamp(command.expectedUpdatedAt),
-      });
+      if (!Number.isSafeInteger(command.expectedRevision) || command.expectedRevision < 1)
+        throw new CollaborationError(400, "COMMENT_REVISION_REQUIRED", "A positive expectedRevision is required, including the first edit");
+      const prepared = prepare(command);
       validateBody(prepared.text);
       validateAttachments(prepared.attachmentIds);
       const result = await transact(options, prepared.context, async (tx) => {
@@ -160,8 +181,8 @@ export function createCollaborationService<Transaction>(
           prepared,
           tx,
         );
-        const comment = await options.repository.edit(prepared, mentions, tx);
-        if (!comment)
+        const outcome = await options.repository.edit(prepared, mentions, tx);
+        if (!outcome)
           throw new CollaborationError(
             409,
             "COMMENT_EDIT_CONFLICT",
@@ -170,19 +191,36 @@ export function createCollaborationService<Transaction>(
         await emit(
           options,
           prepared.context,
-          comment,
+          outcome.comment,
           "edited",
           tx,
           undefined,
           mentions,
         );
-        return comment;
+        for (const attachmentId of outcome.orphanedAttachmentIds)
+          await options.outbox.append(
+            {
+              tenantId: prepared.context.tenantId,
+              topic: "attachments.lifecycle",
+              eventType: "attachments.orphaned",
+              eventKey: `attachment:${attachmentId}:orphaned:comment:${prepared.commentId}`,
+              entityType: "document.attachment",
+              entityId: attachmentId,
+              aggregateType: "document.attachment",
+              aggregateId: attachmentId,
+              actorId: prepared.context.principalId,
+              payload: { attachmentId, commentId: prepared.commentId, reason: "comment_attachment_removed" },
+            },
+            tx,
+          );
+        return outcome.comment;
       });
       fanout(options, prepared.context, "collaboration.comment.edited", result);
       return result;
     },
     async remove(input) {
-      await requirePermission(
+      const capability = await options.authorizeCapability?.("archive_own", input, {...input});
+      if (!capability) await requirePermission(
         options.authorizer,
         input.context,
         PERMISSION.remove,
@@ -206,8 +244,9 @@ export function createCollaborationService<Transaction>(
       });
     },
     async putReaction(input) {
+      const capability = await options.authorizeCapability?.("react", input, {...input});
       validateCode(input.code);
-      await requirePermission(
+      if (!capability) await requirePermission(
         options.authorizer,
         input.context,
         PERMISSION.react,
@@ -233,8 +272,9 @@ export function createCollaborationService<Transaction>(
       });
     },
     async deleteReaction(input) {
+      const capability = await options.authorizeCapability?.("react", input, {...input});
       validateCode(input.code);
-      await requirePermission(
+      if (!capability) await requirePermission(
         options.authorizer,
         input.context,
         PERMISSION.react,
@@ -250,22 +290,25 @@ export function createCollaborationService<Transaction>(
       );
     },
     async putDraft(input) {
-      await requirePermission(
+      const initial = prepare(input);
+      const capability = await options.authorizeCapability?.("draft", input, {...initial});
+      if (!capability) await requirePermission(
         options.authorizer,
         input.context,
         PERMISSION.draft,
       );
-      const prepared = prepare(input);
+      const prepared = {...initial, visibility: input.visibility ?? capability?.defaultAudience ?? "public" as const};
       validateCoordinate(prepared);
       if (prepared.intent !== undefined) validateCode(prepared.intent);
       validateBody(prepared.text);
       validateAttachments(prepared.attachmentIds);
-      await transact(options, prepared.context, (tx) =>
-        options.repository.putDraft(prepared, tx),
+      return transact(options, prepared.context, (tx) =>
+        options.repository.putDraft({...prepared,draftRetentionDays:capability?.draftRetentionDays ?? 30}, tx),
       );
     },
     async deleteDraft(input) {
-      await requirePermission(
+      const capability = await options.authorizeCapability?.("draft", input, {...input});
+      if (!capability) await requirePermission(
         options.authorizer,
         input.context,
         PERMISSION.draft,
@@ -288,7 +331,8 @@ export function createCollaborationService<Transaction>(
       );
     },
     async markRead(input) {
-      await requirePermission(
+      const capability = await options.authorizeCapability?.("read", input, {...input});
+      if (!capability) await requirePermission(
         options.authorizer,
         input.context,
         PERMISSION.read,
@@ -309,7 +353,8 @@ export function createCollaborationService<Transaction>(
       );
     },
     async flag(input) {
-      await requirePermission(
+      const capability = await options.authorizeCapability?.("flag", input, {...input});
+      if (!capability) await requirePermission(
         options.authorizer,
         input.context,
         PERMISSION.flag,

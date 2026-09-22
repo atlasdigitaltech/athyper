@@ -715,6 +715,74 @@ describe("Business Partner request service", () => {
     });
   });
 
+  it("admits typed address and contact roles while rejecting mismatched subdivisions and invalid time zones", async () => {
+    const value = fixture();
+    const extensions = {
+      addresses: [
+        {
+          clientItemKey: "address-1",
+          definitionFieldCode: "address.primary",
+          purpose: "default",
+          countryCode: "GB",
+          stateRegionCode: "GB-LND",
+          regionEntryMode: "directory" as const,
+          region: "London",
+          timezoneCode: "Europe/London",
+          normalizedHash: "e".repeat(64),
+          isPrimary: true,
+        },
+      ],
+      contactPersons: [
+        {
+          clientItemKey: "contact-1",
+          definitionFieldCode: "contact.primary",
+          contactName: "Accounts payable",
+          roleCode: "accounts_payable",
+          isPrimary: true,
+        },
+      ],
+      contactChannels: [
+        {
+          clientItemKey: "channel-1",
+          definitionFieldCode: "contact.channel.email",
+          contactClientItemKey: "contact-1",
+          channelType: "email" as const,
+          value: "ap@example.test",
+          purpose: "default",
+          isPrimary: true,
+        },
+      ],
+    };
+    const created = await value.service.create(command({ extensions }));
+    expect(created.request.extensionSummary.counts).toMatchObject({
+      addresses: 1,
+      contactPersons: 1,
+      contactChannels: 1,
+    });
+    await expect(
+      value.service.create(
+        command({
+          idempotencyKey: "mismatched-subdivision-001",
+          extensions: {
+            ...extensions,
+            addresses: [{ ...extensions.addresses[0], countryCode: "MY" }],
+          },
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "BUSINESS_PARTNER_REQUEST_INVALID" });
+    await expect(
+      value.service.create(
+        command({
+          idempotencyKey: "invalid-address-timezone-001",
+          extensions: {
+            ...extensions,
+            addresses: [{ ...extensions.addresses[0], timezoneCode: "London" }],
+          },
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "BUSINESS_PARTNER_REQUEST_INVALID" });
+  });
+
   it("rejects identity extension families in unrestricted JSON and raw tax values in typed tax rows", async () => {
     const value = fixture();
     await expect(

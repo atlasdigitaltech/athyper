@@ -76,9 +76,15 @@ export class PublicationOrchestrator {
     private readonly authority: PublicationAuthorityRepository,
     private readonly local: LocalProjectionRepository,
     private readonly loader: PublicationArtifactLoader,
+    private readonly authorizeActivation?: (
+      deployment: PublicationDeploymentBundle,
+      artifact: Awaited<ReturnType<PublicationArtifactLoader["load"]>>,
+    ) => Promise<void>,
   ) {}
 
-  activeRelease(publicationKey: string): Promise<ActiveReleaseProjection | null> {
+  activeRelease(
+    publicationKey: string,
+  ): Promise<ActiveReleaseProjection | null> {
     return this.local.findActive(publicationKey);
   }
 
@@ -92,7 +98,8 @@ export class PublicationOrchestrator {
 
     let authorityStatus = deployment.deploymentStatus;
     let localRelease: AppliedReleaseProjection | null = null;
-    let loaded: Awaited<ReturnType<PublicationArtifactLoader["load"]>> | undefined;
+    let loaded:
+      Awaited<ReturnType<PublicationArtifactLoader["load"]>> | undefined;
     let currentStep: PublicationOrchestrationStep = "stage";
 
     const advance = async (
@@ -100,7 +107,11 @@ export class PublicationOrchestrator {
       evidence: Readonly<Record<string, unknown>> = {},
     ): Promise<void> => {
       if (progress(authorityStatus) >= progress(status)) return;
-      await this.authority.transitionDeployment({ deploymentId, status, evidence });
+      await this.authority.transitionDeployment({
+        deploymentId,
+        status,
+        evidence,
+      });
       authorityStatus = status;
     };
 
@@ -113,14 +124,20 @@ export class PublicationOrchestrator {
         loaded = await this.loader.load(deployment);
         await advance("received", { artifactLoaded: true });
         currentStep = "stage";
-        localRelease = await this.local.stage({ deployment, artifact: loaded.document });
+        localRelease = await this.local.stage({
+          deployment,
+          artifact: loaded.document,
+        });
       }
       assertLocalCoordinates(deployment, localRelease);
       await advance("received", { artifactLoaded: true });
       await advance("staged", { localAppliedReleaseId: localRelease.id });
 
       if (localRelease.status === "rejected") {
-        throw permanent(localRelease.failureCode ?? "LOCAL_VERIFICATION_REJECTED", "verify");
+        throw permanent(
+          localRelease.failureCode ?? "LOCAL_VERIFICATION_REJECTED",
+          "verify",
+        );
       }
       if (localRelease.status === "staged") {
         currentStep = "load";
@@ -133,13 +150,22 @@ export class PublicationOrchestrator {
         });
       }
       if (localRelease.status === "rejected") {
-        throw permanent(localRelease.failureCode ?? "LOCAL_VERIFICATION_REJECTED", "verify");
+        throw permanent(
+          localRelease.failureCode ?? "LOCAL_VERIFICATION_REJECTED",
+          "verify",
+        );
       }
       if (!isVerified(localRelease)) {
         throw conflict("LOCAL_RELEASE_NOT_VERIFIED", "verify");
       }
       await advance("verified", { localAppliedReleaseId: localRelease.id });
 
+      // Recheck workload authority even when resuming a previously verified or
+      // active projection. A queued job is never an approval credential.
+      if (this.authorizeActivation) {
+        loaded ??= await this.loader.load(deployment);
+        await this.authorizeActivation(deployment, loaded);
+      }
       let active = await this.local.findActive(deployment.publicationKey);
       if (localRelease.status !== "active") {
         currentStep = "activate";
@@ -148,7 +174,11 @@ export class PublicationOrchestrator {
           evidence: { deploymentId },
         });
       }
-      if (!active || active.id !== localRelease.id || active.artifactHash !== deployment.artifactHash) {
+      if (
+        !active ||
+        active.id !== localRelease.id ||
+        active.artifactHash !== deployment.artifactHash
+      ) {
         throw conflict("LOCAL_ACTIVATION_HEAD_MISMATCH", "activate");
       }
       await advance("activated", { localAppliedReleaseId: active.id });
@@ -175,7 +205,9 @@ export class PublicationOrchestrator {
     }
   }
 
-  private async loadDeployment(deploymentId: string): Promise<PublicationDeploymentBundle> {
+  private async loadDeployment(
+    deploymentId: string,
+  ): Promise<PublicationDeploymentBundle> {
     try {
       const deployment = await this.authority.getDeployment(deploymentId);
       if (!deployment) throw permanent("DEPLOYMENT_NOT_AVAILABLE", "load");
@@ -193,16 +225,28 @@ export function classifyPublicationFailure(
   if (error instanceof PublicationOrchestrationError) return error;
   const code = errorCode(error);
   if (CONFLICT_CODES.has(code)) return conflict(code, step, error);
-  if (PERMANENT_CODES.has(code) || Reflect.get(asObject(error), "retryable") === false) {
+  if (
+    PERMANENT_CODES.has(code) ||
+    Reflect.get(asObject(error), "retryable") === false
+  ) {
     return permanent(code, step, error);
   }
-  return new PublicationOrchestrationError("transient", code, step, "Publication dependency unavailable", {
-    cause: error,
-  });
+  return new PublicationOrchestrationError(
+    "transient",
+    code,
+    step,
+    "Publication dependency unavailable",
+    {
+      cause: error,
+    },
+  );
 }
 
 function assertDeployable(deployment: PublicationDeploymentBundle): void {
-  if (deployment.deploymentStatus === "failed" || deployment.deploymentStatus === "rolled_back") {
+  if (
+    deployment.deploymentStatus === "failed" ||
+    deployment.deploymentStatus === "rolled_back"
+  ) {
     throw conflict("DEPLOYMENT_TERMINAL", "load");
   }
 }
@@ -212,12 +256,13 @@ function assertLocalCoordinates(
   release: AppliedReleaseProjection,
 ): void {
   if (
-    release.deploymentId !== deployment.deploymentId
-    || release.publicationKey !== deployment.publicationKey
-    || release.sourceReleaseId !== deployment.sourceReleaseId
-    || release.sourceReleaseNo !== deployment.sourceReleaseNo
-    || release.artifactHash !== deployment.artifactHash
-  ) throw conflict("LOCAL_RELEASE_COORDINATE_MISMATCH", "stage");
+    release.deploymentId !== deployment.deploymentId ||
+    release.publicationKey !== deployment.publicationKey ||
+    release.sourceReleaseId !== deployment.sourceReleaseId ||
+    release.sourceReleaseNo !== deployment.sourceReleaseNo ||
+    release.artifactHash !== deployment.artifactHash
+  )
+    throw conflict("LOCAL_RELEASE_COORDINATE_MISMATCH", "stage");
 }
 
 function isVerified(release: AppliedReleaseProjection): boolean {
@@ -228,25 +273,54 @@ function progress(status: PublicationDeploymentStatus): number {
   return PROGRESS.indexOf(status);
 }
 
-function permanent(code: string, step: PublicationOrchestrationStep, cause?: unknown) {
-  return new PublicationOrchestrationError("permanent", safeCode(code), step, "Publication artifact rejected", { cause });
+function permanent(
+  code: string,
+  step: PublicationOrchestrationStep,
+  cause?: unknown,
+) {
+  return new PublicationOrchestrationError(
+    "permanent",
+    safeCode(code),
+    step,
+    "Publication artifact rejected",
+    { cause },
+  );
 }
 
-function conflict(code: string, step: PublicationOrchestrationStep, cause?: unknown) {
-  return new PublicationOrchestrationError("conflict", safeCode(code), step, "Publication state conflict", { cause });
+function conflict(
+  code: string,
+  step: PublicationOrchestrationStep,
+  cause?: unknown,
+) {
+  return new PublicationOrchestrationError(
+    "conflict",
+    safeCode(code),
+    step,
+    "Publication state conflict",
+    { cause },
+  );
 }
 
 function errorCode(error: unknown): string {
   const candidate = Reflect.get(asObject(error), "code");
-  if (typeof candidate === "string" && candidate.length > 0) return safeCode(candidate);
-  return error instanceof TypeError ? "INVALID_PUBLICATION_INPUT" : "PUBLICATION_DEPENDENCY_UNAVAILABLE";
+  if (typeof candidate === "string" && candidate.length > 0)
+    return safeCode(candidate);
+  return error instanceof TypeError
+    ? "INVALID_PUBLICATION_INPUT"
+    : "PUBLICATION_DEPENDENCY_UNAVAILABLE";
 }
 
 function safeCode(code: string): string {
-  const normalized = code.toUpperCase().replace(/[^A-Z0-9_]/g, "_").slice(0, 96);
+  const normalized = code
+    .toUpperCase()
+    .replace(/[^A-Z0-9_]/g, "_")
+    .slice(0, 96);
   return normalized || "PUBLICATION_FAILURE";
 }
 
 function asObject(value: unknown): object {
-  return value !== null && (typeof value === "object" || typeof value === "function") ? value : {};
+  return value !== null &&
+    (typeof value === "object" || typeof value === "function")
+    ? value
+    : {};
 }

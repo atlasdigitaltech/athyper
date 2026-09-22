@@ -1,3 +1,4 @@
+import { qualifyPreviewRenderer } from "@athyper/server-adapter-preview-renderer";
 import { sql } from "kysely";
 import { createAuthorizationWriterDatabases } from "./authorization-writer-databases.js";
 import {
@@ -530,11 +531,10 @@ export function registerAdapters(
     });
     container.adapters.contentExtractor = contentExtractor;
     lifecycle.onReady(async () => {
-      const health = await contentExtractor.health();
-      if (health.status === "unhealthy")
-        throw new Error(
-          health.message ?? "Configured content extractor is unhealthy",
-        );
+      try {
+        const health = await contentExtractor.health();
+        if (health.status === "unhealthy") console.warn("[extraction] Provider unavailable; original-file access remains available");
+      } catch { console.warn("[extraction] Provider unavailable; original-file access remains available"); }
     });
     lifecycle.onShutdown(() => contentExtractor.close());
   }
@@ -548,12 +548,10 @@ export function registerAdapters(
     });
     container.adapters.searchIndex = searchIndex;
     lifecycle.onReady(async () => {
-      const health = await searchIndex.health();
-      if (health.status === "unhealthy")
-        throw new Error(
-          health.message ?? "Configured search index is unhealthy",
-        );
-      if (config.mode === "api") await searchIndex.initialize();
+      // An index outage must not stop file scanning or durable text extraction.
+      // Jobs retain extracted text and retry indexing without rerunning the parser.
+      try { if (config.mode === "api") await searchIndex.initialize(); }
+      catch { console.warn("[search] Index initialization deferred; extraction remains available"); }
     });
     lifecycle.onShutdown(() => searchIndex.close());
   }
@@ -566,13 +564,6 @@ export function registerAdapters(
       maxPdfBytes: config.rendering.maxPdfBytes,
     });
     container.adapters.pdfRenderer = pdfRenderer;
-    const previewRenderer = dependencies.createPreviewRenderer({
-      baseUrl: config.rendering.baseUrl,
-      timeoutMs: config.rendering.timeoutMs,
-      maxSourceBytes: config.rendering.maxHtmlBytes,
-      maxOutputBytes: config.rendering.maxPdfBytes,
-    });
-    container.adapters.previewRenderer = previewRenderer;
     lifecycle.onReady(async () => {
       const health = await pdfRenderer.health();
       if (health.status === "unhealthy") {
@@ -580,13 +571,32 @@ export function registerAdapters(
           health.message ?? "Configured PDF renderer is unhealthy",
         );
       }
-      const previewHealth = await previewRenderer.health();
-      if (previewHealth.status === "unhealthy") {
-        throw new Error(
-          previewHealth.message ?? "Configured preview renderer is unhealthy",
-        );
-      }
+
     });
+  }
+
+  // Gotenberg serves restricted HTML-to-PDF only. Derivatives require a separate
+  // compatible endpoint and real conversion qualification, never just /health.
+  if (config.rendering.previewBaseUrl) {
+    const renderer = dependencies.createPreviewRenderer({
+      baseUrl: config.rendering.previewBaseUrl,
+      timeoutMs: 30_000,
+      maxSourceBytes: 20 * 1024 * 1024,
+      maxOutputBytes: 10 * 1024 * 1024,
+    });
+    let qualification: Promise<void> | undefined;
+    const qualify = () => qualification ??= qualifyPreviewRenderer(renderer).catch(error => {
+      qualification = undefined; // A transient outage can recover on the next job.
+      throw error;
+    });
+    const startup = qualify().catch(() => {
+      console.warn("[preview] Real conversion qualification failed; derivative rendering is unavailable");
+    });
+    container.adapters.previewRenderer = {
+      render: async (input) => { await qualify(); return renderer.render(input); },
+      health: () => renderer.health(),
+    };
+    lifecycle.onReady(async () => { await startup; });
   }
 
   if (config.database.connectionString) {

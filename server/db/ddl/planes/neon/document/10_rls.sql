@@ -2,6 +2,8 @@ ALTER TABLE document.attachment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_folder ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_folder FORCE ROW LEVEL SECURITY;
+ALTER TABLE document.attachment_workspace ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.attachment_workspace FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_link ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_link FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.comment ENABLE ROW LEVEL SECURITY;
@@ -39,6 +41,11 @@ CREATE POLICY tenant_access ON document.attachment_folder
     USING (tenant_id = shared.current_tenant_id_soft())
     WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY seed_write ON document.attachment_folder
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+CREATE POLICY tenant_access ON document.attachment_workspace
+    FOR ALL USING (tenant_id = shared.current_tenant_id_soft()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.attachment_workspace
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
 CREATE POLICY tenant_access ON document.attachment_link
@@ -105,7 +112,15 @@ CREATE POLICY seed_write ON document.comment_feed_cursor
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
 CREATE POLICY tenant_read ON document.comment_mention
-    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+    FOR SELECT USING (
+        tenant_id = shared.current_tenant_id_soft()
+        AND EXISTS (
+            SELECT 1
+            FROM document.comment AS comment_target
+            WHERE comment_target.tenant_id = document.comment_mention.tenant_id
+              AND comment_target.id = document.comment_mention.comment_id
+        )
+    );
 CREATE POLICY author_write ON document.comment_mention
     FOR ALL
     USING (
@@ -120,7 +135,15 @@ CREATE POLICY seed_write ON document.comment_mention
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
 CREATE POLICY tenant_read ON document.comment_reaction
-    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+    FOR SELECT USING (
+        tenant_id = shared.current_tenant_id_soft()
+        AND EXISTS (
+            SELECT 1
+            FROM document.comment AS comment_target
+            WHERE comment_target.tenant_id = document.comment_reaction.tenant_id
+              AND comment_target.id = document.comment_reaction.comment_id
+        )
+    );
 CREATE POLICY principal_write ON document.comment_reaction
     FOR ALL
     USING (
@@ -249,7 +272,7 @@ DECLARE
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         FOREACH v_table IN ARRAY ARRAY[
-            'attachment', 'attachment_folder', 'attachment_link',
+            'attachment', 'attachment_folder', 'attachment_workspace', 'attachment_link',
             'comment', 'comment_draft', 'comment_feed_cursor',
             'comment_mention', 'comment_reaction',
             'content_item', 'content_item_link',

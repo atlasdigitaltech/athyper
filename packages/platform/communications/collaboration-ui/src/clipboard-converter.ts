@@ -19,7 +19,15 @@ export function convertClipboard(data: ClipboardDataLike, options: ClipboardConv
   const images = imageFiles(data.files);
   const html = data.getData("text/html");
   const parser = options.domParser ?? (typeof DOMParser === "undefined" ? undefined : new DOMParser());
-  if (html && parser) return withImages("html", fromHtml(html, parser), images, options.createUploadToken);
+  if (html && parser) {
+    // Office applications commonly provide a PNG preview in `files` alongside
+    // semantic HTML for a copied table. That preview is not an inline image in
+    // the document, and treating it as one unnecessarily sends a table paste
+    // through the draft-attachment workflow. Only upload clipboard files when
+    // the HTML itself contains an image representation.
+    const htmlImages = /<img\b/i.test(html) ? images : [];
+    return withImages("html", fromHtml(html, parser), htmlImages, options.createUploadToken);
+  }
   const text = normalize(data.getData("text/plain"));
   if (text) return withImages(text.includes("\t") ? "tsv" : "text", text.includes("\t") ? [tsvTable(text)] : paragraphs(text), images, options.createUploadToken);
   return images.length ? withImages("images", [], images, options.createUploadToken) : null;
@@ -65,19 +73,29 @@ function withImages(source: ClipboardConversion["source"], content: readonly Ric
 function fromHtml(html: string, parser: Pick<DOMParser, "parseFromString">): RichTextNode[] {
   const parsed = parser.parseFromString(html, "text/html");
   const nodes = [...parsed.body.childNodes].flatMap((node) => fromDom(node, []));
-  return nodes.length ? nodes : paragraphs(normalize(parsed.body.textContent ?? ""));
+  // A contenteditable element may expose ordinary typed text as a root text
+  // node rather than wrapping it in a block. The collaboration contract only
+  // permits block nodes directly below `doc`, so normalize root inline nodes
+  // into paragraphs before a comment is submitted.
+  return nodes.length ? blocks(nodes) : paragraphs(normalize(parsed.body.textContent ?? ""));
 }
 
 function fromDom(node: Node, marks: readonly RichTextMark[]): RichTextNode[] {
   if (node.nodeType === Node.TEXT_NODE) return node.textContent ? [{ type: "text", text: normalize(node.textContent), ...(marks.length ? { marks } : {}) }] : [];
   if (node.nodeType !== Node.ELEMENT_NODE) return [];
   const element = node as HTMLElement; const tag = element.tagName.toLowerCase();
+  if (tag === "img" && element.dataset["attachmentId"] && UUID.test(element.dataset["attachmentId"])) return [{ type: "attachmentImage", attrs: { attachmentId: element.dataset["attachmentId"], alt: normalize(element.getAttribute("alt") ?? "Image attachment").slice(0, 200) } }];
   if (["script", "style", "meta", "link", "iframe", "object", "embed", "form", "input", "button", "svg", "img"].includes(tag)) return [];
   if (tag === "br") return [{ type: "hardBreak" }];
   if (tag === "table") return [tableFromDom(element)];
+  if (tag === "span" && element.dataset["attachmentId"] && UUID.test(element.dataset["attachmentId"])) return [{ type: element.dataset["attachmentKind"] === "file" ? "attachmentFile" : "attachmentImage", attrs: { attachmentId: element.dataset["attachmentId"], alt: normalize(element.dataset["attachmentAlt"] ?? "Image attachment").slice(0, 200) } }];
   if (tag === "span" && element.dataset["mentionPrincipal"] && UUID.test(element.dataset["mentionPrincipal"])) return [{ type: "mention", attrs: { principalId: element.dataset["mentionPrincipal"], label: normalize(element.textContent ?? "").replace(/^@/, "").slice(0, 200) } }];
   const mark = markFor(element); const children = [...element.childNodes].flatMap((child) => fromDom(child, mark ? [...marks, mark] : marks));
-  if (tag === "p" || tag === "div") return [{ type: "paragraph", content: inline(children) }];
+  if (tag === "p") return [{ type: "paragraph", content: inline(children) }];
+  // `div` is the serializer's document wrapper. Preserve its block children
+  // (especially attachment chips) instead of flattening them as paragraph
+  // inline content, where attachment nodes are deliberately invalid.
+  if (tag === "div") return blocks(children);
   if (/^h[1-6]$/.test(tag)) return [{ type: "heading", attrs: { level: Number(tag[1]) }, content: inline(children) }];
   if (tag === "blockquote") return [{ type: "blockquote", content: blocks(children) }];
   if (tag === "ul" || tag === "ol") return [{ type: tag === "ul" ? "bulletList" : "orderedList", content: [...element.children].filter((child) => child.tagName === "LI").slice(0, LIMIT.rows).map(listItem) }];
@@ -117,7 +135,7 @@ function span(element: HTMLElement, name: string): number { const value = Number
 function normalize(value: string): string { return value.replaceAll("\u0000", "").replace(/\r\n?/g, "\n").slice(0, LIMIT.text); }
 function isNode(value: RichTextNode | null): value is RichTextNode { return value !== null; }
 
-function plain(node: RichTextNode): string { if (node.type === "text") return node.text ?? ""; if (node.type === "hardBreak") return "\n"; if (node.type === "mention") return `@${String(node.attrs?.["label"] ?? "mention")}`; if (node.type === "attachmentImage") return `[Image: ${String(node.attrs?.["alt"] ?? "attachment")}]`; const separator = node.type === "tableRow" ? "\t" : ["doc", "table", "listItem", "bulletList", "orderedList", "blockquote"].includes(node.type) ? "\n" : ""; return (node.content ?? []).map(plain).join(separator); }
-function render(node: RichTextNode): string { if (node.type === "text") return applyMarks(escape(node.text ?? ""), node.marks); if (node.type === "hardBreak") return "<br>"; if (node.type === "mention") return `<span data-mention-principal="${escape(String(node.attrs?.["principalId"] ?? ""))}">@${escape(String(node.attrs?.["label"] ?? "mention"))}</span>`; if (node.type === "attachmentImage") { const id = escape(String(node.attrs?.["attachmentId"] ?? "")); return `<img src="/api/attachments/${id}/content" data-attachment-id="${id}" alt="${escape(String(node.attrs?.["alt"] ?? "Image attachment"))}">`; } const tags: Record<string, string> = { doc: "div", paragraph: "p", heading: "h3", blockquote: "blockquote", bulletList: "ul", orderedList: "ol", listItem: "li", table: "table", tableRow: "tr", tableHeader: "th", tableCell: "td" }; const tag = tags[node.type] ?? "span"; return `<${tag}>${(node.content ?? []).map(render).join("")}</${tag}>`; }
+function plain(node: RichTextNode): string { if (node.type === "text") return node.text ?? ""; if (node.type === "hardBreak") return "\n"; if (node.type === "mention") return `@${String(node.attrs?.["label"] ?? "mention")}`; if ((node.type === "attachmentImage" || node.type === "attachmentFile")) return `[Attachment: ${String(node.attrs?.["alt"] ?? "attachment")}]`; const separator = node.type === "tableRow" ? "\t" : ["doc", "table", "listItem", "bulletList", "orderedList", "blockquote"].includes(node.type) ? "\n" : ""; return (node.content ?? []).map(plain).join(separator); }
+function render(node: RichTextNode): string { if (node.type === "text") return applyMarks(escape(node.text ?? ""), node.marks); if (node.type === "hardBreak") return "<br>"; if (node.type === "mention") return `<span data-mention-principal="${escape(String(node.attrs?.["principalId"] ?? ""))}">@${escape(String(node.attrs?.["label"] ?? "mention"))}</span>`; if ((node.type === "attachmentImage" || node.type === "attachmentFile")) { const id = escape(String(node.attrs?.["attachmentId"] ?? "")), alt = escape(String(node.attrs?.["alt"] ?? "Image attachment")); return `<span data-attachment-id="${id}" data-attachment-alt="${alt}" data-attachment-kind="${node.type === "attachmentFile" ? "file" : "image"}" contenteditable="false" role="img" aria-label="Attachment: ${alt}">Attachment: ${alt}</span>`; } const tags: Record<string, string> = { doc: "div", paragraph: "p", heading: "h3", blockquote: "blockquote", bulletList: "ul", orderedList: "ol", listItem: "li", table: "table", tableRow: "tr", tableHeader: "th", tableCell: "td" }; const tag = tags[node.type] ?? "span"; return `<${tag}>${(node.content ?? []).map(render).join("")}</${tag}>`; }
 function applyMarks(value: string, marks?: readonly RichTextMark[]): string { return (marks ?? []).reduce((result, mark) => { if (mark.type === "link") return `<a href="${escape(String(mark.attrs?.["href"] ?? ""))}" rel="noopener noreferrer nofollow">${result}</a>`; const tags = { bold: "strong", italic: "em", underline: "u", strike: "s", code: "code" } as const; const tag = tags[mark.type]; return `<${tag}>${result}</${tag}>`; }, value); }
 function escape(value: string): string { return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }

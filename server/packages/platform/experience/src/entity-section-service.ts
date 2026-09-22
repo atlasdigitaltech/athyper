@@ -1,4 +1,5 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
+import type { createEntityCapabilityPolicy } from "./entity-capability-policy.js";
 import type { CompiledEntityArtifactV2 } from "@athyper/server-contract-publication";
 import {
   PinnedCompiledEntityReader,
@@ -23,6 +24,8 @@ export interface EntityRuntimeResourceContext {
   readonly legalEntityId?: string;
   readonly asOf?: string;
   readonly roleLens?: "all" | "supplier" | "customer";
+  /** A validated root comment whose direct replies are being paged independently. */
+  readonly threadRootId?: string;
 }
 
 export interface EntityRuntimeSectionHandler {
@@ -60,6 +63,7 @@ export interface EntityRuntimeSectionHandlerRegistry {
 }
 
 export function createEntityRuntimeResourceService(options: {
+  readonly capabilities?: ReturnType<typeof createEntityCapabilityPolicy>;
   readonly reader: PinnedCompiledEntityReader;
   readonly headers: EntityRuntimeHeaderRepository;
   readonly sections: EntityRuntimeSectionHandlerRegistry;
@@ -127,6 +131,9 @@ export function createEntityRuntimeResourceService(options: {
       // Omission is deliberate: denied sections must not disclose their existence.
       if (!plan.sections.some((section) => section.key === input.sectionKey)) return null;
       const section = await options.reader.section(model.release, input.sectionKey);
+      const kind=section.content.rendererKey==="platform.comments.v1"?"comments":section.content.rendererKey==="platform.attachments.v1"?"attachments":undefined;
+      const capability=kind && options.capabilities ? await options.capabilities.resolve({...input,kind,action:"read"},model.release) : undefined;
+      if(kind && !capability) throw new EntityRuntimeResourceError(403,"ENTITY_CAPABILITY_DENIED");
       const handler = sectionHandler(options.sections, section);
       if (!handler) throw new EntityRuntimeResourceError(503, "ENTITY_RUNTIME_SECTION_HANDLER_UNAVAILABLE");
       let result: { readonly revision: string; readonly data: unknown };
@@ -144,6 +151,7 @@ export function createEntityRuntimeResourceService(options: {
         releaseHash: model.release.release.releaseHash,
         sectionKey: input.sectionKey,
         presentation: browserSectionPresentation(model.core, section),
+        ...(capability ? {capability:capability.projection} : {}),
         ...result,
       });
     },

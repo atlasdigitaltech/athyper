@@ -45,13 +45,6 @@ CREATE INDEX comment_mention_comment_idx
     ON document.comment_mention (tenant_id, comment_id);
 CREATE INDEX comment_reaction_comment_idx
     ON document.comment_reaction (tenant_id, comment_id, created_at);
-CREATE INDEX comment_revision_comment_idx
-    ON document.comment_revision (tenant_id, comment_id, revision_no DESC);
-CREATE INDEX comment_moderation_flag_queue_idx
-    ON document.comment_moderation_flag (tenant_id, status, created_at)
-    WHERE status IN ('open', 'reviewing');
-CREATE INDEX comment_moderation_flag_comment_idx
-    ON document.comment_moderation_flag (tenant_id, comment_id, created_at DESC);
 
 CREATE INDEX content_item_parent_idx
     ON document.content_item (tenant_id, parent_id, locale_code);

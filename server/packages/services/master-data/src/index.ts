@@ -43,6 +43,11 @@ export * from "./workforce-service.js";
 export * from "./kysely-workforce-repository.js";
 export * from "./kysely-workforce-request-repository.js";
 export * from "./workforce-routes.js";
+export * from "./hr-stage2-service.js";
+export * from "./hr-stage2-policy-service.js";
+export * from "./hr-stage2-user-service.js";
+export * from "./hr-stage2-authority-service.js";
+export * from "./hr-stage2-routes.js";
 export * from "./supplier-workforce-requisition-service.js";
 export * from "./supplier-workforce-command-guard.js";
 export * from "./worker-engagement-iam-service.js";
@@ -66,8 +71,11 @@ export * from "./verification-authority.js";
 export * from "./master-data-authority.js";
 export { createBusinessPartnerAtlasInsightOwner } from "./business-partner-atlas-insights.js";
 export * from "./business-partner-company-pilot.js";
+export * from "./business-partner-intake-operation-provider.js";
 
 export { validateProfileIntake, supplierRequirementSurface } from "./business-partner-intake-profile.js";
 export * from "./supplier-onboarding-completion.js";
 
 export { prepareSupplierActivation, authorizeSupplierActivationReadiness } from "./supplier-activation-readiness.js";
+
+export { createBusinessPartnerIntakeCommandMapper } from "./business-partner-intake-command-mapper.js";

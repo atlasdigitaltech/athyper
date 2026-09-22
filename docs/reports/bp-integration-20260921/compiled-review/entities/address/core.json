@@ -1,0 +1,415 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "address/core",
+  "entityCode": "address",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "sourceObjects": [
+      "master.address"
+    ],
+    "primaryObject": "master.address",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.address.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "line1",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "line1"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.line1.label",
+        "defaultText": "Line1"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "line2",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "line2"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.line2.label",
+        "defaultText": "Line2"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "city",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "city"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.city.label",
+        "defaultText": "City"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "postal_code",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "postal_code"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.postal_code.label",
+        "defaultText": "Postal Code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "country_code",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "country_code"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.address.core.fields.country_code.label",
+        "defaultText": "Country Code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "referenceConfig": {
+        "targetEntityCode": "country",
+        "valueField": "code"
+      },
+      "storageType": "character(2)"
+    },
+    {
+      "key": "validation_status",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "validation_status"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.address.core.fields.validation_status.label",
+        "defaultText": "Validation Status"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "line3",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "line3"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.line3.label",
+        "defaultText": "Line 3"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "dependent_locality",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "dependent_locality"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.dependent_locality.label",
+        "defaultText": "Dependent locality"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "region",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "region"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.region.label",
+        "defaultText": "Region"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "state_region_code",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "state_region_code"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.state_region_code.label",
+        "defaultText": "Subdivision code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text",
+      "referenceConfig": {
+        "targetEntityCode": "state_region",
+        "valueField": "code"
+      }
+    },
+    {
+      "key": "timezone_code",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "timezone_code"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.timezone_code.label",
+        "defaultText": "Time zone"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text",
+      "referenceConfig": {
+        "targetEntityCode": "timezone",
+        "valueField": "code"
+      }
+    },
+    {
+      "key": "address_kind",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "address_kind"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.address.core.fields.address_kind.label",
+        "defaultText": "Address kind"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "po_box",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "po_box"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.po_box.label",
+        "defaultText": "PO box"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "building_name",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "building_name"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.building_name.label",
+        "defaultText": "Building name"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "floor",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "floor"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.floor.label",
+        "defaultText": "Floor"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "unit",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "unit"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.unit.label",
+        "defaultText": "Unit"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "house_number",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "house_number"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.house_number.label",
+        "defaultText": "House number"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    },
+    {
+      "key": "street_name",
+      "binding": {
+        "sourceObject": "master.address",
+        "column": "street_name"
+      },
+      "dataType": "string",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.address.core.fields.street_name.label",
+        "defaultText": "Street name"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "tenant",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "dependencies": [
+    "country/core",
+    "state_region/core",
+    "timezone/core",
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.address",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.address",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:c400650d5e7621d87146faa84de3ad6601736047bd8e3359b940ae96d7b231d4"
+}

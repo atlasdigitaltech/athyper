@@ -30,7 +30,9 @@ export function registerCollaborationRoutes(
         }
         s.status(out.status ?? 200).json(out.body);
       } catch (e) {
-        if (e instanceof CollaborationError)
+        if (e instanceof Error && "code" in e && e.code === "ENTITY_CAPABILITY_DENIED")
+          s.status(403).type("application/problem+json").json({status:403,code:"ENTITY_CAPABILITY_DENIED",title:"Entity capability is unavailable or not authorized"});
+        else if (e instanceof CollaborationError)
           s.status(e.statusCode)
             .type("application/problem+json")
             .json({
@@ -43,6 +45,8 @@ export function registerCollaborationRoutes(
         else n(e);
       }
     };
+  if(o.collaboration.participants) app.get("/api/collab/participants",o.authenticate,route(async(r,c)=>({body:{items:await o.collaboration.participants!({context:c,...coordinate(r.query),query:typeof r.query.q==="string"?r.query.q:"",visibility:one(r.query.visibility,["public","internal","private"] as const) ?? "private"})}})));
+  if(o.collaboration.history) app.get("/api/collab/comments/:id/history",o.authenticate,route(async(r,c)=>({body:await o.collaboration.history!({context:c,commentId:uuid(r.params.id),...(r.query.beforeRevision ? {beforeRevision:revision(Number(r.query.beforeRevision))}: {})})})));
   const create = route(async (r, c) => {
     const b = body(r);
     return { status: 201, body: await o.collaboration.create(command(c, b)) };
@@ -75,7 +79,7 @@ export function registerCollaborationRoutes(
           ...rich(b),
           mentionedPrincipalIds: uuids(b.mentionedPrincipalIds),
           attachmentIds: uuids(b.attachmentIds),
-          expectedUpdatedAt: opt(b, "expectedUpdatedAt"),
+          expectedRevision: revision(b.expectedRevision),
         }),
       };
     }),
@@ -129,8 +133,8 @@ export function registerCollaborationRoutes(
     "/api/collab/drafts",
     o.authenticate,
     route(async (r, c) => {
-      await o.collaboration.putDraft(command(c, body(r)));
-      return { status: 204 };
+      const id = await o.collaboration.putDraft(command(c, body(r)));
+      return { status: 200, body: { id } };
     }),
   );
   app.delete(
@@ -291,4 +295,9 @@ function one<T extends string>(v: unknown, values: readonly T[]) {
       `Expected one of: ${values.join(", ")}`,
     );
   return v as T;
+}
+
+function revision(value: unknown): number {
+ if (!Number.isSafeInteger(value) || Number(value)<1) throw new CollaborationError(400,"COMMENT_REVISION_REQUIRED","A positive expectedRevision is required");
+ return value as number;
 }

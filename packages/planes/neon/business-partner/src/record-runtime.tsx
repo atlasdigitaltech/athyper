@@ -1,7 +1,8 @@
 "use client";
-import { EntityRuntimeWorkspace, invalidateEntityRuntimeSectionCache, summaryRenderers, type EntityRuntimeHeaderNavigation } from "@athyper/platform-entity-form-detail";
+import { isCollaborationRequested } from "./collaboration-route";
+import { EntityCollaborationSurface, EntityRuntimeWorkspace, invalidateEntityRuntimeSectionCache, summaryRenderers, type EntityRuntimeHeaderNavigation } from "@athyper/platform-entity-form-detail";
 import { PageHeader, PageWorkspace, useRecordBreadcrumb, useRecordPage } from "@athyper/platform-shell";
-import { ChevronDownIcon, ContactRoundIcon, SettingsIcon } from "@athyper/platform-icons";
+import { ChevronDownIcon, ContactRoundIcon, FileTextIcon, MessageCircleIcon, SettingsIcon } from "@athyper/platform-icons";
 import { useApiClient } from "@athyper/platform-shell-app-foundation";
 import { Badge, Button } from "@athyper/platform-ui";
 import { entityRuntimeClient, type EntityRuntimeActionPlan, type EntityRuntimeResourceContext } from "@athyper/platform-entity-descriptor-client";
@@ -19,13 +20,18 @@ export function BusinessPartnerRecordRuntime({ businessPartnerId }: { readonly b
   const [section, setSection] = useState(readSection);
   const [tab, setTab] = useState(readTab);
   const [resourceContext, setResourceContext] = useState(readResourceContext);
+  const [collaborationFull, setCollaborationFull] = useState(readCollaborationFull);
+  const [collaborationOpen, setCollaborationOpen] = useState(readCollaborationOpen);
+  const [collaborationSection, setCollaborationSection] = useState(readCollaborationSection);
+  // The shared panel restores pin/width preferences and owns presentation modes.
+  const [collaborationPinned, setCollaborationPinned] = useState(true);
   const [actionError, setActionError] = useState<string>();
   const initialViewPreference = readRecordViewPreference();
   const [view, setView] = useState<"content" | "summary">(() => initialViewPreference.summary ? "summary" : "content");
   const [sectionView, setSectionView] = useState(() => initialViewPreference.section);
   const [pendingAction, setPendingAction] = useState<string>();
   useEffect(() => {
-    const update = () => { setSection(readSection()); setTab(readTab()); setResourceContext(readResourceContext()); };
+    const update = () => { setSection(readSection()); setTab(readTab()); setResourceContext(readResourceContext()); setCollaborationFull(readCollaborationFull()); setCollaborationOpen(readCollaborationOpen()); setCollaborationSection(readCollaborationSection()); };
     window.addEventListener("popstate", update);
     return () => window.removeEventListener("popstate", update);
   }, []);
@@ -39,6 +45,40 @@ export function BusinessPartnerRecordRuntime({ businessPartnerId }: { readonly b
     return () => window.removeEventListener("scroll", update);
   }, []);
   useEffect(() => { writeRecordViewPreference({ summary: view === "summary", section: sectionView }); }, [sectionView, view]);
+  const changeCollaborationFull = (full:boolean) => {
+    const next=new URL(window.location.href);
+    next.searchParams.set("panel","collaboration");
+    next.searchParams.set("collaborationSection",collaborationSection ?? "comments");
+    if(full) next.searchParams.set("collaborationMode","content"); else next.searchParams.delete("collaborationMode");
+    window.history.pushState(window.history.state,"",next);
+    setCollaborationFull(full);setCollaborationOpen(true);
+  };
+  const setCollaborationPanel = (open: boolean, sectionKey = collaborationSection) => {
+    const next = new URL(window.location.href);
+    if (open) {
+      next.searchParams.set("panel", "collaboration");
+      if (sectionKey) next.searchParams.set("collaborationSection", sectionKey);
+    } else {
+      next.searchParams.set("panel", "closed");
+      next.searchParams.delete("collaborationMode");
+      setCollaborationFull(false);
+      next.searchParams.delete("collaborationSection");
+      // File/thread identifiers remain valid record navigation state for the
+      // forthcoming rich collaboration actions, but are never loaded on close.
+    }
+    window.history.pushState(window.history.state, "", next);
+    setCollaborationOpen(open);
+    if (sectionKey) setCollaborationSection(sectionKey);
+  };
+  const setCollaborationTab = (sectionKey: string) => {
+    const next = new URL(window.location.href);
+    next.searchParams.set("collaborationSection", sectionKey);
+    next.searchParams.set("panel", "collaboration");
+    window.history.pushState(window.history.state, "", next);
+    setCollaborationSection(sectionKey);
+    setCollaborationOpen(true);
+    window.dispatchEvent(new CustomEvent("athyper:collaboration-open"));
+  };
   return <PageWorkspace width="wide" className={`bp360${headerCollapsed ? " bp360--header-collapsed" : ""}`}>
     <EntityRuntimeWorkspace
       entityCode="business_partner"
@@ -50,13 +90,16 @@ export function BusinessPartnerRecordRuntime({ businessPartnerId }: { readonly b
       sectionNavigation="header"
       continuousSections={sectionView && tab === "360"}
       continuousScrollRoot={contentScrollRef}
+      collaborationSectionKeys={["comments", "attachments"]}
       onSelectSection={(sectionKey) => {
         const next = new URL(window.location.href);
         next.searchParams.set("section", sectionKey);
+        if(collaborationFull){next.searchParams.delete("collaborationMode");next.searchParams.set("panel","closed");setCollaborationFull(false);setCollaborationOpen(false);}
         window.history.pushState(window.history.state, "", next);
         setSection(sectionKey);
       }}
       onObserveSection={(sectionKey) => {
+        if(collaborationFull)return;
         const next = new URL(window.location.href);
         next.searchParams.set("section", sectionKey);
         window.history.replaceState(window.history.state, "", next);
@@ -101,7 +144,7 @@ export function BusinessPartnerRecordRuntime({ businessPartnerId }: { readonly b
             }}
           />}
         />
-        <BusinessPartnerModeNavigation navigation={navigation} view={view} sectionView={sectionView} onViewChange={setView} onSectionViewChange={setSectionView} onTabChange={setTab} />
+        <BusinessPartnerModeNavigation collaborationFull={collaborationFull && collaborationOpen} collaborationSection={collaborationSection ?? "comments"} navigation={navigation} view={view} sectionView={sectionView} onViewChange={setView} onSectionViewChange={setSectionView} onTabChange={setTab} collaboration={navigation.collaboration} onOpenCollaboration={setCollaborationTab} />
       </div>}
       renderBody={({ navigation, content }) => <BusinessPartnerRecordBody
         navigation={navigation}
@@ -111,6 +154,14 @@ export function BusinessPartnerRecordRuntime({ businessPartnerId }: { readonly b
         businessPartnerId={businessPartnerId}
         resourceContext={resourceContext}
         contentScrollRef={contentScrollRef}
+        collaborationFull={collaborationFull}
+        onCollaborationFullChange={changeCollaborationFull}
+        collaborationOpen={collaborationOpen}
+        collaborationPinned={collaborationPinned}
+        collaborationSection={collaborationSection}
+        onCollaborationOpenChange={(open) => setCollaborationPanel(open)}
+        onCollaborationPinnedChange={setCollaborationPinned}
+        onCollaborationSectionChange={setCollaborationTab}
       />}
     />
   </PageWorkspace>;
@@ -124,7 +175,7 @@ function RecordBreadcrumbRegistration({ values, onChange }: { readonly values: R
   return null;
 }
 
-function BusinessPartnerModeNavigation({ navigation, view, sectionView, onViewChange, onSectionViewChange, onTabChange }: { readonly navigation: EntityRuntimeHeaderNavigation; readonly view: "content" | "summary"; readonly sectionView: boolean; readonly onViewChange: (view: "content" | "summary") => void; readonly onSectionViewChange: (value: boolean) => void; readonly onTabChange: (tab: string) => void }) {
+function BusinessPartnerModeNavigation({ collaborationFull, collaborationSection, navigation, view, sectionView, onViewChange, onSectionViewChange, onTabChange, collaboration, onOpenCollaboration }: { readonly collaborationFull?: boolean; readonly collaborationSection?: string; readonly navigation: EntityRuntimeHeaderNavigation; readonly view: "content" | "summary"; readonly sectionView: boolean; readonly onViewChange: (view: "content" | "summary") => void; readonly onSectionViewChange: (value: boolean) => void; readonly onTabChange: (tab: string) => void; readonly collaboration?: EntityRuntimeHeaderNavigation["collaboration"]; readonly onOpenCollaboration: (sectionKey: string) => void }) {
   const modeMenu = useDismissibleDetails(), viewMenu = useDismissibleDetails();
   const available = new Map(navigation.sections.map((section) => [section.key, section]));
   const configuredTabs = navigation.navigation?.tabs ?? BUSINESS_PARTNER_360_PANEL.tabs.map((tab) => ({
@@ -135,8 +186,12 @@ function BusinessPartnerModeNavigation({ navigation, view, sectionView, onViewCh
   }));
   const overviewTab = configuredTabs.find((tab) => tab.provider === "360");
   const overviewSections = (overviewTab?.sectionKeys ?? []).flatMap((key) => available.get(key) ?? []);
-  const directTabs = configuredTabs.filter((tab) => tab.provider === "section" && tab.sectionKeys.some((key) => available.has(key)));
-  const overviewActive = overviewSections.some((section) => section.key === navigation.activeSection);
+  // Collaboration remains a pair of authorized metadata sections, but it has one
+  // record-header entry point. Keeping its child sections out of the main tab row
+  // prevents comments and files from crowding the primary business navigation.
+  const collaborationKeys = new Set(navigation.collaboration?.sections.map((section) => section.key) ?? []);
+  const directTabs = configuredTabs.filter((tab) => tab.provider === "section" && !tab.sectionKeys.some((key) => collaborationKeys.has(key)) && tab.sectionKeys.some((key) => available.has(key)));
+  const overviewActive = !collaborationFull && overviewSections.some((section) => section.key === navigation.activeSection);
   return <nav className="a-record-360__tabs" aria-label="Record views">
     <details ref={modeMenu} className="a-record-360__group" data-active={overviewActive || undefined}>
       <summary aria-current={overviewActive ? "page" : undefined}>
@@ -158,9 +213,18 @@ function BusinessPartnerModeNavigation({ navigation, view, sectionView, onViewCh
     {directTabs.map((tab) => <button
       key={tab.key}
       type="button"
-      aria-current={tab.sectionKeys.includes(navigation.activeSection) ? "page" : undefined}
+      aria-current={!collaborationFull && tab.sectionKeys.includes(navigation.activeSection) ? "page" : undefined}
       onClick={() => selectSection(navigation, tab.sectionKeys[0]!, tab.key, onTabChange)}
     >{tab.label.defaultText}</button>)}
+    {collaboration?.sections.map((section) => <button
+      key={section.key}
+      type="button"
+      className="a-record-360__collaboration-control"
+      aria-current={collaborationFull && collaborationSection === section.key ? "page" : undefined}
+      aria-label={`Open ${section.key === "attachments" ? "Files" : section.key === "comments" ? "Comments" : section.label}`}
+      title={section.label}
+      onClick={() => onOpenCollaboration(section.key)}
+    >{section.key === "comments" ? <MessageCircleIcon aria-hidden="true" /> : <FileTextIcon aria-hidden="true" />}<span>{section.key === "attachments" ? "Files" : "Comments"}</span></button>)}
     <details ref={viewMenu} className="a-record-360__view-control">
       <summary aria-label="View settings"><SettingsIcon aria-hidden="true" /></summary>
       <div role="menu" aria-label="View settings">
@@ -172,7 +236,7 @@ function BusinessPartnerModeNavigation({ navigation, view, sectionView, onViewCh
     </details>
   </nav>;
 }
-function BusinessPartnerRecordBody({ navigation, content, view, sectionView, businessPartnerId, resourceContext, contentScrollRef }: { readonly navigation: EntityRuntimeHeaderNavigation; readonly content: React.ReactNode; readonly view: "content" | "summary"; readonly sectionView: boolean; readonly businessPartnerId: string; readonly resourceContext?: EntityRuntimeResourceContext; readonly contentScrollRef: RefObject<HTMLDivElement | null> }) {
+function BusinessPartnerRecordBody({ collaborationFull, onCollaborationFullChange, navigation, content, view, sectionView, businessPartnerId, resourceContext, contentScrollRef, collaborationOpen, collaborationPinned, collaborationSection, onCollaborationOpenChange, onCollaborationPinnedChange, onCollaborationSectionChange }: { readonly collaborationFull:boolean; readonly onCollaborationFullChange:(full:boolean)=>void; readonly navigation: EntityRuntimeHeaderNavigation; readonly content: React.ReactNode; readonly view: "content" | "summary"; readonly sectionView: boolean; readonly businessPartnerId: string; readonly resourceContext?: EntityRuntimeResourceContext; readonly contentScrollRef: RefObject<HTMLDivElement | null>; readonly collaborationOpen: boolean; readonly collaborationPinned: boolean; readonly collaborationSection?: string; readonly onCollaborationOpenChange: (open: boolean) => void; readonly onCollaborationPinnedChange: (pinned: boolean) => void; readonly onCollaborationSectionChange: (sectionKey: string) => void }) {
   const http = useApiClient();
   const [state, setState] = useState<{ loading: boolean; cards?: readonly Readonly<{ readonly key: string; readonly state: string; readonly data?: unknown }>[]; error?: string }>({ loading: false });
   const [isScrolling, setIsScrolling] = useState(false);
@@ -212,6 +276,19 @@ function BusinessPartnerRecordBody({ navigation, content, view, sectionView, bus
         </section>;
       })}
     </aside> : null}
+    {navigation.collaboration ? <EntityCollaborationSurface
+      fullView={collaborationFull}
+      onFullViewChange={onCollaborationFullChange}
+      open={collaborationOpen}
+      pinned={collaborationPinned}
+      activeSectionKey={collaborationSection}
+      sections={navigation.collaboration.sections}
+      onOpenChange={onCollaborationOpenChange}
+      onPinnedChange={onCollaborationPinnedChange}
+      onActiveSectionChange={onCollaborationSectionChange}
+      preloadSection={navigation.collaboration.preloadSection}
+      renderSection={navigation.collaboration.renderSection}
+    /> : null}
   </div>;
 }
 function SummaryData({ value, rendererKey }: { readonly value: unknown; readonly rendererKey: string }) {
@@ -246,7 +323,7 @@ function BusinessPartnerHeaderActions({ actions, pendingAction, error, onRequest
   const startFlows = actions.filter((action) => action.interaction === "start_flow");
   if (!startFlows.length) return null;
   const menu = useDismissibleDetails();
-  return <details ref={menu} className="a-record-page-header__actions-menu">
+  return <div className="a-record-page-header__actions">{startFlows.length ? <details ref={menu} className="a-record-page-header__actions-menu">
     <summary className="a-button a-button--secondary">Actions</summary>
     <div>
     {startFlows.map((action) => action.operationKey === "request_change"
@@ -254,7 +331,7 @@ function BusinessPartnerHeaderActions({ actions, pendingAction, error, onRequest
       : <Button key={action.operationKey} type="button" variant="secondary" onClick={() => { menu.current?.removeAttribute("open"); onStartFlow(action.operationKey); }}>{action.label.defaultText}</Button>)}
     {error ? <p role="alert">{error}</p> : null}
     </div>
-  </details>;
+  </details> : null}</div>;
 }
 
 const RECORD_VIEW_PREFERENCE_KEY = "athyper.record-view.business-partner.v1";
@@ -285,6 +362,16 @@ function readSection(): string | undefined {
   const tab = query.get("tab");
   const configured = BUSINESS_PARTNER_360_PANEL.tabs.find((item) => item.key === tab);
   return configured?.provider === "section" ? configured.sectionKey : tab === "360" ? BUSINESS_PARTNER_360_PANEL.sections[0] : undefined;
+}
+function readCollaborationFull():boolean { return typeof window!=="undefined" && new URLSearchParams(window.location.search).get("collaborationMode")==="content"; }
+function readCollaborationOpen(): boolean {
+  if (typeof window === "undefined") return false;
+  return isCollaborationRequested(window.location.search);
+}
+function readCollaborationSection(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const value = new URLSearchParams(window.location.search).get("collaborationSection");
+  return value && /^[A-Za-z][A-Za-z0-9_.-]{0,126}$/.test(value) ? value : undefined;
 }
 function readResourceContext(): EntityRuntimeResourceContext | undefined {
   if (typeof window === "undefined") return undefined;

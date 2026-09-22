@@ -137,10 +137,24 @@ export function changedDataInput(
   field: IntakeInputField,
   answers: DataAnswers,
   value: unknown,
+  surface?: EntityIntakeSurfaceV1,
 ): DataAnswers {
   const next: Record<string, unknown> = { ...answers, [field.valueKey]: value };
   if (value === answers[field.valueKey]) return next;
-  for (const key of field.clearOnChange?.fields ?? []) next[key] = "";
+  for (const entry of field.clearOnChange?.fields ?? []) {
+    const key = typeof entry === "string" ? entry : entry.field;
+    const preserveWhen = typeof entry === "string" ? undefined : entry.preserveWhen;
+    if (
+      !preserveWhen ||
+      !intakeConditionMatches(
+        preserveWhen,
+        surface
+          ? answersForCondition(surface, answers, preserveWhen.field)
+          : answers,
+      )
+    )
+      next[key] = "";
+  }
   const option = field.lookup?.options?.find((o) => o.value === value);
   for (const binding of field.lookup?.copyFields ?? [])
     next[binding.to] = option?.data?.[binding.from] ?? "";
@@ -157,18 +171,37 @@ export function dataInputChangeRequiresConfirmation(
   if (value === before[field.valueKey]) return false;
   const after = resolveDataAnswers(
     surface,
-    changedDataInput(field, before, value),
+    changedDataInput(field, before, value, surface),
   );
   return Boolean(
     field.clearOnChange?.fields.some(
-      (key) =>
+      (entry) => {
+        const key = typeof entry === "string" ? entry : entry.field;
+        return (
         before[key] !== undefined &&
         before[key] !== null &&
         before[key] !== "" &&
         before[key] !== false &&
-        before[key] !== after[key],
+        before[key] !== after[key]
+        );
+      },
     ),
   );
+}
+
+/** Conditions name field bindings; answers are keyed by their value binding. */
+function answersForCondition(
+  surface: EntityIntakeSurfaceV1,
+  answers: DataAnswers,
+  fieldKey: string,
+): DataAnswers {
+  const input = fieldsOf(surface).find(
+    (field): field is IntakeInputField =>
+      field.control === "input" && field.key === fieldKey,
+  );
+  return input
+    ? { ...answers, [fieldKey]: answers[input.valueKey] }
+    : answers;
 }
 export function dataSurfaceDefaults(
   surface: EntityIntakeSurfaceV1,

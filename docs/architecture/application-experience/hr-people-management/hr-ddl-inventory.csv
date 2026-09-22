@@ -1,0 +1,96 @@
+area,table,ddl_path,line,evidence_status
+Calendar and time,document.attendance_adjustment_request,server/db/ddl/planes/neon/document/03_tables.sql,3114,DDL foundation; runtime acceptance not inferred
+Calendar and time,document.attendance_day,server/db/ddl/planes/neon/document/03_tables.sql,3094,DDL foundation; runtime acceptance not inferred
+Calendar and time,document.shift_assignment,server/db/ddl/planes/neon/document/03_tables.sql,3060,DDL foundation; runtime acceptance not inferred
+Calendar and time,document.time_punch,server/db/ddl/planes/neon/document/03_tables.sql,3078,DDL foundation; runtime acceptance not inferred
+Calendar and time,master.holiday_calendar,server/db/ddl/planes/neon/master/03_tables.sql,2695,DDL foundation; runtime acceptance not inferred
+Calendar and time,master.holiday_calendar_day,server/db/ddl/planes/neon/master/03_tables.sql,2738,DDL foundation; runtime acceptance not inferred
+Calendar and time,master.shift_type,server/db/ddl/planes/neon/master/03_tables.sql,2767,DDL foundation; runtime acceptance not inferred
+Calendar and time,master.work_pattern,server/db/ddl/planes/neon/master/03_tables.sql,2793,DDL foundation; runtime acceptance not inferred
+Calendar and time,master.work_pattern_day,server/db/ddl/planes/neon/master/03_tables.sql,2821,DDL foundation; runtime acceptance not inferred
+Core HR,master.compensation_assignment,server/db/ddl/planes/neon/master/03_tables.sql,4462,DDL foundation; runtime acceptance not inferred
+Core HR,master.employee,server/db/ddl/planes/neon/master/03_tables.sql,3111,DDL foundation; runtime acceptance not inferred
+Core HR,master.employment,server/db/ddl/planes/neon/master/03_tables.sql,3160,DDL foundation; runtime acceptance not inferred
+Core HR,master.job,server/db/ddl/planes/neon/master/03_tables.sql,2668,DDL foundation; runtime acceptance not inferred
+Core HR,master.job_family,server/db/ddl/planes/neon/master/03_tables.sql,2591,DDL foundation; runtime acceptance not inferred
+Core HR,master.job_function,server/db/ddl/planes/neon/master/03_tables.sql,2611,DDL foundation; runtime acceptance not inferred
+Core HR,master.pay_grade,server/db/ddl/planes/neon/master/03_tables.sql,2632,DDL foundation; runtime acceptance not inferred
+Core HR,master.person,server/db/ddl/planes/neon/master/03_tables.sql,2398,DDL foundation; runtime acceptance not inferred
+Core HR,master.person_sensitive_profile,server/db/ddl/planes/neon/master/03_tables.sql,2442,DDL foundation; runtime acceptance not inferred
+Core HR,master.position,server/db/ddl/planes/neon/master/03_tables.sql,3074,DDL foundation; runtime acceptance not inferred
+Core HR,master.work_assignment,server/db/ddl/planes/neon/master/03_tables.sql,3209,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.contingent_work_order,server/db/ddl/planes/neon/document/03_tables.sql,5269,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.contingent_work_order_revision,server/db/ddl/planes/neon/document/03_tables.sql,5291,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.engagement_onboarding_case,server/db/ddl/planes/neon/document/03_tables.sql,5468,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.external_candidate_evaluation,server/db/ddl/planes/neon/document/03_tables.sql,5251,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.external_candidate_submission,server/db/ddl/planes/neon/document/03_tables.sql,5230,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.external_expense_item,server/db/ddl/planes/neon/document/03_tables.sql,5569,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.external_expense_sheet,server/db/ddl/planes/neon/document/03_tables.sql,5539,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.external_time_entry,server/db/ddl/planes/neon/document/03_tables.sql,5523,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.external_time_sheet,server/db/ddl/planes/neon/document/03_tables.sql,5493,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.service_sheet_source_allocation,server/db/ddl/planes/neon/document/03_tables.sql,5637,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.statement_of_work,server/db/ddl/planes/neon/document/03_tables.sql,5319,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.statement_of_work_item,server/db/ddl/planes/neon/document/03_tables.sql,5368,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.statement_of_work_revision,server/db/ddl/planes/neon/document/03_tables.sql,5341,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.worker_compliance_item,server/db/ddl/planes/neon/document/03_tables.sql,5448,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.worker_engagement,server/db/ddl/planes/neon/document/03_tables.sql,5391,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.worker_operational_placement,server/db/ddl/planes/neon/document/03_tables.sql,5429,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.workforce_requisition,server/db/ddl/planes/neon/document/03_tables.sql,5183,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,document.workforce_requisition_supplier,server/db/ddl/planes/neon/document/03_tables.sql,5214,DDL foundation; runtime acceptance not inferred
+External workforce adjacent,master.external_worker,server/db/ddl/planes/neon/master/03_tables.sql,3259,DDL foundation; runtime acceptance not inferred
+Leave,document.leave_balance_entry,server/db/ddl/planes/neon/document/03_tables.sql,3209,DDL foundation; runtime acceptance not inferred
+Leave,document.leave_request,server/db/ddl/planes/neon/document/03_tables.sql,3189,DDL foundation; runtime acceptance not inferred
+Leave,master.employee_leave_enrollment,server/db/ddl/planes/neon/master/03_tables.sql,3295,DDL foundation; runtime acceptance not inferred
+Leave,master.leave_plan,server/db/ddl/planes/neon/master/03_tables.sql,3012,DDL foundation; runtime acceptance not inferred
+Leave,master.leave_plan_rule,server/db/ddl/planes/neon/master/03_tables.sql,3045,DDL foundation; runtime acceptance not inferred
+Leave,master.leave_type,server/db/ddl/planes/neon/master/03_tables.sql,2988,DDL foundation; runtime acceptance not inferred
+Lifecycle and cases,document.hr_case,server/db/ddl/planes/neon/document/03_tables.sql,3401,DDL foundation; runtime acceptance not inferred
+Lifecycle and cases,document.offboarding_case,server/db/ddl/planes/neon/document/03_tables.sql,3431,DDL foundation; runtime acceptance not inferred
+Lifecycle and cases,document.onboarding_case,server/db/ddl/planes/neon/document/03_tables.sql,3418,DDL foundation; runtime acceptance not inferred
+Lifecycle and cases,document.people_request,server/db/ddl/planes/neon/document/03_tables.sql,3224,DDL foundation; runtime acceptance not inferred
+Lifecycle and cases,document.policy_acknowledgment,server/db/ddl/planes/neon/document/03_tables.sql,3530,DDL foundation; runtime acceptance not inferred
+Lifecycle and cases,document.user_profile_update_request,server/db/ddl/planes/neon/document/03_tables.sql,4310,DDL foundation; runtime acceptance not inferred
+Lifecycle and cases,document.workforce_iam_projection,server/db/ddl/planes/neon/document/03_tables.sql,4398,DDL foundation; runtime acceptance not inferred
+Lifecycle and cases,document.workforce_request,server/db/ddl/planes/neon/document/03_tables.sql,3244,DDL foundation; runtime acceptance not inferred
+Lifecycle and cases,document.workforce_request_validation,server/db/ddl/planes/neon/document/03_tables.sql,3383,DDL foundation; runtime acceptance not inferred
+Payroll,control.formula_expression,server/db/ddl/planes/neon/control/03_tables.sql,464,DDL foundation; runtime acceptance not inferred
+Payroll,control.formula_expression_version,server/db/ddl/planes/neon/control/03_tables.sql,515,DDL foundation; runtime acceptance not inferred
+Payroll,document.compensation_change,server/db/ddl/planes/neon/document/03_tables.sql,3133,DDL foundation; runtime acceptance not inferred
+Payroll,document.employee_tax_declaration,server/db/ddl/planes/neon/document/03_tables.sql,3157,DDL foundation; runtime acceptance not inferred
+Payroll,document.employee_tax_declaration_line,server/db/ddl/planes/neon/document/03_tables.sql,3175,DDL foundation; runtime acceptance not inferred
+Payroll,document.payroll_period,server/db/ddl/planes/neon/document/03_tables.sql,3444,DDL foundation; runtime acceptance not inferred
+Payroll,document.payroll_result,server/db/ddl/planes/neon/document/03_tables.sql,3496,DDL foundation; runtime acceptance not inferred
+Payroll,document.payroll_result_line,server/db/ddl/planes/neon/document/03_tables.sql,3514,DDL foundation; runtime acceptance not inferred
+Payroll,document.payroll_run,server/db/ddl/planes/neon/document/03_tables.sql,3459,DDL foundation; runtime acceptance not inferred
+Payroll,document.payroll_run_employee,server/db/ddl/planes/neon/document/03_tables.sql,3483,DDL foundation; runtime acceptance not inferred
+Payroll,master.employee_statutory_enrollment,server/db/ddl/planes/neon/master/03_tables.sql,3319,DDL foundation; runtime acceptance not inferred
+Payroll,master.pay_component,server/db/ddl/planes/neon/master/03_tables.sql,2856,DDL foundation; runtime acceptance not inferred
+Payroll,master.pay_group,server/db/ddl/planes/neon/master/03_tables.sql,2887,DDL foundation; runtime acceptance not inferred
+Payroll,master.pay_structure,server/db/ddl/planes/neon/master/03_tables.sql,2914,DDL foundation; runtime acceptance not inferred
+Payroll,master.pay_structure_line,server/db/ddl/planes/neon/master/03_tables.sql,2939,DDL foundation; runtime acceptance not inferred
+Payroll,master.statutory_scheme,server/db/ddl/planes/neon/master/03_tables.sql,2962,DDL foundation; runtime acceptance not inferred
+Shared banking and output,document.journal_entry,server/db/ddl/planes/neon/document/03_tables.sql,933,DDL foundation; runtime acceptance not inferred
+Shared banking and output,document.journal_line,server/db/ddl/planes/neon/document/03_tables.sql,993,DDL foundation; runtime acceptance not inferred
+Shared banking and output,document.payment_entry,server/db/ddl/planes/neon/document/03_tables.sql,796,DDL foundation; runtime acceptance not inferred
+Shared banking and output,document.payment_entry_allocation,server/db/ddl/planes/neon/document/03_tables.sql,881,DDL foundation; runtime acceptance not inferred
+Shared banking and output,document.render_output,server/db/ddl/planes/neon/document/03_tables.sql,4273,DDL foundation; runtime acceptance not inferred
+Shared banking and output,master.bank_account,server/db/ddl/planes/neon/master/03_tables.sql,1258,DDL foundation; runtime acceptance not inferred
+Shared banking and output,master.bank_account_company_usage,server/db/ddl/planes/neon/master/15_bank_account_company_usage.sql,10,DDL foundation; runtime acceptance not inferred
+Shared banking and output,master.bank_account_link,server/db/ddl/planes/neon/master/03_tables.sql,1361,DDL foundation; runtime acceptance not inferred
+Shared banking and output,master.bank_account_usage,server/db/ddl/planes/neon/master/15_bank_account_company_usage.sql,2,DDL foundation; runtime acceptance not inferred
+Shared banking and output,master.certification,server/db/ddl/planes/neon/master/03_tables.sql,4986,DDL foundation; runtime acceptance not inferred
+Shared banking and output,master.certification_type,server/db/ddl/planes/neon/master/03_tables.sql,4962,DDL foundation; runtime acceptance not inferred
+User and access,authz.group_member,server/db/ddl/common/authz/03_tables.sql,269,DDL foundation; runtime acceptance not inferred
+User and access,authz.group_role,server/db/ddl/common/authz/03_tables.sql,301,DDL foundation; runtime acceptance not inferred
+User and access,authz.plane_membership,server/db/ddl/common/authz/03_tables.sql,61,DDL foundation; runtime acceptance not inferred
+User and access,authz.principal_group,server/db/ddl/common/authz/03_tables.sql,212,DDL foundation; runtime acceptance not inferred
+User and access,authz.record_acl,server/db/ddl/common/authz/03_tables.sql,537,DDL foundation; runtime acceptance not inferred
+User and access,authz.role,server/db/ddl/common/authz/03_tables.sql,146,DDL foundation; runtime acceptance not inferred
+User and access,authz.role_permission,server/db/ddl/common/authz/03_tables.sql,192,DDL foundation; runtime acceptance not inferred
+User and access,authz.scope_target,server/db/ddl/common/authz/03_tables.sql,98,DDL foundation; runtime acceptance not inferred
+User and access,master.principal,server/db/ddl/common/master/03_platform_tables.sql,636,DDL foundation; runtime acceptance not inferred
+User and access,master.principal_identity_binding,server/db/ddl/common/master/03_platform_tables.sql,731,DDL foundation; runtime acceptance not inferred
+User and access,master.principal_notification_preference,server/db/ddl/common/master/03_platform_tables.sql,887,DDL foundation; runtime acceptance not inferred
+User and access,master.principal_profile,server/db/ddl/common/master/03_platform_tables.sql,685,DDL foundation; runtime acceptance not inferred
+User and access,master.principal_ui_preference,server/db/ddl/common/master/03_platform_tables.sql,854,DDL foundation; runtime acceptance not inferred
+User and access,master.principal_ui_profile,server/db/ddl/common/master/03_platform_tables.sql,812,DDL foundation; runtime acceptance not inferred

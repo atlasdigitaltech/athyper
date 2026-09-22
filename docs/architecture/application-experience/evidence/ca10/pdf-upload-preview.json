@@ -1,0 +1,16 @@
+{
+  "fixtureId": "ce5340eb-9c99-4598-bfc5-6cf24f695531",
+  "fileName": "CA10-proof-1790050084703.pdf",
+  "passedSteps": [
+    "upload started",
+    "full preview visible",
+    "authorized PDF byte range passed",
+    "close removed iframe; thumbnail visible"
+  ],
+  "uploadStatus": 201,
+  "finalizeStatus": 200,
+  "previewStatus": 200,
+  "rangeStatus": 206,
+  "initialSearch": "No hit before asynchronous extraction finished; subsequent signed-in UI search passed.",
+  "note": "Earlier attempt queried preview for an unfinished staged upload. UI now renders preview only for active files."
+}

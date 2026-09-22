@@ -335,6 +335,9 @@ export const ATTACHMENT_STAGE_OPERATION: RelayOperation = Object.freeze({
   path: "/api/attachments/stage",
   requestClass: "json",
   requiresTenant: true,
+  // Staging is a retried command: the client supplies the stable attachment ID
+  // as its idempotency key, and the lifecycle reloads that reservation on retry.
+  idempotency: "required",
   maxBodyBytes: 16 * 1024,
 });
 export const ATTACHMENT_FINALIZE_OPERATION: RelayOperation = Object.freeze({
@@ -343,6 +346,7 @@ export const ATTACHMENT_FINALIZE_OPERATION: RelayOperation = Object.freeze({
   path: "/api/attachments/:attachmentId/finalize",
   requestClass: "json",
   requiresTenant: true,
+  idempotency: "required",
   maxBodyBytes: 4096,
 });
 export const ATTACHMENT_STATUS_OPERATION: RelayOperation = Object.freeze({
@@ -358,6 +362,25 @@ export const ATTACHMENT_REMOVE_OPERATION: RelayOperation = Object.freeze({
   path: "/api/attachments/:attachmentId",
   requestClass: "json",
   requiresTenant: true,
+  idempotency: "required",
+});
+export const ATTACHMENT_RENAME_OPERATION: RelayOperation = Object.freeze({
+  id: "attachments.rename",
+  method: "PATCH",
+  path: "/api/attachments/:attachmentId",
+  requestClass: "json",
+  requiresTenant: true,
+  idempotency: "required",
+  maxBodyBytes: 4096,
+});
+export const ATTACHMENT_FOLDER_OPERATION: RelayOperation = Object.freeze({
+  id: "attachments.folder",
+  method: "POST",
+  path: "/api/attachments/folders",
+  requestClass: "json",
+  requiresTenant: true,
+  idempotency: "required",
+  maxBodyBytes: 4096,
 });
 export const ATTACHMENT_DOWNLOAD_OPERATION: RelayOperation = Object.freeze({
   id: "attachments.download",
@@ -405,6 +428,11 @@ export const ATLAS_ANSWER_RELAY_OPERATIONS: readonly RelayOperation[] =
     ATTACHMENT_FINALIZE_OPERATION,
     ATTACHMENT_STATUS_OPERATION,
     ATTACHMENT_REMOVE_OPERATION,
+    ATTACHMENT_RENAME_OPERATION,
+    ATTACHMENT_FOLDER_OPERATION,
+    { id: "attachments.category", method: "POST", path: "/api/attachments/:attachmentId/category", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 4096 },
+    { id: "attachments.archive-outcome", method: "GET", path: "/api/attachments/:attachmentId/archive", requestClass: "json", requiresTenant: true },
+    { id: "attachments.archive", method: "POST", path: "/api/attachments/:attachmentId/archive", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 4096 },
   ]);
 export const ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
@@ -1607,6 +1635,67 @@ export const NEON_WORKFORCE_REQUEST_RELAY_OPERATIONS: readonly RelayOperation[] 
       }),
     ),
   ]);
+/** Current effective employee directory and record reads. Workforce writes remain request-governed. */
+export const NEON_WORKFORCE_READ_RELAY_OPERATIONS: readonly RelayOperation[] =
+  Object.freeze([
+    {
+      id: "neon.workforce.list",
+      method: "GET",
+      path: "/api/neon/workforce",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.workforce.read",
+      method: "GET",
+      path: "/api/neon/workforce/:employeeId",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.workforce.section.read",
+      method: "GET",
+      path: "/api/neon/workforce/:employeeId/sections/:section",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+  ]);
+export const NEON_WORKFORCE_SAVED_VIEW_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
+  {id:"neon.workforce.saved-views.list",method:"GET",path:"/api/platform/saved-views/:entity",requestClass:"json",requiresTenant:true},
+  {id:"neon.workforce.saved-views.create",method:"POST",path:"/api/platform/saved-views/:entity",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+]);
+export const NEON_WORKFORCE_PROFILE_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
+  {id:"neon.workforce.profile.mutate",method:"POST",path:"/api/neon/workforce/:employeeId/profile-records",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+]);
+export const NEON_HR_STAGE2_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
+  {id:"neon.hr-setup.policy.simulate",method:"POST",path:"/api/policy/simulate",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.hr-setup.catalog",method:"GET",path:"/api/neon/hr-setup/catalog",requestClass:"json",requiresTenant:true},
+  {id:"neon.hr-setup.position.create",method:"POST",path:"/api/neon/hr-setup/positions",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.hr-setup.drafts.list",method:"GET",path:"/api/neon/hr-setup/drafts",requestClass:"json",requiresTenant:true},
+  {id:"neon.hr-setup.drafts.create",method:"POST",path:"/api/neon/hr-setup/drafts",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.hr-setup.drafts.publish",method:"POST",path:"/api/neon/hr-setup/drafts/:approvalId/publish",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.hr-setup.org-company.list",method:"GET",path:"/api/neon/hr-setup/org-company-assignments",requestClass:"json",requiresTenant:true},
+  {id:"neon.hr-setup.org-candidates",method:"GET",path:"/api/neon/hr-setup/org-candidates",requestClass:"json",requiresTenant:true},
+  {id:"neon.hr-setup.org-company.create",method:"POST",path:"/api/neon/hr-setup/org-company-assignments",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.hr-setup.org-company.publish",method:"POST",path:"/api/neon/hr-setup/org-company-assignments/:assignmentId/publish",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.hr-setup.calendar-day.list",method:"GET",path:"/api/neon/hr-setup/calendar-day-changes",requestClass:"json",requiresTenant:true},
+  {id:"neon.hr-setup.calendar-day.create",method:"POST",path:"/api/neon/hr-setup/calendar-day-changes",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.hr-setup.calendar-day.publish",method:"POST",path:"/api/neon/hr-setup/calendar-day-changes/:changeId/publish",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.hr-setup.policy-assignments.list",method:"GET",path:"/api/neon/hr-setup/policy-assignments",requestClass:"json",requiresTenant:true},
+  {id:"neon.hr-setup.policy-effective",method:"GET",path:"/api/neon/hr-setup/policy-effective",requestClass:"json",requiresTenant:true},
+  {id:"neon.hr-setup.policy-assignments.create",method:"POST",path:"/api/neon/hr-setup/policy-assignments",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.hr-setup.policy-assignments.publish",method:"POST",path:"/api/neon/hr-setup/policy-assignments/:assignmentId/publish",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.users.list",method:"GET",path:"/api/neon/users",requestClass:"json",requiresTenant:true},
+  {id:"neon.users.read",method:"GET",path:"/api/neon/users/:principalId",requestClass:"json",requiresTenant:true},
+  {id:"neon.users.profile-change.list",method:"GET",path:"/api/neon/users/me/profile-change",requestClass:"json",requiresTenant:true},
+  {id:"neon.users.profile-change.create",method:"POST",path:"/api/neon/users/me/profile-change",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.users.profile-change.submit",method:"POST",path:"/api/neon/users/me/profile-change/:requestId/submit",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.users.profile-change.review",method:"GET",path:"/api/neon/users/profile-changes/review",requestClass:"json",requiresTenant:true},
+  {id:"neon.users.profile-change.decide",method:"POST",path:"/api/neon/users/profile-changes/:requestId/decision",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.users.profile.admin",method:"PATCH",path:"/api/neon/users/:principalId/profile",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+  {id:"neon.workforce.authority",method:"GET",path:"/api/neon/workforce/:employeeId/authority",requestClass:"json",requiresTenant:true},
+  {id:"neon.workforce.iam-projection.retry",method:"POST",path:"/api/neon/workforce/:employeeId/iam-projection/retry",requestClass:"json",requiresTenant:true,maxBodyBytes:16*1024},
+]);
 export const SUPPLIER_WORKFORCE_REQUISITION_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
     {
@@ -1682,6 +1771,9 @@ export const BUSINESS_PARTNER_RELAY_OPERATIONS: readonly RelayOperation[] =
     BUSINESS_PARTNER_360_GOVERNANCE_OPERATION,
     PERSON_RESTRICTED_EVIDENCE_REVEAL_OPERATION,
     ATTACHMENT_DOWNLOAD_OPERATION,
+    { id: "attachments.preview", method: "POST", path: "/api/attachments/:attachmentId/preview", requestClass: "json", requiresTenant: true, maxBodyBytes: 4096 },
+    { id: "attachments.extract", method: "POST", path: "/api/attachments/:attachmentId/extract", requestClass: "json", requiresTenant: true, maxBodyBytes: 4096 },
+    { id: "attachments.search", method: "POST", path: "/api/attachments/search", requestClass: "json", requiresTenant: true, maxBodyBytes: 4096 },
     ...BUSINESS_PARTNER_360_SECTION_OPERATIONS,
     BUSINESS_PARTNER_ELIGIBILITY_READ_OPERATION,
     BUSINESS_PARTNER_SUPPLIER_ACTIVATION_OPERATION,
@@ -2711,3 +2803,16 @@ export const ENTITY_VIEWS_RELAY_OPERATIONS: readonly RelayOperation[] =
     },
   ]);
 
+export const COLLABORATION_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
+  {id:"collaboration.participants",method:"GET",path:"/api/collab/participants",requestClass:"json",requiresTenant:true},
+  {id:"collaboration.history",method:"GET",path:"/api/collab/comments/:id/history",requestClass:"json",requiresTenant:true},
+  {id:"collaboration.create",method:"POST",path:"/api/collab/comments",requestClass:"json",requiresTenant:true,maxBodyBytes:262144,idempotency:"required"},
+  {id:"collaboration.reply",method:"POST",path:"/api/collab/comments/:id/replies",requestClass:"json",requiresTenant:true,maxBodyBytes:262144,idempotency:"required"},
+  {id:"collaboration.edit",method:"PATCH",path:"/api/collab/comments/:id",requestClass:"json",requiresTenant:true,maxBodyBytes:262144},
+  {id:"collaboration.remove",method:"DELETE",path:"/api/collab/comments/:id",requestClass:"json",requiresTenant:true},
+  {id:"collaboration.react",method:"POST",path:"/api/collab/comments/:id/reactions",requestClass:"json",requiresTenant:true,maxBodyBytes:4096},
+  {id:"collaboration.unreact",method:"DELETE",path:"/api/collab/comments/:id/reactions/:code",requestClass:"json",requiresTenant:true},
+  {id:"collaboration.flag",method:"POST",path:"/api/collab/comments/:id/flag",requestClass:"json",requiresTenant:true,maxBodyBytes:8192},
+  {id:"collaboration.draft.save",method:"POST",path:"/api/collab/drafts",requestClass:"json",requiresTenant:true,maxBodyBytes:262144},
+  {id:"collaboration.draft.cancel",method:"DELETE",path:"/api/collab/drafts",requestClass:"json",requiresTenant:true},
+]);

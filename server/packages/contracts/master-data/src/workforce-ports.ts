@@ -16,6 +16,7 @@ import type {
   ValidateWorkforceRequestCommand,
   ValidateWorkforceRequestResponse,
   WorkforceDetail,
+  WorkforceDirectoryPage,
   WorkforceListQuery,
   WorkforceQuery,
   WorkforceRequest,
@@ -24,6 +25,8 @@ import type {
   WorkforceRequestWorkflowDefinition,
   WorkforceSourceAdapterCommand,
   WorkforceSummary,
+  WorkforceSectionPage,
+  WorkforceSectionQuery,
 } from "./workforce.js";
 
 export interface WorkforceRequestRepository<Transaction = unknown> {
@@ -115,8 +118,13 @@ export interface WorkforceRequestWorkflowResolver<Transaction = unknown> {
 }
 
 export interface WorkforceRepository<Transaction = unknown> {
+  resolveScopes(
+    tenantId: string,
+    employeeId: string,
+    transaction: Transaction,
+  ): Promise<readonly { readonly legalEntityId?: string; readonly companyCodeId?: string }[] | null>;
   list(
-    input: Omit<WorkforceListQuery, "context"> & { readonly tenantId: string },
+    input: Omit<WorkforceListQuery, "context" | "cursor"> & { readonly tenantId: string; readonly offset?: number },
     transaction: Transaction,
   ): Promise<readonly WorkforceSummary[]>;
   get(
@@ -124,6 +132,17 @@ export interface WorkforceRepository<Transaction = unknown> {
     employeeId: string,
     transaction: Transaction,
   ): Promise<WorkforceDetail | null>;
+  getSection(
+    input: Omit<WorkforceSectionQuery, "context" | "cursor"> & { readonly tenantId: string; readonly principalId?: string; readonly offset?: number },
+    transaction: Transaction,
+  ): Promise<WorkforceSectionPage>;
+  mutateProfile(
+    input: Omit<import("./workforce.js").WorkforceProfileMutation, "context"> & {
+      readonly tenantId: string;
+      readonly actorId: string;
+    },
+    transaction: Transaction,
+  ): Promise<import("./workforce.js").WorkforceProfileResult | null>;
   completeChecklistItem(
     input: Omit<CompleteWorkforceChecklistItemCommand, "context"> & {
       readonly tenantId: string;
@@ -193,8 +212,10 @@ export interface WorkforceService {
   applyRequest(
     command: ApplyWorkforceRequestCommand,
   ): Promise<ApplyWorkforceRequestResponse>;
-  list(query: WorkforceListQuery): Promise<readonly WorkforceSummary[]>;
+  list(query: WorkforceListQuery): Promise<WorkforceDirectoryPage>;
   get(query: WorkforceQuery): Promise<WorkforceDetail>;
+  getSection(query: WorkforceSectionQuery): Promise<WorkforceSectionPage>;
+  mutateProfile(command: import("./workforce.js").WorkforceProfileMutation): Promise<import("./workforce.js").WorkforceProfileResult>;
   completeChecklistItem(
     command: CompleteWorkforceChecklistItemCommand,
   ): Promise<WorkforceDetail>;

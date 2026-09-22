@@ -31,13 +31,14 @@ export function captureOperationalError(
   error: unknown,
   tags: Readonly<Record<string, string>> = {},
 ): void {
-  if (!enabled) {
-    const detail = error instanceof Error
-      ? { name: error.name, message: error.message, stack: error.stack }
-      : { message: String(error) };
+  const detail = error instanceof Error
+    ? { name: error.name, message: error.message, stack: error.stack }
+    : { message: String(error) };
+  // Local runtime work must remain diagnosable even when a development Sentry
+  // endpoint is configured. Browser problem responses remain generic.
+  if (!enabled || process.env["ATHYPER_ENV"] === "local")
     process.stderr.write(`${JSON.stringify({ level: "error", event: "operational_error", ...tags, error: detail })}\n`);
-    return;
-  }
+  if (!enabled) return;
   Sentry.withScope((scope) => {
     for (const [key, value] of Object.entries(tags)) scope.setTag(key, value);
     Sentry.captureException(error);

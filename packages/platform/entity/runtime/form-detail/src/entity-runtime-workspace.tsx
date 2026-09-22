@@ -1,5 +1,5 @@
 "use client";
-import type { EntityRuntimeActionPlan, EntityRuntimeNavigationPlan, EntityRuntimeSectionResource, EntityRuntimeResourceContext, EntityRuntimeSummaryViewPlan } from "@athyper/platform-entity-descriptor-client";
+import { entityRuntimeClient, type EntityRuntimeActionPlan, type EntityRuntimeNavigationPlan, type EntityRuntimeSectionResource, type EntityRuntimeResourceContext, type EntityRuntimeSummaryViewPlan } from "@athyper/platform-entity-descriptor-client";
 import { useApiClient, useSessionIdentity } from "@athyper/platform-shell-app-foundation";
 import { Building2Icon } from "@athyper/platform-icons";
 import { Card } from "@athyper/platform-ui";
@@ -12,7 +12,7 @@ import { useEntityRuntimeSectionWorkspace, type EntityRuntimeSectionState } from
 export function EntityRuntimeWorkspace({
   entityCode, recordId, surfaceKey, deepLinkedSectionKey, contextKey = "default", resourceContext,
   locale = typeof navigator === "undefined" ? "und" : navigator.language, renderHeader, renderSection,
-  renderBody, onSelectSection, onObserveSection, sectionNavigation = "rail", continuousSections = false, continuousScrollRoot,
+  renderBody, onSelectSection, onObserveSection, sectionNavigation = "rail", continuousSections = false, continuousScrollRoot, collaborationSectionKeys = [],
 }: {
   readonly entityCode: string; readonly recordId: string; readonly surfaceKey: string; readonly deepLinkedSectionKey?: string;
   readonly contextKey?: string; readonly resourceContext?: EntityRuntimeResourceContext; readonly locale?: string;
@@ -26,6 +26,8 @@ export function EntityRuntimeWorkspace({
   readonly continuousSections?: boolean;
   /** The actual scroll surface for continuous mode. Defaults to the viewport. */
   readonly continuousScrollRoot?: RefObject<HTMLElement | null>;
+  /** Published section keys exposed by an optional shared collaboration surface. */
+  readonly collaborationSectionKeys?: readonly string[];
 }) {
   const client = useApiClient(), identity = useSessionIdentity();
   const [scrollRequest, setScrollRequest] = useState<string | undefined>(() => deepLinkedSectionKey);
@@ -56,6 +58,12 @@ export function EntityRuntimeWorkspace({
   const sectionItems = bootstrap.plan.sections.map((section) => ({ key: section.key, label: section.label?.defaultText ?? section.key }));
   const activeSection = workspace.activeSectionKey ?? bootstrap.plan.sections[0]?.key;
   if (!activeSection) return <Card><p>No authorized sections are available.</p></Card>;
+  // Preserve the entity surface's declared collaboration ordering rather than
+  // the broader record-section order. This makes the default predictable while
+  // still omitting any section the admitted page plan did not expose.
+  const collaborationSections = collaborationSectionKeys.flatMap((key) =>
+    sectionItems.find((section) => section.key === key) ?? [],
+  );
   const navigation: EntityRuntimeHeaderNavigation = {
     sections: sectionItems, activeSection,
     ...(bootstrap.plan.navigation ? { navigation: bootstrap.plan.navigation } : {}),
@@ -70,16 +78,28 @@ export function EntityRuntimeWorkspace({
       setScrollRequest(isContinuousDestination ? sectionKey : undefined);
       onSelectSection?.(sectionKey);
     },
+    ...(collaborationSections.length ? {
+      collaboration: Object.freeze({
+        sections: Object.freeze(collaborationSections),
+        preloadSection: workspace.preloadSection,
+        renderSection: (sectionKey: string) => renderLoadedSection(sectionKey, workspace.sections[sectionKey]),
+      }),
+    } : {}),
   };
   const overview = bootstrap.plan.navigation?.tabs.find((tab) => tab.provider === "360");
   const continuousItems = continuousSections && overview ? overview.sectionKeys.flatMap((key) => sectionItems.find((item) => item.key === key) ?? []) : [];
   const renderLoadedSection = (sectionKey: string, state: EntityRuntimeSectionState | undefined) => {
-    if (!state || state.status === "loading") return <p role="status">Loading section…</p>;
+    // Keep an already admitted section mounted during refresh so drafts and action dialogs survive.
+    if (!state || (state.status === "loading" && !state.resource)) return <p role="status">Loading section…</p>;
     if (state.status === "context_required") return <SectionAvailabilityState title="Context required" detail="Select an authorized organization and company to view this section." icon={<Building2Icon size={22} />} />;
-    if (state.status === "forbidden") return <SectionAvailabilityState title="Not authorized" detail={state.error ?? "You are not authorized to view this section."} />;
+    if (state.status === "forbidden") return <SectionAvailabilityState title="Section unavailable" detail="Your current access does not include this record section. Refresh the record after changing organization or company context." icon={<Building2Icon size={22} />} />;
     if (state.status === "error") return <div role="alert"><p>{state.error ?? "This section is unavailable."}</p><button type="button" onClick={() => workspace.retrySection(sectionKey)}>Try again</button></div>;
+    const loadThreadPage = (threadRootId: string, cursor?: string) => entityRuntimeClient.section(client, {
+      entityCode, recordId, surfaceKey, sectionKey, ...(cursor ? { cursor } : {}),
+      resourceContext: { ...resourceContext, threadRootId },
+    });
     return state.resource
-      ? (renderSection ? renderSection({ sectionKey, resource: state.resource, retry: () => workspace.retrySection(sectionKey) }) : <CompiledEntitySectionContent resource={state.resource} entityCode={entityCode} recordId={recordId} onChanged={() => workspace.invalidate(sectionKey)} onLoadMore={() => workspace.loadMore(sectionKey)} />)
+      ? (renderSection ? renderSection({ sectionKey, resource: state.resource, retry: () => workspace.retrySection(sectionKey) }) : <CompiledEntitySectionContent resource={state.resource} entityCode={entityCode} recordId={recordId} onChanged={() => workspace.invalidate(sectionKey)} onLoadMore={() => workspace.loadMore(sectionKey)} onLoadThreadPage={sectionKey === "comments" ? loadThreadPage : undefined} />)
       : <p>This section is unavailable.</p>;
   };
   const selectedContent = <EntitySectionWorkspace sections={sectionItems} activeSection={activeSection} onNavigate={navigation.onSelectSection} label="Record sections" navigation={sectionNavigation}>{renderLoadedSection(activeSection, workspace.sections[activeSection])}</EntitySectionWorkspace>;
@@ -170,4 +190,10 @@ export interface EntityRuntimeHeaderNavigation {
   readonly sections: readonly { readonly key: string; readonly label: string }[];
   readonly activeSection: string; readonly navigation?: EntityRuntimeNavigationPlan; readonly summaryView?: EntityRuntimeSummaryViewPlan;
   readonly onSelectSection: (sectionKey: string) => void;
+  /** A browser projection backed by this workspace's admitted section cache. */
+  readonly collaboration?: Readonly<{
+    readonly sections: readonly { readonly key: string; readonly label: string }[];
+    readonly preloadSection: (sectionKey: string) => void;
+    readonly renderSection: (sectionKey: string) => ReactNode;
+  }>;
 }

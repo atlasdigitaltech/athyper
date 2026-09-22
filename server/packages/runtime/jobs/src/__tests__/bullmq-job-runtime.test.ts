@@ -290,6 +290,26 @@ describe("BullMQ job runtime", () => {
     await runtime.close();
   });
 
+  it("normalizes colon-delimited explicit job IDs before passing them to BullMQ", async () => {
+    const add = vi.fn(async (_name, _data, options) => ({ id: String(options.jobId) }));
+    const runtime = createBullMqJobRuntime({
+      redisUrl: "redis://localhost/2",
+      createQueue: () => ({ add, close: async () => undefined }),
+    });
+    const semanticId = "attachment:11111111-1111-4111-8111-111111111111:expire:2026-09-21T00:00:00.000Z";
+    const expected = createDeterministicEnqueueId("attachments", "expire", semanticId);
+
+    await expect(runtime.enqueue("attachments", "expire", { attachmentId: "11111111-1111-4111-8111-111111111111" }, {
+      jobId: semanticId,
+    })).resolves.toBe(expected);
+    expect(add).toHaveBeenCalledWith("expire", { attachmentId: "11111111-1111-4111-8111-111111111111" }, {
+      jobId: expected,
+      removeOnComplete: { age: 86400, count: 1000 },
+      removeOnFail: { age: 604800, count: 5000 },
+    });
+    await runtime.close();
+  });
+
   it.each([
     { label: "semantic enqueue key", options: { enqueueKey: "invoice:42" } },
     { label: "administration replay key", options: { enqueueKey: "replay:source-execution:11111111-1111-4111-8111-111111111111" } },

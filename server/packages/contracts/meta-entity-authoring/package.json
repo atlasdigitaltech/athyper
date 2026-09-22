@@ -13,7 +13,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@athyper/server-contract-metadata": "workspace:*"
+    "@athyper/server-contract-metadata": "workspace:*",
+    "@athyper/server-contract-publication": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

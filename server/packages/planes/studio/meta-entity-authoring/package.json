@@ -25,7 +25,8 @@
     "express": "^5.2.1",
     "kysely": "^0.28.17",
     "@athyper/contract-platform-entity-list": "workspace:*",
-    "@athyper/contract-platform-entity-runtime": "workspace:*"
+    "@athyper/contract-platform-entity-runtime": "workspace:*",
+    "@athyper/server-contract-publication": "workspace:*"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

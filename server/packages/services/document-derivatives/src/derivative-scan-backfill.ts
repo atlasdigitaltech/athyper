@@ -482,7 +482,7 @@ export function createKyselyDerivativeScanBackfillRepository(): DerivativeScanBa
         SELECT id, tenant_id, storage_key, content_type, sha256
         FROM document.attachment_derivative
         WHERE tenant_id = ${request.tenantId}::uuid
-          AND status = 'quarantined'
+          AND status IN ('quarantined','failed')
           AND storage_key IS NOT NULL
           AND (${cursor ?? null}::uuid IS NULL OR id > ${cursor ?? null}::uuid)
         ORDER BY id
@@ -503,7 +503,7 @@ export function createKyselyDerivativeScanBackfillRepository(): DerivativeScanBa
         UPDATE document.attachment_derivative
         SET storage_bucket = NULL, storage_key = NULL, updated_at = now(), updated_by = ${input.principalId}::uuid
         WHERE id = ${input.id}::uuid AND tenant_id = ${input.tenantId}::uuid
-          AND status = 'quarantined'
+          AND status IN ('quarantined','failed')
           AND storage_key = ${input.expectedStorageKey}
       `.execute(tx);
       return { updated: Number(result.numAffectedRows ?? 0n) > 0 };

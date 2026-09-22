@@ -31,6 +31,7 @@ export * from "./related-presentation";
 export * from "./access-decision";
 
 export * from "./intake";
+export * from "./intake-operation";
 export * from "./intake-surface";
 
 export * from "./intake-surface-authoring";

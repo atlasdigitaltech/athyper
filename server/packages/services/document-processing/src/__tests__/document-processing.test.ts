@@ -148,6 +148,20 @@ describe("document processing", () => {
     );
     expect(get).not.toHaveBeenCalled();
   });
+  it.each(["no index", "index outage", "unlink during extraction", "unlink during index"])("guards durable extraction: %s", async scenario => {
+    const bytes = new TextEncoder().encode("fixture"), saveExtracted = vi.fn(), remove = vi.fn();
+    let linked = true;
+    const handler = createDocumentProcessingHandler({
+      repository: { load: async () => linked ? candidate(bytes) : null, saveExtracted, markSkipped: vi.fn(), markFailed: vi.fn() },
+      transactions: {run: async (_plane, _actor, work) => work({})},
+      storage: {getStream: async () => stream(bytes), get: async () => bytes, put: vi.fn(), delete: vi.fn(), exists: async () => true, createDownloadUrl: async () => "", createUploadUrl: async () => "", copy: vi.fn()},
+      extractor: {extract: async () => { if (scenario === "unlink during extraction") linked = false; return {text:"clean text",metadata:{},provider:"fixture",durationMs:1}; }},
+      ...(scenario === "no index" ? {} : {searchIndex:{remove,search:async () => ({hits:[],total:0,processingMs:0}),upsert:async () => { if (scenario === "index outage") throw new Error("index offline"); if (scenario === "unlink during index") linked=false; }}}),
+    });
+    if (scenario === "index outage") { await expect(handler.handle(job(),context())).rejects.toThrow("index offline"); expect(saveExtracted).toHaveBeenCalled(); }
+    else if (scenario.startsWith("unlink")) { await expect(handler.handle(job(),context())).resolves.toMatchObject({status:"discarded"}); expect(remove).toHaveBeenCalled(); if (scenario === "unlink during extraction") expect(saveExtracted).not.toHaveBeenCalled(); }
+    else { await expect(handler.handle(job(),context())).resolves.toMatchObject({status:"completed",output:{indexed:false}}); expect(saveExtracted).toHaveBeenCalled(); }
+  });
   it("classifies labels without retaining matched values", () =>
     expect(classifyPii("a@example.com 192.168.1.1")).toEqual([
       "email",

@@ -1,4 +1,5 @@
 "use client";
+import { AtlasPanelResize } from "./atlas-panel-resize";
 import { AtlasActionHistory } from "./atlas-action-history";
 import { useAtlasSurface } from "./atlas-surface";
 
@@ -39,6 +40,8 @@ import {
 import { useShellPersonalizationScope } from "./personalization-scope";
 
 export interface AtlasWorkspaceProps {
+  readonly width?: number;
+  readonly onWidthChange?: (width: number) => void;
   readonly breadcrumbs?: readonly {
     readonly label: string;
     readonly href?: string;
@@ -54,6 +57,8 @@ export interface AtlasWorkspaceProps {
 
 export function AtlasWorkspace({
   breadcrumbs,
+  width = 420,
+  onWidthChange,
   mode,
   planeName,
   currentPath = "/home",
@@ -278,6 +283,9 @@ export function AtlasWorkspace({
       className={`athyper-atlas-workspace athyper-atlas-workspace--${mode}`}
       aria-label="Atlas AI workspace"
     >
+      {mode === "dock" && onWidthChange ? (
+        <AtlasPanelResize width={width} onWidthChange={onWidthChange} />
+      ) : null}
       <header className="athyper-atlas-workspace__header">
         <span className="athyper-atlas-workspace__mark">
           <AtlasBrandIcon size={20} />

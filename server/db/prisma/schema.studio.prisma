@@ -3561,7 +3561,11 @@ model attachment {
   pii_types                                                                                                   Json                              @default("[]")
   pii_scanned_at                                                                                              DateTime?                         @db.Timestamptz(6)
   series_id                                                                                                   String                            @db.Uuid
+  admitted_release_hash                                                                                       String?
+  admitted_policy_hash                                                                                        String?
+  draft_id                                                                                                    String?                           @db.Uuid
   principal_attachment_tenant_id_created_byToprincipal                                                        principal                         @relation("attachment_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_created_by_fk")
+  comment_draft                                                                                               comment_draft?                    @relation(fields: [tenant_id, draft_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_draft_fk")
   attachment                                                                                                  attachment?                       @relation("attachmentToattachment", fields: [tenant_id, parent_attachment_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_parent_fk")
   other_attachment                                                                                            attachment[]                      @relation("attachmentToattachment")
   attachment_series_attachment_tenant_id_series_idToattachment_series                                         attachment_series                 @relation("attachment_tenant_id_series_idToattachment_series", fields: [tenant_id, series_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_series_id_fk")
@@ -3728,6 +3732,7 @@ model attachment_link {
   folder_id            String?            @db.Uuid
   created_at           DateTime           @default(now()) @db.Timestamptz(6)
   created_by           String             @db.Uuid
+  category_code        String?
   attachment_series    attachment_series  @relation(fields: [tenant_id, attachment_series_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_link_attachment_series_fk")
   principal            principal          @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_link_created_by_fk")
   attachment_folder    attachment_folder? @relation(fields: [tenant_id, folder_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_link_folder_fk")
@@ -3761,6 +3766,8 @@ model attachment_series {
   created_by                                                               String                        @db.Uuid
   updated_at                                                               DateTime?                     @db.Timestamptz(6)
   updated_by                                                               String?                       @db.Uuid
+  display_name                                                             String?
+  revision_no                                                              Int                           @default(1)
   attachment_attachment_tenant_id_series_idToattachment_series             attachment[]                  @relation("attachment_tenant_id_series_idToattachment_series")
   attachment_legal_hold                                                    attachment_legal_hold[]
   attachment_legal_hold_event                                              attachment_legal_hold_event[]
@@ -3782,43 +3789,43 @@ model attachment_series {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model comment {
-  id                                                  String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                           String                    @db.Uuid
-  context_type                                        String                    @default("entity")
+  revision_no                                         Int                @default(1)
+  id                                                  String             @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                           String             @db.Uuid
+  context_type                                        String             @default("entity")
   entity_type                                         String
   entity_id                                           String
-  comment_intent                                      String                    @default("general")
-  commenter_id                                        String                    @db.Uuid
+  comment_intent                                      String             @default("general")
+  commenter_id                                        String             @db.Uuid
   comment_text                                        String
-  content_format                                      String                    @default("plain")
+  content_format                                      String             @default("plain")
   content_json                                        Json?
   content_html                                        String?
   content_schema                                      String?
-  parent_comment_id                                   String?                   @db.Uuid
-  thread_depth                                        Int                       @default(0) @db.SmallInt
-  visibility                                          String                    @default("public")
-  deleted_at                                          DateTime?                 @db.Timestamptz(6)
-  deleted_by                                          String?                   @db.Uuid
-  archived_at                                         DateTime?                 @db.Timestamptz(6)
-  archived_by                                         String?                   @db.Uuid
-  retention_until                                     DateTime?                 @db.Timestamptz(6)
-  retention_policy_id                                 String?                   @db.Uuid
-  status                                              String                    @default("open")
-  created_at                                          DateTime                  @default(now()) @db.Timestamptz(6)
-  created_by                                          String                    @db.Uuid
-  updated_at                                          DateTime?                 @db.Timestamptz(6)
-  updated_by                                          String?                   @db.Uuid
-  principal_comment_tenant_id_archived_byToprincipal  principal?                @relation("comment_tenant_id_archived_byToprincipal", fields: [tenant_id, archived_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_archived_by_fk")
-  principal_comment_tenant_id_commenter_idToprincipal principal                 @relation("comment_tenant_id_commenter_idToprincipal", fields: [tenant_id, commenter_id], references: [tenant_id, id], onUpdate: NoAction, map: "comment_commenter_fk")
-  principal_comment_tenant_id_created_byToprincipal   principal                 @relation("comment_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_created_by_fk")
-  principal_comment_tenant_id_deleted_byToprincipal   principal?                @relation("comment_tenant_id_deleted_byToprincipal", fields: [tenant_id, deleted_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_deleted_by_fk")
-  comment                                             comment?                  @relation("commentTocomment", fields: [tenant_id, parent_comment_id], references: [tenant_id, id], onUpdate: NoAction, map: "comment_parent_fk")
-  other_comment                                       comment[]                 @relation("commentTocomment")
-  tenant                                              tenant                    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "comment_tenant_fk")
-  principal_comment_tenant_id_updated_byToprincipal   principal?                @relation("comment_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_updated_by_fk")
+  parent_comment_id                                   String?            @db.Uuid
+  thread_depth                                        Int                @default(0) @db.SmallInt
+  visibility                                          String             @default("public")
+  deleted_at                                          DateTime?          @db.Timestamptz(6)
+  deleted_by                                          String?            @db.Uuid
+  archived_at                                         DateTime?          @db.Timestamptz(6)
+  archived_by                                         String?            @db.Uuid
+  retention_until                                     DateTime?          @db.Timestamptz(6)
+  retention_policy_id                                 String?            @db.Uuid
+  status                                              String             @default("open")
+  created_at                                          DateTime           @default(now()) @db.Timestamptz(6)
+  created_by                                          String             @db.Uuid
+  updated_at                                          DateTime?          @db.Timestamptz(6)
+  updated_by                                          String?            @db.Uuid
+  principal_comment_tenant_id_archived_byToprincipal  principal?         @relation("comment_tenant_id_archived_byToprincipal", fields: [tenant_id, archived_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_archived_by_fk")
+  principal_comment_tenant_id_commenter_idToprincipal principal          @relation("comment_tenant_id_commenter_idToprincipal", fields: [tenant_id, commenter_id], references: [tenant_id, id], onUpdate: NoAction, map: "comment_commenter_fk")
+  principal_comment_tenant_id_created_byToprincipal   principal          @relation("comment_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_created_by_fk")
+  principal_comment_tenant_id_deleted_byToprincipal   principal?         @relation("comment_tenant_id_deleted_byToprincipal", fields: [tenant_id, deleted_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_deleted_by_fk")
+  comment                                             comment?           @relation("commentTocomment", fields: [tenant_id, parent_comment_id], references: [tenant_id, id], onUpdate: NoAction, map: "comment_parent_fk")
+  other_comment                                       comment[]          @relation("commentTocomment")
+  tenant                                              tenant             @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "comment_tenant_fk")
+  principal_comment_tenant_id_updated_byToprincipal   principal?         @relation("comment_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_updated_by_fk")
   comment_draft                                       comment_draft[]
   comment_mention                                     comment_mention[]
-  comment_moderation_flag                             comment_moderation_flag[]
   comment_reaction                                    comment_reaction[]
   comment_revision                                    comment_revision[]
   comment_flag                                        comment_flag[]
@@ -3833,28 +3840,29 @@ model comment {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model comment_draft {
-  id                                                        String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                 String     @db.Uuid
-  principal_id                                              String     @db.Uuid
-  context_type                                              String     @default("entity")
+  id                                                        String       @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                 String       @db.Uuid
+  principal_id                                              String       @db.Uuid
+  context_type                                              String       @default("entity")
   entity_type                                               String
   entity_id                                                 String
-  parent_comment_id                                         String?    @db.Uuid
+  parent_comment_id                                         String?      @db.Uuid
   draft_text                                                String
-  content_format                                            String     @default("plain")
+  content_format                                            String       @default("plain")
   content_json                                              Json?
   content_html                                              String?
   content_schema                                            String?
-  visibility                                                String     @default("public")
-  created_at                                                DateTime   @default(now()) @db.Timestamptz(6)
-  created_by                                                String     @db.Uuid
-  updated_at                                                DateTime?  @db.Timestamptz(6)
-  updated_by                                                String?    @db.Uuid
-  principal_comment_draft_tenant_id_created_byToprincipal   principal  @relation("comment_draft_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_draft_created_by_fk")
-  comment                                                   comment?   @relation(fields: [tenant_id, parent_comment_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "comment_draft_parent_fk")
-  principal_comment_draft_tenant_id_principal_idToprincipal principal  @relation("comment_draft_tenant_id_principal_idToprincipal", fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "comment_draft_principal_fk")
-  tenant                                                    tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "comment_draft_tenant_fk")
-  principal_comment_draft_tenant_id_updated_byToprincipal   principal? @relation("comment_draft_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_draft_updated_by_fk")
+  visibility                                                String       @default("public")
+  created_at                                                DateTime     @default(now()) @db.Timestamptz(6)
+  created_by                                                String       @db.Uuid
+  updated_at                                                DateTime?    @db.Timestamptz(6)
+  updated_by                                                String?      @db.Uuid
+  attachment                                                attachment[]
+  principal_comment_draft_tenant_id_created_byToprincipal   principal    @relation("comment_draft_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_draft_created_by_fk")
+  comment                                                   comment?     @relation(fields: [tenant_id, parent_comment_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "comment_draft_parent_fk")
+  principal_comment_draft_tenant_id_principal_idToprincipal principal    @relation("comment_draft_tenant_id_principal_idToprincipal", fields: [tenant_id, principal_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "comment_draft_principal_fk")
+  tenant                                                    tenant       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "comment_draft_tenant_fk")
+  principal_comment_draft_tenant_id_updated_byToprincipal   principal?   @relation("comment_draft_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_draft_updated_by_fk")
 
   @@unique([tenant_id, principal_id, context_type, entity_type, entity_id, parent_comment_id], map: "comment_draft_target_uq")
   @@unique([tenant_id, id], map: "comment_draft_tenant_id_uq")
@@ -3906,30 +3914,7 @@ model comment_mention {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model comment_moderation_flag {
-  id                                                                 String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                          String     @db.Uuid
-  comment_id                                                         String     @db.Uuid
-  reporter_id                                                        String     @db.Uuid
-  reason_code                                                        String
-  detail                                                             String?
-  status                                                             String     @default("open")
-  resolution                                                         Json       @default("{}")
-  resolved_at                                                        DateTime?  @db.Timestamptz(6)
-  resolved_by                                                        String?    @db.Uuid
-  created_at                                                         DateTime   @default(now()) @db.Timestamptz(6)
-  created_by                                                         String     @db.Uuid
-  comment                                                            comment    @relation(fields: [tenant_id, comment_id], references: [tenant_id, id], onUpdate: NoAction, map: "comment_moderation_flag_comment_fk")
-  principal_comment_moderation_flag_tenant_id_created_byToprincipal  principal  @relation("comment_moderation_flag_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_moderation_flag_created_by_fk")
-  principal_comment_moderation_flag_tenant_id_reporter_idToprincipal principal  @relation("comment_moderation_flag_tenant_id_reporter_idToprincipal", fields: [tenant_id, reporter_id], references: [tenant_id, id], onUpdate: NoAction, map: "comment_moderation_flag_reporter_fk")
-  principal_comment_moderation_flag_tenant_id_resolved_byToprincipal principal? @relation("comment_moderation_flag_tenant_id_resolved_byToprincipal", fields: [tenant_id, resolved_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_moderation_flag_resolved_by_fk")
-  tenant                                                             tenant     @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "comment_moderation_flag_tenant_fk")
 
-  @@unique([tenant_id, id], map: "comment_moderation_flag_tenant_id_uq")
-  @@index([tenant_id, comment_id, created_at(sort: Desc)], map: "comment_moderation_flag_comment_idx")
-  @@index([tenant_id, status, created_at], map: "comment_moderation_flag_queue_idx", where: raw("(status = ANY (ARRAY['open'::text, 'reviewing'::text]))"))
-  @@schema("document")
-}
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -3964,12 +3949,14 @@ model comment_revision {
   content_json   Json?
   content_html   String?
   content_schema String?
+  visibility     String
+  status         String
   change_kind    String    @default("edit")
   created_at     DateTime  @default(now()) @db.Timestamptz(6)
   created_by     String    @db.Uuid
+  principal      principal @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "comment_revision_actor_fk")
   comment        comment   @relation(fields: [tenant_id, comment_id], references: [tenant_id, id], onUpdate: NoAction, map: "comment_revision_comment_fk")
-  principal      principal @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "comment_revision_created_by_fk")
-  tenant         tenant    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "comment_revision_tenant_fk")
+  tenant         tenant    @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "comment_revision_tenant_fk")
 
   @@unique([tenant_id, comment_id, revision_no], map: "comment_revision_number_uq")
   @@unique([tenant_id, id], map: "comment_revision_tenant_id_uq")
@@ -6081,6 +6068,8 @@ model master_module {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model principal {
+  comment_revision                                                                                       comment_revision[]
+  entity_capability                                                                                      entity_capability[]
   id                                                                                                     String                                        @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                                                              String                                        @db.Uuid
   code                                                                                                   String
@@ -6254,12 +6243,8 @@ model principal {
   comment_feed_cursor_comment_feed_cursor_tenant_id_updated_byToprincipal                                comment_feed_cursor[]                         @relation("comment_feed_cursor_tenant_id_updated_byToprincipal")
   comment_mention_comment_mention_tenant_id_created_byToprincipal                                        comment_mention[]                             @relation("comment_mention_tenant_id_created_byToprincipal")
   comment_mention_comment_mention_tenant_id_mentioned_idToprincipal                                      comment_mention[]                             @relation("comment_mention_tenant_id_mentioned_idToprincipal")
-  comment_moderation_flag_comment_moderation_flag_tenant_id_created_byToprincipal                        comment_moderation_flag[]                     @relation("comment_moderation_flag_tenant_id_created_byToprincipal")
-  comment_moderation_flag_comment_moderation_flag_tenant_id_reporter_idToprincipal                       comment_moderation_flag[]                     @relation("comment_moderation_flag_tenant_id_reporter_idToprincipal")
-  comment_moderation_flag_comment_moderation_flag_tenant_id_resolved_byToprincipal                       comment_moderation_flag[]                     @relation("comment_moderation_flag_tenant_id_resolved_byToprincipal")
   comment_reaction_comment_reaction_tenant_id_created_byToprincipal                                      comment_reaction[]                            @relation("comment_reaction_tenant_id_created_byToprincipal")
   comment_reaction_comment_reaction_tenant_id_principal_idToprincipal                                    comment_reaction[]                            @relation("comment_reaction_tenant_id_principal_idToprincipal")
-  comment_revision                                                                                       comment_revision[]
   content_item_content_item_tenant_id_created_byToprincipal                                              content_item[]                                @relation("content_item_tenant_id_created_byToprincipal")
   content_item_content_item_tenant_id_status_changed_byToprincipal                                       content_item[]                                @relation("content_item_tenant_id_status_changed_byToprincipal")
   content_item_content_item_tenant_id_updated_byToprincipal                                              content_item[]                                @relation("content_item_tenant_id_updated_byToprincipal")
@@ -6908,6 +6893,8 @@ model template_binding {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model tenant {
+  comment_revision                                               comment_revision[]
+  entity_capability                                              entity_capability[]
   id                                                             String                                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   code                                                           String
   name                                                           String
@@ -7005,9 +6992,7 @@ model tenant {
   comment_draft                                                  comment_draft[]
   comment_feed_cursor                                            comment_feed_cursor[]
   comment_mention                                                comment_mention[]
-  comment_moderation_flag                                        comment_moderation_flag[]
   comment_reaction                                               comment_reaction[]
-  comment_revision                                               comment_revision[]
   content_item                                                   content_item[]
   content_item_link                                              content_item_link[]
   conversation                                                   conversation[]
@@ -7227,6 +7212,7 @@ model master_workspace {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model entity {
+  entity_capability                                                      entity_capability[]
   id                                                                     String                                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                              String?                                   @db.Uuid
   module_id                                                              String                                    @db.Uuid
@@ -7330,6 +7316,7 @@ model entity_baseline_import_revocation {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an index with non-default null sort order and requires additional setup for migrations. Visit https://pris.ly/d/default-index-null-ordering for more info.
 model entity_change_set {
+  entity_capability                                                              entity_capability[]
   id                                                                             String                                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                                      String?                                   @db.Uuid
   entity_id                                                                      String                                    @db.Uuid
@@ -11339,4 +11326,27 @@ model provider_identity_callback_inbox {
   @@index([received_at], map: "trustiam_provider_identity_callback_pending_idx", where: raw("(disposition = 'received'::text)"))
   @@index([authority_tenant_id, identity_projection_id, provider_sequence(sort: Desc)], map: "trustiam_provider_identity_callback_sequence_idx")
   @@schema("trustiam")
+}
+
+
+model entity_capability {
+  id                String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String?           @db.Uuid
+  entity_id         String            @db.Uuid
+  change_set_id     String            @db.Uuid
+  capability_key    String
+  declaration       Json
+  binding           Json?
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  created_by        String            @db.Uuid
+  updated_at        DateTime?         @db.Timestamptz(6)
+  updated_by        String?           @db.Uuid
+  principal         principal         @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_capability_actor_fk")
+  entity_change_set entity_change_set @relation(fields: [change_set_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_capability_changeset_fk")
+  entity            entity            @relation(fields: [entity_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_capability_entity_fk")
+  tenant            tenant?           @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_capability_tenant_fk")
+
+  @@unique([tenant_id, change_set_id, capability_key])
+  @@unique([tenant_id, id])
+  @@schema("metadata")
 }

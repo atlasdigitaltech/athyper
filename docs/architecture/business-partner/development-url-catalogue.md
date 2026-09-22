@@ -10,10 +10,10 @@ This catalogue covers all operations in that Swagger snapshot, additional backen
 | --- | ---: |
 | Swagger operations | 125 |
 | Swagger paths | 117 |
-| Backend method/path identities extracted from source | 564 |
-| Source identities absent from Swagger | 439 |
+| Backend method/path identities extracted from source | 565 |
+| Source identities absent from Swagger | 440 |
 | studio URL entries (including patterns) | 81 |
-| neon URL entries (including patterns) | 138 |
+| neon URL entries (including patterns) | 139 |
 | mesh URL entries (including patterns) | 65 |
 
 ## Jump to
@@ -32,9 +32,9 @@ This audit checks every listed App and Runtime entry, including discovery endpoi
 
 | Origin | Method/path entries | Unique identities | Duplicate identity groups | Paths with multiple methods |
 | --- | ---: | ---: | ---: | ---: |
-| https://api.dev.athyper.test | 566 | 566 | 0 | 43 |
+| https://api.dev.athyper.test | 567 | 567 | 0 | 43 |
 | https://studio.dev.athyper.test | 85 | 85 | 0 | 1 |
-| https://neon.dev.athyper.test | 144 | 142 | 2 | 3 |
+| https://neon.dev.athyper.test | 145 | 143 | 2 | 3 |
 | https://mesh.dev.athyper.test | 69 | 69 | 0 | 1 |
 
 Duplicate identities listed below represent repeated URL shapes, even when their parameter names differ. A generated entity detail template and a concrete Next.js page can describe the same endpoint; this alone does not establish conflicting handlers.
@@ -616,9 +616,6 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 - **GET** [/people](https://neon.dev.athyper.test/people)  
   Workspace — People · [source](../../../apps/neon/lib/catalog-routes.ts)
 
-- **GET** [/people/core-hr](https://neon.dev.athyper.test/people/core-hr)  
-  Module — Core Human Resources · [source](../../../apps/neon/lib/catalog-routes.ts)
-
 - **GET** [/people/external-workforce](https://neon.dev.athyper.test/people/external-workforce)  
   Module — External Workforce · [source](../../../apps/neon/lib/catalog-routes.ts)
 
@@ -631,6 +628,9 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 - **GET** [/people/time-attendance](https://neon.dev.athyper.test/people/time-attendance)  
   Module — Time & Attendance · [source](../../../apps/neon/lib/catalog-routes.ts)
 
+- **GET** [/people/workforce](https://neon.dev.athyper.test/people/workforce)
+  Page — Core Human Resources · [source](../../../apps/neon/app/(shell)/people/workforce/page.tsx)
+
 - **GET** [/people/workforce/requests](https://neon.dev.athyper.test/people/workforce/requests)  
   Page · [source](../../../apps/neon/app/(shell)/people/workforce/requests/page.tsx)
 
@@ -642,6 +642,9 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 
 - **GET** [/people/workforce/requisitions](https://neon.dev.athyper.test/people/workforce/requisitions)  
   Page · [source](../../../apps/neon/app/(shell)/people/workforce/requisitions/page.tsx)
+
+- **GET** `/people/workforce/{employeeId}`
+  Page · [source](../../../apps/neon/app/(shell)/people/workforce/[employeeId]/page.tsx)
 
 - **GET** [/projects-services](https://neon.dev.athyper.test/projects-services)  
   Workspace — Projects & Services · [source](../../../apps/neon/lib/catalog-routes.ts)
@@ -2705,6 +2708,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
   Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
 
 - **GET** `/api/neon/workforce/{employeeId}/readiness`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **GET** `/api/neon/workforce/{employeeId}/sections/{section}`
   Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
 
 ### Source routes: /api/notifications

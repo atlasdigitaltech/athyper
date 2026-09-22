@@ -1505,6 +1505,7 @@ function validateExtensions(value: BusinessPartnerRequestExtensions, draft = fal
     if(item.stateRegionCode && (!/^[A-Z]{2}-[A-Z0-9]{1,6}$/.test(item.stateRegionCode) || !item.stateRegionCode.startsWith(item.countryCode+'-')))throw invalid("Address subdivision must belong to its country");
     if(item.regionEntryMode && !['directory','manual'].includes(item.regionEntryMode))throw invalid("Invalid address region entry mode");
     if(item.regionEntryMode==='manual' && item.stateRegionCode)throw invalid("Manual region cannot claim a subdivision reference");
+    if(item.timezoneCode && (typeof item.timezoneCode!=="string" || !/^[A-Za-z]+(?:[_+-][A-Za-z0-9+-]+)*(?:\/[A-Za-z0-9_+.-]+)+$/.test(item.timezoneCode)))throw invalid("Address timezoneCode must be an IANA time zone");
     if ((!draft||item.countryCode) && !/^[A-Z]{2}$/.test(item.countryCode))
       throw invalid("Address countryCode must be ISO alpha-2 uppercase");
     required(item.normalizedHash, "Address normalizedHash", 64);

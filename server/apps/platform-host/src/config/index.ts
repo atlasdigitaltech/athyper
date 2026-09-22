@@ -173,6 +173,7 @@ export interface HostConfig {
     privateKey: string | undefined;
   };
   rendering: {
+    previewBaseUrl?: string;
     baseUrl: string | undefined;
     timeoutMs: number;
     maxHtmlBytes: number;
@@ -1064,6 +1065,7 @@ export function loadConfig(): HostConfig {
       privateKey: vapidPrivateKey || undefined,
     },
     rendering: {
+      previewBaseUrl: process.env["PREVIEW_RENDERER_BASE_URL"]?.trim() || undefined,
       baseUrl: docRenderBaseUrl || undefined,
       timeoutMs: docRenderTimeoutMs,
       maxHtmlBytes: docRenderMaxHtmlBytes,

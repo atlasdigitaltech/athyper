@@ -47,6 +47,7 @@ export function compileEntityIntakeSurfaces(
           schemaVersion: 1,
           key: s.surfaceKey,
           title: s.title,
+          presentation: s.layoutConfig.intakePresentation,
           formLabels: s.layoutConfig.formLabels,
           validationMessages: {
             ...defaults[0]?.layoutConfig.entityValidationMessages,

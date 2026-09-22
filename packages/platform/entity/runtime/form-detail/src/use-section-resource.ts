@@ -148,9 +148,28 @@ export function useEntityRuntimeSectionWorkspace(input: {
     void request.then((next) => {
       if (next.releaseId !== bootstrap.releaseId || next.releaseHash !== bootstrap.releaseHash) throw new Error("The page release changed while this section was loading.");
       const nextData = next.data && typeof next.data === "object" && !Array.isArray(next.data) ? next.data as Record<string, unknown> : {};
+      if (controller.current?.signal.aborted || generation.current === 0) return;
       const priorItems = Array.isArray(data?.items) ? data.items : [], nextItems = Array.isArray(nextData.items) ? nextData.items : [];
-      setSections((items) => ({ ...items, [sectionKey]: { status: "ready", resource: { ...next, data: { ...nextData, items: [...priorItems, ...nextItems] } } } }));
-    }).catch((cause) => setSections((items) => ({ ...items, [sectionKey]: { status: "error", resource: current, error: message(cause) } })));
+      // Cursor boundaries are stable but an association can be removed between
+      // pages.  Keep the first item identity and its latest child revision.
+      const seenIds = new Set<string>();
+      const merged: unknown[] = [];
+      for (const item of [...priorItems, ...nextItems]) {
+        const identity = item && typeof item === "object" && !Array.isArray(item) && typeof (item as Record<string, unknown>).id === "string"
+          ? (item as Record<string, unknown>).id as string
+          : undefined;
+        if (!identity || !seenIds.has(identity)) {
+          if (identity) seenIds.add(identity);
+          merged.push(item);
+        }
+      }
+      const resource: EntityRuntimeSectionResource = { ...next, revision: next.revision, data: { ...nextData, items: merged } };
+      sectionCache.set(cacheKey(sectionKey, bootstrap.releaseHash), { resource, expiresAt: Date.now() + CACHE_TTL_MS });
+      setSections((items) => ({ ...items, [sectionKey]: { status: "ready", resource } }));
+    }).catch((cause) => {
+      if (controller.current?.signal.aborted) return;
+      setSections((items) => ({ ...items, [sectionKey]: { status: "error", resource: current, error: message(cause) } }));
+    });
   }, [bootstrap, cacheKey, input.client, input.entityCode, input.recordId, input.surfaceKey, sections]);
   useEffect(() => {
     const sectionKey = input.deepLinkedSectionKey;

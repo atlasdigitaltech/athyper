@@ -1,0 +1,255 @@
+{
+  "schema": "athyper.compiled-entity-release-candidate/1",
+  "schemaVersion": 1,
+  "candidateKey": "business-partner-collaboration-ca08",
+  "targetPlanes": [
+    "neon"
+  ],
+  "roots": [
+    "business_partner/presentation.section.attachments",
+    "business_partner/presentation.section.comments"
+  ],
+  "expectedArtifactKeys": [
+    "address/core",
+    "address_link/core",
+    "business_partner/core",
+    "business_partner/operation",
+    "business_partner/presentation.detail",
+    "business_partner/presentation.section.attachments",
+    "business_partner/presentation.section.comments",
+    "business_partner_banking/core",
+    "business_partner_commodity_capability/core",
+    "business_partner_governance_relation/core",
+    "business_partner_identifier/core",
+    "business_partner_industry_classification/core",
+    "business_partner_operating_organization_assignment/core",
+    "business_partner_qualification/core",
+    "business_partner_tax_registration/core",
+    "certification/core",
+    "contact_person/core",
+    "country/core",
+    "customer/core",
+    "customer_company_profile/core",
+    "platform/core-field-defaults.v1",
+    "state_region/core",
+    "supplier/core",
+    "supplier_company_profile/core",
+    "timezone/core",
+    "workforce/core"
+  ],
+  "forbiddenArtifactPrefixes": [
+    "business_partner_request/"
+  ],
+  "release": {
+    "schema": "athyper.entity-release-envelope/2.0-draft",
+    "contractStatus": "unsigned_review_only",
+    "releaseId": "business-partner-collaboration-ca08-dev",
+    "releaseNo": 1,
+    "supersedesReleaseId": null,
+    "targetPlanes": [
+      "neon"
+    ],
+    "scope": {
+      "kind": "candidate_closure",
+      "candidateKey": "business-partner-collaboration-ca08",
+      "deferredSlices": [
+        "ca-09-preview-extraction-search",
+        "bp2-02-through-bp2-17"
+      ]
+    },
+    "externalDependencies": [
+      {
+        "serviceKey": "neon.bp.governed-materialization.v1",
+        "required": true,
+        "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+      },
+      {
+        "serviceKey": "neon.business-context.v1",
+        "required": true,
+        "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+      },
+      {
+        "serviceKey": "neon.evaluator-registry.v1",
+        "required": true,
+        "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+      },
+      {
+        "serviceKey": "platform.attachments.v1",
+        "required": true,
+        "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+      },
+      {
+        "serviceKey": "platform.audit.v1",
+        "required": true,
+        "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+      },
+      {
+        "serviceKey": "platform.comments.v1",
+        "required": true,
+        "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+      },
+      {
+        "serviceKey": "platform.document-render.v1",
+        "required": true,
+        "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+      },
+      {
+        "serviceKey": "platform.entity-snapshot.v1",
+        "required": true,
+        "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+      },
+      {
+        "serviceKey": "platform.numbering.v1",
+        "required": true,
+        "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+      },
+      {
+        "serviceKey": "platform.workflow.v1",
+        "required": true,
+        "resolution": "locally_verified_version_at_activation_or_pinned_at_workflow_start"
+      }
+    ],
+    "activation": {
+      "mode": "atomic_head_compare_and_swap",
+      "expectedPreviousReleaseId": null,
+      "validateAllDependencies": true,
+      "validateHandlerPermissionAndRendererRegistry": true,
+      "validatePhysicalSchema": true,
+      "rejectMissingOrUnknownRequiredArtifact": true,
+      "rollback": "explicit_new_activation_of_verified_retained_set",
+      "inFlightReads": "pin_release_for_entire_request",
+      "openUI": "pin_release_until_explicit_refresh",
+      "commands": "verify_release_and_record_version_reauthorize_current_actor",
+      "requiredChecks": [
+        "offline_artifact_validation",
+        "live_neon_storage_catalog_match"
+      ],
+      "validateEvaluatorRegistry": true
+    },
+    "runtimeCompatibility": {
+      "consumerContract": "compiled-entity/2.0",
+      "minimumCompiler": "2.0.0-proposed",
+      "currentRuntimeCompatible": true
+    },
+    "signature": {
+      "algorithm": "Ed25519",
+      "keyId": "",
+      "value": ""
+    }
+  },
+  "baseline": {
+    "path": "metadata/products/mdg/review/baselines/business-partner-runtime-neon-r9.json",
+    "publicationKey": "metadata.compiled_entity.business_partner",
+    "releaseId": "compiled-business_partner-cf773137-0b77-48ca-89ca-3d3c24c67933",
+    "releaseHash": "sha256:6ead2e59f2e22b5cc937ab507eff64e758074a6121652faac25e3e3546f8cab6",
+    "artifactCount": 93
+  },
+  "replacementArtifactKeys": [
+    "business_partner/core",
+    "business_partner/operation",
+    "business_partner/presentation.detail",
+    "business_partner/presentation.section.attachments",
+    "business_partner/presentation.section.comments"
+  ],
+  "addedArtifactKeys": [
+    "state_region/core",
+    "timezone/core"
+  ],
+  "expectedRuntimeArtifactKeys": [
+    "address/core",
+    "address/operation",
+    "address/presentation.section",
+    "address_link/core",
+    "address_link/operation",
+    "business_partner/core",
+    "business_partner/flow.intake",
+    "business_partner/operation",
+    "business_partner/presentation.detail",
+    "business_partner/presentation.list",
+    "business_partner/presentation.section.activity",
+    "business_partner/presentation.section.addresses",
+    "business_partner/presentation.section.attachments",
+    "business_partner/presentation.section.banking",
+    "business_partner/presentation.section.business-activity",
+    "business_partner/presentation.section.comments",
+    "business_partner/presentation.section.contacts",
+    "business_partner/presentation.section.credit",
+    "business_partner/presentation.section.customer-company",
+    "business_partner/presentation.section.identifiers-tax",
+    "business_partner/presentation.section.identity",
+    "business_partner/presentation.section.network",
+    "business_partner/presentation.section.overview",
+    "business_partner/presentation.section.qualifications-certificates",
+    "business_partner/presentation.section.requests",
+    "business_partner/presentation.section.roles-scope",
+    "business_partner/presentation.section.supplier-company",
+    "business_partner/presentation.section.workforce",
+    "business_partner_banking/core",
+    "business_partner_banking/operation",
+    "business_partner_commodity_capability/core",
+    "business_partner_commodity_capability/operation",
+    "business_partner_governance_relation/core",
+    "business_partner_governance_relation/operation",
+    "business_partner_identifier/core",
+    "business_partner_identifier/operation",
+    "business_partner_industry_classification/core",
+    "business_partner_industry_classification/operation",
+    "business_partner_operating_organization_assignment/core",
+    "business_partner_operating_organization_assignment/operation",
+    "business_partner_qualification/core",
+    "business_partner_qualification/operation",
+    "business_partner_request/core",
+    "business_partner_request/flow.base",
+    "business_partner_request/flow.customer.add",
+    "business_partner_request/flow.customer.company",
+    "business_partner_request/flow.customer.credit",
+    "business_partner_request/flow.customer.new",
+    "business_partner_request/flow.partner.amend",
+    "business_partner_request/flow.partner.archive",
+    "business_partner_request/flow.partner.assign",
+    "business_partner_request/flow.partner.deactivate",
+    "business_partner_request/flow.partner.reactivate",
+    "business_partner_request/flow.supplier.activate",
+    "business_partner_request/flow.supplier.add",
+    "business_partner_request/flow.supplier.bank",
+    "business_partner_request/flow.supplier.company",
+    "business_partner_request/flow.supplier.new",
+    "business_partner_request/flow.supplier.qualify",
+    "business_partner_request/flow.workforce.add",
+    "business_partner_request/flow.workforce.change",
+    "business_partner_request/flow.workforce.new",
+    "business_partner_request/flow.workforce.offboard",
+    "business_partner_request/operation",
+    "business_partner_request/presentation.detail",
+    "business_partner_request/presentation.list",
+    "business_partner_request/presentation.review",
+    "business_partner_request/presentation.section.capture",
+    "business_partner_request/presentation.section.evidence",
+    "business_partner_request/presentation.section.form.customerCredit",
+    "business_partner_request/presentation.section.form.request",
+    "business_partner_request/presentation.section.form.supplierQualification",
+    "business_partner_request/presentation.section.form.supplierRequest",
+    "business_partner_request/presentation.section.form.workforceReview",
+    "business_partner_tax_registration/core",
+    "business_partner_tax_registration/operation",
+    "certification/core",
+    "certification/operation",
+    "contact_person/core",
+    "contact_person/operation",
+    "country/core",
+    "customer/core",
+    "customer/operation",
+    "customer_company_profile/core",
+    "customer_company_profile/operation",
+    "platform/core-field-defaults.v1",
+    "platform/governed-child-operation.v1",
+    "state_region/core",
+    "supplier/core",
+    "supplier/operation",
+    "supplier_company_profile/core",
+    "supplier_company_profile/operation",
+    "timezone/core",
+    "workforce/core",
+    "workforce/operation"
+  ]
+}

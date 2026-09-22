@@ -364,13 +364,22 @@ function context(): VerifiedRequestContext {
   };
 }
 
-function harness(options: { failOutbox?: () => boolean; deny?: boolean } = {}) {
+function harness(
+  options: {
+    failOutbox?: () => boolean;
+    deny?: boolean;
+    authorizeCapability?: import("../collaboration-service.js").CollaborationServiceOptions<unknown>["authorizeCapability"];
+  } = {},
+) {
   const events: OutboxEventInput[] = [];
   const persistence = createInMemoryCollaborationPersistence({
     now: () => new Date("2026-08-10T00:00:00Z"),
   });
   const service = createCollaborationService({
     authorizer: { authorize: async () => ({ allowed: !options.deny }) },
+    ...(options.authorizeCapability
+      ? { authorizeCapability: options.authorizeCapability }
+      : {}),
     principals: { resolveActivePrincipals: async (_context, values) => values },
     repository: persistence.repository,
     commandExecutions: persistence.commandExecutions,
@@ -399,23 +408,64 @@ const base = {
   text: "hello",
 };
 describe("collaboration regression coverage", () => {
-  it("normalizes equivalent edit timestamps and accepts createdAt for the first edit", async () => {
+  it("records a durable orphan intent when an edit removes the final attachment pin", async () => {
+    const { service, persistence, events } = harness();
+    const comment = await service.create(base);
+    const original = persistence.repository.edit.bind(persistence.repository);
+    persistence.repository.edit = async (command, mentions, tx) => {
+      const outcome = await original(command, mentions, tx);
+      return outcome ? { ...outcome, orphanedAttachmentIds: [id.mentioned] } : null;
+    };
+    await service.edit({ context: context(), commentId: comment.id, text: "without file", expectedRevision: 1 });
+    expect(events).toContainEqual(expect.objectContaining({ topic: "attachments.lifecycle", eventType: "attachments.orphaned", entityId: id.mentioned, eventKey: `attachment:${id.mentioned}:orphaned:comment:${comment.id}`, payload: expect.objectContaining({ reason: "comment_attachment_removed" }) }));
+  });
+  it("uses admitted canonical permission and audience, and cannot fall back after denial", async () => {
+    const admitted = harness({
+      deny: true,
+      authorizeCapability: async () => ({ defaultAudience: "private" }),
+    });
+    const comment = await admitted.service.create({
+      ...base,
+      entityType: "business_partner",
+    });
+    expect(comment.visibility).toBe("private");
+    const denied = harness({
+      authorizeCapability: async () => {
+        throw new Error("policy denied");
+      },
+    });
+    await expect(denied.service.create(base)).rejects.toThrow("policy denied");
+    expect(denied.persistence.inspect().comments.size).toBe(0);
+  });
+  it("does not infer a revision for an edit whose client omitted it", async () => {
     const { service } = harness();
     const comment = await service.create(base);
     await expect(
       service.edit({
         context: context(),
         commentId: comment.id,
+        text: "missing revision",
+        expectedRevision: undefined as unknown as number,
+      }),
+    ).rejects.toMatchObject({ code: "COMMENT_REVISION_REQUIRED" });
+  });
+  it("requires a revision on the first edit and rejects stale revisions", async () => {
+    const { service } = harness();
+    const comment = await service.create(base);
+    await expect(
+      service.edit({
+        expectedRevision: 1,
+        context: context(),
+        commentId: comment.id,
         text: "edited",
-        expectedUpdatedAt: "2026-08-10T08:00:00+08:00",
       }),
     ).resolves.toMatchObject({ text: "edited" });
     await expect(
       service.edit({
+        expectedRevision: 1,
         context: context(),
         commentId: comment.id,
         text: "stale",
-        expectedUpdatedAt: "2026-08-09T00:00:00Z",
       }),
     ).rejects.toMatchObject({ statusCode: 409 });
   });
@@ -470,6 +520,7 @@ describe("collaboration regression coverage", () => {
       },
     });
     const edited = await service.edit({
+      expectedRevision: 1,
       context: context(),
       commentId: comment.id,
       text: "plain",
@@ -576,8 +627,9 @@ describe("collaboration side-effect regressions", () => {
   it("does not reuse a deduplication key across successive mention edits", async () => {
     const { service, events } = harness();
     const comment = await service.create(base);
-    for (const text of ["first mention", "second mention"])
+    for (const [index, text] of ["first mention", "second mention"].entries())
       await service.edit({
+        expectedRevision: index + 1,
         context: context(),
         commentId: comment.id,
         text,
@@ -661,6 +713,7 @@ it("preserves author ownership for edit and delete", async () => {
   const other = { ...context(), principalId: id.mentioned };
   await expect(
     service.edit({
+      expectedRevision: 1,
       context: other,
       commentId: comment.id,
       text: "unauthorized edit",

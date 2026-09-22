@@ -43,9 +43,9 @@ The current source has `platform.comments.v1` / `platform.attachments.v1` compil
 
 Specific baseline evidence:
 
-- [Core example](entity-policy-examples/New_Entity/business_partner/core.json): `capabilities.comments` and `capabilities.attachments`.
-- [Operation example](entity-policy-examples/New_Entity/business_partner/operation.json): `attachmentBinding`, including proposed policy defaults.
-- [Core schema](entity-policy-examples/New_Entity/schemas/core.schema.json) and [Operation schema](entity-policy-examples/New_Entity/schemas/operation.schema.json): reviewed capability/binding slots have permissive empty schema declarations; typed nested validation is required.
+- [Core example](../../../metadata/products/mdg/entities/business_partner/core.json): `capabilities.comments` and `capabilities.attachments`.
+- [Operation example](../../../metadata/products/mdg/entities/business_partner/operation.json): `attachmentBinding`, including proposed policy defaults.
+- [Core schema](../../../metadata/schemas/entity-artifacts-v2/core.schema.json) and [Operation schema](../../../metadata/schemas/entity-artifacts-v2/operation.schema.json): reviewed capability/binding slots have permissive empty schema declarations; typed nested validation is required.
 - [Canonical document DDL](../../../server/db/ddl/common/document/03_foundation_tables.sql), [Studio document DDL](../../../server/db/ddl/planes/studio/document/03_tables.sql), and [MetaEntity authoring DDL](../../../server/db/ddl/planes/studio/metadata/03_tables.sql): existing storage and authoring boundaries.
 - [Docker inventory](evidence/entity-attachments-20260921/container-inventory.json): prior snapshot of 55 containers, 54 running. It is historical evidence, not a new health assertion.
 - Prior live DEV probe: Gotenberg `/health` returned 200 but preview adapter `/render` returned 404. Effective parser/render networks differed from current source Compose. Recheck during implementation; no restart was performed in the review.
@@ -125,7 +125,7 @@ Retain the existing `attachmentBinding` location while typing its contents and r
 
 ### Required definition fields
 
-Exact wire names are to be finalized in CA-01; the meanings below are accepted requirements. Examples of future fields are not executable current schema.
+CA-01 finalized nested capability schema version 1 in `server/packages/contracts/publication/src/entity-capabilities.ts`. [Implementation and local acceptance](entity-comments-and-attachments-ca01-ca02-implementation.md) specifies required/default/optional semantics, the Studio mapping and enabled operations. Later-package feature requirements below do not imply that their handlers or UI are already enabled.
 
 | Concern          | Required definition                                                                  | Validation                                                                                                        |
 | ---------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
@@ -241,6 +241,48 @@ These are the existing integration boundaries to inspect/extend, not instruction
 | `deploy/compose/instance/` and effective source-runtime overrides                                                                                 | Actual local provider/network readiness and compatible deployment configuration      |
 | `tests/foundation/`, `tests/foundation-browser/`, service-local test suites                                                                       | Behavioral and real-boundary regression coverage                                     |
 
+### BP workstream handoff — source and release boundary
+
+The agreed release boundary is the [Business Partner collaboration release
+candidate](business-partner-collaboration-release-candidate.md): retain the
+active native intake prerequisite; include BP2-01 and CA-01–CA-08 once their
+open recovery/reply work closes; defer CA-09 and BP2-02–BP2-17. It must use a
+scoped compiled closure, rather than falsely publishing the broad 113-artifact
+review envelope.
+
+Comments, Attachments, Intake Form and BP Phase 2 work uses the reorganized MDG
+authoring tree:
+
+| Input | Authoritative path |
+| --- | --- |
+| Entity definitions | `metadata/products/mdg/entities/` |
+| Review evidence | `metadata/products/mdg/review/` |
+| Draft artifact schemas | `metadata/schemas/entity-artifacts-v2/` |
+| Layout and validation tools | `tooling/scripts/metadata/` |
+
+Edit those paths and coordinate overlapping BP artifact and release-envelope
+changes. Do not recreate or edit `New_Entity` definitions: that directory retains
+only a compatibility bridge for a hashed review envelope and has no editable entity
+definitions. Runtime/UI packages, server providers and DDL retain the owners listed
+above.
+
+The source relocation is verified but remains uncommitted and unmerged. The native
+intake prerequisite and additive Studio/Neon collaboration DDL have been applied in
+DEV; the separate compiled collaboration package has not been signed or activated.
+Source development can continue, but no workstream may infer that its compiled
+metadata changes are live.
+
+Before the scoped compiled DEVFULL release, complete the candidate's CA-04 and CA-07
+work, run the [baseline-pinned 95-artifact runtime set and provider-delta report](business-partner-collaboration-release-candidate.md#scoped-compilation-and-readiness-commands), reconcile authoring-input and
+compiled-output validation without adding placeholder `artifactHash` values, build a
+clean committed source revision, and then sign/publish/verify matching Neon and
+Studio receipts. BP2 source work may proceed in parallel from BP2-02, but it is not
+part of this candidate.
+
+See [the metadata source guide](../../../metadata/README.md),
+[the relocation record](../../../metadata/REORGANIZATION.md), and
+[the DEVFULL readiness record](devfull-bp-publication-readiness.md).
+
 ### CA-00 — Baseline and replacement inventory
 
 - [x] Snapshot current changed files and baseline version; preserve unrelated work.
@@ -255,119 +297,137 @@ Exit: complete — [CA-00 inventory](entity-comments-and-attachments-ca00-invent
 
 ### CA-01 — Typed MetaEntity capability contracts
 
-- [ ] Type Core capability declarations, Operation attachment/comment bindings, policy references and safe presentation/wire projections.
-- [ ] Specify required/default/optional semantics, the current schema version, unknown-property rejection and dependency hashing. Update all local consumers together; no compatibility adapter for superseded development definitions.
-- [ ] Map Studio authoring records to one canonical policy source; add persistence only if CA-00 demonstrates a gap.
-- [ ] Extend compiler/parser and semantic validation; preserve existing artifact authority and release admission.
-- [ ] Compile authorized service actions and supported renderers without exposing raw handler/storage bindings to the browser.
-- [ ] Bind runtime operation/policy resolution for both direct service routes and generic dispatch.
-- [ ] Add the definition cases in section 4 and republish a locally validated fixture through the real compiler path.
-- [ ] Update reviewed JSON schemas, examples, hashes, dependency catalogs and permission/registry evidence together.
+- [x] Type Core capability declarations, Operation attachment/comment bindings, policy references and safe presentation/wire projections.
+- [x] Specify required/default/optional semantics, the current schema version, unknown-property rejection and dependency hashing. Update all local consumers together; no compatibility adapter for superseded development definitions.
+- [x] Map Studio authoring records to one canonical policy source; add persistence only for a demonstrated gap. CA-01 proved the missing change-set member and added `metadata.entity_capability`; see the implementation note.
+- [x] Extend compiler/parser and semantic validation; preserve existing artifact authority and release admission.
+- [x] Compile authorized service actions and supported renderers without exposing raw handler/storage bindings to the browser.
+- [x] Bind runtime operation/policy resolution for both direct service routes and generic dispatch.
+- [x] Add the definition cases in section 4 and republish a locally validated fixture through the real compiler path.
+- [x] Update reviewed JSON schemas, examples, hashes, dependency catalogs and permission/registry evidence together.
 
-Exit: malformed/inconsistent capability definitions cannot activate; a supported valid definition drives both layouts from the same contract.
+Exit: complete — [implementation and local acceptance](entity-comments-and-attachments-ca01-ca02-implementation.md). Malformed/inconsistent capability definitions cannot activate; a supported valid definition drives both layouts from the same contract.
 
 ### CA-02 — Schema, history and reporting
 
-- [ ] Complete section 6 source-model cleanup and select the atomic revision writer.
-- [ ] Add only proven missing fields: revisions/display label, association policy/category, draft upload linkage and admitted-policy evidence as needed.
-- [ ] Preserve immutable attachment fields; do not duplicate existing quota reservation or multipart structures.
-- [ ] Verify compound tenant FKs, unique pins/links, valid folder ownership/cycles and record-scoped list indexes.
-- [ ] Update canonical DDL, manifests, constraints, indexes, grants/RLS, DB contracts and seeds across planes directly; remove obsolete Studio definitions and their consumers.
-- [ ] Define a consistent revision token for new and edited comments and update all readers/writers together; never omit concurrency for the first edit.
-- [ ] Build a fresh disposable database with representative fixtures; run focused comment revision, report/decision and RLS checks. No backfill, historical data mapping or migration replay tests.
+- [x] Complete section 6 source-model cleanup and select the atomic revision writer.
+- [x] Add only proven missing fields: revisions/display label, association policy/category, draft upload linkage and admitted-policy evidence as needed.
+- [x] Preserve immutable attachment fields; do not duplicate existing quota reservation or multipart structures.
+- [x] Verify compound tenant FKs, unique pins/links, valid folder ownership/cycles and record-scoped list indexes.
+- [x] Update canonical DDL, manifests, constraints, indexes, grants/RLS, DB contracts and seeds across planes directly; remove obsolete Studio definitions and their consumers.
+- [x] Define a consistent revision token for new and edited comments and update all readers/writers together; never omit concurrency for the first edit.
+- [x] Build a fresh disposable database with representative fixtures; run focused comment revision, report/decision and RLS checks. No backfill, historical data mapping or migration replay tests.
 
-Exit: fresh schema/seed installation passes; comment edits capture history and reporting uses one canonical path through application roles.
+Exit: complete — all three disposable planes pass. Fresh schema/seed installation passes; comment edits capture history and reporting uses one canonical path through application roles.
 
 ### CA-03 — Policy and authorization admission
 
-- [ ] Create/reuse one capability owner-admission boundary resolving parent membership from verified context and published metadata.
-- [ ] Enforce operation permission plus parent/audience/version state for stage, finalize, association, status, download, preview, history and unlink.
-- [ ] Define Internal membership and Record participants/Only me projections; prohibit broader reply audience and unauthorized mentions.
-- [ ] Keep draft attachment visibility principal-scoped until atomic comment association; explicit share-to-record command handles audience expansion.
-- [ ] Apply the same rules to counts, search results/snippets, reaction/flag targets and notification/AI integrations.
-- [ ] Ensure expired/revoked policy cannot be bypassed by an old browser projection or direct API caller.
-- [ ] Cover cross-tenant/plane, denied parent, same-tenant unauthorized attachment, private thread and revoked collaborator in a compact parameterized service regression suite; check representative real RLS/pool denial in the fresh database.
+- [x] Create/reuse one capability owner-admission boundary resolving parent membership from verified context and published metadata.
+- [x] Enforce operation permission plus parent/audience/version state for stage, finalize, association, status and download. Preview, history and unlink remain unavailable in the current published definition and fail closed before any handler can run.
+- [x] Define Internal membership and Record participants/Only me projections; prohibit broader reply audience and unauthorized mentions.
+- [x] Keep draft attachment visibility principal-scoped until atomic comment association; the association transaction is the only current share-to-record transition.
+- [x] Apply the same rules to comment reads, reader counts/unread projections, reaction/flag targets, notification recipients and their persisted relations. No comment search, snippet or AI reader is published yet; absent capability operations fail closed.
+- [x] Ensure expired/revoked policy cannot be bypassed by an old browser projection or direct API caller.
+- [x] Cover cross-tenant/plane, denied parent, same-tenant unauthorized attachment, private thread and revoked collaborator in a compact parameterized service regression suite; check representative real RLS/pool denial in the fresh database.
 
-Exit: unauthorized IDs, counts, snippets and bytes cannot be disclosed through alternate resource paths; legitimate collaborators can perform permitted operations.
+Exit: complete — published capability admission governs generic dispatch and direct comments/attachments routes. Private comment IDs, revisions, mention rows and reaction rows are hidden by RLS; unadmitted operations and capability readers are unavailable rather than exposing an alternate path. The detailed implementation record is `entity-comments-and-attachments-ca03-implementation.md`.
 
 ### CA-04 — Upload, version and maintenance commands
 
-- [ ] Consolidate browser upload adapters while retaining the existing stage → PUT → finalize protocol and CSRF/BFF boundary.
-- [ ] Stable attachment ID across retries; after lost finalize response query outcome before attempting to stage/PUT again.
-- [ ] Preserve unique immutable candidate copy, bounded hash/scan verification, exact byte-size checks and fail-closed scanner behavior.
-- [ ] Capture admitted policy/release and verify current mandatory constraints at finalization.
-- [ ] Commit clean association, quota and durable processing intent consistently; do not silently lose jobs if queue publication fails.
-- [ ] Version promotion uses expected series revision; comments pin the selected clean version; same-name uploads do not overwrite automatically.
-- [ ] Implement unlink separately from lifecycle delete/purge; evaluate references, expiry, retention and legal holds.
-- [ ] Wire actual reservation/orphan/purge/reconciliation schedules, bounded batches, retries and operator-visible failure states.
-- [ ] Handle cancel/disconnect, stage expiry, late processing, queue replay, concurrent finalization/version updates and policy changes during transfer.
+- [x] Consolidate browser upload adapters while retaining the existing stage → PUT → finalize protocol and CSRF/BFF boundary.
+- [x] Stable attachment ID across retries; after lost finalize response query outcome before attempting to stage/PUT again.
+- [x] Preserve unique immutable candidate copy, bounded hash/scan verification, exact byte-size checks and fail-closed scanner behavior.
+- [x] Capture admitted policy/release and verify current mandatory constraints at finalization.
+- [x] Commit clean association, quota and durable processing intent consistently; do not silently lose jobs if queue publication fails.
+- [x] Version promotion uses expected parent version/current attachment evidence; comments already pin the selected clean version and same-name uploads create a new immutable storage key.
+- [x] Implement unlink separately from lifecycle delete/purge; evaluate references, expiry, retention and legal holds.
+- [x] Wire actual reservation/orphan/purge/reconciliation schedules, bounded batches, retries and operator-visible failure states.
+- [x] Handle cancel/disconnect, stage expiry, late processing, queue replay, concurrent finalization/version updates and policy changes during transfer. Finalization receives the HTTP disconnect signal and releases the storage stream; retries retain the original staged reservation without resolving a changed staging policy; the finalization command resolves current mandatory policy before commit. Delayed expiry changes state conditionally, so a concurrent finalization emits no false expiry event or quota release; replayed expiry work has one terminal transition. Candidate-copy scanning, deleted-during-scan, concurrent-finalizer and expected-series/current-version checks prevent late work from overwriting or resurrecting content.
+
+Unlink is a published `attachments.unlink` action. It resolves current entity admission and the unlink permission, deletes only the matching `document.attachment_link`, and emits `attachments.unlinked` in the owning transaction. If that was the final active series association, the attachment becomes `orphaned`, emits `attachments.orphaned`, and schedules `attachment:<id>:purge`. Neither command deletes object storage directly.
+
+The plane scheduler runs `attachments.reconcile-retention` every five minutes. It claims at most 100 overdue `expired`, `deleted`, or `orphaned` attachment records with `FOR UPDATE SKIP LOCKED`, excludes active legal holds, and enqueues the deterministic purge identity for each. Every purge reloads the tenant-scoped record and rechecks active links, attachment/series retention, and legal holds before deleting bytes and recording `attachments.purged`.
 
 Exit: one upload/command identity produces one admitted outcome and recoverable work; stale retries cannot overwrite or resurrect content.
 
+Verification (2026-09-21): `@athyper/server-service-attachments` typecheck and 55 focused tests pass, including real HTTP disconnect cancellation, scan timeout/failure, late deletion, concurrent finalization, policy-stable staging retry, finalization-versus-expiry race and replayed expiry work. `@athyper/server-platform-host` typecheck passes.
+
 ### CA-05 — Shared readers, revisions and transport
 
-- [ ] Reuse `/api/platform/entity-runtime/v2` section resources for entity record lists; capability APIs remain owners of file/comment operations.
-- [ ] Map any required new service operations before introducing routes. The earlier design's `/api/entities/...` examples are logical resource sketches, not a second entity API family.
-- [ ] Project link/series/version identities, permitted author names, processing status, actions and child-resource revision.
-- [ ] Cursor pagination with deterministic ties; scoped sort/filter/search; authorization before query and disclosure.
-- [ ] Root-thread pagination and independent reply pages; typed draft restore, revisions and unread/count resources.
-- [ ] Apply series predicates and pin-aware version resolution; avoid duplicate files caused by multiple matching associations.
-- [ ] Cache by plane/tenant/principal/authorization/release/record/context/query; invalidate by actual child revision, not BP record version alone.
-- [ ] No hidden capability reads or read-triggered writes; poll only visible pending uploads/derivatives with cancellation/backoff.
-- [ ] Keep signed URLs out of metadata/cache projections; issue on explicit request with TTL and safe headers.
+- [x] Reuse `/api/platform/entity-runtime/v2` section resources for entity record lists; capability APIs remain owners of file/comment operations.
+- [x] Map required reads through the registered `platform.comments.v1` and `platform.attachments.v1` services. The earlier `/api/entities/...` examples remain logical sketches, not a second entity API family.
+- [x] Project link, series, selected/pinned version, permitted author display name, processing status, item revision and authorized actions. Storage keys, policy bindings and signed URLs are never projected.
+- [x] Use bounded cursor pagination with `(created_at,id)` ties and admission before each query. The published reader supports its fixed newest-first scope; no unadmitted sort, filter or text-search input reaches SQL.
+- [x] Page roots by default and direct replies with a validated `threadRootId`; project caller-only typed draft restore, comment revisions, total count and passive unread count. Reads never advance the feed cursor.
+- [x] Apply series predicates and pin-aware version resolution with `DISTINCT ON (series_id)` before global ordering, so multiple matching associations cannot produce duplicate files.
+- [x] Scope the browser cache by tenant, principal, authorization epoch, release, record, context and section query. Paginated merges deduplicate child identities and cache the returned child revision; command callbacks invalidate the affected section.
+- [x] Keep reads lazy and side-effect free. There is no background reader polling; later upload/derivative polling must be visible-only, abortable and back off through the existing upload client.
+- [x] Keep signed URLs out of metadata and cache projections; the already-authorized download action issues a short-lived URL with safe headers.
 
 Exit: drawer/content render the same authorized data, pagination and actions through one reader contract.
 
 ### CA-06 — Shared surface and state coordination
 
-- [ ] Add shared collaboration surface binding to published record presentation; preserve one main landmark/header/primary scroll owner.
-- [ ] Docked drawer on wide layouts; modal sheet/full screen at smaller widths with safe content minimums.
-- [ ] Temporarily suspend Summary View and restore preference on close; coordinate other shell side surfaces without stacking.
-- [ ] Expand/collapse preserves active tab, filters, selected file/thread, drafts, upload IDs and origin scroll/focus.
-- [ ] Implement proposed panel/file/thread URL state through current tab/section semantics; validate deep links and Back/Forward.
-- [ ] Cancel old-record requests and prevent cross-record response/draft/upload contamination.
-- [ ] Keyboard/focus restoration, modal-only focus trap, resize alternative, labels, progress announcements, zoom and reduced motion.
+- [x] Add `EntityCollaborationSurface`, bound only to the published `comments`/`attachments` section keys from the shared entity runtime workspace. The record page keeps its main header, landmark and primary scroll owner.
+- [x] Use a docked desktop surface with an independent secondary scroll region. At 48rem and below, switch to the framework Drawer’s full-screen modal with safe sizing.
+- [x] Suspend Summary View while collaboration is open and restore it on close. Opening the surface emits a shell coordination event that closes the activity/inbox surface before a second side panel can stack.
+- [x] Keep the selected collaboration section in the owning record state and leave the underlying runtime workspace mounted, so its section cache, active tab, draft/upload component state and record scroll position survive open/close. A record or authorization/context change aborts the old requests and starts a fresh workspace generation.
+- [x] Support validated `panel=collaboration` and `collaborationSection` URL state with `popstate`, including Back/Forward. Existing `file` and `thread` query values are preserved by panel navigation and are reserved for the CA-07/CA-08 selected-resource renderers.
+- [x] Prevent cross-record response contamination through the runtime workspace’s `AbortController` and generation guard; it resets section state before fetching a new record/context.
+- [x] Restore the opener focus on close. The phone surface uses the framework’s modal focus trap, Escape and labelled close control; wide mode is non-modal, and both modes retain live status messages from the shared section content.
 
 Exit: desktop/phone and keyboard journeys preserve business context; navigation does not create a comment or upload.
 
 ### CA-07 — Comments experience
 
-- [ ] Bind existing rich JSON composer to parent-aware draft upload policy and typed server-safe content contract.
-- [ ] Add formatting controls, links, permitted mentions/audiences, attachment chips and preserved drafts.
-- [ ] Reconcile attachment-only comment behavior with nonblank text constraints and accessible text projection.
-- [ ] Render author/time/audience, rich content, pinned file chips, reply groups, reactions and tombstones.
-- [ ] Submit with stable idempotency, enforce ready attachments; failed command retains draft and selection.
-- [ ] Inline revision-aware edits and conflict recovery; append-only history permission and display.
-- [ ] Report/comment moderation feedback via canonical report service; moderator decisions remain governance actions.
-- [ ] Ensure draft cancellation/expiry releases only eligible orphan data and never purges shared referenced files.
+- [x] Bind existing rich JSON composer to parent-aware draft upload policy and typed server-safe content contract. Draft save returns its owner-scoped ID and pasted attachment staging carries that ID.
+- [x] Add formatting controls, safe links, admitted audiences, attachment chips and preserved drafts.
+- [x] Add a bounded participant-scoped mention picker backed by fresh principal/plane permissions and owning-record admission. Revalidate selected IDs on submission; private mentions are self-only.
+- [x] Reconcile attachment-only comment behavior with nonblank text constraints and accessible text projection.
+- [x] Render author/time/audience, rich content, pinned file chips, reactions and safe tombstones. Root comments retain their own cursor page; expanding a root loads an independently authorized, cursor-paginated direct-reply group only on demand, and collapse preserves the loaded group without hidden polling.
+- [x] Submit with stable idempotency, enforce ready attachments; failed command retains draft and selection.
+- [x] Inline rich revision edits retain unsaved content after conflicts. Separately load authorized, cursor-paginated immutable history; explicitly adopt the reviewed revision before retrying. History currently follows author-only RLS.
+- [x] Project caller-reported flag status and governance decision codes from the canonical report/decision tables. Exclude reviewer notes/evidence; moderator writes remain governance actions.
+- [x] Persist published draft retention (30-day default; 1–365-day bounds), refresh expiry on save, and expire cancelled drafts. Five-minute plane reconciliation locks at most 100 expired drafts with `FOR UPDATE SKIP LOCKED`, detaches obsolete draft references, preserves shared attachments, and writes orphan outbox intent atomically. Only attachment maintenance may delete bytes after reference/retention/hold checks.
+
+Verification (2026-09-21): 52 collaboration tests, 15 participant/admission tests and 35 publication-contract tests pass. Fresh Neon source provisioning and application-role revision/report/RLS fixtures pass. A separate PostgreSQL fixture exercises save-versus-expiry locking, renewal, cancellation, shared links, retained/legal-held attachments and replay. The metadata validator accepts 113 authoring artifacts. Source now enables mention/history handlers; no DEVFULL DDL or release activation was performed. See [CA-07 implementation evidence](entity-comments-and-attachments-ca07-implementation.md).
 
 Exit: recording-inspired rich comment/reply/reaction/edit/report journey works with multiple actors and restrictive audiences.
 
 ### CA-08 — Files experience and management
 
-- [ ] Shared compact rows and expanded workspace with policy-derived filters, labels and available actions.
-- [ ] Multiple-file browse/drop and focus-scoped paste; real transfer progress distinct from scan/extraction/preview state.
-- [ ] Pending upload queue remains visible to owner; collaborators only receive admitted readable files.
-- [ ] Inline display-name rename, useful details, explicit download and app deep-link copy with errors/retries.
-- [ ] Explicit version upload/history and duplicate-name choice; do not equate replacing bytes with renaming.
-- [ ] Enable categories/folders only after typed handlers and cycle/owner validation pass; nonempty-folder delete has explicit semantics.
-- [ ] Remove-from-record confirmation describes affected link; privileged global deletion describes references/hold outcome.
-- [ ] Per-item batch failures, accessible empty/error/pending states and stale selection recovery.
+- [x] Shared compact rows and an expanded selection/filter workspace expose policy-derived available actions.
+- [x] Multiple-file browse/drop, focus-scoped paste and real transfer progress are implemented.
+- [x] Bind scan/extraction state to each admitted file through an admitted status route. The rendered collection polls only its own visible pending rows with cancellation and bounded backoff; preview remains unavailable pending CA-09 provider qualification.
+- [x] Pending upload queue is owner-only in the server reader; collaborators receive only active, scanned current/pinned versions.
+- [x] Inline display-name rename uses an admitted series-revision command; download, deep-link copy and per-item errors/retries are present. Richer details remain with version/folder work.
+- [x] Explicit version staging requires the current series version and a `new_version` duplicate-name decision. The upload surface offers that choice for matching names, and selected files have direct version-upload and authorized version-history controls.
+- [x] Enable categories/folders through typed admitted handlers. Folder projections, create/move/delete controls and category/folder filters are record-scoped; database owner/cycle guards remain authoritative and nonempty folders are rejected.
+- [x] Remove-from-record confirmation names the affected link. Privileged archive performs an admitted no-store preflight that shows active reference count and legal-hold outcome before confirmation; archive schedules maintenance-only physical purge.
+- [x] Per-item batch failures retain their upload identity and expose independent retry. Empty/error/pending status is announced and stale selection is cleared after refresh.
 
 Exit: browse/upload/retry/filter/rename/version/folder/unlink journeys work without broadening visibility or deleting unrelated evidence.
 
 ### CA-09 — Qualified preview, extraction and search
 
-- [ ] Recheck actual images, effective networks and provider routes; reconcile current source/runtime overlays locally when implementing.
-- [ ] Select a supported derivative protocol implementation. Preserve restricted Gotenberg HTML→PDF; Office conversion requires explicitly qualified configuration/provider support.
-- [ ] Actual image/PDF viewer and first-page thumbnails; unsupported Office/encrypted formats show truthful fallback until qualified.
-- [ ] Scan derivative output and bind source hash/specification; no preview of unchecked output or permanently exposed object URL.
-- [ ] Authorize byte-range delivery, safe content type/disposition, sandbox/origin strategy, expiring URL renewal and close behavior.
-- [ ] Decouple extraction progress from temporary search availability; bounded OCR/page/input/output limits and tenant-fair job concurrency.
-- [ ] Search exact record scope with authorized snippets and bounded pagination; index removal and late-job guards on unlink/delete.
-- [ ] Verify actual preview/extraction requests with a small file; `/health` alone is insufficient. Investigate observed slowness or memory failure without requiring load benchmarks.
+Local implementation and provider/database qualification completed on 2026-09-22.
+See [the CA-09 evidence and acceptance boundary](entity-comments-and-attachments-ca09-qualification.md).
+The internal Pillow/PDFium sidecar implements the derivative protocol. Restricted
+Gotenberg HTML-to-PDF remains separate; Office/encrypted preview is unsupported.
 
-Exit: actual clean preview/extraction/search works; processor failure affects the dependent feature without misrepresenting original-file readiness.
+- [x] Recheck actual images, effective networks and provider routes; Gotenberg is not a `/render` implementation.
+- [x] Select and qualify a compatible internal derivative protocol implementation with real PNG/PDF conversions.
+- [x] Implement image/PDF viewing and first-page thumbnails, with truthful unsupported/failure states.
+- [x] Scan derivative output and bind source hash/specification; unscanned or stale output is not delivered.
+- [x] Authorize expiring byte-range delivery, safe type/disposition, origin isolation, URL renewal and viewer close cleanup.
+- [x] Decouple durable extraction from search availability; enforce OCR/page/input/output limits and bounded per-worker tenant admission.
+- [x] Search exact record scope with authorized snippets and bounded pagination; remove index entries and guard late jobs after unlink/delete.
+- [x] Verify real small-file preview, scanning, extraction, OCR, delivery and database search; inspect memory/restarts without load benchmarks.
+
+Signed-in browser acceptance and governed activation of the updated source
+capability definition remain in CA-10. Local build/service qualification does not
+require a user session. Existing leases may remain usable for their 120-second
+lifetime; new access is denied after unlink or loss of authorization.
 
 ### CA-10 — One final local acceptance pass
 
@@ -464,20 +524,20 @@ Definition of done:
 
 | Work package | Status   | Checks / remaining work                                                                                                         |
 | ------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| CA-00        | Complete | [Baseline inventory](entity-comments-and-attachments-ca00-inventory.md); focused service/client checks pass; CA-01–CA-10 remain |
-| CA-01        | Planned  | Typed contract and compiler work required                                                                                       |
-| CA-02        | Planned  | Direct DDL/seed updates and fresh-database checks required                                                                      |
+| CA-00        | Complete | [Baseline inventory](entity-comments-and-attachments-ca00-inventory.md); focused service/client checks pass; CA-03–CA-10 remain |
+| CA-01        | Complete | Typed contracts, authoring persistence, runtime policy binding and verified local publication pass                                                                                       |
+| CA-02        | Complete | Shared revision/schema cleanup and all three fresh-install/application-role checks pass                                                                      |
 | CA-03        | Planned  | Parent/audience admission qualification required                                                                                |
-| CA-04        | Planned  | Recovery/version/purge implementation required                                                                                  |
-| CA-05        | Planned  | Basic reader exists; complete policy/revision projection required                                                               |
-| CA-06        | Planned  | HTML prototype exists; application surface work required                                                                        |
-| CA-07        | Planned  | Basic commands/composer exist; full shared experience required                                                                  |
-| CA-08        | Planned  | Basic upload/download exist; full management required                                                                           |
-| CA-09        | Planned  | Provider mismatch recorded; live qualification required                                                                         |
-| CA-10        | Planned  | Cross-entity acceptance and cleanup required                                                                                    |
+| CA-04        | Complete | Stable stage/finalize/version/purge lifecycle with deterministic maintenance jobs; focused recovery/race suite and host typecheck pass |
+| CA-05        | Complete | Generic runtime reader now provides admitted root/reply pages, draft/count/unread projections, pin-aware attachment rows and revision-aware client caching; focused reader tests pass |
+| CA-06        | Complete | Shared dock/modal surface, URL/history coordination, Summary restoration and shell-side-surface coordination are wired; focused typechecks pass |
+| CA-07        | In progress | Participant mentions, grouped reply paging, rich revision conflict/history UI, reporter-only moderation feedback and reference-safe draft cleanup are implemented and locally tested; integrated browser acceptance remains |
+| CA-08        | Complete | Shared file workspace, owner-only pending/status polling, revision-safe rename, version staging/history, category/folder management, unlink/archive outcomes and batch recovery are wired |
+| CA-09        | Complete | [Local qualification](entity-comments-and-attachments-ca09-qualification.md): real preview/OCR/ranges and record-scoped database checks pass; signed-in UI acceptance and governed activation carry to CA-10 |
+| CA-10        | In progress | [Focused local acceptance](entity-comments-and-attachments-ca10-local-acceptance.md) passes; release 13 is signed and active; NEON preview/search/comment/file UI acceptance passes; second-entity, Studio/Mesh and mention/inbox acceptance remain open |
 
 ### Documentation validation
 
-This revision updates planning documents only. Validate Markdown formatting, local links/anchors, referenced source paths and consistency of accepted/planned/deferred labels. Application tests and service probes are not evidence for this documentation-only change unless separately executed and recorded.
+CA-05 and CA-06 are implemented locally. Validate Markdown formatting, local links/anchors, referenced source paths and consistency of accepted/planned/deferred labels alongside the focused reader tests and affected package typechecks recorded above.
 
 Revision 3 supersedes revision 2's migration/reconciliation procedures, V01–V14 evidence gates and production-style operational acceptance. The complete implementation scope and strict metadata/authorization requirements remain. No database reset, schema change, application implementation or Docker restart is performed by this documentation revision.

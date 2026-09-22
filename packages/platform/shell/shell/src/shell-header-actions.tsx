@@ -91,6 +91,14 @@ export function HeaderActions({
     };
   }, [active, closeAction, onActiveChange]);
   useEffect(() => {
+    const closeForRecordCollaboration = (event: Event) => {
+      const detail = event instanceof CustomEvent ? event.detail as { open?: unknown } : undefined;
+      if (detail?.open === true) closeAction();
+    };
+    window.addEventListener("athyper:record-collaboration-surface", closeForRecordCollaboration);
+    return () => window.removeEventListener("athyper:record-collaboration-surface", closeForRecordCollaboration);
+  }, [closeAction]);
+  useEffect(() => {
     if (active === "more")
       requestAnimationFrame(() =>
         overflowPanel.current
@@ -226,7 +234,7 @@ export function HeaderActions({
       ) : null}
       {active === "notifications" || active === "inbox" ? (
         <ShellSurfaceBoundary
-          key={active}
+          key="activity"
           label="Activity recovery"
           onClose={closeAction}
         >

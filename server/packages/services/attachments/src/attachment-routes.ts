@@ -1,9 +1,10 @@
+import { MalwareDocumentUnsupportedError } from "@athyper/server-contract-malware-scanning";
 import type {
   Authorizer,
   VerifiedRequestContext,
 } from "@athyper/server-contract-auth";
 import type { ContentAclService } from "@athyper/server-contract-content";
-import type { Application, RequestHandler, Response } from "express";
+import type { Application, Request, RequestHandler, Response } from "express";
 import {
   AttachmentConflictError,
   AttachmentDownloadError,
@@ -12,6 +13,7 @@ import {
 import { QuotaExceededError } from "./quota.js";
 
 export interface AttachmentRouteOptions {
+  readonly authorizeCapability?: (context: VerifiedRequestContext, action: string, input: Readonly<Record<string, unknown>>, mode?: { readonly preflight: boolean }) => Promise<{readonly admittedReleaseHash: string; readonly admittedPolicyHash: string; readonly entityType?: string; readonly entityId?: string; readonly commentId?: string} | undefined>;
   readonly authenticate: RequestHandler;
   readonly readContext: (response: Response) => VerifiedRequestContext;
   readonly authorizer: Authorizer;
@@ -24,6 +26,20 @@ export function registerAttachmentRoutes(
   application: Application,
   options: AttachmentRouteOptions,
 ): void {
+  application.get("/api/attachments/:attachmentId/archive",options.authenticate,async(request,response,next)=>{try{const context=options.readContext(response),attachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId");await admitAttachmentAction(options, request,context,"archive",{attachmentId},"delete",{attachmentId},false);if(!options.attachments.archiveOutcome)throw new Error("Attachment lifecycle does not support archive outcome");response.setHeader("Cache-Control","private, no-store");response.json(await options.attachments.archiveOutcome({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId}));}catch(error){handle(error,response,next);}});
+  application.post("/api/attachments/:attachmentId/archive",options.authenticate,async(request,response,next)=>{try{const context=options.readContext(response),attachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId");await admitAttachmentAction(options, request,context,"archive",{attachmentId},"delete",{attachmentId},false);if(!options.attachments.archive)throw new Error("Attachment lifecycle does not support archive");response.status(200).json(await options.attachments.archive({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId}));}catch(error){handle(error,response,next);}});
+  application.post("/api/attachments/folders", options.authenticate, async (request, response, next) => { try {
+    const context=options.readContext(response), value=body(request.body), command=text(value,"command",16) as "create" | "move" | "delete", owner=coordinate(value);
+    // Folder management belongs to the same entity-scoped capability as the
+    // file collection. Do not require the legacy global attachment-create ACL
+    // after that capability has admitted the record and its parent scope.
+    const expectedRevision=positiveInteger(value,"expectedRevision"), idempotencyKey=request.get?.("Idempotency-Key") ?? (typeof value["idempotencyKey"] === "string" ? value["idempotencyKey"] : "");
+    await admitAttachmentAction(options, request,context,"folder",{...value,...owner,expectedRevision,idempotencyKey},"create",{resourceId:String(value["folderId"] ?? "")},false);
+    if (!options.attachments.manageFolder) throw new Error("Attachment lifecycle does not support folders");
+    const result=await options.attachments.manageFolder({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId:value["attachmentId"]===undefined?"00000000-0000-4000-8000-000000000000":uuid(value,"attachmentId")},{command,entityType:owner.entityType!,entityId:owner.entityId!,folderId:command==="move" && value["folderId"]===null ? null : uuid(value,"folderId"),expectedRevision,idempotencyKey,...(value["name"] ? {name:text(value,"name",256)} : {}),...(value["parentFolderId"] ? {parentFolderId:uuid(value,"parentFolderId")} : {}),...(value["attachmentId"] ? {attachmentId:uuid(value,"attachmentId")} : {})});
+    response.status(200).json(result);
+  } catch(error){handle(error,response,next);} });
+  application.post("/api/attachments/:attachmentId/category", options.authenticate, async (request,response,next)=>{try { const context=options.readContext(response), attachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId"), value=body(request.body), owner=coordinate(value), category=text(value,"category",32) as "general"|"evidence"; await admitAttachmentAction(options, request,context,"category",{...value,...owner,attachmentId},"create",{attachmentId,resourceId:attachmentId},false); if(!options.attachments.setCategory) throw new Error("Attachment lifecycle does not support categories"); await options.attachments.setCategory({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId},{entityType:owner.entityType!,entityId:owner.entityId!,category}); response.status(204).end(); }catch(error){handle(error,response,next);}});
   application.post(
     "/api/attachments/stage",
     options.authenticate,
@@ -36,6 +52,14 @@ export function registerAttachmentRoutes(
           contentType = text(value, "contentType", 255),
           sizeBytes = integer(value, "sizeBytes");
         const owner = coordinate(value);
+        const draftId = value["draftId"] === undefined ? undefined : uuid(value, "draftId");
+        const parentAttachmentId = value["parentAttachmentId"] === undefined ? undefined : uuid(value, "parentAttachmentId");
+        const expectedSeriesVersion = value["expectedSeriesVersion"] === undefined ? undefined : integer(value, "expectedSeriesVersion");
+        const versioning = parentAttachmentId !== undefined;
+        if (versioning && (expectedSeriesVersion === undefined || expectedSeriesVersion < 1 || value["duplicateNameChoice"] !== "new_version"))
+          throw new RouteError(400, "ATTACHMENT_VERSION_INPUT_INVALID", "A version upload requires its current series version and an explicit new-version choice");
+        if (!versioning && (expectedSeriesVersion !== undefined || value["duplicateNameChoice"] !== undefined))
+          throw new RouteError(400, "ATTACHMENT_VERSION_INPUT_INVALID", "Version input requires a parent attachment");
         if (
           owner.entityType === "content.item" &&
           options.contentAcl &&
@@ -53,9 +77,15 @@ export function registerAttachmentRoutes(
           );
           return;
         }
-        await allowedAttachment(
-          options.authorizer,
+        // Entity App attachments are admitted by the published entity capability.
+        // Its parent scope (for example, the BP operating organization) is part of
+        // that decision and is intentionally not reconstructed as an attachment-ID
+        // resource check. Owners without a capability retain the legacy route gate.
+        const admission = await admitAttachmentAction(
+          options, request,
           context,
+          versioning ? "version" : "create",
+          { ...value, ...owner, ...(draftId ? { draftId } : {}) },
           "create",
           { attachmentId, resourceId: attachmentId },
           owner.entityType === "atlas.prompt",
@@ -78,12 +108,29 @@ export function registerAttachmentRoutes(
           contentType,
           sizeBytes,
           ...owner,
+          ...(draftId ? { draftId } : {}),
+          ...(parentAttachmentId ? { parentAttachmentId, expectedSeriesVersion } : {}),
+          ...admission,
         });
         response.setHeader("Cache-Control", "private, no-store");
-        response.status(201).json(staged);
+        response.status(201).json({attachmentId:staged.attachmentId,uploadUrl:staged.uploadUrl,expiresAt:staged.expiresAt});
       } catch (error) {
         handle(error, response, next);
       }
+    },
+  );
+  application.patch(
+    "/api/attachments/:attachmentId",
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        const context = options.readContext(response), attachmentId = uuidValue(String(request.params["attachmentId"] ?? ""), "attachmentId"), value = body(request.body);
+        await admitAttachmentAction(options, request, context, "rename", { ...value, attachmentId },
+          "create", { attachmentId, resourceId: attachmentId }, false);
+        if (!options.attachments.rename) throw new Error("Attachment lifecycle does not support rename");
+        const result = await options.attachments.rename({ planeKey: context.planeKey, tenantId: context.tenantId, principalId: context.principalId, attachmentId }, { displayName: text(value, "displayName", 1024), expectedSeriesRevision: text(value, "expectedSeriesRevision", 64) });
+        response.status(200).json({ attachmentId: result.id, seriesId: result.seriesId, displayName: value["displayName"] });
+      } catch (error) { handle(error, response, next); }
     },
   );
   application.post(
@@ -111,14 +158,16 @@ export function registerAttachmentRoutes(
             String(request.params["attachmentId"] ?? ""),
             "attachmentId",
           );
-        await allowedAttachment(
-          options.authorizer,
+        const value = body(request.body);
+        await admitAttachmentAction(
+          options, request,
           context,
           "finalize",
+          { attachmentId },
+          "finalize",
           { attachmentId, resourceId: attachmentId },
-          await isAtlasAttachment(options, context, attachmentId),
+          () => isAtlasAttachment(options, context, attachmentId),
         );
-        const value = body(request.body);
         const result = await options.attachments.finalize(
           {
             planeKey: context.planeKey,
@@ -127,7 +176,10 @@ export function registerAttachmentRoutes(
             attachmentId,
           },
           text(value, "contentType", 255),
-          { signal: abortOnDisconnect.signal },
+          { signal: abortOnDisconnect.signal, authorizeCommit: async () => {
+            await admitAttachmentAction(options, request, context, "finalize", { attachmentId }, "finalize",
+              { attachmentId, resourceId: attachmentId }, await isAtlasAttachment(options, context, attachmentId));
+          } },
         );
         response
           .status(200)
@@ -149,14 +201,17 @@ export function registerAttachmentRoutes(
             String(request.params["attachmentId"] ?? ""),
             "attachmentId",
           );
-        await allowedAttachment(
-          options.authorizer,
+        const admission = await admitAttachmentAction(
+          options, request,
           context,
+          "status",
+          { attachmentId },
           "read",
           { attachmentId, resourceId: attachmentId },
-          await isAtlasAttachment(options, context, attachmentId),
+          () => isAtlasAttachment(options, context, attachmentId),
         );
-        const result = await options.attachments.status({
+        const read = admission && options.attachments.authorizedStatus ? options.attachments.authorizedStatus : options.attachments.status;
+        const result = await read({
           planeKey: context.planeKey,
           tenantId: context.tenantId,
           principalId: context.principalId,
@@ -187,18 +242,20 @@ export function registerAttachmentRoutes(
             String(request.params["attachmentId"] ?? ""),
             "attachmentId",
           );
-        await allowedAttachment(
-          options.authorizer,
-          context,
-          "download",
-          { attachmentId, resourceId: attachmentId },
-          false,
-        );
         const value = body(request.body ?? {}),
           ttl =
             value["expirySeconds"] === undefined
               ? 120
               : integer(value, "expirySeconds");
+        await admitAttachmentAction(
+          options, request,
+          context,
+          "download",
+          { attachmentId },
+          "download",
+          { attachmentId, resourceId: attachmentId },
+          false,
+        );
         const result = await options.attachments.createAuthorizedDownload(
           {
             planeKey: context.planeKey,
@@ -226,14 +283,28 @@ export function registerAttachmentRoutes(
             String(request.params["attachmentId"] ?? ""),
             "attachmentId",
           );
-        await allowedAttachment(
-          options.authorizer,
+        const admission = await admitAttachmentAction(
+          options, request,
           context,
+          "unlink",
+          { attachmentId },
           "delete",
           { attachmentId, resourceId: attachmentId },
-          await isAtlasAttachment(options, context, attachmentId),
+          () => isAtlasAttachment(options, context, attachmentId),
         );
-        await options.attachments.deactivate(
+        if (admission?.entityType && admission.entityId) {
+          if (!options.attachments.unlink)
+            throw new Error("Attachment lifecycle does not support unlink");
+          await options.attachments.unlink(
+            {
+              planeKey: context.planeKey,
+              tenantId: context.tenantId,
+              principalId: context.principalId,
+              attachmentId,
+            },
+            { entityType: admission.entityType, entityId: admission.entityId },
+          );
+        } else await options.attachments.deactivate(
           {
             planeKey: context.planeKey,
             tenantId: context.tenantId,
@@ -285,7 +356,9 @@ export function registerAttachmentRoutes(
           attachmentId = uuid(value, "newAttachmentId"),
           fileName = text(value, "fileName", 1024),
           contentType = text(value, "contentType", 255),
-          sizeBytes = integer(value, "sizeBytes");
+          sizeBytes = integer(value, "sizeBytes"),
+          expectedSeriesVersion = integer(value, "expectedSeriesVersion");
+        if (expectedSeriesVersion < 1) throw new RouteError(400, "ATTACHMENT_VERSION_INPUT_INVALID", "A positive current series version is required");
         if (sizeBytes < 1 || sizeBytes > options.maxUploadBytes) {
           problem(
             response,
@@ -304,10 +377,11 @@ export function registerAttachmentRoutes(
           contentType,
           sizeBytes,
           parentAttachmentId,
+          expectedSeriesVersion,
           entityType: "content.item",
           entityId: contentItemId,
         });
-        response.status(201).json(staged);
+        response.status(201).json({attachmentId:staged.attachmentId,uploadUrl:staged.uploadUrl,expiresAt:staged.expiresAt});
       } catch (error) {
         handle(error, response, next);
       }
@@ -404,6 +478,39 @@ async function allowedAttachment(
     `Missing attachment ${operation} permission`,
   );
 }
+
+/**
+ * Prefer an admitted entity capability when the attachment belongs to an Entity
+ * App record. The shared attachment route cannot reproduce a parent's full
+ * scope from an attachment ID alone. Dedicated content and Atlas owners return
+ * no admission and continue through their existing permission boundary.
+ */
+async function admitAttachmentAction(
+  options: AttachmentRouteOptions,
+  request: Request,
+  context: VerifiedRequestContext,
+  action: string,
+  input: Readonly<Record<string, unknown>>,
+  legacyOperation: "create" | "finalize" | "read" | "download" | "delete",
+  legacyResource: Readonly<Record<string, unknown>>,
+  atlasPrompt: boolean | (() => Promise<boolean>),
+) {
+  // Relay transports idempotency in a header, while capability admission reads
+  // command input. Preserve the same key through initial and commit admission.
+  const idempotencyKey = request.get?.("Idempotency-Key");
+  const admission = await options.authorizeCapability?.(context, action,
+    idempotencyKey ? { ...input, idempotencyKey } : input,
+    ...(request.method === "GET" && action === "archive" ? [{preflight:true}] as const : []));
+  if (admission) return admission;
+  await allowedAttachment(
+    options.authorizer,
+    context,
+    legacyOperation,
+    legacyResource,
+    typeof atlasPrompt === "function" ? await atlasPrompt() : atlasPrompt,
+  );
+  return undefined;
+}
 function body(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new RouteError(400, "INVALID_BODY", "JSON object required");
@@ -436,6 +543,12 @@ function uuidValue(value: string, key: string): string {
   )
     throw new RouteError(400, "INVALID_FIELD", `${key} must be a UUID`);
   return value;
+}
+
+function positiveInteger(value: Record<string, unknown>, key: string): number {
+  const candidate=value[key];
+  if (!Number.isSafeInteger(candidate) || Number(candidate) < 1) throw new TypeError(`${key} must be a positive integer`);
+  return Number(candidate);
 }
 function coordinate(value: Record<string, unknown>): {
   entityType?: string;
@@ -480,7 +593,11 @@ function handle(
   response: Response,
   next: (error?: unknown) => void,
 ): void {
-  if (error instanceof QuotaExceededError) {
+  if (error instanceof Error && "code" in error && error.code === "ENTITY_CAPABILITY_DENIED") {
+    problem(response,403,"ENTITY_CAPABILITY_DENIED","Entity capability is unavailable or not authorized");
+  } else if (error instanceof MalwareDocumentUnsupportedError) {
+    problem(response, 422, error.code, error.message);
+  } else if (error instanceof QuotaExceededError) {
     response.setHeader("Retry-After", String(error.policy.retryAfterSeconds));
     response
       .status(429)

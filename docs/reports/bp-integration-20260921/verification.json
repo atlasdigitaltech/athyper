@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-09-21T03:24:14.818389+00:00",
+  "build": {
+    "command": "pnpm build",
+    "successful": 110,
+    "total": 110,
+    "cached": 66
+  },
+  "tests": {
+    "passed": {
+      "collaboration": 52,
+      "attachments": 53,
+      "experience": 93,
+      "studio-authoring": 103,
+      "publication": 205,
+      "records": 289,
+      "master-data": 430,
+      "platform-host": 466
+    },
+    "totalPassed": 1691,
+    "skipped": 29,
+    "cliTestsPassed": 2
+  },
+  "typechecks": [
+    "collaboration",
+    "attachments",
+    "experience",
+    "studio-authoring",
+    "publication",
+    "records",
+    "master-data",
+    "platform-host"
+  ],
+  "sourceArtifactsValidated": 113,
+  "publicationStatus": "blocked",
+  "applicationRestarted": false,
+  "qaStagingProductionChanged": false
+}

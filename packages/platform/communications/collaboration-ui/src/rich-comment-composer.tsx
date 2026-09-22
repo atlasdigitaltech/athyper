@@ -1,6 +1,8 @@
 "use client";
+import { ComposerFrame, ComposerHeader, ComposerFooter, Tooltip } from "@athyper/platform-ui";
+import { CommentAudiencePicker } from "./comment-audience-picker";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useEffectEvent, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import { convertClipboard, serializeForClipboard, uploadClipboardImages, type ClipboardImageUploader } from "./clipboard-converter";
 import { createAttachmentApiClient } from "./attachment-client";
 import { RICH_TEXT_SCHEMA, type RichTextDocument, type RichTextNode } from "./rich-text-types";
@@ -9,6 +11,8 @@ export interface RichCommentSubmission {
   readonly entityType: string;
   readonly entityId: string;
   readonly parentCommentId?: string;
+  /** Server-issued, principal-scoped draft identity for pasted attachment uploads. */
+  readonly draftId?: string;
   readonly text: string;
   readonly format: "rich_json";
   readonly content: RichTextDocument;
@@ -17,14 +21,31 @@ export interface RichCommentSubmission {
   readonly visibility: "public" | "internal" | "private";
 }
 export interface RichCommentComposerProps {
+  readonly header?: React.ReactNode;
+  readonly supportingContent?: React.ReactNode;
+  readonly searchMentions?: (query:string,visibility:"public"|"internal"|"private")=>Promise<readonly {id:string;displayName:string}[]>;
   readonly entityType: string;
   readonly entityId: string;
   readonly parentCommentId?: string;
+  /** Server-issued, principal-scoped draft identity for pasted attachment uploads. */
+  readonly draftId?: string;
   readonly initialDocument?: RichTextDocument;
   readonly uploader?: ClipboardImageUploader;
+  readonly prepareAttachments?: (document: RichTextDocument, visibility: "public" | "internal" | "private") => Promise<{draftId:string; allowedContentTypes:readonly string[]; maxFileBytes:number}>;
+  readonly maxAttachments?: number;
   readonly onSubmit: (submission: RichCommentSubmission) => Promise<void>;
-  readonly onDraftChange?: (document: RichTextDocument) => void;
+  readonly onDraftChange?: (document: RichTextDocument, visibility?: "public" | "internal" | "private") => void;
+  readonly allowedAudiences?: readonly ("public" | "internal" | "private")[];
+  readonly defaultAudience?: "public" | "internal" | "private";
+  /** Attachment images require an admitted parent draft/attachment policy. */
+  readonly allowAttachments?: boolean;
   readonly placeholder?: string;
+  readonly submitLabel?: string;
+  readonly submitAriaLabel?: string;
+  readonly audienceLockedReason?: string;
+  readonly onBusyChange?: (busy:boolean)=>void;
+  readonly onCancel?: () => void;
+  readonly cancelLabel?: string;
   readonly disabled?: boolean;
   readonly className?: string;
 }
@@ -33,23 +54,81 @@ const EMPTY: RichTextDocument = { type: "doc", schema: RICH_TEXT_SCHEMA, content
 
 /** Dependency-light replacement composer; editor frameworks can wrap the same document callbacks later. */
 export function RichCommentComposer(props: RichCommentComposerProps) {
+  const filePicker = useRef<HTMLInputElement>(null);
+  const editorLabelId = useId();
   const [value, setValue] = useState(props.initialDocument ?? EMPTY); const [uploadCount, setUploadCount] = useState(0); const [submitting, setSubmitting] = useState(false); const [error, setError] = useState<string>();
-  const editor = useRef<HTMLDivElement>(null); const uploader = useMemo(() => props.uploader ?? createAttachmentApiClient(), [props.uploader]);
+  const audiences = props.allowedAudiences?.length ? props.allowedAudiences : ["internal"] as const;
+  const [visibility, setVisibility] = useState<"public" | "internal" | "private">(audiences.includes(props.defaultAudience ?? "internal") ? props.defaultAudience ?? "internal" : audiences[0]!);
+  const editor = useRef<HTMLDivElement>(null); const uploader = useMemo(() => props.uploader ?? createAttachmentApiClient({ baseUrl: "/api/relay/attachments", entityType: props.entityType, entityId: props.entityId, ...(props.draftId ? { draftId: props.draftId } : {}) }), [props.uploader, props.entityType, props.entityId, props.draftId]);
+  const [mentionQuery,setMentionQuery]=useState(""), [mentionOptions,setMentionOptions]=useState<readonly {id:string;displayName:string}[]>([]);
+  // Parent callbacks can be recreated on every render. They are event handlers,
+  // not reasons to restart a search or publish another identical busy state.
+  const searchMentions = useEffectEvent(async (query: string, audience: "public" | "internal" | "private") =>
+    await props.searchMentions?.(query, audience) ?? []);
+  const mentionsEnabled = Boolean(props.searchMentions);
+  useEffect(() => {
+    setMentionOptions(current => current.length ? [] : current);
+    if (!mentionsEnabled || !mentionQuery.trim()) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void searchMentions(mentionQuery, visibility).then(items => {
+        if (!cancelled) setMentionOptions(items);
+      }).catch(() => {
+        if (!cancelled) setMentionOptions(current => current.length ? [] : current);
+      });
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [mentionsEnabled, mentionQuery, visibility, props.entityType, props.entityId, props.parentCommentId]);
   const busy = uploadCount > 0 || submitting || Boolean(props.disabled);
+  const notifyBusy = useEffectEvent((value: boolean) => props.onBusyChange?.(value));
+  useEffect(() => { notifyBusy(busy); }, [busy]);
 
-  const commit = useCallback((next: RichTextDocument) => { setValue(next); props.onDraftChange?.(next); }, [props.onDraftChange]);
-  const append = useCallback((pasted: RichTextDocument) => { setValue((current) => { const next = merge(current, pasted); props.onDraftChange?.(next); return next; }); }, [props.onDraftChange]);
+
+  const commit = useCallback((next: RichTextDocument) => { setValue(next); props.onDraftChange?.(next,visibility); }, [props.onDraftChange,visibility]);
+  const append = useCallback((pasted: RichTextDocument) => {
+    const next = merge(value, pasted);
+    setValue(next);
+    props.onDraftChange?.(next,visibility);
+    // Paste is prevented so hostile source markup cannot enter the editable
+    // DOM. Synchronize the safe converted document immediately: the normal
+    // effect deliberately avoids changing a focused editor to preserve its
+    // typing caret, which otherwise leaves a successful paste invisible.
+    if (editor.current) editor.current.innerHTML = serializeForClipboard(next)["text/html"] ?? "";
+  }, [props.onDraftChange, value,visibility]);
   useEffect(() => { if (editor.current && document.activeElement !== editor.current) editor.current.innerHTML = serializeForClipboard(value)["text/html"] ?? ""; }, [value]);
 
   const onPaste = useCallback(async (event: React.ClipboardEvent<HTMLDivElement>) => {
     let conversion;
     try { conversion = convertClipboard(event.clipboardData); } catch (cause) { event.preventDefault(); setError(message(cause)); return; }
     if (!conversion) return;
+    if (conversion.pendingImages.length && props.allowAttachments === false) { event.preventDefault(); setError("Attachments are not enabled for this comment."); return; }
+    if (conversion.pendingImages.length && !props.draftId) { event.preventDefault(); setError("Save a text draft before adding attachments."); return; }
     event.preventDefault(); setError(undefined); setUploadCount((count) => count + conversion.pendingImages.length);
     try { const resolved = await uploadClipboardImages(conversion, uploader); append(resolved); }
     catch (cause) { setError(message(cause)); }
     finally { setUploadCount((count) => Math.max(0, count - conversion.pendingImages.length)); }
-  }, [append, uploader]);
+  }, [append, uploader, props.allowAttachments, props.draftId]);
+
+  const pickFiles = async (files: readonly File[]) => {
+    if (busy || !files.length || props.allowAttachments === false) return;
+    setError(undefined); setUploadCount(files.length);
+    try {
+      if (collectAttachments(value).length + files.length > (props.maxAttachments ?? 10)) throw new Error(`A comment can contain up to ${props.maxAttachments ?? 10} attachments.`);
+      const policy = await props.prepareAttachments?.(value, visibility);
+      if (!policy) throw new Error("Attachment upload is unavailable for this comment.");
+      for (const file of files) {
+        if (!policy.allowedContentTypes.includes(file.type) || file.size < 1 || file.size > policy.maxFileBytes) throw new Error(`“${file.name}” is not supported. Allowed types: ${policy.allowedContentTypes.join(", ")}; maximum ${Math.round(policy.maxFileBytes / 1048576)} MB.`);
+      }
+      const upload = props.uploader ?? createAttachmentApiClient({entityType:props.entityType,entityId:props.entityId,draftId:policy.draftId});
+      let next = value;
+      for (const file of files) {
+        const result = await upload.upload(file,{token:crypto.randomUUID()});
+        next = merge(next,{type:"doc",schema:RICH_TEXT_SCHEMA,content:[{type:file.type.startsWith("image/")?"attachmentImage":"attachmentFile",attrs:{attachmentId:result.attachmentId,alt:file.name}}]});
+        commit(next);
+        if(editor.current) editor.current.innerHTML=serializeForClipboard(next)["text/html"] ?? "";
+      }
+    } catch(cause) {setError(message(cause));} finally {setUploadCount(0);}
+  };
 
   const onInput = useCallback((event: FormEvent<HTMLDivElement>) => {
     const html = event.currentTarget.innerHTML; const text = event.currentTarget.innerText;
@@ -61,19 +140,53 @@ export function RichCommentComposer(props: RichCommentComposerProps) {
     if (busy) return; const serialized = serializeForClipboard(value); const text = (serialized["text/plain"] ?? "").trim(); const attachmentIds = collectAttachments(value);
     if (!text && attachmentIds.length === 0) return;
     setSubmitting(true); setError(undefined);
-    try { await props.onSubmit({ entityType: props.entityType, entityId: props.entityId, ...(props.parentCommentId ? { parentCommentId: props.parentCommentId } : {}), text, format: "rich_json", content: value, contentSchema: RICH_TEXT_SCHEMA, attachmentIds, visibility: "internal" }); commit(EMPTY); if (editor.current) editor.current.innerHTML = ""; }
+    try { await props.onSubmit({ entityType: props.entityType, entityId: props.entityId, ...(props.parentCommentId ? { parentCommentId: props.parentCommentId } : {}), text, format: "rich_json", content: value, contentSchema: RICH_TEXT_SCHEMA, attachmentIds, visibility }); commit(EMPTY); if (editor.current) editor.current.innerHTML = ""; }
     catch (cause) { setError(message(cause)); }
     finally { setSubmitting(false); }
   }, [busy, commit, props, value]);
 
-  return <div className={props.className} data-collaboration-composer="rich-json">
-    <div ref={editor} role="textbox" aria-multiline="true" aria-label={props.placeholder ?? "Write a comment"} contentEditable={!busy} suppressContentEditableWarning onPaste={(event) => void onPaste(event)} onInput={onInput} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter") { event.preventDefault(); void submit(); } }} data-placeholder={props.placeholder ?? "Write a comment…"} />
-    {uploadCount > 0 ? <p role="status">Uploading {uploadCount} pasted image{uploadCount === 1 ? "" : "s"}…</p> : null}
+  const [linkEditing,setLinkEditing] = useState(false), [linkUrl,setLinkUrl] = useState("");
+  const linkSelection = useRef<Range | undefined>(undefined);
+  const format = (command: "bold" | "italic" | "underline" | "createLink") => {
+    editor.current?.focus();
+    if (command === "createLink") {
+      const selection = window.getSelection();
+      linkSelection.current = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : undefined;
+      setLinkUrl(""); setLinkEditing(true); return;
+    } else document.execCommand(command);
+    editor.current?.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  };
+  return <ComposerFrame className={props.className} data-collaboration-composer="rich-json" header={props.header ? <ComposerHeader>{props.header}</ComposerHeader> : undefined}>
+    {linkEditing ? <form className="a-rich-comment-composer__link" onSubmit={event=>{event.preventDefault();const href=linkUrl.trim();if(!/^https?:\/\//i.test(href)){setError("Enter an http or https link.");return;}editor.current?.focus();const selection=window.getSelection();if(selection&&linkSelection.current){selection.removeAllRanges();selection.addRange(linkSelection.current);}document.execCommand("createLink",false,href);if(editor.current){const converted=convertClipboard({getData:type=>type==="text/html"?editor.current!.innerHTML:editor.current!.innerText});if(converted)commit(converted.document);}setLinkEditing(false);setError(undefined);}}><label>Link URL<input type="url" value={linkUrl} onChange={event=>setLinkUrl(event.currentTarget.value)} placeholder="https://" autoFocus /></label><button type="submit">Insert link</button><button type="button" onClick={()=>setLinkEditing(false)}>Cancel</button></form> : null}
+    <span id={editorLabelId} className="a-rich-comment-composer__editor-label a-visually-hidden">Comment</span>
+    <div ref={editor} className="a-rich-comment-composer__editor" data-composer-editor="" role="textbox" aria-multiline="true" aria-labelledby={editorLabelId} contentEditable={!busy} suppressContentEditableWarning onPaste={(event) => void onPaste(event)} onInput={onInput} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter") { event.preventDefault(); void submit(); } }} data-empty={!serializeForClipboard(value)["text/plain"]?.trim()} aria-placeholder={props.placeholder ?? "Write a comment…"} data-placeholder={props.placeholder ?? "Write a comment…"} />
+
+    {collectAttachments(value).length ? <ul className="a-rich-comment-composer__attachments" aria-label="Comment attachments">{collectAttachments(value).map((id) => <li key={id}>{attachmentLabel(value,id)}<button type="button" disabled={busy} aria-label={`Remove attachment ${attachmentLabel(value,id)}`} onClick={()=>commit(withoutAttachment(value,id))}>×</button></li>)}</ul> : null}
+    {uploadCount > 0 ? <p role="status">Uploading {uploadCount} file{uploadCount === 1 ? "" : "s"}…</p> : null}
     {error ? <p role="alert">{error}</p> : null}
-    <button type="button" disabled={busy} onClick={() => void submit()}>{submitting ? "Sending…" : "Send"}</button>
-  </div>;
+    {props.supportingContent}
+    <ComposerFooter className="a-rich-comment-composer__footer">
+    <div role="toolbar" aria-label="Comment formatting"><button type="button" disabled={busy} onClick={() => format("bold")}><strong>B</strong><span className="a-visually-hidden">Bold</span></button><button type="button" disabled={busy} onClick={() => format("italic")}><em>I</em><span className="a-visually-hidden">Italic</span></button><button type="button" disabled={busy} onClick={() => format("underline")}><u>U</u><span className="a-visually-hidden">Underline</span></button><button type="button" disabled={busy} onClick={() => format("createLink")}>Link</button>{props.allowAttachments && props.prepareAttachments ? <><Tooltip label="Attach files"><button type="button" aria-label="Attach files to comment" disabled={busy} onClick={()=>filePicker.current?.click()}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m21 11-9 9a6 6 0 0 1-8.5-8.5L13 2a4 4 0 0 1 5.7 5.7l-9.5 9.5a2 2 0 0 1-2.8-2.8L15 6"/></svg></button></Tooltip><input ref={filePicker} type="file" multiple hidden aria-label="Choose comment attachments" onChange={event=>{const files=Array.from(event.currentTarget.files??[]);event.currentTarget.value="";void pickFiles(files);}}/></> : null}</div>
+    {props.searchMentions ? <Tooltip label="Mention a participant"><details className="a-rich-comment-composer__mentions"><summary aria-label="Mention a participant">@</summary><div><label>Mention a participant<input value={mentionQuery} onChange={event=>setMentionQuery(event.currentTarget.value)} /></label><ul aria-label="Matching participants">{mentionOptions.map(person=><li key={person.id}><button type="button" disabled={busy} onClick={()=>{append({type:"doc",schema:RICH_TEXT_SCHEMA,content:[{type:"paragraph",content:[{type:"mention",attrs:{principalId:person.id,label:person.displayName}}]}]});setMentionQuery("");}}>{person.displayName}</button></li>)}</ul></div></details></Tooltip>:null}
+    <div className="a-rich-comment-composer__submit-actions">
+    <div className="a-rich-comment-composer__audience">{props.audienceLockedReason ? <Tooltip label={props.audienceLockedReason}><span className="a-rich-comment-composer__locked-audience" tabIndex={0} aria-label={`${visibility.charAt(0).toUpperCase()+visibility.slice(1)} visibility. ${props.audienceLockedReason}`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>{visibility.charAt(0).toUpperCase()+visibility.slice(1)}</span></Tooltip> : <CommentAudiencePicker value={visibility} options={audiences} disabled={busy || audiences.length === 1} onChange={audience=>{setVisibility(audience);props.onDraftChange?.(value,audience);}}/>}</div>{props.onCancel?<button type="button" disabled={busy} onClick={props.onCancel}>{props.cancelLabel??"Cancel"}</button>:null}    <button className="a-rich-comment-composer__send" aria-label={props.submitAriaLabel} type="button" disabled={busy} onClick={() => void submit()}>{submitting ? "Saving…" : props.submitLabel ?? "Send"}</button></div>
+    </ComposerFooter>
+  </ComposerFrame>;
 }
 
 function merge(current: RichTextDocument, pasted: RichTextDocument): RichTextDocument { const empty = current.content.length === 1 && current.content[0]?.type === "paragraph" && !(current.content[0]?.content?.length); return { type: "doc", schema: RICH_TEXT_SCHEMA, content: empty ? pasted.content : [...current.content, ...pasted.content] }; }
-function collectAttachments(document: RichTextDocument): string[] { const ids = new Set<string>(); const visit = (node: RichTextNode) => { if (node.type === "attachmentImage" && typeof node.attrs?.["attachmentId"] === "string") ids.add(node.attrs["attachmentId"]); node.content?.forEach(visit); }; document.content.forEach(visit); return [...ids]; }
+function collectAttachments(document: RichTextDocument): string[] { const ids = new Set<string>(); const visit = (node: RichTextNode) => { if ((node.type === "attachmentImage" || node.type === "attachmentFile") && typeof node.attrs?.["attachmentId"] === "string") ids.add(node.attrs["attachmentId"]); node.content?.forEach(visit); }; document.content.forEach(visit); return [...ids]; }
 function message(cause: unknown): string { return cause instanceof Error ? cause.message : "Unable to process clipboard content"; }
+
+function attachmentLabel(document: RichTextDocument, id: string): string {
+  const visit = (nodes: readonly RichTextNode[]): string | undefined => {
+    for (const node of nodes) { if ((node.type === "attachmentImage" || node.type === "attachmentFile") && node.attrs?.["attachmentId"] === id) return String(node.attrs?.["alt"] ?? "Image attachment"); const label = node.content && visit(node.content); if (label) return label; }
+    return undefined;
+  };
+  return visit(document.content) ?? "Image attachment";
+}
+function withoutAttachment(document: RichTextDocument, id: string): RichTextDocument {
+  const visit = (nodes: readonly RichTextNode[]): RichTextNode[] => nodes.filter(node => !((node.type === "attachmentImage" || node.type === "attachmentFile") && node.attrs?.["attachmentId"] === id)).map(node => node.content ? {...node,content:visit(node.content)} : node);
+  const content=visit(document.content);
+  return {...document,content:content.length?content:EMPTY.content};
+}

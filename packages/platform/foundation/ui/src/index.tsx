@@ -3,6 +3,7 @@ import { useModalIsolation, registerModalBranch } from "./modal-isolation";
 export { useModalIsolation } from "./modal-isolation";
 
 import * as React from "react";
+import { PanelHeader } from "./panel";
 import { DatePicker } from "./date-picker";
 export { DatePicker, type DatePickerProps } from "./date-picker";
 import { CloseIcon, SearchIcon } from "@athyper/platform-icons";
@@ -62,10 +63,42 @@ export function TabsContent({ value, mount = "persistent", className, ...props }
   return <div role="tabpanel" id={`${context.baseId}-panel-${value}`} aria-labelledby={`${context.baseId}-tab-${value}`} hidden={!selected} tabIndex={0} className={cx("a-tabs-content", className)} {...props} />;
 }
 
-export function Tooltip({ label, children }: { readonly label: string; readonly children: ReactElement }) {
+export function Tooltip({ label, children, portal = false, onlyWhenTruncated = false, side = "top" }: { readonly side?: "top" | "bottom"; readonly label: string; readonly children: ReactElement; readonly portal?: boolean; readonly onlyWhenTruncated?: boolean }) {
   const id = useId(); const child = Children.only(children);
+  const anchor = useRef<HTMLSpanElement>(null);
+  const bubble = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({left:8,top:8});
+  const [truncated, setTruncated] = useState(false);
+  React.useLayoutEffect(() => {
+    if (!onlyWhenTruncated) return;
+    const target = anchor.current?.firstElementChild as HTMLElement | null;
+    if (!target) return;
+    const measure = () => setTruncated(target.scrollWidth > target.clientWidth + 1 || target.scrollHeight > target.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [onlyWhenTruncated, label]);
+  const suppressed = (onlyWhenTruncated && !truncated) || Boolean((child.props as Record<string, unknown>)["data-tooltip-dismissed"]);
+  React.useLayoutEffect(() => {
+    if (!portal || !open || suppressed) return;
+    const place = () => {
+      const rect = anchor.current?.getBoundingClientRect();
+      const tip = bubble.current?.getBoundingClientRect();
+      if (!rect || !tip) return;
+      const above = rect.top-tip.height-8, below = rect.bottom+8;
+      const top = side === "bottom"
+        ? (below+tip.height <= window.innerHeight-8 ? below : above)
+        : (above >= 8 ? above : below);
+      setPosition({left:Math.max(8,Math.min(rect.right-tip.width,window.innerWidth-tip.width-8)),top:Math.max(8,Math.min(top,window.innerHeight-tip.height-8))});
+    };
+    place(); window.addEventListener("resize",place); window.addEventListener("scroll",place,true);
+    return () => {window.removeEventListener("resize",place);window.removeEventListener("scroll",place,true);};
+  },[portal,open,label,suppressed,side]);
   const describedBy = isValidElement<{ "aria-describedby"?: string }>(child) ? child.props["aria-describedby"] : undefined;
-  return <span className="a-tooltip">{cloneElement(child as ReactElement<Record<string, unknown>>, { "aria-describedby": [describedBy, id].filter(Boolean).join(" ") })}<span id={id} role="tooltip" className="a-tooltip__content">{label}</span></span>;
+  const content = <span ref={bubble} id={id} role="tooltip" className={portal ? "a-tooltip__portal" : "a-tooltip__content"} style={portal ? {position:"fixed",...position,width:"max-content",maxWidth:"min(20rem, calc(100vw - 16px))",whiteSpace:"normal",overflowWrap:"anywhere",pointerEvents:"none",zIndex:2147483647,padding:".375rem .625rem",borderRadius:"var(--a-radius-sm)",background:"var(--a-foreground)",color:"var(--a-background)",fontSize:"var(--a-font-size-xs)"} : side === "bottom" ? {insetBlockEnd:"auto",insetBlockStart:"calc(100% + .375rem)"} : undefined}>{label}</span>;
+  return <span ref={anchor} className="a-tooltip" onMouseEnter={()=>setOpen(true)} onMouseLeave={()=>setOpen(false)} onFocusCapture={()=>setOpen(true)} onBlurCapture={()=>setOpen(false)} onClick={()=>setOpen(false)} onKeyDown={event=>{if(event.key==="Escape")setOpen(false);}}>{cloneElement(child as ReactElement<Record<string, unknown>>, { "aria-describedby": [describedBy, (!suppressed && (!portal || open)) ? id : undefined].filter(Boolean).join(" ") })}{portal ? open && !suppressed ? createPortal(content,document.body) : null : onlyWhenTruncated && !truncated ? null : content}</span>;
 }
 
 type OpenContext = { open: boolean; setOpen: (value: boolean) => void };
@@ -150,8 +183,8 @@ const DialogContext = createContext<OpenContext | null>(null);
 export function Dialog({ open, defaultOpen = false, onOpenChange, children }: { readonly open?: boolean; readonly defaultOpen?: boolean; readonly onOpenChange?: (open: boolean) => void; readonly children: ReactNode }) { const [shown, setShown] = useControllableState(open, defaultOpen, onOpenChange); return <DialogContext.Provider value={{ open: shown, setOpen: setShown }}>{children}</DialogContext.Provider>; }
 export function DialogTrigger(props: ButtonHTMLAttributes<HTMLButtonElement>) { const c = useContext(DialogContext); if (!c) throw new Error("DialogTrigger must be inside Dialog"); return <button type="button" aria-haspopup="dialog" aria-expanded={c.open} onClick={(e) => { props.onClick?.(e); if (!e.defaultPrevented) c.setOpen(true); }} {...props} />; }
 export function DialogClose(props: ButtonHTMLAttributes<HTMLButtonElement>) { const c = useContext(DialogContext); if (!c) throw new Error("DialogClose must be inside Dialog"); return <button type="button" onClick={(e) => { props.onClick?.(e); if (!e.defaultPrevented) c.setOpen(false); }} {...props} />; }
-export function DialogContent({ title, description, children, className }: { readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string }) {
-  return <ModalContent title={title} description={description} className={className} variant="dialog">{children}</ModalContent>;
+export function DialogContent({ title, description, children, className, portal=false }: { readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string; readonly portal?: boolean }) {
+  return <ModalContent title={title} description={description} className={className} variant="dialog" portal={portal}>{children}</ModalContent>;
 }
 export function DrawerContent({ title, description, children, className }: { readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string }) {
   return <ModalContent title={title} description={description} className={className} variant="drawer">{children}</ModalContent>;
@@ -184,9 +217,10 @@ export function DrawerPanel({ size = "standard", variant = "task", mobilePresent
   </div>, document.body);
 }
 
-export function DrawerHeader({ icon, title, description, actions, closeLabel = "Close panel", className, ...props }: Omit<HTMLAttributes<HTMLElement>, "title"> & { readonly icon?: ReactNode; readonly title: ReactNode; readonly description?: ReactNode; readonly actions?: ReactNode; readonly closeLabel?: string }) {
+export function DrawerHeader({ appearance = "default", icon, title, description, actions, closeLabel = "Close panel", className, ...props }: Omit<HTMLAttributes<HTMLElement>, "title"> & { readonly icon?: ReactNode; readonly title: ReactNode; readonly description?: ReactNode; readonly actions?: ReactNode; readonly closeLabel?: string; readonly appearance?: "default" | "panel" }) {
   const drawer = useContext(DrawerAnatomyContext); if (!drawer) throw new Error("DrawerHeader must be inside DrawerPanel");
   const dialog = useDrawerDialog();
+  if(appearance === "panel")return <PanelHeader {...props} className={className} icon={icon} title={title} titleId={drawer.titleId} subtitle={description} subtitleId={drawer.descriptionId} actions={<>{actions}<Tooltip portal side="bottom" label={closeLabel}><button ref={drawer.closeButton} type="button" aria-label={closeLabel} onClick={()=>dialog.setOpen(false)}><CloseIcon size={18}/></button></Tooltip></>}/>;
   return <header {...props} className={cx("a-drawer__header", className)}>{icon ? <span className="a-drawer__header-icon" aria-hidden="true">{icon}</span> : null}<span className="a-drawer__heading"><h2 id={drawer.titleId}>{title}</h2>{description ? <p id={drawer.descriptionId}>{description}</p> : <span id={drawer.descriptionId} className="a-visually-hidden">{typeof title === "string" ? `${title} panel` : "Drawer panel"}</span>}</span>{actions ? <span className="a-drawer__header-actions">{actions}</span> : null}<button ref={drawer.closeButton} type="button" className="a-drawer__close" aria-label={closeLabel} onClick={() => dialog.setOpen(false)}><CloseIcon/></button></header>;
 }
 
@@ -206,18 +240,18 @@ export function DrawerTabPanel(props: Parameters<typeof TabsContent>[0]) { retur
 
 export const Drawer = Object.freeze({ Root: DrawerRoot, Trigger: DrawerTrigger, Close: DrawerClose, Panel: DrawerPanel, Header: DrawerHeader, Navigation: DrawerNavigation, Toolbar: DrawerToolbar, Context: DrawerContext, Metric: DrawerMetric, Body: DrawerBody, Footer: DrawerFooter, FooterSummary: DrawerFooterSummary, FooterActions: DrawerFooterActions, Tabs: DrawerTabs, TabList: DrawerTabList, Tab: DrawerTab, TabPanel: DrawerTabPanel });
 
-function ModalContent({ title, description, children, className, variant }: { readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string; readonly variant: "dialog" | "drawer" }) {
+function ModalContent({ title, description, children, className, variant, portal=false }: { readonly portal?: boolean; readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string; readonly variant: "dialog" | "drawer" }) {
   const c = useContext(DialogContext); if (!c) throw new Error("DialogContent must be inside Dialog"); const titleId = useId(); const descriptionId = useId(); const panel = useRef<HTMLDivElement>(null); const [portalReady, setPortalReady] = useState(false);
   useEffect(() => setPortalReady(true), []);
-  useModalIsolation(panel, c.open && (variant !== "drawer" || portalReady), {
+  useModalIsolation(panel, c.open && (!(variant === "drawer" || portal) || portalReady), {
     outside: () => Array.from(panel.current?.parentElement?.querySelectorAll<HTMLElement>(":scope > .a-dialog-scrim") ?? []),
     onEscape: () => c.setOpen(false),
   });
   if (!c.open) return null;
   const drawer = variant === "drawer";
-  if (drawer && !portalReady) return null;
+  if ((drawer || portal) && !portalReady) return null;
   const layer = <div className={drawer ? "a-drawer-layer" : "a-dialog-layer"}><button type="button" className="a-dialog-scrim" aria-label={`Close ${drawer ? "panel" : "dialog"}`} onClick={() => c.setOpen(false)} /><div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} className={cx(drawer ? "a-drawer" : "a-dialog", className)}>{drawer ? <button type="button" className="a-drawer__close" aria-label="Close panel" onClick={() => c.setOpen(false)}><CloseIcon/></button> : null}<h2 id={titleId} className="a-dialog__title">{title}</h2>{description ? <p id={descriptionId} className="a-dialog__description">{description}</p> : null}{children}</div></div>;
-  return drawer ? createPortal(layer, document.body) : layer;
+  return drawer || portal ? createPortal(layer, document.body) : layer;
 }
 
 export function ToastRegion(props: HTMLAttributes<HTMLDivElement>) { return <div role="region" aria-label="Notifications" aria-live="polite" className={cx("a-toast-region", props.className)} {...props} />; }
@@ -244,3 +278,11 @@ export const ObjectSearch = forwardRef<HTMLInputElement, { id: string; value: st
 export { AppliedFilters, type AppliedFilterChip } from "./applied-filters";
 export { PreviewFrame } from "./preview-frame";
 export { ContextSelectionDrawer, type ContextChoice } from "./context-selection-drawer";
+
+export { registerModalBranch } from "./modal-isolation";
+
+export { ComposerFrame, ComposerHeader, ComposerFooter, type ComposerFrameProps } from "./composer-frame";
+
+export { PanelHeader, PanelTabs, PanelEmptyState, type PanelTab } from "./panel";
+export { SearchField, type SearchFieldProps } from "./search-field";
+export { FilterChipGroup, type FilterChipItem } from "./filter-chip-group";

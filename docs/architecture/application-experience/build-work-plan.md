@@ -154,7 +154,7 @@ through Currency's unrestricted CRUD path. `genericWriteEnabled: false` remains
 enforced by the server. The runtime must read operation metadata for read admission
 as well as commands; loading an action contract never executes that action.
 
-Use `entity-policy-examples/New_Entity/` as the proposed content contract: Core,
+Use `metadata/products/mdg/entities/` as the proposed content contract: Core,
 Operation, surface Presentation, section Presentation, Flow, and their release
 envelope. Resolve shared field/operation profiles once per immutable artifact set.
 The examples remain review inputs until real parsers, compiler output, provider
@@ -324,7 +324,7 @@ existing large module clearer. Avoid new parallel runtimes or packages.
 | `server/packages/services/numbering/src/numbering-service.ts`; `kysely-numbering-repository.ts`                                                                                                                                                                                                                              | Allocation only at command stage, stable receipt replay and policy-reader integration                      |
 | `server/packages/platform/collaboration/src/collaboration-service.ts`; `collaboration-routes.ts`                                                                                                                                                                                                                             | Owner-authorized comment reads/commands; idempotency and targeted invalidation                             |
 | `server/packages/services/attachments/src/attachment-routes.ts`; `attachment-lifecycle.ts`; `kysely-attachment-repository.ts`                                                                                                                                                                                                | Lazy reads, explicit upload lifecycle and owner/resource invalidation                                      |
-| `docs/architecture/application-experience/entity-policy-examples/New_Entity/README.md`; `CONTRACT.md`; `validate.py`; `verify_live_schema.py`; existing `business_partner/`, child and `platform/` JSON artifacts                                                                                                            | Keep reviewed prototype, schemas, hashes and evidence consistent with implementation                       |
+| `metadata/products/mdg/README.md`; `CONTRACT.md`; `validate.py`; `verify_live_schema.py`; existing `business_partner/`, child and `platform/` JSON artifacts                                                                                                            | Keep reviewed prototype, schemas, hashes and evidence consistent with implementation                       |
 
 `apps/neon` remains route/layout/bootstrap composition. `apps/studio` continues to
 host the existing authoring UI; compiler changes live in server packages. Mesh is
@@ -652,7 +652,7 @@ behavior before removing code; a smaller file count alone is not success.
 
 This is the authoritative execution checklist for the current local migration.
 Every phase is **planned**, not implemented by this document edit. Use the existing
-System Design §14.0/§14.0.1 and Appendix A, the compiled prototype in `New_Entity/`,
+System Design §14.0/§14.0.1 and Appendix A, the compiled prototype in `metadata/products/mdg/entities/`,
 and the folder/API blueprints above together. Where this checklist differs from an
 earlier migration gate, this checklist governs local execution.
 
@@ -877,8 +877,8 @@ Files to modify: `server/packages/contracts/publication/src/artifact.ts`,
 `packages/contracts/platform/entity-runtime/src/record-presentation.ts`,
 `record-360-panel.ts`, `related-presentation.ts`, `intake.ts`.
 Add `runtime-resource.ts` in that existing contract package only if no equivalent
-contract can be extended. Update `New_Entity/CONTRACT.md`, `README.md`, `validate.py`,
-`verify_live_schema.py` and affected JSON fixtures/hashes.
+contract can be extended. Update `metadata/products/mdg/CONTRACT.md`, its `README.md`,
+`tooling/scripts/metadata/validate.py`, `verify_live_schema.py` and affected JSON fixtures/hashes.
 
 API action: specify and validate bootstrap/resource/command shapes, without registering
 non-working routes. Existing BP APIs remain in use until their replacements execute.
@@ -1225,7 +1225,7 @@ contains principal, authorization epoch, business-context and locale. Its output
 contains only authorized presentation fields/sections, never storage bindings,
 policy inputs or handler configuration.
 
-The checked-in `New_Entity/business_partner` files remain authoring-review input:
+The checked-in `metadata/products/mdg/entities/business_partner` files remain authoring-review input:
 their artifacts are `draft_for_review` and their release is `unsigned_review_only`.
 The publisher compiles them into a separate immutable published payload only after it
 validates the approved Studio definition source, including BP's governed

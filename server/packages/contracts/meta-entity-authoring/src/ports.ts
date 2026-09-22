@@ -82,6 +82,7 @@ export interface MetaEntityAuthoringRepository {
     breakGlass?: BreakGlassEvidence;
   }): Promise<MetaEntityChangeSet>;
   createRelease(input: {
+    expectedSourceReleaseId?: string;
     changeSetId: string;
     expectedRevision: number;
     actorId: string;

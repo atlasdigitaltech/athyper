@@ -1,0 +1,60 @@
+{
+  "schema": "athyper.candidate-provider-qualification/1",
+  "schemaVersion": 1,
+  "candidateKey": "business-partner-collaboration-ca08",
+  "qualifiedAt": "2026-09-21T00:00:00.000Z",
+  "runtimeCompatibility": {
+    "consumerContract": "compiled-entity/2.0",
+    "evidence": [
+      "candidate compilation publication projection (95 artifacts)",
+      "local publisher dry-run against Studio and Neon, release 10 planned",
+      "platform-host typecheck"
+    ]
+  },
+  "handlers": [
+    "platform.attachments.category.v1",
+    "platform.attachments.folder.v1",
+    "platform.attachments.read.v1",
+    "platform.attachments.rename.v1",
+    "platform.attachments.status.v1",
+    "platform.attachments.unlink.v1",
+    "platform.attachments.version.v1",
+    "platform.comments.draft.v1",
+    "platform.comments.flag.v1",
+    "platform.comments.history.v1",
+    "platform.comments.mention.v1",
+    "platform.comments.react.v1",
+    "platform.comments.read.v1",
+    "platform.comments.reply.v1"
+  ],
+  "checks": [
+    {
+      "command": "pnpm --filter @athyper/server-service-attachments typecheck && pnpm --filter @athyper/server-service-attachments test",
+      "result": "55 passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-collaboration typecheck && pnpm --filter @athyper/server-platform-collaboration test",
+      "result": "52 passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-experience test",
+      "result": "94 passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/server-contract-publication typecheck && pnpm --filter @athyper/server-contract-publication test",
+      "result": "35 passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-host typecheck",
+      "result": "passed"
+    }
+  ],
+  "plannedPublication": {
+    "publicationKey": "metadata.compiled_entity.business_partner",
+    "sourceDefinitionReleaseId": "cf773137-0b77-48ca-89ca-3d3c24c67933",
+    "plannedReleaseNo": 10,
+    "artifactCount": 95,
+    "compiledReleaseHash": "sha256:e93c48cb1e2d66d1a063d0043bb2cb4ec7f6b1d4d9bb12324414f2d653b58c85"
+  },
+  "status": "local_qualified_pending_signed_release"
+}

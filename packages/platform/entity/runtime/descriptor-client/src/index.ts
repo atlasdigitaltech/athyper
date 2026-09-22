@@ -18,3 +18,4 @@ export const entityDescriptorClient = Object.freeze({
 
 function parseReceipt(value: unknown): RecordMutationReceipt { if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("mutation receipt is invalid"); const item = value as Record<string, unknown>; if (item.kind !== "Committed" || (item.action !== "create" && item.action !== "patch") || typeof item.entityCode !== "string" || typeof item.recordId !== "string" || typeof item.replayed !== "boolean") throw new TypeError("mutation receipt is invalid"); const version = typeof item.version === "number" && Number.isInteger(item.version) && item.version >= 0 ? item.version : undefined; return Object.freeze({ kind: "Committed", action: item.action, entityCode: item.entityCode, recordId: item.recordId, replayed: item.replayed, ...(version === undefined ? {} : { version }) }); }
 export * from "./runtime-client";
+export * from "./intake-operation-client";

@@ -61,7 +61,9 @@ function fixture(overrides: Partial<AttachmentRecord> = {}) {
     deactivate: vi.fn(async () => {
       record = { ...record!, status: "deleted", isActive: false };
     }),
-    expire: vi.fn(async () => undefined),
+    unlink: vi.fn(async () => ({ unlinked: true, orphaned: false })),
+    hasActiveLinks: vi.fn(async () => false),
+    expire: vi.fn<() => Promise<boolean | void>>(async () => undefined),
     markPurged: vi.fn(async () => undefined),
   };
   const storage = {
@@ -107,6 +109,7 @@ function fixture(overrides: Partial<AttachmentRecord> = {}) {
     expire: async () => [],
   };
   const append = vi.fn(async () => undefined);
+  const schedulePurge = vi.fn(async () => undefined);
   const lifecycle = createAttachmentLifecycle({
     transactions: { run: async (_plane, _actor, work) => work({}) },
     repository,
@@ -123,6 +126,11 @@ function fixture(overrides: Partial<AttachmentRecord> = {}) {
       }),
     },
     outbox: { append },
+    scheduler: {
+      scheduleExtraction: async () => undefined,
+      scheduleDerivatives: async () => undefined,
+      schedulePurge,
+    },
     now: () => new Date("2026-09-06T00:00:00Z"),
   });
   return {
@@ -132,6 +140,7 @@ function fixture(overrides: Partial<AttachmentRecord> = {}) {
     scanner,
     quota,
     append,
+    schedulePurge,
     objects,
     setRecord: (value: AttachmentRecord | null) => {
       record = value;
@@ -158,6 +167,40 @@ describe("attachment lifecycle security regressions", () => {
       f.lifecycle.finalize(identity, intent.contentType),
     ).rejects.toThrow("expired");
     expect(f.storage.copy).not.toHaveBeenCalled();
+  });
+  it("does not release quota or emit expiry when finalization wins a delayed expiry race", async () => {
+    const f = fixture({ expiresAt: "2026-09-05T00:00:00Z" });
+    f.repository.expire.mockResolvedValue(false);
+
+    await f.lifecycle.expire(identity);
+
+    expect(f.repository.expire).toHaveBeenCalledOnce();
+    expect(f.quota.release).not.toHaveBeenCalled();
+    expect(f.append).not.toHaveBeenCalled();
+    expect(f.schedulePurge).not.toHaveBeenCalled();
+  });
+  it("replays a delayed stage-expiry job without duplicating the terminal transition", async () => {
+    const f = fixture({ expiresAt: "2026-09-05T00:00:00Z" });
+    f.repository.expire.mockImplementation(async () => {
+      f.setRecord({
+        ...f.getRecord(),
+        status: "expired",
+        isActive: false,
+      });
+      return true;
+    });
+
+    await f.lifecycle.expire(identity);
+    await f.lifecycle.expire(identity);
+
+    expect(f.repository.expire).toHaveBeenCalledOnce();
+    expect(f.quota.release).toHaveBeenCalledOnce();
+    expect(f.append).toHaveBeenCalledOnce();
+    expect(f.append).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: "attachments.expired" }),
+      {},
+    );
+    expect(f.schedulePurge).toHaveBeenCalledOnce();
   });
   it("rejects changed retry metadata and limits upload URLs to reservation lifetime", async () => {
     const f = fixture();
@@ -186,6 +229,48 @@ describe("attachment lifecycle security regressions", () => {
     expect(f.repository.deactivate).not.toHaveBeenCalled();
     expect(f.quota.release).not.toHaveBeenCalled();
     expect(f.append).not.toHaveBeenCalled();
+  });
+  it("unlinks only the requested record association and records the durable event", async () => {
+    const f = fixture({ status: "active", expiresAt: undefined });
+    await expect(
+      f.lifecycle.unlink!(identity, {
+        entityType: "business_partner",
+        entityId: "44444444-4444-4444-8444-444444444444",
+      }),
+    ).resolves.toEqual({ unlinked: true, orphaned: false });
+    expect(f.repository.unlink).toHaveBeenCalledWith(
+      identity,
+      { entityType: "business_partner", entityId: "44444444-4444-4444-8444-444444444444" },
+      {},
+    );
+    expect(f.repository.deactivate).not.toHaveBeenCalled();
+    expect(f.append).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: "attachments.unlinked" }),
+      {},
+    );
+    expect(f.schedulePurge).not.toHaveBeenCalled();
+  });
+  it("schedules one deterministic purge only after the final association is orphaned", async () => {
+    const f = fixture({ status: "active", expiresAt: undefined });
+    f.repository.unlink.mockResolvedValue({ unlinked: true, orphaned: true });
+    await f.lifecycle.unlink!(identity, {
+      entityType: "business_partner",
+      entityId: "44444444-4444-4444-8444-444444444444",
+    });
+    expect(f.append).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: "attachments.orphaned" }),
+      {},
+    );
+    expect(f.schedulePurge).toHaveBeenCalledWith(identity, {
+      jobId: `attachment:${identity.attachmentId}:purge`,
+    });
+  });
+  it("does not purge an orphan candidate that has been linked again", async () => {
+    const f = fixture({ status: "orphaned", expiresAt: undefined });
+    f.repository.hasActiveLinks.mockResolvedValue(true);
+    await expect(f.lifecycle.purge(identity)).resolves.toBe(false);
+    expect(f.storage.delete).not.toHaveBeenCalled();
+    expect(f.repository.markPurged).not.toHaveBeenCalled();
   });
   it.each(["", "too large"])(
     "rejects actual size mismatch (%s)",
@@ -319,6 +404,38 @@ describe("attachment lifecycle security regressions", () => {
     expect(f.storage.createDownloadUrl).toHaveBeenCalledWith(
       "quarantine/source",
       10,
+      { contentType: "application/octet-stream", contentDisposition: 'attachment; filename="invoice.pdf"' },
     );
+  });
+});
+
+describe("purge durability", () => {
+  it("preserves the storage key and quota when object deletion fails, then retries", async () => {
+    const f = fixture({ status: "expired", isActive: false });
+    f.storage.delete.mockRejectedValueOnce(new Error("storage unavailable"));
+    await expect(f.lifecycle.purge(identity)).rejects.toThrow("storage unavailable");
+    expect(f.repository.markPurged).not.toHaveBeenCalled();
+    expect(f.quota.release).not.toHaveBeenCalled();
+    await expect(f.lifecycle.purge(identity)).resolves.toBe(true);
+    expect(f.repository.markPurged).toHaveBeenCalledOnce();
+  });
+  it("does not delete an already purged marker on job replay", async () => {
+    const f = fixture({ status: "deleted", storageKey: `purged/${identity.attachmentId}`, isActive: false });
+    await expect(f.lifecycle.purge(identity)).resolves.toBe(false);
+    expect(f.storage.delete).not.toHaveBeenCalled();
+    expect(f.repository.markPurged).not.toHaveBeenCalled();
+  });
+});
+
+describe("finalization admission after scanning", () => {
+  it("does not commit bytes after record access or policy is revoked during a scan", async () => {
+    const f = fixture();
+    const authorizeCommit = vi.fn(async () => { throw new Error("policy revoked"); });
+    await expect(f.lifecycle.finalize(identity, intent.contentType, { authorizeCommit })).rejects.toThrow("policy revoked");
+    expect(f.scanner.scan).toHaveBeenCalledOnce();
+    expect(authorizeCommit).toHaveBeenCalledOnce();
+    expect(f.repository.finalizeClean).not.toHaveBeenCalled();
+    expect(f.quota.commit).not.toHaveBeenCalled();
+    expect([...f.objects.keys()]).toEqual(["quarantine/source"]);
   });
 });

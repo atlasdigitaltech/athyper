@@ -17,9 +17,10 @@
     "test:integration:governed-internal-business-partner-http": "tsx src/__tests__/integration/governed-internal-business-partner-http.mjs"
   },
   "dependencies": {
-    "@athyper/server-contract-ai": "workspace:*",
+    "@athyper/contract-neon-party": "workspace:*",
     "@athyper/contract-platform-entity-runtime": "workspace:*",
     "@athyper/platform-temporal": "workspace:*",
+    "@athyper/server-contract-ai": "workspace:*",
     "@athyper/server-contract-audit": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-events": "workspace:*",

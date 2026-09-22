@@ -236,7 +236,16 @@ apps/docs-internal/.docs-manifest.json
 # Legacy local-output locations: prevent accidental evidence/export commits.
 # Current tools write outside the checkout; see docs/runbooks/local-artifacts.md.
 /artifacts/
-/metadata/
+# Root metadata now contains reviewed source definitions. Keep unknown local
+# exports ignored; admit only the documented source layout.
+/metadata/*
+!/metadata/README.md
+!/metadata/REORGANIZATION.md
+!/metadata/relocation-map.json
+!/metadata/products/
+!/metadata/shared/
+!/metadata/overlays/
+!/metadata/schemas/
 
 # Accidental compiler emissions beside the records TypeScript source files.
 /server/packages/services/records/src/address-form-choices.js

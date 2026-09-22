@@ -297,7 +297,7 @@ async function addresses(
   transaction: Tx,
 ): Promise<Positioned<BusinessPartner360AddressItem>[]> {
   const rows = (
-    await sql<Row>`SELECT address.id::text,link.id::text link_id,link.purpose,link.is_primary,link.effective_from,link.effective_until,address.address_kind,address.line1,address.line2,address.line3,address.city,address.dependent_locality,address.region,address.postal_code,address.country_code::text,address.formatted_address,address.validation_status,address.validation_provider,address.validation_confidence,address.validated_at,link.created_at FROM master.address_link link JOIN master.address address ON address.tenant_id=link.tenant_id AND address.id=link.address_id WHERE link.tenant_id=${input.tenantId}::uuid AND link.owner_type_id=${ownerType}::uuid AND link.owner_id=${input.businessPartnerId}::uuid AND link.usage_status='active' AND address.status='active' AND link.effective_from<=${input.asOf}::date AND(link.effective_until IS NULL OR link.effective_until>${input.asOf}::date) AND link.created_at<=${input.cursor.snapshotAt}::timestamptz ${afterRelated(input, "link.")} ORDER BY ${relatedOrder(input, "link.")} link.created_at DESC,link.id DESC LIMIT ${input.limit + 1}`.execute(
+    await sql<Row>`SELECT address.id::text,link.id::text link_id,link.purpose,link.is_primary,link.effective_from,link.effective_until,address.address_kind,address.line1,address.line2,address.line3,address.city,address.dependent_locality,address.region,address.state_region_code,address.postal_code,address.country_code::text,address.timezone_code,address.formatted_address,address.validation_status,address.validation_provider,address.validation_confidence,address.validated_at,link.created_at FROM master.address_link link JOIN master.address address ON address.tenant_id=link.tenant_id AND address.id=link.address_id WHERE link.tenant_id=${input.tenantId}::uuid AND link.owner_type_id=${ownerType}::uuid AND link.owner_id=${input.businessPartnerId}::uuid AND link.usage_status='active' AND address.status='active' AND link.effective_from<=${input.asOf}::date AND(link.effective_until IS NULL OR link.effective_until>${input.asOf}::date) AND link.created_at<=${input.cursor.snapshotAt}::timestamptz ${afterRelated(input, "link.")} ORDER BY ${relatedOrder(input, "link.")} link.created_at DESC,link.id DESC LIMIT ${input.limit + 1}`.execute(
       transaction,
     )
   ).rows;
@@ -327,10 +327,16 @@ async function addresses(
           }
         : {}),
       ...(optional(row, "region") ? { region: optional(row, "region") } : {}),
+      ...(optional(row, "state_region_code")
+        ? { stateRegionCode: optional(row, "state_region_code"), regionEntryMode: "directory" as const }
+        : optional(row, "region")
+          ? { regionEntryMode: "manual" as const }
+          : {}),
       ...(optional(row, "postal_code")
         ? { postalCode: optional(row, "postal_code") }
         : {}),
       countryCode: text(row, "country_code"),
+      ...(optional(row, "timezone_code") ? { timezoneCode: optional(row, "timezone_code") } : {}),
       ...(optional(row, "formatted_address")
         ? { formattedAddress: optional(row, "formatted_address") }
         : {}),
@@ -425,7 +431,7 @@ async function identifiers(
     sql<Row>`SELECT id::text,scheme_code,issuing_authority,issuing_country_code::text,issued_at,effective_until,is_primary,verified_at,COALESCE(metadata->>'maskedValue','••••') masked_value,COALESCE((metadata->>'protected')::boolean,false) protected,created_at FROM master.business_partner_identifier WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND status='active' AND(issued_at IS NULL OR issued_at<=${input.asOf}::date) AND(effective_until IS NULL OR effective_until>${input.asOf}::date) AND created_at<=${input.cursor.snapshotAt}::timestamptz ${after(input)} ORDER BY created_at DESC,id DESC LIMIT ${input.limit + 1}`.execute(
       transaction,
     ),
-    sql<Row>`SELECT registration.id::text,registration.registration_type_code,jurisdiction.code jurisdiction_code,registration.effective_from,registration.effective_until,registration.is_primary,registration.verified_at,COALESCE(registration.metadata->>'maskedValue','••••') masked_value,COALESCE((registration.metadata->>'protected')::boolean,false) protected,registration.created_at FROM master.business_partner_tax_registration registration JOIN master.tax_jurisdiction jurisdiction ON jurisdiction.tenant_id=registration.tenant_id AND jurisdiction.id=registration.jurisdiction_id WHERE registration.tenant_id=${input.tenantId}::uuid AND registration.business_partner_id=${input.businessPartnerId}::uuid AND registration.status='active' AND(registration.effective_from IS NULL OR registration.effective_from<=${input.asOf}::date) AND(registration.effective_until IS NULL OR registration.effective_until>${input.asOf}::date) AND registration.created_at<=${input.cursor.snapshotAt}::timestamptz ${after(input, "registration.created_at", "registration.id")} ORDER BY registration.created_at DESC,registration.id DESC LIMIT ${input.limit + 1}`.execute(
+    sql<Row>`SELECT registration.id::text,registration.registration_type_code,tax_type.code tax_type_code,jurisdiction.code jurisdiction_code,jurisdiction.country_code::text jurisdiction_country_code,jurisdiction.state_region_code jurisdiction_state_region_code,registration.effective_from,registration.effective_until,registration.is_primary,registration.verified_at,COALESCE(registration.metadata->>'maskedValue','••••') masked_value,COALESCE((registration.metadata->>'protected')::boolean,false) protected,registration.created_at FROM master.business_partner_tax_registration registration JOIN master.tax_jurisdiction jurisdiction ON jurisdiction.tenant_id=registration.tenant_id AND jurisdiction.id=registration.jurisdiction_id LEFT JOIN master.tax_type tax_type ON tax_type.tenant_id=registration.tenant_id AND tax_type.id=registration.tax_type_id WHERE registration.tenant_id=${input.tenantId}::uuid AND registration.business_partner_id=${input.businessPartnerId}::uuid AND registration.status='active' AND(registration.effective_from IS NULL OR registration.effective_from<=${input.asOf}::date) AND(registration.effective_until IS NULL OR registration.effective_until>${input.asOf}::date) AND registration.created_at<=${input.cursor.snapshotAt}::timestamptz ${after(input, "registration.created_at", "registration.id")} ORDER BY registration.created_at DESC,registration.id DESC LIMIT ${input.limit + 1}`.execute(
       transaction,
     ),
     sql<Row>`SELECT id::text,source_system_code,external_entity_code,external_id,external_code,created_at FROM master.external_reference WHERE tenant_id=${input.tenantId}::uuid AND owner_type_id=${ownerType}::uuid AND owner_id=${input.businessPartnerId}::uuid AND status='active' AND created_at<=${input.cursor.snapshotAt}::timestamptz ${after(input)} ORDER BY created_at DESC,id DESC LIMIT ${input.limit + 1}`.execute(
@@ -460,6 +466,15 @@ async function identifiers(
         id: text(row, "id"),
         registrationTypeCode: text(row, "registration_type_code"),
         jurisdictionCode: text(row, "jurisdiction_code"),
+        ...(optional(row, "tax_type_code")
+          ? { taxTypeCode: optional(row, "tax_type_code") }
+          : {}),
+        ...(optional(row, "jurisdiction_country_code")
+          ? { jurisdictionCountryCode: optional(row, "jurisdiction_country_code") }
+          : {}),
+        ...(optional(row, "jurisdiction_state_region_code")
+          ? { jurisdictionStateRegionCode: optional(row, "jurisdiction_state_region_code") }
+          : {}),
         maskedValue: text(row, "masked_value"),
         primary: Boolean(row["is_primary"]),
         verified: Boolean(row["verified_at"]),
@@ -528,7 +543,7 @@ async function resources(
       AND (attachment.expires_at IS NULL OR attachment.expires_at>clock_timestamp())
       AND attachment.created_at<=${input.cursor.snapshotAt}::timestamptz AND attachment.created_at::date<=${input.asOf}::date
       AND (EXISTS(SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.entity_type IN ('business_partner','master.business_partner') AND link.entity_id=${input.businessPartnerId} AND link.attachment_series_id=attachment.series_id AND (link.pinned_attachment_id IS NULL OR link.pinned_attachment_id=attachment.id))
-        OR (${input.certificateVisible === true} AND EXISTS(SELECT 1 FROM master.certification certification WHERE certification.tenant_id=attachment.tenant_id AND certification.owner_type='business_partner' AND certification.owner_id=${input.businessPartnerId}::uuid AND certification.document_attachment_id=attachment.id AND (certification.company_code_id IS NULL OR certification.company_code_id=${input.companyCodeId ?? null}::uuid) AND (certification.effective_from IS NULL OR certification.effective_from<=${input.asOf}::date))))
+        OR (${input.certificateVisible === true} AND EXISTS(SELECT 1 FROM master.certification certification WHERE certification.tenant_id=attachment.tenant_id AND certification.owner_type='business_partner' AND certification.owner_id=${input.businessPartnerId}::uuid AND certification.document_attachment_id=attachment.id AND (certification.company_code_id IS NULL OR certification.company_code_id=${input.companyCodeId ?? null}::uuid) AND (certification.effective_from IS NULL OR certification.effective_from<=${input.asOf}::date) AND (certification.effective_until IS NULL OR certification.effective_until>${input.asOf}::date)))
       ${after(input, "attachment.created_at", "attachment.id")}
     ORDER BY attachment.created_at DESC,attachment.id DESC LIMIT ${input.limit + 1}`.execute(
       transaction,

@@ -1,0 +1,118 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "bank_branch/core",
+  "entityCode": "bank_branch",
+  "plane": "neon",
+  "storage": {
+    "kind": "table",
+    "primaryObject": "shared.bank_branch",
+    "sourceObjects": [
+      "shared.bank_branch"
+    ],
+    "idField": "id",
+    "tenantField": null,
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "shared.bank_branch",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.bankBranch.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "institutionId",
+      "binding": {
+        "sourceObject": "shared.bank_branch",
+        "column": "institution_id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.bankBranch.core.fields.institutionId.label",
+        "defaultText": "Bank institution"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "name",
+      "binding": {
+        "sourceObject": "shared.bank_branch",
+        "column": "name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.bankBranch.core.fields.name.label",
+        "defaultText": "Name"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "countryCode",
+      "binding": {
+        "sourceObject": "shared.bank_branch",
+        "column": "country_code"
+      },
+      "dataType": "string",
+      "storageType": "character(2)",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.bankBranch.core.fields.countryCode.label",
+        "defaultText": "Country"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "shared_reference"
+  },
+  "referencePicker": {
+    "valueField": "id",
+    "labelField": "name",
+    "displayFormat": "{name}",
+    "allowedTokens": [
+      "name"
+    ],
+    "load": "bounded_lookup"
+  },
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:6a1514aa8301b46bb5df3906cd516f93c0846850ec4663d33e3e930ae1efa333"
+}

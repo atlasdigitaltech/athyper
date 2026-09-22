@@ -14,7 +14,9 @@
         "server/db/scripts/tests/integration/identity-replay-live.mjs"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio"],
+      "legacyPlanes": [
+        "studio"
+      ],
       "canonicalPaths": [
         "ddl/planes/studio/trustiam/12_identity_replay_approval.sql"
       ]
@@ -31,8 +33,12 @@
         "server/apps/platform-host/src/composition/__tests__/mesh-exchange-readiness.postgres.test.ts"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["mesh"],
-      "canonicalPaths": ["ddl/planes/mesh/mesh/11_grants.sql"]
+      "legacyPlanes": [
+        "mesh"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/mesh/mesh/11_grants.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260907_atlas_conversation_runtime_access.sql",
@@ -45,8 +51,14 @@
         "tooling/scripts/verification/setup-local-atlas-authority.mts"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
-      "canonicalPaths": ["ddl/common/ai/11_grants.sql"]
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/ai/11_grants.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260907_lookup_reference_governance.sql",
@@ -54,9 +66,15 @@
       "planes": [],
       "disposition": "legacy-upgrade",
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260907_lookup_reference_governance.sql",
-      "callers": ["deploy/compose/tests/structure.test.mjs"],
+      "callers": [
+        "deploy/compose/tests/structure.test.mjs"
+      ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
       "canonicalPaths": [
         "ddl/common/control/14_admin_integrations.sql",
         "ddl/common/control/15_lookup_reference_governance.sql"
@@ -74,8 +92,14 @@
         "server/db/scripts/tests/integration/db-review/run.mjs"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
-      "canonicalPaths": ["ddl/common/master/19_entity_saved_views.sql"]
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/master/19_entity_saved_views.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260908_entity_standard_view_defaults.sql",
@@ -89,8 +113,14 @@
         "deploy/compose/tests/structure.test.mjs"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
-      "canonicalPaths": ["ddl/common/master/19_entity_saved_views.sql"]
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/master/19_entity_saved_views.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260908_supplier_preference_normalized_scope.sql",
@@ -102,8 +132,12 @@
         "server/db/scripts/__tests__/platform/db-review-deployment.test.ts"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["neon"],
-      "canonicalPaths": ["ddl/planes/neon/control/07_functions.sql"]
+      "legacyPlanes": [
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/neon/control/07_functions.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260909_atlas_tool_only_completion.sql",
@@ -113,8 +147,14 @@
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260909_atlas_tool_only_completion.sql",
       "callers": [],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
-      "canonicalPaths": ["ddl/common/ai/05_constraints.sql"]
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/ai/05_constraints.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_account_cache_isolation.sql",
@@ -127,7 +167,9 @@
         "server/db/scripts/tests/integration/db-review/run.mjs"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["neon"],
+      "legacyPlanes": [
+        "neon"
+      ],
       "canonicalPaths": [
         "ddl/planes/neon/master/09_views.sql",
         "ddl/planes/neon/master/11_grants.sql"
@@ -145,8 +187,14 @@
         "server/db/scripts/tests/integration/db-review/README.md"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
-      "canonicalPaths": ["ddl/common/ai/05_constraints.sql"]
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/ai/05_constraints.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_ai_call_usage_preflight.sql",
@@ -159,8 +207,14 @@
         "server/db/scripts/tests/integration/db-review/run.mjs"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
-      "canonicalPaths": ["ddl/common/ai/05_constraints.sql"]
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/ai/05_constraints.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_atlas_intent_feedback.sql",
@@ -173,7 +227,11 @@
         "tooling/scripts/verification/deploy-atlas-f6-persona-schema.mjs"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
       "canonicalPaths": [
         "ddl/common/ai/03_tables.sql",
         "ddl/common/ai/05_constraints.sql",
@@ -190,7 +248,11 @@
         "server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
       "canonicalPaths": [
         "ddl/common/ai/03_tables.sql",
         "ddl/common/ai/05_constraints.sql",
@@ -209,7 +271,9 @@
         "server/apps/platform-host/scripts/db-verification/tests/integration/atlas/learning-inbox.mts"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio"],
+      "legacyPlanes": [
+        "studio"
+      ],
       "canonicalPaths": [
         "ddl/planes/studio/ai/03_tables.sql",
         "ddl/planes/studio/ai/05_constraints.sql",
@@ -242,8 +306,12 @@
         "tooling/scripts/verification/deploy-atlas-baseline-precondition.mjs"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["neon"],
-      "canonicalPaths": ["ddl/common/runtime_meta/12_baseline_precondition.sql"]
+      "legacyPlanes": [
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/runtime_meta/12_baseline_precondition.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_baseline_compilation_source.sql",
@@ -253,8 +321,12 @@
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_baseline_compilation_source.sql",
       "callers": [],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio"],
-      "canonicalPaths": ["ddl/planes/studio/metadata/12_baseline_import.sql"]
+      "legacyPlanes": [
+        "studio"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/12_baseline_import.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_baseline_publication_locking.sql",
@@ -264,8 +336,12 @@
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_baseline_publication_locking.sql",
       "callers": [],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio"],
-      "canonicalPaths": ["ddl/planes/studio/metadata/12_baseline_import.sql"]
+      "legacyPlanes": [
+        "studio"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/12_baseline_import.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_baseline_publication_materializer.sql",
@@ -275,8 +351,12 @@
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_baseline_publication_materializer.sql",
       "callers": [],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio"],
-      "canonicalPaths": ["ddl/planes/studio/metadata/12_baseline_import.sql"]
+      "legacyPlanes": [
+        "studio"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/12_baseline_import.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_entity_baseline_import.sql",
@@ -284,10 +364,16 @@
       "planes": [],
       "disposition": "legacy-upgrade",
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_entity_baseline_import.sql",
-      "callers": ["tooling/scripts/verification/adopt-atlas-neon-baseline.mjs"],
+      "callers": [
+        "tooling/scripts/verification/adopt-atlas-neon-baseline.mjs"
+      ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio"],
-      "canonicalPaths": ["ddl/planes/studio/metadata/12_baseline_import.sql"]
+      "legacyPlanes": [
+        "studio"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/12_baseline_import.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_experience_foundation.sql",
@@ -295,9 +381,15 @@
       "planes": [],
       "disposition": "legacy-upgrade",
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_experience_foundation.sql",
-      "callers": ["server/db/scripts/checks/ddl/experience-foundation.mjs"],
+      "callers": [
+        "server/db/scripts/checks/ddl/experience-foundation.mjs"
+      ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
       "canonicalPaths": [
         "ddl/common/ai/03_tables.sql",
         "ddl/common/ai/05_constraints.sql",
@@ -325,7 +417,9 @@
         "server/db/scripts/tests/integration/db-review/README.md"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio"],
+      "legacyPlanes": [
+        "studio"
+      ],
       "canonicalPaths": [
         "ddl/planes/studio/trustiam/12_identity_replay_approval.sql"
       ]
@@ -341,8 +435,12 @@
         "server/db/scripts/__tests__/platform/db-review-migrations.test.ts"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["mesh"],
-      "canonicalPaths": ["ddl/planes/mesh/mesh/11_grants.sql"]
+      "legacyPlanes": [
+        "mesh"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/mesh/mesh/11_grants.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_mesh_command_hardening.sql",
@@ -357,8 +455,12 @@
         "server/db/scripts/tests/integration/db-review/README.md"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["mesh"],
-      "canonicalPaths": ["ddl/planes/mesh/mesh/11_grants.sql"]
+      "legacyPlanes": [
+        "mesh"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/mesh/mesh/11_grants.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_mesh_discovery_current_status.sql",
@@ -372,8 +474,12 @@
         "server/db/scripts/tests/integration/db-review/run.mjs"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["mesh"],
-      "canonicalPaths": ["ddl/planes/mesh/mesh/11_grants.sql"]
+      "legacyPlanes": [
+        "mesh"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/mesh/mesh/11_grants.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_mesh_global_baseline_import.sql",
@@ -381,7 +487,9 @@
       "planes": [],
       "disposition": "operational-upgrade",
       "path": "scripts/operations/upgrades/publication/20260910_mesh_global_baseline_import.sql",
-      "callers": ["tooling/scripts/verification/adopt-atlas-mesh-baseline.mjs"],
+      "callers": [
+        "tooling/scripts/verification/adopt-atlas-mesh-baseline.mjs"
+      ],
       "reason": "Explicit upgrade for existing or isolated target schemas; bytes preserved and excluded from automatic manifests."
     },
     {
@@ -416,8 +524,12 @@
         "tooling/scripts/verification/deploy-atlas-activation-confirmation.mjs"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio"],
-      "canonicalPaths": ["ddl/planes/studio/metadata/12_baseline_import.sql"]
+      "legacyPlanes": [
+        "studio"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/12_baseline_import.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_neon_attachment_knowledge_writer.sql",
@@ -429,8 +541,12 @@
         "tooling/scripts/verification/deploy-atlas-attachment-knowledge-writer.mjs"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["neon"],
-      "canonicalPaths": ["ddl/planes/neon/ai/12_attachment_knowledge.sql"]
+      "legacyPlanes": [
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/neon/ai/12_attachment_knowledge.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_operation_projection_release_identity.sql",
@@ -443,8 +559,14 @@
         "tooling/scripts/verification/deploy-atlas-operation-projection-identity.mjs"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
-      "canonicalPaths": ["ddl/common/authz/07_functions.sql"]
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/authz/07_functions.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_saved_view_legacy_grant_cleanup.sql",
@@ -452,10 +574,18 @@
       "planes": [],
       "disposition": "legacy-upgrade",
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_saved_view_legacy_grant_cleanup.sql",
-      "callers": ["server/db/scripts/tests/integration/db-review/run.mjs"],
+      "callers": [
+        "server/db/scripts/tests/integration/db-review/run.mjs"
+      ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
-      "canonicalPaths": ["ddl/common/master/19_entity_saved_views.sql"]
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/master/19_entity_saved_views.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_saved_view_runtime_grants.sql",
@@ -468,8 +598,14 @@
         "server/db/scripts/tests/integration/db-review/run.mjs"
       ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
-      "canonicalPaths": ["ddl/common/master/19_entity_saved_views.sql"]
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/master/19_entity_saved_views.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260910_tenant_view_isolation.sql",
@@ -477,9 +613,15 @@
       "planes": [],
       "disposition": "legacy-upgrade",
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260910_tenant_view_isolation.sql",
-      "callers": ["server/db/scripts/tests/integration/db-review/run.mjs"],
+      "callers": [
+        "server/db/scripts/tests/integration/db-review/run.mjs"
+      ],
       "reason": "Pre-baseline historical upgrade retained unchanged. Current foundation owns the final schema; excluded from automatic startup.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
       "canonicalPaths": [
         "ddl/planes/neon/document/09_views.sql",
         "ddl/planes/studio/document/09_views.sql",
@@ -531,7 +673,11 @@
         "server/db/scripts/__tests__/platform/derivative-scan-evidence-migration.test.ts"
       ],
       "reason": "Retired from automatic development upgrades; fresh installs use canonical DDL. Exact historical SQL retained for explicit legacy upgrades and rehearsals.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
       "canonicalPaths": [
         "ddl/common/document/03_foundation_tables.sql",
         "ddl/planes/neon/document/02_domains.sql",
@@ -552,7 +698,9 @@
         "tooling/scripts/verification/isolated-release20/qualify-binding-recovery-guard.mjs"
       ],
       "reason": "Binding recovery rehearsal now selects the two current canonical functions; the copied development patch is retired.",
-      "canonicalPaths": ["ddl/common/authz/07_functions.sql"]
+      "canonicalPaths": [
+        "ddl/common/authz/07_functions.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260911_restore_neon_account_bank_permission_reference.sql",
@@ -584,7 +732,9 @@
       ],
       "reason": "Historical explicit reset installer found during final dynamic-path audit; recovered original checksummed SQL, while fresh installs use canonical DDL.",
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260911_runtime_restoration_neon.sql",
-      "legacyPlanes": ["neon"],
+      "legacyPlanes": [
+        "neon"
+      ],
       "callers": [
         "tooling/scripts/verification/install-reset-runtime-migrations.mjs"
       ]
@@ -599,7 +749,9 @@
       ],
       "reason": "Historical explicit reset installer found during final dynamic-path audit; recovered original checksummed SQL, while fresh installs use canonical DDL.",
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260911_runtime_restoration_studio.sql",
-      "legacyPlanes": ["studio"],
+      "legacyPlanes": [
+        "studio"
+      ],
       "callers": [
         "tooling/scripts/verification/install-reset-runtime-migrations.mjs"
       ]
@@ -644,8 +796,12 @@
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260912_case_contract_initial_publication.sql",
       "callers": [],
       "reason": "Retired from automatic development upgrades; fresh installs use canonical DDL. Exact historical SQL retained for explicit legacy upgrades and rehearsals.",
-      "legacyPlanes": ["studio"],
-      "canonicalPaths": ["ddl/planes/studio/snapshot/03_tables.sql"]
+      "legacyPlanes": [
+        "studio"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/studio/snapshot/03_tables.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260912_case_validation_guard.sql",
@@ -658,7 +814,9 @@
         "tooling/scripts/verification/isolated-enter/consolidate-dependency-qualification.mjs"
       ],
       "reason": "Retired from automatic development upgrades; fresh installs use canonical DDL. Exact historical SQL retained for explicit legacy upgrades and rehearsals.",
-      "legacyPlanes": ["neon"],
+      "legacyPlanes": [
+        "neon"
+      ],
       "canonicalPaths": [
         "ddl/common/document/07_functions.sql",
         "ddl/planes/neon/document/07_functions.sql"
@@ -688,7 +846,9 @@
         "tooling/scripts/verification/isolated-enter/rehearse-company-provenance-projection.mjs"
       ],
       "reason": "Retired from automatic development upgrades; fresh installs use canonical DDL. Exact historical SQL retained for explicit legacy upgrades and rehearsals.",
-      "legacyPlanes": ["neon"],
+      "legacyPlanes": [
+        "neon"
+      ],
       "canonicalPaths": [
         "ddl/planes/neon/master/07_functions.sql",
         "ddl/planes/neon/master/11_grants.sql",
@@ -705,8 +865,14 @@
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260912_control_admin_foundation.sql",
       "callers": [],
       "reason": "Retired from automatic development upgrades; fresh installs use canonical DDL. Exact historical SQL retained for explicit legacy upgrades and rehearsals.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
-      "canonicalPaths": ["ddl/common/control/14_admin_integrations.sql"]
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/control/14_admin_integrations.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260912_document_collection_publication.sql",
@@ -718,8 +884,12 @@
         "tooling/scripts/verification/isolated-enter/test-document-publication-handoff.mjs"
       ],
       "reason": "Retired from automatic development upgrades; fresh installs use canonical DDL. Exact historical SQL retained for explicit legacy upgrades and rehearsals.",
-      "legacyPlanes": ["studio"],
-      "canonicalPaths": ["ddl/planes/studio/publication/07_functions.sql"]
+      "legacyPlanes": [
+        "studio"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/studio/publication/07_functions.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260912_finance_journal_activity_permission.sql",
@@ -741,7 +911,9 @@
       "path": "scripts/operations/upgrades/legacy-baseline-20260914/20260912_identity_saga_foundation.sql",
       "callers": [],
       "reason": "Retired from automatic development upgrades; fresh installs use canonical DDL. Exact historical SQL retained for explicit legacy upgrades and rehearsals.",
-      "legacyPlanes": ["studio"],
+      "legacyPlanes": [
+        "studio"
+      ],
       "canonicalPaths": [
         "ddl/planes/studio/trustiam/03_tables.sql",
         "ddl/planes/studio/trustiam/05_constraints.sql",
@@ -763,8 +935,14 @@
         "tooling/scripts/verification/isolated-enter/consolidate-dependency-qualification.mjs"
       ],
       "reason": "Retired from automatic development upgrades; fresh installs use canonical DDL. Exact historical SQL retained for explicit legacy upgrades and rehearsals.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
-      "canonicalPaths": ["ddl/common/event/05_constraints.sql"]
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/event/05_constraints.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260912_neon_case_lifecycle_restore.sql",
@@ -776,8 +954,12 @@
         "tooling/scripts/verification/isolated-enter/consolidate-dependency-qualification.mjs"
       ],
       "reason": "Retired from automatic development upgrades; fresh installs use canonical DDL. Exact historical SQL retained for explicit legacy upgrades and rehearsals.",
-      "legacyPlanes": ["neon"],
-      "canonicalPaths": ["ddl/planes/neon/document/07_functions.sql"]
+      "legacyPlanes": [
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/planes/neon/document/07_functions.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260912_protected_bank_display_suffix.sql",
@@ -801,7 +983,9 @@
         "tooling/scripts/verification/isolated-enter/deploy-complete-dependencies.mjs"
       ],
       "reason": "Retired from automatic development upgrades; fresh installs use canonical DDL. Exact historical SQL retained for explicit legacy upgrades and rehearsals.",
-      "legacyPlanes": ["neon"],
+      "legacyPlanes": [
+        "neon"
+      ],
       "canonicalPaths": [
         "ddl/common/runtime_meta/03_tables.sql",
         "ddl/common/runtime_meta/06_indexes.sql"
@@ -818,15 +1002,23 @@
         "deploy/compose/tests/forward-migrations.integration.test.mjs"
       ],
       "reason": "Retired from automatic development upgrades; fresh installs use canonical DDL. Exact historical SQL retained for explicit legacy upgrades and rehearsals.",
-      "legacyPlanes": ["studio", "mesh", "neon"],
-      "canonicalPaths": ["ddl/common/master/21_reference_choice_recent.sql"]
+      "legacyPlanes": [
+        "studio",
+        "mesh",
+        "neon"
+      ],
+      "canonicalPaths": [
+        "ddl/common/master/21_reference_choice_recent.sql"
+      ]
     },
     {
       "originalPath": "migrations/20260914_address_subdivision_capture.sql",
       "sha256": "332fc9b16a94ac278c8a3608ebf961bd88e43a15e072d5d8c8027bb1aa051684",
       "planes": [],
       "disposition": "canonical",
-      "canonicalPaths": ["ddl/planes/neon/master/07_functions.sql"],
+      "canonicalPaths": [
+        "ddl/planes/neon/master/07_functions.sql"
+      ],
       "reason": "Final definition is maintained in canonical DDL; unlisted local-development patch retired. Historical receipt coordinates remain unchanged."
     },
     {
@@ -834,7 +1026,9 @@
       "sha256": "02fd30bcbc0e059b9f81b2b1153941cd22b992746de3755af3c56400a1c81542",
       "planes": [],
       "disposition": "canonical",
-      "canonicalPaths": ["ddl/planes/neon/master/07_functions.sql"],
+      "canonicalPaths": [
+        "ddl/planes/neon/master/07_functions.sql"
+      ],
       "reason": "Final definition is maintained in canonical DDL; unlisted local-development patch retired. Historical receipt coordinates remain unchanged."
     },
     {
@@ -842,7 +1036,9 @@
       "sha256": "de4b5d7728404b7dedcb6ac06cb5c7d7cb8d59281054bf2ec6ddefd5519e8068",
       "planes": [],
       "disposition": "canonical",
-      "canonicalPaths": ["ddl/common/control/12_banking_reference_seed.sql"],
+      "canonicalPaths": [
+        "ddl/common/control/12_banking_reference_seed.sql"
+      ],
       "reason": "Final definition is maintained in canonical DDL; unlisted local-development patch retired. Historical receipt coordinates remain unchanged."
     },
     {
@@ -860,8 +1056,80 @@
       "sha256": "5d22ff0a94c01fd7be71121e6d99394f8bb79534a4f84b4c94a5b40496cefdfb",
       "planes": [],
       "disposition": "canonical",
-      "canonicalPaths": ["ddl/planes/neon/document/03_tables.sql"],
+      "canonicalPaths": [
+        "ddl/planes/neon/document/03_tables.sql"
+      ],
       "reason": "Final definition is maintained in canonical DDL; unlisted local-development patch retired. Historical receipt coordinates remain unchanged."
+    },
+    {
+      "originalPath": "scripts/operations/upgrades/bp-integration-20260921/studio.sql",
+      "path": "scripts/operations/upgrades/bp-integration-20260921/studio.sql",
+      "sha256": "77bc8bb4b2b41554fcbd090a22f3e29bacae5f8b87058bb13030577b6d9719ae",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [],
+      "reason": "Explicit data-preserving CA integration upgrade; excluded from automatic startup. Rehearsal and DEV application evidence in the integrated release record.",
+      "canonicalPaths": [
+        "ddl/planes/studio/metadata/03_tables.sql",
+        "ddl/planes/studio/metadata/05_constraints.sql",
+        "ddl/planes/studio/metadata/10_rls.sql",
+        "ddl/planes/studio/metadata/11_grants.sql",
+        "ddl/planes/studio/metadata/07_functions.sql",
+        "ddl/planes/studio/metadata/08_triggers.sql"
+      ]
+    },
+    {
+      "originalPath": "scripts/operations/upgrades/bp-integration-20260921/neon.sql",
+      "path": "scripts/operations/upgrades/bp-integration-20260921/neon.sql",
+      "sha256": "8ab6bfde2aad357844c6cc07928ca6d9abac8682b1c28305b22d22623d4f1acd",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [],
+      "reason": "Explicit data-preserving CA integration upgrade; excluded from automatic startup. Rehearsal and DEV application evidence in the integrated release record.",
+      "canonicalPaths": [
+        "ddl/common/document/03_foundation_tables.sql",
+        "ddl/common/document/12_collaboration_integrity.sql",
+        "ddl/planes/neon/document/10_rls.sql"
+      ]
+    },
+    {
+      "originalPath": "scripts/operations/upgrades/bp-integration-20260921/publication-audit.sql",
+      "path": "scripts/operations/upgrades/bp-integration-20260921/publication-audit.sql",
+      "sha256": "ec73b7bb71645095890cd7384d7e654006d482c4bb15f0040fc899ab220ac383",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [],
+      "reason": "Explicit DEV workload audit contract prerequisite; excluded from automatic startup.",
+      "canonicalPaths": [
+        "ddl/common/audit/12_reference_seed.sql"
+      ]
+    },
+    {
+      "originalPath": "scripts/operations/upgrades/bp-integration-20260921/runtime-publication-audit.sql",
+      "path": "scripts/operations/upgrades/bp-integration-20260921/runtime-publication-audit.sql",
+      "sha256": "d0d9df400db4485154895fa729c596d6ba15348510438e0f252fe2b979c90ecc",
+      "planes": [],
+      "disposition": "operational-upgrade",
+      "callers": [],
+      "reason": "Explicit DEVFULL runtime workload approval audit contract; no human-review changes.",
+      "canonicalPaths": [
+        "ddl/common/audit/12_reference_seed.sql"
+      ]
+    },
+    {
+      "originalPath": "migrations/20260922_workforce_as_of_projection.sql",
+      "path": "migrations/20260922_workforce_as_of_projection.sql",
+      "sha256": "e24f71fd2ea51bf00d8140f46d7e9d0759cc762dfe249241c35e656f70e632d6",
+      "planes": [
+        "neon"
+      ],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Stage 0 data-preserving Employee 360 correction: allow unallocated person numbers and select only current effective employment and assignment rows.",
+      "canonicalPaths": [
+        "ddl/planes/neon/master/03_tables.sql",
+        "ddl/planes/neon/master/09_views.sql"
+      ]
     }
   ]
 }

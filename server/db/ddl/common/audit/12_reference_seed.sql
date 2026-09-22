@@ -9,7 +9,7 @@
 -- seed-natural-key: master.audit_event_contract(code)
 -- seed-cross-file-ids: false
 -- seed-id-strategy: natural-key-only
--- seed-expected-row-count: exact:33
+-- seed-expected-row-count: exact:38
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
 
@@ -468,3 +468,34 @@ VALUES('notification_channel_consent','^governance\.channel_consent\.(opted_in|o
  'tenant',false,'metadata',16384,1,'{"owner":"notifications","destination":"hash_only"}'::jsonb,'active')
 ON CONFLICT(code) DO NOTHING;
 -- End P7 consent audit contract.
+
+-- DEV publication workload audit events retain explicit automation attribution.
+INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
+VALUES('metadata_development_publication','^metadata\.development_publication\.(started|submitted|approved|dispatched)$',22,ARRAY['execute']::audit.operation_d[],'critical',ARRAY['service_account']::audit.actor_type_d[],'tenant',false,'metadata',65536,1,'{"owner":"publication","purpose":"development_workload_maker_checker_publication"}'::jsonb,'active')
+ON CONFLICT(code) DO NOTHING;
+
+-- Separate workload runtime authority; human review contracts are unchanged.
+INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
+VALUES('metadata_development_runtime','^metadata\.development_runtime\.(qualified|activation_authorized)$',23,ARRAY['execute']::audit.operation_d[],'critical',ARRAY['service_account']::audit.actor_type_d[],'tenant',false,'metadata',65536,1,'{"owner":"publication","purpose":"devfull_workload_runtime_approval"}'::jsonb,'active')
+ON CONFLICT(code) DO NOTHING;
+
+-- Collaboration writes produce tenant-scoped, metadata-only audit evidence.
+-- The transaction writer normalizes their created/edited/deleted actions to
+-- the audit `execute` operation before calling audit.append_event.
+INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,
+ allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
+VALUES('collaboration_comment_lifecycle','^collaboration\.(comment\.(created|edited|deleted|flagged)|reaction\.added)$',24,
+ ARRAY['execute']::audit.operation_d[],'info',ARRAY['user','service_account','system']::audit.actor_type_d[],
+ 'tenant',false,'metadata',16384,1,'{"owner":"collaboration","comment_content":"omitted","purpose":"comment_and_reaction_lifecycle"}'::jsonb,'active')
+ON CONFLICT(code) DO UPDATE SET event_code_pattern=EXCLUDED.event_code_pattern,priority=EXCLUDED.priority,allowed_operations=EXCLUDED.allowed_operations,default_severity=EXCLUDED.default_severity,allowed_actor_types=EXCLUDED.allowed_actor_types,allowed_scope=EXCLUDED.allowed_scope,reason_required=EXCLUDED.reason_required,capture_mode=EXCLUDED.capture_mode,max_payload_bytes=EXCLUDED.max_payload_bytes,schema_version=EXCLUDED.schema_version,metadata=EXCLUDED.metadata,status=EXCLUDED.status
+WHERE (master.audit_event_contract.event_code_pattern,master.audit_event_contract.priority,master.audit_event_contract.allowed_operations,master.audit_event_contract.default_severity,master.audit_event_contract.allowed_actor_types,master.audit_event_contract.allowed_scope,master.audit_event_contract.reason_required,master.audit_event_contract.capture_mode,master.audit_event_contract.max_payload_bytes,master.audit_event_contract.schema_version,master.audit_event_contract.metadata,master.audit_event_contract.status) IS DISTINCT FROM (EXCLUDED.event_code_pattern,EXCLUDED.priority,EXCLUDED.allowed_operations,EXCLUDED.default_severity,EXCLUDED.allowed_actor_types,EXCLUDED.allowed_scope,EXCLUDED.reason_required,EXCLUDED.capture_mode,EXCLUDED.max_payload_bytes,EXCLUDED.schema_version,EXCLUDED.metadata,EXCLUDED.status);
+
+-- Comment reports open a governance case in the same transaction. Review and
+-- decision actions use this contract when the moderation workflow progresses.
+INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,
+ allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
+VALUES('governance_comment_moderation','^governance\.comment_moderation\.(open|review|resolve|dismiss)$',23,
+ ARRAY['execute']::audit.operation_d[],'info',ARRAY['user','service_account','system']::audit.actor_type_d[],
+ 'tenant',false,'metadata',16384,1,'{"owner":"governance","purpose":"comment_moderation_lifecycle","comment_content":"omitted"}'::jsonb,'active')
+ON CONFLICT(code) DO UPDATE SET event_code_pattern=EXCLUDED.event_code_pattern,priority=EXCLUDED.priority,allowed_operations=EXCLUDED.allowed_operations,default_severity=EXCLUDED.default_severity,allowed_actor_types=EXCLUDED.allowed_actor_types,allowed_scope=EXCLUDED.allowed_scope,reason_required=EXCLUDED.reason_required,capture_mode=EXCLUDED.capture_mode,max_payload_bytes=EXCLUDED.max_payload_bytes,schema_version=EXCLUDED.schema_version,metadata=EXCLUDED.metadata,status=EXCLUDED.status
+WHERE (master.audit_event_contract.event_code_pattern,master.audit_event_contract.priority,master.audit_event_contract.allowed_operations,master.audit_event_contract.default_severity,master.audit_event_contract.allowed_actor_types,master.audit_event_contract.allowed_scope,master.audit_event_contract.reason_required,master.audit_event_contract.capture_mode,master.audit_event_contract.max_payload_bytes,master.audit_event_contract.schema_version,master.audit_event_contract.metadata,master.audit_event_contract.status) IS DISTINCT FROM (EXCLUDED.event_code_pattern,EXCLUDED.priority,EXCLUDED.allowed_operations,EXCLUDED.default_severity,EXCLUDED.allowed_actor_types,EXCLUDED.allowed_scope,EXCLUDED.reason_required,EXCLUDED.capture_mode,EXCLUDED.max_payload_bytes,EXCLUDED.schema_version,EXCLUDED.metadata,EXCLUDED.status);

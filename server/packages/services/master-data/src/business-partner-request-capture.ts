@@ -152,6 +152,15 @@ export async function linkRequestCaptureDocuments(
           "State or region does not match the selected country and subdivision.",
         );
     }
+    if (address.timezoneCode) {
+      const timezone = (
+        await sql<{ code: string }>`SELECT code FROM shared.timezone WHERE code=${address.timezoneCode} AND status='active'`.execute(
+          tx,
+        )
+      ).rows[0];
+      if (!timezone)
+        fail("Time zone is not an active reference.");
+    }
     if (address.countryCode && address.postalCode) {
       const result = (
         await sql<{

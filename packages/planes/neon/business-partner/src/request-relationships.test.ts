@@ -12,10 +12,14 @@ describe("request relationship components", () => {
         line1: " 1 Main Street ",
         city: "London",
         countryCode: "gb",
+        stateRegionCode: "GB-LND",
+        regionEntryMode: "directory" as const,
+        timezoneCode: "Europe/London",
       },
       contact = {
         ...newContact(),
         contactName: " Ada Buyer ",
+        roleCode: " Accounts_Payable ",
         channels: [{ ...newContact().channels[0]!, value: "ada@example.test" }],
       };
     const result = await buildRelationshipExtensions([address], [contact]);
@@ -23,11 +27,15 @@ describe("request relationship components", () => {
       line1: "1 Main Street",
       city: "London",
       countryCode: "GB",
+      stateRegionCode: "GB-LND",
+      regionEntryMode: "directory",
+      timezoneCode: "Europe/London",
       isPrimary: true,
       normalizedHash: expect.stringMatching(/^[a-f0-9]{64}$/),
     });
     expect(result.contactPersons[0]).toMatchObject({
       contactName: "Ada Buyer",
+      roleCode: "accounts_payable",
       isPrimary: true,
     });
     expect(result.contactChannels[0]).toMatchObject({
@@ -169,4 +177,12 @@ it("prevents a nested choice change from silently dropping a populated routing f
  const bankSurface={schemaVersion:1 as const,key:"bank",title:"Bank",columns:1 as const,sections:[{key:"fields",fields:[{control:"input" as const,key:"kind",valueKey:"kind",label:"Type",required:true,widget:"text" as const,columnSpan:12,helpText:"Clear the routing code first."},{control:"input" as const,key:"routing",valueKey:"routing",label:"Routing",required:false,widget:"text" as const,columnSpan:12,visibleWhen:{field:"kind",operator:"equals" as const,value:"local"}}]}]};
  const surface={...profileSurface,sections:[{key:"banks",fields:[{control:"repeatableGroup" as const,key:"banks",valueKey:"banks",label:"Banks",itemLabel:"Bank",addLabel:"Add",removeLabel:"Remove",itemSurfaceKey:"bank",minItems:0,maxItems:20,columnSpan:12}]}]};
  expect(hiddenProfileValues(surface,{banks:[{key:"b",kind:"local",routing:"001"}]},{banks:[{key:"b",kind:"iban",routing:"001"}]},[bankSurface])).toBe(true);
+});
+
+
+it("keeps a manual region unreferenced when it is restored and resubmitted", async () => {
+  const address = { ...newAddress(), countryCode: "MY", region: "Kuala Lumpur", regionEntryMode: "manual" as const };
+  const result = await buildRelationshipExtensions([address], []);
+  expect(result.addresses[0]).toMatchObject({ countryCode: "MY", region: "Kuala Lumpur", regionEntryMode: "manual" });
+  expect(result.addresses[0]).not.toHaveProperty("stateRegionCode");
 });

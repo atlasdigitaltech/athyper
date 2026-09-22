@@ -1,0 +1,42 @@
+# Explicitly opt in after running deploy/config/preview-renderer/qualify.py.
+# Gotenberg's HTML-to-PDF service and restrictions remain independent.
+services:
+  preview-renderer:
+    image: athyper/preview-renderer:ca09
+    build: { context: ../../config/preview-renderer }
+    networks: [document-services]
+    restart: unless-stopped
+    read_only: true
+    user: "65532:65532"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    init: true
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 32
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/health',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  api:
+    environment: { PREVIEW_RENDERER_BASE_URL: "http://preview-renderer:3000", DOCPARSER_URL: "http://qualified-docparser:9998", DOCPARSER_MAX_INPUT_BYTES: "20971520", DOCPARSER_MAX_TEXT_CHARS: "200000", DOCPARSER_TIMEOUT_MS: "35000" }
+    depends_on: { preview-renderer: { condition: service_healthy } }
+  worker:
+    environment: { PREVIEW_RENDERER_BASE_URL: "http://preview-renderer:3000", DOCPARSER_URL: "http://qualified-docparser:9998", DOCPARSER_MAX_INPUT_BYTES: "20971520", DOCPARSER_MAX_TEXT_CHARS: "200000", DOCPARSER_TIMEOUT_MS: "35000" }
+    depends_on: { preview-renderer: { condition: service_healthy } }
+  qualified-docparser:
+    image: ${ATHYPER_IMAGE_TIKA:-athyper/tika:4.0.0-hardened}
+    command: ["-c", "/etc/tika-config.json"]
+    volumes: ["../../config/tika/ca09-config.json:/etc/tika-config.json:ro"]
+    networks: [document-services]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=128m"]
+    mem_limit: 768m
+    cpus: 2.0
+    pids_limit: 128
+    init: true
+    restart: unless-stopped

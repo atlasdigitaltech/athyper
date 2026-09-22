@@ -107,11 +107,21 @@ WHERE permission.canonical_code IN (
     ('neon.collaboration.comment.update_own'), ('neon.contact_person.read'), ('neon.customer.read'),
     ('neon.customer_company_profile.read'), ('neon.relationship.business_partner.mesh_publish'),
     ('neon.relationship.business_partner.print'), ('neon.supplier.read'),
-    ('neon.supplier_company_profile.read'), ('neon.workforce.read')
+    ('neon.supplier_company_profile.read')
   ) AS definition(code)
 )
 ON CONFLICT (permission_id, scope_kind, propagation_mode) DO UPDATE SET status = 'active'
 WHERE authz.permission_scope_kind.status IS DISTINCT FROM EXCLUDED.status;
+
+DELETE FROM authz.permission_scope_kind AS scope
+USING authz.permission AS permission
+WHERE scope.permission_id=permission.id
+  AND permission.canonical_code='neon.workforce.read'
+  AND scope.scope_kind='operating_organization';
+INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by)
+SELECT id,'company_code','exact','active','00000000-0000-0000-0000-000000000000'::uuid
+FROM authz.permission WHERE canonical_code='neon.workforce.read'
+ON CONFLICT(permission_id,scope_kind,propagation_mode) DO UPDATE SET status='active';
 
 DO $assertions$
 BEGIN

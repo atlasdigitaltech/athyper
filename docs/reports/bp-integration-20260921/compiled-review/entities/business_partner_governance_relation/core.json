@@ -1,0 +1,232 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "business_partner_governance_relation/core",
+  "entityCode": "business_partner_governance_relation",
+  "plane": "neon",
+  "storage": {
+    "kind": "handler_projection",
+    "sourceObjects": [
+      "master.business_partner_governance_relation"
+    ],
+    "primaryObject": "master.business_partner_governance_relation",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.business_partner_governance_relation",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_governance_relation.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "relation_type_code",
+      "binding": {
+        "sourceObject": "master.business_partner_governance_relation",
+        "column": "relation_type_code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_governance_relation.core.fields.relation_type_code.label",
+        "defaultText": "Relation Type"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "member_name",
+      "binding": {
+        "sourceObject": "master.business_partner_governance_relation",
+        "column": "member_name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_governance_relation.core.fields.member_name.label",
+        "defaultText": "Member Name"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "member_type",
+      "binding": {
+        "sourceObject": "master.business_partner_governance_relation",
+        "column": "member_type"
+      },
+      "dataType": "string",
+      "storageType": "master.governance_member_type_d",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_governance_relation.core.fields.member_type.label",
+        "defaultText": "Member Type"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "business_title",
+      "binding": {
+        "sourceObject": "master.business_partner_governance_relation",
+        "column": "business_title"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_governance_relation.core.fields.business_title.label",
+        "defaultText": "Business Title"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "ownership_pct",
+      "binding": {
+        "sourceObject": "master.business_partner_governance_relation",
+        "column": "ownership_pct"
+      },
+      "dataType": "decimal",
+      "storageType": "numeric(7,4)",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_governance_relation.core.fields.ownership_pct.label",
+        "defaultText": "Ownership Percentage"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "appointed_date",
+      "binding": {
+        "sourceObject": "master.business_partner_governance_relation",
+        "column": "appointed_date"
+      },
+      "dataType": "date",
+      "storageType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_governance_relation.core.fields.appointed_date.label",
+        "defaultText": "Appointed Date"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "end_of_term",
+      "binding": {
+        "sourceObject": "master.business_partner_governance_relation",
+        "column": "end_of_term"
+      },
+      "dataType": "date",
+      "storageType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_governance_relation.core.fields.end_of_term.label",
+        "defaultText": "End of Term"
+      },
+      "valueOrigin": "stored"
+    },
+    {
+      "key": "status",
+      "binding": {
+        "sourceObject": "master.business_partner_governance_relation",
+        "column": "status"
+      },
+      "dataType": "string",
+      "storageType": "master.partner_extension_status_d",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_governance_relation.core.fields.status.label",
+        "defaultText": "Status"
+      },
+      "valueOrigin": "stored"
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "tenant",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.business_partner_governance_relation",
+      "column": "business_partner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_governance_relation",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_governance_relation",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:b0d5626933a0feb5f1400e4ca88fa3375409aa71c3c9cd03571bbe9bec76551d"
+}

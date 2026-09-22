@@ -1,0 +1,12 @@
+{
+  "head": {
+    "row_version": 13,
+    "activated_at": "2026-09-22T04:01:27.862386+00:00",
+    "artifact_hash": "9e12611779c1a8c12abb7d2197d81971f56dd55bb029bfe9d5193ec5e11e5a77",
+    "publication_key": "metadata.compiled_entity.business_partner",
+    "source_release_no": 13,
+    "applied_release_id": "01a0c746-992b-7b64-a316-2a2b2bfba131"
+  },
+  "artifactCount": 95,
+  "payloadReleaseHash": "sha256:f9bdc342cd7eac381686d856668306d79975d2725578239bf45d731fb2d82f67"
+}

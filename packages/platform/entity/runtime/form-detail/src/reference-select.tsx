@@ -9,6 +9,7 @@ import {
   updateReferenceHistoryOperation,
   type HttpClient,
   type ReferenceHistoryItem,
+  sharedReferenceDirectoryOperation,
 } from "@athyper/platform-api-client";
 import {
   subscribeReferenceHistory,
@@ -26,6 +27,11 @@ export interface ReferenceHistoryBinding {
   readonly surfaceKey: string;
   readonly fieldKey: string;
   readonly query?: Readonly<Record<string, string>>;
+}
+export interface ReferenceDirectoryBinding {
+  readonly client: HttpClient;
+  /** Dependencies are calculated from the current form answers, never entered as SQL fields. */
+  readonly filters?: Readonly<Record<string, string>>;
 }
 export function referenceRecentKey(
   scope: ReferenceChoiceScope | undefined,
@@ -49,10 +55,11 @@ export function ReferenceSelect(props: {
   readonly value: string;
   readonly options: readonly ReferenceOption[];
   readonly sourceKey: string;
+  readonly directory?: ReferenceDirectoryBinding;
   readonly recentScope?: ReferenceChoiceScope;
   readonly recentPolicy?: RecentChoicePolicy;
   readonly history?: ReferenceHistoryBinding;
-  readonly onChange: (value: string) => void;
+  readonly onChange: (value: string, option?: ReferenceOption) => void;
   readonly required?: boolean;
   readonly disabled?: boolean;
   readonly placeholder?: string;
@@ -137,6 +144,7 @@ function ScopedReferenceSelect({
     return response.items;
   };
   const remote = policy.enabled && policy.persistence === "server" && !!history;
+  const directory = props.directory;
   const refresh = useRef(() => {});
   refresh.current = () => {
     if (activated.current && remote)
@@ -164,6 +172,36 @@ function ScopedReferenceSelect({
     <SearchableSelect
       {...props}
       locale={i18n?.localization.uiLocale}
+      loadPage={
+        directory && isSharedReferenceSource(_source)
+          ? async ({ query, cursor, value, signal }) => {
+              const page = await directory.client.request(
+                sharedReferenceDirectoryOperation,
+                {
+                  params: { sourceKey: _source },
+                  query: {
+                    ...(query ? { query } : {}),
+                    ...(cursor ? { cursor } : {}),
+                    ...(value ? { value } : {}),
+                    ...(directory.filters && Object.keys(directory.filters).length
+                      ? { filter: JSON.stringify(directory.filters) }
+                      : {}),
+                    limit: 25,
+                  },
+                  signal,
+                },
+              );
+              return {
+                options: page.items.map((item) => ({
+                  value: item.value,
+                  label: item.label,
+                  ...(item.data ? { data: item.data } : {}),
+                })),
+                ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}),
+              };
+            }
+          : undefined
+      }
       onOpen={() => {
         activated.current = true;
         store.current?.prune();
@@ -193,16 +231,20 @@ function ScopedReferenceSelect({
         clear: message("entity.reference.clear"),
         clearRecent: message("entity.reference.clearRecent"),
       }}
-      onChange={(value) => {
-        props.onChange(value);
+      onChange={(value, option) => {
+        props.onChange(value, option);
         if (
           !storageKey ||
           !value ||
-          !props.options.some((option) => option.value === value)
+          !option
         )
           return;
         store.current?.mutate("select", value, remote ? transport : undefined);
       }}
     />
   );
+}
+
+function isSharedReferenceSource(source: string) {
+  return source === "iso.country" || source === "iso.currency" || source.startsWith("shared.");
 }

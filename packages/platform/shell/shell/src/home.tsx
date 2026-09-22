@@ -1,4 +1,5 @@
 "use client";
+import { ComposerFrame, ComposerHeader, ComposerFooter } from "@athyper/platform-ui";
 
 import { useAtlasSurface } from "./atlas-surface";
 import { parseInstant } from "@athyper/platform-temporal";
@@ -938,7 +939,7 @@ export const AtlasPromptComposer = React.forwardRef<
   };
 
   return (
-    <section
+    <ComposerFrame
       className="athyper-home__composer"
       data-dragging={dragging}
       aria-label="Atlas AI prompt composer"
@@ -971,7 +972,7 @@ export const AtlasPromptComposer = React.forwardRef<
           <small>Files are checked and prepared securely.</small>
         </div>
       ) : null}
-      <header>
+      <ComposerHeader>
         <span>
           <SearchIcon size={22} />
         </span>
@@ -1008,11 +1009,12 @@ export const AtlasPromptComposer = React.forwardRef<
             ))}
           </MenuContent>
         </Menu>
-      </header>
+      </ComposerHeader>
       <div
         ref={editor}
         id={editorId}
         className="athyper-home__composer-editor"
+        data-composer-editor=""
         role="textbox"
         aria-label="Ask Atlas to search, create, or take action"
         aria-multiline="true"
@@ -1058,7 +1060,7 @@ export const AtlasPromptComposer = React.forwardRef<
             : formatMessage}
         </p>
       ) : null}
-      <footer>
+      <ComposerFooter>
         <div>
           <input
             ref={fileInput}
@@ -1155,8 +1157,8 @@ export const AtlasPromptComposer = React.forwardRef<
             )}
           </button>
         </div>
-      </footer>
-    </section>
+      </ComposerFooter>
+    </ComposerFrame>
   );
 });
 

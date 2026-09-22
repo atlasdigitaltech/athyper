@@ -1,4 +1,5 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
+import type { createEntityCapabilityPolicy } from "./entity-capability-policy.js";
 import type { CompiledEntityArtifactV2 } from "@athyper/server-contract-publication";
 import { PinnedCompiledEntityReader, type CompiledEntityReleaseCoordinate } from "@athyper/server-platform-metadata";
 
@@ -24,13 +25,24 @@ export interface EntityRuntimeOperationArtifactResolver {
 export class EntityRuntimeOperationError extends Error { constructor(readonly status: 400 | 403 | 404 | 409 | 503, readonly code: string) { super(code); } }
 
 /** Resolves one pinned operation declaration before dispatching an explicitly registered domain handler. */
-export function createEntityOperationDispatcher(options: { readonly reader: PinnedCompiledEntityReader; readonly handlers: EntityRuntimeOperationHandlerRegistry; readonly artifacts?: EntityRuntimeOperationArtifactResolver }) {
+export function createEntityOperationDispatcher(options: { readonly reader: PinnedCompiledEntityReader; readonly handlers: EntityRuntimeOperationHandlerRegistry; readonly artifacts?: EntityRuntimeOperationArtifactResolver; readonly capabilities?: ReturnType<typeof createEntityCapabilityPolicy> }) {
   return Object.freeze({
     async execute(input: {
       readonly context: VerifiedRequestContext; readonly entityCode: string; readonly recordId: string;
       readonly operationKey: string; readonly expectedVersion?: number; readonly idempotencyKey?: string;
       readonly input: Readonly<Record<string, unknown>>;
     }) {
+      const capabilityMatch=/^(comments|attachments)\.([a-z_]+)$/.exec(input.operationKey);
+      if(capabilityMatch) {
+        if(!options.capabilities) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_BINDING_UNSUPPORTED");
+        const resolved=await options.capabilities.resolve({...input,kind:capabilityMatch[1] as "comments"|"attachments",action:capabilityMatch[2]!,input:{...input.input,expectedVersion:input.expectedVersion,idempotencyKey:input.idempotencyKey}});
+        if(resolved.action.concurrency==="revision" && (!Number.isSafeInteger(input.expectedVersion)||Number(input.expectedVersion)<1)) throw new EntityRuntimeOperationError(409,"ENTITY_RUNTIME_OPERATION_VERSION_REQUIRED");
+        if(resolved.action.idempotency==="required"&&!input.idempotencyKey) throw new EntityRuntimeOperationError(400,"ENTITY_RUNTIME_OPERATION_IDEMPOTENCY_REQUIRED");
+        const handler=options.handlers.get(resolved.action.handlerKey);
+        if(!handler) throw new EntityRuntimeOperationError(503,"ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE");
+        const receipt=await handler.execute(input);
+        return Object.freeze({...receipt,changedResources:changedResources(receipt,input)});
+      }
       const artifactCoordinates = options.artifacts?.resolve({ entityCode: input.entityCode, operationKey: input.operationKey })
         ?? { releaseEntityCode: input.entityCode, operationEntityCode: input.entityCode };
       const release = await options.reader.resolve(coordinate(input.context, artifactCoordinates.releaseEntityCode));

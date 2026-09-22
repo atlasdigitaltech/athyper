@@ -19,6 +19,7 @@ export * from "./publication-jobs.js";
 export * from "./publication-routes.js";
 export * from "./publication-artifact-loader.js";
 export * from "./publication-operations.js";
+export * from "./release-promotion.js";
 export * from "./kysely-publication-operations-repository.js";
 export * from "./business-partner-definition-service.js";
 export * from "./entity-definition-source.js";

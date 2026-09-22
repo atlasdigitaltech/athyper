@@ -24,6 +24,15 @@ export function createKyselyPrincipalDirectory(): PrincipalDirectory {
 }
 export function createKyselyCollaborationRepository(): CollaborationRepository<CollaborationTransaction> {
   return {
+    async history(input, tx) {
+      const owner = (await sql<{status:string;deleted_at:Date|string|null;deleted_by:string|null}>`SELECT status,deleted_at,deleted_by::text FROM document.comment WHERE tenant_id=${input.context.tenantId}::uuid AND id=${input.commentId}::uuid AND commenter_id=${input.context.principalId}::uuid`.execute(tx)).rows[0];
+      if (!owner) throw new CollaborationError(403,"HISTORY_UNAVAILABLE","History is unavailable");
+      if(owner.status === "deleted") return {items:[],deletion:{...(owner.deleted_at?{deletedAt:new Date(owner.deleted_at).toISOString()}:{}),...(owner.deleted_by?{deletedBy:owner.deleted_by}:{})}};
+      const limit=input.limit ?? 20;
+      const rows=(await sql<{revision_no:number;comment_text:string;content_format:"plain"|"rich_json";content_json:Record<string,unknown>|null;created_at:Date|string}>`SELECT revision_no,comment_text,content_format,content_json,created_at FROM document.comment_revision WHERE tenant_id=${input.context.tenantId}::uuid AND comment_id=${input.commentId}::uuid ${input.beforeRevision ? sql`AND revision_no<${input.beforeRevision}` : sql``} ORDER BY revision_no DESC LIMIT ${limit+1}`.execute(tx)).rows;
+      const items=rows.slice(0,limit).map(row=>({revision:row.revision_no,text:row.comment_text,format:row.content_format,...(row.content_json?{content:row.content_json}:{}),createdAt:new Date(row.created_at).toISOString()}));
+      return {items,...(rows.length>limit?{nextRevision:items.at(-1)!.revision}:{})};
+    },
     async create(command, mentions, tx) {
       await requireLookup(
         tx,
@@ -77,17 +86,15 @@ export function createKyselyCollaborationRepository(): CollaborationRepository<C
       ).rows[0];
       if (
         !current ||
-        (command.expectedUpdatedAt &&
-          iso(current["updated_at"] ?? current["created_at"]) !==
-            command.expectedUpdatedAt)
+        Number(current["revision_no"]) !== command.expectedRevision
       )
         return null;
       const result =
         await sql<Row>`UPDATE document.comment SET comment_text=${command.text},content_format=${command.format ?? String(current["content_format"])},content_json=${command.content ? JSON.stringify(command.content) : null}::jsonb,content_html=${command.html ?? null},content_schema=${command.contentSchema ?? null},updated_at=clock_timestamp(),updated_by=${command.context.principalId}::uuid WHERE tenant_id=${command.context.tenantId}::uuid AND id=${command.commentId}::uuid RETURNING *`.execute(
           tx,
         );
-      await replaceRelations(command, command.commentId, mentions, tx);
-      return map(required(result.rows[0]));
+      const orphanedAttachmentIds=await replaceRelations(command, command.commentId, mentions, tx);
+      return {comment:map(required(result.rows[0])),orphanedAttachmentIds};
     },
     async softDelete(tenantId, id, principalId, tx) {
       const r =
@@ -130,13 +137,15 @@ export function createKyselyCollaborationRepository(): CollaborationRepository<C
             "Parent comment was not found in this context",
           );
       }
-      await sql`INSERT INTO document.comment_draft(tenant_id,principal_id,context_type,entity_type,entity_id,parent_comment_id,draft_text,content_format,content_json,content_html,content_schema,visibility,created_by) VALUES(${command.context.tenantId}::uuid,${command.context.principalId}::uuid,${command.contextType ?? "entity"},${command.entityType},${command.entityId},${command.parentCommentId ?? null}::uuid,${command.text},${command.format ?? "plain"},${command.content ? JSON.stringify(command.content) : null}::jsonb,${command.html ?? null},${command.contentSchema ?? null},${command.visibility ?? "public"},${command.context.principalId}::uuid) ON CONFLICT(tenant_id,principal_id,context_type,entity_type,entity_id,parent_comment_id) DO UPDATE SET draft_text=EXCLUDED.draft_text,content_format=EXCLUDED.content_format,content_json=EXCLUDED.content_json,content_html=EXCLUDED.content_html,content_schema=EXCLUDED.content_schema,visibility=EXCLUDED.visibility,updated_at=clock_timestamp(),updated_by=EXCLUDED.principal_id`.execute(
+      const saved = await sql<{id:string}>`INSERT INTO document.comment_draft(expires_at,tenant_id,principal_id,context_type,entity_type,entity_id,parent_comment_id,draft_text,content_format,content_json,content_html,content_schema,visibility,created_by) VALUES(clock_timestamp()+make_interval(days=>${command.draftRetentionDays ?? 30}),${command.context.tenantId}::uuid,${command.context.principalId}::uuid,${command.contextType ?? "entity"},${command.entityType},${command.entityId},${command.parentCommentId ?? null}::uuid,${command.text},${command.format ?? "plain"},${command.content ? JSON.stringify(command.content) : null}::jsonb,${command.html ?? null},${command.contentSchema ?? null},${command.visibility ?? "public"},${command.context.principalId}::uuid) ON CONFLICT(tenant_id,principal_id,context_type,entity_type,entity_id,parent_comment_id) DO UPDATE SET expires_at=EXCLUDED.expires_at,draft_text=EXCLUDED.draft_text,content_format=EXCLUDED.content_format,content_json=EXCLUDED.content_json,content_html=EXCLUDED.content_html,content_schema=EXCLUDED.content_schema,visibility=EXCLUDED.visibility,updated_at=clock_timestamp(),updated_by=EXCLUDED.principal_id RETURNING id::text`.execute(
         tx,
       );
+      if (!saved.rows[0]?.id) throw new CollaborationError(409, "DRAFT_WRITE_CONFLICT", "Draft could not be saved");
+      return saved.rows[0].id;
     },
     async deleteDraft(tenantId, principalId, c, parentId, tx) {
       const r =
-        await sql`DELETE FROM document.comment_draft WHERE tenant_id=${tenantId}::uuid AND principal_id=${principalId}::uuid AND context_type=${c.contextType ?? "entity"} AND entity_type=${c.entityType} AND entity_id=${c.entityId} AND parent_comment_id IS NOT DISTINCT FROM ${parentId ?? null}::uuid`.execute(
+        await sql`UPDATE document.comment_draft SET expires_at=clock_timestamp(),updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE tenant_id=${tenantId}::uuid AND principal_id=${principalId}::uuid AND context_type=${c.contextType ?? "entity"} AND entity_type=${c.entityType} AND entity_id=${c.entityId} AND parent_comment_id IS NOT DISTINCT FROM ${parentId ?? null}::uuid`.execute(
           tx,
         );
       return Number(r.numAffectedRows ?? 0n) > 0;
@@ -168,6 +177,21 @@ async function replaceRelations(
   mentions: readonly string[],
   tx: CollaborationTransaction,
 ) {
+  const sourceCoordinates =
+    "entityType" in command
+      ? command
+      : required(
+          (
+            await sql<{ entity_type: string; entity_id: string }>`SELECT entity_type,entity_id FROM document.comment WHERE tenant_id=${command.context.tenantId}::uuid AND id=${commentId}::uuid`.execute(
+              tx,
+            )
+          ).rows[0],
+        );
+  const coordinates =
+    "entityType" in sourceCoordinates
+      ? { entityType: sourceCoordinates.entityType, entityId: sourceCoordinates.entityId }
+      : { entityType: sourceCoordinates.entity_type, entityId: sourceCoordinates.entity_id };
+  await sql`SELECT id FROM document.comment_draft WHERE tenant_id=${command.context.tenantId}::uuid AND principal_id=${command.context.principalId}::uuid AND entity_type=${coordinates.entityType} AND entity_id=${coordinates.entityId} ORDER BY id FOR UPDATE`.execute(tx);
   await sql`DELETE FROM document.comment_mention WHERE tenant_id=${command.context.tenantId}::uuid AND comment_id=${commentId}::uuid`.execute(
     tx,
   );
@@ -175,27 +199,37 @@ async function replaceRelations(
     await sql`INSERT INTO document.comment_mention(tenant_id,comment_id,mentioned_id,created_by) VALUES(${command.context.tenantId}::uuid,${commentId}::uuid,${id}::uuid,${command.context.principalId}::uuid)`.execute(
       tx,
     );
-  await sql`DELETE FROM document.attachment_link WHERE tenant_id=${command.context.tenantId}::uuid AND entity_type='document.comment' AND entity_id=${commentId} AND link_kind='comment'`.execute(
+  const removed = await sql<{ attachment_series_id: string }>`DELETE FROM document.attachment_link WHERE tenant_id=${command.context.tenantId}::uuid AND entity_type='document.comment' AND entity_id=${commentId} AND link_kind='comment' RETURNING attachment_series_id::text`.execute(
     tx,
   );
   for (const id of new Set(command.attachmentIds ?? [])) {
     const linked =
-      await sql`INSERT INTO document.attachment_link(tenant_id,entity_type,entity_id,attachment_series_id,link_kind,created_by) SELECT ${command.context.tenantId}::uuid,'document.comment',${commentId},a.series_id,'comment',${command.context.principalId}::uuid FROM document.attachment a WHERE a.tenant_id=${command.context.tenantId}::uuid AND a.id=${id}::uuid AND a.status='active' AND a.is_active ON CONFLICT DO NOTHING`.execute(
+      await sql`INSERT INTO document.attachment_link(tenant_id,entity_type,entity_id,attachment_series_id,pinned_attachment_id,link_kind,created_by) SELECT ${command.context.tenantId}::uuid,'document.comment',${commentId},a.series_id,a.id,'comment',${command.context.principalId}::uuid FROM document.attachment a WHERE a.tenant_id=${command.context.tenantId}::uuid AND a.id=${id}::uuid AND a.status='active' AND a.is_active AND a.is_virus_scanned AND a.metadata->>'entity_type'=${coordinates.entityType} AND a.metadata->>'entity_id'=${coordinates.entityId} AND a.uploaded_by=${command.context.principalId}::uuid AND (a.draft_id IS NULL OR EXISTS(SELECT 1 FROM document.comment_draft d WHERE d.tenant_id=a.tenant_id AND d.id=a.draft_id AND d.principal_id=${command.context.principalId}::uuid AND d.entity_type=${coordinates.entityType} AND d.entity_id=${coordinates.entityId} AND d.expires_at>clock_timestamp())) ON CONFLICT DO NOTHING`.execute(
         tx,
       );
     if (Number(linked.numAffectedRows ?? 0n) === 0) {
       const attachment =
-        await sql`SELECT id FROM document.attachment WHERE tenant_id=${command.context.tenantId}::uuid AND id=${id}::uuid AND status='active' AND is_active`.execute(
+        await sql`SELECT id FROM document.attachment a WHERE a.tenant_id=${command.context.tenantId}::uuid AND a.id=${id}::uuid AND a.status='active' AND a.is_active AND a.is_virus_scanned AND a.metadata->>'entity_type'=${coordinates.entityType} AND a.metadata->>'entity_id'=${coordinates.entityId} AND a.uploaded_by=${command.context.principalId}::uuid AND (a.draft_id IS NULL OR EXISTS(SELECT 1 FROM document.comment_draft d WHERE d.tenant_id=a.tenant_id AND d.id=a.draft_id AND d.principal_id=${command.context.principalId}::uuid AND d.entity_type=${coordinates.entityType} AND d.entity_id=${coordinates.entityId} AND d.expires_at>clock_timestamp()))`.execute(
           tx,
         );
       if (!attachment.rows.length)
         throw new CollaborationError(
           422,
           "ATTACHMENT_NOT_FOUND",
-          "Every attachment must be active in this tenant",
+          "Every attachment must be active and owned by this draft author",
         );
     }
+    // This transaction is the only audience expansion for a draft upload: the
+    // immutable comment link is written first, then the private draft marker is
+    // released. A failed comment command rolls both writes back.
+    await sql`UPDATE document.attachment SET draft_id=NULL,metadata=metadata-'draft_id'-'draft_principal_id',updated_at=clock_timestamp(),updated_by=${command.context.principalId}::uuid WHERE tenant_id=${command.context.tenantId}::uuid AND id=${id}::uuid AND uploaded_by=${command.context.principalId}::uuid AND draft_id IS NOT NULL`.execute(tx);
   }
+  // Evaluate only after the replacement pins exist. This keeps a selected pin
+  // and any other comment/context link alive, while every active version in a
+  // now-unreferenced removed series becomes a retention candidate atomically.
+  if (!removed.rows.length) return [];
+  const orphaned=await sql<{ id: string }>`UPDATE document.attachment attachment SET status='orphaned',is_active=false,status_changed_at=clock_timestamp(),status_changed_by=${command.context.principalId}::uuid,updated_at=clock_timestamp(),updated_by=${command.context.principalId}::uuid WHERE attachment.tenant_id=${command.context.tenantId}::uuid AND attachment.series_id=ANY(${[...new Set(removed.rows.map(row=>row.attachment_series_id))]}::uuid[]) AND attachment.status='active' AND NOT EXISTS(SELECT 1 FROM document.attachment_link remaining WHERE remaining.tenant_id=attachment.tenant_id AND remaining.attachment_series_id=attachment.series_id) RETURNING attachment.id::text`.execute(tx);
+  return orphaned.rows.map(row=>row.id);
 }
 function map(r: Row): CommentRecord {
   return {
@@ -222,6 +256,7 @@ function map(r: Row): CommentRecord {
     intent: String(r["comment_intent"]),
     status: String(r["status"]) as CommentRecord["status"],
     createdAt: iso(r["created_at"]),
+    revision: Number(r["revision_no"]),
     ...(r["updated_at"] ? { updatedAt: iso(r["updated_at"]) } : {}),
   };
 }

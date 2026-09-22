@@ -1,0 +1,122 @@
+{
+  "environment": "dev",
+  "container": "athyper-dev-db-1",
+  "timestamp": "2026-09-21T03:21:05.184203+00:00",
+  "rehearsalContainer": "athyper-bp-integration-local-20260921",
+  "rehearsal": [
+    "restored Studio and Neon backups",
+    "CA01 persisted capabilities, compiled and verified signature/local activation",
+    "CA02 privacy, immutable history, revision concurrency, rollback",
+    "CA07 concurrent draft retention and attachment cleanup"
+  ],
+  "planes": [
+    {
+      "plane": "studio",
+      "sql": "server/db/scripts/operations/upgrades/bp-integration-20260921/studio.sql",
+      "sha256": "77bc8bb4b2b41554fcbd090a22f3e29bacae5f8b87058bb13030577b6d9719ae",
+      "beforeCounts": {
+        "metadata.entity_change_set": 8,
+        "metadata.entity_release": 2
+      },
+      "afterCounts": {
+        "metadata.entity_change_set": 8,
+        "metadata.entity_release": 2
+      },
+      "catalog": {
+        "metadata.entity_capability": {
+          "columns": [
+            "binding",
+            "capability_key",
+            "change_set_id",
+            "created_at",
+            "created_by",
+            "declaration",
+            "entity_id",
+            "id",
+            "tenant_id",
+            "updated_at",
+            "updated_by"
+          ],
+          "constraints": [
+            "entity_capability_actor_fk",
+            "entity_capability_binding_check",
+            "entity_capability_capability_key_check",
+            "entity_capability_changeset_fk",
+            "entity_capability_check",
+            "entity_capability_declaration_check",
+            "entity_capability_entity_fk",
+            "entity_capability_graph_validate",
+            "entity_capability_pkey",
+            "entity_capability_tenant_fk",
+            "entity_capability_tenant_id_change_set_id_capability_key_key",
+            "entity_capability_tenant_id_id_key"
+          ],
+          "triggers": [
+            "entity_capability_graph_guard",
+            "entity_capability_graph_validate",
+            "entity_capability_updated_at"
+          ],
+          "rls": true
+        }
+      },
+      "status": "applied"
+    },
+    {
+      "plane": "neon",
+      "sql": "server/db/scripts/operations/upgrades/bp-integration-20260921/neon.sql",
+      "sha256": "8ab6bfde2aad357844c6cc07928ca6d9abac8682b1c28305b22d22623d4f1acd",
+      "beforeCounts": {
+        "document.comment": 0,
+        "document.comment_draft": 0,
+        "document.attachment": 162,
+        "document.attachment_link": 160,
+        "document.attachment_series": 162
+      },
+      "afterCounts": {
+        "document.comment": 0,
+        "document.comment_draft": 0,
+        "document.attachment": 162,
+        "document.attachment_link": 160,
+        "document.attachment_series": 162
+      },
+      "catalog": {
+        "document.comment_revision": {
+          "columns": [
+            "change_kind",
+            "comment_id",
+            "comment_text",
+            "content_format",
+            "content_html",
+            "content_json",
+            "content_schema",
+            "created_at",
+            "created_by",
+            "id",
+            "revision_no",
+            "status",
+            "tenant_id",
+            "visibility"
+          ],
+          "constraints": [
+            "comment_revision_actor_fk",
+            "comment_revision_comment_fk",
+            "comment_revision_content_json_chk",
+            "comment_revision_content_schema_chk",
+            "comment_revision_kind_chk",
+            "comment_revision_number_chk",
+            "comment_revision_number_uq",
+            "comment_revision_pkey",
+            "comment_revision_tenant_fk",
+            "comment_revision_tenant_id_uq",
+            "comment_revision_text_chk"
+          ],
+          "triggers": [
+            "comment_revision_immutable"
+          ],
+          "rls": true
+        }
+      },
+      "status": "applied"
+    }
+  ]
+}

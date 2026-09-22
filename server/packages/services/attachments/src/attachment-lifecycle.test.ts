@@ -81,7 +81,7 @@ describe("attachment lifecycle", () => {
       url: "https://objects.example/signed",
       expiresAt: "2026-08-30T00:05:00.000Z",
     });
-    expect(createDownloadUrl).toHaveBeenCalledWith("attachments/file", 300);
+    expect(createDownloadUrl).toHaveBeenCalledWith("attachments/file", 300, { contentType: "application/octet-stream", contentDisposition: 'attachment; filename="attachment"' });
   });
   it("stages an upload in quarantine with a bounded URL", async () => {
     const writes: string[] = [];
@@ -113,6 +113,7 @@ describe("attachment lifecycle", () => {
       },
     );
     const createUploadUrl = vi.fn(async () => "https://objects.example/upload");
+    const scheduleStageExpiry = vi.fn(async () => undefined);
     const lifecycle = createAttachmentLifecycle({
       transactions: { run: async (_plane, _actor, work) => work({}) },
       repository: {
@@ -163,6 +164,12 @@ describe("attachment lifecycle", () => {
       },
       outbox: { append: async () => undefined },
       uploadUrlTtlSeconds: 300,
+      scheduler: {
+        scheduleExtraction: async () => undefined,
+        scheduleDerivatives: async () => undefined,
+        schedulePurge: async () => undefined,
+        scheduleStageExpiry,
+      },
     });
 
     const result = await lifecycle.stage({
@@ -181,6 +188,13 @@ describe("attachment lifecycle", () => {
     expect(createStaged).toHaveBeenCalledOnce();
     expect(writes).toEqual(["attachment", "quota"]);
     expect(createUploadUrl).toHaveBeenCalledWith(result.storageKey, 300);
+    expect(scheduleStageExpiry).toHaveBeenCalledWith(
+      expect.objectContaining({ attachmentId: result.attachmentId }),
+      expect.objectContaining({
+        jobId: expect.stringMatching(/^attachment:.*:expire:/),
+        delayMs: expect.any(Number),
+      }),
+    );
   });
 
   it("reuses an existing staged upload without reserving quota again", async () => {
@@ -195,6 +209,13 @@ describe("attachment lifecycle", () => {
     };
     const reserve = vi.fn(async () => "created" as const);
     const createStaged = vi.fn(async () => existing);
+    const resolve = vi.fn(async () => ({
+      kind: "attachment.storage" as const,
+      limitBytes: 1_000,
+      limitItems: 10,
+      reservationTtlSeconds: 60,
+      retryAfterSeconds: 60,
+    }));
     const lifecycle = createAttachmentLifecycle({
       transactions: { run: async (_plane, _actor, work) => work({}) },
       repository: {
@@ -233,13 +254,7 @@ describe("attachment lifecycle", () => {
         expire: async () => [],
       },
       quotaPolicies: {
-        resolve: async () => ({
-          kind: "attachment.storage",
-          limitBytes: 1_000,
-          limitItems: 10,
-          reservationTtlSeconds: 60,
-          retryAfterSeconds: 60,
-        }),
+        resolve,
       },
       outbox: { append: async () => undefined },
     });
@@ -257,6 +272,7 @@ describe("attachment lifecycle", () => {
     ).resolves.toMatchObject({ storageKey: existing.storageKey });
     expect(createStaged).not.toHaveBeenCalled();
     expect(reserve).not.toHaveBeenCalled();
+    expect(resolve).not.toHaveBeenCalled();
   });
 
   it("schedules derivatives with the finalized source hash", async () => {
@@ -898,5 +914,28 @@ describe("attachment lifecycle", () => {
       {},
     );
     expect(markPurgedForMaintenance).toHaveBeenCalledOnce();
+  });
+
+  it("replays a lost folder response and rejects concurrent folder mutations with a stale workspace revision", async () => {
+    const receipts = new Map<string, { readonly folderId: string | null; readonly revision: number }>(); let revision = 1;
+    const manageFolder = vi.fn(async (_identity: unknown, input: { readonly expectedRevision: number }) => input.expectedRevision === revision ? { revision: ++revision } : { revision: undefined });
+    const lifecycle = createAttachmentLifecycle({ transactions:{run:async(_p,_a,work)=>work({})}, repository:{manageFolder,createStaged:async()=>{throw new Error("unused");},load:async()=>null,finalizeClean:async()=>{throw new Error("unused");},quarantine:async()=>undefined,deactivate:async()=>undefined,expire:async()=>undefined,markPurged:async()=>undefined}, commandExecutions:{begin:async input=>receipts.has(input.idempotencyKey)?{kind:"replay",result:receipts.get(input.idempotencyKey)!}:{kind:"started",executionId:input.idempotencyKey},complete:async(id,result)=>{receipts.set(id,result);}}, storage:{createUploadUrl:async()=>"",createDownloadUrl:async()=>"",put:async()=>undefined,get:async()=>new Uint8Array(),delete:async()=>undefined,copy:async()=>undefined,exists:async()=>false}, scanner:{scan:async()=>({status:"clean",scanner:"test",scannedAt:new Date().toISOString(),durationMs:1})},quota:{reserve:async()=>"created",commit:async()=>undefined,release:async()=>true,expire:async()=>[]},quotaPolicies:{resolve:async()=>({kind:"attachment.storage",limitBytes:1,limitItems:1,reservationTtlSeconds:1,retryAfterSeconds:1})},outbox:{append:async()=>undefined} });
+    const identity={planeKey:"neon" as const,tenantId:"11111111-1111-4111-8111-111111111111",principalId:"22222222-2222-4222-8222-222222222222",attachmentId:"33333333-3333-4333-8333-333333333333"}; const command={command:"move" as const,entityType:"business_partner",entityId:"record-1",folderId:"44444444-4444-4444-8444-444444444444",attachmentId:identity.attachmentId,expectedRevision:1,idempotencyKey:"folder-move-command-0001"};
+    await expect(lifecycle.manageFolder!(identity,command)).resolves.toEqual({folderId:command.folderId,revision:2});
+    await expect(lifecycle.manageFolder!(identity,command)).resolves.toEqual({folderId:command.folderId,revision:2});
+    await expect(lifecycle.manageFolder!(identity,{...command,command:"delete",attachmentId:undefined,idempotencyKey:"folder-delete-command-1"})).rejects.toThrow("Attachment workspace has changed");
+    expect(manageFolder).toHaveBeenCalledTimes(2);
+    const unfiled={...command,folderId:null,expectedRevision:2,idempotencyKey:"folder-unfile-command-1"};
+    await expect(lifecycle.manageFolder!(identity,unfiled)).resolves.toEqual({folderId:null,revision:3});
+    await expect(lifecycle.manageFolder!(identity,unfiled)).resolves.toEqual({folderId:null,revision:3});
+    await expect(lifecycle.manageFolder!(identity,{...unfiled,command:"delete"})).rejects.toThrow("Attachment folder command is invalid");
+    expect(manageFolder).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries the complete original, staging, and derivative purge manifest after storage failure", async () => {
+    const identity={planeKey:"neon" as const,tenantId:"11111111-1111-4111-8111-111111111111",principalId:"22222222-2222-4222-8222-222222222222",attachmentId:"33333333-3333-4333-8333-333333333333"}; let fail=true; const deleted:string[]=[]; const marked=vi.fn(async()=>undefined);
+    const lifecycle=createAttachmentLifecycle({transactions:{run:async(_p,_a,work)=>work({})},repository:{createStaged:async()=>{throw new Error("unused");},load:async()=>null,loadForMaintenance:async()=>({id:identity.attachmentId,status:"orphaned" as const,storageKey:"original",isCurrent:true,isActive:false,hasLegalHold:false}),purgeObjectKeys:async()=>["original","staging-copy","derivative-preview"],markPurgedForMaintenance:marked,markPurged:async()=>undefined,hasActiveLinks:async()=>false,expire:async()=>undefined,finalizeClean:async()=>{throw new Error("unused");},quarantine:async()=>undefined,deactivate:async()=>undefined,listRetentionCandidates:async()=>[identity.attachmentId]},storage:{createUploadUrl:async()=>"",createDownloadUrl:async()=>"",put:async()=>undefined,get:async()=>new Uint8Array(),delete:async key=>{deleted.push(key);if(key==="derivative-preview"&&fail)throw new Error("object store unavailable");},copy:async()=>undefined,exists:async()=>false},scanner:{scan:async()=>({status:"clean",scanner:"test",scannedAt:new Date().toISOString(),durationMs:1})},quota:{reserve:async()=>"created",commit:async()=>undefined,release:async()=>true,expire:async()=>[]},quotaPolicies:{resolve:async()=>({kind:"attachment.storage",limitBytes:1,limitItems:1,reservationTtlSeconds:1,retryAfterSeconds:1})},outbox:{append:async()=>undefined}});
+    await expect(lifecycle.cleanupRetention(identity)).rejects.toThrow("object store unavailable"); expect(marked).not.toHaveBeenCalled();
+    fail=false; await expect(lifecycle.cleanupRetention(identity)).resolves.toMatchObject({purged:1}); expect(deleted).toEqual(["original","staging-copy","derivative-preview","original","staging-copy","derivative-preview"]); expect(marked).toHaveBeenCalledOnce();
   });
 });

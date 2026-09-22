@@ -1,0 +1,4665 @@
+{
+  "runtimeArtifact": false,
+  "source": {
+    "database": "athyper_neon",
+    "method": "pg_catalog.pg_attribute/pg_type",
+    "scope": "local_read_only_snapshot"
+  },
+  "columns": [
+    {
+      "table": "control.business_partner_qualification",
+      "column": "approved_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "approved_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "commodity_capability_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "company_code_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "decision",
+      "type": "control.qualification_decision_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "decision_fingerprint",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "decision_idempotency_key",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "decision_reason",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "effective_from",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "effective_until",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "idempotency_key",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "next_review_at",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "operating_organization_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "partner_role",
+      "type": "master.partner_role_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "qualification_type_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "reviewed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "reviewed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "risk_assessment_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "role_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "row_version",
+      "type": "bigint",
+      "baseType": "bigint",
+      "nullable": false
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "control.business_partner_qualification",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "address_kind",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.address",
+      "column": "address_type",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "building_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "city",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "country_code",
+      "type": "character(2)",
+      "baseType": "character",
+      "nullable": false
+    },
+    {
+      "table": "master.address",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.address",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.address",
+      "column": "current_validation_event_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "delivery_service_number",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "delivery_service_type",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "dependent_locality",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "entrance",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "floor",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "format_version",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.address",
+      "column": "formatted_address",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "house_number",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "house_number_suffix",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.address",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "latitude",
+      "type": "numeric(9,6)",
+      "baseType": "numeric",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "line1",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "line2",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "line3",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "longitude",
+      "type": "numeric(9,6)",
+      "baseType": "numeric",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.address",
+      "column": "normalization_version",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.address",
+      "column": "normalized_hash",
+      "type": "character(64)",
+      "baseType": "character",
+      "nullable": false
+    },
+    {
+      "table": "master.address",
+      "column": "po_box",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "po_box_city",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "po_box_postal_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "postal_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "region",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "room",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "state_region_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "status",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.address",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "street_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.address",
+      "column": "timezone_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "unit",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "validated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "validation_confidence",
+      "type": "numeric(5,2)",
+      "baseType": "numeric",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "validation_provider",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address",
+      "column": "validation_status",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.address_link",
+      "column": "address_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.address_link",
+      "column": "attention_line",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address_link",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.address_link",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.address_link",
+      "column": "effective_from",
+      "type": "date",
+      "baseType": "date",
+      "nullable": false
+    },
+    {
+      "table": "master.address_link",
+      "column": "effective_until",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.address_link",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.address_link",
+      "column": "is_primary",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": false
+    },
+    {
+      "table": "master.address_link",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.address_link",
+      "column": "owner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.address_link",
+      "column": "owner_type_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.address_link",
+      "column": "purpose",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.address_link",
+      "column": "role_qualifier",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address_link",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.address_link",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.address_link",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.address_link",
+      "column": "usage_denied_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.address_link",
+      "column": "usage_denied_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.address_link",
+      "column": "usage_denied_reason_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.address_link",
+      "column": "usage_status",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "account_holder_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "account_id_type",
+      "type": "master.bank_account_id_type_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "account_id_value",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "account_last4",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "account_nature",
+      "type": "master.bank_account_nature_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "bank_branch_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "bank_country_override",
+      "type": "character(2)",
+      "baseType": "character",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "bank_institution_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "bank_name_override",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "bic_override",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "correspondent_bank_institution_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "currency_code",
+      "type": "character(3)",
+      "baseType": "character",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "is_verified",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "provider_account_ref",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "provisional_bank_reference_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "status",
+      "type": "master.bank_account_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.bank_account",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "verification_method",
+      "type": "master.bank_verification_method_d",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "verified_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.bank_account",
+      "column": "verified_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "commodity_category_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "effective_from",
+      "type": "date",
+      "baseType": "date",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "effective_until",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "notes",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "partner_role",
+      "type": "master.partner_role_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "status",
+      "type": "master.partner_extension_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_capability",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "appointed_date",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "beneficial_ownership_pct",
+      "type": "numeric(7,4)",
+      "baseType": "numeric",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "business_title",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "end_of_term",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "member_business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "member_country_code",
+      "type": "character(2)",
+      "baseType": "character",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "member_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "member_type",
+      "type": "master.governance_member_type_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "notes",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "ownership_pct",
+      "type": "numeric(7,4)",
+      "baseType": "numeric",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "relation_type_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "status",
+      "type": "master.partner_extension_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_governance_relation",
+      "column": "voting_pct",
+      "type": "numeric(7,4)",
+      "baseType": "numeric",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "effective_until",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "identifier_value",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "is_primary",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "issued_at",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "issuing_authority",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "issuing_country_code",
+      "type": "character(2)",
+      "baseType": "character",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "scheme_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "status",
+      "type": "master.partner_extension_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "verified_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_identifier",
+      "column": "verified_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "assignment_kind",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "confidence",
+      "type": "smallint",
+      "baseType": "smallint",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "effective_from",
+      "type": "date",
+      "baseType": "date",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "effective_until",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "industry_code_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "industry_domain_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "is_primary",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "source_reference",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "source_system",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "status",
+      "type": "master.partner_extension_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "verified_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_industry_classification",
+      "column": "verified_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "effective_from",
+      "type": "date",
+      "baseType": "date",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "effective_until",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "operating_organization_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "partner_role",
+      "type": "master.partner_role_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "status",
+      "type": "master.partner_extension_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "effective_from",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "effective_until",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "is_primary",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "jurisdiction_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "registration_number",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "registration_type_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "status",
+      "type": "master.partner_extension_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "tax_type_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "verified_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_tax_registration",
+      "column": "verified_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "additional_info",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "certificate_number",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "certification_type_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "certified_by",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "certified_location",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "company_code_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.certification",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.certification",
+      "column": "custom_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "document_attachment_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "effective_from",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "effective_until",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.certification",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.certification",
+      "column": "owner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.certification",
+      "column": "owner_type",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.certification",
+      "column": "site_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "status",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.certification",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.certification",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.certification",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "company_code_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "currency_code",
+      "type": "character(3)",
+      "baseType": "character",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "customer_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "default_accounting_profile_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "default_dimension_set_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "payment_term_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "statement_cycle_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "status",
+      "type": "master.partner_extension_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_customer_profile",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "company_code_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "currency_code",
+      "type": "character(3)",
+      "baseType": "character",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "default_accounting_profile_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "default_dimension_set_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "payment_term_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "preferred_remittance_bank_link_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "status",
+      "type": "master.partner_extension_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "supplier_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.company_code_supplier_profile",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_email",
+      "column": "bounce_count",
+      "type": "integer",
+      "baseType": "integer",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_email",
+      "column": "contact_link_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_email",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_email",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_email",
+      "column": "is_disposable",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_email",
+      "column": "last_bounce_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_email",
+      "column": "last_bounce_reason",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_email",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_email",
+      "column": "mx_checked_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_email",
+      "column": "mx_valid",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_email",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_email",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_email",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_link",
+      "column": "channel_type",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "effective_from",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "effective_until",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_link",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_link",
+      "column": "is_primary",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "is_verified",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "owner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "owner_type_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "purpose",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "role_qualifier",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_link",
+      "column": "status",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_link",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_link",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_link",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_link",
+      "column": "value",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "verification_evidence",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_link",
+      "column": "verification_provider",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_link",
+      "column": "verification_signature",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_link",
+      "column": "verified_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_person",
+      "column": "business_title",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_person",
+      "column": "contact_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person",
+      "column": "department_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_person",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_person",
+      "column": "is_primary",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person",
+      "column": "owner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person",
+      "column": "owner_type_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person",
+      "column": "status",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_person",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_person",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_person",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_person_role",
+      "column": "contact_person_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person_role",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person_role",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person_role",
+      "column": "effective_from",
+      "type": "date",
+      "baseType": "date",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person_role",
+      "column": "effective_until",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_person_role",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person_role",
+      "column": "is_primary",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person_role",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person_role",
+      "column": "role_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person_role",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_person_role",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_person_role",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_phone",
+      "column": "carrier_hint",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_phone",
+      "column": "contact_link_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_phone",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_phone",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_phone",
+      "column": "line_type",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_phone",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_phone",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.contact_phone",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.contact_phone",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.customer",
+      "column": "business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.customer",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.customer",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.customer",
+      "column": "customer_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.customer",
+      "column": "customer_type",
+      "type": "master.customer_type_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.customer",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.customer",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.customer",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.customer",
+      "column": "record_version",
+      "type": "bigint",
+      "baseType": "bigint",
+      "nullable": false
+    },
+    {
+      "table": "master.customer",
+      "column": "status",
+      "type": "master.customer_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.customer",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.customer",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.customer",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.customer",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.customer",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "company_code_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "department",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "display_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "email",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "employee_number",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "employment_type",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "first_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "hire_date",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "last_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "manager_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "person_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "phone",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "principal_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "status",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.employee",
+      "column": "termination_date",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "title",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.employee",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.supplier",
+      "column": "business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.supplier",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.supplier",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.supplier",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.supplier",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.supplier",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.supplier",
+      "column": "record_version",
+      "type": "bigint",
+      "baseType": "bigint",
+      "nullable": false
+    },
+    {
+      "table": "master.supplier",
+      "column": "status",
+      "type": "master.supplier_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.supplier",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.supplier",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.supplier",
+      "column": "supplier_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.supplier",
+      "column": "supplier_type",
+      "type": "master.supplier_type_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.supplier",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.supplier",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.supplier",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "address_format",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "calling_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "code",
+      "type": "character(2)",
+      "baseType": "character",
+      "nullable": false
+    },
+    {
+      "table": "shared.country",
+      "column": "code3",
+      "type": "character(3)",
+      "baseType": "character",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "shared.country",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "shared.country",
+      "column": "has_postal_codes",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": false
+    },
+    {
+      "table": "shared.country",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "shared.country",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "shared.country",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.country",
+      "column": "numeric3",
+      "type": "character(3)",
+      "baseType": "character",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "official_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "phone_example",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "phone_national_pattern",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "phone_trunk_prefix",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "postal_code_example",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "postal_code_label",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.country",
+      "column": "postal_code_pattern",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "postal_position",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.country",
+      "column": "region",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "region_label",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.country",
+      "column": "status",
+      "type": "shared.ref_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.country",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "subregion",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "shared.country",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "request_no",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "request_kind",
+      "type": "document.business_partner_request_kind_d",
+      "baseType": "text",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "source_kind",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "registration_mode",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "invitation_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "applicant_principal_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "represented_party_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "representation_evidence_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "target_business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "base_record_version",
+      "type": "bigint",
+      "baseType": "bigint",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "base_snapshot_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "base_payload_hash",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "source_system_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "source_entity_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "source_entity_id",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "source_entity_code_value",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "source_projection_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "source_version",
+      "type": "bigint",
+      "baseType": "bigint",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "source_payload_hash",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "requested_role",
+      "type": "document.business_partner_requested_role_d",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "operating_organization_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "company_code_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "legal_entity_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "org_unit_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "position_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "payload_schema_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "payload_schema_version",
+      "type": "integer",
+      "baseType": "integer",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "payload_schema_hash",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "proposed_payload",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "extension_mode",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "extension_fingerprint",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "extension_counts",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "validation_summary",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "duplicate_summary",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "change_impact",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "workflow_request_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialized_business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialized_supplier_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialized_customer_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialized_person_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialized_employee_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialized_employment_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialized_work_assignment_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialized_principal_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialized_bank_verification_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialized_supplier_company_profile_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialized_customer_company_profile_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialized_operating_organization_assignment_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "materialization_snapshot_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "application_idempotency_key",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "application_fingerprint",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "application_result_kind",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "application_reason_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "decision_fingerprint",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "idempotency_key",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "status",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "submitted_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "submitted_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "approved_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "approved_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "applied_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "applied_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "failure_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "failure_detail",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "support_reference",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "row_version",
+      "type": "bigint",
+      "baseType": "bigint",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "document.business_partner_request",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true,
+      "evidence": "source_ddl_only"
+    },
+    {
+      "table": "master.business_partner",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "canonical_party_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "representation_purpose_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "partner_category",
+      "type": "master.business_partner_category_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "ownership_class",
+      "type": "master.business_partner_ownership_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "legal_classification",
+      "type": "master.business_partner_legal_classification_d",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "category_locked_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "category_locked_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "record_version",
+      "type": "bigint",
+      "baseType": "bigint",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "legal_form",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "registration_country_code",
+      "type": "character(2)",
+      "baseType": "character",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "incorporation_date",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "website_url",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "parent_business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "description",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "aliases",
+      "type": "text[]",
+      "baseType": "text[]",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "status",
+      "type": "master.business_partner_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "legal_form_value_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "business_type_value_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "founded_year",
+      "type": "smallint",
+      "baseType": "smallint",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "employee_count",
+      "type": "integer",
+      "baseType": "integer",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "employee_count_as_of",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner",
+      "column": "employee_count_scope",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.bank_branch",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "shared.bank_branch",
+      "column": "institution_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "shared.bank_branch",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.bank_branch",
+      "column": "country_code",
+      "type": "character(2)",
+      "baseType": "character",
+      "nullable": false
+    },
+    {
+      "table": "shared.bank_identifier",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "shared.bank_identifier",
+      "column": "institution_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "shared.bank_identifier",
+      "column": "branch_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "shared.bank_identifier",
+      "column": "scheme",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.bank_identifier",
+      "column": "value",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.bank_institution",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "shared.bank_institution",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.bank_institution",
+      "column": "country_code",
+      "type": "character(2)",
+      "baseType": "character",
+      "nullable": false
+    },
+    {
+      "table": "shared.bank_institution",
+      "column": "institution_type",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.classification_scheme",
+      "column": "code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.classification_scheme",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.classification_scheme",
+      "column": "scheme_kind",
+      "type": "shared.classification_kind_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.commodity_code",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "shared.commodity_code",
+      "column": "domain_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.commodity_code",
+      "column": "code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.commodity_code",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.commodity_crosswalk",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "shared.commodity_crosswalk",
+      "column": "source_domain_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.commodity_crosswalk",
+      "column": "source_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.commodity_crosswalk",
+      "column": "target_domain_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.commodity_crosswalk",
+      "column": "target_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.currency",
+      "column": "code",
+      "type": "character(3)",
+      "baseType": "character",
+      "nullable": false
+    },
+    {
+      "table": "shared.currency",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.industry_code",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "shared.industry_code",
+      "column": "domain_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.industry_code",
+      "column": "code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.industry_code",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.industry_crosswalk",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "shared.industry_crosswalk",
+      "column": "source_domain_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.industry_crosswalk",
+      "column": "source_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.industry_crosswalk",
+      "column": "target_domain_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.industry_crosswalk",
+      "column": "target_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.language",
+      "column": "code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.language",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.locale",
+      "column": "code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.locale",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.locale",
+      "column": "language_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.locale",
+      "column": "country_code",
+      "type": "character(2)",
+      "baseType": "character",
+      "nullable": true
+    },
+    {
+      "table": "shared.state_region",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "shared.state_region",
+      "column": "code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.state_region",
+      "column": "country_code",
+      "type": "character(2)",
+      "baseType": "character",
+      "nullable": false
+    },
+    {
+      "table": "shared.state_region",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.timezone",
+      "column": "code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.timezone",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.timezone",
+      "column": "canonical_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "shared.uom",
+      "column": "code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.uom",
+      "column": "name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "shared.uom",
+      "column": "quantity_type",
+      "type": "shared.uom_quantity_type_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_alias",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_alias",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_alias",
+      "column": "business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_alias",
+      "column": "alias_kind",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_alias",
+      "column": "alias_name",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_alias",
+      "column": "language_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_alias",
+      "column": "country_code",
+      "type": "character(2)",
+      "baseType": "character(2)",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_alias",
+      "column": "effective_from",
+      "type": "date",
+      "baseType": "date",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_alias",
+      "column": "effective_until",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_alias",
+      "column": "is_primary",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_alias",
+      "column": "status",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "source_business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "target_business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "relationship_type_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "country_code",
+      "type": "character(2)",
+      "baseType": "character(2)",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "effective_from",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "effective_until",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "status",
+      "type": "master.partner_extension_status_d",
+      "baseType": "text",
+      "nullable": false
+    }
+  ],
+  "ddlFallbacks": [
+    {
+      "table": "document.business_partner_request",
+      "path": "server/db/ddl/planes/neon/document/03_tables.sql",
+      "sha256": "5c74ff46421dd1194c513bf164c5c2daea9fcd1630ccca8d8162ab40d6dea3aa",
+      "reason": "TABLE_ABSENT_FROM_LOCAL_DATABASE",
+      "parserBoundary": "column_declarations_before_first_table_constraint"
+    },
+    {
+      "path": "server/db/ddl/planes/neon/master/18_business_partner_business_profile.sql",
+      "sha256": "f387205bfad4e0571dadbaa4b1695da97b60fdd644766d6d2d1a8eb98c4e6609",
+      "verification": "PostgreSQL DDL executed and pg_catalog captured inside rolled-back transaction; not deployed"
+    },
+    {
+      "path": "server/db/ddl/common/shared/03_tables.sql",
+      "sha256": "e981c5280e87ee9e9aadb41c6d564f4d43dfb9ae106f15f2f3811384a66a37d9",
+      "verification": "BP2-01 shared-reference field bindings reconciled against pinned DDL; live schema verification remains release-readiness work."
+    },
+    {
+      "path": "server/db/ddl/common/shared/03_bank_master.sql",
+      "sha256": "d2b0f60d67ae7336df176d65703efe6711ec7f735a091cc94e81f3d840ec2fcd",
+      "verification": "BP2-01 shared-reference field bindings reconciled against pinned DDL; live schema verification remains release-readiness work."
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "path": "server/db/ddl/planes/neon/master/03_tables.sql",
+      "sha256": "4c490266735d8b29a429e7a6101dc2db241496c5f7caad959efd449865bfaf46",
+      "reason": "TABLE_ABSENT_FROM_LOCAL_DATABASE",
+      "parserBoundary": "column_declarations_before_first_table_constraint"
+    }
+  ]
+}

@@ -7,3 +7,7 @@ export * from "./entity-runtime-contracts.js";
 export * from "./entity-runtime-routes.js";
 export * from "./routes.js";
 export * from "./entity-operation-dispatcher.js";
+export * from "./entity-intake-operation-routes.js";
+export * from "./entity-capability-policy.js";
+
+export * from "./record-participants.js";

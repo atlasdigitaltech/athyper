@@ -12,7 +12,11 @@ test("attachment uploads omit incomplete comment coordinates and accept explicit
       return Response.json({ attachmentId: body.attachmentId, uploadUrl: "https://objects.example/upload" }, { status: 201 });
     }
     if (url === "https://objects.example/upload") return new Response(null, { status: 200 });
-    if (url.endsWith("/finalize")) return Response.json({ status: "active" });
+    if (url.endsWith("/finalize")) {
+      const id=url.split('/').at(-2);
+      assert.equal(new Headers(init?.headers).get('Idempotency-Key'),id);
+      return Response.json({ status: "active" });
+    }
     return new Response(null, { status: 404 });
   };
   const file = new File(["safe"], "context.txt", { type: "text/plain" });
@@ -21,4 +25,23 @@ test("attachment uploads omit incomplete comment coordinates and accept explicit
   assert.equal(stageBodies[0]?.entityType, undefined);
   assert.deepEqual({ entityType: stageBodies[1]?.entityType, entityId: stageBodies[1]?.entityId }, { entityType: "atlas.prompt", entityId: "11111111-1111-4111-8111-111111111111" });
   assert.throws(() => createAttachmentApiClient({ fetch: request as typeof fetch, entityType: "atlas.prompt" }), /provided together/);
+});
+
+test("retry recovers an uncertain committed upload before staging or PUT again", async () => {
+  let stages = 0, puts = 0, recovering = false;
+  const id = "11111111-1111-4111-8111-111111111111";
+  const request: typeof fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/stage")) { stages++; return Response.json({ attachmentId: id, uploadUrl: "https://objects.example/upload" }); }
+    if (url === "https://objects.example/upload") { puts++; return new Response(null, { status: 200 }); }
+    if (url.endsWith("/status") && recovering) return Response.json({ attachmentId: id, status: "active" });
+    throw new TypeError("response lost");
+  };
+  const client = createAttachmentApiClient({ fetch: request, createAttachmentId: () => id });
+  const file = new File(["safe"], "file.pdf", { type: "application/pdf" });
+  await assert.rejects(client.upload(file, { token: "same-command" }), /response lost/);
+  recovering = true;
+  assert.deepEqual(await client.upload(file, { token: "same-command" }), { attachmentId: id });
+  assert.equal(stages, 1);
+  assert.equal(puts, 1);
 });

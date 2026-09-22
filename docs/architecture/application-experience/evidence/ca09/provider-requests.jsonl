@@ -1,0 +1,10 @@
+{"fixture": "clean-text.pdf", "rendition": "thumbnail_sm", "status": 200, "ms": 90}
+{"fixture": "clean-text.pdf", "rendition": "preview_default", "status": 200, "ms": 80}
+{"fixture": "clean-ocr.png", "rendition": "thumbnail_sm", "status": 200, "ms": 86}
+{"fixture": "clean-ocr.png", "rendition": "preview_default", "status": 200, "ms": 84}
+{"fixture": "encrypted.pdf", "rendition": "preview_default", "status": 422, "ms": 62}
+{"fixture": "over-page-limit.pdf", "rendition": "preview_default", "status": 422, "ms": 52}
+{"fixture": "clean-text.pdf", "rendition": "preview_default", "status": 422, "ms": 60}
+{"fixture": "clean-text.pdf", "extraction": "passed", "ms": 2807}
+{"fixture": "clean-ocr.png", "extraction": "passed", "ms": 137}
+{"fixture": "over-page-limit.pdf", "extraction": "passed", "ms": 24}

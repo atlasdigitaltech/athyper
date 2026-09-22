@@ -1,3 +1,4 @@
+import { createTenantWorkGate } from "@athyper/server-foundation/resilience";
 import { createHash } from "node:crypto";
 import { downloadForExtraction } from "./bounded-download.js";
 import { extname } from "node:path";
@@ -37,6 +38,7 @@ export interface DocumentProcessingCandidate {
   readonly updatedAt: string;
 }
 export interface ExtractedDocumentUpdate {
+  readonly sourceSha256?: string;
   readonly attachmentId: string;
   readonly tenantId: string;
   readonly principalId: string;
@@ -79,7 +81,7 @@ export interface DocumentProcessingOptions<Transaction> {
   readonly transactions: PlaneTransactionCoordinator<Transaction>;
   readonly storage: ObjectStorage;
   readonly extractor: ContentExtractor;
-  readonly searchIndex: SearchIndex;
+  readonly searchIndex?: SearchIndex;
   readonly maxExtractBytes?: number;
   readonly piiDetector?: PiiDetector;
 }
@@ -106,6 +108,7 @@ export function createDocumentExtractionScheduler(
         {
           jobId: `extract-${request.planeKey}-${request.tenantId}-${request.attachmentId}`,
           maxAttempts: 5,
+          backoff: {kind:"exponential",delayMs:1000,jitter:0.2},
           timeoutMs,
           removeOnComplete: 1000,
           removeOnFail: 5000,
@@ -120,7 +123,8 @@ export function createDocumentProcessingHandler<Transaction>(
   const maxBytes = options.maxExtractBytes ?? 50 * 1_024 * 1_024;
   if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0)
     throw new Error("maxExtractBytes must be a positive safe integer");
-  return {
+  const admit = createTenantWorkGate();
+  const handler: JobHandler<typeof EXTRACT_AND_INDEX_JOB, DocumentExtractionRequest> = {
     async handle(job, context): Promise<JobExecutionResult> {
       const request = valid(job.data);
       const actor = {
@@ -135,7 +139,7 @@ export function createDocumentProcessingHandler<Transaction>(
           options.repository.load(request.tenantId, request.attachmentId, tx),
       );
       if (!candidate) {
-        await options.searchIndex.remove(searchId(request));
+        await options.searchIndex?.remove(searchId(request));
         return {
           status: "discarded",
           reason: "attachment_not_found_or_not_eligible",
@@ -145,7 +149,7 @@ export function createDocumentProcessingHandler<Transaction>(
         candidate.extractionStatus === "extracted" &&
         candidate.extractedText !== null
       ) {
-        await options.searchIndex.upsert(
+        await options.searchIndex?.upsert(
           searchDocument(
             request,
             candidate,
@@ -153,11 +157,16 @@ export function createDocumentProcessingHandler<Transaction>(
             candidate.piiTypes,
           ),
         );
+        const current = await options.transactions.run(request.planeKey, actor, tx => options.repository.load(request.tenantId, request.attachmentId, tx));
+        if (!current || current.sha256 !== candidate.sha256 || current.entityType !== candidate.entityType || current.entityId !== candidate.entityId) {
+          await options.searchIndex?.remove(searchId(request));
+          return { status: "discarded", reason: "source_changed_during_index" };
+        }
         return {
           status: "completed",
           output: {
             attachmentId: candidate.attachmentId,
-            indexed: true,
+            indexed: Boolean(options.searchIndex),
             reusedExtraction: true,
           },
         };
@@ -179,7 +188,7 @@ export function createDocumentProcessingHandler<Transaction>(
             tx,
           ),
         );
-        await options.searchIndex.remove(searchId(request));
+        await options.searchIndex?.remove(searchId(request));
         return { status: "discarded", reason };
       }
       await context.reportProgress({ stage: "download" });
@@ -219,6 +228,11 @@ export function createDocumentProcessingHandler<Transaction>(
         throw error;
       }
       throwIfAborted(context.signal);
+      const current = await options.transactions.run(request.planeKey, actor, tx => options.repository.load(request.tenantId, request.attachmentId, tx));
+      if (!current || current.sha256 !== candidate.sha256 || current.entityType !== candidate.entityType || current.entityId !== candidate.entityId) {
+        await options.searchIndex?.remove(searchId(request));
+        return { status: "discarded", reason: "source_changed_during_extraction" };
+      }
       const piiTypes = (options.piiDetector ?? defaultPiiDetector).classify(
         extracted.text,
       );
@@ -228,6 +242,7 @@ export function createDocumentProcessingHandler<Transaction>(
             attachmentId: request.attachmentId,
             tenantId: request.tenantId,
             principalId: request.principalId,
+            sourceSha256: candidate.sha256,
             text: extracted.text,
             piiTypes,
             provider: extracted.provider,
@@ -238,20 +253,26 @@ export function createDocumentProcessingHandler<Transaction>(
         ),
       );
       await context.reportProgress({ stage: "index" });
-      await options.searchIndex.upsert(
+      await options.searchIndex?.upsert(
         searchDocument(request, candidate, extracted.text, piiTypes),
       );
+      const afterIndex = await options.transactions.run(request.planeKey, actor, tx => options.repository.load(request.tenantId, request.attachmentId, tx));
+      if (!afterIndex || afterIndex.sha256 !== candidate.sha256 || afterIndex.entityType !== candidate.entityType || afterIndex.entityId !== candidate.entityId) {
+        await options.searchIndex?.remove(searchId(request));
+        return { status: "discarded", reason: "source_changed_during_index" };
+      }
       return {
         status: "completed",
         output: {
           attachmentId: request.attachmentId,
           characters: extracted.text.length,
           piiTypes,
-          indexed: true,
+          indexed: Boolean(options.searchIndex),
         },
       };
     },
   };
+  return { handle: (job, context) => admit(`${job.data.planeKey}:${job.data.tenantId}`, context.signal, () => handler.handle(job, context)) };
 }
 function throwIfAborted(signal: AbortSignal) {
   if (signal.aborted)

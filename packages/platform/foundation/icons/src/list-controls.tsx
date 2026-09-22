@@ -40,3 +40,5 @@ export function StarIcon(props: IconProps) { return <IconFrame {...props}><path 
 export function EyeIcon(props: IconProps) { return <IconFrame {...props}><path d="M2.06 12.35a1 1 0 0 1 0-.7C3.73 7.6 7.68 5 12 5c4.32 0 8.27 2.6 9.94 6.65a1 1 0 0 1 0 .7C20.27 16.4 16.32 19 12 19c-4.32 0-8.27-2.6-9.94-6.65Z" /><circle cx="12" cy="12" r="3" /></IconFrame>; }
 /** Lucide Copy geometry for entity-neutral copy actions. */
 export function CopyIcon(props: IconProps) { return <IconFrame {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></IconFrame>; }
+
+export function UnlinkIcon(props: IconProps) { return <IconFrame {...props}><path d="m18 13 2-2a5 5 0 0 0-7-7l-2 2M6 11l-2 2a5 5 0 0 0 7 7l2-2M3 3l18 18M8 2v3M2 8h3M16 19v3M19 16h3" /></IconFrame>; }

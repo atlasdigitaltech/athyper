@@ -62,7 +62,7 @@ export function createPreviewRendererAdapter(
           method: "POST",
           body: form,
           redirect: "error",
-          signal: input.signal ?? AbortSignal.timeout(timeoutMs),
+          signal: AbortSignal.any([AbortSignal.timeout(timeoutMs), ...(input.signal ? [input.signal] : [])]),
         });
       } catch (error) {
         const timedOut = error instanceof Error &&
@@ -75,7 +75,7 @@ export function createPreviewRendererAdapter(
       }
 
       if (response.status === 422) {
-        const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+        const body = await boundedJson(response, 4096).catch(() => ({})) as Record<string, unknown>;
         if (body["skipped"] === true) {
           throw new PreviewRendererError(
             "unsupported_media_type",
@@ -89,7 +89,21 @@ export function createPreviewRendererAdapter(
 
       let body: RendererResponseBody;
       try {
-        body = await response.json() as RendererResponseBody;
+        if (!response.headers.get("content-type")?.includes("application/json")) throw new Error("JSON required");
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("Empty response");
+        const chunks: Uint8Array[] = [];
+        let size = 0;
+        try {
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            size += value.byteLength;
+            if (size > Math.ceil(maxOutputBytes * 4 / 3) + 4096) throw new Error("Output size limit");
+            chunks.push(value);
+          }
+        } finally { await reader.cancel(); }
+        body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as RendererResponseBody;
       } catch (error) {
         throw new PreviewRendererError("invalid_output", "Preview renderer returned non-JSON response", {
           retryable: false,
@@ -103,6 +117,7 @@ export function createPreviewRendererAdapter(
         });
       }
 
+      if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(body.bytes)) throw new PreviewRendererError("invalid_output", "Invalid base64 output", { retryable: false });
       let bytes: Uint8Array;
       try {
         bytes = Buffer.from(body.bytes, "base64");
@@ -178,7 +193,8 @@ function isAllowedOutputType(contentType: string): boolean {
 }
 
 async function buildResponseError(response: Response): Promise<PreviewRendererError> {
-  const body = (await response.text().catch(() => "")).slice(0, 1_024);
+  await response.body?.cancel().catch(() => undefined);
+  const body = "";
   const suffix = body ? `: ${body}` : "";
   if (response.status === 504) {
     return new PreviewRendererError("timeout", `Preview renderer conversion timed out${suffix}`, {
@@ -208,4 +224,13 @@ function validateBaseUrl(raw: string): string {
 function positiveInteger(value: number, name: string): number {
   if (!Number.isInteger(value) || value <= 0) throw new Error(`${name} must be a positive integer`);
   return value;
+}
+
+async function boundedJson(response: Response, maxBytes: number): Promise<unknown> {
+  const reader = response.body?.getReader();
+  if (!reader) return {};
+  let size = 0; const chunks: Uint8Array[] = [];
+  try { for (;;) { const {done,value} = await reader.read(); if (done) break; size += value.byteLength; if (size > maxBytes) throw new Error("Response too large"); chunks.push(value); } }
+  finally { await reader.cancel().catch(() => undefined); }
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }

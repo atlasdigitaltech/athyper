@@ -10,7 +10,8 @@ import { KyselyPublicationAuthorityWork } from "../../kysely-publication-authori
 import {
   canonicalBytes,
   sha256,
-} from "../../../../../adapters/publication-signing/src/canonical-json.js";
+} from "@athyper/server-adapter-publication-signing/canonical-json";
+import type { PublicationArtifactStore } from "@athyper/server-contract-publication";
 const url = process.env.DATABASE_URL;
 if (!url || new URL(url).pathname !== "/athyper_studio")
   throw new Error("A protected Studio DATABASE_URL is required");
@@ -176,7 +177,7 @@ try {
         },
       },
       store: {
-        async putImmutable(input) {
+        async putImmutable(input: Parameters<PublicationArtifactStore["putImmutable"]>[0]) {
           stored.push(input.bytes);
           return input.key;
         },

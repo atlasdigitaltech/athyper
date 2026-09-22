@@ -157,10 +157,17 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
       if (effectiveOptions.jobId && effectiveOptions.enqueueKey) {
         throw new Error("enqueue options jobId and enqueueKey are mutually exclusive");
       }
-      const resolvedJobId = effectiveOptions.jobId
+      const requestedJobId = effectiveOptions.jobId
         ?? (effectiveOptions.enqueueKey
           ? createDeterministicEnqueueId(queue, name, effectiveOptions.enqueueKey)
           : undefined);
+      // BullMQ reserves ':' as an internal job-id separator. Callers use
+      // colon-delimited semantic identities throughout the platform, so turn
+      // only those IDs into deterministic transport IDs at this boundary.
+      // Plain explicit IDs remain unchanged for operator lookup compatibility.
+      const resolvedJobId = requestedJobId?.includes(":")
+        ? createDeterministicEnqueueId(queue, name, requestedJobId)
+        : requestedJobId;
       validateExecution(effectiveOptions.execution);
       const storedData = encodeBullMqJobData(data, effectiveOptions);
       const job = await queueFor(queue).add(

@@ -229,3 +229,10 @@ export function Minimize2Icon(props: IconProps) {
     </IconFrame>
   );
 }
+
+export function ThumbsUpIcon(props: IconProps) {
+  return <IconFrame {...props}><path d="M7 10v11H3V10h4Zm0 0 5-8a3 3 0 0 1 2 3v4h5a2 2 0 0 1 2 2l-2 8a2 2 0 0 1-2 2H7"/></IconFrame>;
+}
+export function ReplyIcon(props: IconProps) {
+  return <IconFrame {...props}><path d="m9 5-6 6 6 6M3 11h11a7 7 0 0 1 7 7v2"/></IconFrame>;
+}

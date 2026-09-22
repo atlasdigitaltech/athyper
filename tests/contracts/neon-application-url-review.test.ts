@@ -4,7 +4,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { runInNewContext } from "node:vm";
 import { build } from "esbuild";
-import { createRelayHandler, NEON_WORKFORCE_REQUEST_RELAY_OPERATIONS } from "../../packages/platform/gateway/bff-relay/src/index";
+import { createRelayHandler, NEON_WORKFORCE_READ_RELAY_OPERATIONS, NEON_WORKFORCE_REQUEST_RELAY_OPERATIONS, NEON_WORKFORCE_SAVED_VIEW_RELAY_OPERATIONS } from "../../packages/platform/gateway/bff-relay/src/index";
 import { notificationServiceWorkerSource } from "../../packages/platform/communications/notifications-client/src/service-worker";
 
 const root = new URL("../../", import.meta.url);
@@ -37,16 +37,15 @@ test("Next route precedence sends BP catalogue URLs to the governed page aliases
   }
 });
 
-test("BP aliases redirect to governed workflows and reject malformed record IDs", async () => {
+test("BP create and detail aliases redirect to governed workflows and reject malformed record IDs", async () => {
   for (const [page, target] of [
-    ["business-partners/page.tsx", "/mdg/business-partner/partners"],
     ["business-partners/new/page.tsx", "/mdg/business-partner/new"],
     ["requests/new/page.tsx", "/mdg/business-partner/new"],
     ["business-partners/[recordId]/page.tsx", "/mdg/business-partner/11111111-1111-4111-8111-111111111111"],
   ]) {
-    const result = await build({ entryPoints: [new URL(`(shell)/mdg/business-partner/${page}`, app).pathname], bundle: true, jsx: "automatic", platform: "node", format: "cjs", write: false, external: ["next/navigation"] });
+    const result = await build({ entryPoints: [new URL(`(shell)/mdg/business-partner/${page}`, app).pathname], bundle: true, jsx: "automatic", platform: "node", format: "cjs", write: false, loader: { ".css": "empty" }, external: ["next/navigation"] });
     const module = { exports: {} as { default: (input: unknown) => unknown } };
-    runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, require: () => ({ redirect: (path: string) => { throw new Error(`redirect:${path}`); }, notFound: () => { throw new Error("not-found"); } }) });
+    runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, process: { env: { NODE_ENV: "test" } }, require: () => ({ redirect: (path: string) => { throw new Error(`redirect:${path}`); }, notFound: () => { throw new Error("not-found"); } }) });
     await assert.rejects(async () => module.exports.default({ params: Promise.resolve({ recordId: "11111111-1111-4111-8111-111111111111" }) }), { message: `redirect:${target}` });
     if (page.includes("[recordId]")) await assert.rejects(async () => module.exports.default({ params: Promise.resolve({ recordId: "invalid" }) }), { message: "not-found" });
   }
@@ -70,6 +69,32 @@ test("every workforce browser operation reaches the runtime with tenant and CSRF
     if (operation.method === "POST") assert.equal((await handler(request("invalid"), context)).status, 403);
   }
   assert.equal(calls, 7);
+});
+
+test("employee directory and detail reads are admitted only through the tenant relay", async () => {
+  const source = await readFile(new URL("apps/neon/lib/relay.ts", root), "utf8");
+  assert.match(source, /\.\.\.NEON_WORKFORCE_READ_RELAY_OPERATIONS/);
+  const paths: string[] = [];
+  const handler = createRelayHandler({ plane: "neon", runtimeApiUrl: "http://runtime:4000", appOrigin: "https://neon.example", operations: NEON_WORKFORCE_READ_RELAY_OPERATIONS,
+    session: { resolve: async () => ({ accessToken: "token", plane: "neon", realmKey: "realm", tenantId: "tenant", principalId: "principal", authEpoch: 1, csrfToken: "proof" }), refresh: async () => undefined, invalidate: async () => undefined },
+    fetch: async (url, init) => { paths.push(String(url)); assert.equal(new Headers(init?.headers).get("x-tenant-id"), "tenant"); return Response.json([]); },
+  });
+  assert.equal(NEON_WORKFORCE_READ_RELAY_OPERATIONS.length, 3);
+  for (const operation of NEON_WORKFORCE_READ_RELAY_OPERATIONS) {
+    const path = operation.path.replace(":employeeId", "11111111-1111-4111-8111-111111111111").replace(":section", "team");
+    const response = await handler(new Request(`https://neon.example/api/relay/${path.slice(5)}`), { params: Promise.resolve({ path: path.slice(5).split("/") }) });
+    assert.equal(response.status, 200, operation.id);
+  }
+  assert.equal(paths.length, 3);
+});
+
+test("employee saved views use the authenticated platform preference authority", async () => {
+  const source = await readFile(new URL("apps/neon/lib/relay.ts", root), "utf8");
+  assert.match(source, /\.\.\.NEON_WORKFORCE_SAVED_VIEW_RELAY_OPERATIONS/);
+  let calls=0;
+  const handler=createRelayHandler({plane:"neon",runtimeApiUrl:"http://runtime:4000",appOrigin:"https://neon.example",operations:NEON_WORKFORCE_SAVED_VIEW_RELAY_OPERATIONS,session:{resolve:async()=>({accessToken:"token",plane:"neon",realmKey:"realm",tenantId:"tenant",principalId:"principal",authEpoch:1,csrfToken:"proof"}),refresh:async()=>undefined,invalidate:async()=>undefined},fetch:async(_url,init)=>{calls++;assert.equal(new Headers(init?.headers).get("x-tenant-id"),"tenant");return Response.json([]);}});
+  for(const operation of NEON_WORKFORCE_SAVED_VIEW_RELAY_OPERATIONS){const path=operation.path.replace(":entity","employee"),response=await handler(new Request(`https://neon.example/api/relay/${path.slice(5)}`,{method:operation.method,headers:operation.method==="POST"?{"content-type":"application/json","origin":"https://neon.example","x-csrf-token":"proof"}:undefined,body:operation.method==="POST"?JSON.stringify({name:"Active",surfaceCode:"employee_directory",state:{status:"employed"}}):undefined}),{params:Promise.resolve({path:path.slice(5).split("/")})});assert.equal(response.status,200,operation.id);}
+  assert.equal(calls,2);
 });
 
 function worker() {
@@ -111,7 +136,7 @@ test("supplier controls reject invalid route IDs before rendering the client", a
     if (name === "@athyper/product-neon-business-partner") return { SupplierControls: () => null };
     return require(name);
   } });
-  await assert.rejects(() => module.exports.default({ params: Promise.resolve({ recordId: "not-a-record" }) }), { message: "not-found" });
+  await assert.rejects(() => module.exports.default({ params: Promise.resolve({ recordId: "not-a-record" }), searchParams: Promise.resolve({}) }), { message: "not-found" });
   const id = "11111111-1111-4111-8111-111111111111";
-  assert.equal((await module.exports.default({ params: Promise.resolve({ recordId: id }) })).props.businessPartnerId, id);
+  assert.equal((await module.exports.default({ params: Promise.resolve({ recordId: id }), searchParams: Promise.resolve({}) })).props.businessPartnerId, id);
 });

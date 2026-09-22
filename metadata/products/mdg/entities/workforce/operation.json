@@ -1,0 +1,127 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "operation",
+  "artifactKey": "workforce/operation",
+  "entityCode": "workforce",
+  "plane": "neon",
+  "operations": [
+    {
+      "key": "read",
+      "permissionCode": "neon.workforce.read",
+      "permissionStatus": "proposed_requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.workforce.read.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "not_applicable"
+    },
+    {
+      "key": "request_change",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "permissionStatus": "requires_catalog_verification",
+      "execution": {
+        "handlerKey": "neon.bp.governed-request.create.v1",
+        "registryRequired": true
+      },
+      "scopeBinding": {
+        "scopeSource": "persisted_record_or_validated_create_input",
+        "resolverKey": "neon.business-context.v1",
+        "denyUnresolved": true
+      },
+      "idempotency": "required",
+      "draftEntityCode": "business_partner_request",
+      "targetBinding": {
+        "targetEntityCode": "workforce",
+        "targetResolution": "operation_context_only",
+        "clientSuppliedTargetEntityCode": "forbidden",
+        "handlerMustRejectTargetMismatch": true
+      }
+    }
+  ],
+  "policyBindings": [],
+  "dependencies": [
+    "workforce/core",
+    "platform/governed-child-operation.v1"
+  ],
+  "artifactHash": "sha256:6a2fb17be873f1a517eddabee7ab3cdcf6eb1aabc7343321bf10d414d0c34d4a",
+  "operationDefaultsProfile": "platform.governed-child-operation.v1",
+  "operationDefaultsProfileRef": "platform/governed-child-operation.v1.json",
+  "commentBinding": {
+    "schemaVersion": 1,
+    "serviceKey": "platform.comments.v1",
+    "ownerEntityCode": "workforce",
+    "admissionResolverKey": "platform.records.admission.v1",
+    "layouts": [
+      "drawer",
+      "content"
+    ],
+    "actions": [
+      {
+        "key": "read",
+        "permissionCode": "neon.collaboration.comment.read",
+        "handlerKey": "platform.comments.read.v1",
+        "concurrency": "none",
+        "idempotency": "none"
+      },
+      {
+        "key": "create",
+        "permissionCode": "neon.collaboration.comment.create",
+        "handlerKey": "platform.comments.create.v1",
+        "concurrency": "none",
+        "idempotency": "required"
+      },
+      {
+        "key": "update_own",
+        "permissionCode": "neon.collaboration.comment.update_own",
+        "handlerKey": "platform.comments.update_own.v1",
+        "concurrency": "revision",
+        "idempotency": "none"
+      },
+      {
+        "key": "archive_own",
+        "permissionCode": "neon.collaboration.comment.archive_own",
+        "handlerKey": "platform.comments.archive_own.v1",
+        "concurrency": "none",
+        "idempotency": "none"
+      },
+      {
+        "key": "reply",
+        "permissionCode": "neon.collaboration.comment.create",
+        "handlerKey": "platform.comments.reply.v1",
+        "concurrency": "none",
+        "idempotency": "required"
+      }
+    ],
+    "richTextSchema": "athyper.rich-text/1.0",
+    "maxTextLength": 5000,
+    "maxDepth": 2,
+    "allowedAudiences": [
+      "public",
+      "private"
+    ],
+    "defaultAudience": "public",
+    "features": {
+      "replies": true,
+      "edits": true,
+      "reactions": false,
+      "mentions": false,
+      "drafts": false,
+      "reporting": false,
+      "history": false
+    },
+    "reactionCodes": [],
+    "attachments": {
+      "allowed": false,
+      "maxCount": 0,
+      "pinVersion": true
+    },
+    "draftRetentionDays": 30
+  }
+}

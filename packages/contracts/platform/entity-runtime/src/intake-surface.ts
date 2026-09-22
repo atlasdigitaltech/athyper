@@ -38,11 +38,18 @@ export interface IntakeChoiceField {
 }
 export type IntakeSurfaceField =
   IntakeChoiceField | EntityLookupField | IntakeDataField;
+export type IntakeWorkspaceLayout = "content" | "sections-content" | "sections-content-guidance";
+export interface IntakeWorkspacePresentation {
+  readonly defaultLayout: IntakeWorkspaceLayout;
+  readonly allowedLayouts: readonly IntakeWorkspaceLayout[];
+  readonly guidance?: { readonly title?: string; readonly description?: string };
+}
 export interface EntityIntakeSurfaceV1 {
   readonly validationMessages?: ValidationMessages;
   readonly schemaVersion: 1;
   readonly key: string;
   readonly title: string;
+  readonly presentation?: IntakeWorkspacePresentation;
   readonly formLabels?: {
     readonly continue: string;
     readonly submit: string;
@@ -100,6 +107,12 @@ const array = (v: unknown): unknown[] =>
     ? v
     : fail("nonempty array (maximum 64)");
 const optionalText = (v: unknown) => (v === undefined ? undefined : text(v));
+function workspacePresentation(v: unknown): IntakeWorkspacePresentation {
+  const value=object(v),allowed=array(value.allowedLayouts).map(item=>item==="content"||item==="sections-content"||item==="sections-content-guidance"?item:fail("workspace layout")) as IntakeWorkspaceLayout[];
+  if(!allowed.includes(value.defaultLayout as IntakeWorkspaceLayout)||new Set(allowed).size!==allowed.length)fail("workspace defaults");
+  const guidance=value.guidance===undefined?undefined:object(value.guidance);
+  return Object.freeze({defaultLayout:value.defaultLayout as IntakeWorkspaceLayout,allowedLayouts:Object.freeze(allowed),...(guidance?{guidance:Object.freeze({... (guidance.title===undefined?{}:{title:text(guidance.title)}),...(guidance.description===undefined?{}:{description:text(guidance.description)})})}:{})});
+}
 function unique(keys: readonly string[]) {
   if (new Set(keys).size !== keys.length) fail("duplicate key or option value");
 }
@@ -274,7 +287,9 @@ export function parseEntityIntakeSurfaces(
           ...(field.referenceRules ? [field.referenceRules.field] : []),
           ...(field.lookup?.filterBy ?? []).map((b) => b.field),
           ...(field.lookup?.copyFields ?? []).map((b) => b.to),
-          ...(field.clearOnChange?.fields ?? []),
+          ...(field.clearOnChange?.fields ?? []).map((entry) =>
+            typeof entry === "string" ? entry : entry.field,
+          ),
         ])
           if (
             name === field.valueKey ||
@@ -298,6 +313,7 @@ export function parseEntityIntakeSurfaces(
       validationMessages: parseValidationMessages(s.validationMessages),
       key: key(s.key),
       title: text(s.title),
+      ...(s.presentation === undefined ? {} : { presentation: workspacePresentation(s.presentation) }),
       ...(s.formLabels
         ? {
             formLabels: {

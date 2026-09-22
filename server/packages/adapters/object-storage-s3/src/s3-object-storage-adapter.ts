@@ -81,7 +81,7 @@ export interface S3ObjectStorageAdapter extends ObjectStorage {
   list(prefix?: string): Promise<readonly ObjectMetadata[]>;
   getMetadata(key: string): Promise<ObjectMetadata>;
   copy(sourceKey: string, destinationKey: string): Promise<void>;
-  createDownloadUrl(key: string, expirySeconds?: number): Promise<string>;
+  createDownloadUrl(key: string, expirySeconds?: number, delivery?: { readonly contentType: string; readonly contentDisposition: string }): Promise<string>;
   createUploadUrl(key: string, expirySeconds?: number): Promise<string>;
   health(): Promise<ObjectStorageHealth>;
   validateAccess(): Promise<void>;
@@ -443,11 +443,12 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
     );
   }
 
-  createDownloadUrl(key: string, expirySeconds?: number): Promise<string> {
+  createDownloadUrl(key: string, expirySeconds?: number, delivery?: { readonly contentType: string; readonly contentDisposition: string }): Promise<string> {
     return this.#sign(
       new GetObjectCommand({
         Bucket: this.config.bucket,
         Key: requireObjectKey(key),
+        ...(delivery ? { ResponseContentType: delivery.contentType, ResponseContentDisposition: delivery.contentDisposition, ResponseCacheControl: "private, no-store" } : {}),
       }),
       expirySeconds,
     );

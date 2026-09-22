@@ -76,7 +76,7 @@ export function registerPolicyRoutes(
         const context = options.readContext(response);
         const authorization = await options.authorizer.authorize({
           context,
-          permissionCode: "policy.simulate",
+          permissionCode: context.planeKey === "neon" ? "neon.policy.simulate" : "policy.simulate",
         });
         if (!authorization.allowed) {
           response.status(403).json({

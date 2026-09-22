@@ -95,6 +95,8 @@ export interface BusinessPartnerRequestAddress extends BusinessPartnerRequestExt
   readonly postalCode?: string;
   readonly stateRegionCode?: string;
   readonly regionEntryMode?: "directory" | "manual";
+  /** IANA time-zone code captured with the canonical address. */
+  readonly timezoneCode?: string;
   readonly poBox?: string;
   readonly buildingName?: string;
   readonly floor?: string;

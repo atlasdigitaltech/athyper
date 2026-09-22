@@ -15,6 +15,8 @@ import {
 import {
   parseEntityIntakeSurfaces,
   compileEntityIntakeSurfaces,
+  changedDataInput,
+  dataInputChangeRequiresConfirmation,
   type EntityIntakeSurfaceV1,
 } from "@athyper/contract-platform-entity-runtime";
 import {
@@ -140,6 +142,7 @@ it("renders country master options and nested labels through the shared renderer
   expect(document.querySelector('[role="listbox"]')!.textContent).not.toContain("United States");
   expect(container.querySelector('input[type="hidden"][name="registrationCountryCode"]')).not.toBeNull();
   expect(container.querySelectorAll('input[type="radio"]')).toHaveLength(3);
+  expect(container.textContent).toContain("Contact role");
 });
 it("keeps stable identities, enforces bounds, and transfers primary on removal", async () => {
   await act(async () => root.render(<Demo />));
@@ -362,4 +365,70 @@ it("updates nested address requiredness when the parent profile mode changes", a
   expect(line().required).toBe(false);
   await act(async () => {mode.value = "standard"; mode.dispatchEvent(new Event("change", {bubbles: true}));});
   expect(line().required).toBe(true);
+});
+
+it("clears a directory subdivision on country change while retaining a manual region", () => {
+  const [surface] = parseEntityIntakeSurfaces([
+    {
+      schemaVersion: 1,
+      key: "address",
+      title: "Address",
+      columns: 1,
+      sections: [
+        {
+          key: "location",
+          fields: [
+            {
+              control: "input",
+              key: "country",
+              valueKey: "countryCode",
+              label: "Country",
+              required: true,
+              widget: "select",
+              columnSpan: 6,
+              lookup: { options: [{ value: "MY", label: "Malaysia" }, { value: "GB", label: "United Kingdom" }] },
+              clearOnChange: {
+                fields: [
+                  "stateRegionCode",
+                  {
+                    field: "region",
+                    preserveWhen: {
+                      field: "mode",
+                      operator: "equals",
+                      value: "manual",
+                    },
+                  },
+                ],
+                message: "Review the location.",
+                confirmLabel: "Change country",
+                cancelLabel: "Keep country",
+              },
+            },
+            { control: "input", key: "state", valueKey: "stateRegionCode", label: "Subdivision", required: false, widget: "text", columnSpan: 6 },
+            { control: "input", key: "region", valueKey: "region", label: "Region", required: false, widget: "text", columnSpan: 6 },
+            { control: "input", key: "mode", valueKey: "regionEntryMode", label: "Mode", required: true, widget: "select", columnSpan: 6, lookup: { options: [{ value: "directory", label: "Directory" }, { value: "manual", label: "Manual" }] } },
+          ],
+        },
+      ],
+    },
+  ]);
+  const country = surface!.sections[0]!.fields[0] as any;
+  const manual = {
+    countryCode: "MY",
+    stateRegionCode: "MY-14",
+    region: "Kuala Lumpur",
+    regionEntryMode: "manual",
+  };
+  expect(dataInputChangeRequiresConfirmation(country, surface!, manual, "GB")).toBe(true);
+  expect(changedDataInput(country, manual, "GB", surface!)).toMatchObject({
+    countryCode: "GB",
+    stateRegionCode: "",
+    region: "Kuala Lumpur",
+  });
+  const directory = { ...manual, regionEntryMode: "directory" };
+  expect(changedDataInput(country, directory, "GB", surface!)).toMatchObject({
+    countryCode: "GB",
+    stateRegionCode: "",
+    region: "",
+  });
 });

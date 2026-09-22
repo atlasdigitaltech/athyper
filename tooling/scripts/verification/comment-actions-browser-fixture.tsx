@@ -1,0 +1,118 @@
+import { CollaborationPresentationContext } from "../../../packages/platform/entity/runtime/form-detail/src/collaboration-visibility";
+import { ToastProvider } from "../../../packages/platform/shell/app-foundation/src/toasts";
+export { useToasts } from "../../../packages/platform/shell/app-foundation/src/toasts";
+import React, { useState } from "react";
+import { createRoot } from "react-dom/client";
+import { CompiledEntitySectionContent } from "../../../packages/platform/entity/runtime/form-detail/src/compiled-section-content";
+import { ApiTransportError } from "@athyper/platform-api-client";
+const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+let item: any = {
+  id,
+  authorId: "owner",
+  authorDisplayName: "Test Author",
+  createdAt: "2026-09-22T05:00:00Z",
+  visibility: "public",
+  text: "Original comment",
+  revision: 1,
+  viewerReactions: [],
+  reactions: [],
+};
+const calls: any[] = [];
+Object.assign(window, { commentCalls: calls, editFails: false });
+const client = {
+  request: async (operation: any, options: any = {}) => {
+    const path =
+      typeof operation.path === "function"
+        ? operation.path({})
+        : operation.path;
+    calls.push({ path, method: operation.method, ...options });
+    if (path.startsWith("/api/collab/participants?")) return {items:[{id:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",displayName:"Alex Reviewer"}]};
+    if (operation.method === "PATCH") {
+      if ((window as any).editFails)
+        throw new ApiTransportError("http", "Changed on server", 409);
+      item = { ...item, ...options.body, revision: item.revision + 1 };
+      return item;
+    }
+    if(operation.method === "DELETE" && path.endsWith(`/comments/${id}`)){if((window as any).deleteFails)throw new ApiTransportError("http","Delete failed",500);item={...item,tombstone:true,text:"",content:undefined,pinnedFiles:[]};return true;}
+    if (path.endsWith("/history") && item.tombstone) return {items:[],deletion:{deletedAt:"2026-09-22T06:00:00Z"}};
+    if (path.endsWith("/history"))
+      return {
+        items: [
+          {
+            revision: 2,
+            text: "Latest saved revision",
+            createdAt: item.createdAt,
+          },
+          { revision: 1, text: "Original comment", createdAt: item.createdAt },
+        ],
+      };
+    if (path.endsWith("/preview")) return {state:"unavailable",detail:"Fixture preview unavailable"};
+    if (path.endsWith("/flag")) {item={...item,reportStatus:"open",viewerReport:{reason:options.body.reasonCode,detail:options.body.detail,status:"open",submittedAt:"2026-09-22T06:00:00Z"}};return { id: "report" };}
+    if (path.includes("/reactions")) {
+      const liked = operation.method === "POST";
+      item = {
+        ...item,
+        viewerReactions: liked ? ["thumbs_up"] : [],
+        reactions: liked ? [{ code: "thumbs_up", count: 1 }] : [],
+      };
+      return { inserted: liked };
+    }
+    if(path.endsWith("/sections/attachments")) return {capability:{actions:[{key:"create"},{key:"finalize"}],allowedContentTypes:["application/pdf","image/png"],maxFileBytes:26214400}};
+    if (path.endsWith("/drafts")) return { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" };
+    return {};
+  },
+};
+export function useApiClient() {
+  return client;
+}
+export function useSessionIdentity() {
+  return { scope: { principalId: "owner" } };
+}
+function Fixture() {
+  const [, refresh] = useState(0);
+  const [full,setFull]=useState(false);Object.assign(window,{setFull});
+  const [replyItems,setReplyItems]=useState<any[]|undefined>();Object.assign(window,{setReplyItems});
+  const [groupFixture,setGroupFixture]=useState(false);Object.assign(window,{groupComments:()=>setGroupFixture(true)});
+  const [replyCount,setReplyCount]=useState(0),[empty,setEmpty]=useState(false);
+  Object.assign(window,{setReplyCount,emptyComments:()=>setEmpty(true),pinCommentFile:()=>{item={...item,content:{type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"Evidence attached"}]},{type:"attachmentFile",attrs:{attachmentId:"proof-file",alt:"proof.pdf"}}]},pinnedFiles:[{attachmentId:"proof-file",fileName:"proof.pdf",version:2,sizeBytes:2048}]};refresh(value=>value+1);}});
+  const [files,setFiles]=useState(false);Object.assign(window,{showFiles:()=>setFiles(true)});
+  const resource: any = {
+    presentation: { rendererKey: "platform.comments.v1", fields: [] },
+    capability: {
+      actions: [
+        "create",
+        "mention",
+        "draft",
+        "react",
+        "reply",
+        "flag",
+        "history",
+        "update_own",
+        "archive_own",
+      ].map((key) => ({ key })),
+      allowedAudiences: ["public", "private"],
+      defaultAudience: "public",
+      maxAttachments: 5,
+    },
+    data: { items: empty?[]:groupFixture?[{...item,id:"early",authorId:"bob",authorDisplayName:"Bob",createdAt:"2026-09-21T01:00:00Z",text:"Early Bob"},{...item,id:"middle",authorId:"alice",authorDisplayName:"Alice",createdAt:"2026-09-22T01:00:00Z",text:"Alice comment"},{...item,id:"late",authorId:"bob",authorDisplayName:"Bob",createdAt:"2026-09-22T02:00:00Z",text:"Late Bob"}]:[{...item,replyCount}] },
+  };
+  if(files){resource.presentation.rendererKey="platform.attachments.v1";resource.capability.actions=["read","rename","category","folder"].map(key=>({key}));resource.data={workspaceRevision:"1",folders:[{id:"folder",name:"Evidence folder"}],items:[{id:"file",fileName:"proof.pdf",displayName:"proof.pdf",category:"general",revision:"1",processingStatus:"active",version:1}]};}
+  return (
+    <CollaborationPresentationContext.Provider value={full?"content":"pinned"}><section
+      data-mode={full?"content":undefined}
+      className="a-collaboration-panel"
+      style={{ height: 600, width: 420 }}
+    >
+      <div className="a-collaboration-panel__body">
+        <CompiledEntitySectionContent
+          resource={resource}
+          entityCode="fixture"
+          recordId="record"
+          onLoadThreadPage={async()=>{calls.push({path:"thread-page"});return ({data:{items:replyItems??[{...item,id:"reply-fixture",text:"A reply",parentCommentId:id,threadDepth:1},{...item,id:"nested-fixture",text:"Nested reply",parentCommentId:"reply-fixture",threadDepth:2}],nextCursor:replyItems?"more":undefined}} as any);}}
+          onChanged={() => refresh((value) => value + 1)}
+        />
+      </div>
+    </section></CollaborationPresentationContext.Provider>
+  );
+}
+createRoot(document.getElementById("root")!).render(<ToastProvider><Fixture /></ToastProvider>);

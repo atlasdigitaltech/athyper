@@ -146,7 +146,8 @@ BEGIN
     NEW.delivery_service_type := nullif(btrim(NEW.delivery_service_type), '');
     NEW.delivery_service_number := nullif(btrim(NEW.delivery_service_number), '');
     NEW.country_code := nullif(upper(btrim(NEW.country_code::text)), '')::character(2);
-    NEW.timezone_code := nullif(lower(btrim(NEW.timezone_code)), '');
+    -- IANA identifiers are canonical, case-sensitive reference values.
+    NEW.timezone_code := nullif(btrim(NEW.timezone_code), '');
     NEW.normalization_version := COALESCE(NEW.normalization_version, 'v1');
     NEW.format_version := COALESCE(NEW.format_version, 'v1');
     NEW.formatted_address := nullif(btrim(NEW.formatted_address), '');

@@ -294,6 +294,7 @@ export {
   LayoutIcon,
   LibraryBigIcon,
   LinkIcon,
+  UnlinkIcon,
   MoreHorizontalIcon,
   MoreVerticalIcon,
   RefreshCwIcon,
@@ -341,3 +342,4 @@ export {
   WarehouseIcon,
 } from "./shell-icons";
 export { AtlasBrandIcon } from "./atlas-brand";
+export { ThumbsUpIcon, ReplyIcon } from "./shell-icons";

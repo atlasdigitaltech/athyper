@@ -1,0 +1,66 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "flow",
+  "artifactKey": "business_partner_request/flow.customer.new",
+  "entityCode": "business_partner_request",
+  "plane": "neon",
+  "flowKey": "customer.new",
+  "journey": "customer",
+  "requestContract": {
+    "kind": "required_path_contract",
+    "requestKind": "customer.new",
+    "domainOperation": "new_partner",
+    "requiredPaths": [
+      "partner.displayName",
+      "partner.legalName",
+      "partner.countryCode",
+      "partner.category",
+      "partner.registrationNumber",
+      "partner.taxIdentifiers",
+      "partner.addresses",
+      "partner.contacts",
+      "scope.operatingOrganizationId"
+    ],
+    "payloadSchemaAuthority": "registered_governed_request_validator",
+    "rejectUnknownPaths": true,
+    "fullPayloadSchemaNotImpliedByRequiredPaths": true,
+    "requiredCoordinates": [
+      "operatingOrganizationId"
+    ]
+  },
+  "supportedSources": [
+    "internal",
+    "portal",
+    "mesh",
+    "import",
+    "api"
+  ],
+  "dependencies": [
+    "business_partner_request/core",
+    "business_partner_request/flow.base",
+    "business_partner_request/operation",
+    "business_partner_request/presentation.review",
+    "business_partner_request/presentation.section.evidence",
+    "business_partner_request/presentation.section.form.request"
+  ],
+  "sourceMappingKeys": [
+    "internal",
+    "portal",
+    "mesh",
+    "import",
+    "api"
+  ],
+  "presentationSlots": {
+    "capture": "business_partner_request/presentation.section.form.request.json"
+  },
+  "flowKind": "variant",
+  "baseFlowRef": "business_partner_request/flow.base.json",
+  "composition": {
+    "stage": "artifact_preparation",
+    "cacheKey": "base_hash_and_variant_hash",
+    "securityOverride": "forbidden"
+  },
+  "artifactHash": "sha256:694912836f9d0240185b4d47a86bd1dbd912a39186b22b1e483f4b12ce6438df"
+}

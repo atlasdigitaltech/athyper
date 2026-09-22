@@ -51,7 +51,7 @@ describe("entity runtime resource service", () => {
     const permittedSurface = artifact("presentation_surface", "business_partner/presentation.detail", { surfaceKey: "detail", header: { titleField: "name", codeField: "code", statusField: "status" }, sections: [{ sectionKey: "comments", presentationRef: "business_partner/presentation.section.comments.json", viewPermission: "bp.read" }], actions: [] });
     const handler = { read: vi.fn(async () => ({ revision: "comments-1", data: { items: [] } })) };
     const reader = { surfaceModel: vi.fn(async () => ({ release: { release: { releaseId: "release-1", releaseHash: `sha256:${"a".repeat(64)}` } }, core, surface: permittedSurface })), operation: vi.fn(async () => operation), section: vi.fn(async () => comments) };
-    const service = createEntityRuntimeResourceService({ reader: reader as any, headers: { readHeader: vi.fn(async () => ({ revision: "record-1", values: {} })) }, sections: { get: vi.fn(), getService: vi.fn((key) => key === "platform.comments.v1" ? handler : undefined) } });
+    const service = createEntityRuntimeResourceService({ reader: reader as any, headers: { readHeader: vi.fn(async () => ({ revision: "record-1", values: {} })) }, capabilities: {resolve: vi.fn(async () => ({projection:{layouts:["drawer","content"],actions:[]}}))} as any, sections: { get: vi.fn(), getService: vi.fn((key) => key === "platform.comments.v1" ? handler : undefined) } });
     await expect(service.section({ context, entityCode: "business_partner", recordId: "00000000-0000-4000-8000-000000000001", surfaceKey: "detail", sectionKey: "comments" })).resolves.toMatchObject({ sectionKey: "comments", revision: "comments-1" });
     expect(handler.read).toHaveBeenCalledOnce();
   });
@@ -74,8 +74,8 @@ describe("section context handling", () => {
     const handler = { read: vi.fn(async () => ({ revision: "section-1", data: { items: [] } })) };
     const reader = { surfaceModel: vi.fn(async () => ({ release: { release: { releaseId: "release-1", releaseHash: `sha256:${"a".repeat(64)}` } }, core, surface })), operation: vi.fn(async () => operation), section: vi.fn(async () => overview) };
     const service = createEntityRuntimeResourceService({ reader: reader as any, headers: { readHeader: vi.fn() }, sections: { get: vi.fn(() => handler) } });
-    await service.section({ context, entityCode: "business_partner", recordId: "00000000-0000-4000-8000-000000000001", surfaceKey: "detail", sectionKey: "overview", resourceContext: { operatingOrganizationId: "00000000-0000-4000-8000-000000000002", companyCodeId: "00000000-0000-4000-8000-000000000003", roleLens: "supplier" } });
-    expect(handler.read).toHaveBeenCalledWith(expect.objectContaining({ resourceContext: { operatingOrganizationId: "00000000-0000-4000-8000-000000000002", companyCodeId: "00000000-0000-4000-8000-000000000003", roleLens: "supplier" } }));
+    await service.section({ context, entityCode: "business_partner", recordId: "00000000-0000-4000-8000-000000000001", surfaceKey: "detail", sectionKey: "overview", resourceContext: { operatingOrganizationId: "00000000-0000-4000-8000-000000000002", companyCodeId: "00000000-0000-4000-8000-000000000003", roleLens: "supplier", threadRootId: "00000000-0000-4000-8000-000000000004" } });
+    expect(handler.read).toHaveBeenCalledWith(expect.objectContaining({ resourceContext: { operatingOrganizationId: "00000000-0000-4000-8000-000000000002", companyCodeId: "00000000-0000-4000-8000-000000000003", roleLens: "supplier", threadRootId: "00000000-0000-4000-8000-000000000004" } }));
   });
 
   it("turns a registered reader's expected context conflict into a safe runtime response", async () => {

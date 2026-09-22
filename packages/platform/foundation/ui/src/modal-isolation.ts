@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, type RefObject } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 
 type Entry = { panel: HTMLElement; outside: readonly HTMLElement[] };
 type Branch = { owner: HTMLElement; element: HTMLElement };
@@ -115,7 +115,7 @@ export function useModalIsolation(
 ) {
   const latest = useRef(options);
   latest.current = options;
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = panel.current;
     if (!enabled || !element) return;
     const doc = element.ownerDocument,
@@ -141,7 +141,7 @@ export function useModalIsolation(
         latest.current.initialFocus?.() ??
         focusable(element)[0] ??
         element
-      ).focus();
+      ).focus({ preventScroll: true });
     if (!inside(doc.activeElement)) focusFirst();
     const focus = (event: FocusEvent) => {
       if (top() && !inside(event.target as Node)) focusFirst();
@@ -161,7 +161,7 @@ export function useModalIsolation(
         last = items.at(-1);
       if (!first || !last) {
         event.preventDefault();
-        element.focus();
+        element.focus({ preventScroll: true });
         return;
       }
       if (
@@ -169,13 +169,13 @@ export function useModalIsolation(
         (doc.activeElement === first || !inside(doc.activeElement))
       ) {
         event.preventDefault();
-        last.focus();
+        last.focus({ preventScroll: true });
       } else if (
         !event.shiftKey &&
         (doc.activeElement === last || !inside(doc.activeElement))
       ) {
         event.preventDefault();
-        first.focus();
+        first.focus({ preventScroll: true });
       }
     };
     doc.addEventListener("focusin", focus);
@@ -196,7 +196,7 @@ export function useModalIsolation(
         previous?.isConnected &&
         !previous.closest("[inert]")
       )
-        previous.focus();
+        previous.focus({ preventScroll: true });
     };
   }, [enabled, panel]);
 }

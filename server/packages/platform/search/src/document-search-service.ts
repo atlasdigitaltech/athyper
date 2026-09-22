@@ -1,4 +1,4 @@
-import type { Authorizer } from "@athyper/server-contract-auth";
+import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { DocumentSearchService, SearchDocumentsCommand, SearchHit, SearchIndex } from "@athyper/server-contract-search";
 
 export class SearchError extends Error {
@@ -11,6 +11,7 @@ export class SearchError extends Error {
 export function createDocumentSearchService(options: {
   readonly authorizer: Authorizer;
   readonly index: SearchIndex;
+  readonly authorizeHit?: (context: VerifiedRequestContext, hit: SearchHit) => Promise<boolean>;
 }): DocumentSearchService {
   return {
     async search(command: SearchDocumentsCommand) {
@@ -32,6 +33,7 @@ export function createDocumentSearchService(options: {
       // Page offsets and totals must refer to authorized hits, not raw index matches.
       // Scan the retrievable result set; estimated index totals include forbidden hits.
       for (let offset = 0; ; offset += batchSize) {
+        if (offset >= 2000) throw new SearchError(422, "SEARCH_SCOPE_TOO_BROAD", "Narrow your search to fewer matching documents");
         const result = await options.index.search({
           planeKey: command.context.planeKey,
           tenantId: command.context.tenantId,
@@ -59,7 +61,7 @@ export function createDocumentSearchService(options: {
               entityId: hit.entityId,
             },
           });
-          if (!decision.allowed) continue;
+          if (!decision.allowed || (options.authorizeHit && !await options.authorizeHit(command.context, hit))) continue;
           if (total >= start && hits.length < pageSize) hits.push(hit);
           total++;
         }

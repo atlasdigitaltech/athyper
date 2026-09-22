@@ -127,7 +127,7 @@ for (const route of ["evaluate", "simulate"] as const)
       expect(response.status).toBe(200);
       expect(f.authorize).toHaveBeenCalledWith({
         context,
-        permissionCode: `policy.${route}`,
+        permissionCode: route === "simulate" ? "neon.policy.simulate" : "policy.evaluate",
       });
       expect(f[route]).toHaveBeenCalledWith({
         context,

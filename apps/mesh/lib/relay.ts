@@ -1,3 +1,4 @@
+import { COLLABORATION_RELAY_OPERATIONS } from "@athyper/platform-gateway-bff-relay";
 import { readAppEnvironment } from "./environment";
 import {
   ACTIVITY_CENTER_RELAY_OPERATIONS,
@@ -52,6 +53,7 @@ export function createAppRelay(
     ...options,
     plane: "mesh",
     operations: [
+      ...COLLABORATION_RELAY_OPERATIONS,
       IAM_ME_OPERATION,
       EXPERIENCE_BOOTSTRAP_OPERATION,
       PRINCIPAL_LOCALE_UPDATE_OPERATION,

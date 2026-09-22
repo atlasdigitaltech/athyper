@@ -12,20 +12,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify metadata source layout
+        run: node tooling/scripts/metadata/check-layout.mjs
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Install artifact validator dependencies
-        run: python3 -m pip install -r docs/architecture/application-experience/entity-policy-examples/New_Entity/requirements.txt
+        run: python3 -m pip install -r tooling/scripts/metadata/requirements.txt
       - name: Validate draft artifact consistency
-        run: python3 docs/architecture/application-experience/entity-policy-examples/New_Entity/validate.py
+        run: python3 tooling/scripts/metadata/validate.py
       - name: Compare reviewed catalog with real Neon schema
         env:
           NEON_SCHEMA_DATABASE_URL: ${{ secrets.NEON_SCHEMA_DATABASE_URL }}
-        run: python3 docs/architecture/application-experience/entity-policy-examples/New_Entity/verify_live_schema.py
+        run: python3 tooling/scripts/metadata/verify_live_schema.py
       - name: Verify descriptor permissions exist in target Neon catalog
         env:
           NEON_SCHEMA_DATABASE_URL: ${{ secrets.NEON_SCHEMA_DATABASE_URL }}
-        run: python3 docs/architecture/application-experience/entity-policy-examples/New_Entity/verify_permission_catalog.py
+        run: python3 tooling/scripts/metadata/verify_permission_catalog.py

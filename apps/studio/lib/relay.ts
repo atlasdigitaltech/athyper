@@ -1,3 +1,4 @@
+import { COLLABORATION_RELAY_OPERATIONS } from "@athyper/platform-gateway-bff-relay";
 import { readAppEnvironment } from "./environment";
 import {
   STUDIO_BP_LOCAL_PREVIEW_OPERATION,
@@ -60,6 +61,7 @@ export function createAppRelay(
     ...options,
     plane: "studio",
     operations: [
+      ...COLLABORATION_RELAY_OPERATIONS,
       STUDIO_BP_LOCAL_PREVIEW_OPERATION,
       ...STUDIO_META_ENTITY_AUTHORING_RELAY_OPERATIONS,
       ...STUDIO_AUTHORIZATION_MANAGEMENT_RELAY_OPERATIONS,

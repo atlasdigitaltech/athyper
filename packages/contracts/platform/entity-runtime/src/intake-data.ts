@@ -11,6 +11,17 @@ export const intakeReferenceSources = [
   "neon.tax_jurisdiction",
   "neon.tax_type",
   "neon.certification_type",
+  "shared.country",
+  "shared.currency",
+  "shared.language",
+  "shared.locale",
+  "shared.timezone",
+  "shared.uom",
+  "shared.classification_scheme",
+  "shared.commodity_code",
+  "shared.commodity_crosswalk",
+  "shared.industry_crosswalk",
+  "shared.bank_identifier",
 ] as const;
 import {
   parseValidationMessages,
@@ -72,7 +83,15 @@ export interface IntakeInputField {
   readonly clearOnChange?: {
     readonly mode?: "inline" | "dialog";
     readonly title?: string;
-    readonly fields: readonly string[];
+    /**
+     * A dependent value may be retained when its declared condition still
+     * applies. This keeps parent changes declarative rather than teaching the
+     * renderer about individual domain fields.
+     */
+    readonly fields: readonly (
+      | string
+      | { readonly field: string; readonly preserveWhen?: IntakeCondition }
+    )[];
     readonly message: string;
     readonly confirmLabel: string;
     readonly cancelLabel: string;
@@ -518,7 +537,22 @@ export function parseIntakeDataField(raw: unknown): IntakeDataField {
             return {
               ...(c.mode ? { mode: c.mode as "inline" | "dialog" } : {}),
               ...(c.title ? { title: text(c.title) } : {}),
-              fields: c.fields.map(key),
+              fields: c.fields.map((candidate) => {
+                if (typeof candidate === "string") return key(candidate);
+                const field = object(candidate);
+                if (
+                  Object.keys(field).some(
+                    (name) => name !== "field" && name !== "preserveWhen",
+                  )
+                )
+                  throw Error("INTAKE_CLEAR_FIELD");
+                return {
+                  field: key(field.field),
+                  ...(field.preserveWhen === undefined
+                    ? {}
+                    : { preserveWhen: parseIntakeCondition(field.preserveWhen) }),
+                };
+              }),
               message: text(c.message),
               confirmLabel: text(c.confirmLabel),
               cancelLabel: text(c.cancelLabel),

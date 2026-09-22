@@ -75,6 +75,7 @@ export { useDataValidation, type DisplayIssue } from "./data-validation";
 export { CollectionSection, AddressesSection, ContactsSection, BankAccountsSection, CertificationsSection, SupportingDocumentsSection } from "./collection-section";
 
 export {EntityFormLayout} from "./form-layout";
+export {EntityIntakeWorkspace} from "./intake-workspace";
 export {EntitySectionNavigation, useEntitySectionScroll, type EntitySectionItem} from "./section-navigation";
 export { EntitySectionWorkspace } from "./section-workspace";
 export {
@@ -84,6 +85,7 @@ export {
   type EntityRuntimeWorkspaceState,
 } from "./use-section-resource";
 export { EntityRuntimeWorkspace, type EntityRuntimeHeaderNavigation } from "./entity-runtime-workspace";
+export { EntityCollaborationSurface } from "./collaboration-surface";
 
 export { CompiledEntitySectionContent } from "./compiled-section-content";
 export * from "./registered-renderers";

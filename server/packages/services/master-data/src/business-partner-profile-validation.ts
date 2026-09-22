@@ -127,9 +127,9 @@ export function validateBusinessPartnerProfile(
       if (
         group === "aliases" &&
         item.languageCode &&
-        !/^[a-z]{2,3}(-[A-Z]{2})?$/.test(String(item.languageCode))
+        !/^\s*[A-Za-z]{2,3}(-[A-Za-z]{2})?\s*$/.test(String(item.languageCode))
       )
-        fail("Invalid alias language.");
+        fail("Invalid alias language or locale; use a base language or language-region tag.");
       if (group === "governanceRelations") {
         if (
           ![

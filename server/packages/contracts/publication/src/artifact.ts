@@ -1,4 +1,5 @@
 import { PublicationContractError } from "./errors.js";
+import { parseCapabilityBinding, parseCapabilityDeclaration, validateEntityCapabilities } from "./entity-capabilities.js";
 import type { BusinessPartnerDefinitionProjection, CompiledEntityRuntimeProjectionV2, EntityRuntimeProjection, PublicationCompatibilityLevel, PublicationPlane } from "./projection.js";
 
 export const PUBLICATION_ARTIFACT_SCHEMA_V1 = "athyper.publication-artifact.v1" as const;
@@ -62,6 +63,9 @@ export interface CompiledEntityReleaseEnvelopeV2 {
 }
 
 export interface CompiledEntityRegistry {
+  /** Authoritative final schema catalog, when validating persisted source bindings. */
+  readonly sourceObjects?: ReadonlySet<string>;
+  readonly permissions?: ReadonlySet<string>;
   readonly handlers: ReadonlySet<string>;
   readonly renderers: ReadonlySet<string>;
   readonly resolvers: ReadonlySet<string>;
@@ -122,9 +126,9 @@ const compiledArtifactKeyPattern = /^[A-Za-z][A-Za-z0-9_.-]{0,126}(?:\/[A-Za-z][
 const compiledHashPattern = /^sha256:[a-f0-9]{64}$/;
 const compiledArtifactKeys: Readonly<Record<CompiledEntityArtifactType, ReadonlySet<string>>> = {
   core: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","businessContext","capabilities","coreKind","defaultsProfile","defaultsProfileRef","deferredRelations","editRuntimeTier","fieldAccess","fieldDefaults","fields","operationDefaults","ownerBinding","profileKey","projectionPolicy","protections","query","querySafetyLimits","readinessFacts","referencePicker","relationDefaults","relations","serverDependencies","storage","validationAuthority"]),
-  operation: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","attachmentBinding","browserProjection","concurrency","consumedBy","disclosureBinding","evaluationContract","handlerBindingStatus","lifecycleBinding","lifecycleOperationBindings","materialization","numberingBinding","operationDefaultsProfile","operationDefaultsProfileRef","operations","policyBindings","policyManifestProjection","printBinding","reasonCodeCatalog","snapshotBinding","transactionOrder","validationDeclarations"]),
+  operation: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","commentBinding","attachmentBinding","browserProjection","concurrency","consumedBy","disclosureBinding","evaluationContract","handlerBindingStatus","lifecycleBinding","lifecycleOperationBindings","materialization","numberingBinding","operationDefaultsProfile","operationDefaultsProfileRef","operations","policyBindings","policyManifestProjection","printBinding","reasonCodeCatalog","snapshotBinding","transactionOrder","validationDeclarations"]),
   presentation_surface: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","actions","columns","contextControl","dataAuthority","excludedCapabilities","fieldDiff","header","layout","navigation","pageSizes","policyManifest","queryPresentation","restrictedValues","sections","sort","summaryView","surfaceKey"]),
-  presentation_section: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","accessAuthority","additionalCoreRefs","authorization","availableOperations","childCollections","completenessEvaluation","completenessPacks","contentModel","coreRef","dataBinding","fieldBindingNamespace","fieldBindings","form","linkFields","load","ownerBinding","pagination","relationKey","rendererKey","requiredContext","resourceStates","targetCoreRef","targetFieldBindings","validationAuthority","sectionKey"]),
+  presentation_section: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","accessAuthority","additionalCoreRefs","authorization","availableOperations","childCollections","completenessEvaluation","completenessPacks","contentModel","emptyState","coreRef","dataBinding","fieldBindingNamespace","fieldBindings","form","linkFields","load","ownerBinding","pagination","relationKey","rendererKey","requiredContext","resourceStates","targetCoreRef","targetFieldBindings","validationAuthority","sectionKey"]),
   flow: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","baseFlowRef","composition","draftEntityCode","flowKey","flowKind","flowRefs","journey","materializesEntityCode","persistence","presentationSlots","requestContract","selection","serverValidation","sourceMappingCatalog","sourceMappingKeys","steps","supportedSources","workflowDefinitions"]),
 };
 function compiledKey(value: unknown, name: string): string {
@@ -154,6 +158,8 @@ function compiledReferences(value: unknown, property: string): readonly string[]
     if (!isRecord(candidate)) return;
     for (const [key, item] of Object.entries(candidate)) {
       if (key === property && typeof item === "string") found.push(item);
+      if (key === property && Array.isArray(item))
+        found.push(...item.filter((entry): entry is string => typeof entry === "string"));
       visit(item);
     }
   };
@@ -171,6 +177,16 @@ export function parseCompiledEntityArtifact(value: unknown): CompiledEntityArtif
   if (!(["core", "operation", "presentation_surface", "presentation_section", "flow"] as const).includes(artifactType as never))
     throw new PublicationContractError("COMPILED_ENTITY_ARTIFACT_TYPE_UNSUPPORTED", "Compiled entity artifact type is unsupported");
   const type = artifactType as CompiledEntityArtifactType;
+  if(type === "core" && value.capabilities !== undefined) {
+    if(!isRecord(value.capabilities)) throw new PublicationContractError("ENTITY_CAPABILITY_INVALID", `${String(value.artifactKey)}.capabilities must be an object`);
+    const known = new Set(["comments","attachments","audit","customFields","lifecycle","numbering","print","snapshot"]);
+    for(const property of Object.keys(value.capabilities)) if(!known.has(property)) throw new PublicationContractError("ENTITY_CAPABILITY_INVALID", `${String(value.artifactKey)}.capabilities.${property} is unknown`);
+    for(const kind of ["comments","attachments"] as const) parseCapabilityDeclaration(value.capabilities[kind],kind,String(value.entityCode));
+  }
+  if(type === "operation") {
+    if(value.commentBinding !== undefined) parseCapabilityBinding(value.commentBinding,"comments",String(value.entityCode));
+    if(value.attachmentBinding !== undefined) parseCapabilityBinding(value.attachmentBinding,"attachments",String(value.entityCode));
+  }
   for (const property of Object.keys(value))
     if (!compiledArtifactKeys[type].has(property))
       throw new PublicationContractError("COMPILED_ENTITY_ARTIFACT_UNKNOWN_PROPERTY", `Unknown normative property: ${property}`);
@@ -233,6 +249,7 @@ export function validateCompiledEntityRelease(
   artifacts: readonly CompiledEntityArtifactV2[],
   registry: CompiledEntityRegistry,
 ): void {
+  validateEntityCapabilities(artifacts, registry);
   const byKey = new Map(artifacts.map((artifact) => [artifact.artifactKey, artifact]));
   const validateChildren = (value: unknown, ownerArtifactKey: string): void => {
     if (!Array.isArray(value)) return;
@@ -262,6 +279,19 @@ export function validateCompiledEntityRelease(
       throw new PublicationContractError("COMPILED_ENTITY_RELEASE_INVALID", `Release artifact does not match: ${entry.artifactKey}`);
   }
   for (const artifact of artifacts) {
+    if (registry.sourceObjects) {
+      const sources = new Set([
+        ...compiledReferences(artifact.content, "sourceObject"),
+        ...compiledReferences(artifact.content, "primaryObject"),
+        ...compiledReferences(artifact.content, "sourceObjects"),
+      ]);
+      for (const source of sources)
+        if (!registry.sourceObjects.has(source))
+          throw new PublicationContractError("COMPILED_ENTITY_REFERENCE_MISSING", `Missing source object: ${source}`);
+    }
+    for (const permission of compiledReferences(artifact.content, "permissionCode"))
+      if (!registry.permissions?.has(permission))
+        throw new PublicationContractError("COMPILED_ENTITY_REGISTRATION_MISSING", `Missing permissionCode: ${permission}`);
     for (const dependency of artifact.dependencies)
       if (!byKey.has(dependency))
         throw new PublicationContractError("COMPILED_ENTITY_REFERENCE_MISSING", `Missing dependency: ${dependency}`);
@@ -296,6 +326,7 @@ export function assertCompiledEntityRuntimePublication(
     throw new PublicationContractError("COMPILED_ENTITY_RELEASE_NOT_PUBLISHED", "Compiled entity release is not published");
   if (artifacts.some((artifact) => artifact.contractStatus !== "published"))
     throw new PublicationContractError("COMPILED_ENTITY_ARTIFACT_NOT_PUBLISHED", "Compiled entity artifact is not published");
+  validateEntityCapabilities(artifacts);
   if (typeof projection.generatedAt !== "string" || Number.isNaN(Date.parse(projection.generatedAt)))
     throw new PublicationContractError("COMPILED_ENTITY_RUNTIME_INVALID", "Compiled entity projection generatedAt is invalid");
   if (!compiledKey(projection.entityCode, "entityCode") || !release.artifacts.some((entry) => entry.entityCode === projection.entityCode))

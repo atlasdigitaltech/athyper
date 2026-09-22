@@ -313,3 +313,23 @@ function fixture(crashBoundary?: string) {
 async function unimplemented(): Promise<never> {
   throw new Error("not used by orchestrator test");
 }
+
+describe("activation authority recheck", () => {
+  it("cannot activate or acknowledge a verified deployment after approval is revoked", async () => {
+    const durable = fixture(); let revoked = true;
+    const orchestrator = new PublicationOrchestrator(durable.authority, durable.local, durable.loader, async () => {
+      if (revoked) throw Error("DEV_PUBLICATION_WORKLOAD_REVOKED");
+    });
+    await expect(orchestrator.deploy(bundle.deploymentId)).rejects.toThrow();
+    expect(durable.activationMutations()).toBe(0);
+    expect(durable.acknowledgementMutations()).toBe(0);
+    revoked = false;
+    await orchestrator.deploy(bundle.deploymentId);
+    expect(durable.activationMutations()).toBe(1);
+    expect(durable.acknowledgementMutations()).toBe(1);
+    revoked = true;
+    await expect(orchestrator.deploy(bundle.deploymentId)).rejects.toThrow();
+    expect(durable.activationMutations()).toBe(1);
+    expect(durable.acknowledgementMutations()).toBe(1);
+  });
+});

@@ -42,7 +42,7 @@ export interface EntityAuthorizationPublicationInput {
       readonly runtimeHash: string;
       readonly catalogHash: string;
       readonly operationKeys: readonly string[];
-    }): Promise<{ readonly receiptSha256: string }>;
+    }): Promise<{ readonly receiptSha256: string; readonly mode?: "development_auto_approval" }>;
   };
   readonly canonicalizer: PublicationCanonicalizer;
   readonly signer: PublicationSigner;
@@ -321,6 +321,7 @@ export async function compileEntityAuthorizationPublication(
     createdAt: d.generatedAt,
     evidence: {
       authorizationReviewReceiptSha256: review.receiptSha256,
+      ...(review.mode ? { authorizationReviewMode: review.mode } : {}),
       authorizationRuntimeVersion: runtime.runtimeVersion,
       authorizationProfileHash: hash(profile),
     },
