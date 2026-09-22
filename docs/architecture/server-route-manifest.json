@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1313,
+    "identities": 1353,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 445,
+    "currentOnly": 485,
     "legacyOccurrences": 898,
-    "currentOccurrences": 511
+    "currentOccurrences": 551
   },
   "routes": [
     {
@@ -100,7 +100,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-routes.ts",
-          "line": 219,
+          "line": 276,
           "declaredPath": "/api/attachments/:attachmentId",
           "kind": "direct"
         }
@@ -164,7 +164,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 83,
+          "line": 87,
           "declaredPath": "/api/collab/comments/:id",
           "kind": "direct"
         }
@@ -179,7 +179,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 115,
+          "line": 119,
           "declaredPath": "/api/collab/comments/:id/reactions/:code",
           "kind": "direct"
         }
@@ -201,7 +201,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 136,
+          "line": 140,
           "declaredPath": "/api/collab/drafts",
           "kind": "direct"
         }
@@ -1626,6 +1626,21 @@
       "status": "current-only"
     },
     {
+      "identity": "GET /api/attachments/:param/archive",
+      "method": "GET",
+      "path": "/api/attachments/:param/archive",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/attachments/src/attachment-routes.ts",
+          "line": 29,
+          "declaredPath": "/api/attachments/:attachmentId/archive",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "GET /api/attachments/:param/status",
       "method": "GET",
       "path": "/api/attachments/:param/status",
@@ -1633,7 +1648,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-routes.ts",
-          "line": 142,
+          "line": 194,
           "declaredPath": "/api/attachments/:attachmentId/status",
           "kind": "direct"
         }
@@ -1947,6 +1962,21 @@
       "status": "legacy-only"
     },
     {
+      "identity": "GET /api/collab/comments/:param/history",
+      "method": "GET",
+      "path": "/api/collab/comments/:param/history",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
+          "line": 49,
+          "declaredPath": "/api/collab/comments/:id/history",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "GET /api/collab/comments/:param/reactions",
       "method": "GET",
       "path": "/api/collab/comments/:param/reactions",
@@ -2056,6 +2086,21 @@
       ],
       "current": [],
       "status": "legacy-only"
+    },
+    {
+      "identity": "GET /api/collab/participants",
+      "method": "GET",
+      "path": "/api/collab/participants",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
+          "line": 48,
+          "declaredPath": "/api/collab/participants",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
     },
     {
       "identity": "GET /api/content/admin/quarantined",
@@ -6581,6 +6626,111 @@
       "status": "current-only"
     },
     {
+      "identity": "GET /api/neon/hr-setup/calendar-day-changes",
+      "method": "GET",
+      "path": "/api/neon/hr-setup/calendar-day-changes",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 29,
+          "declaredPath": "/api/neon/hr-setup/calendar-day-changes",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/neon/hr-setup/catalog",
+      "method": "GET",
+      "path": "/api/neon/hr-setup/catalog",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 20,
+          "declaredPath": "/api/neon/hr-setup/catalog",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/neon/hr-setup/drafts",
+      "method": "GET",
+      "path": "/api/neon/hr-setup/drafts",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 22,
+          "declaredPath": "/api/neon/hr-setup/drafts",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/neon/hr-setup/org-candidates",
+      "method": "GET",
+      "path": "/api/neon/hr-setup/org-candidates",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 26,
+          "declaredPath": "/api/neon/hr-setup/org-candidates",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/neon/hr-setup/org-company-assignments",
+      "method": "GET",
+      "path": "/api/neon/hr-setup/org-company-assignments",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 25,
+          "declaredPath": "/api/neon/hr-setup/org-company-assignments",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/neon/hr-setup/policy-assignments",
+      "method": "GET",
+      "path": "/api/neon/hr-setup/policy-assignments",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 32,
+          "declaredPath": "/api/neon/hr-setup/policy-assignments",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/neon/hr-setup/policy-effective",
+      "method": "GET",
+      "path": "/api/neon/hr-setup/policy-effective",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 33,
+          "declaredPath": "/api/neon/hr-setup/policy-effective",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "GET /api/neon/mesh-business-partner-account-links/:param",
       "method": "GET",
       "path": "/api/neon/mesh-business-partner-account-links/:param",
@@ -6656,6 +6806,66 @@
       "status": "current-only"
     },
     {
+      "identity": "GET /api/neon/users",
+      "method": "GET",
+      "path": "/api/neon/users",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 36,
+          "declaredPath": "/api/neon/users",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/neon/users/:param",
+      "method": "GET",
+      "path": "/api/neon/users/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 43,
+          "declaredPath": "/api/neon/users/:principalId",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/neon/users/me/profile-change",
+      "method": "GET",
+      "path": "/api/neon/users/me/profile-change",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 37,
+          "declaredPath": "/api/neon/users/me/profile-change",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/neon/users/profile-changes/review",
+      "method": "GET",
+      "path": "/api/neon/users/profile-changes/review",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 40,
+          "declaredPath": "/api/neon/users/profile-changes/review",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "GET /api/neon/work-contexts",
       "method": "GET",
       "path": "/api/neon/work-contexts",
@@ -6723,8 +6933,23 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 210,
+          "line": 243,
           "declaredPath": "/api/neon/workforce/:employeeId",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/neon/workforce/:param/authority",
+      "method": "GET",
+      "path": "/api/neon/workforce/:param/authority",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 44,
+          "declaredPath": "/api/neon/workforce/:employeeId/authority",
           "kind": "direct"
         }
       ],
@@ -6738,7 +6963,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 233,
+          "line": 266,
           "declaredPath": "/api/neon/workforce/:employeeId/onboarding-checklist",
           "kind": "direct"
         }
@@ -6753,8 +6978,23 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 220,
+          "line": 253,
           "declaredPath": "/api/neon/workforce/:employeeId/readiness",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/neon/workforce/:param/sections/:param",
+      "method": "GET",
+      "path": "/api/neon/workforce/:param/sections/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/workforce-routes.ts",
+          "line": 213,
+          "declaredPath": "/api/neon/workforce/:employeeId/sections/:section",
           "kind": "direct"
         }
       ],
@@ -8796,6 +9036,21 @@
       "status": "current-only"
     },
     {
+      "identity": "GET /api/reference-directory/:param",
+      "method": "GET",
+      "path": "/api/reference-directory/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/records/src/shared-reference-directory-routes.ts",
+          "line": 69,
+          "declaredPath": "/api/reference-directory/:sourceKey",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "GET /api/runtime/v1/bindings/:param",
       "method": "GET",
       "path": "/api/runtime/v1/bindings/:param",
@@ -9940,6 +10195,21 @@
       "status": "current-only"
     },
     {
+      "identity": "PATCH /api/attachments/:param",
+      "method": "PATCH",
+      "path": "/api/attachments/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/attachments/src/attachment-routes.ts",
+          "line": 122,
+          "declaredPath": "/api/attachments/:attachmentId",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "PATCH /api/audit/legal-holds/:param/release",
       "method": "PATCH",
       "path": "/api/audit/legal-holds/:param/release",
@@ -9990,7 +10260,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 65,
+          "line": 69,
           "declaredPath": "/api/collab/comments/:id",
           "kind": "direct"
         }
@@ -10494,6 +10764,21 @@
           "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
           "line": 19,
           "declaredPath": "/api/neon/external/business-partner-invitations/:journeyKind/requests/:requestId/correction",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "PATCH /api/neon/users/:param/profile",
+      "method": "PATCH",
+      "path": "/api/neon/users/:param/profile",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 42,
+          "declaredPath": "/api/neon/users/:principalId/profile",
           "kind": "direct"
         }
       ],
@@ -11173,6 +11458,36 @@
       "status": "current-only"
     },
     {
+      "identity": "POST /api/attachments/:param/archive",
+      "method": "POST",
+      "path": "/api/attachments/:param/archive",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/attachments/src/attachment-routes.ts",
+          "line": 30,
+          "declaredPath": "/api/attachments/:attachmentId/archive",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/attachments/:param/category",
+      "method": "POST",
+      "path": "/api/attachments/:param/category",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/attachments/src/attachment-routes.ts",
+          "line": 42,
+          "declaredPath": "/api/attachments/:attachmentId/category",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "POST /api/attachments/:param/download",
       "method": "POST",
       "path": "/api/attachments/:param/download",
@@ -11180,8 +11495,23 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-routes.ts",
-          "line": 180,
+          "line": 235,
           "declaredPath": "/api/attachments/:attachmentId/download",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/attachments/:param/extract",
+      "method": "POST",
+      "path": "/api/attachments/:param/extract",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
+          "line": 105,
+          "declaredPath": "/api/attachments/:attachmentId/extract",
           "kind": "direct"
         }
       ],
@@ -11195,8 +11525,53 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-routes.ts",
-          "line": 89,
+          "line": 136,
           "declaredPath": "/api/attachments/:attachmentId/finalize",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/attachments/:param/preview",
+      "method": "POST",
+      "path": "/api/attachments/:param/preview",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
+          "line": 101,
+          "declaredPath": "/api/attachments/:attachmentId/preview",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/attachments/folders",
+      "method": "POST",
+      "path": "/api/attachments/folders",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/attachments/src/attachment-routes.ts",
+          "line": 31,
+          "declaredPath": "/api/attachments/folders",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/attachments/search",
+      "method": "POST",
+      "path": "/api/attachments/search",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
+          "line": 109,
+          "declaredPath": "/api/attachments/search",
           "kind": "direct"
         }
       ],
@@ -11210,7 +11585,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-routes.ts",
-          "line": 27,
+          "line": 43,
           "declaredPath": "/api/attachments/stage",
           "kind": "direct"
         }
@@ -11379,7 +11754,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 50,
+          "line": 54,
           "declaredPath": "/api/collab/comments",
           "kind": "direct"
         }
@@ -11401,7 +11776,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 165,
+          "line": 169,
           "declaredPath": "/api/collab/comments/:id/flag",
           "kind": "direct"
         }
@@ -11423,7 +11798,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 101,
+          "line": 105,
           "declaredPath": "/api/collab/comments/:id/reactions",
           "kind": "direct"
         }
@@ -11445,7 +11820,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 51,
+          "line": 55,
           "declaredPath": "/api/collab/comments/:id/replies",
           "kind": "direct"
         }
@@ -11467,7 +11842,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 152,
+          "line": 156,
           "declaredPath": "/api/collab/comments/mark-all-read",
           "kind": "direct"
         }
@@ -11489,7 +11864,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 128,
+          "line": 132,
           "declaredPath": "/api/collab/drafts",
           "kind": "direct"
         }
@@ -11654,7 +12029,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-routes.ts",
-          "line": 251,
+          "line": 322,
           "declaredPath": "/api/content/items/:id/attachments/:attachmentId/versions",
           "kind": "direct"
         }
@@ -12178,6 +12553,21 @@
       "status": "current-only"
     },
     {
+      "identity": "POST /api/dev-publication/publish",
+      "method": "POST",
+      "path": "/api/dev-publication/publish",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/dev-publication.ts",
+          "line": 312,
+          "declaredPath": "/api/dev-publication/publish",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "POST /api/documents/:param",
       "method": "POST",
       "path": "/api/documents/:param",
@@ -12326,6 +12716,21 @@
           "line": 16,
           "declaredPath": "/api/documents/render",
           "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/entity-runtime/:param/intake/:param/operations/:param",
+      "method": "POST",
+      "path": "/api/entity-runtime/:param/intake/:param/operations/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/experience/src/entity-runtime-contracts.ts",
+          "line": 14,
+          "declaredPath": "/api/entity-runtime/:entityCode/intake/:flowKey/operations/:operation",
+          "kind": "contract"
         }
       ],
       "status": "current-only"
@@ -16735,6 +17140,141 @@
       "status": "current-only"
     },
     {
+      "identity": "POST /api/neon/hr-setup/calendar-day-changes",
+      "method": "POST",
+      "path": "/api/neon/hr-setup/calendar-day-changes",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 30,
+          "declaredPath": "/api/neon/hr-setup/calendar-day-changes",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/hr-setup/calendar-day-changes/:param/publish",
+      "method": "POST",
+      "path": "/api/neon/hr-setup/calendar-day-changes/:param/publish",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 31,
+          "declaredPath": "/api/neon/hr-setup/calendar-day-changes/:changeId/publish",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/hr-setup/drafts",
+      "method": "POST",
+      "path": "/api/neon/hr-setup/drafts",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 23,
+          "declaredPath": "/api/neon/hr-setup/drafts",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/hr-setup/drafts/:param/publish",
+      "method": "POST",
+      "path": "/api/neon/hr-setup/drafts/:param/publish",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 24,
+          "declaredPath": "/api/neon/hr-setup/drafts/:approvalId/publish",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/hr-setup/org-company-assignments",
+      "method": "POST",
+      "path": "/api/neon/hr-setup/org-company-assignments",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 27,
+          "declaredPath": "/api/neon/hr-setup/org-company-assignments",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/hr-setup/org-company-assignments/:param/publish",
+      "method": "POST",
+      "path": "/api/neon/hr-setup/org-company-assignments/:param/publish",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 28,
+          "declaredPath": "/api/neon/hr-setup/org-company-assignments/:assignmentId/publish",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/hr-setup/policy-assignments",
+      "method": "POST",
+      "path": "/api/neon/hr-setup/policy-assignments",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 34,
+          "declaredPath": "/api/neon/hr-setup/policy-assignments",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/hr-setup/policy-assignments/:param/publish",
+      "method": "POST",
+      "path": "/api/neon/hr-setup/policy-assignments/:param/publish",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 35,
+          "declaredPath": "/api/neon/hr-setup/policy-assignments/:assignmentId/publish",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/hr-setup/positions",
+      "method": "POST",
+      "path": "/api/neon/hr-setup/positions",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 21,
+          "declaredPath": "/api/neon/hr-setup/positions",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "POST /api/neon/mesh-bank-account-events",
       "method": "POST",
       "path": "/api/neon/mesh-bank-account-events",
@@ -16787,7 +17327,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 309,
+          "line": 342,
           "declaredPath": "/api/neon/people/:personId/restricted-evidence/read",
           "kind": "direct"
         }
@@ -16885,6 +17425,51 @@
       "status": "current-only"
     },
     {
+      "identity": "POST /api/neon/users/me/profile-change",
+      "method": "POST",
+      "path": "/api/neon/users/me/profile-change",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 38,
+          "declaredPath": "/api/neon/users/me/profile-change",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/users/me/profile-change/:param/submit",
+      "method": "POST",
+      "path": "/api/neon/users/me/profile-change/:param/submit",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 39,
+          "declaredPath": "/api/neon/users/me/profile-change/:requestId/submit",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/users/profile-changes/:param/decision",
+      "method": "POST",
+      "path": "/api/neon/users/profile-changes/:param/decision",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
+          "line": 41,
+          "declaredPath": "/api/neon/users/profile-changes/:requestId/decision",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "POST /api/neon/workforce-requests",
       "method": "POST",
       "path": "/api/neon/workforce-requests",
@@ -16967,7 +17552,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 327,
+          "line": 361,
           "declaredPath": "/api/neon/workforce-source-adapters/:source",
           "kind": "direct"
         }
@@ -16982,7 +17567,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 290,
+          "line": 323,
           "declaredPath": "/api/neon/workforce/:employeeId/iam-projection/retry",
           "kind": "direct"
         }
@@ -16997,7 +17582,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 259,
+          "line": 292,
           "declaredPath": "/api/neon/workforce/:employeeId/offboarding",
           "kind": "direct"
         }
@@ -17012,7 +17597,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 276,
+          "line": 309,
           "declaredPath": "/api/neon/workforce/:employeeId/offboarding/:caseId/resources/:itemCode/complete",
           "kind": "direct"
         }
@@ -17027,8 +17612,23 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 246,
+          "line": 279,
           "declaredPath": "/api/neon/workforce/:employeeId/onboarding-checklist/:itemCode/complete",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/workforce/:param/profile-records",
+      "method": "POST",
+      "path": "/api/neon/workforce/:param/profile-records",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/workforce-routes.ts",
+          "line": 227,
+          "declaredPath": "/api/neon/workforce/:employeeId/profile-records",
           "kind": "direct"
         }
       ],

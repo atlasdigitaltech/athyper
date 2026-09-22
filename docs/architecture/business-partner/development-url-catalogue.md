@@ -10,10 +10,10 @@ This catalogue covers all operations in that Swagger snapshot, additional backen
 | --- | ---: |
 | Swagger operations | 125 |
 | Swagger paths | 117 |
-| Backend method/path identities extracted from source | 565 |
-| Source identities absent from Swagger | 440 |
+| Backend method/path identities extracted from source | 604 |
+| Source identities absent from Swagger | 479 |
 | studio URL entries (including patterns) | 81 |
-| neon URL entries (including patterns) | 139 |
+| neon URL entries (including patterns) | 144 |
 | mesh URL entries (including patterns) | 65 |
 
 ## Jump to
@@ -32,9 +32,9 @@ This audit checks every listed App and Runtime entry, including discovery endpoi
 
 | Origin | Method/path entries | Unique identities | Duplicate identity groups | Paths with multiple methods |
 | --- | ---: | ---: | ---: | ---: |
-| https://api.dev.athyper.test | 567 | 567 | 0 | 43 |
+| https://api.dev.athyper.test | 606 | 606 | 0 | 50 |
 | https://studio.dev.athyper.test | 85 | 85 | 0 | 1 |
-| https://neon.dev.athyper.test | 145 | 143 | 2 | 3 |
+| https://neon.dev.athyper.test | 150 | 148 | 2 | 3 |
 | https://mesh.dev.athyper.test | 69 | 69 | 0 | 1 |
 
 Duplicate identities listed below represent repeated URL shapes, even when their parameter names differ. A generated entity detail template and a concrete Next.js page can describe the same endpoint; this alone does not establish conflicting handlers.
@@ -628,8 +628,11 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 - **GET** [/people/time-attendance](https://neon.dev.athyper.test/people/time-attendance)  
   Module — Time & Attendance · [source](../../../apps/neon/lib/catalog-routes.ts)
 
-- **GET** [/people/workforce](https://neon.dev.athyper.test/people/workforce)
+- **GET** [/people/workforce](https://neon.dev.athyper.test/people/workforce)  
   Page — Core Human Resources · [source](../../../apps/neon/app/(shell)/people/workforce/page.tsx)
+
+- **GET** [/people/workforce/hr-setup](https://neon.dev.athyper.test/people/workforce/hr-setup)  
+  Page · [source](../../../apps/neon/app/(shell)/people/workforce/hr-setup/page.tsx)
 
 - **GET** [/people/workforce/requests](https://neon.dev.athyper.test/people/workforce/requests)  
   Page · [source](../../../apps/neon/app/(shell)/people/workforce/requests/page.tsx)
@@ -643,7 +646,19 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 - **GET** [/people/workforce/requisitions](https://neon.dev.athyper.test/people/workforce/requisitions)  
   Page · [source](../../../apps/neon/app/(shell)/people/workforce/requisitions/page.tsx)
 
-- **GET** `/people/workforce/{employeeId}`
+- **GET** [/people/workforce/users](https://neon.dev.athyper.test/people/workforce/users)  
+  Page · [source](../../../apps/neon/app/(shell)/people/workforce/users/page.tsx)
+
+- **GET** [/people/workforce/users/me/profile-change](https://neon.dev.athyper.test/people/workforce/users/me/profile-change)  
+  Page · [source](../../../apps/neon/app/(shell)/people/workforce/users/me/profile-change/page.tsx)
+
+- **GET** [/people/workforce/users/profile-changes/review](https://neon.dev.athyper.test/people/workforce/users/profile-changes/review)  
+  Page · [source](../../../apps/neon/app/(shell)/people/workforce/users/profile-changes/review/page.tsx)
+
+- **GET** `/people/workforce/users/{principalId}`  
+  Page · [source](../../../apps/neon/app/(shell)/people/workforce/users/[principalId]/page.tsx)
+
+- **GET** `/people/workforce/{employeeId}`  
   Page · [source](../../../apps/neon/app/(shell)/people/workforce/[employeeId]/page.tsx)
 
 - **GET** [/projects-services](https://neon.dev.athyper.test/projects-services)  
@@ -1629,14 +1644,38 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **DELETE** `/api/attachments/{attachmentId}`  
   Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
 
+- **PATCH** `/api/attachments/{attachmentId}`  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
+- **GET** `/api/attachments/{attachmentId}/archive`  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
+- **POST** `/api/attachments/{attachmentId}/archive`  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
+- **POST** `/api/attachments/{attachmentId}/category`  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
 - **POST** `/api/attachments/{attachmentId}/download`  
   Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
+- **POST** `/api/attachments/{attachmentId}/extract`  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-discovery-routes.ts)
 
 - **POST** `/api/attachments/{attachmentId}/finalize`  
   Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
 
+- **POST** `/api/attachments/{attachmentId}/preview`  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-discovery-routes.ts)
+
 - **GET** `/api/attachments/{attachmentId}/status`  
   Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
+- **POST** [/api/attachments/folders](https://api.dev.athyper.test/api/attachments/folders)  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
+- **POST** [/api/attachments/search](https://api.dev.athyper.test/api/attachments/search)  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-discovery-routes.ts)
 
 - **POST** [/api/attachments/stage](https://api.dev.athyper.test/api/attachments/stage)  
   Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
@@ -1660,6 +1699,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **POST** `/api/collab/comments/{id}/flag`  
   Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
 
+- **GET** `/api/collab/comments/{id}/history`  
+  Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
+
 - **POST** `/api/collab/comments/{id}/reactions`  
   Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
 
@@ -1676,6 +1718,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
   Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
 
 - **POST** [/api/collab/drafts](https://api.dev.athyper.test/api/collab/drafts)  
+  Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
+
+- **GET** [/api/collab/participants](https://api.dev.athyper.test/api/collab/participants)  
   Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
 
 ### Source routes: /api/content
@@ -1889,6 +1934,11 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **GET** [/api/control-admin/runtime-history](https://api.dev.athyper.test/api/control-admin/runtime-history)  
   Route contract · [source](../../../server/packages/platform/control-admin/src/runtime-command-routes.ts)
 
+### Source routes: /api/dev-publication
+
+- **POST** [/api/dev-publication/publish](https://api.dev.athyper.test/api/dev-publication/publish)  
+  Raw route · [source](../../../server/apps/platform-host/src/composition/dev-publication.ts)
+
 ### Source routes: /api/documents
 
 - **POST** `/api/documents/{documentId}/download`  
@@ -1901,6 +1951,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **GET** `/api/entity-runtime/{entityCode}/application-descriptor`  
   Route contract · [source](../../../server/packages/services/records/src/entity-list-routes.ts)
+
+- **POST** `/api/entity-runtime/{entityCode}/intake/{flowKey}/operations/{operation}`  
+  Route contract · [source](../../../server/packages/platform/experience/src/entity-runtime-contracts.ts)
 
 - **GET** `/api/entity-runtime/{entityCode}/records/{recordId}/bootstrap`  
   Route contract · [source](../../../server/packages/platform/experience/src/entity-runtime-contracts.ts)
@@ -2617,6 +2670,54 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **POST** `/api/neon/governed-business-partner-cases/{caseId}/submit`  
   Raw route · [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts)
 
+- **GET** [/api/neon/hr-setup/calendar-day-changes](https://api.dev.athyper.test/api/neon/hr-setup/calendar-day-changes)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **POST** [/api/neon/hr-setup/calendar-day-changes](https://api.dev.athyper.test/api/neon/hr-setup/calendar-day-changes)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **POST** `/api/neon/hr-setup/calendar-day-changes/{changeId}/publish`  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **GET** [/api/neon/hr-setup/catalog](https://api.dev.athyper.test/api/neon/hr-setup/catalog)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **GET** [/api/neon/hr-setup/drafts](https://api.dev.athyper.test/api/neon/hr-setup/drafts)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **POST** [/api/neon/hr-setup/drafts](https://api.dev.athyper.test/api/neon/hr-setup/drafts)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **POST** `/api/neon/hr-setup/drafts/{approvalId}/publish`  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **GET** [/api/neon/hr-setup/org-candidates](https://api.dev.athyper.test/api/neon/hr-setup/org-candidates)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **GET** [/api/neon/hr-setup/org-company-assignments](https://api.dev.athyper.test/api/neon/hr-setup/org-company-assignments)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **POST** [/api/neon/hr-setup/org-company-assignments](https://api.dev.athyper.test/api/neon/hr-setup/org-company-assignments)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **POST** `/api/neon/hr-setup/org-company-assignments/{assignmentId}/publish`  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **GET** [/api/neon/hr-setup/policy-assignments](https://api.dev.athyper.test/api/neon/hr-setup/policy-assignments)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **POST** [/api/neon/hr-setup/policy-assignments](https://api.dev.athyper.test/api/neon/hr-setup/policy-assignments)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **POST** `/api/neon/hr-setup/policy-assignments/{assignmentId}/publish`  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **GET** [/api/neon/hr-setup/policy-effective](https://api.dev.athyper.test/api/neon/hr-setup/policy-effective)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **POST** [/api/neon/hr-setup/positions](https://api.dev.athyper.test/api/neon/hr-setup/positions)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
 - **POST** [/api/neon/mesh-bank-account-events](https://api.dev.athyper.test/api/neon/mesh-bank-account-events)  
   Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
 
@@ -2662,6 +2763,30 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **POST** `/api/neon/supplier-workforce/requisitions/{requisitionId}/publications`  
   Raw route · [source](../../../server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts)
 
+- **GET** [/api/neon/users](https://api.dev.athyper.test/api/neon/users)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **GET** `/api/neon/users/{principalId}`  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **PATCH** `/api/neon/users/{principalId}/profile`  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **GET** [/api/neon/users/me/profile-change](https://api.dev.athyper.test/api/neon/users/me/profile-change)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **POST** [/api/neon/users/me/profile-change](https://api.dev.athyper.test/api/neon/users/me/profile-change)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **POST** `/api/neon/users/me/profile-change/{requestId}/submit`  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **POST** `/api/neon/users/profile-changes/{requestId}/decision`  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
+- **GET** [/api/neon/users/profile-changes/review](https://api.dev.athyper.test/api/neon/users/profile-changes/review)  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
 - **GET** [/api/neon/workforce](https://api.dev.athyper.test/api/neon/workforce)  
   Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
 
@@ -2692,6 +2817,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **GET** `/api/neon/workforce/{employeeId}`  
   Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
 
+- **GET** `/api/neon/workforce/{employeeId}/authority`  
+  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
+
 - **POST** `/api/neon/workforce/{employeeId}/iam-projection/retry`  
   Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
 
@@ -2707,10 +2835,13 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **POST** `/api/neon/workforce/{employeeId}/onboarding-checklist/{itemCode}/complete`  
   Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
 
+- **POST** `/api/neon/workforce/{employeeId}/profile-records`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
 - **GET** `/api/neon/workforce/{employeeId}/readiness`  
   Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
 
-- **GET** `/api/neon/workforce/{employeeId}/sections/{section}`
+- **GET** `/api/neon/workforce/{employeeId}/sections/{section}`  
   Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
 
 ### Source routes: /api/notifications
@@ -2820,6 +2951,11 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **POST** `/api/records/{entityCode}/{recordId}/snapshots`  
   Route contract · [source](../../../server/packages/services/records/src/snapshots/snapshot-routes.ts)
+
+### Source routes: /api/reference-directory
+
+- **GET** `/api/reference-directory/{sourceKey}`  
+  Route contract · [source](../../../server/packages/services/records/src/shared-reference-directory-routes.ts)
 
 ### Source routes: /api/search
 

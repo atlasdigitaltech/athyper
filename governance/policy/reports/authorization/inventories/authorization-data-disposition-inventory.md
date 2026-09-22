@@ -6,7 +6,7 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285`
 - Approval: **pending**
-- Cataloged database tables: 744
+- Cataloged database tables: 756
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
 - Unclassified tables: 0
@@ -28,14 +28,14 @@ or multiply classified runtime objects.
 | authentication_authority | 1 |
 | authorization_authority | 21 |
 | authorization_cache | 1 |
-| business_master_transactional | 150 |
+| business_master_transactional | 160 |
 | business_scope_context_non_authorizing | 2 |
 | business_workflow_transactional | 10 |
 | database_backup_object | 1 |
 | ddl_catalog_reference | 127 |
 | derived_projection | 23 |
 | derived_runtime_projection | 13 |
-| document_metadata | 170 |
+| document_metadata | 171 |
 | document_object | 2 |
 | event_outbox_inbox | 21 |
 | event_stream | 1 |
@@ -46,7 +46,7 @@ or multiply classified runtime objects.
 | mesh_owned | 43 |
 | mesh_owned_document_object | 1 |
 | mesh_provisioning_ledger | 1 |
-| metadata_authority | 32 |
+| metadata_authority | 33 |
 | operational_log | 1 |
 | operational_state_and_evidence | 20 |
 | provisioning_ledger | 1 |
@@ -252,6 +252,7 @@ or multiply classified runtime objects.
 | `document.attachment_legal_hold_event` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.attachment_link` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.attachment_series` | document_metadata | migrate_with_referenced_objects | schema_default |
+| `document.attachment_workspace` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.attendance_adjustment_request` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.attendance_day` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.bank_recon_case` | document_metadata | migrate_with_referenced_objects | schema_default |
@@ -281,7 +282,6 @@ or multiply classified runtime objects.
 | `document.comment_draft` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.comment_feed_cursor` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.comment_mention` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.comment_moderation_flag` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.comment_reaction` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.comment_revision` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.commitment` | document_metadata | migrate_with_referenced_objects | schema_default |
@@ -351,6 +351,7 @@ or multiply classified runtime objects.
 | `document.payroll_run` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.payroll_run_employee` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.people_request` | document_metadata | migrate_with_referenced_objects | schema_default |
+| `document.person_sensitive_access_audit` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.planning_scenario` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.planning_scenario_line` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.policy_acknowledgment` | document_metadata | migrate_with_referenced_objects | schema_default |
@@ -546,6 +547,10 @@ or multiply classified runtime objects.
 | `master.gl_account` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.holiday_calendar` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.holiday_calendar_day` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.hr_calendar_day_change` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.hr_org_company_assignment` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.hr_policy_assignment` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.hr_setup_publication` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.intercompany_trading_pair` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.item` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.job` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
@@ -582,6 +587,12 @@ or multiply classified runtime objects.
 | `master.payment_term_clause` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.payment_term_discount_tier` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.person` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.person_address_use` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.person_education` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.person_emergency_contact` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.person_health_profile` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.person_identity_document` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.person_prior_employment` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.person_sensitive_profile` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.position` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.principal` | identity_projection | import_exact_preserved_projection | exact_table_override |
@@ -672,6 +683,7 @@ or multiply classified runtime objects.
 | `metadata.entity` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_baseline_import` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_baseline_import_revocation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_capability` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_change_set` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_class_profile` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_contract_test_case` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
