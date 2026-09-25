@@ -12,7 +12,7 @@ import {
   relationshipCounts,
   rolesHref,
 } from "../company-relationships";
-import { createBusinessPartner360CommercialClient } from "../business-partner-360-commercial-client";
+import { createBusinessPartner360CommercialClient } from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-commercial-client";
 import { createBusinessPartner360ExplainabilityClient } from "../business-partner-360-explainability-client";
 type Row = Readonly<Record<string, unknown>>;
 const rows = (v: unknown): Row[] =>

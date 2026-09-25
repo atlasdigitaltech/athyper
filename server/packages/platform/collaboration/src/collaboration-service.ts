@@ -83,6 +83,7 @@ export function createCollaborationService<Transaction>(
       if (prepared.intent !== undefined) validateCode(prepared.intent);
       validateBody(prepared.text);
       validateAttachments(prepared.attachmentIds);
+      validateNotificationAttachments(prepared);
       const key =
         prepared.idempotencyKey === undefined
           ? undefined
@@ -144,6 +145,7 @@ export function createCollaborationService<Transaction>(
           tx,
           undefined,
           mentions,
+          prepared.notificationAttachments,
         );
         if (executionId)
           await options.commandExecutions!.complete(
@@ -175,6 +177,7 @@ export function createCollaborationService<Transaction>(
       const prepared = prepare(command);
       validateBody(prepared.text);
       validateAttachments(prepared.attachmentIds);
+      validateNotificationAttachments(prepared);
       const result = await transact(options, prepared.context, async (tx) => {
         const mentions = await resolveMentions(
           options.principals,
@@ -195,7 +198,8 @@ export function createCollaborationService<Transaction>(
           "edited",
           tx,
           undefined,
-          mentions,
+          outcome.addedMentionIds,
+          prepared.notificationAttachments,
         );
         for (const attachmentId of outcome.orphanedAttachmentIds)
           await options.outbox.append(
@@ -302,6 +306,7 @@ export function createCollaborationService<Transaction>(
       if (prepared.intent !== undefined) validateCode(prepared.intent);
       validateBody(prepared.text);
       validateAttachments(prepared.attachmentIds);
+      validateNotificationAttachments(prepared);
       return transact(options, prepared.context, (tx) =>
         options.repository.putDraft({...prepared,draftRetentionDays:capability?.draftRetentionDays ?? 30}, tx),
       );
@@ -408,6 +413,7 @@ async function emit<Transaction>(
   tx: Transaction,
   idempotencyKey?: string,
   mentions: readonly string[] = [],
+  attachments: readonly {readonly attachmentId:string;readonly required:boolean}[] = [],
 ): Promise<void> {
   await simpleEvent(
     options,
@@ -415,8 +421,8 @@ async function emit<Transaction>(
     comment.id,
     `collaboration.comment.${action}`,
     tx,
-    { entityType: comment.entityType, entityId: comment.entityId },
-    idempotencyKey,
+    { entityType: comment.entityType, entityId: comment.entityId, entity_type:comment.entityType, entity_id:comment.entityId, comment_id:comment.id, comment_revision:comment.revision, attachments:attachments.map(a=>({...a,attachmentVersionId:a.attachmentId,versionPolicy:"pinned",requestedDisposition:"auto"})) },
+    idempotencyKey??`comment:${comment.id}:revision:${comment.revision}:${action}`,
   );
   for (const principalId of mentions.filter((id) => id !== context.principalId))
     await options.outbox.append(
@@ -424,6 +430,7 @@ async function emit<Transaction>(
         tenantId: context.tenantId,
         topic: "collaboration",
         eventType: "collaboration.comment.mentioned",
+        eventKey: `comment:${comment.id}:revision:${comment.revision}:mention:${principalId}`,
         // Resource IDs may be arbitrary text; the outbox entity_id is a UUID.
         entityType: "document.comment",
         entityId: comment.id,
@@ -432,6 +439,8 @@ async function emit<Transaction>(
         actorId: context.principalId,
         payload: {
           comment_id: comment.id,
+          comment_revision: comment.revision,
+          attachments: attachments.map(a=>({...a,attachmentVersionId:a.attachmentId,versionPolicy:"pinned",requestedDisposition:"auto"})),
           recipient_principal_ids: [principalId],
           action,
           excerpt: comment.text.slice(0, 240),
@@ -457,6 +466,8 @@ async function simpleEvent<Transaction>(
       topic: "collaboration",
       eventType,
       ...(eventKey ? { eventKey } : {}),
+      entityType: "document.comment",
+      entityId: commentId,
       aggregateType: "document.comment",
       aggregateId: commentId,
       actorId: context.principalId,
@@ -661,4 +672,9 @@ function timestamp(value?: string): string | undefined {
       "A valid ISO timestamp with timezone is required",
     );
   return new Date(value).toISOString();
+}
+
+function validateNotificationAttachments(command:{attachmentIds?:readonly string[];notificationAttachments?:readonly {attachmentId:string;required:boolean}[]}) {
+ const refs=command.notificationAttachments??[];
+ if(refs.length>10 || new Set(refs.map(a=>a.attachmentId)).size!==refs.length || refs.some(a=>typeof a.required!=="boolean"||!command.attachmentIds?.includes(a.attachmentId)))throw new CollaborationError(422,"INVALID_NOTIFICATION_ATTACHMENTS","Notification attachments must reference selected comment attachments");
 }

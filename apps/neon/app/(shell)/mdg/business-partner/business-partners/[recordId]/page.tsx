@@ -1,10 +1,5 @@
-import { notFound, redirect } from "next/navigation";
-import { isEntityId } from "@/lib/route-params";
+import { redirectEntityRecord, type LegacyEntityRecordProps } from "@/lib/redirect-entity-record";
 
-export default async function BusinessPartnerCatalogDetail({ params }: {
-  readonly params: Promise<{ readonly recordId: string }>;
-}): Promise<never> {
-  const { recordId } = await params;
-  if (!isEntityId(recordId)) notFound();
-  redirect(`/mdg/business-partner/${encodeURIComponent(recordId)}`);
+export default function BusinessPartnerDetailPage(props: LegacyEntityRecordProps): Promise<never> {
+  return redirectEntityRecord("business_partner", props);
 }

@@ -7,6 +7,7 @@ import {
   COLOR_TOKENS,
   DENSITY_TOKENS,
   FOUNDATION_TOKENS,
+  MONO_COLOR_TOKENS,
   type ColorMode,
 } from "../src/tokens";
 
@@ -24,8 +25,8 @@ const check = process.argv.includes("--check");
 const kebab = (value: string) =>
   value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 
-function canonicalColors(mode: ColorMode): string[] {
-  return Object.entries(COLOR_TOKENS[mode]).map(
+function canonicalColors(mode: ColorMode, tokens: typeof COLOR_TOKENS = COLOR_TOKENS): string[] {
+  return Object.entries(tokens[mode]).map(
     ([name, value]) => `  --a-${kebab(name)}: ${value};`,
   );
 }
@@ -150,7 +151,7 @@ const structural = [
   `--a-opacity-disabled:${t.opacity.disabled}`,
 ].map((value) => `  ${value};`);
 
-const css = `/*\n * GENERATED from @athyper/platform-theme/src/tokens.ts.\n * Do not edit. Run: pnpm iam:build\n */\n@font-face {\n  font-family: "Geist";\n  src: url("../fonts/Geist-Variable.woff2") format("woff2");\n  font-style: normal;\n  font-weight: 100 900;\n  font-display: swap;\n}\n\n:root, :root[data-theme="light"] {\n${[...canonicalColors("light"), ...structural, ...compatibilityAliases()].join("\n")}\n  color-scheme: light;\n}\n\n:root[data-theme="dark"], :root.dark {\n${canonicalColors("dark").join("\n")}\n  color-scheme: dark;\n}\n\n:root[data-theme="high-contrast"] {\n${canonicalColors("high-contrast").join("\n")}\n  color-scheme: dark;\n}\n\n@media (prefers-reduced-motion: reduce) {\n  :root { --a-motion-fast: 0ms; --a-motion-normal: 0ms; --a-motion-slow: 0ms; }\n}\n`;
+const css = `/*\n * GENERATED from @athyper/platform-theme/src/tokens.ts.\n * Do not edit. Run: pnpm iam:build\n */\n@font-face {\n  font-family: "Geist";\n  src: url("../fonts/Geist-Variable.woff2") format("woff2");\n  font-style: normal;\n  font-weight: 100 900;\n  font-display: swap;\n}\n\n:root, :root[data-theme="light"] {\n${[...canonicalColors("light"), ...structural, ...compatibilityAliases()].join("\n")}\n  color-scheme: light;\n}\n\n:root[data-theme="dark"], :root.dark {\n${canonicalColors("dark").join("\n")}\n  color-scheme: dark;\n}\n\n:root[data-theme="high-contrast"] {\n${canonicalColors("high-contrast").join("\n")}\n  color-scheme: dark;\n}\n\n/* Atlas Mono: danger/warning/success/focus intentionally inherit from the blocks above. */\n:root[data-theme-family="atlas-mono"] { --a-theme-family: atlas-mono; }\n:root[data-theme-family="atlas-mono"][data-theme="light"], :root[data-theme-family="atlas-mono"] {\n${canonicalColors("light", MONO_COLOR_TOKENS).join("\n")}\n}\n\n:root[data-theme-family="atlas-mono"][data-theme="dark"] {\n${canonicalColors("dark", MONO_COLOR_TOKENS).join("\n")}\n}\n\n@media (prefers-reduced-motion: reduce) {\n  :root { --a-motion-fast: 0ms; --a-motion-normal: 0ms; --a-motion-slow: 0ms; }\n}\n`;
 
 if (check) {
   const current = await readFile(output, "utf8").catch(() => "");

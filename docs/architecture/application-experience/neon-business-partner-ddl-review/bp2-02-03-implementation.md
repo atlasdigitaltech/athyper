@@ -2,6 +2,15 @@
 
 This implementation extends the existing governed Business Partner request and materialization path. It does not add a generic write surface for addresses, contacts, channels, roles, validation events, or person identities.
 
+**Latest acceptance, 2026-09-23:** release 16 is active. The existing CATL supplier
+case `971f6388-7272-4d10-8ff7-b567590c44d9` completed submission, independent owner
+approval and materialization through governed APIs. BP
+`01a0caf1-3f6a-7819-afd7-76ba1e30cab8` has one materialized address, contact person
+and email channel; populated Addresses/Contacts signed-in reads pass. This closes
+the initial integrated journey left open in the historical verification below.
+See the [current checkpoint](bp2-integration-20260923.md) for scope fixes and
+remaining BP2-04/05/06 acceptance.
+
 ## BP2-02 — address graph
 
 - `address/core` now describes directory-backed subdivision codes, manual region text, IANA time zones, structured address fields, and the existing country reference. The former US-only postal-code metadata condition was removed. Country-specific labels, examples, and postal rules remain in the registered country address policy; validation is server-authoritative.
@@ -32,4 +41,6 @@ This implementation extends the existing governed Business Partner request and m
 
 ## Environment-gated verification
 
-The disposable PostgreSQL suite covers primary-address overlap, foreign-owner access, normalized contact duplicates, and verification evidence. It is intentionally skipped without `ATHYPER_MASTER_DATA_DB_TESTS=true` and `ATHYPER_MASTER_DATA_TEST_DATABASE_URL`; run it against the disposable DDL database before releasing the DDL change. The source changes are not published or activated.
+The disposable PostgreSQL suite covers primary-address overlap, foreign-owner access, normalized contact duplicates, and verification evidence. It is intentionally skipped without `ATHYPER_MASTER_DATA_DB_TESTS=true` and `ATHYPER_MASTER_DATA_TEST_DATABASE_URL`.
+
+On 2026-09-23 all 25 tests passed in an empty disposable repository database. Separately, all 248 fresh Neon manifest entries and canonical three-tenant authorization seeds installed successfully, and subdivision/timezone/address persistence passed under `athyperapp`. The source artifacts are now signed and activated in compiled release 14 (97 artifacts). See the [integration checkpoint](bp2-integration-20260923.md) for exact hashes and read-back. After normal login renewal, signed-in address/contact/request section reads return 200 and the Addresses page renders. The full governed integrated journey remains open; the earlier expired-session 401 is resolved.

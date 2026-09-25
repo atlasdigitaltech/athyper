@@ -53,6 +53,13 @@ export class PinnedCompiledEntityReader {
     return this.artifact(release, `${release.coordinate.entityCode}/core`, "core");
   }
 
+  async publicationCoordinate(release: CompiledEntityResolvedRelease) {
+    const value = await this.options.source.findPublicationCoordinate?.(release);
+    if (!value || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.releaseId) || !Number.isSafeInteger(value.releaseNo) || value.releaseNo < 1)
+      throw new Error("COMPILED_ENTITY_PUBLICATION_COORDINATE_UNAVAILABLE");
+    return value;
+  }
+
   async operation(release: CompiledEntityResolvedRelease): Promise<CompiledEntityArtifactV2> {
     return this.artifact(release, `${release.coordinate.entityCode}/operation`, "operation");
   }
@@ -136,8 +143,8 @@ export class PinnedCompiledEntityReader {
     release: CompiledEntityResolvedRelease,
     entry: CompiledEntityArtifactReadCoordinate["entry"],
   ): Promise<CompiledEntityArtifactV2> {
-    const input = { release: release.release, entry } as const;
-    const key = `${release.release.releaseHash}\0${entry.artifactKey}\0${entry.hash}`;
+    const input = { coordinate: release.coordinate, release: release.release, entry } as const;
+    const key = `${releaseKey(release.coordinate)}\0${release.release.releaseHash}\0${entry.artifactKey}\0${entry.hash}`;
     const pending = this.artifactInflight.get(key);
     if (pending) return pending;
     const load = this.loadArtifact(release, input).finally(() => this.artifactInflight.delete(key));
@@ -146,6 +153,13 @@ export class PinnedCompiledEntityReader {
   }
 
   private async loadRelease(coordinate: CompiledEntityReleaseCoordinate): Promise<CompiledEntityResolvedRelease | null> {
+    // An unpinned coordinate names a mutable activation head, not immutable IR.
+    // Reusing its cached envelope after publication can point artifact reads at a
+    // superseded (no longer admitted) release for the entire cache TTL.
+    if (!coordinate.releaseHash) {
+      const active = await this.options.source.findAdmittedRelease(coordinate);
+      return active ? resolveCompiledEntityRelease(coordinate, active) : null;
+    }
     let release;
     try {
       release = await this.options.cache?.getRelease(coordinate);

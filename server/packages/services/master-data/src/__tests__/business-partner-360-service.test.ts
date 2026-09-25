@@ -303,6 +303,19 @@ function fixture(
   });
 }
 describe("Business Partner 360 secure core", () => {
+  it.each([true,false])("requires independent person permission for the names projection: %s",async permitted=>{
+    const repository=new MemoryRepository(core("person",[]));
+    let include: boolean | undefined;
+    const service=createBusinessPartner360Service({
+      authorizer:{async authorize(input:{permissionCode:string}){return {allowed:input.permissionCode!==BUSINESS_PARTNER_360_PERMISSIONS.person||permitted};}} as never,
+      repository:Object.assign(repository,{async readOverview(input:{includePersonIdentity?:boolean}){include=input.includePersonIdentity;return {name:"Business display",...(include?{person_first_name:"Maya"}:{})};}}),
+      transactions:{async run(_plane,_actor,work){return work({});}},
+      definitions:{async resolve(){return {code:"business_partner.onboarding" as const,version:"1.0.0",hash:"a".repeat(64)};}},
+    });
+    const result=await service.overview({context,businessPartnerId:ids.bp});
+    expect(include).toBe(permitted);
+    expect(Object.hasOwn(result.values,"person_first_name")).toBe(permitted);
+  });
   it("reads the bounded header without loading fragments", async () => {
     const repository = new MemoryRepository(core("organization", ["supplier"]));
     let fragmentsRead = 0;
@@ -623,18 +636,18 @@ describe("Business Partner 360 secure core", () => {
       readOnly: true,
     });
   });
-  it("does not expose person or workforce records through Business Partner 360", async () => {
+  it("admits person partner facts without exposing workforce records", async () => {
     const service = fixture(core("person", ["workforce"]));
     await expect(
       service.summary({ context, businessPartnerId: ids.bp }),
-    ).rejects.toMatchObject({ status: 404, code: "BP_360_NOT_FOUND" });
+    ).resolves.toMatchObject({identity:{category:"person"}});
     await expect(
       service.section({
         context,
         businessPartnerId: ids.bp,
         sectionCode: "workforce",
       }),
-    ).rejects.toMatchObject({ status: 404, code: "BP_360_NOT_FOUND" });
+    ).rejects.toMatchObject({ status: 404, code: "BP_360_SECTION_NOT_APPLICABLE" });
   });
   it("returns the local safe network projection when the live MESH adapter is unavailable", async () => {
     const result = await fixture(core("organization", ["supplier"])).section<
@@ -663,6 +676,14 @@ describe("Business Partner 360 secure core", () => {
       /accountLast4|accountNumber|proposedPayload|fieldDiff|rankedCandidates|person|workforce/i,
     );
   });
+  it("admits role-free partner governance without granting a Mesh commercial relationship", async () => {
+    const value = {...core("organization", []), scopeResolved:false};
+    const result = await fixture(value).section<Record<string,unknown>>({context,businessPartnerId:ids.bp,sectionCode:"network"});
+    expect(result.data).toHaveProperty("collections");
+    expect(result.data).toMatchObject({live:{state:"not_requested",reasonCode:"MESH_RELATIONSHIP_COORDINATE_INVALID"}});
+    const denied = new Set(Object.values(BUSINESS_PARTNER_360_PERMISSIONS).filter(code=>code!==BUSINESS_PARTNER_360_PERMISSIONS.network));
+    await expect(fixture(value,denied).section({context,businessPartnerId:ids.bp,sectionCode:"network"})).rejects.toMatchObject({status:403,code:"BP_360_SECTION_FORBIDDEN"});
+  });
 });
 
 describe("360 metadata directory admission", () => {
@@ -679,7 +700,7 @@ describe("360 metadata directory admission", () => {
         async authorize(input: { permissionCode: string; resource?: unknown }) {
           if (input.permissionCode !== BUSINESS_PARTNER_360_PERMISSIONS.record)
             return { allowed: false, reason: "missing_permission" };
-          if (input.resource) return { allowed: false, reason };
+          if (input.resource?.operatingOrganizationId !== "admitted-org") return { allowed: false, reason };
           baseCalls++;
           return baseAllowed
             ? { allowed: true }
@@ -708,6 +729,7 @@ describe("360 metadata directory admission", () => {
         ? {
             admitDirectoryRecord: async () => {
               if (admissionFails) throw new Error("Directory denied");
+              return {scopeResources:[{operatingOrganizationId:"admitted-org"}]};
             },
           }
         : {}),

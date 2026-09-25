@@ -1,5 +1,5 @@
 "use client";
-import { businessLabel } from "./360/display-values";
+import { businessTitle as title } from "./360/display-values";
 import { useOrganizationSelection } from "./use-organization-selection";
 import {
   EntityIntakeForm,
@@ -437,5 +437,3 @@ function requiredValue(data: FormData, name: string): string {
     throw new Error(`${title(name)} is required`);
   return value.trim();
 }
-
-function title(value: string): string { return businessLabel(value, "title"); }

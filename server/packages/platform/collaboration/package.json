@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@athyper/contract-platform-rich-text": "workspace:*",
     "@athyper/server-contract-audit": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-collaboration": "workspace:*",

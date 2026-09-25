@@ -8,6 +8,15 @@
   "plane": "neon",
   "operations": [
     {
+      "key": "reveal",
+      "permissionCode": "neon.relationship.business_partner_identifier.reveal",
+      "execution": { "handlerKey": "neon.bp.identifier.reveal.v1", "registryRequired": true },
+      "scopeBinding": { "scopeSource": "persisted_record", "resolverKey": "neon.business-context.v1", "denyUnresolved": true },
+      "idempotency": "single_use_claim",
+      "cache": "no_store",
+      "policyRequirements": ["elevated_assurance", "purpose_bound_claim", "audit_in_same_transaction"]
+    },
+    {
       "key": "read",
       "permissionCode": "neon.business_partner_identifier.read",
       "permissionStatus": "proposed_requires_catalog_verification",

@@ -2,7 +2,8 @@
 set -eu
 
 export PGPASSWORD="$(cat /run/secrets/postgres-password)"
-ddl_root=/athyper/ddl
+ddl_root=${ATHYPER_DDL_ROOT:-/athyper/ddl}
+reconciliation_root=${ATHYPER_RECONCILIATION_ROOT:-/athyper/reconciliation}
 
 apply_plane() {
   plane="$1"
@@ -106,7 +107,7 @@ SQL
 for plane in studio neon mesh; do
   psql --no-psqlrc --set ON_ERROR_STOP=1 \
     --dbname "athyper_${plane}" \
-    --file /athyper/reconciliation/runtime-worker-grants-v1.sql
+    --file "${reconciliation_root}/runtime-worker-grants-v1.sql"
 done
 
 unset PGPASSWORD

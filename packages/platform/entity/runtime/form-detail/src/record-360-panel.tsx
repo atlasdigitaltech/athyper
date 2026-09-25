@@ -31,7 +31,7 @@ export function EntityRecord360ModeNavigation({
     ref={navigationRef}
     role="tablist"
     aria-label="Record views"
-    className="a-record-360__tabs"
+    className="a-entity-record__tabs"
     onKeyDown={(event) => {
       const buttons = Array.from(
         navigationRef.current!.querySelectorAll<HTMLButtonElement>("[role=tab]"),
@@ -62,7 +62,7 @@ export function EntityRecord360ModeNavigation({
   </div>;
 }
 
-/** Shared scroll navigation. The adapter supplies only authorized section providers. */
+/** Legacy v1 panel adapter. New entity pages use EntityRecordPage and compiled navigation. */
 export function EntityRecord360Panel({
   panel,
   sections,
@@ -104,7 +104,6 @@ export function EntityRecord360Panel({
     (key) => sections.find((item) => item.key === key) ?? [],
   );
   const tab = panel.tabs.find((tab) => tab.key === activeTab) ?? panel.tabs[0]!;
-  const overviewTab = panel.tabs.find((tab) => tab.provider === "360")!;
   const signature = rail.map((item) => item.key).join(":");
   useEffect(() => {
     if (!tabsRoot.current || typeof ResizeObserver === "undefined") return;
@@ -120,7 +119,7 @@ export function EntityRecord360Panel({
   useEntitySectionScroll({
     root,
     attribute: "data-record-section",
-    contentSelector: ".a-record-360__sections",
+    contentSelector: ".a-entity-record__sections",
     activeSection,
     navigationRevision,
     scopeKey: `${activeTab}:${signature}`,
@@ -132,7 +131,7 @@ export function EntityRecord360Panel({
     fallbackSelector: "[role=tabpanel]",
   });
   return (
-    <div ref={root} className="a-record-360">
+    <div ref={root} className="a-entity-record">
       {modeNavigationRef ? null : <EntityRecord360ModeNavigation panel={panel} activeTab={activeTab} onSelectTab={onSelectTab} navigationId={navigationId} navigationRef={tabsRoot} />}
       <div
         id={`${navigationId}-content`}
@@ -141,20 +140,20 @@ export function EntityRecord360Panel({
         aria-labelledby={`${navigationId}-tab-${tab.key}`}
         className={
           tab.provider === "360"
-            ? "a-record-360__layout"
-            : "a-record-360__content"
+            ? "a-entity-record__layout"
+            : "a-entity-record__content"
         }
       >
         {tab.provider === "360" ? (
           <>
             <EntitySectionNavigation
-              className="a-record-360__rail"
-              label="360 sections"
+              className="a-entity-record__rail"
+              label={`${tab.label} sections`}
               sections={rail}
               activeSection={activeSection}
               onNavigate={onSelectSection}
             />
-            <div className="a-record-360__sections">
+            <div className="a-entity-record__sections">
               {rail.map((item, index) => (
                 <ProgressiveSection
                   key={item.key}
@@ -167,7 +166,7 @@ export function EntityRecord360Panel({
               ))}
             </div>
             <aside
-              className="a-record-360__sidebar"
+              className="a-entity-record__sidebar"
               aria-label="Primary record details"
             >
               {panel.sidebar.map((item) => (
@@ -221,14 +220,14 @@ function ProgressiveSection({
       data-record-section={item.key}
       tabIndex={-1}
       aria-labelledby={id}
-      className="a-record-360__section"
+      className="a-entity-record__section"
     >
       <h2 id={id}>{item.label}</h2>
       {loaded || selected ? (
         <SectionBoundary label={item.label}>{children}</SectionBoundary>
       ) : (
         <div
-          className="a-record-360__placeholder"
+          className="a-entity-record__placeholder"
           aria-hidden="true"
         />
       )}
@@ -252,7 +251,7 @@ class SectionBoundary extends Component<
   render() {
     if (!this.state.failed) return this.props.children;
     return (
-      <div role="alert" className="a-record-360__section-error">
+      <div role="alert" className="a-entity-record__section-error">
         <p>{this.props.label} could not be displayed.</p>
         <button type="button" onClick={() => this.setState({ failed: false })}>
           Try again

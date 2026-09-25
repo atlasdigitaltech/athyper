@@ -10,6 +10,7 @@ export {
   type KyselyPublicationAuthorityWorkOptions,
 } from "./kysely-publication-authority-work.js";
 export { KyselyLocalProjectionRepository } from "./kysely-local-projection-repository.js";
+export {adoptEntityPair, entityAdoptionTransaction, type CoordinatedAdoptionPorts} from './coordinated-entity-adoption.js';
 export {
   PublicationOrchestrationError,
   PublicationOrchestrator,
@@ -18,6 +19,7 @@ export {
 export * from "./publication-jobs.js";
 export * from "./publication-routes.js";
 export * from "./publication-artifact-loader.js";
+export { readPublishedNotificationConfiguration } from "./notification-configuration-source.js";
 export * from "./publication-operations.js";
 export * from "./release-promotion.js";
 export * from "./kysely-publication-operations-repository.js";
@@ -47,3 +49,4 @@ export {
 } from "./compiled-entity-collection-compiler.js";
 export * from "./compiled-entity-artifact-compiler.js";
 export * from "./business-partner-company-case-contract.js";
+export {readPublishedCollectionConfiguration} from "./collection-configuration-source.js";

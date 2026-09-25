@@ -8,15 +8,16 @@ export function createBusinessPartnerRevealRuntimeRegistrations(
   service: BusinessPartner360Service, scopes: EntityScopeAdapter,
 ): readonly EntityAuthorizationRuntimeRegistration[] {
   if (!service.preflightReveal) throw Error("BP_REVEAL_PREFLIGHT_UNAVAILABLE");
-  return (["bank", "tax"] as const).map(kind => {
+  return (["bank", "tax", "identifier"] as const).map(kind => {
     const key = `${kind}_reveal`;
     return {
       entityCode: "business_partner", planeKey: "neon",
       operation: {key, permissionCode: `neon.relationship.bp_target.${key}`, scope: "tenant.record.v1", target: "existing", effect: "reveal", discoveryOperation: "enter", requiresParentRead: true, requiresPreflight: true},
-      handler: {key: `business_partner.${key}.v1`, invoke: (command: Parameters<BusinessPartner360Service["revealBankAccount"]>[0] | Parameters<BusinessPartner360Service["revealTaxRegistration"]>[0]) => {
+      handler: {key: `business_partner.${key}.v1`, invoke: (command: Parameters<BusinessPartner360Service["revealBankAccount"]>[0] | Parameters<BusinessPartner360Service["revealTaxRegistration"]>[0] | Parameters<NonNullable<BusinessPartner360Service["revealIdentifier"]>>[0]) => {
         if (command.context.planeKey !== "neon") throw Error("BP_REVEAL_RUNTIME_COORDINATE_MISMATCH");
-        if (kind === "bank" && "bankAccountLinkId" in command && !("taxRegistrationId" in command)) return service.revealBankAccount(command);
-        if (kind === "tax" && "taxRegistrationId" in command && !("bankAccountLinkId" in command)) return service.revealTaxRegistration(command);
+        if (kind === "identifier" && "identifierId" in command && !("taxRegistrationId" in command) && !("bankAccountLinkId" in command) && service.revealIdentifier) return service.revealIdentifier(command);
+        if (kind === "bank" && "bankAccountLinkId" in command && !("taxRegistrationId" in command) && !("identifierId" in command)) return service.revealBankAccount(command);
+        if (kind === "tax" && "taxRegistrationId" in command && !("bankAccountLinkId" in command) && !("identifierId" in command)) return service.revealTaxRegistration(command);
         throw Error("BP_REVEAL_RUNTIME_COORDINATE_MISMATCH");
       }},
       resolver: {key: "tenant.record.v1", resolve: (input: Parameters<EntityScopeAdapter["resolve"]>[0]) => {

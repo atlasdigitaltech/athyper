@@ -1,6 +1,6 @@
 import type {BusinessPartner360Section} from "./business-partner-360.js";
 export type BusinessPartner360ScopeState="global"|"missing_scope"|"scoped"|"historical";
-export interface BusinessPartner360RoleSummaryItem{readonly id:string;readonly role:"supplier"|"customer";readonly roleCode?:string;readonly status:string;}
+export interface BusinessPartner360RoleSummaryItem{readonly id?:string;readonly role:"supplier"|"customer";readonly roleCode?:string;readonly status:string;}
 export interface BusinessPartner360OrganizationAssignmentItem{readonly displayValues?:Readonly<Record<string,string>>;readonly id:string;readonly operatingOrganizationId:string;readonly partnerRole:"supplier"|"customer";readonly status:string;readonly effectiveFrom:string;readonly effectiveUntil?:string;}
 export interface BusinessPartner360LegalEntityAssignmentItem{readonly id:string;readonly legalEntityId:string;readonly effectiveFrom:string;readonly effectiveUntil?:string;}
 export interface BusinessPartner360WorkAssignmentItem{readonly id:string;readonly employmentId?:string;readonly legalEntityId?:string;readonly companyCodeId:string;readonly orgUnitId?:string;readonly positionId?:string;readonly assignmentType:string;readonly fte:number;readonly effectiveFrom:string;readonly effectiveUntil?:string;}

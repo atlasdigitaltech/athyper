@@ -1,8 +1,20 @@
 # Entity comments and attachments — metadata-controlled build plan
 
-Decision accepted: 2026-09-21. Documentation revision: 3 — local build simplification. Implementation status: planned; approval of this plan does not imply implementation completion.
+Decision accepted: 2026-09-21. Documentation revision: 3 — local build simplification. Status reviewed: 2026-09-23. Implementation status: in progress; NEON Business Partner local acceptance is recorded, but the full workstream is not yet closed.
 
 Parent: [Shared Application Experience build plan](build-work-plan.md). Product behavior: [Comments and attachments design](entity-comments-and-attachments-design.md). Layout reference: [interactive prototype](../../prototypes/entity-comments-attachments.html).
+
+### Closure review — 2026-09-23
+
+The [CA-10 acceptance record](entity-comments-and-attachments-ca10-local-acceptance.md) confirms signed release 13 activation and a passing signed-in NEON Business Partner journey. It explicitly leaves these required checks open:
+
+- Activate and exercise a second real entity through published metadata and its domain admission provider.
+- Complete the remaining Mesh/Studio authorization acceptance; unavailable endpoints are not passing denial checks.
+- Verify configured mention/inbox delivery with current-access checks.
+
+Before closing, reconcile the CA-10 cleanup and documentation checklist, the parent workstream status, and the findings in the [2026-09-22 service review](../../reports/entity-collaboration-phase1-review-20260922.md) with subsequent fixes and focused verification. That review is historical evidence; this documentation review does not establish whether each finding still exists in current source. Passing UI regressions alone do not resolve those service findings or the remaining integrated checks.
+
+This review updates status only; it does not rerun acceptance, close unchecked requirements, or add production release gates. Optional Office/encrypted-document preview, AI and new outbound providers remain outside the required closure scope.
 
 ## 1. Purpose, scope and precedence
 
@@ -527,14 +539,14 @@ Definition of done:
 | CA-00        | Complete | [Baseline inventory](entity-comments-and-attachments-ca00-inventory.md); focused service/client checks pass; CA-03–CA-10 remain |
 | CA-01        | Complete | Typed contracts, authoring persistence, runtime policy binding and verified local publication pass                                                                                       |
 | CA-02        | Complete | Shared revision/schema cleanup and all three fresh-install/application-role checks pass                                                                      |
-| CA-03        | Planned  | Parent/audience admission qualification required                                                                                |
+| CA-03        | Complete | Published parent/audience admission and direct-route checks are implemented; 25 focused capability/section tests and the fresh Neon application-role revision/private-audience fixture passed again on 2026-09-23. Broader signed-in acceptance remains CA-10. |
 | CA-04        | Complete | Stable stage/finalize/version/purge lifecycle with deterministic maintenance jobs; focused recovery/race suite and host typecheck pass |
 | CA-05        | Complete | Generic runtime reader now provides admitted root/reply pages, draft/count/unread projections, pin-aware attachment rows and revision-aware client caching; focused reader tests pass |
 | CA-06        | Complete | Shared dock/modal surface, URL/history coordination, Summary restoration and shell-side-surface coordination are wired; focused typechecks pass |
-| CA-07        | In progress | Participant mentions, grouped reply paging, rich revision conflict/history UI, reporter-only moderation feedback and reference-safe draft cleanup are implemented and locally tested; integrated browser acceptance remains |
+| CA-07        | In progress | Participant mentions, grouped reply paging, rich revision conflict/history UI, reporter-only moderation feedback and reference-safe draft cleanup are implemented and locally tested. The self-only principal RLS discovery defect is fixed; live CATL admin → owner mention admission, rich comment creation, notification inbox delivery and cleanup now pass. Remaining integrated browser/acceptance checks are retained in CA-10. |
 | CA-08        | Complete | Shared file workspace, owner-only pending/status polling, revision-safe rename, version staging/history, category/folder management, unlink/archive outcomes and batch recovery are wired |
 | CA-09        | Complete | [Local qualification](entity-comments-and-attachments-ca09-qualification.md): real preview/OCR/ranges and record-scoped database checks pass; signed-in UI acceptance and governed activation carry to CA-10 |
-| CA-10        | In progress | [Focused local acceptance](entity-comments-and-attachments-ca10-local-acceptance.md) passes; release 13 is signed and active; NEON preview/search/comment/file UI acceptance passes; second-entity, Studio/Mesh and mention/inbox acceptance remain open |
+| CA-10        | In progress | [Prior release-13 acceptance](entity-comments-and-attachments-ca10-local-acceptance.md) remains historical evidence; signed release 16 is active. [2026-09-23 checks](neon-business-partner-ddl-review/bp2-integration-20260923.md) pass BP multi-actor public/private isolation, private-history denial, cross-tenant denial, cross-actor mention inbox delivery and cleanup. Workforce comment-create/delete also passes. New bounded participant-directory SQL passes application-role isolation checks on all three DEV planes and disposable Neon. Refreshed signed-in Studio denies the NEON-only BP comments resource (404). Earlier signed-in Mesh denial (404) remains historical evidence; its current saved session is anonymous. Full browser/cross-plane CA-07/CA-10 closure is not claimed. |
 
 ### Documentation validation
 

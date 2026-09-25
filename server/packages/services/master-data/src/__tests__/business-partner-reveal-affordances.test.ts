@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { evaluateBusinessPartner360Policy } from "../business-partner-360-policy.js";
+import { evaluateBusinessPartner360Policy } from "../business-partner/record/access-policy";
 import { BUSINESS_PARTNER_360_PERMISSIONS as P } from "@athyper/server-contract-master-data";
 const input = {
   context: {
@@ -17,6 +17,14 @@ const input = {
   counts: {},
 };
 describe("reveal affordance authorization", () => {
+  it.each(["mfa_required", "missing_permission", "scope_denied"])("offers verification only for authorized step-up denial: %s", async (reason) => {
+    const authorize = vi.fn(async (r: any) => [P.identifierReveal, P.taxReveal, P.bankReveal].includes(r.permissionCode)
+      ? {allowed:false, reason} : {allowed:true});
+    const result = await evaluateBusinessPartner360Policy({authorize} as never, {...input, context:{...(input.context as object), assurance:"baseline"} as never});
+    expect(result.granted.has(P.identifierReveal)).toBe(false);
+    expect(result.verificationRequired.has(P.identifierReveal)).toBe(reason === "mfa_required");
+    expect(result.verificationRequired.has(P.taxReveal)).toBe(reason === "mfa_required");
+  });
   it("runs the owning reveal preflight with selected context, without executing a reveal", async () => {
     const authorize = vi.fn(async (r: any) => ({
       allowed:
@@ -73,12 +81,12 @@ describe("reveal affordance authorization", () => {
 
 it("derives tax affordances from authorization even when a stored tax value is not tokenized", async () => {
   const { createBusinessPartner360Service } =
-    await import("../business-partner-360-service.js");
+    await import("../business-partner/record/service");
   let revealAllowed = true;
   const service = createBusinessPartner360Service({
     authorizer: {
       authorize: async (r: any) => ({
-        allowed: r.permissionCode !== P.taxReveal || revealAllowed,
+        allowed: ![P.taxReveal, P.identifierReveal].includes(r.permissionCode) || revealAllowed,
       }),
     },
     repository: {
@@ -97,6 +105,7 @@ it("derives tax affordances from authorization even when a stored tax value is n
       readCommonSection: async () => ({
         items: [
           { id: "tax", kind: "tax", maskedValue: "••••", revealable: false },
+          { id: "identifier", kind: "identifier", maskedValue: "••••", revealable: true },
         ],
         provenance: [],
         redactions: [],
@@ -116,14 +125,14 @@ it("derives tax affordances from authorization even when a stored tax value is n
     sectionCode: "identifiers-tax" as const,
   };
   expect((await service.section(query)).data).toMatchObject({
-    items: [{ maskedValue: "••••", revealable: true }],
+    items: [{ maskedValue: "••••", revealable: true }, {kind:"identifier",revealable:true}],
   });
   revealAllowed = false;
   expect((await service.section(query)).data).toMatchObject({
-    items: [{ revealable: false }],
+    items: [{ revealable: false }, {kind:"identifier",revealable:false}],
   });
   revealAllowed = true;
   expect(
     (await service.section({ ...query, asOf: "2026-09-11" })).data,
-  ).toMatchObject({ items: [{ revealable: false }] });
+  ).toMatchObject({ items: [{ revealable: false }, {kind:"identifier",revealable:false}] });
 });

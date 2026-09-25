@@ -4,9 +4,17 @@ import {
   customerControlHistoryRows,
   customerLifecycleActions,
   customerReadinessGuidance,
+  validCreditApproval,
 } from "./customer-controls";
 
 describe("R5 customer controls model", () => {
+  it("requires an explicit finite non-negative approval limit and currency", () => {
+    for (const amount of ["", " ", "NaN", "Infinity", "-1", "not a number"])
+      expect(validCreditApproval(amount, "MYR")).toBe(false);
+    expect(validCreditApproval("0", "MYR")).toBe(true);
+    expect(validCreditApproval("100.25", "myr")).toBe(true);
+    expect(validCreditApproval("100", "")).toBe(false);
+  });
   it("binds each Customer decision and lifecycle command to native authority", () => {
     expect(customerControlPermissions).toEqual({
       creditCreate: "neon.customer.credit.create",

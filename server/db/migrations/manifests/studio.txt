@@ -1,1 +1,7 @@
 # Canonical development baseline. Add only new post-baseline upgrades here.
+20260923_notification_configuration.sql
+20260923_notification_compilation_source.sql
+20260923_collection_configuration.sql
+20260924_publication_provenance_recovery.sql
+20260924_publication_recovery_successor.sql
+20260924_publication_recovery_audit.sql

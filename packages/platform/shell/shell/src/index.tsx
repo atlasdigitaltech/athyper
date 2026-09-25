@@ -41,3 +41,8 @@ export { PageNavigation, useDeepLinkedTabState, type PageNavigationTabItem, type
 export { PageResourceBoundary, type PageResourceStatus, type PageResourceBoundaryProps } from "./page-resource-boundary";
 
 export { useWorkspaceSidePanel } from "./workspace-side-panel";
+
+export { ActivityNotificationRow, ActivityInboxRow } from "./activity-center";
+export { ActivityQueryControls } from "./activity-query-controls";
+
+export { ActivityNotificationActions } from "./activity-notification-actions";

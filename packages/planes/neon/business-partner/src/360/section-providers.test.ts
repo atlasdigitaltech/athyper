@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { BUSINESS_PARTNER_360_PANEL, realignPartnerPanel } from "./panel-definition";
-import { assertSectionProvidersRegistered } from "./section-providers";
+import { BUSINESS_PARTNER_360_PANEL, realignPartnerPanel } from "@athyper/product-neon-entity-extensions/business-partner/clients/panel-definition";
+import { assertSectionProvidersRegistered } from "@athyper/product-neon-entity-extensions/business-partner/clients/section-providers";
 
 describe("assertSectionProvidersRegistered", () => {
   it("passes for the real, published Business Partner 360 panel", () => {

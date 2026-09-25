@@ -298,7 +298,7 @@ ALTER TABLE document.workflow_stage
 ALTER TABLE document.commitment
     ADD CONSTRAINT commitment_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
     ADD CONSTRAINT commitment_company_fk FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id),
-    ADD CONSTRAINT commitment_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id),
+    ADD CONSTRAINT commitment_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id),
     ADD CONSTRAINT commitment_parent_fk FOREIGN KEY (tenant_id, parent_commitment_id)
         REFERENCES document.commitment(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT commitment_responsible_fk FOREIGN KEY (tenant_id, responsible_principal_id) REFERENCES master.principal(tenant_id, id),
@@ -357,7 +357,7 @@ ALTER TABLE document.commitment_release_allocation
 ALTER TABLE document.purchase_invoice
     ADD CONSTRAINT purchase_invoice_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
     ADD CONSTRAINT purchase_invoice_company_fk FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id),
-    ADD CONSTRAINT purchase_invoice_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id),
+    ADD CONSTRAINT purchase_invoice_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id),
     ADD CONSTRAINT purchase_invoice_commitment_fk FOREIGN KEY (tenant_id, commitment_id) REFERENCES document.commitment(tenant_id, id),
     ADD CONSTRAINT purchase_invoice_currency_fk FOREIGN KEY (currency_code) REFERENCES shared.currency(code),
     ADD CONSTRAINT purchase_invoice_base_currency_fk FOREIGN KEY (base_currency_code) REFERENCES shared.currency(code),
@@ -444,7 +444,7 @@ ALTER TABLE document.payment_term_application
 ALTER TABLE document.payment_entry
     ADD CONSTRAINT payment_entry_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
     ADD CONSTRAINT payment_entry_company_fk FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id),
-    ADD CONSTRAINT payment_entry_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id),
+    ADD CONSTRAINT payment_entry_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id),
     ADD CONSTRAINT payment_entry_bank_account_fk FOREIGN KEY (tenant_id, bank_account_id) REFERENCES master.bank_account(tenant_id, id),
     ADD CONSTRAINT payment_entry_currency_fk FOREIGN KEY (currency_code) REFERENCES shared.currency(code),
     ADD CONSTRAINT payment_entry_base_currency_fk FOREIGN KEY (base_currency_code) REFERENCES shared.currency(code),
@@ -553,7 +553,7 @@ ALTER TABLE document.purchase_requisition_line
     ADD CONSTRAINT prl_from_jurisdiction_fk FOREIGN KEY (tenant_id, from_tax_jurisdiction_id) REFERENCES master.tax_jurisdiction(tenant_id, id),
     ADD CONSTRAINT prl_site_fk FOREIGN KEY (tenant_id, site_id) REFERENCES master.site(tenant_id, id),
     ADD CONSTRAINT prl_warehouse_fk FOREIGN KEY (tenant_id, site_id, warehouse_id) REFERENCES master.warehouse(tenant_id, site_id, id),
-    ADD CONSTRAINT prl_suggested_supplier_fk FOREIGN KEY (tenant_id, suggested_supplier_id) REFERENCES master.supplier(tenant_id, id),
+    ADD CONSTRAINT purchase_requisition_line_business_partner_fk FOREIGN KEY (tenant_id, suggested_business_partner_id) REFERENCES master.business_partner(tenant_id, id),
     ADD CONSTRAINT prl_ship_to_fk FOREIGN KEY (tenant_id, ship_to_address_id) REFERENCES master.address(tenant_id, id),
     ADD CONSTRAINT prl_bill_to_fk FOREIGN KEY (tenant_id, bill_to_address_id) REFERENCES master.address(tenant_id, id),
     ADD CONSTRAINT prl_bill_from_fk FOREIGN KEY (tenant_id, bill_from_address_id) REFERENCES master.address(tenant_id, id),
@@ -567,7 +567,7 @@ ALTER TABLE document.purchase_order_confirmation
     ADD CONSTRAINT poc_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
     ADD CONSTRAINT poc_company_fk FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id),
     ADD CONSTRAINT poc_commitment_fk FOREIGN KEY (tenant_id, commitment_id) REFERENCES document.commitment(tenant_id, id),
-    ADD CONSTRAINT poc_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id),
+    ADD CONSTRAINT purchase_order_confirmation_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id),
     ADD CONSTRAINT poc_amendment_fk FOREIGN KEY (tenant_id, amendment_commitment_id) REFERENCES document.commitment(tenant_id, id),
     ADD CONSTRAINT poc_currency_fk FOREIGN KEY (currency_code) REFERENCES shared.currency(code),
     ADD CONSTRAINT poc_status_by_fk FOREIGN KEY (tenant_id, status_changed_by) REFERENCES master.principal(tenant_id, id),
@@ -583,7 +583,7 @@ ALTER TABLE document.delivery_note
     ADD CONSTRAINT dn_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
     ADD CONSTRAINT dn_company_fk FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id),
     ADD CONSTRAINT dn_commitment_fk FOREIGN KEY (tenant_id, commitment_id) REFERENCES document.commitment(tenant_id, id),
-    ADD CONSTRAINT dn_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id),
+    ADD CONSTRAINT delivery_note_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id),
     ADD CONSTRAINT dn_site_fk FOREIGN KEY (tenant_id, delivery_site_id) REFERENCES master.site(tenant_id, id),
     ADD CONSTRAINT dn_warehouse_fk FOREIGN KEY (tenant_id, delivery_site_id, delivery_warehouse_id) REFERENCES master.warehouse(tenant_id, site_id, id),
     ADD CONSTRAINT dn_currency_fk FOREIGN KEY (currency_code) REFERENCES shared.currency(code),
@@ -606,7 +606,7 @@ ALTER TABLE document.receipt
     ADD CONSTRAINT receipt_requested_by_fk FOREIGN KEY (tenant_id, requested_by) REFERENCES master.principal(tenant_id, id),
     ADD CONSTRAINT receipt_commitment_fk FOREIGN KEY (tenant_id, commitment_id) REFERENCES document.commitment(tenant_id, id),
     ADD CONSTRAINT receipt_delivery_note_fk FOREIGN KEY (tenant_id, delivery_note_id) REFERENCES document.delivery_note(tenant_id, id),
-    ADD CONSTRAINT receipt_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id),
+    ADD CONSTRAINT receipt_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id),
     ADD CONSTRAINT receipt_site_fk FOREIGN KEY (tenant_id, receiving_site_id) REFERENCES master.site(tenant_id, id),
     ADD CONSTRAINT receipt_warehouse_fk FOREIGN KEY (tenant_id, receiving_site_id, receiving_warehouse_id) REFERENCES master.warehouse(tenant_id, site_id, id),
     ADD CONSTRAINT receipt_currency_fk FOREIGN KEY (currency_code) REFERENCES shared.currency(code),
@@ -634,7 +634,7 @@ ALTER TABLE document.receipt_line
     ADD CONSTRAINT receipt_line_from_jur_fk FOREIGN KEY (tenant_id, from_tax_jurisdiction_id) REFERENCES master.tax_jurisdiction(tenant_id, id),
     ADD CONSTRAINT receipt_line_site_fk FOREIGN KEY (tenant_id, site_id) REFERENCES master.site(tenant_id, id),
     ADD CONSTRAINT receipt_line_warehouse_fk FOREIGN KEY (tenant_id, site_id, warehouse_id) REFERENCES master.warehouse(tenant_id, site_id, id),
-    ADD CONSTRAINT receipt_line_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id),
+    ADD CONSTRAINT receipt_line_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id),
     ADD CONSTRAINT receipt_line_ship_to_fk FOREIGN KEY (tenant_id, ship_to_address_id) REFERENCES master.address(tenant_id, id),
     ADD CONSTRAINT receipt_line_bill_to_fk FOREIGN KEY (tenant_id, bill_to_address_id) REFERENCES master.address(tenant_id, id),
     ADD CONSTRAINT receipt_line_bill_from_fk FOREIGN KEY (tenant_id, bill_from_address_id) REFERENCES master.address(tenant_id, id),
@@ -650,7 +650,7 @@ ALTER TABLE document.service_sheet
     ADD CONSTRAINT service_sheet_company_fk FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id),
     ADD CONSTRAINT service_sheet_requested_by_fk FOREIGN KEY (tenant_id, requested_by) REFERENCES master.principal(tenant_id, id),
     ADD CONSTRAINT service_sheet_commitment_fk FOREIGN KEY (tenant_id, commitment_id) REFERENCES document.commitment(tenant_id, id),
-    ADD CONSTRAINT service_sheet_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id),
+    ADD CONSTRAINT service_sheet_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id),
     ADD CONSTRAINT service_sheet_currency_fk FOREIGN KEY (currency_code) REFERENCES shared.currency(code),
     ADD CONSTRAINT service_sheet_base_currency_fk FOREIGN KEY (base_currency_code) REFERENCES shared.currency(code),
     ADD CONSTRAINT service_sheet_period_fk FOREIGN KEY (tenant_id, fiscal_period_id) REFERENCES master.fiscal_period(tenant_id, id),
@@ -676,7 +676,7 @@ ALTER TABLE document.service_sheet_line
     ADD CONSTRAINT service_sheet_line_from_jur_fk FOREIGN KEY (tenant_id, from_tax_jurisdiction_id) REFERENCES master.tax_jurisdiction(tenant_id, id),
     ADD CONSTRAINT service_sheet_line_site_fk FOREIGN KEY (tenant_id, site_id) REFERENCES master.site(tenant_id, id),
     ADD CONSTRAINT service_sheet_line_warehouse_fk FOREIGN KEY (tenant_id, site_id, warehouse_id) REFERENCES master.warehouse(tenant_id, site_id, id),
-    ADD CONSTRAINT service_sheet_line_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id),
+    ADD CONSTRAINT service_sheet_line_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id),
     ADD CONSTRAINT service_sheet_line_ship_to_fk FOREIGN KEY (tenant_id, ship_to_address_id) REFERENCES master.address(tenant_id, id),
     ADD CONSTRAINT service_sheet_line_bill_to_fk FOREIGN KEY (tenant_id, bill_to_address_id) REFERENCES master.address(tenant_id, id),
     ADD CONSTRAINT service_sheet_line_bill_from_fk FOREIGN KEY (tenant_id, bill_from_address_id) REFERENCES master.address(tenant_id, id),
@@ -872,9 +872,9 @@ ALTER TABLE document.sales_order
     FOREIGN KEY (tenant_id, company_code_id)
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
 ALTER TABLE document.sales_order
-    ADD CONSTRAINT sales_order_customer_fk
-    FOREIGN KEY (tenant_id, customer_id)
-    REFERENCES master.customer (tenant_id, id) ON DELETE RESTRICT;
+    ADD CONSTRAINT sales_order_partner_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT;
 ALTER TABLE document.sales_order
     ADD CONSTRAINT sales_order_currency_fk
     FOREIGN KEY (currency_code)
@@ -944,8 +944,8 @@ ALTER TABLE document.stocktake_line
 ALTER TABLE document.sales_opportunity
     ADD CONSTRAINT sales_opportunity_tenant_fk FOREIGN KEY (tenant_id)
         REFERENCES master.tenant (id) ON DELETE RESTRICT,
-    ADD CONSTRAINT sales_opportunity_customer_fk FOREIGN KEY (tenant_id, customer_id)
-        REFERENCES master.customer (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT sales_opportunity_partner_fk FOREIGN KEY (tenant_id, business_partner_id)
+        REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT sales_opportunity_org_fk FOREIGN KEY (tenant_id, operating_organization_id)
         REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT sales_opportunity_principal_company_fk FOREIGN KEY (tenant_id, principal_seller_company_id)
@@ -978,8 +978,8 @@ ALTER TABLE document.sales_quotation
         REFERENCES master.tenant (id) ON DELETE RESTRICT,
     ADD CONSTRAINT sales_quotation_opportunity_fk FOREIGN KEY (tenant_id, opportunity_id)
         REFERENCES document.sales_opportunity (tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT sales_quotation_customer_fk FOREIGN KEY (tenant_id, customer_id)
-        REFERENCES master.customer (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT sales_quotation_partner_fk FOREIGN KEY (tenant_id, business_partner_id)
+        REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT sales_quotation_org_fk FOREIGN KEY (tenant_id, operating_organization_id)
         REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT sales_quotation_principal_company_fk FOREIGN KEY (tenant_id, principal_seller_company_id)
@@ -1144,7 +1144,7 @@ ALTER TABLE document.sourcing_event_demand
 
 ALTER TABLE document.sourcing_event_award
     ADD CONSTRAINT sourcing_event_award_event_fk FOREIGN KEY(tenant_id,sourcing_event_id) REFERENCES document.sourcing_event(tenant_id,id) ON DELETE CASCADE,
-    ADD CONSTRAINT sourcing_event_award_supplier_fk FOREIGN KEY(tenant_id,supplier_id) REFERENCES master.supplier(tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT sourcing_event_award_business_partner_fk FOREIGN KEY(tenant_id,business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
     ADD CONSTRAINT sourcing_event_award_currency_fk FOREIGN KEY(currency_code) REFERENCES shared.currency(code) ON DELETE RESTRICT,
     ADD CONSTRAINT sourcing_event_award_approved_by_fk FOREIGN KEY(tenant_id,approved_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
     ADD CONSTRAINT sourcing_event_award_converted_by_fk FOREIGN KEY(tenant_id,converted_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
@@ -1536,7 +1536,7 @@ ALTER TABLE document.payment_remittance_output
     ADD CONSTRAINT payment_remittance_output_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
     ADD CONSTRAINT payment_remittance_output_company_fk FOREIGN KEY(tenant_id,company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
     ADD CONSTRAINT payment_remittance_output_payment_fk FOREIGN KEY(tenant_id,payment_entry_id) REFERENCES document.payment_entry(tenant_id,id) ON DELETE RESTRICT,
-    ADD CONSTRAINT payment_remittance_output_supplier_fk FOREIGN KEY(tenant_id,supplier_id) REFERENCES master.supplier(tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT payment_remittance_output_business_partner_fk FOREIGN KEY(tenant_id,business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
     ADD CONSTRAINT payment_remittance_output_currency_fk FOREIGN KEY(currency_code) REFERENCES shared.currency(code) ON DELETE RESTRICT,
     ADD CONSTRAINT payment_remittance_output_render_fk FOREIGN KEY(tenant_id,render_output_id) REFERENCES document.render_output(tenant_id,id) ON DELETE RESTRICT;
 
@@ -1705,206 +1705,6 @@ ALTER TABLE document.multipart_upload_part
     ADD CONSTRAINT multipart_upload_part_recorded_by_fk
     FOREIGN KEY (tenant_id, recorded_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_request
-    ADD CONSTRAINT business_partner_request_tenant_fk
-        FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_target_fk
-        FOREIGN KEY (tenant_id, target_business_partner_id)
-        REFERENCES master.business_partner(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_base_snapshot_fk
-        FOREIGN KEY (tenant_id, base_snapshot_id)
-        REFERENCES snapshot.entity_snapshot_identity(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_operating_org_fk
-        FOREIGN KEY (tenant_id, operating_organization_id)
-        REFERENCES master.operating_organization(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_company_fk
-        FOREIGN KEY (tenant_id, company_code_id)
-        REFERENCES master.company_code(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_legal_entity_fk
-        FOREIGN KEY (tenant_id, legal_entity_id)
-        REFERENCES master.legal_entity(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_org_unit_fk
-        FOREIGN KEY (tenant_id, org_unit_id)
-        REFERENCES master.org_unit(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_position_fk
-        FOREIGN KEY (tenant_id, position_id)
-        REFERENCES master.position(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_workflow_fk
-        FOREIGN KEY (tenant_id, workflow_request_id)
-        REFERENCES document.workflow_request(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialized_fk
-        FOREIGN KEY (tenant_id, materialized_business_partner_id)
-        REFERENCES master.business_partner(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialized_supplier_fk
-        FOREIGN KEY (tenant_id, materialized_supplier_id)
-        REFERENCES master.supplier(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialized_customer_fk
-        FOREIGN KEY (tenant_id, materialized_customer_id)
-        REFERENCES master.customer(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialized_person_fk
-        FOREIGN KEY (tenant_id, materialized_person_id)
-        REFERENCES master.person(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialized_employee_fk
-        FOREIGN KEY (tenant_id, materialized_employee_id)
-        REFERENCES master.employee(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialized_employment_fk
-        FOREIGN KEY (tenant_id, materialized_employment_id)
-        REFERENCES master.employment(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialized_work_assignment_fk
-        FOREIGN KEY (tenant_id, materialized_work_assignment_id)
-        REFERENCES master.work_assignment(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialized_principal_fk
-        FOREIGN KEY (tenant_id, materialized_principal_id)
-        REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialized_bank_verification_fk
-        FOREIGN KEY (tenant_id, materialized_bank_verification_id)
-        REFERENCES document.business_partner_bank_verification(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialized_supplier_company_profile_fk
-        FOREIGN KEY (tenant_id, materialized_supplier_company_profile_id)
-        REFERENCES master.company_code_supplier_profile(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialized_customer_company_profile_fk
-        FOREIGN KEY (tenant_id, materialized_customer_company_profile_id)
-        REFERENCES master.company_code_customer_profile(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialized_assignment_fk
-        FOREIGN KEY (tenant_id, materialized_operating_organization_assignment_id)
-        REFERENCES master.business_partner_operating_organization_assignment(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialization_snapshot_fk
-        FOREIGN KEY (tenant_id, materialization_snapshot_id)
-        REFERENCES snapshot.entity_snapshot_identity(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_submitted_by_fk
-        FOREIGN KEY (tenant_id, submitted_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_approved_by_fk
-        FOREIGN KEY (tenant_id, approved_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_applied_by_fk
-        FOREIGN KEY (tenant_id, applied_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_status_by_fk
-        FOREIGN KEY (tenant_id, status_changed_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_created_by_fk
-        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_updated_by_fk
-        FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_request
-    ADD CONSTRAINT business_partner_request_invitation_fk
-        FOREIGN KEY (tenant_id, invitation_id)
-        REFERENCES document.business_partner_invitation(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_applicant_fk
-        FOREIGN KEY (tenant_id, applicant_principal_id)
-        REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-
--- Preserve terminal pre-S2 workforce rows as historical evidence while this
--- NOT VALID constraint prevents every new or changed BP request from crossing
--- into Person/Workforce authority.
-ALTER TABLE document.business_partner_request
-    ADD CONSTRAINT business_partner_request_organization_boundary_chk CHECK (
-        request_kind NOT IN ('add_workforce', 'change_employment')
-        AND requested_role IS DISTINCT FROM 'workforce'
-        AND COALESCE(proposed_payload->>'partnerCategory', proposed_payload->>'partner_category', '')
-            NOT IN ('person', 'individual', 'group')
-        AND num_nonnulls(
-            materialized_person_id,
-            materialized_employee_id,
-            materialized_employment_id,
-            materialized_work_assignment_id,
-            materialized_principal_id
-        ) = 0
-    ) NOT VALID;
-
-ALTER TABLE document.business_partner_request_evidence
-    ADD CONSTRAINT business_partner_request_evidence_request_fk
-        FOREIGN KEY (tenant_id, request_id)
-        REFERENCES document.business_partner_request(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_evidence_attachment_fk
-        FOREIGN KEY (tenant_id, attachment_id)
-        REFERENCES document.attachment(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_evidence_snapshot_fk
-        FOREIGN KEY (tenant_id, snapshot_id)
-        REFERENCES snapshot.entity_snapshot_identity(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_evidence_verified_by_fk
-        FOREIGN KEY (tenant_id, verified_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_evidence_created_by_fk
-        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_request_validation
-    ADD CONSTRAINT business_partner_request_validation_request_fk
-        FOREIGN KEY (tenant_id, request_id)
-        REFERENCES document.business_partner_request(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_validation_evaluated_by_fk
-        FOREIGN KEY (tenant_id, evaluated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_validation_created_by_fk
-        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_request_address
-    ADD CONSTRAINT business_partner_request_address_request_fk
-        FOREIGN KEY (tenant_id, request_id) REFERENCES document.business_partner_request(tenant_id, id) ON DELETE CASCADE,
-    ADD CONSTRAINT business_partner_request_address_validation_evidence_fk
-        FOREIGN KEY (tenant_id, validation_evidence_id) REFERENCES document.business_partner_request_evidence(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_address_created_by_fk
-        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_request_contact_person
-    ADD CONSTRAINT business_partner_request_contact_person_request_fk
-        FOREIGN KEY (tenant_id, request_id) REFERENCES document.business_partner_request(tenant_id, id) ON DELETE CASCADE,
-    ADD CONSTRAINT business_partner_request_contact_person_created_by_fk
-        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_request_contact_channel
-    ADD CONSTRAINT business_partner_request_contact_channel_person_fk
-        FOREIGN KEY (tenant_id, request_id, contact_client_item_key)
-        REFERENCES document.business_partner_request_contact_person(tenant_id, request_id, client_item_key) ON DELETE CASCADE,
-    ADD CONSTRAINT business_partner_request_contact_channel_created_by_fk
-        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_request_identifier
-    ADD CONSTRAINT business_partner_request_identifier_request_fk
-        FOREIGN KEY (tenant_id, request_id) REFERENCES document.business_partner_request(tenant_id, id) ON DELETE CASCADE,
-    ADD CONSTRAINT business_partner_request_identifier_created_by_fk
-        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_request_tax_registration
-    ADD CONSTRAINT business_partner_request_tax_registration_request_fk
-        FOREIGN KEY (tenant_id, request_id) REFERENCES document.business_partner_request(tenant_id, id) ON DELETE CASCADE,
-    ADD CONSTRAINT business_partner_request_tax_registration_jurisdiction_fk
-        FOREIGN KEY (tenant_id, jurisdiction_id) REFERENCES master.tax_jurisdiction(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_tax_registration_type_fk
-        FOREIGN KEY (tenant_id, tax_type_id) REFERENCES master.tax_type(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_tax_registration_created_by_fk
-        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_request_classification
-    ADD CONSTRAINT business_partner_request_classification_request_fk
-        FOREIGN KEY (tenant_id, request_id) REFERENCES document.business_partner_request(tenant_id, id) ON DELETE CASCADE,
-    ADD CONSTRAINT business_partner_request_classification_created_by_fk
-        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_request_certification
-    ADD CONSTRAINT business_partner_request_certification_request_fk
-        FOREIGN KEY (tenant_id, request_id) REFERENCES document.business_partner_request(tenant_id, id) ON DELETE CASCADE,
-    ADD CONSTRAINT business_partner_request_certification_attachment_fk
-        FOREIGN KEY (tenant_id, attachment_id) REFERENCES document.attachment(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_certification_company_fk
-        FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_certification_created_by_fk
-        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_request_materialization_item
-    ADD CONSTRAINT business_partner_request_materialization_item_request_fk
-        FOREIGN KEY (tenant_id, request_id) REFERENCES document.business_partner_request(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_request_materialization_item_applied_by_fk
-        FOREIGN KEY (tenant_id, applied_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_request
-    ADD CONSTRAINT business_partner_request_representation_evidence_fk
-        FOREIGN KEY (tenant_id, representation_evidence_id)
-        REFERENCES document.business_partner_request_evidence(tenant_id, id) ON DELETE RESTRICT;
-
-ALTER TABLE document.business_partner_invitation
-    ADD CONSTRAINT business_partner_invitation_request_fk
-        FOREIGN KEY (tenant_id, business_partner_request_id)
-        REFERENCES document.business_partner_request(tenant_id, id) ON DELETE RESTRICT;
-ALTER TABLE document.business_partner_request
-    ADD CONSTRAINT business_partner_request_source_projection_fk FOREIGN KEY (tenant_id, source_projection_id) REFERENCES snapshot.mesh_business_partner_profile_received(tenant_id, id) ON DELETE RESTRICT;
 ALTER TABLE document.mesh_business_partner_match
     ADD CONSTRAINT mesh_business_partner_match_projection_fk FOREIGN KEY (tenant_id, projection_id) REFERENCES control.mesh_business_partner_profile_projection(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT mesh_business_partner_match_snapshot_fk FOREIGN KEY (tenant_id, snapshot_id) REFERENCES snapshot.mesh_business_partner_profile_received(tenant_id, id) ON DELETE RESTRICT,
@@ -1917,20 +1717,7 @@ ALTER TABLE document.mesh_business_partner_acceptance
     ADD CONSTRAINT mesh_business_partner_acceptance_created_by_fk FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
 ALTER TABLE document.mesh_business_partner_acceptance_event
     ADD CONSTRAINT mesh_business_partner_acceptance_event_acceptance_fk FOREIGN KEY (tenant_id, acceptance_id) REFERENCES document.mesh_business_partner_acceptance(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT mesh_business_partner_acceptance_event_request_fk FOREIGN KEY (tenant_id, business_partner_request_id) REFERENCES document.business_partner_request(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT mesh_business_partner_acceptance_event_recorded_by_fk FOREIGN KEY (tenant_id, recorded_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
-ALTER TABLE document.business_partner_bank_verification
-  ADD CONSTRAINT business_partner_bank_verification_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
-  ADD CONSTRAINT business_partner_bank_verification_projection_fk FOREIGN KEY(tenant_id,bank_projection_id) REFERENCES control.mesh_bank_account_projection(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT business_partner_bank_verification_partner_fk FOREIGN KEY(tenant_id,business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT business_partner_bank_verification_profile_fk FOREIGN KEY(tenant_id,supplier_company_profile_id) REFERENCES master.company_code_supplier_profile(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT business_partner_bank_verification_company_fk FOREIGN KEY(tenant_id,company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT business_partner_bank_verification_candidate_fk FOREIGN KEY(tenant_id,candidate_bank_account_link_id) REFERENCES master.bank_account_link(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT business_partner_bank_verification_prior_fk FOREIGN KEY(tenant_id,prior_bank_account_link_id) REFERENCES master.bank_account_link(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT business_partner_bank_verification_created_by_fk FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT business_partner_bank_verification_verified_by_fk FOREIGN KEY(tenant_id,verified_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT business_partner_bank_verification_rejected_by_fk FOREIGN KEY(tenant_id,rejected_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT business_partner_bank_verification_applied_by_fk FOREIGN KEY(tenant_id,applied_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
 
 ALTER TABLE document.business_partner_duplicate_resolution
   ADD CONSTRAINT business_partner_duplicate_resolution_duplicate_fk FOREIGN KEY(tenant_id,duplicate_business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
@@ -1959,7 +1746,6 @@ ALTER TABLE document.business_partner_invitation
  ADD CONSTRAINT business_partner_invitation_entity_case_fk FOREIGN KEY(tenant_id,entity_case_id) REFERENCES document.entity_case(tenant_id,id) ON DELETE RESTRICT;
 ALTER TABLE document.business_partner_invitation_recovery
  ADD CONSTRAINT business_partner_invitation_recovery_invitation_fk FOREIGN KEY(tenant_id,invitation_id) REFERENCES document.business_partner_invitation(tenant_id,id) ON DELETE RESTRICT,
- ADD CONSTRAINT business_partner_invitation_recovery_request_fk FOREIGN KEY(tenant_id,request_id) REFERENCES document.business_partner_request(tenant_id,id) ON DELETE RESTRICT,
  ADD CONSTRAINT business_partner_invitation_recovery_entity_case_fk FOREIGN KEY(tenant_id,entity_case_id) REFERENCES document.entity_case(tenant_id,id) ON DELETE RESTRICT,
  ADD CONSTRAINT business_partner_invitation_recovery_prior_fk FOREIGN KEY(tenant_id,prior_applicant_principal_id) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
  ADD CONSTRAINT business_partner_invitation_recovery_requested_fk FOREIGN KEY(tenant_id,requested_applicant_principal_id) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
@@ -1981,14 +1767,14 @@ ALTER TABLE document.workforce_requisition
 ALTER TABLE document.workforce_requisition_supplier
     ADD CONSTRAINT workforce_requisition_supplier_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
     ADD CONSTRAINT workforce_requisition_supplier_requisition_fk FOREIGN KEY (tenant_id, workforce_requisition_id) REFERENCES document.workforce_requisition(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT workforce_requisition_supplier_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT workforce_requisition_supplier_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT workforce_requisition_supplier_distributed_by_fk FOREIGN KEY (tenant_id, distributed_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
 
 ALTER TABLE document.external_candidate_submission
     ADD CONSTRAINT external_candidate_submission_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_candidate_submission_requisition_fk FOREIGN KEY (tenant_id, workforce_requisition_id) REFERENCES document.workforce_requisition(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_candidate_submission_distribution_fk FOREIGN KEY (tenant_id, requisition_supplier_id) REFERENCES document.workforce_requisition_supplier(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT external_candidate_submission_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_candidate_submission_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_candidate_submission_person_fk FOREIGN KEY (tenant_id, person_id) REFERENCES master.person(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_candidate_submission_content_fk FOREIGN KEY (tenant_id, profile_content_item_id) REFERENCES document.content_item(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_candidate_submission_submitted_by_fk FOREIGN KEY (tenant_id, submitted_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
@@ -2002,7 +1788,7 @@ ALTER TABLE document.contingent_work_order
     ADD CONSTRAINT contingent_work_order_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
     ADD CONSTRAINT contingent_work_order_company_fk FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT contingent_work_order_legal_entity_fk FOREIGN KEY (tenant_id, legal_entity_id) REFERENCES master.legal_entity(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT contingent_work_order_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT contingent_work_order_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT contingent_work_order_submission_fk FOREIGN KEY (tenant_id, candidate_submission_id) REFERENCES document.external_candidate_submission(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT contingent_work_order_commitment_fk FOREIGN KEY (tenant_id, commitment_id) REFERENCES document.commitment(tenant_id, id) ON DELETE RESTRICT;
 
@@ -2017,7 +1803,7 @@ ALTER TABLE document.statement_of_work
     ADD CONSTRAINT statement_of_work_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
     ADD CONSTRAINT statement_of_work_company_fk FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT statement_of_work_legal_entity_fk FOREIGN KEY (tenant_id, legal_entity_id) REFERENCES master.legal_entity(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT statement_of_work_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT statement_of_work_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT statement_of_work_purchase_requisition_fk FOREIGN KEY (tenant_id, purchase_requisition_id) REFERENCES document.purchase_requisition(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT statement_of_work_commitment_fk FOREIGN KEY (tenant_id, commitment_id) REFERENCES document.commitment(tenant_id, id) ON DELETE RESTRICT;
 
@@ -2034,7 +1820,7 @@ ALTER TABLE document.statement_of_work_item
 ALTER TABLE document.worker_engagement
     ADD CONSTRAINT worker_engagement_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
     ADD CONSTRAINT worker_engagement_external_worker_fk FOREIGN KEY (tenant_id, external_worker_id) REFERENCES master.external_worker(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT worker_engagement_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT worker_engagement_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT worker_engagement_company_fk FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT worker_engagement_legal_entity_fk FOREIGN KEY (tenant_id, legal_entity_id) REFERENCES master.legal_entity(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT worker_engagement_work_order_fk FOREIGN KEY (tenant_id, contingent_work_order_id) REFERENCES document.contingent_work_order(tenant_id, id) ON DELETE RESTRICT,
@@ -2112,7 +1898,7 @@ ALTER TABLE document.external_expense_item
 ALTER TABLE document.external_service_entry
     ADD CONSTRAINT external_service_entry_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_service_entry_company_fk FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT external_service_entry_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_service_entry_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_service_entry_commitment_fk FOREIGN KEY (tenant_id, commitment_id) REFERENCES document.commitment(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_service_entry_workflow_fk FOREIGN KEY (tenant_id, workflow_request_id) REFERENCES document.workflow_request(tenant_id, id) ON DELETE RESTRICT;
 

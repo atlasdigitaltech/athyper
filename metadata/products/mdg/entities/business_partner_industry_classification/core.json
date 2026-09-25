@@ -7,9 +7,10 @@
   "entityCode": "business_partner_industry_classification",
   "plane": "neon",
   "storage": {
-    "kind": "table",
+    "kind": "handler_projection",
     "sourceObjects": [
-      "master.business_partner_industry_classification"
+      "master.business_partner_industry_classification",
+      "shared.industry_code"
     ],
     "primaryObject": "master.business_partner_industry_classification",
     "idField": "id",
@@ -60,12 +61,13 @@
         "sourceObject": "master.business_partner_industry_classification",
         "column": "industry_domain_code"
       },
-      "dataType": "string",
+      "dataType": "enum",
+      "display": {"lookup":{"code":"shared.classification_scheme"}},
       "storageType": "text",
       "nullable": false,
       "label": {
-        "labelKey": "entity.business_partner_industry_classification.core.fields.industry_domain_code.label",
-        "defaultText": "Industry Domain"
+        "labelKey": "entity.business_partner.classifications.industry_system",
+        "defaultText": "Classification system"
       },
       "valueOrigin": "stored"
     },
@@ -90,12 +92,13 @@
         "sourceObject": "master.business_partner_industry_classification",
         "column": "assignment_kind"
       },
-      "dataType": "string",
+      "dataType": "enum",
+      "display": {"lookup":{"options":[{"value":"declared","label":{"labelKey":"entity.business_partner_industry_classification.assignment_kind.declared","defaultText":"Declared"}},{"value":"imported","label":{"labelKey":"entity.business_partner_industry_classification.assignment_kind.imported","defaultText":"Imported"}},{"value":"verified","label":{"labelKey":"entity.business_partner_industry_classification.assignment_kind.verified","defaultText":"Verified"}}]}},
       "storageType": "text",
       "nullable": false,
       "label": {
-        "labelKey": "entity.business_partner_industry_classification.core.fields.assignment_kind.label",
-        "defaultText": "Assignment Kind"
+        "labelKey": "entity.business_partner.classifications.assignment_kind",
+        "defaultText": "Declaration source"
       },
       "valueOrigin": "stored"
     },
@@ -195,7 +198,8 @@
         "sourceObject": "master.business_partner_industry_classification",
         "column": "status"
       },
-      "dataType": "string",
+      "dataType": "enum",
+      "display": {"lookup":{"options":[{"value":"draft","label":{"labelKey":"entity.business_partner_industry_classification.status.draft","defaultText":"Draft"}},{"value":"active","label":{"labelKey":"entity.business_partner_industry_classification.status.active","defaultText":"Active"}},{"value":"inactive","label":{"labelKey":"entity.business_partner_industry_classification.status.inactive","defaultText":"Inactive"}},{"value":"archived","label":{"labelKey":"entity.business_partner_industry_classification.status.archived","defaultText":"Archived"}}]}},
       "storageType": "master.partner_extension_status_d",
       "nullable": false,
       "label": {
@@ -203,6 +207,70 @@
         "defaultText": "Status"
       },
       "valueOrigin": "stored"
+    },
+    {
+      "key": "industry_code",
+      "binding": {
+        "sourceObject": "shared.industry_code",
+        "column": "code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.classifications.industry_code",
+        "defaultText": "Industry code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "industry_name",
+      "binding": {
+        "sourceObject": "shared.industry_code",
+        "column": "name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.classifications.industry_name",
+        "defaultText": "Business activity"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "verification_status",
+      "display": {"lookup":{"options":[{"value":"verified","label":{"labelKey":"partner.verification_status.verified","defaultText":"Verified classification"}},{"value":"unverified","label":{"labelKey":"partner.verification_status.unverified","defaultText":"Not verified"}}]}},
+      "binding": {
+        "sourceObject": "master.business_partner_industry_classification",
+        "column": "verified_at"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.classifications.verification_status",
+        "defaultText": "Classification verification"
+      },
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
     }
   ],
   "businessContext": {
@@ -269,10 +337,10 @@
   ],
   "defaultsProfile": "platform.core-field-defaults.v1",
   "defaultsProfileRef": "platform/core-field-defaults.v1.json",
-  "artifactHash": "sha256:9c1cdd6e3be964a9018a20b60fdf67a36efd2664f59c977fedb9dc009fb0fcc8",
   "query": {
     "search": [],
     "filters": [],
     "sorts": []
-  }
+  },
+  "artifactHash": "sha256:13ed8c12994bb428ab3a41020ecb0160646128eeed5c500d391c12764f5119da"
 }

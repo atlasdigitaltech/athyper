@@ -1,3 +1,4 @@
+export * from "./entity-coordinate.js";
 export * from "./collaboration-service.js";
 export * from "./in-memory-collaboration-repository.js";
 export * from "./kysely-collaboration-repository.js";

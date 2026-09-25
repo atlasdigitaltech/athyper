@@ -9,7 +9,7 @@
   "operations": [
     {
       "key": "read",
-      "permissionCode": "neon.business_partner_request.read",
+      "permissionCode": "neon.relationship.entity_case.read",
       "execution": {
         "handlerKey": "neon.business_partner_request.read.v1",
         "registryRequired": true

@@ -1,25 +1,249 @@
 "use client";
-
-import { ContentHeader, type ShellInboxItem, type ShellNotificationItem } from "@athyper/platform-shell";
-import { BellIcon, CircleCheckIcon, InboxIcon } from "@athyper/platform-icons";
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  ContentHeader,
+  ActivityQueryControls,
+  ActivityNotificationActions,
+  ActivityNotificationRow,
+  ActivityInboxRow,
+  type ShellInboxItem,
+  type ShellNotificationItem,
+} from "@athyper/platform-shell";
+import { BellIcon, InboxIcon } from "@athyper/platform-icons";
+import {
+  Button,
+  PanelTabs,
+  FilterChipGroup,
+  PanelEmptyState,
+} from "@athyper/platform-ui";
+import { useState } from "react";
+import { defaultActivityQuery } from "@athyper/contract-platform-activity";
+import { NotificationControls } from "./notification-controls";
 import { useActivityCenterData } from "./index";
 
-export function ActivityCenterPage({kind}:{readonly kind:"notifications"|"inbox"}) {
-  const data=useActivityCenterData();
-  const [scope,setScope]=useState<"all"|"attention">("all");
-  const notifications=data.notifications??[],inbox=data.inbox??[];
-  const items=useMemo(()=>kind==="notifications"?(scope==="attention"?notifications.filter((item)=>item.unread):notifications):(scope==="attention"?inbox.filter((item)=>item.priority==="urgent"||item.priority==="high"):inbox),[kind,scope,notifications,inbox]);
-  const count=kind==="notifications"?data.unreadNotificationCount??0:data.openInboxCount??0;
-  return <section className="athyper-activity-page" aria-labelledby="activity-page-title">
-    <ContentHeader title={kind==="notifications"?"Notifications":"Inbox"} titleId="activity-page-title" description={kind==="notifications"?"Updates, mentions, and important system changes.":"Assigned work, approvals, and conversations that need attention."} actions={<b className="athyper-activity-page__count" aria-label={`${count} ${kind==="notifications"?"unread":"open"}`}>{count}</b>}/>
-    <nav className="athyper-activity-page__tabs" aria-label="Activity type"><a href="/notifications" aria-current={kind==="notifications"?"page":undefined}>Notifications</a><a href="/inbox" aria-current={kind==="inbox"?"page":undefined}>Inbox</a></nav>
-    <div className="athyper-activity-page__toolbar"><div><button type="button" aria-pressed={scope==="all"} onClick={()=>setScope("all")}>All</button><button type="button" aria-pressed={scope==="attention"} onClick={()=>setScope("attention")}>{kind==="notifications"?"Unread":"Priority"}</button></div><div className="athyper-activity-page__toolbar-actions">{kind==="notifications"?<PushControl data={data}/>:null}{kind==="notifications"&&count>0?<button type="button" onClick={()=>void data.onMarkAllNotificationsRead?.()}>Mark all read</button>:null}</div></div>
-    {data.loading?<ActivityState title="Loading activity…"/>:data.error?<ActivityState title="Activity couldn't be loaded" detail={data.error} action={<button type="button" onClick={data.onRetry}>Try again</button>}/>:items.length?<ul className="athyper-activity-page__list">{items.map((item)=><li key={item.id}>{kind==="notifications"?<Notification item={item as ShellNotificationItem} onRead={data.onMarkNotificationRead}/>:<Inbox item={item as ShellInboxItem} onComplete={data.onCompleteInboxItem}/>}</li>)}</ul>:<ActivityState title={scope==="attention"?`No ${kind==="notifications"?"unread notifications":"priority work"}`:kind==="notifications"?"You're all caught up":"Nothing needs your attention"} detail="New activity will appear here automatically."/>}
-    {scope==="all"&&(kind==="notifications"?data.hasMoreNotifications:data.hasMoreInbox)?<div className="athyper-activity-page__more"><button type="button" onClick={()=>void (kind==="notifications"?data.onLoadMoreNotifications?.():data.onLoadMoreInbox?.())}>Load more</button></div>:null}
-  </section>;
+export function ActivityCenterPage({
+  kind,
+}: {
+  readonly kind: "notifications" | "inbox";
+}) {
+  const data = useActivityCenterData();
+  const [settings, setSettings] = useState(false),
+    [actionError, setActionError] = useState<string>();
+  const query = data.queries?.[kind];
+  const defaults = defaultActivityQuery(kind, query?.timeZone);
+  const filtered =
+    query &&
+    Object.keys(defaults).some(
+      (key) =>
+        !["sort", "group", "density", "timeZone"].includes(key) &&
+        query[key as keyof typeof query] !==
+          defaults[key as keyof typeof defaults],
+    );
+  const clear = () => {
+    if (query)
+      data.onQueryChange?.(kind, {
+        ...defaults,
+        sort: query.sort,
+        group: query.group,
+        density: query.density,
+      });
+  };
+  const scope = (
+    kind === "notifications" ? query?.read === "unread" : query?.attention
+  )
+    ? "attention"
+    : "all";
+  const setScope = (value: string) => {
+    if (query)
+      data.onQueryChange?.(kind, {
+        ...query,
+        ...(kind === "notifications"
+          ? { read: value === "attention" ? "unread" : "all" }
+          : { attention: value === "attention" }),
+      });
+  };
+  const error = data.errors?.[kind]?.message ?? data.error;
+  const denied = (data.errors?.[kind]?.status ?? data.errorStatus) === 403;
+  const notifications = data.notifications ?? [],
+    inbox = data.inbox ?? [];
+  const all = kind === "notifications" ? notifications : inbox;
+  const items = all;
+  const count = (tab: "notifications" | "inbox") =>
+    data.loading || data.errors?.[tab] || data.error
+      ? undefined
+      : tab === "notifications"
+        ? data.unreadNotificationCount
+        : data.openInboxCount;
+  const more =
+    kind === "notifications" ? data.hasMoreNotifications : data.hasMoreInbox;
+  const groups = new Map<string, typeof items>();
+  for (const item of items) {
+    const group = item.groupLabel ?? "";
+    groups.set(group, [...(groups.get(group) ?? []), item]);
+  }
+  return (
+    <section
+      className="athyper-activity-page"
+      data-activity-density={query?.density}
+      aria-labelledby="activity-page-title"
+    >
+      <ContentHeader
+        title="Activity center"
+        titleId="activity-page-title"
+        description="Updates and work that need your attention."
+        actions={
+          kind === "notifications" ? (
+            <Button
+              variant="secondary"
+              aria-expanded={settings}
+              aria-controls="activity-preferences"
+              onClick={() => setSettings((value) => !value)}
+            >
+              Notification preferences
+            </Button>
+          ) : undefined
+        }
+      />
+      <PanelTabs
+        label="Activity type"
+        value={kind}
+        onValueChange={(value) => {
+          window.location.assign(
+            value === "inbox"
+              ? (data.inboxHref ?? "/inbox")
+              : (data.notificationsHref ?? "/notifications"),
+          );
+        }}
+        items={[
+          {
+            key: "notifications",
+            label: "Notifications",
+            count: count("notifications"),
+            panelId: "activity-content",
+          },
+          {
+            key: "inbox",
+            label: "Inbox",
+            count: count("inbox"),
+            panelId: "activity-content",
+          },
+        ]}
+      />
+      {settings ? (
+        <div id="activity-preferences">
+          <NotificationControls expanded />
+        </div>
+      ) : null}
+      <ActivityQueryControls kind={kind} data={data} />
+      {!data.collections?.[kind] ? <div className="athyper-activity-page__toolbar">
+        {!data.collections?.[kind] ? <FilterChipGroup
+          label={
+            kind === "notifications" ? "Notification filters" : "Inbox filters"
+          }
+          value={scope}
+          onValueChange={setScope}
+          items={[
+            { value: "all", label: "All" },
+            {
+              value: "attention",
+              label: kind === "notifications" ? "Unread" : "Needs attention",
+            },
+          ]}
+        />
+        : null}
+        {kind === "notifications" ? <ActivityNotificationActions data={data} /> : null}
+      </div> : null}
+      <div
+        id="activity-content"
+        role="tabpanel"
+        aria-label={kind === "notifications" ? "Notifications" : "Inbox"}
+      >
+        {actionError ? <p role="alert">{actionError}</p> : null}
+        {data.loading && !all.length ? (
+          <PanelEmptyState icon={<BellIcon />} title="Loading activity…" />
+        ) : error ? (
+          <PanelEmptyState
+            icon={<InboxIcon />}
+            title={denied ? "Access required" : "Activity couldn't be loaded"}
+            description={
+              denied
+                ? "Ask your administrator to review your access."
+                : "Please try again."
+            }
+            action={
+              !denied ? (
+                <Button variant="secondary" onClick={data.onRetry}>
+                  Try again
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : items.length ? (
+          <>
+            {[...groups].map(([label, rows]) => (
+              <section className="athyper-activity-page__group" key={label}>
+                {label ? <h2>{label}</h2> : null}
+                <ul className="athyper-activity-feed">
+                  {rows.map((item) => (
+                    <li key={item.id}>
+                      {kind === "notifications" ? (
+                        <ActivityNotificationRow
+                          item={item as ShellNotificationItem}
+                          onMarkRead={data.onMarkNotificationRead}
+                          onDismiss={data.onDismissNotification}
+                        />
+                      ) : (
+                        <ActivityInboxRow item={item as ShellInboxItem} />
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </>
+        ) : (
+          <PanelEmptyState
+            icon={kind === "notifications" ? <BellIcon /> : <InboxIcon />}
+            title={
+              filtered
+                ? "No matching activity"
+                : kind === "notifications"
+                  ? "You're all caught up"
+                  : "Nothing needs your attention"
+            }
+            description={
+              filtered
+                ? "Try another search or clear your filters."
+                : "New activity will appear here automatically."
+            }
+            action={
+              filtered ? (
+                <Button variant="secondary" onClick={clear}>
+                  Show all
+                </Button>
+              ) : undefined
+            }
+          />
+        )}
+        {!error && more ? (
+          <div className="athyper-activity-page__more">
+            <span>{all.length} items loaded</span>
+            <Button
+              variant="secondary"
+              onClick={() =>
+                void Promise.resolve(
+                  kind === "notifications"
+                    ? data.onLoadMoreNotifications?.()
+                    : data.onLoadMoreInbox?.(),
+                ).catch(() =>
+                  setActionError("Could not load more activity. Try again."),
+                )
+              }
+            >
+              Load more
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
 }
-function PushControl({data}:{readonly data:ReturnType<typeof useActivityCenterData>}){switch(data.pushEnrollmentStatus){case"enabled":return <button type="button" data-state="enabled" title="Turn off browser alerts on this device" onClick={()=>void data.onDisableBrowserPush?.()}><BellIcon size={16}/>Browser alerts on</button>;case"prompt":case"error":return <button type="button" title={data.pushEnrollmentError} onClick={()=>void data.onEnableBrowserPush?.()}><BellIcon size={16}/>Enable browser alerts</button>;case"denied":return <span className="athyper-activity-page__push-status" title="Allow notifications in your browser site settings"><BellIcon size={16}/>Browser alerts blocked</span>;case"checking":return <span className="athyper-activity-page__push-status"><BellIcon size={16}/>Checking browser alerts…</span>;case"unsupported":return <span className="athyper-activity-page__push-status"><BellIcon size={16}/>Browser alerts unsupported</span>;default:return null;}}
-function Notification({item,onRead}:{readonly item:ShellNotificationItem;readonly onRead?: (item:ShellNotificationItem)=>void|Promise<void>}){const copy=<><span className="athyper-activity-page__glyph" data-tone={item.tone??"info"} aria-hidden="true">{item.unread?<BellIcon/>:<CircleCheckIcon/>}</span><span><strong>{item.title}</strong>{item.detail?<p>{item.detail}</p>:null}<small>{[item.sourceLabel,item.timestampLabel].filter(Boolean).join(" · ")}</small></span></>;return <article data-unread={item.unread}>{item.href?<a href={item.href} onClick={()=>void onRead?.(item)}>{copy}</a>:<div>{copy}</div>}{item.unread&&onRead?<button type="button" onClick={()=>void onRead(item)}>Mark read</button>:null}</article>;}
-function Inbox({item,onComplete}:{readonly item:ShellInboxItem;readonly onComplete?:(item:ShellInboxItem)=>void|Promise<void>}){const copy=<><span className="athyper-activity-page__glyph" data-tone={item.priority??"normal"} aria-hidden="true"><InboxIcon/></span><span><strong>{item.title}</strong>{item.detail?<p>{item.detail}</p>:null}<small>{[item.sourceLabel,item.assigneeLabel,item.dueLabel].filter(Boolean).join(" · ")}</small></span></>;return <article>{item.href?<a href={item.href}>{copy}</a>:<div>{copy}</div>}{onComplete?<button type="button" onClick={()=>void onComplete(item)}>Complete</button>:null}</article>;}
-function ActivityState({title,detail,action}:{readonly title:string;readonly detail?:string;readonly action?:ReactNode}){return <div className="athyper-activity-page__state" role="status"><span aria-hidden="true"><CircleCheckIcon/></span><strong>{title}</strong>{detail?<p>{detail}</p>:null}{action}</div>;}

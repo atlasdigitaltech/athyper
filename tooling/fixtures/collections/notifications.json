@@ -1,0 +1,216 @@
+{
+  "contractSchema": "athyper.meta-entity-contract/2.1",
+  "entity": {
+    "entityCode": "activity_notifications_configuration",
+    "entityClass": "configuration",
+    "ownershipModel": "tenant"
+  },
+  "runtimeProfiles": [
+    {
+      "profileKey": "default",
+      "backingKind": "virtual",
+      "apiExposure": "catalog_only",
+      "readMode": "none",
+      "writeMode": "none"
+    }
+  ],
+  "fields": [],
+  "operations": [],
+  "surfaces": [
+    {
+      "id": "d3228585-1346-484b-b84a-64c7d67b37b0",
+      "surfaceKey": "collection_configuration",
+      "surfaceKind": "embedded",
+      "title": "Notifications",
+      "isDefault": true,
+      "layoutConfig": {
+        "collectionConfiguration": {
+          "schema": "athyper.collection-presentation/1",
+          "collectionKey": "activity.notifications",
+          "title": "Notifications",
+          "description": "Updates and work that need your attention",
+          "providerKey": "platform.activity.notifications.v1",
+          "providerVersion": 1,
+          "viewVersion": 1,
+          "targetPlanes": [
+            "neon",
+            "mesh",
+            "studio"
+          ],
+          "rendererKey": "activity.notification.v1",
+          "searchFields": [
+            "title",
+            "summary",
+            "recordLabel"
+          ],
+          "fields": [
+            {
+              "key": "title",
+              "label": "Title",
+              "valueKind": "text",
+              "operators": [
+                "contains"
+              ],
+              "sortable": false,
+              "groupable": false
+            },
+            {
+              "key": "summary",
+              "label": "Summary",
+              "valueKind": "text",
+              "operators": [
+                "contains"
+              ],
+              "sortable": false,
+              "groupable": false
+            },
+            {
+              "key": "recordLabel",
+              "label": "Related record",
+              "valueKind": "text",
+              "operators": [
+                "contains"
+              ],
+              "sortable": false,
+              "groupable": false
+            },
+            {
+              "key": "read",
+              "label": "Read status",
+              "valueKind": "enum",
+              "operators": [
+                "eq",
+                "in"
+              ],
+              "sortable": false,
+              "groupable": false,
+              "choices": [
+                {
+                  "value": "read",
+                  "label": "read"
+                },
+                {
+                  "value": "unread",
+                  "label": "unread"
+                }
+              ]
+            },
+            {
+              "key": "type",
+              "label": "Activity type",
+              "valueKind": "enum",
+              "operators": [
+                "eq",
+                "in"
+              ],
+              "sortable": false,
+              "groupable": true,
+              "choices": [],
+              "choiceSource": "activity.authorized-types.v1"
+            },
+            {
+              "key": "entity",
+              "label": "Entity type",
+              "valueKind": "reference",
+              "operators": [
+                "eq",
+                "in"
+              ],
+              "sortable": false,
+              "groupable": true,
+              "choiceSource": "activity.authorized-entities.v1"
+            },
+            {
+              "key": "createdAt",
+              "label": "Created",
+              "valueKind": "datetime",
+              "operators": [
+                "eq",
+                "gte",
+                "lte",
+                "relative"
+              ],
+              "sortable": true,
+              "groupable": true
+            }
+          ],
+          "quickFields": [
+            "read",
+            "type",
+            "entity"
+          ],
+          "defaultState": {
+            "query": "",
+            "filters": [],
+            "sort": [
+              {
+                "field": "createdAt",
+                "direction": "desc"
+              }
+            ],
+            "group": "createdAt",
+            "density": "comfortable"
+          },
+          "views": [
+            {
+              "key": "all",
+              "label": "All activity",
+              "state": {
+                "query": "",
+                "filters": [],
+                "sort": [
+                  {
+                    "field": "createdAt",
+                    "direction": "desc"
+                  }
+                ],
+                "group": "createdAt",
+                "density": "comfortable"
+              }
+            },
+            {
+              "key": "unread",
+              "label": "Unread",
+              "state": {
+                "query": "",
+                "filters": [
+                  {
+                    "field": "read",
+                    "operator": "eq",
+                    "value": "unread"
+                  }
+                ],
+                "sort": [
+                  {
+                    "field": "createdAt",
+                    "direction": "desc"
+                  }
+                ],
+                "group": "createdAt",
+                "density": "comfortable"
+              }
+            }
+          ],
+          "surfaces": [
+            "page",
+            "drawer"
+          ],
+          "actionKeys": [
+            "open_record",
+            "mark_read",
+            "dismiss"
+          ],
+          "maxPageSize": 100
+        }
+      }
+    }
+  ],
+  "tests": [
+    {
+      "key": "collection_schema",
+      "assertion": "path_equals",
+      "path": "surfaces.0.layoutConfig.collectionConfiguration.schema",
+      "expected": "athyper.collection-presentation/1"
+    }
+  ]
+}

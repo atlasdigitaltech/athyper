@@ -3,7 +3,7 @@ import {
   encodePathSegment,
   type HttpClient,
 } from "@athyper/platform-api-client";
-import type { SummaryQuery } from "./business-partner-360-client";
+import type { SummaryQuery } from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-client";
 export type ExplainabilitySectionCode =
   | "requests"
   | "activity"

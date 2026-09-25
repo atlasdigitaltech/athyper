@@ -119,3 +119,26 @@ it("preserves absent draft fields while retaining explicit clears of saved value
   expect(saved.proposedPayload.legalName).toBeNull();
   expect(saved.proposedPayload).not.toHaveProperty("qualificationTypeCode");
 });
+
+it("retains tenant fields absent from the current form without accepting undeclared posted fields", () => {
+  const { descriptor } = parsePublishedRequestForm(envelope);
+  const data = new FormData();
+  data.set("injected", "must not save");
+  const saved = serializeRequestForm(descriptor, data, {
+    includeEmpty: true,
+    existingPayload: { tenantFields: { retiredField: "saved value" } },
+  });
+  expect(saved.proposedPayload.tenantFields).toMatchObject({ retiredField: "saved value" });
+  expect(saved.proposedPayload.tenantFields).not.toHaveProperty("injected");
+});
+
+it("clears a visible tenant field explicitly without losing fields no longer on the form", () => {
+  const { descriptor } = parsePublishedRequestForm(envelope);
+  const data = new FormData();
+  data.set("expectedAnnualSpend", "");
+  const saved = serializeRequestForm(descriptor, data, {
+    includeEmpty: true,
+    existingPayload: { tenantFields: { expectedAnnualSpend: 100, retiredField: "saved" } },
+  });
+  expect(saved.proposedPayload.tenantFields).toEqual({retiredField:"saved"});
+});

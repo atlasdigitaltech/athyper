@@ -5,11 +5,11 @@ export type NotificationPriority = "low" | "normal" | "high" | "urgent";
 export interface NotificationItem {
   readonly id: string; readonly tenantId: string; readonly principalId: string; readonly planeKey: string;
   readonly templateKey: string; readonly eventCode: string; readonly title: string; readonly body?: string;
-  readonly priority: NotificationPriority; readonly entityType?: string; readonly entityId?: string; readonly href?: string;
+  readonly priority: NotificationPriority; readonly entityType?: string; readonly entityId?: string; readonly href?: string; readonly recordLabel?:string; readonly actionLabel?:string;readonly groupLabel?:string;
   readonly subject?: string; readonly payload: Readonly<Record<string, unknown>>;
   readonly readAt?: string; readonly dismissedAt?: string; readonly createdAt: string;
 }
-export interface NotificationInboxPage { readonly notifications: readonly NotificationItem[]; readonly unreadCount: number; readonly nextCursor?: string; }
+export interface NotificationInboxPage { readonly notifications: readonly NotificationItem[]; readonly unreadCount: number; readonly nextCursor?: string; readonly matchingCount?:number; readonly viewScope?:string; readonly facets?:{entities:string[];types:string[]}; }
 export interface NotificationCounts { readonly unread: number; }
 export interface NotificationReadAllResult { readonly updated: number; readonly readAt: string; }
 export interface NotificationStreamEvent { readonly type: "notification.created" | "notification.read" | "notification.refresh" | "notification.delivery"; readonly tenantId: string; readonly principalId: string; readonly notificationId?: string; readonly deliveryId?: string; readonly deliveryStatus?: "sent" | "delivered" | "bounced" | "failed"; readonly occurredAt: string; }
@@ -35,7 +35,7 @@ export const notificationPushSubscribeOperation=createOperation<PushSubscription
 export const notificationPushUnsubscribeOperation=createOperation<void>({method:"DELETE",path:({id})=>`/api/notifications/push-subscriptions/${encodePathSegment(id)}`,response:"void"});
 
 export interface NotificationClient {
-  list(options?: { readonly limit?: number; readonly cursor?: string; readonly unreadOnly?: boolean; readonly signal?: AbortSignal }): Promise<NotificationInboxPage>;
+  list(options?: { readonly limit?: number; readonly activityQuery?:string; readonly cursor?: string; readonly unreadOnly?: boolean; readonly signal?: AbortSignal }): Promise<NotificationInboxPage>;
   counts(signal?: AbortSignal): Promise<NotificationCounts>;
   markRead(id: string, signal?: AbortSignal): Promise<void>;
   markAllRead(signal?: AbortSignal): Promise<NotificationReadAllResult>;
@@ -49,7 +49,7 @@ export interface NotificationClient {
   unsubscribePush(id:string,signal?:AbortSignal):Promise<void>;
 }
 export function createNotificationClient(client: HttpClient): NotificationClient { const implementation:NotificationClient={
-  list: (options = {}) => client.request(notificationInboxOperation, { signal: options.signal, query: { limit: options.limit ?? 50, cursor: options.cursor, unread: options.unreadOnly } }),
+  list: (options = {}) => client.request(notificationInboxOperation, { signal: options.signal, query: { limit: options.limit ?? 50, cursor: options.cursor, activityQuery:options.activityQuery, unread: options.unreadOnly } }),
   counts: (signal) => client.request(notificationCountsOperation, { signal }),
   markRead: (id, signal) => client.request(notificationReadOperation, { params: { id },idempotencyKey:`notification-read:${id}`, signal }),
   markAllRead: (signal) => client.request(notificationReadAllOperation, { idempotencyKey:`notification-read-all:${Date.now()}`,signal }),
@@ -69,8 +69,8 @@ export async function consumeNotificationStream(stream: ReadableStream<Uint8Arra
   finally { signal?.removeEventListener("abort",abort);reader.releaseLock(); }
 }
 
-function parseInbox(value:unknown):NotificationInboxPage{const body=record(value,"notification inbox");if(!Array.isArray(body.notifications))throw new TypeError("notifications must be an array");const nextCursor=optional(body.nextCursor);return Object.freeze({notifications:Object.freeze(body.notifications.map(parseNotification)),unreadCount:nonNegative(body.unreadCount,"unreadCount"),...(nextCursor?{nextCursor}:{})});}
-function parseNotification(value:unknown):NotificationItem{const body=record(value,"notification"),priority=body.priority;if(!["low","normal","high","urgent"].includes(String(priority)))throw new TypeError("Invalid notification priority");return Object.freeze({id:required(body.id,"id"),tenantId:required(body.tenantId,"tenantId"),principalId:required(body.principalId,"principalId"),planeKey:required(body.planeKey,"planeKey"),templateKey:required(body.templateKey,"templateKey"),eventCode:required(body.eventCode,"eventCode"),title:required(body.title,"title"),priority:priority as NotificationPriority,payload:record(body.payload,"payload"),...(optional(body.subject)?{subject:optional(body.subject)}:{}),createdAt:date(body.createdAt,"createdAt"),...optionals(body,["body","entityType","entityId","href","readAt","dismissedAt"] as const)});}
+function parseInbox(value:unknown):NotificationInboxPage{const body=record(value,"notification inbox");if(!Array.isArray(body.notifications))throw new TypeError("notifications must be an array");const nextCursor=optional(body.nextCursor);return Object.freeze({...activityPageFields(body),notifications:Object.freeze(body.notifications.map(parseNotification)),unreadCount:nonNegative(body.unreadCount,"unreadCount"),...(nextCursor?{nextCursor}:{})});}
+function parseNotification(value:unknown):NotificationItem{const body=record(value,"notification"),priority=body.priority;if(!["low","normal","high","urgent"].includes(String(priority)))throw new TypeError("Invalid notification priority");return Object.freeze({id:required(body.id,"id"),tenantId:required(body.tenantId,"tenantId"),principalId:required(body.principalId,"principalId"),planeKey:required(body.planeKey,"planeKey"),templateKey:required(body.templateKey,"templateKey"),eventCode:required(body.eventCode,"eventCode"),title:required(body.title,"title"),priority:priority as NotificationPriority,payload:record(body.payload,"payload"),...(optional(body.subject)?{subject:optional(body.subject)}:{}),createdAt:date(body.createdAt,"createdAt"),...optionals(body,["recordLabel","actionLabel","groupLabel","body","entityType","entityId","href","readAt","dismissedAt"] as const)});}
 function parseCounts(value:unknown):NotificationCounts{return Object.freeze({unread:nonNegative(record(value,"notification counts").unread,"unread")});}
 function parseReadAll(value:unknown):NotificationReadAllResult{const body=record(value,"read-all result");return Object.freeze({updated:nonNegative(body.updated,"updated"),readAt:date(body.readAt,"readAt")});}
 function parsePreferences(value:unknown):NotificationPreferenceSnapshot{const body=record(value,"notification preferences");if(!Array.isArray(body.preferences))throw new TypeError("preferences must be an array");return Object.freeze({preferences:Object.freeze(body.preferences.map((value)=>{const item=record(value,"preference");return Object.freeze({tenantId:required(item.tenantId,"tenantId"),principalId:required(item.principalId,"principalId"),eventCode:required(item.eventCode,"eventCode"),channels:channels(item.channels),version:nonNegative(item.version,"version")});})),version:nonNegative(body.version,"version")});}
@@ -85,3 +85,12 @@ function optional(value:unknown):string|undefined{return typeof value==="string"
 function nonNegative(value:unknown,name:string):number{if(!Number.isSafeInteger(value)||Number(value)<0)throw new TypeError(`${name} must be a non-negative integer`);return Number(value);}
 function date(value:unknown,name:string):string{const result=required(value,name);if(!Number.isFinite(parseInstant(result)))throw new TypeError(`${name} must be an ISO date`);return result;}
 function optionals<const K extends readonly string[]>(body:Record<string,unknown>,keys:K):Partial<Record<K[number],string>>{return Object.fromEntries(keys.flatMap((key)=>optional(body[key])?[[key,optional(body[key])]]:[])) as Partial<Record<K[number],string>>;}
+
+export interface NotificationDeliverySummary {readonly id:string;readonly channel:string;readonly status:string;readonly subject:string|null;readonly createdAt:string;readonly error:string|null;readonly attemptCount:number;}
+export const notificationDeliveriesOperation=createOperation<{items:readonly NotificationDeliverySummary[];nextCursor?:string}>({method:"GET",path:"/api/operations/notifications/deliveries",parse(value){const b=record(value,"deliveries");if(!Array.isArray(b.items))throw new TypeError("Delivery items required");return {items:b.items.map(value=>{const r=record(value,"delivery");return {id:required(r.id,"id"),channel:required(r.channel,"channel"),status:required(r.status,"status"),subject:optional(r.subject)??null,error:optional(r.error)??null,createdAt:date(r.createdAt,"createdAt"),attemptCount:nonNegative(r.attemptCount,"attemptCount")};}),...(optional(b.nextCursor)?{nextCursor:optional(b.nextCursor)}:{})};}});
+export const notificationDeliveryReplayOperation=createOperation<unknown,{replayKey:string}>({method:"POST",path:({id})=>`/api/operations/notifications/deliveries/${encodePathSegment(id)}/replay`,idempotency:"required",parse:value=>record(value,"replay receipt")});
+
+function activityPageFields(body:Record<string,unknown>){
+ const facets=body.facets && typeof body.facets==="object" ? body.facets as Record<string,unknown> : undefined;
+ return {...(body.matchingCount!==undefined?{matchingCount:nonNegative(body.matchingCount,"matchingCount")} : {}),...(optional(body.viewScope)?{viewScope:optional(body.viewScope)}:{}),...(facets && Array.isArray(facets.entities) && Array.isArray(facets.types) ? {facets:{entities:facets.entities.map(v=>required(v,"entity")),types:facets.types.map(v=>required(v,"type"))}}:{})};
+}

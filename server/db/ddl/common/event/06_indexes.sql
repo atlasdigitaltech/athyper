@@ -69,3 +69,6 @@ CREATE INDEX whatsapp_consent_current_idx ON event.whatsapp_consent (tenant_id, 
 CREATE INDEX webhook_subscription_topic_idx ON event.webhook_subscription USING gin (topics) WHERE is_active;
 CREATE INDEX IF NOT EXISTS ix_invalidation_dead_letter_created
   ON event.invalidation_dead_letter (dead_lettered_at DESC);
+
+-- Rolling recipient/channel deduplication for published entity policies.
+CREATE INDEX notification_delivery_entity_dedup_idx ON event.notification_delivery(tenant_id,(metadata->>'dedup_key'),created_at) WHERE metadata ? 'dedup_key';

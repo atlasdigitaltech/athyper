@@ -75,6 +75,7 @@ const compilation = compileCompiledEntityArtifacts({
     .filter((d) =>
       [
         "core",
+        "runtime_contract",
         "operation",
         "presentation_surface",
         "presentation_section",

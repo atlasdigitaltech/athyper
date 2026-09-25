@@ -1,6 +1,6 @@
 -- seed-contract-version: 1
 -- seed-pack: common.audit.event-contracts
--- seed-pack-version: 1.13.0
+-- seed-pack-version: 1.17.0
 -- seed-dataset: master.audit-event-contract
 -- seed-data-class: production_reference
 -- seed-provenance: {"source":"internal-audit-contract","publisher":"Athyper","source_version":"1","retrieved_at":"2026-08-13","license":"internal"}
@@ -9,9 +9,10 @@
 -- seed-natural-key: master.audit_event_contract(code)
 -- seed-cross-file-ids: false
 -- seed-id-strategy: natural-key-only
--- seed-expected-row-count: exact:38
+-- seed-expected-row-count: exact:44
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
+
 
 DO $seed_plane_guard$
 BEGIN
@@ -19,6 +20,82 @@ BEGIN
         RAISE EXCEPTION '[common.audit.event-contracts] app.database_plane is missing or invalid';
     END IF;
 END $seed_plane_guard$;
+
+-- BEGIN protected intake audit contract
+INSERT INTO master.audit_event_contract (
+    code,event_code_pattern,priority,allowed_operations,default_severity,
+    allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,
+    schema_version,metadata,status
+) VALUES (
+    'business_partner_intake_protection','^business_partner[.]intake_value[.]protected$',34,
+    ARRAY['execute']::audit.operation_d[],'info',ARRAY['user']::audit.actor_type_d[],
+    'tenant',false,'metadata',16384,1,
+    '{"owner":"master-data","purpose":"protected_intake_capture","protected_values":"omitted"}'::jsonb,'active'
+) ON CONFLICT(code) DO NOTHING;
+DO $protected_capture_contract$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM master.audit_event_contract
+        WHERE code='business_partner_intake_protection'
+          AND event_code_pattern='^business_partner[.]intake_value[.]protected$'
+          AND allowed_operations=ARRAY['execute']::audit.operation_d[]
+          AND allowed_actor_types=ARRAY['user']::audit.actor_type_d[]
+          AND allowed_scope='tenant' AND capture_mode='metadata' AND status='active') THEN
+        RAISE EXCEPTION 'Protected intake audit contract differs; reconcile explicitly';
+    END IF;
+END $protected_capture_contract$;
+-- END protected intake audit contract
+
+-- BEGIN protected tax reveal audit contract
+INSERT INTO master.audit_event_contract (
+ code,event_code_pattern,priority,allowed_operations,default_severity,
+ allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status
+) VALUES (
+ 'business_partner_tax_reveal','^business_partner[.]tax_registration[.]revealed$',10,
+ ARRAY['execute']::audit.operation_d[],'info',ARRAY['user']::audit.actor_type_d[],
+ 'tenant',false,'metadata',4096,1,
+ '{"owner":"master-data","sensitive":true,"commandPurposeRequired":true,"rawValuesExcluded":true}'::jsonb,'active'
+) ON CONFLICT(code) DO NOTHING;
+DO $tax_reveal_contract$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM master.audit_event_contract WHERE code='business_partner_tax_reveal'
+  AND event_code_pattern='^business_partner[.]tax_registration[.]revealed$'
+  AND allowed_operations=ARRAY['execute']::audit.operation_d[]
+  AND allowed_actor_types=ARRAY['user']::audit.actor_type_d[]
+  AND allowed_scope='tenant' AND capture_mode='metadata' AND status='active') THEN
+  RAISE EXCEPTION 'Tax reveal audit contract differs; reconcile explicitly';
+ END IF;
+END $tax_reveal_contract$;
+-- END protected tax reveal audit contract
+
+-- BEGIN protected bank audit contracts
+INSERT INTO master.audit_event_contract (
+ code,event_code_pattern,priority,allowed_operations,default_severity,
+ allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status
+) VALUES
+ ('business_partner_bank_registration','^business_partner[.]bank_registration[.](protected|verified|rejected)$',34,
+ ARRAY['execute']::audit.operation_d[],'info',ARRAY['user']::audit.actor_type_d[],
+ 'tenant',false,'metadata',16384,1,'{"owner":"master-data","protected_values":"omitted","makerCheckerOnDecision":true}'::jsonb,'active'),
+ ('business_partner_bank_reveal','^business_partner[.]bank_account[.]revealed$',10,
+ ARRAY['execute']::audit.operation_d[],'info',ARRAY['user']::audit.actor_type_d[],
+ 'tenant',false,'metadata',4096,1,'{"owner":"master-data","sensitive":true,"commandPurposeRequired":true,"rawValuesExcluded":true}'::jsonb,'active'),
+ ('business_partner_bank_provisional_resolution','^business_partner[.]bank_provisional[.]resolved$',34,
+ ARRAY['execute']::audit.operation_d[],'info',ARRAY['user']::audit.actor_type_d[],
+ 'tenant',false,'metadata',4096,1,'{"owner":"master-data","makerCheckerOnDecision":true,"accountUnchanged":true}'::jsonb,'active')
+ON CONFLICT(code) DO NOTHING;
+DO $bank_contracts$
+BEGIN
+ IF (SELECT count(*) FROM master.audit_event_contract WHERE
+  (code,event_code_pattern) IN (
+   ('business_partner_bank_registration','^business_partner[.]bank_registration[.](protected|verified|rejected)$'),
+   ('business_partner_bank_provisional_resolution','^business_partner[.]bank_provisional[.]resolved$'),
+   ('business_partner_bank_reveal','^business_partner[.]bank_account[.]revealed$'))
+  AND allowed_operations=ARRAY['execute']::audit.operation_d[]
+  AND allowed_actor_types=ARRAY['user']::audit.actor_type_d[]
+  AND allowed_scope='tenant' AND capture_mode='metadata' AND status='active')<>3 THEN
+  RAISE EXCEPTION 'Protected bank audit contracts differ; reconcile explicitly';
+ END IF;
+END $bank_contracts$;
+-- END protected bank audit contracts
 
 INSERT INTO master.audit_event_contract (
     code, event_code_pattern, priority, allowed_operations, default_severity,
@@ -499,3 +576,6 @@ VALUES('governance_comment_moderation','^governance\.comment_moderation\.(open|r
  'tenant',false,'metadata',16384,1,'{"owner":"governance","purpose":"comment_moderation_lifecycle","comment_content":"omitted"}'::jsonb,'active')
 ON CONFLICT(code) DO UPDATE SET event_code_pattern=EXCLUDED.event_code_pattern,priority=EXCLUDED.priority,allowed_operations=EXCLUDED.allowed_operations,default_severity=EXCLUDED.default_severity,allowed_actor_types=EXCLUDED.allowed_actor_types,allowed_scope=EXCLUDED.allowed_scope,reason_required=EXCLUDED.reason_required,capture_mode=EXCLUDED.capture_mode,max_payload_bytes=EXCLUDED.max_payload_bytes,schema_version=EXCLUDED.schema_version,metadata=EXCLUDED.metadata,status=EXCLUDED.status
 WHERE (master.audit_event_contract.event_code_pattern,master.audit_event_contract.priority,master.audit_event_contract.allowed_operations,master.audit_event_contract.default_severity,master.audit_event_contract.allowed_actor_types,master.audit_event_contract.allowed_scope,master.audit_event_contract.reason_required,master.audit_event_contract.capture_mode,master.audit_event_contract.max_payload_bytes,master.audit_event_contract.schema_version,master.audit_event_contract.metadata,master.audit_event_contract.status) IS DISTINCT FROM (EXCLUDED.event_code_pattern,EXCLUDED.priority,EXCLUDED.allowed_operations,EXCLUDED.default_severity,EXCLUDED.allowed_actor_types,EXCLUDED.allowed_scope,EXCLUDED.reason_required,EXCLUDED.capture_mode,EXCLUDED.max_payload_bytes,EXCLUDED.schema_version,EXCLUDED.metadata,EXCLUDED.status);
+
+INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
+VALUES('business_partner_identifier_reveal','^business_partner[.]identifier[.]revealed$',10,ARRAY['execute']::audit.operation_d[],'info',ARRAY['user']::audit.actor_type_d[],'tenant',false,'metadata',4096,1,'{"owner":"master-data","sensitive":true,"commandPurposeRequired":true,"rawValuesExcluded":true}'::jsonb,'active') ON CONFLICT(code) DO NOTHING;

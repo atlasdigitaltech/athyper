@@ -15,6 +15,17 @@ const id = {
 };
 
 describe("collaboration transaction boundary", () => {
+  it("keeps edit upload drafts separate from root and reply drafts",async()=>{
+    const {service,persistence}=harness();
+    const parent=await service.create(base);
+    await service.putDraft({...base,text:"Unsent root"});
+    await service.putDraft({...base,parentCommentId:parent.id,text:"Unsent reply"});
+    const contextType="entity_edit_11111111111141118111111111111111";
+    await service.putDraft({...base,contextType,text:"Editing attachment"});
+    expect(persistence.inspect().drafts.size).toBe(3);
+    await service.deleteDraft({...base,contextType});
+    expect([...persistence.inspect().drafts.values()].map(draft=>draft.text).sort()).toEqual(["Unsent reply","Unsent root"]);
+  });
   it("creates comment, resolved mention records, audit, and notification outbox atomically", async () => {
     const events: OutboxEventInput[] = [];
     const persistence = createInMemoryCollaborationPersistence({
@@ -624,7 +635,7 @@ describe("collaboration side-effect regressions", () => {
     expect(await service.create(command)).toEqual(first);
     expect(events).toHaveLength(1);
   });
-  it("does not reuse a deduplication key across successive mention edits", async () => {
+  it("does not repeat retained mentions across successive edits", async () => {
     const { service, events } = harness();
     const comment = await service.create(base);
     for (const [index, text] of ["first mention", "second mention"].entries())
@@ -638,8 +649,8 @@ describe("collaboration side-effect regressions", () => {
     const mentions = events.filter(
       (event) => event.eventType === "collaboration.comment.mentioned",
     );
-    expect(mentions).toHaveLength(2);
-    expect(mentions.every((event) => event.eventKey === undefined)).toBe(true);
+    expect(mentions).toHaveLength(1);
+    expect(mentions[0]?.eventKey).toBe(`comment:${comment.id}:revision:2:mention:${id.mentioned}`);
   });
   it("caps future read times and rejects impossible calendar dates", async () => {
     const { service, persistence } = harness();
@@ -722,4 +733,23 @@ it("preserves author ownership for edit and delete", async () => {
   await expect(
     service.remove({ context: other, commentId: comment.id }),
   ).resolves.toBe(false);
+});
+
+it("notifies only newly added mentions on edit with stable revision identities",async()=>{
+ const {service,events}=harness();
+ const a=await service.create({...base,mentionedPrincipalIds:[id.mentioned,id.author]});
+ const b=await service.edit({context:context(),commentId:a.id,text:"Retained mention",expectedRevision:a.revision,mentionedPrincipalIds:[id.mentioned]});
+ await service.edit({context:context(),commentId:a.id,text:"Added B",expectedRevision:b.revision,mentionedPrincipalIds:[id.mentioned,id.flag]});
+ const mentions=events.filter(e=>e.eventType==="collaboration.comment.mentioned");
+ expect(mentions.map(e=>e.payload.recipient_principal_ids)).toEqual([[id.mentioned],[id.flag]]);
+ expect(mentions.map(e=>e.eventKey)).toEqual([`comment:${a.id}:revision:1:mention:${id.mentioned}`,`comment:${a.id}:revision:3:mention:${id.flag}`]);
+});
+
+it("includes only explicitly requested pinned notification files and rejects unrelated references",async()=>{
+ const {service,events}=harness();
+ await service.create({...base,attachmentIds:[id.flag],mentionedPrincipalIds:[id.mentioned]});
+ expect(events.find(e=>e.eventType==="collaboration.comment.mentioned")?.payload.attachments).toEqual([]);
+ await service.create({...base,attachmentIds:[id.flag],notificationAttachments:[{attachmentId:id.flag,required:true}],mentionedPrincipalIds:[id.mentioned]});
+ expect(events.filter(e=>e.eventType==="collaboration.comment.mentioned").at(-1)?.payload.attachments).toEqual([{attachmentId:id.flag,attachmentVersionId:id.flag,versionPolicy:"pinned",requestedDisposition:"auto",required:true}]);
+ await expect(service.create({...base,notificationAttachments:[{attachmentId:id.flag,required:false}]})).rejects.toMatchObject({code:"INVALID_NOTIFICATION_ATTACHMENTS"});
 });

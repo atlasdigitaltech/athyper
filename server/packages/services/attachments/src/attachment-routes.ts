@@ -27,7 +27,7 @@ export function registerAttachmentRoutes(
   options: AttachmentRouteOptions,
 ): void {
   application.get("/api/attachments/:attachmentId/archive",options.authenticate,async(request,response,next)=>{try{const context=options.readContext(response),attachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId");await admitAttachmentAction(options, request,context,"archive",{attachmentId},"delete",{attachmentId},false);if(!options.attachments.archiveOutcome)throw new Error("Attachment lifecycle does not support archive outcome");response.setHeader("Cache-Control","private, no-store");response.json(await options.attachments.archiveOutcome({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId}));}catch(error){handle(error,response,next);}});
-  application.post("/api/attachments/:attachmentId/archive",options.authenticate,async(request,response,next)=>{try{const context=options.readContext(response),attachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId");await admitAttachmentAction(options, request,context,"archive",{attachmentId},"delete",{attachmentId},false);if(!options.attachments.archive)throw new Error("Attachment lifecycle does not support archive");response.status(200).json(await options.attachments.archive({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId}));}catch(error){handle(error,response,next);}});
+  application.post("/api/attachments/:attachmentId/archive",options.authenticate,async(request,response,next)=>{try{const context=options.readContext(response),attachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId"),idempotencyKey=requireIdempotencyKey(request);await admitAttachmentAction(options, request,context,"archive",{attachmentId,idempotencyKey},"delete",{attachmentId},false);if(!options.attachments.archive)throw new Error("Attachment lifecycle does not support archive");response.status(200).json(await options.attachments.archive({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId},{idempotencyKey}));}catch(error){handle(error,response,next);}});
   application.post("/api/attachments/folders", options.authenticate, async (request, response, next) => { try {
     const context=options.readContext(response), value=body(request.body), command=text(value,"command",16) as "create" | "move" | "delete", owner=coordinate(value);
     // Folder management belongs to the same entity-scoped capability as the
@@ -39,7 +39,7 @@ export function registerAttachmentRoutes(
     const result=await options.attachments.manageFolder({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId:value["attachmentId"]===undefined?"00000000-0000-4000-8000-000000000000":uuid(value,"attachmentId")},{command,entityType:owner.entityType!,entityId:owner.entityId!,folderId:command==="move" && value["folderId"]===null ? null : uuid(value,"folderId"),expectedRevision,idempotencyKey,...(value["name"] ? {name:text(value,"name",256)} : {}),...(value["parentFolderId"] ? {parentFolderId:uuid(value,"parentFolderId")} : {}),...(value["attachmentId"] ? {attachmentId:uuid(value,"attachmentId")} : {})});
     response.status(200).json(result);
   } catch(error){handle(error,response,next);} });
-  application.post("/api/attachments/:attachmentId/category", options.authenticate, async (request,response,next)=>{try { const context=options.readContext(response), attachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId"), value=body(request.body), owner=coordinate(value), category=text(value,"category",32) as "general"|"evidence"; await admitAttachmentAction(options, request,context,"category",{...value,...owner,attachmentId},"create",{attachmentId,resourceId:attachmentId},false); if(!options.attachments.setCategory) throw new Error("Attachment lifecycle does not support categories"); await options.attachments.setCategory({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId},{entityType:owner.entityType!,entityId:owner.entityId!,category}); response.status(204).end(); }catch(error){handle(error,response,next);}});
+  application.post("/api/attachments/:attachmentId/category", options.authenticate, async (request,response,next)=>{try { const context=options.readContext(response), attachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId"), value=body(request.body), owner=coordinate(value), category=text(value,"category",32) as "general"|"evidence",idempotencyKey=requireIdempotencyKey(request); await admitAttachmentAction(options, request,context,"category",{...value,...owner,attachmentId,idempotencyKey},"create",{attachmentId,resourceId:attachmentId},false); if(!options.attachments.setCategory) throw new Error("Attachment lifecycle does not support categories"); await options.attachments.setCategory({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId},{entityType:owner.entityType!,entityId:owner.entityId!,category,idempotencyKey}); response.status(204).end(); }catch(error){handle(error,response,next);}});
   application.post(
     "/api/attachments/stage",
     options.authenticate,
@@ -124,11 +124,11 @@ export function registerAttachmentRoutes(
     options.authenticate,
     async (request, response, next) => {
       try {
-        const context = options.readContext(response), attachmentId = uuidValue(String(request.params["attachmentId"] ?? ""), "attachmentId"), value = body(request.body);
+        const context = options.readContext(response), attachmentId = uuidValue(String(request.params["attachmentId"] ?? ""), "attachmentId"), value = body(request.body), idempotencyKey=requireIdempotencyKey(request);
         await admitAttachmentAction(options, request, context, "rename", { ...value, attachmentId },
           "create", { attachmentId, resourceId: attachmentId }, false);
         if (!options.attachments.rename) throw new Error("Attachment lifecycle does not support rename");
-        const result = await options.attachments.rename({ planeKey: context.planeKey, tenantId: context.tenantId, principalId: context.principalId, attachmentId }, { displayName: text(value, "displayName", 1024), expectedSeriesRevision: text(value, "expectedSeriesRevision", 64) });
+        const result = await options.attachments.rename({ planeKey: context.planeKey, tenantId: context.tenantId, principalId: context.principalId, attachmentId }, { displayName: text(value, "displayName", 1024), expectedSeriesRevision: text(value, "expectedSeriesRevision", 64), idempotencyKey });
         response.status(200).json({ attachmentId: result.id, seriesId: result.seriesId, displayName: value["displayName"] });
       } catch (error) { handle(error, response, next); }
     },
@@ -516,6 +516,12 @@ function body(value: unknown): Record<string, unknown> {
     throw new RouteError(400, "INVALID_BODY", "JSON object required");
   return value as Record<string, unknown>;
 }
+function requireIdempotencyKey(request: Request): string {
+  const key = request.get?.("Idempotency-Key");
+  if (typeof key !== "string" || !key.trim())
+    throw new RouteError(400, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header is required");
+  return key.trim();
+}
 function text(
   value: Record<string, unknown>,
   key: string,
@@ -615,7 +621,7 @@ function handle(
         retryAfterSeconds: error.policy.retryAfterSeconds,
       });
   } else if (error instanceof AttachmentConflictError)
-    problem(response, 409, "ATTACHMENT_CONFLICT", error.message);
+    problem(response, 409, error.code, error.message);
   else if (error instanceof AttachmentDownloadError)
     problem(response, 410, error.code, error.message);
   else if (error instanceof RouteError)

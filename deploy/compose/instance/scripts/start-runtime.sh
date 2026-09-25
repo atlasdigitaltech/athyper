@@ -99,7 +99,7 @@ for provider_secret in \
   TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKEN TWILIO_FROM_NUMBER TWILIO_MESSAGING_SERVICE_SID \
   META_WHATSAPP_API_VERSION META_WHATSAPP_PHONE_NUMBER_ID META_WHATSAPP_ACCESS_TOKEN \
   PUSH_FCM_PROJECT_ID PUSH_FCM_CLIENT_EMAIL PUSH_FCM_PRIVATE_KEY \
-  VAPID_SUBJECT VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY INFISICAL_TOKEN; do
+  VAPID_SUBJECT VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY INFISICAL_TOKEN PROTECTED_VALUES_INFISICAL_TOKEN; do
   load_optional_secret "$provider_secret"
 done
 unset provider_secret
@@ -108,6 +108,18 @@ unset provider_secret
 export PUBLICATION_API_ENABLED PUBLICATION_COMPILE_ENABLED PUBLICATION_DISPATCH_ENABLED PUBLICATION_APPLY_ENABLED PUBLICATION_RECOVERY_ENABLED
 
 unset runtime_password worker_password redis_password
+# Operator commands need the same secret-file and storage configuration as the
+# service, but must not start a second worker or accept arbitrary commands.
+if [ "$#" -gt 0 ]; then
+  if [ "$#" -eq 1 ] && [ "$1" = adopt-dev-business-partner ]; then
+    [ "$ATHYPER_ENV" = local ] && [ "${ATHYPER_DOMAIN_SUFFIX:-}" = dev.athyper.test ] && [ "${ATHYPER_LOCAL_SOURCE:-0}" = 1 ] || { echo "Adoption requires source DEV" >&2; exit 1; }
+    cd "${ATHYPER_SOURCE_CHECKOUT:?Source checkout is required}"
+    exec node --import tsx tooling/scripts/local-dev/deploy-bp-adoption-worker.mts
+  fi
+  [ "$#" -eq 1 ] && [ "$1" = recover-dev-publication ] || { echo "Unknown runtime command" >&2; exit 1; }
+  [ "$ATHYPER_ENV" = local ] && [ "${ATHYPER_DOMAIN_SUFFIX:-}" = dev.athyper.test ] || { echo "Publication recovery requires local DEV" >&2; exit 1; }
+  exec node dist/scripts/recover-dev-publication.js
+fi
 # Source mode is restricted to the personal local DEV instance.
 if [ "${ATHYPER_LOCAL_SOURCE:-0}" = 1 ]; then
   [ "${ATHYPER_DOMAIN_SUFFIX:-}" = dev.athyper.test ] || { echo "Source mode requires local DEV" >&2; exit 1; }

@@ -1,5 +1,7 @@
 "use client";
 
+import { readBrowserPreference, writeBrowserPreference } from "./record/browser-preferences";
+
 import { CollaborationVisibilityContext, CollaborationPresentationContext, CollaborationToolbarContext } from "./collaboration-visibility";
 import { PanelHeader, PanelTabs, Tooltip, useModalIsolation } from "@athyper/platform-ui";
 import {
@@ -115,24 +117,15 @@ export function EntityCollaborationSurface({
     const update = () => setCompact(media.matches);
     update();
     media.addEventListener("change", update);
-    try {
-      const saved = JSON.parse(localStorage.getItem(preference) ?? "null");
-      if (typeof saved?.pinned === "boolean") onPinnedChange?.(saved.pinned);
-      if (Number.isFinite(saved?.width))
-        setWidth(Math.max(360, Math.min(560, saved.width)));
-    } catch {
-      /* Storage is optional. */
-    }
+    const saved = readBrowserPreference(preference);
+    if (typeof saved.pinned === "boolean") onPinnedChange?.(saved.pinned);
+    if (typeof saved.width === "number" && Number.isFinite(saved.width))
+      setWidth(Math.max(360, Math.min(560, saved.width)));
     setReady(true);
     return () => media.removeEventListener("change", update);
   }, []);
   useEffect(() => {
-    if (ready)
-      try {
-        localStorage.setItem(preference, JSON.stringify({ pinned, width }));
-      } catch {
-        /* Storage is optional. */
-      }
+    if (ready) writeBrowserPreference(preference, { pinned, width });
   }, [pinned, width, ready]);
   useEffect(() => {
     if (active && open) {

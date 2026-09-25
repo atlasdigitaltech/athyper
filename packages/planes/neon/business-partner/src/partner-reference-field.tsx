@@ -4,7 +4,7 @@ import {
   entityListOperation,
   entityListQuery,
 } from "@athyper/platform-api-client";
-import { useApiClient } from "@athyper/platform-shell-app-foundation";
+import { useApiClient, useSessionIdentity } from "@athyper/platform-shell-app-foundation";
 import type { DataInputHandlers } from "@athyper/platform-entity-form-detail";
 
 /** Uses the authorized entity directory, including its published search policy. */
@@ -17,6 +17,18 @@ export function PartnerReferenceField({
   disabled,
 }: Parameters<DataInputHandlers[string]>[0]) {
   const http = useApiClient();
+  const identity = useSessionIdentity();
+  const scopeKey = JSON.stringify(identity.scope);
+  const [descriptor, setDescriptor] = useState<Parameters<typeof entityListQuery>[1]>();
+  const [descriptorError, setDescriptorError] = useState<string>();
+  useEffect(() => {
+    const controller = new AbortController();
+    setDescriptor(undefined);setDescriptorError(undefined);
+    void http.request(entityListDescriptorOperation,{params:{entityCode:"business_partner"},signal:controller.signal})
+      .then(value=>{if(!controller.signal.aborted)setDescriptor(value);})
+      .catch(cause=>{if(!controller.signal.aborted)setDescriptorError(cause instanceof Error?cause.message:"Partner directory is unavailable.");});
+    return ()=>controller.abort();
+  },[http,scopeKey]);
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<
     readonly { id: string; label: string }[]
@@ -26,14 +38,10 @@ export function PartnerReferenceField({
     const controller = new AbortController();
     setOptions([]);
     setError(undefined);
-    if (!query.trim()) return () => controller.abort();
+    if (!query.trim() || !descriptor) return () => controller.abort();
     const timeout = setTimeout(() => {
       void (async () => {
         const params = { entityCode: "business_partner" };
-        const descriptor = await http.request(entityListDescriptorOperation, {
-          params,
-          signal: controller.signal,
-        });
         if (query.trim().length < descriptor.surface.search.minimumQueryLength)
           return;
         const result = await http.request(entityListOperation, {
@@ -60,7 +68,7 @@ export function PartnerReferenceField({
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [http, query]);
+  }, [http, query, descriptor, scopeKey]);
   return (
     <>
       <label htmlFor={id}>
@@ -74,7 +82,7 @@ export function PartnerReferenceField({
         value={query}
         placeholder={field.placeholder}
         autoComplete="off"
-        aria-describedby={error ? id + "-lookup-error" : undefined}
+        aria-describedby={error || descriptorError ? id + "-lookup-error" : undefined}
         onChange={(event) => {
           setQuery(event.target.value);
           onChange("");
@@ -98,9 +106,9 @@ export function PartnerReferenceField({
           ))}
         </ul>
       ) : null}
-      {error ? (
+      {error || descriptorError ? (
         <span id={id + "-lookup-error"} role="status">
-          {error}
+          {error ?? descriptorError}
         </span>
       ) : null}
     </>

@@ -3,12 +3,12 @@ import { entityRuntimeClient, type EntityRuntimeActionPlan, type EntityRuntimeNa
 import { useApiClient, useSessionIdentity } from "@athyper/platform-shell-app-foundation";
 import { Building2Icon } from "@athyper/platform-icons";
 import { Card } from "@athyper/platform-ui";
-import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { EntitySectionWorkspace } from "./section-workspace";
 import { CompiledEntitySectionContent } from "./compiled-section-content";
 import { useEntityRuntimeSectionWorkspace, type EntityRuntimeSectionState } from "./use-section-resource";
 
-/** Shared record workspace. Continuous mode is deliberately opt-in: it is for a parent tab such as 360 View, never direct tabs. */
+/** Shared record workspace. Continuous mode is deliberately opt-in: each admitted tab declares continuous or selected section display. */
 export function EntityRuntimeWorkspace({
   entityCode, recordId, surfaceKey, deepLinkedSectionKey, contextKey = "default", resourceContext,
   locale = typeof navigator === "undefined" ? "und" : navigator.language, renderHeader, renderSection,
@@ -33,7 +33,11 @@ export function EntityRuntimeWorkspace({
   const [scrollRequest, setScrollRequest] = useState<string | undefined>(() => deepLinkedSectionKey);
   // A click has priority over viewport observation until the requested scroll lands.
   // A ref closes the small render gap between the click and the next observer callback.
-  const manualScrollLock = useRef(false);
+  const manualScrollLock = useRef(Boolean(deepLinkedSectionKey));
+  const settleScroll = useCallback(() => {
+    manualScrollLock.current = false;
+    setScrollRequest(undefined);
+  }, []);
   const cacheScope = useMemo(() => [identity.scope?.tenantId ?? "unbound", identity.scope?.principalId ?? "unbound", identity.scope?.authEpoch ?? 0, contextKey, locale].join(":"), [contextKey, identity.scope?.authEpoch, identity.scope?.principalId, identity.scope?.tenantId, locale]);
   const workspace = useEntityRuntimeSectionWorkspace({ client, entityCode, recordId, surfaceKey, cacheScope, deepLinkedSectionKey, ...(resourceContext ? { resourceContext } : {}) });
   // IntersectionObserver uses a reading line below the pane top. At scrollTop 0,
@@ -41,7 +45,9 @@ export function EntityRuntimeWorkspace({
   useEffect(() => {
     if (!continuousSections || scrollRequest || manualScrollLock.current) return;
     const container = continuousScrollRoot?.current;
-    const firstSection = workspace.bootstrap?.plan.navigation?.tabs.find((tab) => tab.provider === "360")?.sectionKeys[0];
+    const group = workspace.bootstrap?.plan.navigation?.tabs.find((tab) => tab.sectionDisplay === "continuous" && tab.sectionKeys.includes(workspace.activeSectionKey ?? ""));
+    if (workspace.activeSectionKey && !group?.sectionKeys.includes(workspace.activeSectionKey)) return;
+    const firstSection = group?.sectionKeys[0];
     if (!container || !firstSection) return;
     const activateFirstAtTop = () => {
       if (container.scrollTop > 1 || manualScrollLock.current) return;
@@ -51,43 +57,33 @@ export function EntityRuntimeWorkspace({
     activateFirstAtTop();
     container.addEventListener("scroll", activateFirstAtTop, { passive: true });
     return () => container.removeEventListener("scroll", activateFirstAtTop);
-  }, [continuousScrollRoot, continuousSections, onObserveSection, scrollRequest, workspace.bootstrap, workspace.observeSection]);
-  if (workspace.bootstrapStatus === "loading") return <Card><p role="status">Loading record…</p></Card>;
-  if (workspace.bootstrapStatus === "error" || !workspace.bootstrap) return <Card><p role="alert">{workspace.bootstrapError ?? "This record is unavailable."}</p></Card>;
+  }, [continuousScrollRoot, continuousSections, onObserveSection, scrollRequest, workspace.bootstrap, workspace.activeSectionKey, workspace.observeSection]);
   const { bootstrap } = workspace;
-  const sectionItems = bootstrap.plan.sections.map((section) => ({ key: section.key, label: section.label?.defaultText ?? section.key }));
-  const activeSection = workspace.activeSectionKey ?? bootstrap.plan.sections[0]?.key;
+  const sectionItems = useMemo(() => bootstrap?.plan.sections.map(section => ({key:section.key,label:section.label?.defaultText ?? section.key})) ?? [],[bootstrap?.plan.sections]);
+  const activeSection = workspace.activeSectionKey ?? bootstrap?.plan.sections[0]?.key;
+  const collaborationKeys = JSON.stringify(collaborationSectionKeys);
+  const collaborationSections = useMemo(() => (JSON.parse(collaborationKeys) as string[]).flatMap(key => sectionItems.find(section => section.key === key) ?? []),[collaborationKeys,sectionItems]);
+  const selectSection = useCallback((sectionKey:string) => {
+    workspace.selectSection(sectionKey);
+    const continuous = bootstrap?.plan.navigation?.tabs.some(tab => tab.sectionDisplay === "continuous" && tab.sectionKeys.includes(sectionKey)) ?? false;
+    manualScrollLock.current = continuous;
+    setScrollRequest(continuous ? sectionKey : undefined);
+    onSelectSection?.(sectionKey);
+  },[workspace.selectSection,bootstrap?.plan.navigation,onSelectSection,continuousSections]);
+  const renderSectionRef = useRef<(sectionKey:string)=>ReactNode>(()=>null);
+  const renderCollaboration = useCallback((sectionKey:string)=>renderSectionRef.current(sectionKey),[]);
+  const navigation = useMemo<EntityRuntimeHeaderNavigation>(() => ({
+    sections:sectionItems,activeSection:activeSection ?? "",
+    ...(bootstrap?.plan.navigation ? {navigation:bootstrap.plan.navigation} : {}),
+    ...(bootstrap?.plan.summaryView ? {summaryView:bootstrap.plan.summaryView} : {}),
+    onSelectSection:selectSection,
+    ...(collaborationSections.length ? {collaboration:{sections:collaborationSections,preloadSection:workspace.preloadSection,renderSection:renderCollaboration}} : {}),
+  }),[sectionItems,activeSection,bootstrap?.plan.navigation,bootstrap?.plan.summaryView,selectSection,collaborationSections,workspace.preloadSection,workspace.sections,renderCollaboration]);
+  if (workspace.bootstrapStatus === "loading") return <Card><p role="status">Loading record…</p></Card>;
+  if (workspace.bootstrapStatus === "error" || !bootstrap) return <Card><p role="alert">{workspace.bootstrapError ?? "This record is unavailable."}</p></Card>;
   if (!activeSection) return <Card><p>No authorized sections are available.</p></Card>;
-  // Preserve the entity surface's declared collaboration ordering rather than
-  // the broader record-section order. This makes the default predictable while
-  // still omitting any section the admitted page plan did not expose.
-  const collaborationSections = collaborationSectionKeys.flatMap((key) =>
-    sectionItems.find((section) => section.key === key) ?? [],
-  );
-  const navigation: EntityRuntimeHeaderNavigation = {
-    sections: sectionItems, activeSection,
-    ...(bootstrap.plan.navigation ? { navigation: bootstrap.plan.navigation } : {}),
-    ...(bootstrap.plan.summaryView ? { summaryView: bootstrap.plan.summaryView } : {}),
-    onSelectSection: (sectionKey) => {
-      workspace.selectSection(sectionKey);
-      // The parent changes tab mode in the same click. Queue the destination even
-      // while a direct tab is still rendered, so the newly mounted 360 document
-      // can land there before viewport observation takes over.
-      const isContinuousDestination = bootstrap.plan.navigation?.tabs.some((tab) => tab.provider === "360" && tab.sectionKeys.includes(sectionKey)) ?? false;
-      manualScrollLock.current = isContinuousDestination;
-      setScrollRequest(isContinuousDestination ? sectionKey : undefined);
-      onSelectSection?.(sectionKey);
-    },
-    ...(collaborationSections.length ? {
-      collaboration: Object.freeze({
-        sections: Object.freeze(collaborationSections),
-        preloadSection: workspace.preloadSection,
-        renderSection: (sectionKey: string) => renderLoadedSection(sectionKey, workspace.sections[sectionKey]),
-      }),
-    } : {}),
-  };
-  const overview = bootstrap.plan.navigation?.tabs.find((tab) => tab.provider === "360");
-  const continuousItems = continuousSections && overview ? overview.sectionKeys.flatMap((key) => sectionItems.find((item) => item.key === key) ?? []) : [];
+  const activeGroup = bootstrap.plan.navigation?.tabs.find(tab => tab.sectionKeys.includes(activeSection));
+  const continuousItems = continuousSections && activeGroup?.sectionDisplay === "continuous" ? activeGroup.sectionKeys.flatMap((key) => sectionItems.find((item) => item.key === key) ?? []) : [];
   const renderLoadedSection = (sectionKey: string, state: EntityRuntimeSectionState | undefined) => {
     // Keep an already admitted section mounted during refresh so drafts and action dialogs survive.
     if (!state || (state.status === "loading" && !state.resource)) return <p role="status">Loading section…</p>;
@@ -99,13 +95,14 @@ export function EntityRuntimeWorkspace({
       resourceContext: { ...resourceContext, threadRootId },
     });
     return state.resource
-      ? (renderSection ? renderSection({ sectionKey, resource: state.resource, retry: () => workspace.retrySection(sectionKey) }) : <CompiledEntitySectionContent resource={state.resource} entityCode={entityCode} recordId={recordId} onChanged={() => workspace.invalidate(sectionKey)} onLoadMore={() => workspace.loadMore(sectionKey)} onLoadThreadPage={sectionKey === "comments" ? loadThreadPage : undefined} />)
+      ? (renderSection ? renderSection({ sectionKey, resource: state.resource, retry: () => workspace.retrySection(sectionKey) }) : <CompiledEntitySectionContent resource={state.resource} entityCode={entityCode} recordId={recordId} onChanged={() => workspace.invalidate(sectionKey)} loadingMore={state.loadingMore} loadMoreError={state.loadMoreError} onLoadMore={() => workspace.loadMore(sectionKey)} onLoadMentionsPage={(cursor, signal) => entityRuntimeClient.section(client, {entityCode, recordId, surfaceKey, sectionKey, cursor, signal, resourceContext: {...resourceContext, commentFilter: "mentions"}})} onLoadThreadPage={state.resource.presentation.rendererKey === "platform.comments.v1" ? loadThreadPage : undefined} />)
       : <p>This section is unavailable.</p>;
   };
+  renderSectionRef.current = sectionKey => renderLoadedSection(sectionKey, workspace.sections[sectionKey]);
   const selectedContent = <EntitySectionWorkspace sections={sectionItems} activeSection={activeSection} onNavigate={navigation.onSelectSection} label="Record sections" navigation={sectionNavigation}>{renderLoadedSection(activeSection, workspace.sections[activeSection])}</EntitySectionWorkspace>;
-  const content = continuousItems.length ? <div className="a-runtime-continuous-sections" aria-label="360 sections">
+  const content = continuousItems.length ? <div className="a-runtime-continuous-sections" aria-label={`${activeGroup?.label.defaultText ?? "Record"} sections`}>
     {continuousItems.map((item, index) => <ContinuousSection key={item.key} item={item} selected={item.key === activeSection} initial={index === 0}
-      state={workspace.sections[item.key]} scrollRoot={continuousScrollRoot} scrollTo={scrollRequest === item.key} onScrollSettled={() => { manualScrollLock.current = false; setScrollRequest(undefined); }} onApproach={() => workspace.preloadSection(item.key)} onObserve={() => { if (manualScrollLock.current) return; workspace.observeSection(item.key); onObserveSection?.(item.key); }}>
+      state={workspace.sections[item.key]} scrollRoot={continuousScrollRoot} scrollTo={scrollRequest === item.key} onScrollSettled={settleScroll} onApproach={() => workspace.preloadSection(item.key)} onObserve={() => { if (manualScrollLock.current) return; workspace.observeSection(item.key); onObserveSection?.(item.key); }}>
       {renderLoadedSection(item.key, workspace.sections[item.key])}
     </ContinuousSection>)}
     {/* Gives the final authorized heading enough trailing scroll range to align with
@@ -133,51 +130,63 @@ function ContinuousSection({ item, selected, initial, state, scrollRoot, scrollT
     if (heading.current) observer.observe(heading.current);
     return () => observer.disconnect();
   }, [onApproach, onObserve, scrollRoot, selected, state]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!scrollTo) return;
     setNear(true);
     let cancelled = false;
-    let settled = false;
-    let settleTimer: number | undefined;
-    let cleanup: (() => void) | undefined;
-    const finish = () => {
-      if (cancelled || settled) return;
-      settled = true;
-      cleanup?.();
+    let focused = false;
+    const target = root.current;
+    if (!target) return;
+    const align = () => {
+      if (cancelled) return;
+      const container = scrollRoot?.current;
+      // A supplied pane may not have attached its ref on the first layout pass.
+      // Never move the outer page while waiting for that pane.
+      if (scrollRoot && !container) return;
+      if (container) {
+        const top = target.getBoundingClientRect().top - container.getBoundingClientRect().top
+          - container.clientTop + container.scrollTop;
+        if (Math.abs(container.scrollTop - Math.max(0, top)) > 1)
+          container.scrollTo({ top: Math.max(0, top), behavior: "instant" });
+      } else {
+        target.scrollIntoView({ block: "start", behavior: "instant" });
+      }
+      if (!focused) {
+        heading.current?.focus({ preventScroll: true });
+        focused = true;
+      }
+    };
+    // Explicit navigation is a destination jump, not a tour through the document.
+    align();
+    const frame = window.requestAnimationFrame(align);
+    const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(align);
+    // Preceding lazy sections can expand without changing the target's own size.
+    // Observe each section as well as the document and keep the selected heading anchored.
+    const documentRoot = target.parentElement;
+    if (documentRoot) {
+      observer?.observe(documentRoot);
+      for (const child of documentRoot.children) observer?.observe(child);
+    }
+    const release = () => {
+      if (cancelled) return;
+      cancelled = true;
+      observer?.disconnect();
+      window.cancelAnimationFrame(frame);
       onScrollSettled();
     };
-    const frame = window.requestAnimationFrame(() => {
-      const target = root.current;
-      const container = scrollRoot?.current;
-      if (!target) { finish(); return; }
-      if (!container) {
-        target.scrollIntoView({ block: "start", behavior: "smooth" });
-        settleTimer = window.setTimeout(finish, 850);
-        return;
-      }
-      // The continuous document owns this scroll surface. Avoid scrollIntoView(),
-      // which would also move the application root and its fixed contextual panes.
-      const top = target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
-      const resetSettleTimer = () => {
-        if (settleTimer) window.clearTimeout(settleTimer);
-        settleTimer = window.setTimeout(finish, 180);
-      };
-      const onScrollEnd = () => finish();
-      cleanup = () => {
-        container.removeEventListener("scroll", resetSettleTimer);
-        container.removeEventListener("scrollend", onScrollEnd);
-        if (settleTimer) window.clearTimeout(settleTimer);
-      };
-      container.addEventListener("scroll", resetSettleTimer, { passive: true });
-      container.addEventListener("scrollend", onScrollEnd, { once: true });
-      settleTimer = window.setTimeout(finish, 1_200);
-      container.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-    });
+    const onKey = (event: KeyboardEvent) => {
+      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) release();
+    };
+    // Relinquish anchoring immediately on user intent, before native scrolling.
+    const events = ["wheel", "touchstart", "pointerdown"] as const;
+    for (const event of events) document.addEventListener(event, release, { capture: true, passive: true });
+    document.addEventListener("keydown", onKey, true);
     return () => {
       cancelled = true;
+      observer?.disconnect();
       window.cancelAnimationFrame(frame);
-      cleanup?.();
-      if (settleTimer) window.clearTimeout(settleTimer);
+      for (const event of events) document.removeEventListener(event, release, true);
+      document.removeEventListener("keydown", onKey, true);
     };
   }, [onScrollSettled, scrollRoot, scrollTo]);
   return <section ref={root} id={`entity-runtime-section-${item.key}`} data-runtime-section={item.key} className="a-runtime-continuous-section" aria-labelledby={`entity-runtime-heading-${item.key}`}>

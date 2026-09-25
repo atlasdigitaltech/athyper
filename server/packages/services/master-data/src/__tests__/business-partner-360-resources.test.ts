@@ -7,8 +7,8 @@ import {
   PostgresQueryCompiler,
   type Transaction,
 } from "kysely";
-import { readBusinessPartner360CommonSection } from "../kysely-business-partner-360-sections.js";
-import { createBusinessPartner360Service, type BusinessPartner360Repository } from "../business-partner-360-service.js";
+import { readBusinessPartner360CommonSection } from "../business-partner/record/section-readers";
+import { createBusinessPartner360Service, type BusinessPartner360Repository } from "../business-partner/record/service";
 import { BUSINESS_PARTNER_360_PERMISSIONS as P } from "@athyper/server-contract-master-data";
 
 async function read(
@@ -75,7 +75,7 @@ async function read(
         sectionCode,
         certificateVisible,
         asOf: "2026-09-08",
-        limit: 2,
+        limit: 1,
         cursor: {
           snapshotAt: "2026-09-08T12:00:00Z",
           afterAt: "2026-09-08T03:00:00Z",
@@ -133,4 +133,19 @@ it("redacts qualification controls and document links for a certificate-only rea
   const result=await service.section({context:{planeKey:"neon",tenantId:"tenant",principalId:"reader",permissions:{allowed:[P.record,P.certificate],authorizationScopes:[]}} as never,businessPartnerId:"partner",sectionCode:"qualifications-certificates"});
   expect(result.data).toMatchObject({qualifications:[],preferences:[],blocks:[],commodityCapabilities:[],certifications:[{id:"certificate",name:"ISO 9001"}]});
   expect(JSON.stringify(result.data)).not.toContain("attachmentId");
+});
+
+it.each([true, false])("uses current attachment capability admission, not a legacy grant fallback: %s", async allowed => {
+  const calls: string[] = [];
+  const repository = {
+    resolveCore: async () => ({id:"partner",code:"BP1",category:"organization",displayName:"Partner",status:"active",version:1,changedAt:"2026-09-08T00:00:00Z",businessDate:"2026-09-08",roles:[],scopeValid:true,scopeResolved:false}),
+    readCommercialControlSection: async () => ({state:"ready",provenance:[],data:{certifications:[{id:"certificate",attachment:{attachmentId:"document"}}]}}),
+  } as unknown as BusinessPartner360Repository<object>;
+  const service=createBusinessPartner360Service({repository,
+    authorizeCertificateAttachment: async (_query, id) => { calls.push(id); return allowed; },
+    transactions:{async run(_plane,_actor,work){return work({});}},definitions:{async resolve(){throw Error("No definition");}},
+    authorizer:{async authorize(query){return {allowed: [P.record,P.certificate,...(!allowed ? [P.attachment] : [])].includes(query.permissionCode as never)};}}});
+  const result=await service.section({context:{planeKey:"neon",tenantId:"tenant",principalId:"reader",permissions:{allowed:[],authorizationScopes:[]}} as never,businessPartnerId:"partner",sectionCode:"qualifications-certificates"});
+  expect(calls).toEqual(["document"]);
+  expect(JSON.stringify(result.data).includes("attachmentId")).toBe(allowed);
 });

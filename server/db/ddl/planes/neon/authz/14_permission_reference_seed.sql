@@ -1,4 +1,5 @@
 -- seed-contract-version: 1
+
 -- seed-pack: neon.business-partner-permission-reference
 -- seed-pack-version: 1.0.0
 -- seed-dataset: authz.permission;authz.permission_scope_kind
@@ -9,7 +10,7 @@
 -- seed-natural-key: authz.permission(canonical_code);authz.permission_scope_kind(permission_id,scope_kind,propagation_mode)
 -- seed-cross-file-ids: false
 -- seed-id-strategy: deterministic-uuid:athyper.authorization.catalog.v2
--- seed-expected-row-count: exact:60
+-- seed-expected-row-count: exact:63
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
 -- seed-assertion: expected-count
@@ -513,10 +514,53 @@ $assertions$;
 -- Account/bank linkage permission reference restored from migration
 -- 20260828_neon_business_partner_account_bank_linkage.sql after baseline squash.
 -- Preserve the original IDs, MFA, separation of duties and exact scopes.
-INSERT INTO authz.permission(id,canonical_code,permission_kind,module_id,risk_tier,requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,metadata,status,created_by) SELECT definition.id,definition.code,'entity_operation',module.id,definition.risk::authz.risk_tier_d,definition.mfa,definition.sod,false,false,false,'{"_seed":{"pack":"neon.mesh-account-bank-linkage","version":"1.0.0"}}','published','00000000-0000-0000-0000-000000000000' FROM control.module module CROSS JOIN(VALUES('43b1d1d7-9e31-5076-ab90-584063d732f5'::uuid,'neon.mesh_account_link.request','high',false,true),('285138d7-31c0-5506-a504-abfe00a13c87'::uuid,'neon.mesh_account_link.decide','critical',true,true),('1eb5268c-f686-5dc2-95db-333a1bdb1b32'::uuid,'neon.mesh_account_link.read','medium',false,false),('9c1966b9-9144-5186-b9bd-e51c668600ee'::uuid,'neon.mesh_bank_projection.receive','critical',true,false),('d8fdc899-fe16-5593-97a9-4206c643ef05'::uuid,'neon.business_partner_bank.verify','critical',true,true),('0d777b02-9325-5883-8b1a-775fa7f598b7'::uuid,'neon.business_partner_bank.apply','critical',true,true))definition(id,code,risk,mfa,sod) WHERE module.code='fnd' ON CONFLICT(canonical_code) DO UPDATE SET risk_tier=EXCLUDED.risk_tier,requires_mfa=EXCLUDED.requires_mfa,requires_sod=EXCLUDED.requires_sod,status='published';
-INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by) SELECT id,CASE WHEN canonical_code LIKE 'neon.business_partner_bank.%' THEN 'company_code'::authz.scope_kind_d ELSE 'network_relationship'::authz.scope_kind_d END,'exact','active','00000000-0000-0000-0000-000000000000' FROM authz.permission WHERE canonical_code LIKE 'neon.mesh_account_link.%' OR canonical_code LIKE 'neon.mesh_bank_projection.%' OR canonical_code LIKE 'neon.business_partner_bank.%' ON CONFLICT(permission_id,scope_kind,propagation_mode) DO UPDATE SET status='active';
+INSERT INTO authz.permission(id,canonical_code,permission_kind,module_id,risk_tier,requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,metadata,status,created_by) SELECT definition.id,definition.code,'entity_operation',module.id,definition.risk::authz.risk_tier_d,definition.mfa,definition.sod,false,false,false,'{"_seed":{"pack":"neon.mesh-account-bank-linkage","version":"1.0.0"}}','published','00000000-0000-0000-0000-000000000000' FROM control.module module CROSS JOIN(VALUES('43b1d1d7-9e31-5076-ab90-584063d732f5'::uuid,'neon.mesh_account_link.request','high',false,true),('285138d7-31c0-5506-a504-abfe00a13c87'::uuid,'neon.mesh_account_link.decide','critical',true,true),('1eb5268c-f686-5dc2-95db-333a1bdb1b32'::uuid,'neon.mesh_account_link.read','medium',false,false),('9c1966b9-9144-5186-b9bd-e51c668600ee'::uuid,'neon.mesh_bank_projection.receive','critical',true,false))definition(id,code,risk,mfa,sod) WHERE module.code='fnd' ON CONFLICT(canonical_code) DO UPDATE SET risk_tier=EXCLUDED.risk_tier,requires_mfa=EXCLUDED.requires_mfa,requires_sod=EXCLUDED.requires_sod,status='published';
+INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by) SELECT id,'network_relationship'::authz.scope_kind_d,'exact','active','00000000-0000-0000-0000-000000000000' FROM authz.permission WHERE canonical_code LIKE 'neon.mesh_account_link.%' OR canonical_code LIKE 'neon.mesh_bank_projection.%' ON CONFLICT(permission_id,scope_kind,propagation_mode) DO UPDATE SET status='active';
+
+-- Partner decision views: independent read authority, no grants to human roles.
+INSERT INTO authz.permission(id,canonical_code,permission_kind,module_id,risk_tier,requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,metadata,status,created_by)
+SELECT 'f289b345-8a8b-40ef-8a6b-3aa821320e59'::uuid,'neon.relationship.business_partner_restriction.read','entity_operation',module.id,'medium',false,false,false,false,false,
+ '{"_seed":{"pack":"neon.partner-decision-views","version":"1.0.0"}}'::jsonb,'published','00000000-0000-0000-0000-000000000000'::uuid
+FROM control.module module WHERE module.code='fnd' AND module.status='active'
+ON CONFLICT(canonical_code) DO NOTHING;
+INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by)
+SELECT id,'tenant','exact','active','00000000-0000-0000-0000-000000000000'::uuid FROM authz.permission
+WHERE canonical_code IN ('neon.relationship.business_partner_qualification.read','neon.relationship.business_partner_restriction.read')
+ON CONFLICT(permission_id,scope_kind,propagation_mode) DO UPDATE SET status='active';
+
+-- Minimal person-name projection for tenant-local partner identities; this does
+-- not enable sensitive person data or workforce access, nor assign human access.
+INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by)
+SELECT id,'tenant','exact','active','00000000-0000-0000-0000-000000000000'::uuid FROM authz.permission
+WHERE canonical_code='neon.relationship.business_partner_person.read'
+ON CONFLICT(permission_id,scope_kind,propagation_mode) DO UPDATE SET status='active';
 
 -- Company setup reference permissions. No role assignment or human access.
+-- BP2-09A REGISTER BEGIN: reference only; tenant role assignment is an explicit administration action.
+INSERT INTO authz.permission(id,canonical_code,permission_kind,module_id,risk_tier,requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,metadata,status,created_by)
+SELECT '07e5d051-6f2d-49b0-8d4a-fcf75e3ee901'::uuid,'neon.business_partner_bank.register','entity_operation',module.id,'medium',false,false,false,false,false,
+ '{"_seed":{"pack":"neon.partner-bank-registration","version":"1.0.0"}}'::jsonb,'published','00000000-0000-0000-0000-000000000000'::uuid
+FROM control.module module WHERE module.code='bp'
+ON CONFLICT(canonical_code) DO NOTHING;
+INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by)
+SELECT id,'tenant','exact','active','00000000-0000-0000-0000-000000000000'::uuid FROM authz.permission
+WHERE canonical_code='neon.business_partner_bank.register'
+ON CONFLICT(permission_id,scope_kind,propagation_mode) DO NOTHING;
+-- BP2-09A REGISTER END
+
+-- Directory resolution is not bank verification. Preserve MFA and independent
+-- actor controls without granting registration users additional authority.
+INSERT INTO authz.permission(id,canonical_code,permission_kind,module_id,risk_tier,requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,metadata,status,created_by)
+SELECT '7316274b-2469-4e73-b238-71689330417c'::uuid,'neon.business_partner_bank.resolve_directory','entity_operation',module.id,'high',true,true,false,false,false,
+ '{"_seed":{"pack":"neon.partner-bank-directory-resolution","version":"1.0.0"}}'::jsonb,'published','00000000-0000-0000-0000-000000000000'::uuid
+FROM control.module module WHERE module.code='bp'
+ON CONFLICT(canonical_code) DO NOTHING;
+INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by)
+SELECT id,'tenant','exact','active','00000000-0000-0000-0000-000000000000'::uuid FROM authz.permission
+WHERE canonical_code='neon.business_partner_bank.resolve_directory'
+ON CONFLICT(permission_id,scope_kind,propagation_mode) DO NOTHING;
+
+
 INSERT INTO authz.permission(id,canonical_code,permission_kind,module_id,risk_tier,requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,metadata,status,created_by)
 SELECT value.id,value.code,'entity_operation',module.id,CASE WHEN value.mfa THEN 'high' ELSE 'low' END,value.mfa,value.sod,false,false,false,
  '{"_seed":{"pack":"neon.company-setup-case-permissions","version":"1.0.0"}}'::jsonb,'published','00000000-0000-0000-0000-000000000000'::uuid
@@ -538,3 +582,32 @@ ON CONFLICT(permission_id,scope_kind,propagation_mode) DO NOTHING;
 DO $catalog$ BEGIN
  IF (SELECT count(*) FROM authz.permission WHERE canonical_code LIKE 'neon.relationship.bp_company_setup_request.%' AND status='published')<>7 THEN RAISE EXCEPTION 'Company setup permission catalog incomplete'; END IF;
 END $catalog$;
+
+-- Separately authorized protected identifier reveal; no default user grants.
+INSERT INTO authz.permission(id,canonical_code,permission_kind,module_id,risk_tier,requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,metadata,status,created_by)
+SELECT v.id::uuid,v.code,'entity_operation',m.id,'high',true,false,false,false,false,
+ '{"_seed":{"pack":"neon.partner-protected-reveal","version":"1.0.0"}}'::jsonb,'published','00000000-0000-0000-0000-000000000000'::uuid
+FROM control.module m CROSS JOIN (VALUES
+ ('aee6eb17-b61c-43e2-820b-101d80184196','neon.relationship.business_partner_identifier.reveal'),
+ ('bb7f9521-bac8-4536-a5f3-59f624e754a6','neon.relationship.bp_target.identifier_reveal'),
+ ('a333bd8d-2047-468b-82a3-a9a26b785fd0','neon.relationship.bp_target.tax_reveal'),
+ ('dfc7f302-e044-44f0-b7b8-21cf842098bc','neon.relationship.bp_target.bank_reveal')
+) v(id,code) WHERE m.code='fnd' AND m.status='active'
+ON CONFLICT(canonical_code) DO NOTHING;
+INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by)
+SELECT id,'tenant','exact','active','00000000-0000-0000-0000-000000000000'::uuid FROM authz.permission
+WHERE canonical_code IN ('neon.relationship.business_partner_identifier.reveal','neon.relationship.bp_target.identifier_reveal','neon.relationship.bp_target.tax_reveal','neon.relationship.business_partner_tax.reveal','neon.relationship.bp_target.bank_reveal','neon.relationship.business_partner_bank.reveal')
+ON CONFLICT(permission_id,scope_kind,propagation_mode) DO NOTHING;
+
+-- BEGIN BP NETWORK READ CATALOG
+-- Catalog only; never assigns a role.
+INSERT INTO authz.permission(id,canonical_code,permission_kind,module_id,risk_tier,requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,metadata,status,created_by)
+SELECT 'f1c18a88-299c-55af-8d3c-ad905dd260a2'::uuid,'neon.relationship.bp_target.network_read','entity_operation',id,'low',false,false,false,false,false,
+ '{"_seed":{"pack":"neon.partner-network-read","version":"1.0.0"}}'::jsonb,'published','00000000-0000-0000-0000-000000000000'::uuid
+FROM control.module WHERE code='fnd' AND status='active'
+ON CONFLICT(canonical_code) DO NOTHING;
+INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by)
+SELECT id,'tenant','exact','active','00000000-0000-0000-0000-000000000000'::uuid FROM authz.permission
+WHERE canonical_code='neon.relationship.bp_target.network_read' AND status='published'
+ON CONFLICT(permission_id,scope_kind,propagation_mode) DO NOTHING;
+-- END BP NETWORK READ CATALOG

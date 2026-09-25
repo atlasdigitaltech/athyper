@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
-import { createBusinessPartner360CommercialClient } from "./business-partner-360-commercial-client";
-import { createBusinessPartner360SectionClient } from "./business-partner-360-section-client";
+import { createBusinessPartner360CommercialClient } from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-commercial-client";
+import { createBusinessPartner360SectionClient } from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-section-client";
 it("sends selected organization/company with both protected reveal commands", async () => {
   const request = vi.fn(async () => ({}));
   const http = { request } as never;

@@ -24,7 +24,11 @@
     "@athyper/platform-shell-app-foundation": "workspace:*",
     "@athyper/platform-shell-runtime": "workspace:*",
     "@athyper/platform-temporal": "workspace:*",
-    "@athyper/platform-ui": "workspace:*"
+    "@athyper/platform-theme": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
+    "@athyper/contract-platform-activity": "workspace:*",
+    "@athyper/platform-collection-controls": "workspace:*",
+    "@athyper/contract-platform-collection": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"

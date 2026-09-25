@@ -1,12 +1,15 @@
--- Reversible check of the canonical organization-only, single-name DDL.
+-- Reversible check of common identity shape and category-specific references.
 BEGIN;
 CREATE TEMP TABLE bp_identity_check (LIKE master.business_partner INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
 INSERT INTO bp_identity_check(tenant_id,code,name,category_locked_by,created_by)
 VALUES('11111111-1111-4111-8111-111111111111','BP.IDENTITY.CHECK',repeat('N',320),
        '22222222-2222-4222-8222-222222222222','22222222-2222-4222-8222-222222222222');
 DO $$ BEGIN
-  BEGIN PERFORM 'person'::master.business_partner_category_d;
-    RAISE EXCEPTION 'Person category was accepted'; EXCEPTION WHEN check_violation THEN NULL; END;
+  PERFORM 'person'::master.business_partner_category_d;
+  BEGIN UPDATE bp_identity_check SET partner_category='person';
+    RAISE EXCEPTION 'Person without reference was accepted'; EXCEPTION WHEN check_violation THEN NULL; END;
+  BEGIN UPDATE bp_identity_check SET person_id='33333333-3333-4333-8333-333333333333';
+    RAISE EXCEPTION 'Organization with person reference was accepted'; EXCEPTION WHEN check_violation THEN NULL; END;
   BEGIN PERFORM 'group'::master.business_partner_category_d;
     RAISE EXCEPTION 'Group category was accepted'; EXCEPTION WHEN check_violation THEN NULL; END;
   BEGIN UPDATE bp_identity_check SET name=repeat('N',321);

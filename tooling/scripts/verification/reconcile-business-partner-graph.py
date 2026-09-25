@@ -55,7 +55,7 @@ def adjacent_owner(table):
     return next((owner for owner, pattern in groups if re.match(pattern,name)), f'{schema} domain: requires owner confirmation before expansion')
 
 CORE_REVIEW = {
- 'address': 'BP2-02: add country-dependent state_region/timezone contracts; existing columns alone do not complete lookup/filter/write validation',
+ 'address': 'BP2-02: reference contracts implemented and published in release 14; integrated authenticated acceptance remains',
  'address_link': 'BP2-02: verify owner registry, purpose, effective dates and primary overlap through existing commands',
  'business_partner': 'BP2-04/06/16: extend relations only through verified providers; complete alias/relationship/context graph',
  'business_partner_banking': 'BP2-09: account core is not link/usage/company/disclosure graph; preserve protected reader',
@@ -65,7 +65,7 @@ CORE_REVIEW = {
  'business_partner_industry_classification': 'BP2-05: domain plus code UUID and allowed isic/naics identity',
  'business_partner_operating_organization_assignment': 'BP2-06: role capability, organization/company scope and revocation',
  'business_partner_qualification': 'BP2-07/10: decision scope and governed outcomes; not generic editable qualification rows',
- 'business_partner_request': 'BF-04: replace retired stored bindings with actual case/snapshot projection; keep logical entity and domain status mapping',
+ 'business_partner_request': 'BF-04: C01 case/snapshot projection and C02 publisher catalog enforcement implemented; requester/approver/materializer acceptance remains',
  'business_partner_tax_registration': 'BP2-04: tax jurisdiction/scheme and protected projection through current authority',
  'certification': 'BP2-05/BF-05: certificate type/custom alternative, validity and attachment parent parity',
  'contact_person': 'BP2-03: roles/channels/person identity link and authorized primary selection',

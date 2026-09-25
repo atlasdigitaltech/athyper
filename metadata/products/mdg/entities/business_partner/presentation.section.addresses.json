@@ -21,37 +21,81 @@
   "coreRef": "address_link/core.json",
   "fieldBindings": [
     {
-      "fieldKey": "owner_type_id"
+      "fieldKey": "purpose",
+      "label": {
+        "labelKey": "entity.address_link.view.purpose",
+        "defaultText": "Purpose"
+      }
     },
     {
-      "fieldKey": "owner_id"
+      "fieldKey": "lines",
+      "label": {
+        "labelKey": "entity.address_link.view.lines",
+        "defaultText": "Postal address"
+      }
     },
     {
-      "fieldKey": "address_id"
+      "fieldKey": "locality",
+      "label": {
+        "labelKey": "entity.address_link.view.locality",
+        "defaultText": "Locality"
+      }
     },
     {
-      "fieldKey": "purpose"
+      "fieldKey": "region",
+      "label": {
+        "labelKey": "entity.address_link.view.region",
+        "defaultText": "Region"
+      }
     },
     {
-      "fieldKey": "role_qualifier"
+      "fieldKey": "postalCode",
+      "label": {
+        "labelKey": "entity.address_link.view.postalcode",
+        "defaultText": "Postal code"
+      }
     },
     {
-      "fieldKey": "attention_line"
+      "fieldKey": "countryCode",
+      "label": {
+        "labelKey": "entity.address_link.view.countrycode",
+        "defaultText": "Country"
+      }
     },
     {
-      "fieldKey": "usage_status"
+      "fieldKey": "primary",
+      "label": {
+        "labelKey": "entity.address_link.view.primary",
+        "defaultText": "Primary"
+      }
     },
     {
-      "fieldKey": "usage_denied_reason_code"
+      "fieldKey": "validationStatus",
+      "label": {
+        "labelKey": "entity.address_link.view.validationstatus",
+        "defaultText": "Address validation"
+      }
     },
     {
-      "fieldKey": "is_primary"
+      "fieldKey": "effectiveFrom",
+      "label": {
+        "labelKey": "entity.address_link.view.effectivefrom",
+        "defaultText": "Effective from"
+      }
     },
     {
-      "fieldKey": "effective_from"
+      "fieldKey": "effectiveUntil",
+      "label": {
+        "labelKey": "entity.address_link.view.effectiveuntil",
+        "defaultText": "Effective until"
+      }
     },
     {
-      "fieldKey": "effective_until"
+      "fieldKey": "assignedContacts",
+      "label": {
+        "labelKey": "entity.address_link.view.assignedcontacts",
+        "defaultText": "Assigned contacts"
+      }
     }
   ],
   "authorization": {

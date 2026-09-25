@@ -18,13 +18,12 @@ beforeEach(()=>{Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true});transp
 afterEach(async()=>{await act(async()=>root.unmount());container.remove();});
 it("opens management unscoped even if the shell has selected a company",async()=>{
  await act(async()=>root.render(<BankingWorkspace businessPartnerId="partner"/>));
- expect(String(transport.mock.calls[0]?.[0])).not.toContain("companyCodeId");expect(container.textContent).toContain("Manage banking");expect(container.textContent).toContain("Select a company");
- const select=container.querySelector("#banking-company") as HTMLSelectElement;
- await act(async()=>{select.value="uk";select.dispatchEvent(new Event("change",{bubbles:true}));});
- expect(transport.mock.calls.some(call=>String(call[0]).includes("companyCodeId=uk"))).toBe(true);expect(container.textContent).toContain("Register a bank account");
+ expect(String(transport.mock.calls[0]?.[0])).not.toContain("companyCodeId");expect(container.textContent).toContain("Bank accounts");
+ expect(container.querySelector("#banking-company")).toBeNull();
+ expect(container.textContent).toContain("Add bank account");
 });
-it("loads the selected company's real verification and offers the latest disclosure review",async()=>{
+it("redirects the legacy verification experience to facts without calling retired APIs",async()=>{
  await act(async()=>root.render(<BankingWorkspace businessPartnerId="partner" mode="verification" initialCompanyCodeId="uk" initialBankProjectionId="projection"/>));
- expect(transport.mock.calls.some(call=>String(call[0]).includes("/business-partner-bank-verifications/review"))).toBe(true);
- expect(container.textContent).toContain("Start review of latest disclosure");expect(container.textContent).toContain("Apply verified bank change");
+ expect(transport.mock.calls.some(call=>String(call[0]).includes("/business-partner-bank-verifications/"))).toBe(false);
+ expect(container.textContent).toContain("Bank verification has been retired");expect(container.textContent).not.toContain("Apply verified bank change");
 });

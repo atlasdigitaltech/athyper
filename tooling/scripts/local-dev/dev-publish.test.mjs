@@ -5,6 +5,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parsePublishArguments } from "./dev-publish.mjs";
 import { configureDevPublication } from "./dev-workspace.mjs";
+test("tenant setup is explicit and cannot silently retarget publication", () => {
+  assert.equal(parsePublishArguments(["--setup", "--tenant", "athyper"]).tenant, "athyper");
+  assert.equal(parsePublishArguments(["--setup"]).tenant, "cirrusatlantic");
+  assert.throws(() => parsePublishArguments(["--tenant", "athyper", "--dry-run"]));
+  assert.throws(() => parsePublishArguments(["--setup", "--tenant", "all"]));
+  assert.throws(() => parsePublishArguments(["--setup", "--tenant", "athyper", "--tenant", "cirrusatlantic"]));
+});
 test("CLI accepts loopback turbo but never remote credential destinations", () => {
   assert.equal(parsePublishArguments(["--dry-run"]).dryRun, true);
   assert.equal(

@@ -1,60 +1,465 @@
+import {
+  renderEntityNotification,
+  type EntityNotificationRoute,
+} from "./entity-notification-routing.js";
 import { sql, type Transaction } from "kysely";
 import type { ChannelConsentService } from "@athyper/server-contract-governance";
-import type { NotificationChannel, NotificationPlanner, NotificationPlanningResult, NotificationSourceEvent } from "@athyper/server-contract-notifications";
+import type {
+  NotificationChannel,
+  NotificationPlanner,
+  NotificationPlanningResult,
+  NotificationSourceEvent,
+} from "@athyper/server-contract-notifications";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
-import { assertAttachmentReference, assertNotificationSource, evaluatesCondition, isUuid, recipientPrincipalIds, renderNotificationTemplate, retryAttempts, stableHash, type NotificationTemplate } from "./notification-planning-support.js";
+import {
+  assertAttachmentReference,
+  assertNotificationSource,
+  evaluatesCondition,
+  isUuid,
+  recipientPrincipalIds,
+  renderNotificationTemplate,
+  retryAttempts,
+  stableHash,
+  type NotificationTemplate,
+} from "./notification-planning-support.js";
 
 type Tx = Transaction<Record<string, never>>;
-interface Rule { readonly id: string; readonly code: string; readonly entity_type: string | null; readonly lifecycle_state: string | null; readonly template_key: string; readonly channels: readonly NotificationChannel[]; readonly priority: string; readonly digest_frequency: string | null; readonly recipient_rules: unknown; readonly condition_expr: unknown; }
-interface Planned { readonly principalId: string | null; readonly address: string; readonly channel: NotificationChannel; readonly frequency: string | null; readonly template: NotificationTemplate; readonly rendered: Readonly<Record<string, unknown>>; }
+interface Rule {
+  readonly id: string | null;
+  readonly entityRoute?: EntityNotificationRoute;
+  readonly code: string;
+  readonly entity_type: string | null;
+  readonly lifecycle_state: string | null;
+  readonly template_key: string;
+  readonly channels: readonly NotificationChannel[];
+  readonly priority: string;
+  readonly digest_frequency: string | null;
+  readonly recipient_rules: unknown;
+  readonly condition_expr: unknown;
+}
+interface Planned {
+  readonly principalId: string | null;
+  readonly address: string;
+  readonly channel: NotificationChannel;
+  readonly frequency: string | null;
+  readonly template: NotificationTemplate;
+  readonly rendered: Readonly<Record<string, unknown>>;
+}
 
 export interface NotificationPlanningPolicy {
   immediate?(source: NotificationSourceEvent): boolean;
-  forRecipient?(source: NotificationSourceEvent, principalId: string, transaction: Tx, work: () => Promise<void>): Promise<void>;
-  prepare(source: NotificationSourceEvent, transaction: Tx): Promise<NotificationSourceEvent | null>;
-  authorizeRecipient(source: NotificationSourceEvent, principalId: string, channel: NotificationChannel, transaction: Tx): Promise<boolean>;
+  forRecipient?(
+    source: NotificationSourceEvent,
+    principalId: string,
+    transaction: Tx,
+    work: () => Promise<void>,
+  ): Promise<void>;
+  prepare(
+    source: NotificationSourceEvent,
+    transaction: Tx,
+  ): Promise<NotificationSourceEvent | null>;
+  authorizeRecipient(
+    source: NotificationSourceEvent,
+    principalId: string,
+    channel: NotificationChannel,
+    transaction: Tx,
+  ): Promise<boolean>;
 }
-export function createNotificationPlanner(options: { readonly transactions: PlaneTransactionCoordinator<Tx>; readonly consent:ChannelConsentService<Tx>; readonly policy?: NotificationPlanningPolicy }): NotificationPlanner {
-  return { async plan(source) { assertNotificationSource(source); return options.transactions.run(source.planeKey, { tenantId: source.tenantId, principalId: source.actorPrincipalId }, async (tx) => {
-    const prepared = options.policy ? await options.policy.prepare(source, tx) : source;
-    return prepared ? plan(tx, prepared, options.consent, options.policy) : {matchedRules:0,messages:0,deliveries:0,digests:0};
-  }); } };
+export function createNotificationPlanner(options: {
+  readonly transactions: PlaneTransactionCoordinator<Tx>;
+  readonly consent: ChannelConsentService<Tx>;
+  readonly policy?: NotificationPlanningPolicy;
+  readonly entityRoute?: (
+    source: NotificationSourceEvent,
+    tx: Tx,
+  ) => Promise<EntityNotificationRoute | null | undefined>;
+}): NotificationPlanner {
+  return {
+    async plan(source) {
+      assertNotificationSource(source);
+      return options.transactions.run(
+        source.planeKey,
+        { tenantId: source.tenantId, principalId: source.actorPrincipalId },
+        async (tx) => {
+          const prepared = options.policy
+            ? await options.policy.prepare(source, tx)
+            : source;
+          if (!prepared)
+            return { matchedRules: 0, messages: 0, deliveries: 0, digests: 0 };
+          const route = await options.entityRoute?.(prepared, tx);
+          if (route === null)
+            return { matchedRules: 0, messages: 0, deliveries: 0, digests: 0 };
+          const routed = route
+            ? {
+                ...prepared,
+                entityType: route.parentEntityCode,
+                entityId: route.parentRecordId,
+                attachments:
+                  route.rule.attachmentMode === "none"
+                    ? []
+                    : (prepared.attachments ?? []).map((a) => ({
+                        ...a,
+                        requestedDisposition: route.rule.attachmentMode as
+                          "link" | "embed",
+                      })),
+                payload: {
+                  ...prepared.payload,
+                  notification_event_code: prepared.eventCode,
+                  parent_entity_code: route.parentEntityCode,
+                  parent_record_id: route.parentRecordId,
+                  resource_id: route.resourceId,
+                },
+              }
+            : prepared;
+          return plan(tx, routed, options.consent, options.policy, route);
+        },
+      );
+    },
+  };
 }
 
-async function plan(tx: Tx, source: NotificationSourceEvent,consent:ChannelConsentService<Tx>,policy?:NotificationPlanningPolicy): Promise<NotificationPlanningResult> {
-  const rules = await loadRules(tx, source); let messages = 0; let deliveries = 0; let digests = 0;
+async function plan(
+  tx: Tx,
+  source: NotificationSourceEvent,
+  consent: ChannelConsentService<Tx>,
+  policy?: NotificationPlanningPolicy,
+  route?: EntityNotificationRoute,
+): Promise<NotificationPlanningResult> {
+  const rules: readonly Rule[] = route
+    ? [
+        {
+          id: null,
+          code: `entity.${route.capability}.${source.eventCode}`,
+          entityRoute: route,
+          entity_type: route.parentEntityCode,
+          lifecycle_state: null,
+          template_key: route.rule.templates[0]!.key,
+          channels: route.rule.channels,
+          priority: "normal",
+          digest_frequency: null,
+          recipient_rules:
+            route.rule.recipients === "actor"
+              ? { actor: true }
+              : { principal_paths: ["recipient_principal_ids"] },
+          condition_expr: null,
+        },
+      ]
+    : await loadRules(tx, source);
+  let messages = 0;
+  let deliveries = 0;
+  let digests = 0;
   for (const rule of rules) {
     if (!matches(rule, source)) continue;
-    const planned = await planRule(tx, source, rule,consent,policy);
+    const planned = await planRule(tx, source, rule, consent, policy);
     if (!planned.length) continue;
     const messageId = await insertMessage(tx, source, rule, planned);
     if (!messageId) continue;
-    await insertAttachments(tx, source, messageId); messages += 1;
+    await insertAttachments(tx, source, messageId);
+    messages += 1;
     for (const item of planned) {
-      if (item.frequency && item.principalId) { await insertDigest(tx, source, rule, item, messageId); digests += 1; continue; }
-      await insertDelivery(tx, source, rule, item, messageId); deliveries += 1;
+      if (item.frequency && item.principalId) {
+        await insertDigest(tx, source, rule, item, messageId);
+        digests += 1;
+        continue;
+      }
+      await insertDelivery(tx, source, rule, item, messageId);
+      deliveries += 1;
     }
-    if (planned.every((item) => item.frequency !== null)) await sql`UPDATE event.notification_message SET status='completed',completed_at=now(),updated_at=now(),updated_by=${source.actorPrincipalId}::uuid WHERE tenant_id=${source.tenantId}::uuid AND id=${messageId}::uuid`.execute(tx);
+    if (planned.every((item) => item.frequency !== null))
+      await sql`UPDATE event.notification_message SET status='completed',completed_at=now(),updated_at=now(),updated_by=${source.actorPrincipalId}::uuid WHERE tenant_id=${source.tenantId}::uuid AND id=${messageId}::uuid`.execute(
+        tx,
+      );
   }
   return { matchedRules: rules.length, messages, deliveries, digests };
 }
 
-function matches(rule: Rule, source: NotificationSourceEvent): boolean { return (!rule.entity_type || rule.entity_type === source.entityType) && (!rule.lifecycle_state || rule.lifecycle_state === source.lifecycleState) && evaluatesCondition(rule.condition_expr, source.payload); }
-async function planRule(tx: Tx, source: NotificationSourceEvent, rule: Rule,consent:ChannelConsentService<Tx>,policy?:NotificationPlanningPolicy): Promise<Planned[]> {
-  const planned: Planned[] = []; const principals = recipientPrincipalIds(rule.recipient_rules, source);
-  for (const channel of rule.channels) {
-    const template = await loadTemplate(tx, source, rule.template_key, channel); if (!template) continue;
-    const rendered = renderNotificationTemplate(template, source.payload);
-    if (channel === "webhook") { const hooks = await sql<{ id: string; target_url: string }>`SELECT id,target_url FROM event.webhook_subscription WHERE tenant_id=${source.tenantId}::uuid AND is_active AND (${source.eventCode}=ANY(topics) OR cardinality(topics)=0)`.execute(tx); for (const hook of hooks.rows) planned.push({ principalId: null, address: hook.target_url, channel, frequency: null, template, rendered: { ...rendered, subscriptionId: hook.id } }); continue; }
-    for (const principalId of principals) { const work=async()=>{ if(policy && !await policy.authorizeRecipient(source,principalId,channel,tx))return; const preference = await preferenceFor(tx, source, principalId, channel); if (preference.enabled === false) return; const address = await addressFor(tx, source, principalId, channel); if (address && (channel === "in_app" || (await consent.checkAt({planeKey:source.planeKey,tenantId:source.tenantId,subjectType:"principal",subjectId:principalId,channel,destination:address,at:source.occurredAt??new Date().toISOString()},tx))?.consented===true)) planned.push({ principalId, address, channel, frequency: policy?.immediate?.(source) ? null : preference.frequency ?? rule.digest_frequency, template, rendered }); }; if(policy?.forRecipient)await policy.forRecipient(source,principalId,tx,work);else await work(); }
+function matches(rule: Rule, source: NotificationSourceEvent): boolean {
+  return (
+    (!rule.entity_type || rule.entity_type === source.entityType) &&
+    (!rule.lifecycle_state || rule.lifecycle_state === source.lifecycleState) &&
+    evaluatesCondition(rule.condition_expr, source.payload)
+  );
+}
+async function planRule(
+  tx: Tx,
+  source: NotificationSourceEvent,
+  rule: Rule,
+  consent: ChannelConsentService<Tx>,
+  policy?: NotificationPlanningPolicy,
+): Promise<Planned[]> {
+  const planned: Planned[] = [];
+  const principals =
+    rule.entityRoute?.rule.recipients === "actor"
+      ? [source.actorPrincipalId]
+      : recipientPrincipalIds(rule.recipient_rules, source).filter(
+          (id) => !rule.entityRoute || id !== source.actorPrincipalId,
+        );
+  for (const channel of [...rule.channels].sort()) {
+    const entityRendered = rule.entityRoute
+      ? renderEntityNotification(rule.entityRoute, channel, source)
+      : undefined;
+    const template: NotificationTemplate | null = entityRendered
+      ? {
+          version: entityRendered.template.version,
+          subject: null,
+          body_text: null,
+          body_html: null,
+          body_json: null,
+          variables_schema: null,
+        }
+      : await loadTemplate(tx, source, rule.template_key, channel);
+    if (!template) continue;
+    const rendered =
+      entityRendered?.rendered ??
+      renderNotificationTemplate(template, source.payload);
+    if (channel === "webhook") {
+      if (rule.entityRoute) continue;
+      const hooks = await sql<{
+        id: string;
+        target_url: string;
+      }>`SELECT id,target_url FROM event.webhook_subscription WHERE tenant_id=${source.tenantId}::uuid AND is_active AND (${source.eventCode}=ANY(topics) OR cardinality(topics)=0)`.execute(
+        tx,
+      );
+      for (const hook of hooks.rows)
+        planned.push({
+          principalId: null,
+          address: hook.target_url,
+          channel,
+          frequency: null,
+          template,
+          rendered: { ...rendered, subscriptionId: hook.id },
+        });
+      continue;
+    }
+    for (const principalId of [...principals].sort()) {
+      const work = async () => {
+        if (
+          policy &&
+          !(await policy.authorizeRecipient(source, principalId, channel, tx))
+        )
+          return;
+        if (
+          rule.entityRoute &&
+          (await alreadyNotified(tx, source, rule, principalId, channel))
+        )
+          return;
+        const preference = await preferenceFor(
+          tx,
+          source,
+          principalId,
+          channel,
+        );
+        if (preference.enabled === false) return;
+        const address = await addressFor(tx, source, principalId, channel);
+        if (
+          address &&
+          (channel === "in_app" ||
+            (
+              await consent.checkAt(
+                {
+                  planeKey: source.planeKey,
+                  tenantId: source.tenantId,
+                  subjectType: "principal",
+                  subjectId: principalId,
+                  channel,
+                  destination: address,
+                  at: source.occurredAt ?? new Date().toISOString(),
+                },
+                tx,
+              )
+            )?.consented === true)
+        )
+          planned.push({
+            principalId,
+            address,
+            channel,
+            frequency: policy?.immediate?.(source)
+              ? null
+              : (preference.frequency ?? rule.digest_frequency),
+            template,
+            rendered,
+          });
+      };
+      if (policy?.forRecipient)
+        await policy.forRecipient(source, principalId, tx, work);
+      else await work();
+    }
   }
   return planned;
 }
-async function loadRules(tx: Tx, source: NotificationSourceEvent): Promise<readonly Rule[]> { return (await sql<Rule>`SELECT id,code,entity_type,lifecycle_state,template_key,channels,priority,digest_frequency,recipient_rules,condition_expr FROM (SELECT DISTINCT ON (code) * FROM control.notification_routing_rule WHERE event_type=${source.eventCode} AND (tenant_id IS NULL OR tenant_id=${source.tenantId}::uuid) ORDER BY code,tenant_id NULLS LAST) selected WHERE is_enabled ORDER BY sort_order,code`.execute(tx)).rows; }
-async function loadTemplate(tx: Tx, source: NotificationSourceEvent, key: string, channel: NotificationChannel): Promise<NotificationTemplate | null> { const locale = source.locale ?? "en"; return (await sql<NotificationTemplate>`SELECT version,subject,body_text,body_html,body_json,variables_schema FROM control.notification_template WHERE template_key=${key} AND channel=${channel} AND status='active' AND (tenant_id IS NULL OR tenant_id=${source.tenantId}::uuid) AND locale IN (${locale},'en') ORDER BY (tenant_id IS NOT NULL) DESC,(locale=${locale}) DESC,version DESC LIMIT 1`.execute(tx)).rows[0] ?? null; }
-async function preferenceFor(tx: Tx, source: NotificationSourceEvent, principalId: string, channel: NotificationChannel) { const row = (await sql<{ is_enabled: boolean | null; frequency_code: string | null }>`SELECT is_enabled,frequency_code FROM master.principal_notification_preference WHERE tenant_id=${source.tenantId}::uuid AND principal_id=${principalId}::uuid AND event_code=${source.eventCode} AND channel=${channel} AND status='active' LIMIT 1`.execute(tx)).rows[0]; return { enabled: row?.is_enabled ?? null, frequency: row?.frequency_code ?? null }; }
-async function addressFor(tx: Tx, source: NotificationSourceEvent, principalId: string, channel: NotificationChannel): Promise<string | null> { if (channel === "in_app" || channel === "push") return principalId; if (channel === "whatsapp") return (await sql<{ phone_e164: string }>`SELECT phone_e164 FROM event.whatsapp_consent WHERE tenant_id=${source.tenantId}::uuid AND principal_id=${principalId}::uuid AND consent_status='opted_in' ORDER BY consented_at DESC LIMIT 1`.execute(tx)).rows[0]?.phone_e164 ?? null; const types = channel === "email" ? ["email"] : ["sms", "phone"]; return (await sql<{ value: string }>`SELECT link.value FROM master.contact_link link JOIN control.owner_type owner ON owner.id=link.owner_type_id WHERE link.tenant_id=${source.tenantId}::uuid AND link.owner_id=${principalId}::uuid AND owner.code='principal' AND link.status='active' AND link.effective_from<=now() AND (link.effective_until IS NULL OR link.effective_until>now()) AND link.channel_type=ANY(${types}::text[]) ORDER BY link.is_verified DESC,link.is_primary DESC,link.created_at LIMIT 1`.execute(tx)).rows[0]?.value ?? null; }
-async function insertMessage(tx: Tx, source: NotificationSourceEvent, rule: Rule, planned: readonly Planned[]): Promise<string | null> { const eventId = stableHash(`${source.id}:${rule.id}`); const immediate = planned.filter((item) => item.frequency === null).length; const result = await sql<{ id: string }>`INSERT INTO event.notification_message (tenant_id,plane_key,event_id,event_code,rule_id,entity_type,entity_id,template_key,template_version,subject,payload,priority,channels,recipient_count,status,correlation_id,metadata,created_by) VALUES (${source.tenantId}::uuid,${source.planeKey},${eventId},${source.eventCode},${rule.id}::uuid,${source.entityType ?? null},${isUuid(source.entityId) ? source.entityId : null}::uuid,${rule.template_key},${Math.max(...planned.map((item) => item.template.version))},${planned[0]?.rendered["subject"] ?? null},${JSON.stringify(source.payload)}::jsonb,${rule.priority},${[...new Set(planned.map((item) => item.channel))]}::text[],${immediate},'pending',${isUuid(source.correlationId) ? source.correlationId : null}::uuid,${JSON.stringify({ source_event_id: source.id, digest_recipient_count: planned.length - immediate })}::jsonb,${source.actorPrincipalId}::uuid) ON CONFLICT (tenant_id,plane_key,event_id) DO NOTHING RETURNING id`.execute(tx); if (result.rows[0]) return result.rows[0].id; return (await sql<{ id: string }>`SELECT id FROM event.notification_message WHERE tenant_id=${source.tenantId}::uuid AND plane_key=${source.planeKey} AND event_id=${eventId}`.execute(tx)).rows[0]?.id ?? null; }
-async function insertAttachments(tx: Tx, source: NotificationSourceEvent, messageId: string): Promise<void> { for (const [sortOrder, reference] of (source.attachments ?? []).entries()) { assertAttachmentReference(reference); await sql`INSERT INTO event.notification_message_attachment (tenant_id,message_id,attachment_id,attachment_version_id,version_policy,requested_disposition,is_required,display_name,sort_order,created_by) VALUES (${source.tenantId}::uuid,${messageId}::uuid,${reference.attachmentId}::uuid,${reference.attachmentVersionId ?? null}::uuid,${reference.versionPolicy},${reference.requestedDisposition},${reference.required},${reference.displayName ?? null},${sortOrder},${source.actorPrincipalId}::uuid) ON CONFLICT (tenant_id,message_id,attachment_id,attachment_version_id) DO NOTHING`.execute(tx); } }
-async function insertDigest(tx: Tx, source: NotificationSourceEvent, rule: Rule, item: Planned, messageId: string): Promise<void> { await sql`INSERT INTO event.digest_staging (tenant_id,recipient_id,channel,frequency,message_id,event_code,subject,payload,template_key,priority,metadata,created_by) VALUES (${source.tenantId}::uuid,${item.principalId}::uuid,${item.channel},${item.frequency},${messageId}::uuid,${source.eventCode},${String(item.rendered["subject"] ?? "") || null},${JSON.stringify(item.rendered)}::jsonb,${rule.template_key},${rule.priority},${JSON.stringify({ source_event_id: source.id, recipient_address: item.address })}::jsonb,${source.actorPrincipalId}::uuid) ON CONFLICT DO NOTHING`.execute(tx); }
-async function insertDelivery(tx: Tx, source: NotificationSourceEvent, rule: Rule, item: Planned, messageId: string): Promise<void> { const key = stableHash(`${source.id}:${rule.id}:${item.principalId ?? item.address}:${item.channel}`); await sql`INSERT INTO event.notification_delivery (tenant_id,message_id,recipient_id,recipient_addr,channel,status,max_attempts,idempotency_key,subscription_id,channel_detail,metadata,created_by) VALUES (${source.tenantId}::uuid,${messageId}::uuid,${item.principalId}::uuid,${item.address},${item.channel},'pending',${retryAttempts(rule.priority)},${key},${typeof item.rendered["subscriptionId"] === "string" ? item.rendered["subscriptionId"] : null}::uuid,${JSON.stringify(item.rendered)}::jsonb,${JSON.stringify({ source_event_id: source.id })}::jsonb,${source.actorPrincipalId}::uuid) ON CONFLICT (tenant_id,idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING`.execute(tx); }
+async function loadRules(
+  tx: Tx,
+  source: NotificationSourceEvent,
+): Promise<readonly Rule[]> {
+  return (
+    await sql<Rule>`SELECT id,code,entity_type,lifecycle_state,template_key,channels,priority,digest_frequency,recipient_rules,condition_expr FROM (SELECT DISTINCT ON (code) * FROM control.notification_routing_rule WHERE event_type=${source.eventCode} AND (tenant_id IS NULL OR tenant_id=${source.tenantId}::uuid) ORDER BY code,tenant_id NULLS LAST) selected WHERE is_enabled ORDER BY sort_order,code`.execute(
+      tx,
+    )
+  ).rows;
+}
+async function loadTemplate(
+  tx: Tx,
+  source: NotificationSourceEvent,
+  key: string,
+  channel: NotificationChannel,
+): Promise<NotificationTemplate | null> {
+  const locale = source.locale ?? "en";
+  return (
+    (
+      await sql<NotificationTemplate>`SELECT version,subject,body_text,body_html,body_json,variables_schema FROM control.notification_template WHERE template_key=${key} AND channel=${channel} AND status='active' AND (tenant_id IS NULL OR tenant_id=${source.tenantId}::uuid) AND locale IN (${locale},'en') ORDER BY (tenant_id IS NOT NULL) DESC,(locale=${locale}) DESC,version DESC LIMIT 1`.execute(
+        tx,
+      )
+    ).rows[0] ?? null
+  );
+}
+async function preferenceFor(
+  tx: Tx,
+  source: NotificationSourceEvent,
+  principalId: string,
+  channel: NotificationChannel,
+) {
+  const row = (
+    await sql<{
+      is_enabled: boolean | null;
+      frequency_code: string | null;
+    }>`SELECT is_enabled,frequency_code FROM master.principal_notification_preference WHERE tenant_id=${source.tenantId}::uuid AND principal_id=${principalId}::uuid AND event_code=${source.eventCode} AND channel=${channel} AND status='active' LIMIT 1`.execute(
+      tx,
+    )
+  ).rows[0];
+  return {
+    enabled: row?.is_enabled ?? null,
+    frequency: row?.frequency_code ?? null,
+  };
+}
+async function addressFor(
+  tx: Tx,
+  source: NotificationSourceEvent,
+  principalId: string,
+  channel: NotificationChannel,
+): Promise<string | null> {
+  if (channel === "in_app" || channel === "push") return principalId;
+  if (channel === "whatsapp")
+    return (
+      (
+        await sql<{
+          phone_e164: string;
+        }>`SELECT phone_e164 FROM event.whatsapp_consent WHERE tenant_id=${source.tenantId}::uuid AND principal_id=${principalId}::uuid AND consent_status='opted_in' ORDER BY consented_at DESC LIMIT 1`.execute(
+          tx,
+        )
+      ).rows[0]?.phone_e164 ?? null
+    );
+  const types = channel === "email" ? ["email"] : ["sms", "phone"];
+  return (
+    (
+      await sql<{
+        value: string;
+      }>`SELECT link.value FROM master.contact_link link JOIN control.owner_type owner ON owner.id=link.owner_type_id WHERE link.tenant_id=${source.tenantId}::uuid AND link.owner_id=${principalId}::uuid AND owner.code='principal' AND link.status='active' AND link.effective_from<=now() AND (link.effective_until IS NULL OR link.effective_until>now()) AND link.channel_type=ANY(${types}::text[]) ORDER BY link.is_verified DESC,link.is_primary DESC,link.created_at LIMIT 1`.execute(
+        tx,
+      )
+    ).rows[0]?.value ?? null
+  );
+}
+async function insertMessage(
+  tx: Tx,
+  source: NotificationSourceEvent,
+  rule: Rule,
+  planned: readonly Planned[],
+): Promise<string | null> {
+  const eventId = stableHash(`${source.id}:${rule.id ?? rule.code}`);
+  const immediate = planned.filter((item) => item.frequency === null).length;
+  const result = await sql<{
+    id: string;
+  }>`INSERT INTO event.notification_message (tenant_id,plane_key,event_id,event_code,rule_id,entity_type,entity_id,template_key,template_version,subject,payload,priority,channels,recipient_count,status,correlation_id,metadata,created_by) VALUES (${source.tenantId}::uuid,${source.planeKey},${eventId},${source.eventCode},${rule.id}::uuid,${source.entityType ?? null},${isUuid(source.entityId) ? source.entityId : null}::uuid,${rule.template_key},${Math.max(...planned.map((item) => item.template.version))},${planned[0]?.rendered["subject"] ?? null},${JSON.stringify(source.payload)}::jsonb,${rule.priority},${[...new Set(planned.map((item) => item.channel))]}::text[],${immediate},'pending',${isUuid(source.correlationId) ? source.correlationId : null}::uuid,${JSON.stringify({ source_event_id: source.id, digest_recipient_count: planned.length - immediate, ...(rule.entityRoute ? { policy_release_id: rule.entityRoute.releaseId, parent_entity_code: rule.entityRoute.parentEntityCode, parent_record_id: rule.entityRoute.parentRecordId, resource_id: rule.entityRoute.resourceId } : {}) })}::jsonb,${source.actorPrincipalId}::uuid) ON CONFLICT (tenant_id,plane_key,event_id) DO NOTHING RETURNING id`.execute(
+    tx,
+  );
+  if (result.rows[0]) return result.rows[0].id;
+  return (
+    (
+      await sql<{
+        id: string;
+      }>`SELECT id FROM event.notification_message WHERE tenant_id=${source.tenantId}::uuid AND plane_key=${source.planeKey} AND event_id=${eventId}`.execute(
+        tx,
+      )
+    ).rows[0]?.id ?? null
+  );
+}
+async function insertAttachments(
+  tx: Tx,
+  source: NotificationSourceEvent,
+  messageId: string,
+): Promise<void> {
+  for (const [sortOrder, reference] of (source.attachments ?? []).entries()) {
+    assertAttachmentReference(reference);
+    await sql`INSERT INTO event.notification_message_attachment (tenant_id,message_id,attachment_id,attachment_version_id,version_policy,requested_disposition,is_required,display_name,sort_order,created_by) VALUES (${source.tenantId}::uuid,${messageId}::uuid,${reference.attachmentId}::uuid,${reference.attachmentVersionId ?? null}::uuid,${reference.versionPolicy},${reference.requestedDisposition},${reference.required},${reference.displayName ?? null},${sortOrder},${source.actorPrincipalId}::uuid) ON CONFLICT (tenant_id,message_id,attachment_id,attachment_version_id) DO NOTHING`.execute(
+      tx,
+    );
+  }
+}
+async function insertDigest(
+  tx: Tx,
+  source: NotificationSourceEvent,
+  rule: Rule,
+  item: Planned,
+  messageId: string,
+): Promise<void> {
+  await sql`INSERT INTO event.digest_staging (tenant_id,recipient_id,channel,frequency,message_id,event_code,subject,payload,template_key,priority,metadata,created_by) VALUES (${source.tenantId}::uuid,${item.principalId}::uuid,${item.channel},${item.frequency},${messageId}::uuid,${source.eventCode},${String(item.rendered["subject"] ?? "") || null},${JSON.stringify(item.rendered)}::jsonb,${rule.template_key},${rule.priority},${JSON.stringify({ source_event_id: source.id, recipient_address: item.address })}::jsonb,${source.actorPrincipalId}::uuid) ON CONFLICT DO NOTHING`.execute(
+    tx,
+  );
+}
+async function insertDelivery(
+  tx: Tx,
+  source: NotificationSourceEvent,
+  rule: Rule,
+  item: Planned,
+  messageId: string,
+): Promise<void> {
+  const key = stableHash(
+    `${source.id}:${rule.id ?? rule.code}:${item.principalId ?? item.address}:${item.channel}`,
+  );
+  await sql`INSERT INTO event.notification_delivery (tenant_id,message_id,recipient_id,recipient_addr,channel,status,max_attempts,idempotency_key,subscription_id,channel_detail,metadata,created_by) VALUES (${source.tenantId}::uuid,${messageId}::uuid,${item.principalId}::uuid,${item.address},${item.channel},'pending',${retryAttempts(rule.priority)},${key},${typeof item.rendered["subscriptionId"] === "string" ? item.rendered["subscriptionId"] : null}::uuid,${JSON.stringify(item.rendered)}::jsonb,${JSON.stringify({ source_event_id: source.id, ...(rule.entityRoute ? { dedup_key: entityDedupKey(source, rule, item.principalId ?? item.address, item.channel) } : {}) })}::jsonb,${source.actorPrincipalId}::uuid) ON CONFLICT (tenant_id,idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING`.execute(
+    tx,
+  );
+}
+
+function entityDedupKey(
+  source: NotificationSourceEvent,
+  rule: Rule,
+  principalId: string,
+  channel: NotificationChannel,
+): string {
+  const route = rule.entityRoute!;
+  return stableHash(
+    JSON.stringify([
+      source.tenantId,
+      source.planeKey,
+      route.parentEntityCode,
+      route.parentRecordId,
+      route.resourceId,
+      source.eventCode,
+      principalId,
+      channel,
+    ]),
+  );
+}
+async function alreadyNotified(
+  tx: Tx,
+  source: NotificationSourceEvent,
+  rule: Rule,
+  principalId: string,
+  channel: NotificationChannel,
+): Promise<boolean> {
+  const window = rule.entityRoute!.rule.dedupWindowMs;
+  if (!window) return false;
+  const key = entityDedupKey(source, rule, principalId, channel);
+  // Serialize competing planner transactions for the same audience/channel.
+  await sql`SELECT pg_advisory_xact_lock(hashtextextended(${key},0))`.execute(
+    tx,
+  );
+  return (
+    (
+      await sql`SELECT 1 FROM event.notification_delivery WHERE tenant_id=${source.tenantId}::uuid AND metadata ? 'dedup_key' AND metadata->>'dedup_key'=${key} AND created_at>clock_timestamp()-${window}*interval '1 millisecond' AND status<>'cancelled' LIMIT 1`.execute(
+        tx,
+      )
+    ).rows.length > 0
+  );
+}

@@ -69,11 +69,13 @@ export function createBusinessPartnerRequestService<Transaction>(
     async preflightCreate(command) {
       assertContext(command.context);
       validateCreate(command);
+      if (command.proposedPayload["partnerCategory"] === "person")
+        await authorize(options.authorizer, command.context, "neon.relationship.business_partner_person.read", { tenantId: command.context.tenantId });
       await options.validateBusinessContext?.(command);
       await authorize(
         options.authorizer,
         command.context,
-        businessPartnerRequestPermissions.create,
+        casePermission(command,"create"),
         {
           ...scope(command.operatingOrganizationId, command.companyCodeId),
           entityCode: "entity_case",
@@ -87,6 +89,11 @@ export function createBusinessPartnerRequestService<Transaction>(
           "BUSINESS_PARTNER_DRAFT_VALIDATOR_UNAVAILABLE",
           "Draft validation is unavailable",
         );
+      if (command.proposedPayload["childActivation"] !== undefined)
+        await authorize(options.authorizer, command.context, "neon.relationship.business_partner.read", {
+          businessPartnerId: command.targetBusinessPartnerId,
+          ...scope(command.operatingOrganizationId, command.companyCodeId),
+        });
       await options.validateIntake?.(command);
       const schema = await options.schemas.resolve({
         context: command.context,
@@ -143,11 +150,18 @@ export function createBusinessPartnerRequestService<Transaction>(
     async create(command) {
       assertContext(command.context);
       validateCreate(command);
+      if (command.proposedPayload["partnerCategory"] === "person")
+        await authorize(options.authorizer, command.context, "neon.relationship.business_partner_person.read", { tenantId: command.context.tenantId });
+      if (command.proposedPayload["childActivation"] !== undefined)
+        await authorize(options.authorizer, command.context, "neon.relationship.business_partner.read", {
+          businessPartnerId: command.targetBusinessPartnerId,
+          ...scope(command.operatingOrganizationId, command.companyCodeId),
+        });
       await options.validateBusinessContext?.(command);
       await authorize(
         options.authorizer,
         command.context,
-        businessPartnerRequestPermissions.create,
+        casePermission(command,"create"),
         {
           ...scope(command.operatingOrganizationId, command.companyCodeId),
           entityCode: "entity_case",
@@ -199,6 +213,9 @@ export function createBusinessPartnerRequestService<Transaction>(
           );
           if (existing) {
             const matches =
+              command.kind === "new_partner" && !command.requestedRole && options.repository.matchesCoreRegistrationCreation
+                ? await options.repository.matchesCoreRegistrationCreation({context:command.context,command:withoutContext(command),schema,existing},transaction)
+                :
               command.source.kind === "import" &&
               command.kind === "new_partner" &&
               options.repository.matchesGovernedImportCreation
@@ -263,7 +280,7 @@ export function createBusinessPartnerRequestService<Transaction>(
           await authorize(
             options.authorizer,
             query.context,
-            businessPartnerRequestPermissions.read,
+            casePermission(request,"read"),
             caseScope(request),
           );
           return request;
@@ -296,7 +313,7 @@ export function createBusinessPartnerRequestService<Transaction>(
           await authorize(
             options.authorizer,
             query.context,
-            businessPartnerRequestPermissions.read,
+            casePermission(view.request,"read"),
             caseScope(view.request),
           );
           if (
@@ -365,7 +382,7 @@ export function createBusinessPartnerRequestService<Transaction>(
           await authorize(
             options.authorizer,
             query.context,
-            businessPartnerRequestPermissions.read,
+            casePermission(view.request,"read"),
             caseScope(view.request),
           );
           const { previousSnapshot: _baseline, ...publicView } = view;
@@ -471,6 +488,8 @@ export function createBusinessPartnerRequestService<Transaction>(
       )
         throw invalid("expectedVersion must be a positive integer");
       validatePayload(command.proposedPayload);
+      if (command.proposedPayload["partnerCategory"] === "person" || command.proposedPayload["personId"] !== undefined)
+        await authorize(options.authorizer, command.context, "neon.relationship.business_partner_person.read", { tenantId: command.context.tenantId });
       if (command.extensions !== undefined)
         validateExtensions(command.extensions,command.draftCapture);
       return options.transactions.run(
@@ -517,16 +536,19 @@ export function createBusinessPartnerRequestService<Transaction>(
           const organizationId =
             command.operatingOrganizationId ?? current.operatingOrganizationId;
           // An unchanged owning scope was already authorized against the stored case.
-          // Proposed ownership changes still require the separate target-scope check.
+          // The published update operation admits existing cases only. Scope
+          // changes additionally require create authority at the proposed target;
+          // never reinterpret an existing-target update binding as proposed.
           if (organizationId !== current.operatingOrganizationId ||
               (command.companyCodeId !== undefined && (command.companyCodeId ?? undefined) !== current.companyCodeId))
           await authorize(
             options.authorizer,
             command.context,
-            businessPartnerRequestPermissions.update,
+            businessPartnerRequestPermissions.create,
             {
-              ...caseScope(current),
-              operationKey: "update",
+              tenantId: current.tenantId,
+              entityCode: "entity_case",
+              operationKey: "create",
               ...scope(
                 organizationId,
                 command.companyCodeId === undefined
@@ -540,6 +562,17 @@ export function createBusinessPartnerRequestService<Transaction>(
               authorizationTarget: "proposed",
             },
           );
+          if (organizationId !== current.operatingOrganizationId ||
+              (command.companyCodeId !== undefined && (command.companyCodeId ?? undefined) !== current.companyCodeId)) {
+            await options.validateBusinessContext?.({
+              context: command.context, kind: current.kind, source: current.source,
+              requestedRole: command.requestedRole ?? current.requestedRole,
+              operatingOrganizationId: organizationId,
+              companyCodeId: command.companyCodeId === undefined ? current.companyCodeId : command.companyCodeId ?? undefined,
+              proposedPayload: { ...current.proposedPayload, ...command.proposedPayload },
+              idempotencyKey: `context-validation:${current.id}:${command.expectedVersion}`,
+            });
+          }
           validateSupplierOnboardingRequirement({ ...current, requestedRole: command.requestedRole ?? current.requestedRole, proposedPayload: { ...current.proposedPayload, ...command.proposedPayload } }, { draft: true, previous: current.proposedPayload, changes: command.proposedPayload });
           await options.validateIntake?.(intakeValidationCommand(command.context, {
             ...current,proposedPayload:{...current.proposedPayload,...command.proposedPayload,...(command.extensions!==undefined?{relationshipProposals:command.extensions}:{})},
@@ -850,7 +883,7 @@ export function createBusinessPartnerRequestService<Transaction>(
           await authorize(
             options.authorizer,
             command.context,
-            businessPartnerRequestPermissions.decide,
+            current.kind === "new_partner" && !current.requestedRole ? "neon.business_partner_registration.decide" : businessPartnerRequestPermissions.decide,
             {
               ...caseScope(current),
               tenantId: current.tenantId,
@@ -933,7 +966,7 @@ export function createBusinessPartnerRequestService<Transaction>(
           await authorize(
             options.authorizer,
             command.context,
-            businessPartnerRequestPermissions.apply,
+            casePermission(current,"apply"),
             {
               ...caseScope(current),
               tenantId: current.tenantId,
@@ -1097,9 +1130,7 @@ async function authorizeCaseMutation(
   await authorize(
     authorizer,
     context,
-    action === "validate"
-      ? businessPartnerRequestPermissions.validate
-      : businessPartnerRequestPermissions.submit,
+    casePermission(request,action),
     {
       ...caseScope(request),
       ...(action === "submit"
@@ -1122,15 +1153,17 @@ function assertContext(context: VerifiedRequestContext): void {
     );
 }
 function validateCreate(command: CreateBusinessPartnerRequestCommand): void {
+  if (command.kind === "change_bank")
+    throw new MasterDataError(410, "BUSINESS_PARTNER_BANK_VERIFICATION_RETIRED",
+      "Bank verification cases are retired. Capture partner bank facts through protected bank registration.");
   const commercial = [
-    "new_partner",
     "add_supplier",
     "add_customer",
     "assign_organization",
     "configure_company",
     "change_bank",
     "activate_supplier",
-  ].includes(command.kind);
+  ].includes(command.kind) || (command.kind === "new_partner" && Boolean(command.requestedRole));
   if (commercial && !command.operatingOrganizationId)
     throw invalid("operatingOrganizationId is required for commercial scope");
   if (
@@ -1150,10 +1183,25 @@ function validateCreate(command: CreateBusinessPartnerRequestCommand): void {
   if (command.kind === "add_customer" && command.requestedRole !== "customer")
     throw invalid("add_customer requires requestedRole customer");
   if (
-    command.kind === "new_partner" &&
+    command.kind === "new_partner" && command.requestedRole !== undefined &&
     !["supplier", "customer"].includes(command.requestedRole ?? "")
   )
     throw invalid("new_partner requires supplier or customer role");
+  if (command.kind === "new_partner" && !command.requestedRole) {
+    const fields = ["name", "businessPartnerCode", "partnerCategory", "personId", "ownershipClass", "legalClassification", "legalForm", "registrationCountryCode", "incorporationDate", "websiteUrl", "description"];
+    if (command.source.kind !== "manual" || command.operatingOrganizationId || command.companyCodeId || command.extensions || command.draftCapture || Object.keys(command.proposedPayload).some(key => !fields.includes(key)))
+      throw invalid("Role-free registration accepts core identity only, with no company, organization, commercial fields or child capture; declare commodities after registration");
+    if (!["organization", "person"].includes(String(command.proposedPayload["partnerCategory"])) || !["internal", "external"].includes(String(command.proposedPayload["ownershipClass"])))
+      throw invalid("Role-free registration requires an organization/person category and explicit ownership class");
+    if (command.proposedPayload["partnerCategory"] === "person") {
+      if (typeof command.proposedPayload["personId"] !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(command.proposedPayload["personId"]))
+        throw invalid("Person registration requires a tenant-local person reference");
+      if (["legalForm", "registrationCountryCode", "incorporationDate"].some(key => Object.hasOwn(command.proposedPayload, key)))
+        throw invalid("Person registration cannot contain organization identity fields");
+    } else if (command.proposedPayload["personId"] !== undefined) throw invalid("Organization registration cannot contain a person reference");
+    const name=command.proposedPayload["name"];
+    if(typeof name!=="string" || !name.trim() || name.length>320) throw invalid("Role-free registration requires a nonempty partner name of at most 320 characters");
+  }
   if (
     [
       "add_supplier",
@@ -1166,8 +1214,6 @@ function validateCreate(command: CreateBusinessPartnerRequestCommand): void {
     throw invalid(
       "Commercial role onboarding and configuration support only supplier or customer",
     );
-  if (command.kind === "change_bank" && command.requestedRole !== "supplier")
-    throw invalid("change_bank requires requestedRole supplier");
   if (
     command.kind === "activate_supplier" &&
     command.requestedRole !== "supplier"
@@ -1640,7 +1686,7 @@ function assertRoleMaterializable(request: BusinessPartnerRequest): void {
   const supported =
     (request.kind === "new_partner" &&
       (!request.targetBusinessPartnerId || request.status === "applied") &&
-      (request.requestedRole === "supplier" ||
+      (!request.requestedRole || request.requestedRole === "supplier" ||
         request.requestedRole === "customer")) ||
     (request.kind === "add_supplier" &&
       Boolean(request.targetBusinessPartnerId) &&
@@ -1826,7 +1872,9 @@ async function authorize(
   const decision = await authorizer.authorize({
     context,
     permissionCode,
-    resource,
+    // Dedicated native registration authority is not the generic entity_case CRUD binding.
+    // Callers select it only for persisted/core-only new_partner cases; retain ownership and review evidence.
+    resource: permissionCode.startsWith("neon.business_partner_registration.") ? {...Object.fromEntries(Object.entries(resource).filter(([key])=>!["entityCode","operationKey"].includes(key))),tenantId:context.tenantId} : resource,
     observation: {
       entityCode: "business_partner",
       surface: "command",
@@ -1846,6 +1894,11 @@ async function authorize(
       `Permission denied: ${permissionCode}`,
     );
   }
+}
+function casePermission(request: {kind: string; requestedRole?: string}, action: keyof typeof businessPartnerRequestPermissions): string {
+  return request.kind === "new_partner" && !request.requestedRole
+    ? `neon.business_partner_registration.${action === "apply" ? "materialize" : action}`
+    : businessPartnerRequestPermissions[action];
 }
 function scope(
   operatingOrganizationId?: string,
@@ -1894,7 +1947,7 @@ function commandFingerprint(
     requestedRole: command.requestedRole,
     operatingOrganizationId: command.operatingOrganizationId,
     companyCodeId: command.companyCodeId,
-    proposedPayload: command.proposedPayload,
+    proposedPayload: registrationFingerprintPayload(command),
     extensionFingerprint: hash(command.extensions ?? {}),
     schema,
   });
@@ -1908,14 +1961,21 @@ function creationFingerprint(request: BusinessPartnerRequest): string {
     applicantPrincipalId: request.applicantPrincipalId,
     representedPartyName: request.representedPartyName,
     representationEvidenceId: request.representationEvidenceId,
-    targetBusinessPartnerId: request.targetBusinessPartnerId,
+    // Core creation has no target; the materializer later binds the resulting partner.
+    targetBusinessPartnerId: request.kind === "new_partner" && !request.requestedRole && request.targetBusinessPartnerId === request.materializedBusinessPartnerId
+      ? undefined : request.targetBusinessPartnerId,
     requestedRole: request.requestedRole,
     operatingOrganizationId: request.operatingOrganizationId,
     companyCodeId: request.companyCodeId,
-    proposedPayload: request.proposedPayload,
+    proposedPayload: registrationFingerprintPayload(request),
     extensionFingerprint: request.extensionSummary.fingerprint ?? hash({}),
     schema: request.schema,
   });
+}
+function registrationFingerprintPayload(value: Pick<CreateBusinessPartnerRequestCommand, "kind" | "requestedRole" | "proposedPayload">) {
+  return value.kind === "new_partner" && !value.requestedRole
+    ? { registrationChannel: "internal", ...value.proposedPayload }
+    : value.proposedPayload;
 }
 function defaultRegistrationMode(
   sourceKind: CreateBusinessPartnerRequestCommand["source"]["kind"],

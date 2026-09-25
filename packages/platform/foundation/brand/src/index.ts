@@ -1,4 +1,5 @@
 export { ATLAS_MODERN_BRAND, type AtlasModernBrand } from "./atlas-modern";
+export { ATLAS_MONO_BRAND, type AtlasMonoBrand } from "./atlas-mono";
 import { ATLAS_MODERN_BRAND } from "./atlas-modern";
 import presentation from "./plane-presentation.json";
 

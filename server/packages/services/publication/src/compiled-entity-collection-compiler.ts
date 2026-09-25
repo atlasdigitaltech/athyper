@@ -24,8 +24,8 @@ const object = (v: unknown): Record<string, any> =>
 const rows = (v: unknown): Record<string, any>[] =>
   Array.isArray(v) ? v.map(object) : fail();
 
-/** Registered case summary only. Native graph hashes remain provenance; this
- * consumer descriptor receives its own hash before native artifact signing. */
+/** Registered case summary only. Graph hashes remain provenance; this consumer
+ * descriptor is a member of the same compiled release as its UI artifacts. */
 export function compileDocumentCollection(
   native: Record<string, unknown>,
   plane: string,

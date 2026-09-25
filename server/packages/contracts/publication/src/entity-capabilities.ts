@@ -1,4 +1,5 @@
 import { PublicationContractError } from "./errors.js";
+import { parseEntityNotificationConfiguration, compileEntityNotificationConfiguration, type EntityNotificationConfiguration } from "./notification-policy.js";
 import type {
   CompiledEntityArtifactV2,
   CompiledEntityRegistry,
@@ -62,7 +63,9 @@ export function capabilityArtifactMembers(
     else if (member.binding !== undefined)
       fail(entityCode, "disabled capability has policy");
   }
-  return { capabilities, operationBindings };
+  const notificationPolicies = Object.fromEntries(members.flatMap(member => member.declaration.enabled && member.binding?.notifications
+    ? [[member.capabilityKey, compileEntityNotificationConfiguration(member.binding.notifications, member.capabilityKey)]] : []));
+  return { capabilities, operationBindings, ...(Object.keys(notificationPolicies).length ? { notificationPolicies } : {}) };
 }
 export interface CapabilityAction {
   readonly key: string;
@@ -72,6 +75,7 @@ export interface CapabilityAction {
   readonly idempotency: "none" | "required";
 }
 export interface CapabilityBinding {
+  readonly notifications?: EntityNotificationConfiguration;
   readonly schemaVersion: 1;
   readonly serviceKey: string;
   readonly ownerEntityCode: string;
@@ -127,6 +131,7 @@ export interface AttachmentBinding extends CapabilityBinding {
 }
 const kinds = ["comments", "attachments"] as const;
 const base = [
+  "notifications",
   "schemaVersion",
   "serviceKey",
   "ownerEntityCode",
@@ -325,6 +330,10 @@ export function parseCapabilityBinding(
           "processing",
         ];
   const v = object(value, [...base, ...fields], path);
+  if (v.notifications !== undefined) {
+    try { parseEntityNotificationConfiguration(v.notifications, kind); }
+    catch (error) { fail(`${path}.notifications`, error instanceof Error ? error.message : "Invalid notification configuration"); }
+  }
   literal(v.schemaVersion, 1, `${path}.schemaVersion`);
   literal(v.serviceKey, `platform.${kind}.v1`, `${path}.serviceKey`);
   literal(v.ownerEntityCode, entityCode, `${path}.ownerEntityCode`);

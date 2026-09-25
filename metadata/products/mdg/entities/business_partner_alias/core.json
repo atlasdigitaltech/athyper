@@ -59,7 +59,8 @@
         "sourceObject": "master.business_partner_alias",
         "column": "alias_kind"
       },
-      "dataType": "string",
+      "dataType": "enum",
+      "display": {"lookup":{"options":[{"value":"legal","label":{"labelKey":"entity.business_partner_alias.alias_kind.legal","defaultText":"Legal"}},{"value":"trading","label":{"labelKey":"entity.business_partner_alias.alias_kind.trading","defaultText":"Trading"}},{"value":"former","label":{"labelKey":"entity.business_partner_alias.alias_kind.former","defaultText":"Former"}},{"value":"search","label":{"labelKey":"entity.business_partner_alias.alias_kind.search","defaultText":"Search"}}]}},
       "storageType": "text",
       "nullable": false,
       "label": {
@@ -100,6 +101,7 @@
     },
     {
       "key": "country_code",
+      "display": {"lookup":{"code":"shared.country"}},
       "binding": {
         "sourceObject": "master.business_partner_alias",
         "column": "country_code"

@@ -1,3 +1,5 @@
+import { entitySectionDisplay, entityNavigationProvider } from "@athyper/contract-platform-entity-runtime";
+import { isEntityRuntimeKey, isEntityNavigationKey } from "@athyper/contract-platform-entity-runtime";
 import type { CompiledEntityArtifactV2 } from "@athyper/server-contract-publication";
 
 export interface EntityPagePlan {
@@ -24,7 +26,8 @@ export interface EntityPageNavigationPlan {
 export interface EntityPageNavigationTabPlan {
   readonly key: string;
   readonly label: Readonly<{ readonly labelKey: string; readonly defaultText: string }>;
-  readonly provider: "360" | "section";
+  readonly provider: "overview" | "section";
+  readonly sectionDisplay: "continuous" | "selected";
   readonly sectionKeys: readonly string[];
 }
 export interface EntityPageSummaryViewPlan {
@@ -128,18 +131,22 @@ export function planEntityPage(input: {
 function navigationPlan(value: unknown, sections: readonly EntityPageSectionPlan[]): EntityPageNavigationPlan | undefined {
   if (value === undefined) return undefined;
   const raw = record(value) ? value : invalidNavigation();
+  if (!array(raw.tabs).length) throw new TypeError("ENTITY_PAGE_PLAN_NAVIGATION_INVALID");
   const tabs = array(raw.tabs).flatMap((value, index) => {
     if (!record(value)) throw new TypeError(`ENTITY_PAGE_PLAN_NAVIGATION_INVALID:${index}`);
-    const provider = value.provider;
+    const provider = entityNavigationProvider(value.provider);
     const label = localized(value.label);
-    if ((provider !== "360" && provider !== "section") || !label) throw new TypeError(`ENTITY_PAGE_PLAN_NAVIGATION_INVALID:${index}`);
-    const requested = provider === "360" ? array(value.sectionKeys) : [value.sectionKey];
+    if (!provider || !label) throw new TypeError(`ENTITY_PAGE_PLAN_NAVIGATION_INVALID:${index}`);
+    const requested = provider === "overview" || Array.isArray(value.sectionKeys) ? array(value.sectionKeys) : [value.sectionKey];
     const sectionKeys = requested.flatMap((key) => typeof key === "string" && sections.some((section) => section.key === key) ? [key] : []);
     if (!sectionKeys.length) return [];
     if (new Set(sectionKeys).size !== sectionKeys.length) throw new TypeError(`ENTITY_PAGE_PLAN_NAVIGATION_DUPLICATE_SECTION:${index}`);
-    return [Object.freeze({ key: safeNavigationKey(requiredString(value.key, "ENTITY_PAGE_PLAN_NAVIGATION_KEY_INVALID")), label, provider, sectionKeys: Object.freeze(sectionKeys) })];
+    return [Object.freeze({ key: safeNavigationKey(requiredString(value.key, "ENTITY_PAGE_PLAN_NAVIGATION_KEY_INVALID")), label, provider, sectionDisplay: entitySectionDisplay(value.sectionDisplay, provider), sectionKeys: Object.freeze(sectionKeys) })];
   });
-  if (!tabs.length || new Set(tabs.map((tab) => tab.key)).size !== tabs.length || tabs.filter((tab) => tab.provider === "360").length > 1)
+  // Permission filtering may legitimately remove every destination. That is
+  // an empty admitted plan, not malformed published navigation.
+  if (!tabs.length) return undefined;
+  if (new Set(tabs.map((tab) => tab.key)).size !== tabs.length || tabs.filter((tab) => tab.provider === "overview").length > 1)
     throw new TypeError("ENTITY_PAGE_PLAN_NAVIGATION_INVALID");
   return Object.freeze({ tabs: Object.freeze(tabs) });
 }
@@ -173,8 +180,8 @@ function array(value: unknown): readonly unknown[] { return Array.isArray(value)
 function record(value: unknown): value is Readonly<Record<string, unknown>> { return !!value && typeof value === "object" && !Array.isArray(value); }
 function uniqueStrings(values: readonly unknown[]): string[] { return [...new Set(values.filter((value): value is string => typeof value === "string"))]; }
 function requiredString(value: unknown, code: string): string { if (typeof value !== "string" || !value) throw new TypeError(code); return value; }
-function safeKey(value: string): string { if (!/^[A-Za-z][A-Za-z0-9_.-]{0,126}$/.test(value)) throw new TypeError("ENTITY_PAGE_PLAN_SECTION_KEY_INVALID"); return value; }
-function safeNavigationKey(value: string): string { if (value !== "360" && !/^[A-Za-z][A-Za-z0-9_.-]{0,126}$/.test(value)) throw new TypeError("ENTITY_PAGE_PLAN_NAVIGATION_KEY_INVALID"); return value; }
+function safeKey(value: string): string { if (!isEntityRuntimeKey(value)) throw new TypeError("ENTITY_PAGE_PLAN_SECTION_KEY_INVALID"); return value; }
+function safeNavigationKey(value: string): string { if (!isEntityNavigationKey(value)) throw new TypeError("ENTITY_PAGE_PLAN_NAVIGATION_KEY_INVALID"); return value; }
 function safeOperationKey(value: unknown): string { if (typeof value !== "string" || !/^[a-z][a-z0-9_.-]{1,126}$/.test(value)) throw new TypeError("ENTITY_PAGE_PLAN_ACTION_KEY_INVALID"); return value; }
 function safeReference(value: string): string { if (!/^[A-Za-z][A-Za-z0-9_./-]{0,255}\.json$/.test(value) || value.includes("..")) throw new TypeError("ENTITY_PAGE_PLAN_SECTION_REFERENCE_INVALID"); return value; }
 function localized(value: unknown): Readonly<{ readonly labelKey: string; readonly defaultText: string }> | undefined {

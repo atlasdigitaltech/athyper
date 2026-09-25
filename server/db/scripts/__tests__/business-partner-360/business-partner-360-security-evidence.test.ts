@@ -33,16 +33,16 @@ test("P0 security runner executes tenant, scope, collision, rollback and leakage
 test("P0 restricted reveal is one-time, purpose-expiring and permission-epoch bound", async () => {
   const [service, repository, routes, taxClient, bankClient] =
     await Promise.all([
-      read("packages/services/master-data/src/business-partner-360-service.ts"),
+      read("packages/services/master-data/src/business-partner/record/service.ts"),
       read(
-        "packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "packages/services/master-data/src/business-partner/record/repository.ts",
       ),
-      read("packages/services/master-data/src/business-partner-360-routes.ts"),
+      read("packages/services/master-data/src/business-partner/legacy-360/routes.ts"),
       read(
-        "../packages/planes/neon/business-partner/src/360/business-partner-360-section-client.ts",
+        "../packages/planes/neon/entity-extensions/src/business-partner/clients/business-partner-360-section-client.ts",
       ),
       read(
-        "../packages/planes/neon/business-partner/src/360/business-partner-360-commercial-client.ts",
+        "../packages/planes/neon/entity-extensions/src/business-partner/clients/business-partner-360-commercial-client.ts",
       ),
     ]);
   for (const value of [
@@ -68,15 +68,15 @@ test("P0 public and browser-adjacent surfaces remain restricted-value negative",
     exportPrivacy,
     meshDefinition,
   ] = await Promise.all([
-    read("packages/services/master-data/src/business-partner-360-routes.ts"),
+    read("packages/services/master-data/src/business-partner/legacy-360/routes.ts"),
     read(
-      "../packages/planes/neon/business-partner/src/360/business-partner-360.tsx",
+      "../packages/platform/entity/runtime/form-detail/src/record/entity-record-page.tsx",
     ),
     read(
-      "../packages/planes/neon/business-partner/src/360/components/common-section.tsx",
+      "../packages/planes/neon/business-partner/src/protected-values/use-audited-reveal.ts",
     ),
     read(
-      "../packages/planes/neon/business-partner/src/360/components/commercial-controls.tsx",
+      "../packages/planes/neon/business-partner/src/banking/bank-accounts.tsx",
     ),
     read(
       "../packages/planes/neon/workforce/src/index.tsx",
@@ -92,6 +92,12 @@ test("P0 public and browser-adjacent surfaces remain restricted-value negative",
   );
   for (const source of [shell, common, commercial, workforceRequests])
     assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/);
+  // Compatibility sections are retained until browser coverage migrates.
+  for (const path of [
+    "../packages/planes/neon/business-partner/src/360/components/common-section.tsx",
+    "../packages/planes/neon/business-partner/src/360/components/commercial-controls.tsx",
+  ])
+    assert.doesNotMatch(await read(path), /localStorage|sessionStorage|indexedDB/);
   assert.doesNotMatch(workforceRequests, /dateOfBirth|nationalId|passport|compensation|billRate/i);
   assert.match(exportPrivacy, /BUSINESS_PARTNER_EXPORT_WORKFORCE_FORBIDDEN/);
   for (const value of ["person.", "workforce."])

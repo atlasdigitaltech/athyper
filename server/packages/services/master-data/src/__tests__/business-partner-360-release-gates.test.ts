@@ -5,7 +5,7 @@ import {
   type BusinessPartner360ReleaseEvidence,
   BUSINESS_PARTNER_360_APPROVAL_GATES,
   evaluateBusinessPartner360Approvals,
-} from "../business-partner-360-release-gates.js";
+} from "../business-partner/workflow/release-gates";
 const approvals = BUSINESS_PARTNER_360_APPROVAL_GATES.map((gate) => ({
   gate,
   status: "approved" as const,

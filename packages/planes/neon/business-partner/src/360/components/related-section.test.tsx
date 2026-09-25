@@ -32,7 +32,7 @@ vi.mock(
 vi.mock("../business-partner-360-context", () => ({
   useBusinessPartner360: () => ({ summary: mock.summary, roleLens: "all" }),
 }));
-vi.mock("../business-partner-360-section-client", async (importOriginal) => ({
+vi.mock("@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-section-client", async (importOriginal) => ({
   ...(await importOriginal<any>()),
   createBusinessPartner360SectionClient: () => ({ read: mock.read }),
 }));

@@ -136,3 +136,12 @@ describe("notification operations", () => {
     expect(replace).not.toHaveBeenCalled();
   });
 });
+
+it("checks delivery-list permission before reading any tenant rows",async()=>{
+ const list=vi.fn().mockResolvedValue({items:[]});
+ const authorizer={authorize:vi.fn().mockResolvedValue({allowed:false})};
+ const service=createNotificationOperations({authorizer,repository:{list,timeline:vi.fn(),replay:vi.fn()}});
+ await expect(service.list(context)).rejects.toMatchObject({statusCode:403});expect(list).not.toHaveBeenCalled();
+ authorizer.authorize.mockResolvedValue({allowed:true});await expect(service.list(context)).resolves.toEqual({items:[]});
+ expect(list).toHaveBeenCalledWith({context});await expect(service.list(context,"bad cursor")).rejects.toMatchObject({statusCode:400});
+});

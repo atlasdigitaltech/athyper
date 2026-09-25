@@ -34,7 +34,8 @@
     "@athyper/server-foundation": "workspace:*",
     "@athyper/server-platform-metadata": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
-    "kysely": "^0.28.17"
+    "kysely": "^0.28.17",
+    "@athyper/contract-platform-collection": "workspace:*"
   },
   "devDependencies": {
     "@athyper/server-adapter-publication-signing": "workspace:*",

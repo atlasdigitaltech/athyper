@@ -52,11 +52,19 @@ function assertDevContainer(name, project) {
 }
 
 export function parsePublishArguments(args) {
-  const result = { setup: false, dryRun: false, url: undefined, overlay: "intake-presentation" };
+  const result = { setup: false, dryRun: false, url: undefined, overlay: "intake-presentation", tenant: "cirrusatlantic" };
+  let tenantSpecified = false;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === "--") continue;
-    if (arg === "--setup") result.setup = true;
+    if (arg === "--tenant") {
+      if (tenantSpecified) throw Error("Only one tenant may be specified");
+      tenantSpecified = true;
+      result.tenant = args[++i];
+      if (!["cirrusatlantic", "athyper"].includes(result.tenant))
+        throw Error("Unsupported DEV publication tenant");
+    }
+    else if (arg === "--setup") result.setup = true;
     else if (arg === "--dry-run") result.dryRun = true;
     else if (arg === "--intake-prerequisite") result.overlay = "intake-prerequisite";
     else if (arg === "--url") {
@@ -77,10 +85,18 @@ export function parsePublishArguments(args) {
   }
   if (result.setup && (result.dryRun || result.url || result.overlay !== "intake-presentation"))
     throw Error("Setup cannot be combined with publication options");
+  if (tenantSpecified && !result.setup)
+    throw Error("Tenant selection currently supports isolated setup only; activation needs a reviewed tenant candidate");
   return result;
 }
 
-function setup() {
+function setup(tenant = "cirrusatlantic") {
+  const tenantId = {cirrusatlantic: "44444444-4444-4444-8444-444444444444", athyper: "11111111-1111-4111-8111-111111111111"}[tenant];
+  if (!tenantId) throw Error("Unsupported DEV publication tenant");
+  // Keep the mounted CATL configuration untouched. No wildcard tenant authority.
+  const directory = join(homedir(), ".athyper/instances/dev/secrets", tenant === "cirrusatlantic" ? "dev-publication" : `dev-publication-${tenant}`);
+  const configPath = join(directory, "server.json");
+  const credentialPath = join(directory, "client.json");
   assertDevContainer("athyper-dev-db-1", "athyper-dev");
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   if (statSync(directory).mode & 0o077)
@@ -92,7 +108,9 @@ function setup() {
     if (
       config.instance !== "dev" ||
       config.entityCode !== "business_partner" ||
-      config.tenantCode !== "cirrusatlantic" ||
+      config.tenantCode !== tenant ||
+      config.tenantId !== tenantId ||
+      config.author.principalId === config.publisher.principalId ||
       config.targets.join() !== "neon" ||
       ["author", "publisher"].some(
         (role) => config[role].digest !== digest(credentials[role]),
@@ -109,8 +127,8 @@ function setup() {
     config = {
       schemaVersion: 1,
       instance: "dev",
-      tenantId: "44444444-4444-4444-8444-444444444444",
-      tenantCode: "cirrusatlantic",
+      tenantId,
+      tenantCode: tenant,
       entityCode: "business_partner",
       targets: ["neon"],
       ...Object.fromEntries(
@@ -240,7 +258,7 @@ if (
 ) {
   try {
     const options = parsePublishArguments(process.argv.slice(2));
-    if (options.setup) setup();
+    if (options.setup) setup(options.tenant);
     else await publish(options);
   } catch (error) {
     console.error(error.message);

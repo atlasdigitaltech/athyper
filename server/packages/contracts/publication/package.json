@@ -17,6 +17,7 @@
     "vitest": "^4.1.4"
   },
   "dependencies": {
-    "@athyper/server-contract-master-data": "workspace:*"
+    "@athyper/server-contract-master-data": "workspace:*",
+    "@athyper/contract-platform-collection": "workspace:*"
   }
 }

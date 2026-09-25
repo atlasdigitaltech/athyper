@@ -9,8 +9,8 @@
   "sectionKey": "identifiers-tax",
   "rendererKey": "platform.related-collection.v1",
   "emptyState": {
-    "title": "No tax identifiers yet",
-    "detail": "When tax identifiers are added, they’ll appear here."
+    "title": "No identifiers or tax registrations",
+    "detail": "Business Partner identifiers and tax registrations appear here as masked values."
   },
   "dataBinding": {
     "kind": "registered_service",
@@ -61,19 +61,24 @@
       "rendererKey": "platform.related-collection.v1",
       "fieldBindings": [
         {
-          "fieldKey": "scheme_code"
+          "fieldKey": "scheme_code",
+          "dataKey": "schemeCode"
         },
         {
-          "fieldKey": "issuing_country_code"
+          "fieldKey": "issuing_country_code",
+          "dataKey": "issuingCountryCode"
         },
         {
-          "fieldKey": "identifier_value"
+          "fieldKey": "identifier_value",
+          "dataKey": "maskedValue"
         },
         {
-          "fieldKey": "issued_at"
+          "fieldKey": "issued_at",
+          "dataKey": "effectiveFrom"
         },
         {
-          "fieldKey": "effective_until"
+          "fieldKey": "effective_until",
+          "dataKey": "effectiveUntil"
         }
       ],
       "load": "on_visible",
@@ -90,22 +95,28 @@
       "rendererKey": "platform.related-collection.v1",
       "fieldBindings": [
         {
-          "fieldKey": "registration_type_code"
+          "fieldKey": "registration_type_code",
+          "dataKey": "registrationTypeCode"
         },
         {
-          "fieldKey": "jurisdiction_id"
+          "fieldKey": "jurisdiction_id",
+          "dataKey": "jurisdictionCode"
         },
         {
-          "fieldKey": "tax_type_id"
+          "fieldKey": "tax_type_id",
+          "dataKey": "taxTypeCode"
         },
         {
-          "fieldKey": "registration_number"
+          "fieldKey": "registration_number",
+          "dataKey": "maskedValue"
         },
         {
-          "fieldKey": "effective_from"
+          "fieldKey": "effective_from",
+          "dataKey": "effectiveFrom"
         },
         {
-          "fieldKey": "effective_until"
+          "fieldKey": "effective_until",
+          "dataKey": "effectiveUntil"
         }
       ],
       "load": "on_visible",

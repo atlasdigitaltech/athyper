@@ -902,16 +902,6 @@ ALTER TABLE control.business_partner_qualification
     ADD CONSTRAINT business_partner_qualification_partner_fk
     FOREIGN KEY (tenant_id, business_partner_id)
     REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_qualification_org_fk
-    FOREIGN KEY (tenant_id, operating_organization_id)
-    REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_qualification_company_fk
-    FOREIGN KEY (tenant_id, company_code_id)
-    REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_qualification_capability_fk
-    FOREIGN KEY (tenant_id, commodity_capability_id)
-    REFERENCES master.business_partner_commodity_capability (tenant_id, id)
-    ON DELETE RESTRICT,
     ADD CONSTRAINT business_partner_qualification_risk_fk
     FOREIGN KEY (tenant_id, risk_assessment_id)
     REFERENCES master.party_risk_assessment (tenant_id, id) ON DELETE RESTRICT,
@@ -985,12 +975,6 @@ ALTER TABLE control.business_partner_block
     ADD CONSTRAINT business_partner_block_partner_fk
     FOREIGN KEY (tenant_id, business_partner_id)
     REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_block_org_fk
-    FOREIGN KEY (tenant_id, operating_organization_id)
-    REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_block_company_fk
-    FOREIGN KEY (tenant_id, company_code_id)
-    REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT business_partner_block_blocked_by_fk
     FOREIGN KEY (tenant_id, blocked_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
@@ -1040,7 +1024,6 @@ ALTER TABLE control.mesh_business_partner_account_link
   ADD CONSTRAINT mesh_bp_account_link_projection_fk FOREIGN KEY(tenant_id,profile_projection_id) REFERENCES control.mesh_business_partner_profile_projection(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT mesh_bp_account_link_partner_fk FOREIGN KEY(tenant_id,business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT mesh_bp_account_link_external_fk FOREIGN KEY(tenant_id,external_reference_id) REFERENCES master.external_reference(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT mesh_bp_account_link_request_fk FOREIGN KEY(tenant_id,onboarding_request_id) REFERENCES document.business_partner_request(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT mesh_bp_account_link_created_by_fk FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT mesh_bp_account_link_reviewed_by_fk FOREIGN KEY(tenant_id,reviewed_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT mesh_bp_account_link_approved_by_fk FOREIGN KEY(tenant_id,approved_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
@@ -1092,7 +1075,7 @@ ALTER TABLE control.external_workforce_rate_card
 ALTER TABLE control.external_workforce_rate
     ADD CONSTRAINT external_workforce_rate_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_workforce_rate_card_fk FOREIGN KEY (tenant_id, rate_card_id) REFERENCES control.external_workforce_rate_card(tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT external_workforce_rate_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_workforce_rate_partner_fk FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_workforce_rate_job_fk FOREIGN KEY (tenant_id, job_id) REFERENCES master.job(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_workforce_rate_site_fk FOREIGN KEY (tenant_id, site_id) REFERENCES master.site(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_workforce_rate_created_by_fk FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
@@ -1103,13 +1086,15 @@ ALTER TABLE control.external_workforce_rate
     EXCLUDE USING gist (
         tenant_id WITH =,
         rate_card_id WITH =,
-        COALESCE(supplier_id, '00000000-0000-0000-0000-000000000000'::uuid) WITH =,
+        COALESCE(business_partner_id, '00000000-0000-0000-0000-000000000000'::uuid) WITH =,
         COALESCE(job_id, '00000000-0000-0000-0000-000000000000'::uuid) WITH =,
         COALESCE(site_id, '00000000-0000-0000-0000-000000000000'::uuid) WITH =,
         COALESCE(worker_classification, '') WITH =,
         daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
     ) WHERE (status = 'active');
 ALTER TABLE control.business_partner_decision_scope
+    ADD CONSTRAINT business_partner_decision_scope_block_fk
+    FOREIGN KEY(tenant_id,block_id) REFERENCES control.business_partner_block(tenant_id,id) ON DELETE RESTRICT,
     ADD CONSTRAINT business_partner_decision_scope_qualification_fk
     FOREIGN KEY (tenant_id, qualification_id) REFERENCES control.business_partner_qualification(tenant_id,id) ON DELETE CASCADE,
     ADD CONSTRAINT business_partner_decision_scope_preference_fk
@@ -1135,12 +1120,14 @@ ALTER TABLE control.business_partner_decision_scope
     ADD CONSTRAINT business_partner_decision_scope_no_overlap_excl
     EXCLUDE USING gist (
         tenant_id WITH =,
+        COALESCE(block_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
         COALESCE(qualification_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
         COALESCE(supplier_preference_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
         COALESCE(customer_designation_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
         COALESCE(credit_review_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
-        scope_group WITH =, scope_mode WITH =, scope_kind WITH =,
-        COALESCE(operating_organization_id,company_code_id,commodity_category_id,tax_jurisdiction_id,organization_unit_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
+        scope_group WITH =, scope_mode WITH =, scope_kind WITH =, selection_mode WITH =,
+        COALESCE(commercial_capacity_code,'') WITH =, COALESCE(country_purpose,'') WITH =,
+        COALESCE(operating_organization_id,company_code_id,commodity_category_id,commodity_classification_id,tax_jurisdiction_id,organization_unit_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
         COALESCE(country_code,'**'::bpchar) WITH =,
         daterange(effective_from,COALESCE(effective_until,'infinity'::date),'[)') WITH &&
     );

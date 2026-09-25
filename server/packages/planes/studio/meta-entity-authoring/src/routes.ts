@@ -7,6 +7,8 @@ import type { Application, RequestHandler, Response } from "express";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
 import { MetaEntityAuthoringService } from "./authoring-service.js";
 import { parseEntityRegistration } from "./entity-registration.js";
+import {registerCollectionAuthoringRoutes} from "./collection-authoring-routes.js";
+import { registerNotificationAuthoringRoutes } from "./notification-authoring-routes.js";
 export interface MetaEntityAuthoringRouteOptions {
   authenticate: RequestHandler;
   readContext(response: Response): VerifiedRequestContext;
@@ -15,12 +17,27 @@ export interface MetaEntityAuthoringRouteOptions {
   inspectionAuthorizer?: Authorizer;
   service: MetaEntityAuthoringService;
   addressPreviewChoices?: (context: VerifiedRequestContext) => Promise<unknown>;
+  inspectNotificationConfiguration?: (context: VerifiedRequestContext, entityCode: string) => Promise<unknown | null>;
   inspectActivation?: (context: VerifiedRequestContext, release: import("@athyper/server-contract-meta-entity-authoring").MetaEntityInspectionRelease) => Promise<unknown>;
 }
 export function registerMetaEntityAuthoringRoutes(
   app: Application,
   o: MetaEntityAuthoringRouteOptions,
 ) {
+  app.get("/api/meta-entity-authoring/inspection/notifications/:entityCode",o.authenticate,handler(async(q,s)=>{
+    const entityCode=String(q.params.entityCode);
+    if(!/^[a-z][a-z0-9_]{1,62}$/.test(entityCode)){s.status(400).json({code:"INVALID_ENTITY_CODE"});return;}
+    const context=await allowed(o,s,"publication.deployment.view");if(!context)return;
+    s.setHeader("Cache-Control","private, no-store");
+    if(!o.inspectNotificationConfiguration){s.status(503).json({code:"NOTIFICATION_INSPECTION_UNAVAILABLE"});return;}
+    const configuration=await o.inspectNotificationConfiguration(context,entityCode);
+    s.status(configuration?200:404).json(configuration??{code:"NOTIFICATION_CONFIGURATION_NOT_PUBLISHED"});
+  }));
+  registerCollectionAuthoringRoutes(app, {authenticate:o.authenticate,service:o.service,authorize:(response,permission,id)=>allowed(o,response,permission,id?{changeSetId:id}:undefined)});
+  registerNotificationAuthoringRoutes(app, {
+    authenticate: o.authenticate, service: o.service,
+    authorize: (response, permission, changeSetId) => allowed(o, response, permission, changeSetId ? { changeSetId } : undefined),
+  });
   app.get("/api/meta-entity-authoring/change-sets/:id/history", o.authenticate, handler(async (q,s) => {
     const c = await allowed(o,s,["metadata.entity.author","metadata.entity.review"]); if(!c)return;
     const id=uuid(q.params.id); await scoped(o,c,id); s.setHeader("Cache-Control","private, no-store");

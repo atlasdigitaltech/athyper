@@ -86,3 +86,48 @@ describe("content search filters",()=>{
     await expect(f.service.search(context,{entityType:"business_partner",entityId:"record",q:"invoice",category:"invalid"})).rejects.toThrow();
   });
 });
+
+describe("record attachment browsing",()=>{
+  it("resolves a file outside the loaded page using record-bound preview admission",async()=>{
+    const f=fixture([{id,series_id:id,link_id:id,pinned_attachment_id:id,link_kind:"record",folder_id:null,folder_name:null,category:null,version_no:2,file_name:"proof.pdf",display_name:null,content_type:"application/pdf",size_bytes:10,status:"active",created_at:"2026-01-01T00:00:00.000Z",series_revision:"2",version_history:[{id,version:2,fileName:"proof.pdf",status:"active"}]}]);
+    const result=await f.service.browse(context,{entityType:"business_partner",entityId:"record",attachmentId:id});
+    expect(f.authorizeCapability).toHaveBeenCalledExactlyOnceWith(context,"preview",{entityType:"business_partner",entityId:"record",attachmentId:id});
+    expect(result.items[0]).toMatchObject({pinnedAttachmentId:id});
+    expect(result.items[0]).not.toHaveProperty("versionHistory");
+    expect(f.queries[0]!.sql).toContain("AND a.id=");
+    expect(f.queries[0]!.parameters).toContain("record");
+  });
+  it("rejects a linked-file lookup admitted for a different record before reading",async()=>{
+    const f=fixture([]);
+    await expect(f.service.browse(context,{entityType:"business_partner",entityId:"other-record",attachmentId:id})).rejects.toThrow("ENTITY_CAPABILITY_DENIED");
+    expect(f.queries).toHaveLength(0);
+  });
+  it("keeps history and pin metadata in filtered results",async()=>{
+    const f=fixture([{id,series_id:id,link_id:id,pinned_attachment_id:id,link_kind:"record",category:"evidence",version_no:2,file_name:"proof.pdf",size_bytes:10,status:"active",created_at:"2026-01-01T00:00:00.000Z",series_revision:"2",version_history:[{id,version:1,status:"active",fileName:"old.pdf"}]}]);
+    const result=await f.service.browse(context,{entityType:"business_partner",entityId:"record",attachmentId:id,includeHistory:true});
+    expect(f.authorizeCapability).toHaveBeenCalledWith(context,"version",expect.objectContaining({attachmentId:id,entityId:"record"}));
+    expect(result.items[0]).toMatchObject({pinnedAttachmentId:id,versionHistory:[{fileName:"old.pdf"}]});
+    expect(f.queries[0]!.sql).toContain("v.uploaded_by=");
+  });
+  it("returns the implicit general category for legacy links",async()=>{
+    const f=fixture([{id,series_id:id,link_id:id,folder_id:null,folder_name:null,category:null,version_no:1,file_name:"invoice.pdf",display_name:null,content_type:"application/pdf",size_bytes:10,status:"active",created_at:"2026-01-01T00:00:00.000Z",series_revision:"1"}]);
+    const result=await f.service.browse(context,{entityType:"business_partner",entityId:"record",category:"general"});
+    expect(result.items).toEqual([expect.objectContaining({id,category:"general"})]);
+  });
+  it("applies exact-name, folder, and category filters before pagination",async()=>{
+    const f=fixture([]);
+    await f.service.browse(context,{entityType:"business_partner",entityId:"record",name:"invoice.pdf",exactName:true,folderId:id,category:"evidence",after:id});
+    const query=f.queries[0]!;
+    expect(query.sql).toContain("lower(a.file_name)=lower(");
+    expect(query.sql).toContain("l.folder_id=");
+    expect(query.sql).toContain("l.metadata->>'category'");
+    expect(query.sql.indexOf("l.folder_id=")).toBeLessThan(query.sql.indexOf("LIMIT 51"));
+    expect(query.parameters).toContain("invoice.pdf");
+    expect(query.parameters).toContain("record");
+  });
+  it("rejects unsupported browse filters before querying",async()=>{
+    const f=fixture([]);
+    await expect(f.service.browse(context,{entityType:"business_partner",entityId:"record",exactName:true})).rejects.toThrow("INVALID_BROWSE_INPUT");
+    expect(f.queries).toHaveLength(0);
+  });
+});

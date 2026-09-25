@@ -42,7 +42,7 @@ vi.mock("../company-relationships", async () => ({
         companyCodeId: "uk",
         operatingOrganizationId: "uk-org",
         role: "supplier",
-        roleStatus: "active",
+        roleStatus: "enabled",
         assignmentStatus: "active",
         profileStatus: "active",
       },
@@ -50,14 +50,14 @@ vi.mock("../company-relationships", async () => ({
         companyCodeId: "eu",
         operatingOrganizationId: "eu-org",
         role: "customer",
-        roleStatus: "active",
+        roleStatus: "enabled",
         assignmentStatus: "active",
         profileStatus: "active",
       },
     ],
   }),
 }));
-vi.mock("../business-partner-360-commercial-client", () => ({
+vi.mock("@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-commercial-client", () => ({
   createBusinessPartner360CommercialClient: () => ({ read: test.bank }),
 }));
 vi.mock("../business-partner-360-explainability-client", () => ({

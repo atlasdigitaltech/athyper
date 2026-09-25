@@ -11,7 +11,19 @@ import {
   type BusinessPartnerMetricsTarget,
 } from "../monitoring/business-partner-metrics.js";
 
+function requiredEnvironment(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+}
+
 export interface HostConfig {
+  /** Plane-wide cutover, never a per-page or per-entity fallback. Enable only
+   * after executable compiled baselines have been activated for that plane. */
+  compiledMetadataPlanes?: readonly ("studio" | "neon" | "mesh")[];
+  protectedValuesStore?: {
+    endpoint: string; token: string; workspaceId: string; environment: string; secretPath: string;
+  };
   businessPartnerAuthorizationShadow?: BusinessPartnerShadowConfig;
   localContactDeliveryKey?: string;
   localContactChallenge?: import("@athyper/server-service-master-data").LocalChallengeConfiguration;
@@ -900,6 +912,7 @@ export function loadConfig(): HostConfig {
   }
 
   const config: HostConfig = {
+    compiledMetadataPlanes: readPublicationPlanes(process.env["METADATA_COMPILED_ONLY_PLANES"], "METADATA_COMPILED_ONLY_PLANES"),
     masterDataVerificationKeys,
     ...(localContactDeliveryKey ? { localContactDeliveryKey } : {}),
     ...(localContactChallenge ? { localContactChallenge } : {}),
@@ -1112,6 +1125,13 @@ export function loadConfig(): HostConfig {
       secretPath:
         process.env["INFISICAL_SECRET_PATH"]?.trim() || "/publication",
     },
+    ...(Object.keys(process.env).some(key => key.startsWith("PROTECTED_VALUES_INFISICAL_")) ? {protectedValuesStore: {
+      endpoint: requiredEnvironment("PROTECTED_VALUES_INFISICAL_URL"),
+      token: requiredEnvironment("PROTECTED_VALUES_INFISICAL_TOKEN"),
+      workspaceId: requiredEnvironment("PROTECTED_VALUES_INFISICAL_WORKSPACE_ID"),
+      environment: requiredEnvironment("PROTECTED_VALUES_INFISICAL_ENVIRONMENT"),
+      secretPath: requiredEnvironment("PROTECTED_VALUES_INFISICAL_SECRET_PATH"),
+    }} : {}),
     wave0: {
       financeRoutesEnabled: readBoolean("WAVE0_FINANCE_ROUTES_ENABLED", false),
       financeF2Enabled: readBoolean("FINANCE_F2_ENABLED", false),
@@ -1242,6 +1262,7 @@ export function assertAuthorizationManagementHostQualification(
 
 function readPublicationPlanes(
   value: string | undefined,
+  setting = "PUBLICATION_TARGET_PLANES",
 ): readonly ("studio" | "neon" | "mesh")[] {
   if (!value?.trim()) return [];
   const planes = [
@@ -1255,7 +1276,7 @@ function readPublicationPlanes(
   for (const plane of planes) {
     if (plane !== "studio" && plane !== "neon" && plane !== "mesh")
       throw new Error(
-        `PUBLICATION_TARGET_PLANES contains invalid plane: ${plane}`,
+        `${setting} contains invalid plane: ${plane}`,
       );
   }
   return planes as ("studio" | "neon" | "mesh")[];

@@ -33,8 +33,8 @@ const BUSINESS_PARTNER_360_PERMISSION_CODES = [
 ] as const;
 const PRIMARY_TENANT_ADMINS = ["athyper.admin", "tksa.admin", "catl.admin"] as const;
 const PUBLISHED_AT = "2026-08-26T00:00:00.000Z";
-const SOURCE_VERSION = "development-v11";
-const CASE_CONTRACT_SOURCE_VERSION = "development-v5";
+const SOURCE_VERSION = "development-v12";
+const CASE_CONTRACT_SOURCE_VERSION = "development-v7";
 const UUID_NAMESPACE = Buffer.from("7bbaa1b7700b5b54a7eecf62699013ca", "hex");
 
 type QueryClient = Pick<Client, "query">;
@@ -53,7 +53,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
     schema: "athyper.meta-entity-contract/2.1",
     entity: { entityCode: "business_partner", entityClass: "business", detailRouteTemplate: "/mdg/business-partner/:recordId" },
     runtime: { plane: "neon", backingKind: "table", readMode: "cursor", writeMode: "governed_adapter" },
-    storage: { schema: "master", object: "business_partner" },
+    storage: { schema: "master", object: "business_partner_identity_current" },
     operations: [{ code: "read", permissionCode: PERMISSION_CODE },{code:"export",permissionCode:PERMISSION_CODE},{code:"import",permissionCode:PERMISSION_CODE}],
   };
   const contractHash = sha256(contract);
@@ -62,7 +62,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
     entityCode: "business_partner",
     detailRouteTemplate: "/mdg/business-partner/:recordId",
     planeKey: "neon",
-    storage: { schema: "master", object: "business_partner", idField: "id", tenantField: "tenant_id", statusField: "status", versionField: "record_version" },
+    storage: { schema: "master", object: "business_partner_identity_current", idField: "id", tenantField: "tenant_id", statusField: "status", versionField: "record_version" },
     fields: [
       field("record_version", "integer", true, false, false, { label: "Record Version", defaultVisible: false, defaultOrder: 91, defaultWidth: 120 }),
       field("id", "uuid", true, true, true, { label: "Record ID", defaultVisible: false, defaultOrder: 90, defaultWidth: 300 }),
@@ -199,7 +199,8 @@ export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string,r
       websiteUrl: { type: "string" },
       description: { type: "string" },
       ownershipClass: { type: "string", enum: ["internal", "external"] },
-      partnerCategory: { type: "string", enum: ["organization"] },
+      partnerCategory: { type: "string", enum: ["organization", "person"] },
+      personId: { type: "string", format: "uuid" },
       legalClassification: { type: "string" },
       requestedRole: { type: "string", enum: ["supplier", "customer"] },
       roleCode: { type: "string" },
@@ -219,6 +220,7 @@ export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string,r
       supplierType: { type: "string" },
       customerType: { type: "string" },
       meshChangeResolutionId: { type: "string" },
+      childActivation: { type: "object" },
       meshChangeFingerprint: { type: "string" },
       meshChangeDecisions: { type: "object" },
       meshChangePreview: { type: "object" },

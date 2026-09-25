@@ -5,10 +5,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./kysely-business-partner-360-sections": "./src/kysely-business-partner-360-sections.ts",
+    "./business-partner/record/sections": "./src/business-partner/record/section-readers.ts",
     "./kysely-business-partner-case-repository": "./src/kysely-business-partner-case-repository.ts",
     "./kysely-business-partner-invitation-repository": "./src/kysely-business-partner-invitation-repository.ts",
-    "./kysely-business-partner-360-repository": "./src/kysely-business-partner-360-repository.ts"
+    "./business-partner/record/repository": "./src/business-partner/record/repository.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

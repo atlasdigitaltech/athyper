@@ -61,10 +61,25 @@ it("intersects directory restrictions and keeps eligibility IDs server-bound",()
  const database=new Kysely<Record<string,never>>({dialect:new PostgresDialect({pool:{} as never})});
  const compiled=compileRecordCollectionScopeCondition(descriptor,"tenant",{kind:"neon.business_partner.directory.v1",organizationIds:["org"],companyIds:["company"],partnerRole:"supplier",eligibleIds:["partner"]}).compile(database);
  expect(compiled.sql).toContain("company_code_supplier_profile");
+ expect(compiled.sql).toContain('"business_partner"."supplier_enabled" = TRUE');
+ expect(compiled.sql).not.toMatch(/"master"\."(?:supplier|customer)"/);
  expect(compiled.sql).toContain("company_code_customer_profile");
+ expect(compiled.sql).toContain("p.business_partner_id=");
+ expect(compiled.sql).not.toMatch(/p\.(supplier_id|customer_id)/);
  expect(compiled.sql).toContain("business_partner_operating_organization_assignment");
  expect(compiled.sql).not.toContain("'partner'");
  expect(compiled.parameters).toContain("partner");
  expect(compiled.parameters).toContain("company");
  expect(compileRecordCollectionScopeCondition(descriptor,"tenant",{kind:"neon.business_partner.directory.v1",organizationIds:[]}).compile(database).sql).toContain("FALSE");
+});
+
+it("filters each commercial capability independently without treating it as eligibility",()=>{
+ const database=new Kysely<Record<string,never>>({dialect:new PostgresDialect({pool:{} as never})});
+ for(const partnerRole of ["supplier","customer"] as const){
+  const compiled=compileRecordCollectionScopeCondition(descriptor,"tenant",{kind:"neon.business_partner.directory.v1",partnerRole,eligibleIds:[]}).compile(database);
+  expect(compiled.sql).toContain(`"business_partner"."${partnerRole}_enabled" = TRUE`);
+  expect(compiled.sql).toContain("FALSE");
+  expect(compiled.sql).not.toMatch(/FROM|status/);
+ }
+ expect(()=>compileRecordCollectionScopeCondition(descriptor,"tenant",{kind:"neon.business_partner.directory.v1",partnerRole:"invalid" as "supplier"})).toThrow("Unsupported partner capability");
 });

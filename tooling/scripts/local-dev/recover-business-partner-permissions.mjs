@@ -1,0 +1,51 @@
+/** Incident-scoped seed-catalog recovery. No grant or membership writes. */
+import {execFileSync} from 'node:child_process';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+const source='athyper-bp-recovery-20260924',target='athyper-dev-db-1';
+const root='/home/chandravel_natarajan/.athyper/backups/bp-publication-recovery-20260924';
+const backup='/home/chandravel_natarajan/.athyper/backups/dev-qa-pre-rebuild-20260924-hg6ZwJ/dev-athyper_neon.dump';
+const args=process.argv.slice(2),apply=args.includes('--apply');
+if(args.some(x=>x!=='--apply'&&!x.startsWith('--approved-plan-sha256=')))throw Error('UNKNOWN_ARGUMENT');
+const hash=x=>createHash('sha256').update(x).digest('hex');
+const quote=x=>"'"+String(x).replaceAll("'","''")+"'";
+const run=(container,db,input)=>execFileSync('docker',['exec','-i',container,'psql','-X','-U','postgres','-d',db,'-qAt','-v','ON_ERROR_STOP=1'],{input,encoding:'utf8',maxBuffer:16*1024*1024});
+const query=(container,db,s)=>JSON.parse(run(container,db,`SELECT coalesce(json_agg(q),'[]') FROM (${s}) q;`));
+const live=s=>query(target,'athyper_neon',s),old=s=>query(source,'athyper_neon',s);
+const topology=JSON.parse(execFileSync('docker',['inspect',target],{encoding:'utf8'}))[0];
+if(topology.Config.Labels['com.docker.compose.project']!=='athyper-dev')throw Error('DEV_REQUIRED');
+const [compilation]=query(target,'athyper_studio',"SELECT unsigned_document FROM publication.artifact_compilation WHERE publication_release_id='7bdb29f6-6b01-4385-867d-06357504f6ca' AND plane_code='neon' AND artifact_kind='entity_runtime'");
+const bindings=compilation.unsigned_document.envelope.payload.entityDescriptor.descriptor.operation_scope_bindings;
+const ids=[...new Set(bindings.filter(b=>b.permissionCode.startsWith('neon.relationship.bp_target.')).map(b=>b.permissionId))];
+if(ids.length!==27||ids.some(id=>!/^[a-f0-9-]{36}$/.test(id)))throw Error('RECOVERY_SCOPE_CHANGED');
+const list=ids.map(quote).join(',');
+const permissions=old(`SELECT * FROM authz.permission WHERE id IN (${list}) ORDER BY id`);
+const scopes=old(`SELECT * FROM authz.permission_scope_kind WHERE permission_id IN (${list}) AND status='active' ORDER BY id`);
+if(permissions.length!==27||permissions.some(p=>p.status!=='published'||!bindings.some(b=>b.permissionId===p.id&&b.permissionCode===p.canonical_code&&b.permissionKind===p.permission_kind)))throw Error('SOURCE_PERMISSION_MISMATCH');
+for(const b of bindings.filter(b=>ids.includes(b.permissionId)))if(!scopes.some(s=>s.permission_id===b.permissionId&&s.scope_kind===b.scopeKind))throw Error('SOURCE_SCOPE_MISSING');
+const modules=old(`SELECT id,code,status FROM control.module WHERE id IN (SELECT module_id FROM authz.permission WHERE id IN (${list})) ORDER BY id`);
+for(const m of modules){const [current]=live(`SELECT id,code,status FROM control.module WHERE id=${quote(m.id)}`);if(JSON.stringify(current)!==JSON.stringify(m)||m.status!=='active')throw Error('MODULE_DEPENDENCY_CONFLICT');}
+const plan={schema:'athyper.permission-catalog-recovery/1',environment:'dev',plane:'neon',releaseId:'7bdb29f6-6b01-4385-867d-06357504f6ca',backupHash:hash(readFileSync(backup)),permissions,scopes,modules};
+const digest=hash(JSON.stringify(plan));
+writeFileSync(root+'/permission-recovery-plan.json',JSON.stringify({...plan,planSha256:digest},null,2)+'\n',{mode:0o600});
+console.log(JSON.stringify({planSha256:digest,permissions:permissions.length,scopeRows:scopes.length,modules:modules.map(m=>m.code),humanGrantsRestored:false}));
+if(apply&&!args.includes('--approved-plan-sha256='+digest))throw Error('EXACT_PLAN_APPROVAL_REQUIRED');
+const tables=live("SELECT tablename FROM pg_tables WHERE schemaname='authz' AND tablename NOT IN ('permission','permission_scope_kind') ORDER BY tablename").map(r=>r.tablename);
+if(tables.some(t=>!/^[a-z_]+$/.test(t)))throw Error('TABLE_NAME_INVALID');
+const fingerprints=tables.map(t=>`SELECT ${quote(t)} AS name,md5(coalesce(string_agg(row_to_json(r)::text,E'\\n' ORDER BY row_to_json(r)::text),'')) AS digest FROM authz.${t} r`).join(' UNION ALL ');
+const inserts=Object.entries({permission:permissions,permission_scope_kind:scopes}).map(([table,rows])=>{
+ const data=quote(JSON.stringify(rows));
+ return `DO $guard$ BEGIN IF EXISTS(SELECT 1 FROM jsonb_populate_recordset(NULL::authz.${table},${data}::jsonb) s JOIN authz.${table} t ON t.id=s.id WHERE to_jsonb(s)<>to_jsonb(t)) THEN RAISE EXCEPTION 'CATALOG_RECOVERY_CONFLICT'; END IF; END $guard$;
+ INSERT INTO authz.${table} SELECT s.* FROM jsonb_populate_recordset(NULL::authz.${table},${data}::jsonb) s WHERE NOT EXISTS(SELECT 1 FROM authz.${table} t WHERE t.id=s.id);`;
+}).join('\n');
+const sql=`BEGIN; SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='60s';
+SELECT pg_advisory_xact_lock(hashtextextended('bp-permission-recovery-20260924',0));
+LOCK TABLE ${['permission','permission_scope_kind',...tables].map(t=>'authz.'+t).join(',')} IN SHARE ROW EXCLUSIVE MODE;
+CREATE TEMP TABLE before_authz ON COMMIT DROP AS ${fingerprints};
+${inserts}
+SET CONSTRAINTS ALL IMMEDIATE;
+DO $verify$ BEGIN IF EXISTS((${fingerprints}) EXCEPT SELECT * FROM before_authz) THEN RAISE EXCEPTION 'NON_CATALOG_AUTHORIZATION_CHANGED'; END IF; END $verify$;
+${apply?'COMMIT':'ROLLBACK'};`;
+run(target,'athyper_neon',sql);
+writeFileSync(root+(apply?'/permission-recovery-receipt.json':'/permission-recovery-rehearsal.json'),JSON.stringify({planSha256:digest,backupHash:plan.backupHash,permissions:permissions.length,scopeRows:scopes.length,nonCatalogTablesChecked:tables,status:apply?'committed':'rolled_back',at:new Date().toISOString()},null,2)+'\n',{mode:0o600});
+console.log(JSON.stringify({status:apply?'committed':'rehearsed-and-rolled-back',nonCatalogTablesUnchanged:tables.length}));

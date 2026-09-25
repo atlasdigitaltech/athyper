@@ -65,6 +65,9 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
           const decision = await options.repository.resolve(
             {
               tenantId: query.context.tenantId,
+              commodityClassificationId:query.commodityClassificationId,countries:query.countries,
+              contextKind:query.contextKind,contextId:query.contextId,
+              targetEntityType:query.targetEntityType,targetEntityId:query.targetEntityId,targetLineId:query.targetLineId,
               businessPartnerId: query.businessPartnerId,
               role: query.role,
               operatingOrganizationId: query.operatingOrganizationId,
@@ -273,6 +276,7 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
               ...(command.companyCodeId
                 ? { companyCodeId: command.companyCodeId }
                 : {}),
+              ...(command.commodityClassificationId ? {commodityClassificationId: command.commodityClassificationId} : {}),
               ...(command.commodityCapabilityId
                 ? { commodityCapabilityId: command.commodityCapabilityId }
                 : {}),
@@ -1308,6 +1312,7 @@ async function authorize(
     );
 }
 function validateCreate(command: CreateBusinessPartnerQualificationCommand) {
+  if(command.commodityCapabilityId && command.commodityClassificationId) throw invalid("Select a classification or legacy capability, not both");
   key(command.idempotencyKey);
   validateCode(command.qualificationTypeCode, "qualificationTypeCode");
   for (const [name, value] of [
@@ -1395,6 +1400,7 @@ function creation(command: CreateBusinessPartnerQualificationCommand) {
     operatingOrganizationId: command.operatingOrganizationId,
     companyCodeId: command.companyCodeId,
     commodityCapabilityId: command.commodityCapabilityId,
+    commodityClassificationId: command.commodityClassificationId,
     qualificationTypeCode: command.qualificationTypeCode,
     riskAssessmentId: command.riskAssessmentId,
     effectiveFrom: command.effectiveFrom,
@@ -1412,6 +1418,7 @@ function qualificationFingerprint(value: BusinessPartnerQualification) {
     operatingOrganizationId: value.operatingOrganizationId,
     companyCodeId: value.companyCodeId,
     commodityCapabilityId: value.commodityCapabilityId,
+    commodityClassificationId: value.commodityClassificationId,
     qualificationTypeCode: value.qualificationTypeCode,
     riskAssessmentId: value.riskAssessmentId,
     effectiveFrom: value.effectiveFrom,

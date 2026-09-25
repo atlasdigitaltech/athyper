@@ -3,8 +3,8 @@ import * as React from "react";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { COLOR_MODES, COLOR_TOKENS, DEFAULT_THEME_FAMILY, DENSITY_MODES, DENSITY_TOKENS, REQUIRED_COLOR_TOKENS, THEME_FAMILIES, ThemeScript, createThemeBootstrapScript, resolveColorMode } from "../../packages/platform/foundation/theme/src/index";
-import { ATLAS_MODERN_BRAND } from "../../packages/platform/foundation/brand/src/index";
+import { COLOR_MODES, COLOR_TOKENS, DEFAULT_THEME_FAMILY, DENSITY_MODES, DENSITY_TOKENS, MONO_COLOR_TOKENS, REQUIRED_COLOR_TOKENS, THEME_FAMILIES, ThemeScript, createThemeBootstrapScript, resolveColorMode } from "../../packages/platform/foundation/theme/src/index";
+import { ATLAS_MODERN_BRAND, ATLAS_MONO_BRAND } from "../../packages/platform/foundation/brand/src/index";
 
 describe("foundation theme contract", () => {
   it("has every semantic token in light, dark, and high-contrast modes", () => {
@@ -18,7 +18,7 @@ describe("foundation theme contract", () => {
   });
 
   it("uses Atlas Modern as the shared default interaction theme", () => {
-    assert.deepEqual(THEME_FAMILIES, ["atlas-modern"]);
+    assert.deepEqual(THEME_FAMILIES, ["atlas-modern", "atlas-mono"]);
     assert.equal(DEFAULT_THEME_FAMILY, "atlas-modern");
     assert.equal(COLOR_TOKENS.light.primary, "var(--a-brand)");
     assert.equal(COLOR_TOKENS.light.brand, ATLAS_MODERN_BRAND.colors.primary);
@@ -38,6 +38,18 @@ describe("foundation theme contract", () => {
       const html = readFileSync(page, "utf8");
       assert.match(html, /data-theme-family="atlas-modern"/);
       assert.match(html, /theme-color" content="#234B84"/);
+    }
+  });
+
+  it("has an Atlas Mono family with full token coverage and unchanged status colors", () => {
+    for (const mode of COLOR_MODES) assert.deepEqual(Object.keys(MONO_COLOR_TOKENS[mode]).sort(), [...REQUIRED_COLOR_TOKENS].sort());
+    assert.equal(MONO_COLOR_TOKENS.light.brand, ATLAS_MONO_BRAND.colors.primary);
+    assert.equal(MONO_COLOR_TOKENS.light.brandForeground, ATLAS_MONO_BRAND.colors.primaryForeground);
+    assert.notEqual(MONO_COLOR_TOKENS.light.background, COLOR_TOKENS.light.background);
+    for (const mode of COLOR_MODES) {
+      for (const token of ["danger", "dangerForeground", "warning", "warningForeground", "success", "successForeground", "focus"] as const) {
+        assert.equal(MONO_COLOR_TOKENS[mode][token], COLOR_TOKENS[mode][token], `${mode}.${token} should stay chromatic so status meaning does not depend on hue alone`);
+      }
     }
   });
 
@@ -69,11 +81,12 @@ describe("foundation theme contract", () => {
     assert.doesNotMatch(script, /<\/script/i);
   });
 
-  it("lets operating-system preference determine the initial app theme", () => {
+  it("lets operating-system preference determine the initial app theme, forwarding only the saved design-system family", () => {
     for (const plane of ["neon", "mesh", "studio"]) {
       const layout = readFileSync(`apps/${plane}/app/layout.tsx`, "utf8");
-      assert.match(layout, /<ThemeScript \/>/);
+      assert.match(layout, /<ThemeScript \{\.\.\.\(themeFamily\?\{themeFamily\}:\{\}\)\} \/>/);
       assert.doesNotMatch(layout, /<ThemeScript[^>]*platformDefault="light"/);
+      assert.doesNotMatch(layout, /<ThemeScript[^>]*sessionMode=/);
     }
   });
 

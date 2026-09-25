@@ -1,6 +1,6 @@
 import { useBusinessPartner360 } from "../business-partner-360-context";
 import { Card } from "@athyper/platform-ui";
-import type { SectionState } from "../business-partner-360-client";
+import type { SectionState } from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-client";
 const copy: Record<SectionState, string> = {
   empty: "No applicable records are available in this scope.",
   partial: "Some providers did not return data.",

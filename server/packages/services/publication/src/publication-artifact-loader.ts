@@ -1,4 +1,5 @@
-import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata";
+import {collectionPublicationFromGraph,parseCollectionPublicationDescriptor,collectionPublicationKey} from "@athyper/server-contract-publication";
+import { parseEntityRuntimeDescriptor, parseCompiledRuntimeContract, validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
 import { authoredAuthorization } from "./entity-authorization-compiler.js";
 import {
   parseEntityAuthorizationProfile,
@@ -6,6 +7,7 @@ import {
 } from "@athyper/server-contract-metadata";
 import {
   parsePublicationArtifactEnvelope,
+  parseNotificationPublicationDescriptor,
   assertCompiledEntityRuntimePublication,
   PublicationContractError,
   type LoadedPublicationArtifact,
@@ -127,6 +129,71 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
       } catch {
         throw failure("ARTIFACT_PAYLOAD_INVALID");
       }
+      try {
+        validateCompiledRuntimeContracts(envelope.payload.artifacts);
+        for (const artifact of envelope.payload.artifacts.filter(item => item.artifactType === "runtime_contract")) {
+          const descriptor = parseCompiledRuntimeContract(artifact, { releaseId: envelope.releaseId, releaseNo: envelope.releaseNo });
+          if (descriptor.authorizationRuntime) {
+            if (!this.options.authorizationRuntime) throw failure("RUNTIME_INCOMPATIBLE");
+            this.options.authorizationRuntime.qualify(descriptor.authorization!, descriptor.authorizationRuntime);
+          } else if (!descriptor.collectionRelationship) {
+            throw failure("RUNTIME_INCOMPATIBLE");
+          }
+        }
+      } catch (error) {
+        if (error instanceof PublicationContractError) throw error;
+        const invalid = failure("RUNTIME_INCOMPATIBLE");
+        invalid.cause = error;
+        throw invalid;
+      }
+    }
+    if (
+      envelope.artifactKind === "entity_runtime" &&
+      envelope.payload.entityDescriptor.descriptorKind ===
+        "collection_configuration"
+    ) {
+      try {
+        const c = envelope.payload.entityContract,
+          d = envelope.payload.entityDescriptor,
+          descriptor = parseCollectionPublicationDescriptor(d.descriptor),
+          source = collectionPublicationFromGraph(c.contract);
+        const hash = (value: unknown) =>
+          this.options.canonicalizer.sha256(
+            this.options.canonicalizer.canonicalBytes(value),
+          );
+        if (
+          !source ||
+          hash(source) !== hash(descriptor) ||
+          !c.tenantId ||
+          descriptor.sourceEntityCode !== c.entityCode ||
+          d.plane !== envelope.targetPlane ||
+          !descriptor.configuration.targetPlanes.includes(envelope.targetPlane) ||
+          c.releaseId !== envelope.releaseId ||
+          c.releaseNo !== envelope.releaseNo ||
+          c.publicationKey !== envelope.publicationKey ||
+          envelope.publicationKey !==
+            collectionPublicationKey(
+              c.tenantId,
+              descriptor.configuration.collectionKey,
+            )
+        )
+          throw new TypeError("Collection source or coordinates mismatch");
+      } catch {
+        throw failure("ARTIFACT_PAYLOAD_INVALID");
+      }
+    }
+    if (envelope.artifactKind === "entity_runtime" && envelope.payload.entityDescriptor.descriptorKind === "entity_notifications") {
+      try {
+        const descriptor = parseNotificationPublicationDescriptor(envelope.payload.entityDescriptor.descriptor);
+        const c=envelope.payload.entityContract, d=envelope.payload.entityDescriptor;
+        const members=c.contract["capabilities"];
+        if(!Array.isArray(members))throw new TypeError("Missing notification source");
+        const notifications=Object.fromEntries(members.filter(m=>m?.declaration?.enabled===true&&m.binding?.notifications!==undefined).map(m=>[m.capabilityKey,m.binding.notifications]));
+        const target=members.find(m=>m.binding?.notifications)?.binding.notifications.targetEntityCode;
+        const source=parseNotificationPublicationDescriptor({schema:descriptor.schema,sourceEntityCode:c.entityCode,entityCode:target,notifications});
+        const hash=(v:unknown)=>this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(v));
+        if (hash(source)!==hash(descriptor)||!c.tenantId||descriptor.sourceEntityCode !== c.entityCode || d.plane!==envelope.targetPlane || c.releaseId!==envelope.releaseId || c.releaseNo!==envelope.releaseNo || c.publicationKey!==envelope.publicationKey || envelope.publicationKey!==`metadata.notifications.${descriptor.entityCode}.${c.tenantId.replaceAll("-","")}`) throw new TypeError("Notification source or coordinates mismatch");
+      } catch { throw failure("ARTIFACT_PAYLOAD_INVALID"); }
     }
     const hasLearning =
       envelope.artifactKind === "entity_runtime" &&
@@ -140,6 +207,8 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
       envelope.artifactKind === "entity_runtime" &&
       (manifest.evidence?.["importedBaseline"] !== undefined ||
         hasLearning ||
+        envelope.payload.entityDescriptor.descriptorKind === "collection_configuration" ||
+        envelope.payload.entityDescriptor.descriptorKind === "entity_notifications" ||
         envelope.payload.entityDescriptor.descriptorKind ===
           "entity_case_runtime" ||
         envelope.payload.entityDescriptor.descriptor["authorizationRuntime"] !==
@@ -283,7 +352,9 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
         this.options.authorizationRuntime.qualify(profile, runtime);
       } catch (error) {
         if (error instanceof PublicationContractError) throw error;
-        throw failure("RUNTIME_INCOMPATIBLE");
+        const incompatible = failure("RUNTIME_INCOMPATIBLE");
+        incompatible.cause = error;
+        throw incompatible;
       }
     }
     const projectionEvidence =

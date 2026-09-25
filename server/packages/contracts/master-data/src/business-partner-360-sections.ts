@@ -27,6 +27,9 @@ export interface BusinessPartner360IdentityItem {
   readonly industryCodeId?: string;
   readonly industryCode?: string;
   readonly industryName?: string;
+  readonly sourceSystem?: string;
+  readonly sourceReference?: string;
+  readonly status?: string;
   readonly assignmentKind?: string;
   readonly primary?: boolean;
   readonly verified?: boolean;
@@ -45,6 +48,7 @@ export interface BusinessPartner360ContactItem {
   readonly primary: boolean;
   readonly roles: readonly Readonly<{
     code: string;
+    addressLinkId?: string;
     primary: boolean;
     effectiveFrom: string;
     effectiveUntil?: string;
@@ -71,6 +75,8 @@ export interface BusinessPartner360AddressEventItem {
 }
 export interface BusinessPartner360AddressItem {
   readonly id: string;
+  readonly addressLinkId?: string;
+  readonly assignedContacts?: readonly Readonly<{name:string;role:string}>[];
   readonly purpose: string;
   readonly addressKind: string;
   readonly lines: readonly string[];
@@ -116,6 +122,7 @@ export interface BusinessPartner360IdentifierItem {
   readonly effectiveFrom?: string;
   readonly effectiveUntil?: string;
   readonly revealable: boolean;
+  readonly revealVerificationRequired?: boolean;
 }
 
 export type BusinessPartner360IdentitySection = BusinessPartner360Section<
@@ -132,6 +139,7 @@ export type BusinessPartner360IdentifiersSection = BusinessPartner360Section<
 >;
 
 export interface BusinessPartner360TaxRevealCommand {
+  readonly legalEntityId?: string;
   readonly operatingOrganizationId?: string;
   readonly companyCodeId?: string;
   readonly context: VerifiedRequestContext;
@@ -146,4 +154,11 @@ export interface BusinessPartner360TaxRevealResult {
   readonly value: string;
   readonly expiresAt: string;
   readonly provenance: readonly BusinessPartner360SourceFreshness[];
+}
+
+export interface BusinessPartner360IdentifierRevealCommand extends Omit<BusinessPartner360TaxRevealCommand, "taxRegistrationId"> {
+  readonly identifierId: string;
+}
+export interface BusinessPartner360IdentifierRevealResult extends Omit<BusinessPartner360TaxRevealResult, "taxRegistrationId"> {
+  readonly identifierId: string;
 }

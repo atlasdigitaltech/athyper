@@ -25,6 +25,9 @@
   "coreRef": "business_partner_banking/core.json",
   "fieldBindings": [
     {
+      "fieldKey": "status"
+    },
+    {
       "fieldKey": "account_holder_name"
     },
     {
@@ -32,9 +35,6 @@
     },
     {
       "fieldKey": "currency_code"
-    },
-    {
-      "fieldKey": "is_verified"
     }
   ],
   "authorization": {
@@ -57,7 +57,86 @@
   "load": "on_visible",
   "requiredContext": "resolve_from_target_core",
   "dependencies": [
-    "business_partner_banking/core"
+    "business_partner_banking/core",
+    "business_partner_bank_account_link/core",
+    "business_partner_bank_provisional_reference/core"
   ],
-  "artifactHash": "sha256:0ee27dc9e0ba9e50734eae7188700a4047c84c898cc637da4a4ea7ef70eddb22"
+  "childCollections": [
+    {
+      "key": "bank_accounts",
+      "entityCode": "business_partner_banking",
+      "coreRef": "business_partner_banking/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {"fieldKey":"bank_name"},
+        {"fieldKey":"branch_name"},
+        {"fieldKey":"branch_code"},
+        {"fieldKey":"bic"},
+        {
+          "fieldKey": "status"
+        },
+        {
+          "fieldKey": "account_holder_name"
+        },
+        {
+          "fieldKey": "account_last4"
+        },
+        {
+          "fieldKey": "currency_code"
+        }
+      ],
+      "load": "on_visible"
+    },
+    {
+      "key": "payment_instrument_links",
+      "entityCode": "business_partner_bank_account_link",
+      "coreRef": "business_partner_bank_account_link/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {"fieldKey":"account_last4"},
+        {"fieldKey":"is_primary"},
+        {
+          "fieldKey": "relationship_role"
+        },
+        {
+          "fieldKey": "purpose"
+        },
+        {
+          "fieldKey": "effective_from"
+        },
+        {
+          "fieldKey": "effective_until"
+        }
+      ],
+      "load": "on_visible"
+    },
+    {
+      "key": "bank_provisional_references",
+      "entityCode": "business_partner_bank_provisional_reference",
+      "coreRef": "business_partner_bank_provisional_reference/core.json",
+      "rendererKey": "platform.related-collection.v1",
+      "fieldBindings": [
+        {
+          "fieldKey": "submitted_name"
+        },
+        {
+          "fieldKey": "submitted_country"
+        },
+        {
+          "fieldKey": "submitted_bic"
+        },
+        {
+          "fieldKey": "status"
+        },
+        {
+          "fieldKey": "resolved_institution_id"
+        },
+        {
+          "fieldKey": "resolved_branch_id"
+        }
+      ],
+      "load": "on_visible"
+    }
+  ],
+  "artifactHash": "sha256:adb7b0db8945b92a89c39c0ca910fb0e730df194c8b75e192fab7d4810d0e971"
 }

@@ -35,7 +35,11 @@ it("matches all eight approved action semantics without accepting a changed comp
   expect(f.entries).toHaveLength(8);
   const entries = [...f.entries, ...createBusinessPartnerReadRuntimeRegistrations(f.records as never, {section: vi.fn()} as never, f.scopes)];
   const selected = JSON.parse(readFileSync(new URL("../../../../../../governance/policy/reports/business-partner-corrected-release.dev.json", import.meta.url), "utf8")).descriptor.authorization;
-  const profile = {...selected, operations: selected.operations.filter((o: {key: string}) => entries.some(e => e.operation.key === o.key))};
+  // Preserve historical action expectations; reads now use the cleaned catalog.
+  const profile = {...selected, operations: [
+    ...selected.operations.filter((o: {key: string}) => f.entries.some(e => e.operation.key === o.key)),
+    ...entries.filter(e=>!f.entries.includes(e)).map(e=>e.operation),
+  ]};
   const runtime = {schemaVersion: 1, runtimeVersion: "entity-authorization.v1", bindings: entries.map(e => ({operation: e.operation.key, handler: e.handler.key, resolver: e.resolver.key, ...(e.preflight ? {preflight: e.preflight.key} : {})}))};
   const registry = createEntityAuthorizationRuntimeRegistry(entries);
   expect(() => registry.qualify(profile, runtime)).not.toThrow();

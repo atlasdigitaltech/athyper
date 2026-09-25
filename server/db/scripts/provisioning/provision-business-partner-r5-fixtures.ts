@@ -101,9 +101,12 @@ export async function provisionBusinessPartnerR5Fixtures(options: {
       notes: "synthetic_customer_control_qualification",
     });
     await client.query(
-      `INSERT INTO master.business_partner(id,tenant_id,code,name,partner_category,ownership_class,registration_country_code,metadata,status,created_by)
-      VALUES($1,$2,'R5.CUS.CONTROLS','R5 disposable Customer','organization','external','MY',$3,'active',$4)`,
+      `INSERT INTO master.business_partner(id,tenant_id,code,name,partner_category,ownership_class,metadata,status,created_by)
+      VALUES($1,$2,'R5.CUS.CONTROLS','R5 disposable Customer','organization','external',$3,'active',$4)`,
       [f.businessPartnerId, context.tenant_id, metadata, context.actor_id],
+    );
+    await client.query(
+      `SELECT master.update_business_partner_organization_identity($1::uuid,$2::uuid,'{"registrationCountryCode":"MY"}'::jsonb,$3::uuid)`,[context.tenant_id,f.businessPartnerId,context.actor_id],
     );
     await client.query(
       `INSERT INTO master.customer(id,tenant_id,business_partner_id,customer_code,status,created_by) VALUES($1,$2,$3,'CUS.R5.CONTROLS','prospect',$4)`,

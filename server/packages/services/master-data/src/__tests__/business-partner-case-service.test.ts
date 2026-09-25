@@ -474,6 +474,7 @@ function fixture(
   companyPilot = false,
   validateIntake?: (command:CreateBusinessPartnerRequestCommand)=>Promise<void>,
   supplierSubmission?: import("../business-partner-request-service.js").SupplierProcessSubmission<object>,
+  validateBusinessContext?: (command:CreateBusinessPartnerRequestCommand)=>Promise<void>,
 ) {
   const repository = new MemoryRepository(),
     permissions: string[] = [],
@@ -484,6 +485,7 @@ function fixture(
     : createBusinessPartnerRequestService;
   const service = createService({
     supplierSubmission,
+    validateBusinessContext,
     validateIntake,
     refreshContext: async (context: VerifiedRequestContext) => context,
     requirePublishedOperation: async () => {},
@@ -578,6 +580,43 @@ function fixture(
 }
 
 describe("Business Partner request service", () => {
+  const roleFree = (): CreateBusinessPartnerRequestCommand => ({context,idempotencyKey:"role-free-registration-001",kind:"new_partner",source:{kind:"manual"},registrationMode:"direct",proposedPayload:{name:"Role-free demo",partnerCategory:"organization",ownershipClass:"external",registrationCountryCode:"MY"}});
+  it("captures and validates core registration without a role, category, organization or company", async () => {
+    const value=fixture();
+    const created=await value.service.create(roleFree());
+    expect(created.request.requestedRole).toBeUndefined();
+    expect(created.request.operatingOrganizationId).toBeUndefined();
+    expect(created.request.companyCodeId).toBeUndefined();
+    const validation=await createBusinessPartnerRequestValidator({duplicates:{findExactName:async()=>[]}}).validate({context,request:created.request},{});
+    expect(validation.valid).toBe(true);
+    expect(validation.findings.find(f=>f.ruleCode==="role.requested.required")?.outcome).toBe("skipped");
+  });
+  it("replays core registration after storage adds its internal channel default", async () => {
+    const value = fixture(), input = roleFree();
+    const first = await value.service.create(input);
+    value.repository.rows.set(first.request.id, {...first.request, proposedPayload: {...first.request.proposedPayload, registrationChannel: "internal"}});
+    await expect(value.service.create(input)).resolves.toMatchObject({replayed:true,request:{id:first.request.id}});
+    const partnerId = "10101010-1010-4010-8010-101010101010";
+    value.repository.rows.set(first.request.id, {...first.request, status:"applied", targetBusinessPartnerId:partnerId, materializedBusinessPartnerId:partnerId, proposedPayload:{...first.request.proposedPayload,registrationChannel:"internal"}});
+    await expect(value.service.create(input)).resolves.toMatchObject({replayed:true,request:{id:first.request.id}});
+    await expect(value.service.create({...input,proposedPayload:{...input.proposedPayload,name:"Different partner"}})).rejects.toThrow(/different request content/);
+  });
+  it("does not use role-free registration to smuggle commercial authority or child data", async () => {
+    for(const extra of [{supplierType:"general"},{companyCodeId:"55555555-5555-4555-8555-555555555555"},{qualificationTypeCode:"basic"}]){
+      const value=fixture(),cmd=roleFree();
+      await expect(value.service.create({...cmd,proposedPayload:{...cmd.proposedPayload,...extra}})).rejects.toThrow(/core identity only/);
+      expect(value.repository.rows.size).toBe(0);
+    }
+    await expect(fixture().service.create({...roleFree(),operatingOrganizationId:"55555555-5555-4555-8555-555555555555"})).rejects.toThrow(/core identity only/);
+    await expect(fixture().service.create({...roleFree(),source:{kind:"import"}})).rejects.toThrow(/core identity only/);
+  });
+  it("keeps registration-only maker authority separate from supplier onboarding", async () => {
+    const value=fixture(permission=>permission.startsWith("neon.business_partner_registration."));
+    await expect(value.service.create(roleFree())).resolves.toMatchObject({request:{kind:"new_partner"}});
+    await expect(value.service.create(command({idempotencyKey:"commercial-not-authorized"}))).rejects.toThrow(/Permission denied/);
+    expect(value.permissions).toContain("neon.business_partner_registration.create");
+    expect(value.permissions).toContain("neon.relationship.entity_case.create");
+  });
   it("refuses activation approval preparation without current policy, readiness and version coordinates", async () => {
     const value=fixture();
     const created=await value.service.create(command({kind:"activate_supplier",targetBusinessPartnerId:"10101010-1010-4010-8010-101010101010",proposedPayload:{activation:{businessDate:"2026-08-28"}}}));
@@ -963,7 +1002,7 @@ describe("Business Partner request service", () => {
     expect(result.validation).toMatchObject({
       evaluationId: "66666666-6666-4666-8666-666666666666",
       valid: true,
-      ruleset: { code: "neon.business_partner.entity_case.phase1", version: 4 },
+      ruleset: { code: "neon.business_partner.entity_case.phase1", version: 5 },
     });
     expect(result.validation.findings).toHaveLength(18);
     expect(value.repository.validations).toHaveLength(1);
@@ -2205,20 +2244,47 @@ it("does not emit duplicate save effects when the repository returns the exact r
  expect(value.effects).toEqual(before);
 });
 
-it("identifies the update operation without treating unchanged ownership as reassignment",async()=>{
+it("requires existing update and proposed create authority only when ownership changes",async()=>{
  const checked:Readonly<Record<string,unknown>>[]=[];
  const value=fixture((permission,resource)=>{
-  if(permission!=="neon.relationship.entity_case.update")return true;
-  checked.push(resource??{});return resource?.operationKey==="update"&&resource?.entityCode==="entity_case";
+  if(!["neon.relationship.entity_case.update","neon.relationship.entity_case.create"].includes(permission))return true;
+  if(resource?.authorizationTarget)checked.push(resource??{});
+  return resource?.entityCode==="entity_case" || permission==="neon.relationship.entity_case.create";
  });
  const created=(await value.service.create(command({draftCapture:true}))).request;
+ checked.length=0;
  await value.service.patch({context,requestId:created.id,expectedVersion:created.rowVersion,draftCapture:true,proposedPayload:{name:"Updated draft"}});
  expect(checked.map(scope=>scope.authorizationTarget)).toEqual(["existing"]);
  checked.length=0;
  await value.service.patch({context,requestId:created.id,expectedVersion:2,draftCapture:true,operatingOrganizationId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",proposedPayload:{name:"Reassigned draft"}});
  expect(checked.map(scope=>scope.authorizationTarget)).toEqual(["existing","proposed"]);
+ expect(checked.map(scope=>scope.operationKey)).toEqual(["update","create"]);
 });
 
+
+it("does not let existing update authority admit an unauthorized proposed scope", async () => {
+ let creating=true;
+ const value=fixture((permission)=>creating || permission!=="neon.relationship.entity_case.create");
+ const created=(await value.service.create(command({draftCapture:true}))).request;
+ creating=false;
+ await expect(value.service.patch({context,requestId:created.id,expectedVersion:created.rowVersion,
+   draftCapture:true,companyCodeId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",proposedPayload:{name:"Changed"}}))
+   .rejects.toMatchObject({code:"FORBIDDEN"});
+ expect(value.repository.rows.get(created.id)?.rowVersion).toBe(created.rowVersion);
+});
+
+it("readmits changed company scope before saving and preserves the draft on denial", async () => {
+ const admission=vi.fn(async (_command:CreateBusinessPartnerRequestCommand)=>{});
+ const value=fixture(true,"test",false,undefined,undefined,admission);
+ const created=(await value.service.create(command({draftCapture:true}))).request;
+ admission.mockClear();
+ admission.mockRejectedValue(new MasterDataError(403,"EXPERIENCE_COMPANY_NOT_PERMITTED","Denied"));
+ await expect(value.service.patch({context,requestId:created.id,expectedVersion:created.rowVersion,
+   draftCapture:true,companyCodeId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",proposedPayload:{name:"Changed"}}))
+   .rejects.toMatchObject({code:"EXPERIENCE_COMPANY_NOT_PERMITTED"});
+ expect(admission).toHaveBeenCalledWith(expect.objectContaining({companyCodeId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}));
+ expect(value.repository.rows.get(created.id)?.rowVersion).toBe(created.rowVersion);
+});
 
 describe("supplier requirement API authority", () => {
   it.each(["basic", "standard", "enhanced"])("saves a %s assertion in the governed snapshot", async level => {

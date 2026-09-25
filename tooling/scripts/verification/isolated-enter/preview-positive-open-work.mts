@@ -57,7 +57,7 @@ if (!process.argv.includes("--inside")) {
   const { KyselyBusinessPartnerCaseRepository } =
     await import("../../../../server/packages/services/master-data/src/kysely-business-partner-case-repository.js");
   const { readBusinessPartner360ExplainabilitySection: read } =
-    await import("../../../../server/packages/services/master-data/src/kysely-business-partner-360-explainability.js");
+    await import("../../../../server/packages/services/master-data/src/business-partner/relationships/explainability-reader");
   const db = new Kysely({
     dialect: new PostgresDialect({
       pool: new Pool({

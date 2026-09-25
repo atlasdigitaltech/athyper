@@ -22,3 +22,8 @@ export * from "./kysely-ses-delivery-event-repository.js";
 export * from "./ses-event-message-handler.js";
 export * from "./ses-activity-events.js";
 export * from "./suppression-aware-email.js";
+export { resolveEntityNotificationRoute, renderEntityNotification, type EntityNotificationRoute } from "./entity-notification-routing.js";
+export { createCollaborationNotificationPolicy, isCollaborationNotification } from "./collaboration-notification-policy.js";
+export { createEntityNotificationDeliveryGuard } from "./entity-notification-delivery.js";
+export { mapNotificationProviderStatus, nextNotificationProviderStatus, createNotificationCallbackApplier } from "./provider-status.js";
+export * from './activity-presentation.js';

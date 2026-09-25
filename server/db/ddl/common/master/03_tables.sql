@@ -48,6 +48,7 @@ CREATE TABLE master.contact_person_role (
     id                uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id         uuid        NOT NULL,
     contact_person_id uuid        NOT NULL,
+    address_link_id   uuid,
     role_code         text        NOT NULL,
     effective_from    date        NOT NULL DEFAULT CURRENT_DATE,
     effective_until   date,
@@ -71,4 +72,4 @@ CREATE TABLE master.contact_person_role (
 );
 
 COMMENT ON TABLE master.contact_person_role IS
-  'Temporal contact-to-role assignment. role_code resolves through the tenant-extensible master.contact_role lookup domain.';
+  'Temporal contact responsibility, owner-wide when address_link_id is null or scoped to an address of the same owner. role_code resolves through master.contact_role; shared across planes.';

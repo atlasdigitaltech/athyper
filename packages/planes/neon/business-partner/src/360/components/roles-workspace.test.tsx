@@ -18,3 +18,16 @@ it("asks for organization when company participation is ambiguous",async()=>{awa
 it("keeps the selected company across all sibling tabs and extension links",async()=>{state.scope={companyCodeId:"uk",operatingOrganizationId:"org"};await act(async()=>root.render(<RolesWorkspace/>));expect(host.textContent).toContain("Supplier settings");await act(async()=>{(host.querySelector("#role-tab-selling") as HTMLButtonElement).click();});expect(host.textContent).toContain("Customer settings");expect(host.querySelector("a")?.getAttribute("href")).toBe("/mdg/business-partner/partner/scope/new?companyCodeId=uk&operatingOrganizationId=org");await act(async()=>{(host.querySelector("#role-tab-banks") as HTMLButtonElement).click();});expect(host.textContent).toContain("Accounts for uk");expect(window.location.search).toContain("roleTab=banks");});
 
 it("resolves a company-only overview deep link to its unique organization",async()=>{state.scope={companyCodeId:"uk"};await act(async()=>root.render(<RolesWorkspace/>));expect(state.selectScope).toHaveBeenCalledWith("org","uk");});
+
+it("replaces role-tab state through the shared writer without losing route context",async()=>{
+ state.scope={companyCodeId:"uk",operatingOrganizationId:"org"};
+ window.history.replaceState({router:"preserved"},"","/?tab=roles&section=roles-scope&companyCodeId=uk&asOf=2026-09-25&tag=a&tag=b#details");
+ const historyLength=window.history.length;
+ await act(async()=>root.render(<RolesWorkspace/>));
+ await act(async()=>{(host.querySelector("#role-tab-banks") as HTMLButtonElement).click();});
+ const query=new URLSearchParams(window.location.search);
+ expect(query.get("roleTab")).toBe("banks");expect(query.get("companyCodeId")).toBe("uk");
+ expect(query.get("asOf")).toBe("2026-09-25");expect(query.getAll("tag")).toEqual(["a","b"]);
+ expect(window.history.state).toEqual({router:"preserved"});expect(window.location.hash).toBe("#details");
+ expect(window.history.length).toBe(historyLength);
+});

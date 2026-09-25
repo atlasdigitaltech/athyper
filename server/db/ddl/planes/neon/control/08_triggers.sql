@@ -62,15 +62,9 @@ ON control.business_partner_qualification
 FOR EACH ROW
 EXECUTE FUNCTION control.trg_validate_business_partner_control_lookup();
 
-CREATE TRIGGER trg_business_partner_qualification_15_role_pair
-BEFORE INSERT OR UPDATE OF tenant_id,business_partner_id,partner_role,role_id
-ON control.business_partner_qualification
-FOR EACH ROW EXECUTE FUNCTION control.trg_validate_qualification_role_pair();
 
 CREATE TRIGGER trg_business_partner_qualification_20_scope
-BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, partner_role, role_id,
-    operating_organization_id, company_code_id, commodity_capability_id,
-    risk_assessment_id
+BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, risk_assessment_id
 ON control.business_partner_qualification
 FOR EACH ROW
 EXECUTE FUNCTION control.trg_validate_business_partner_control_scope();
@@ -153,7 +147,7 @@ BEFORE UPDATE OR DELETE ON control.business_partner_mutation_evidence
 FOR EACH ROW EXECUTE FUNCTION control.trg_reject_business_partner_mutation_evidence_change();
 
 CREATE TRIGGER trg_business_partner_block_10_operation_lookup
-BEFORE INSERT OR UPDATE OF operation_code
+BEFORE INSERT OR UPDATE OF operation_codes
 ON control.business_partner_block
 FOR EACH ROW
 EXECUTE FUNCTION control.trg_validate_business_partner_control_lookup('operation');
@@ -164,12 +158,6 @@ ON control.business_partner_block
 FOR EACH ROW
 EXECUTE FUNCTION control.trg_validate_business_partner_control_lookup('reason');
 
-CREATE TRIGGER trg_business_partner_block_30_scope
-BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, partner_role_scope,
-    operating_organization_id, company_code_id
-ON control.business_partner_block
-FOR EACH ROW
-EXECUTE FUNCTION control.trg_validate_business_partner_control_scope();
 
 CREATE TRIGGER trg_business_partner_block_40_guard
 BEFORE INSERT OR UPDATE
@@ -648,9 +636,6 @@ CREATE TRIGGER trg_business_partner_decision_scope_validate
 BEFORE INSERT OR UPDATE ON control.business_partner_decision_scope
 FOR EACH ROW EXECUTE FUNCTION control.trg_validate_decision_scope();
 
-CREATE TRIGGER trg_business_partner_qualification_scope_rows
-AFTER INSERT ON control.business_partner_qualification
-FOR EACH ROW EXECUTE FUNCTION control.trg_materialize_legacy_decision_scope();
 CREATE TRIGGER trg_supplier_preference_scope_rows
 AFTER INSERT ON control.supplier_preference_designation
 FOR EACH ROW EXECUTE FUNCTION control.trg_materialize_legacy_decision_scope();

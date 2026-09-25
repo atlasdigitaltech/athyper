@@ -1,3 +1,4 @@
+import {collectionPublicationFromGraph} from "@athyper/server-contract-publication";
 import { capabilityArtifactMembers, parseCapabilityBinding, parseCapabilityDeclaration } from "@athyper/server-contract-publication";
 import { compileEntityIntakeSurfaces } from "@athyper/contract-platform-entity-runtime";
 import { compileEntityAi } from "./entity-ai.js";
@@ -532,7 +533,9 @@ export function compileGraph(
   if (directoryRules.length > 1)
     throw new TypeError("Only one directory scope rule is allowed");
   const collectionRelationship = compileCollectionRelationship(graph);
+  const collectionConfiguration=collectionPublicationFromGraph(graph);
   const descriptor = canonicalValue({
+    ...(collectionConfiguration?{collectionConfiguration}:{}),
     ...(authorization ? { authorization } : {}),
     ...(authorizationRuntime ? { authorizationRuntime } : {}),
     ...(ai ? { ai } : {}),
@@ -1100,6 +1103,7 @@ function validateListSurfaces(
   graph: MetaEntityGraph,
   issues: ValidationIssue[],
 ) {
+  try {collectionPublicationFromGraph(graph);}catch(error){issues.push({code:"COLLECTION_CONFIGURATION_INVALID",path:"surfaces",message:(error as Error).message});}
   const fieldsById = new Map(
       graph.fields.flatMap((field) =>
         field.id ? [[field.id, field] as const] : [],

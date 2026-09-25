@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { projectBusinessPartnerProvider } from "../../server/packages/services/master-data/src/business-partner-provider-projection.js";
+import { projectBusinessPartnerProvider } from "../../server/packages/services/master-data/src/business-partner/record/projection-policy";
 import { createPermissionAuthorizer } from "../../server/packages/platform/iam/src/permission-authorizer.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 

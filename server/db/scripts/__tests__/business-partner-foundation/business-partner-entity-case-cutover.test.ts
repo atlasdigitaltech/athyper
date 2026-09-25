@@ -22,6 +22,10 @@ const retirement = readFileSync(
   new URL("../../../ddl/planes/neon/document/11_grants.sql", import.meta.url),
   "utf8",
 );
+const canonicalTables = readFileSync(
+  new URL("../../../ddl/planes/neon/document/03_tables.sql", import.meta.url),
+  "utf8",
+);
 const generated = readFileSync(
   new URL("../../../../packages/adapters/database/neon-postgres/src/generated/kysely/types.ts", import.meta.url),
   "utf8",
@@ -52,7 +56,8 @@ describe("Business Partner entity-case cutover", () => {
   });
 
   it("retires legacy canonical objects and generated types", () => {
-    assert.match(retirement, /DROP TABLE IF EXISTS document\.business_partner_request CASCADE/);
+    assert.doesNotMatch(canonicalTables, /CREATE TABLE document\.business_partner_request(?:\s|_)/);
+    assert.doesNotMatch(retirement, /DROP TABLE IF EXISTS document\.business_partner_request(?:\s|_)/);
     assert.doesNotMatch(generated, /export type business_partner_request(?:_| =)/);
     assert.doesNotMatch(generated, /"document\.business_partner_request"/);
   });

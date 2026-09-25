@@ -1245,6 +1245,7 @@ CREATE TABLE master.bank_provisional_reference (
  submitted_name text NOT NULL CHECK (btrim(submitted_name) <> ''),
  submitted_country character(2) NOT NULL REFERENCES shared.country(code),
  submitted_bic text,
+ submitted_branch_name text CHECK (submitted_branch_name IS NULL OR btrim(submitted_branch_name)<>''),
  status text NOT NULL DEFAULT 'unresolved' CHECK (status IN ('unresolved','resolved','rejected')),
  resolved_institution_id uuid REFERENCES shared.bank_institution(id),
  resolved_branch_id uuid,
@@ -1255,11 +1256,33 @@ CREATE TABLE master.bank_provisional_reference (
  CHECK (resolved_branch_id IS NULL OR resolved_institution_id IS NOT NULL)
 );
 
+CREATE TABLE master.payment_instrument (
+    id uuid NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id uuid NOT NULL,
+    instrument_type_code text NOT NULL CHECK (instrument_type_code = 'bank_account'),
+    code text CHECK (code IS NULL OR code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
+    name text CHECK (name IS NULL OR btrim(name) <> ''),
+    status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','inactive','closed','retired')),
+    record_version bigint NOT NULL DEFAULT 1 CHECK (record_version >= 1),
+    metadata jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(metadata)='object'),
+    status_changed_at timestamptz,
+    status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    created_by uuid NOT NULL,
+    updated_at timestamptz,
+    updated_by uuid,
+    PRIMARY KEY (id), UNIQUE (tenant_id,id),
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
+    CHECK ((status_changed_at IS NULL)=(status_changed_by IS NULL)),
+    CHECK ((updated_at IS NULL)=(updated_by IS NULL))
+);
+
+COMMENT ON TABLE master.payment_instrument IS
+ 'Tenant-owned instrument identity and lifecycle. Bank-account subtype shares this primary key; cash has no instrument row. Other instrument types are not enabled.';
+
 CREATE TABLE master.bank_account (
-    id                    uuid                           NOT NULL DEFAULT shared.uuidv7(),
+    id                    uuid                           NOT NULL ,
     tenant_id             uuid                           NOT NULL,
-    code                  text,
-    name                  text,
     bank_institution_id         uuid,
     bank_branch_id uuid,
     provisional_bank_reference_id uuid,
@@ -1269,20 +1292,10 @@ CREATE TABLE master.bank_account (
     account_last4         text                           NOT NULL,
     currency_code         character(3)                   NOT NULL,
     bic_override          text,
-    bank_name_override    text,
-    bank_country_override character(2),
     account_nature        master.bank_account_nature_d   NOT NULL DEFAULT 'direct',
     provider_account_ref  text,
     correspondent_bank_institution_id uuid,
-    is_verified           boolean                        NOT NULL DEFAULT false,
-    verified_at           timestamptz,
-    verified_by           uuid,
-    verification_method   master.bank_verification_method_d,
     metadata              jsonb                          NOT NULL DEFAULT '{}'::jsonb,
-    status                master.bank_account_status_d   NOT NULL DEFAULT 'pending_verification',
-    is_active             boolean GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at     timestamptz,
-    status_changed_by     uuid,
     created_at            timestamptz                    NOT NULL DEFAULT now(),
     created_by            uuid                           NOT NULL,
     updated_at            timestamptz,
@@ -1290,10 +1303,6 @@ CREATE TABLE master.bank_account (
 
     CONSTRAINT bank_account_pkey PRIMARY KEY (id),
     CONSTRAINT bank_account_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT bank_account_code_chk
-        CHECK (code IS NULL OR code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
-    CONSTRAINT bank_account_name_chk
-        CHECK (name IS NULL OR btrim(name) <> ''),
     CONSTRAINT bank_account_holder_chk CHECK (btrim(account_holder_name) <> ''),
     CONSTRAINT bank_account_identifier_chk
         CHECK (account_id_value ~ '^[A-Z0-9]{4,64}$'),
@@ -1304,22 +1313,11 @@ CREATE TABLE master.bank_account (
         )
     ),
     CONSTRAINT bank_account_currency_chk CHECK (currency_code::text ~ '^[A-Z]{3}$'),
+    CONSTRAINT bank_account_instrument_fk FOREIGN KEY (tenant_id,id)
+        REFERENCES master.payment_instrument(tenant_id,id) ON DELETE RESTRICT,
     CONSTRAINT bank_account_bank_identity_chk CHECK (
-        (
-            bank_institution_id IS NOT NULL
-            AND bank_name_override IS NULL
-            AND bank_country_override IS NULL
-        )
-        OR (
-            bank_institution_id IS NULL
-            AND bank_name_override IS NOT NULL
-            AND btrim(bank_name_override) <> ''
-            AND bank_country_override IS NOT NULL
-        )
-    ),
-    CONSTRAINT bank_account_override_country_chk CHECK (
-        bank_country_override IS NULL
-        OR bank_country_override::text ~ '^[A-Z]{2}$'
+        (bank_institution_id IS NOT NULL AND provisional_bank_reference_id IS NULL)
+        OR (bank_institution_id IS NULL AND provisional_bank_reference_id IS NOT NULL)
     ),
     CONSTRAINT bank_account_bic_override_chk CHECK (
         bic_override IS NULL
@@ -1332,25 +1330,7 @@ CREATE TABLE master.bank_account (
         ),
     CONSTRAINT bank_account_provider_ref_chk
         CHECK (provider_account_ref IS NULL OR btrim(provider_account_ref) <> ''),
-    CONSTRAINT bank_account_verification_evidence_chk CHECK (
-        (
-            NOT is_verified
-            AND verified_at IS NULL
-            AND verified_by IS NULL
-            AND verification_method IS NULL
-        )
-        OR (
-            is_verified
-            AND verified_at IS NOT NULL
-            AND verified_by IS NOT NULL
-            AND verification_method IS NOT NULL
-        )
-    ),
-    CONSTRAINT bank_account_active_verification_chk
-        CHECK (status <> 'active' OR is_verified),
     CONSTRAINT bank_account_metadata_object_chk CHECK (jsonb_typeof(metadata) = 'object'),
-    CONSTRAINT bank_account_status_audit_pair_chk
-        CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
     CONSTRAINT bank_account_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
@@ -1358,14 +1338,14 @@ CREATE TABLE master.bank_account (
 COMMENT ON COLUMN master.bank_account.account_id_value IS
   'Sensitive normalized identifier for legacy rows; protected registrations store a SHA-256 fingerprint here and keep the raw value only in protected storage.';
 
-CREATE TABLE master.bank_account_link (
+CREATE TABLE master.payment_instrument_link (
     id                    uuid                              NOT NULL DEFAULT shared.uuidv7(),
     tenant_id             uuid                              NOT NULL,
     owner_type_id         uuid                              NOT NULL,
     owner_type            text                              NOT NULL,
     owner_id              uuid                              NOT NULL,
     relationship_role     master.bank_relationship_role_d   NOT NULL,
-    bank_account_id       uuid                              NOT NULL,
+    payment_instrument_id       uuid                              NOT NULL,
     company_code_id       uuid,
     purpose               text                              NOT NULL DEFAULT 'default',
     is_primary            boolean                           NOT NULL DEFAULT false,
@@ -1377,31 +1357,31 @@ CREATE TABLE master.bank_account_link (
     updated_at            timestamptz,
     updated_by            uuid,
 
-    CONSTRAINT bank_account_link_pkey PRIMARY KEY (id),
-    CONSTRAINT bank_account_link_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT bank_account_link_owner_code_chk
+    CONSTRAINT payment_instrument_link_pkey PRIMARY KEY (id),
+    CONSTRAINT payment_instrument_link_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT payment_instrument_link_owner_code_chk
         CHECK (owner_type ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT bank_account_link_purpose_chk
+    CONSTRAINT payment_instrument_link_purpose_chk
         CHECK (purpose ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT bank_account_link_company_owner_chk CHECK (
+    CONSTRAINT payment_instrument_link_company_owner_chk CHECK (
         owner_type <> 'company_code'
         OR company_code_id = owner_id
     ),
-    CONSTRAINT bank_account_link_effective_chk
+    CONSTRAINT payment_instrument_link_effective_chk
         CHECK (effective_until IS NULL OR effective_until > effective_from),
-    CONSTRAINT bank_account_link_metadata_object_chk CHECK (jsonb_typeof(metadata) = 'object'),
-    CONSTRAINT bank_account_link_audit_pair_chk
+    CONSTRAINT payment_instrument_link_metadata_object_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT payment_instrument_link_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL)),
-    CONSTRAINT bank_account_link_no_overlap EXCLUDE USING gist (
+    CONSTRAINT payment_instrument_link_no_overlap EXCLUDE USING gist (
         tenant_id WITH =,
         owner_type_id WITH =,
         owner_id WITH =,
-        bank_account_id WITH =,
+        payment_instrument_id WITH =,
         purpose WITH =,
         COALESCE(company_code_id, '00000000-0000-0000-0000-000000000000'::uuid) WITH =,
         daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
     ),
-    CONSTRAINT bank_account_link_primary_no_overlap EXCLUDE USING gist (
+    CONSTRAINT payment_instrument_link_primary_no_overlap EXCLUDE USING gist (
         tenant_id WITH =,
         owner_type_id WITH =,
         owner_id WITH =,
@@ -1411,13 +1391,13 @@ CREATE TABLE master.bank_account_link (
     ) WHERE (is_primary)
 );
 
-COMMENT ON COLUMN master.bank_account_link.owner_type IS
+COMMENT ON COLUMN master.payment_instrument_link.owner_type IS
   'Compatibility code retained for existing services. owner_type_id is authoritative and a trigger enforces exact registry-code agreement.';
 
 CREATE TABLE master.bank_account_house_config (
     id                    uuid                              NOT NULL DEFAULT shared.uuidv7(),
     tenant_id             uuid                              NOT NULL,
-    bank_account_link_id  uuid                              NOT NULL,
+    payment_instrument_link_id  uuid                              NOT NULL,
     company_code_id       uuid                              NOT NULL,
     gl_account_id         uuid                              NOT NULL,
     local_account_type    text,
@@ -1443,7 +1423,7 @@ CREATE TABLE master.bank_account_house_config (
 
     CONSTRAINT bank_account_house_config_pkey PRIMARY KEY (id),
     CONSTRAINT bank_account_house_config_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT bank_account_house_config_link_uq UNIQUE (tenant_id, bank_account_link_id),
+    CONSTRAINT bank_account_house_config_link_uq UNIQUE (tenant_id, payment_instrument_link_id),
     CONSTRAINT bank_account_house_config_local_type_chk
         CHECK (local_account_type IS NULL OR btrim(local_account_type) <> ''),
     CONSTRAINT bank_account_house_config_nickname_chk
@@ -1890,18 +1870,16 @@ CREATE TABLE master.business_partner (
     code                       text                             NOT NULL,
     name                       text                             NOT NULL,
     partner_category           master.business_partner_category_d NOT NULL DEFAULT 'organization',
+    person_id                  uuid,
     ownership_class            master.business_partner_ownership_d NOT NULL DEFAULT 'external',
+    supplier_enabled           boolean                          NOT NULL DEFAULT false,
+    customer_enabled           boolean                          NOT NULL DEFAULT false,
     legal_classification       master.business_partner_legal_classification_d,
     category_locked_at         timestamptz                      NOT NULL DEFAULT now(),
     category_locked_by         uuid                             NOT NULL,
     record_version             bigint                           NOT NULL DEFAULT 1,
-    legal_form                 text,
-    registration_country_code  character(2),
-    incorporation_date         date,
     website_url                text,
-    parent_business_partner_id uuid,
     description                text,
-    aliases                    text[]                           NOT NULL DEFAULT '{}'::text[],
     metadata                   jsonb                            NOT NULL DEFAULT '{}'::jsonb,
     status                     master.business_partner_status_d NOT NULL DEFAULT 'draft',
     is_active                  boolean                          GENERATED ALWAYS AS (status = 'active') STORED,
@@ -1914,6 +1892,15 @@ CREATE TABLE master.business_partner (
 
     CONSTRAINT business_partner_pkey PRIMARY KEY (id),
     CONSTRAINT business_partner_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_person_shape_chk CHECK (
+        (partner_category='organization' AND person_id IS NULL)
+        OR (partner_category='person' AND person_id IS NOT NULL)
+    ),
+    CONSTRAINT business_partner_legal_category_chk CHECK (
+        legal_classification IS NULL
+        OR (partner_category='organization' AND legal_classification IN ('government','nonprofit'))
+        OR (partner_category='person' AND legal_classification='sole_proprietor')
+    ),
     CONSTRAINT business_partner_code_fmt_chk
         CHECK (code ~ '^[A-Z][A-Z0-9_.-]{1,62}$'),
     CONSTRAINT business_partner_purpose_chk
@@ -1921,16 +1908,6 @@ CREATE TABLE master.business_partner (
     CONSTRAINT business_partner_name_nonempty_chk
         CHECK (btrim(name) <> '' AND length(name) <= 320),
     CONSTRAINT business_partner_record_version_chk CHECK (record_version >= 1),
-    CONSTRAINT business_partner_legal_form_chk
-        CHECK (
-            legal_form IS NULL
-            OR (btrim(legal_form) <> '' AND length(legal_form) <= 100)
-        ),
-    CONSTRAINT business_partner_registration_country_chk
-        CHECK (
-            registration_country_code IS NULL
-            OR registration_country_code::text ~ '^[A-Z]{2}$'
-        ),
     CONSTRAINT business_partner_website_chk
         CHECK (
             website_url IS NULL
@@ -1940,12 +1917,8 @@ CREATE TABLE master.business_partner (
                 AND website_url ~* '^https://([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?(?::[0-9]{1,5})?(?:[/#?][^[:space:][:cntrl:]]*)?$'
             )
         ),
-    CONSTRAINT business_partner_parent_not_self_chk
-        CHECK (parent_business_partner_id IS DISTINCT FROM id),
     CONSTRAINT business_partner_description_chk
         CHECK (description IS NULL OR length(description) <= 4000),
-    CONSTRAINT business_partner_aliases_cache_chk
-        CHECK (cardinality(aliases) <= 50),
     CONSTRAINT business_partner_metadata_object_chk
         CHECK (jsonb_typeof(metadata) = 'object'
                AND octet_length(metadata::text) <= 16384
@@ -1966,12 +1939,14 @@ COMMENT ON COLUMN master.business_partner.partner_category IS
   'Organization-only identity. Ownership and supplier/customer roles are separate axes.';
 COMMENT ON COLUMN master.business_partner.ownership_class IS
   'External or tenant-internal ownership. Internal organization roles must be intercompany.';
+COMMENT ON COLUMN master.business_partner.supplier_enabled IS
+  'Command-owned Supplier capability indicator. Not qualification, preference, restriction, profile readiness or transaction eligibility.';
+COMMENT ON COLUMN master.business_partner.customer_enabled IS
+  'Command-owned Customer capability indicator, independent of Supplier. Disabling preserves setup and history; it does not cancel existing obligations.';
 COMMENT ON COLUMN master.business_partner.legal_classification IS
   'Optional legal/business classification such as government or nonprofit; never a structural category.';
 COMMENT ON COLUMN master.business_partner.metadata IS
   'Non-authoritative integration metadata only; legal identifiers, tax facts, permissions, and workflow state are prohibited.';
-COMMENT ON COLUMN master.business_partner.aliases IS
-  'Read-compatible cache maintained from master.business_partner_alias; direct writes are rejected.';
 
 CREATE TABLE master.supplier (
     id                  uuid                     NOT NULL DEFAULT shared.uuidv7(),
@@ -2437,7 +2412,7 @@ CREATE TABLE master.person (
 );
 
 COMMENT ON TABLE master.person IS
-  'People/Workforce-owned controlled PII profile. A Person is not a Business Partner; employee, employment, work assignment and external-worker engagement own workforce facts.';
+  'People-owned controlled identity profile, optionally referenced by a tenant-local person Business Partner. Partner linkage creates no employment or login; workforce tables own workforce facts.';
 
 CREATE TABLE master.person_sensitive_profile (
     id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -4315,7 +4290,7 @@ CREATE TABLE master.project (
     id                       uuid                    NOT NULL DEFAULT shared.uuidv7(),
     tenant_id                uuid                    NOT NULL,
     company_code_id          uuid                    NOT NULL,
-    customer_id              uuid,
+    business_partner_id      uuid,
     code                     text                    NOT NULL,
     name                     text                    NOT NULL,
     description              text,
@@ -4676,37 +4651,6 @@ CREATE TABLE master.business_partner_tax_registration (
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
 
-CREATE TABLE master.business_partner_commodity_capability (
-    id                    uuid                              NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id             uuid                              NOT NULL,
-    business_partner_id   uuid                              NOT NULL,
-    commodity_category_id uuid                              NOT NULL,
-    partner_role          master.partner_role_d             NOT NULL,
-    effective_from        date                              NOT NULL DEFAULT CURRENT_DATE,
-    effective_until       date,
-    notes                 text,
-    metadata              jsonb                             NOT NULL DEFAULT '{}'::jsonb,
-    status                master.partner_extension_status_d NOT NULL DEFAULT 'draft',
-    is_active             boolean GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at     timestamptz,
-    status_changed_by     uuid,
-    created_at            timestamptz                       NOT NULL DEFAULT now(),
-    created_by            uuid                              NOT NULL,
-    updated_at            timestamptz,
-    updated_by            uuid,
-
-    CONSTRAINT business_partner_commodity_capability_pkey PRIMARY KEY (id),
-    CONSTRAINT business_partner_commodity_capability_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT business_partner_commodity_capability_range_chk
-        CHECK (effective_until IS NULL OR effective_until > effective_from),
-    CONSTRAINT business_partner_commodity_capability_metadata_chk
-        CHECK (jsonb_typeof(metadata) = 'object'),
-    CONSTRAINT business_partner_commodity_capability_status_pair_chk
-        CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
-    CONSTRAINT business_partner_commodity_capability_audit_pair_chk
-        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
-);
-
 CREATE TABLE master.business_partner_industry_classification (
     id                   uuid                              NOT NULL DEFAULT shared.uuidv7(),
     tenant_id            uuid                              NOT NULL,
@@ -4793,7 +4737,7 @@ CREATE TABLE master.business_partner_operating_organization_assignment (
 CREATE TABLE master.company_code_supplier_profile (
     id                                uuid                              NOT NULL DEFAULT shared.uuidv7(),
     tenant_id                         uuid                              NOT NULL,
-    supplier_id                       uuid                              NOT NULL,
+    business_partner_id               uuid                              NOT NULL,
     company_code_id                   uuid                              NOT NULL,
     currency_code                     character(3),
     payment_term_id                   uuid,
@@ -4815,7 +4759,7 @@ CREATE TABLE master.company_code_supplier_profile (
     CONSTRAINT company_code_supplier_profile_company_id_uq
         UNIQUE (tenant_id, company_code_id, id),
     CONSTRAINT company_code_supplier_profile_coordinate_uq
-        UNIQUE (tenant_id, supplier_id, company_code_id),
+        UNIQUE (tenant_id, business_partner_id, company_code_id),
     CONSTRAINT company_code_supplier_profile_metadata_chk
         CHECK (jsonb_typeof(metadata) = 'object' AND octet_length(metadata::text) <= 16384
                AND NOT (metadata ?| ARRAY['creditLimit','bankAccount','paymentTerms','currency'])),
@@ -4828,7 +4772,7 @@ CREATE TABLE master.company_code_supplier_profile (
 CREATE TABLE master.company_code_customer_profile (
     id                            uuid                              NOT NULL DEFAULT shared.uuidv7(),
     tenant_id                     uuid                              NOT NULL,
-    customer_id                   uuid                              NOT NULL,
+    business_partner_id           uuid                              NOT NULL,
     company_code_id               uuid                              NOT NULL,
     currency_code                 character(3),
     payment_term_id               uuid,
@@ -4850,7 +4794,7 @@ CREATE TABLE master.company_code_customer_profile (
     CONSTRAINT company_code_customer_profile_company_id_uq
         UNIQUE (tenant_id, company_code_id, id),
     CONSTRAINT company_code_customer_profile_coordinate_uq
-        UNIQUE (tenant_id, customer_id, company_code_id),
+        UNIQUE (tenant_id, business_partner_id, company_code_id),
     CONSTRAINT company_code_customer_profile_statement_chk
         CHECK (statement_cycle_code IS NULL
                OR statement_cycle_code ~ '^[a-z][a-z0-9_.-]{1,62}$'),

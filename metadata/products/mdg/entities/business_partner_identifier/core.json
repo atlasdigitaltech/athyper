@@ -76,10 +76,21 @@
           "plaintextInNormalQueries": false
         },
         "sensitivity": "restricted"
+        ,"reveal": {
+          "operationKey": "reveal",
+          "purposes": [{"value":"partner_review","label":{"labelKey":"business_partner.reveal.purpose.partner_review","defaultText":"Partner review"}}],
+          "permissionCode": "neon.relationship.business_partner_identifier.reveal",
+          "requiresElevatedAssurance": true,
+          "historicalSnapshotAllowed": false,
+          "claim": "single_use_purpose_bound_expiring",
+          "audit": "same_transaction",
+          "cachePolicy": "no_store"
+        }
       }
     },
     {
       "key": "scheme_code",
+      "display": {"lookup":{"code":"master.business_partner_identifier_scheme"}},
       "binding": {
         "sourceObject": "master.business_partner_identifier",
         "column": "scheme_code"
@@ -96,6 +107,7 @@
     },
     {
       "key": "issuing_country_code",
+      "display": {"lookup":{"code":"shared.country"}},
       "binding": {
         "sourceObject": "master.business_partner_identifier",
         "column": "issuing_country_code"

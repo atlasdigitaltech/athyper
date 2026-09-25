@@ -1,4 +1,5 @@
 import { useAuditedReveal } from "../use-audited-reveal";
+import { CrosswalkEvidence } from "./crosswalk-evidence";
 import { RelatedRecord } from "@athyper/platform-entity-form-detail";
 import { RelatedSection } from "./related-section";
 import { businessLabel, countryName } from "../display-values";
@@ -15,7 +16,7 @@ import {
   type CommonSection as Section,
   type CommonSectionCode,
   type CommonSectionItem,
-} from "../business-partner-360-section-client";
+} from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-section-client";
 import { useBusinessPartner360 } from "../business-partner-360-context";
 export function CommonSection({ code }: { readonly code: CommonSectionCode }) {
   return code === "contacts" || code === "addresses" ? (
@@ -216,6 +217,7 @@ export function ItemCard({
           {emptyCount === 1 ? "field" : "fields"}
         </button>
       ) : null}
+      {item.kind === "classification" ? <CrosswalkEvidence items={item.crosswalks} /> : null}
       {item.industryCodeId ? (
         <details>
           <summary>Technical details</summary>

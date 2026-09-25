@@ -8,7 +8,7 @@ export function activityCount(
   source: ShellActivityDataSource | undefined,
   tab: ShellActivityTab,
 ): number | undefined {
-  if (!source || source.loading || source.error) return undefined;
+  if (!source || source.loading || source.error || source.errors?.[tab]) return undefined;
   const explicit =
     tab === "notifications"
       ? source.unreadNotificationCount

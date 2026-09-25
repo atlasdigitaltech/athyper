@@ -15,7 +15,7 @@ import {
   createBusinessPartner360SectionClient,
   sectionQueryKey,
   type CommonSection,
-} from "../business-partner-360-section-client";
+} from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-section-client";
 
 export function RelatedSection({
   code,

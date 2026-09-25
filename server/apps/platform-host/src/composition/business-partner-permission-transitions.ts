@@ -6,6 +6,11 @@ import type { EntityAuthorizationProfileV1 } from "@athyper/server-contract-meta
  * Installation confers no capabilities and does not enable enforcement. */
 const approvedTransitions = [
   {
+    operationKey: "identifier_reveal",
+    sourcePermissionCode: "neon.relationship.business_partner_identifier.reveal",
+    targetPermissionCode: "neon.relationship.bp_target.identifier_reveal",
+  },
+  {
     "operationKey": "enter",
     "sourcePermissionCode": "neon.relationship.business_partner.enter",
     "targetPermissionCode": "neon.relationship.bp_target.enter"

@@ -21,7 +21,7 @@ BEFORE UPDATE ON master.contact_person
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 CREATE TRIGGER trg_contact_person_role_05_validate
-BEFORE INSERT OR UPDATE OF tenant_id, role_code
+BEFORE INSERT OR UPDATE OF tenant_id, role_code,contact_person_id,address_link_id
 ON master.contact_person_role
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_contact_person_role();
 
@@ -53,6 +53,10 @@ CREATE TRIGGER trg_address_20_identity_immutable
 BEFORE UPDATE
 ON master.address
 FOR EACH ROW EXECUTE FUNCTION master.trg_guard_address_identity();
+
+CREATE TRIGGER trg_address_link_contact_owner_guard
+BEFORE UPDATE OF tenant_id,owner_type_id,owner_id ON master.address_link
+FOR EACH ROW EXECUTE FUNCTION master.trg_guard_contact_address_owner();
 
 CREATE TRIGGER trg_address_link_05_usage_guard
 BEFORE INSERT OR UPDATE OF

@@ -18,7 +18,7 @@ JOIN pg_namespace n ON n.nspname=i.table_schema
 JOIN pg_class c ON c.relnamespace=n.oid AND c.relname=i.table_name
 JOIN pg_attribute a ON a.attrelid=c.oid AND a.attname=i.column_name
 JOIN pg_type t ON t.oid=a.atttypid
-WHERE i.table_schema IN ('master','document','control','shared');
+WHERE i.table_schema IN ('master','document','control','shared','snapshot');
 """
 INDEX_QUERY = """
 SELECT coalesce(json_agg(json_build_object(
@@ -95,9 +95,8 @@ def main():
     expected_database = catalog_document['source']['database']
     if identity['database'] != expected_database or environment['PGDATABASE'] != expected_database:
         sys.exit('BLOCKED: PostgreSQL connection database does not match reviewed catalog evidence.')
-    # Some legacy/request storage is deliberately retained as pinned source-DDL
-    # evidence until its local table is deployed. It remains validated offline,
-    # but cannot be required from the active development container.
+    # Optional source-only additions may carry DDL evidence. Retired request
+    # storage is not a valid fallback; request fields use the case projection.
     source_only_tables = {
         item['table'] for item in catalog_document.get('ddlFallbacks', [])
         if isinstance(item.get('table'), str)

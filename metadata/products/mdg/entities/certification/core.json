@@ -9,7 +9,8 @@
   "storage": {
     "kind": "handler_projection",
     "sourceObjects": [
-      "master.certification"
+      "master.certification",
+      "master.certification_type"
     ],
     "primaryObject": "master.certification",
     "idField": "id",
@@ -104,6 +105,7 @@
     },
     {
       "key": "document_attachment_id",
+      "display": { "attachmentDownload": true },
       "binding": {
         "sourceObject": "master.certification",
         "column": "document_attachment_id"
@@ -112,7 +114,7 @@
       "nullable": true,
       "label": {
         "labelKey": "entity.certification.core.fields.document_attachment_id.label",
-        "defaultText": "Document Attachment Id"
+        "defaultText": "Certificate document"
       },
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
@@ -120,6 +122,7 @@
     },
     {
       "key": "certification_type_id",
+      "display": {"lookup":{"code":"master.certification_type"}},
       "binding": {
         "sourceObject": "master.certification",
         "column": "certification_type_id"
@@ -149,6 +152,22 @@
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
       "storageType": "text"
+    },
+    {
+      "key": "display_name",
+      "binding": { "sourceObject": "master.certification", "column": "custom_name" },
+      "dataType": "string", "nullable": true, "storageType": "text",
+      "label": { "labelKey": "entity.certification.display_name", "defaultText": "Certificate name" },
+      "valueOrigin": "derived", "readPolicy": "authorized_projection", "writePolicy": "system_managed",
+      "uiFacets": { "visibility": "visible", "editability": "readonly" }
+    },
+    {
+      "key": "issuing_body",
+      "binding": { "sourceObject": "master.certification_type", "column": "issuing_body" },
+      "dataType": "string", "nullable": true, "storageType": "text",
+      "label": { "labelKey": "entity.certification.issuing_body", "defaultText": "Issuing body" },
+      "valueOrigin": "derived", "readPolicy": "authorized_projection", "writePolicy": "system_managed",
+      "uiFacets": { "visibility": "visible", "editability": "readonly" }
     },
     {
       "key": "certificate_number",
@@ -220,7 +239,8 @@
         "sourceObject": "master.certification",
         "column": "status"
       },
-      "dataType": "string",
+      "dataType": "enum",
+      "display": {"lookup":{"options":[{"value":"active","label":{"labelKey":"entity.certification.status.active","defaultText":"Active"}},{"value":"inactive","label":{"labelKey":"entity.certification.status.inactive","defaultText":"Inactive"}},{"value":"archived","label":{"labelKey":"entity.certification.status.archived","defaultText":"Archived"}}]}},
       "nullable": false,
       "label": {
         "labelKey": "entity.certification.core.fields.status.label",
@@ -305,7 +325,6 @@
   ],
   "defaultsProfile": "platform.core-field-defaults.v1",
   "defaultsProfileRef": "platform/core-field-defaults.v1.json",
-  "artifactHash": "sha256:3b2eb2df4613c95c5a0153f156763a58bd6d73cee31fadbba516056c107f631c",
   "query": {
     "search": [],
     "filters": [],

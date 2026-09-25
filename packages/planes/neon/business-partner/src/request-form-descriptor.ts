@@ -130,12 +130,14 @@ export function serializeRequestForm(descriptor: RequestFormDescriptor, data: Fo
   operatingOrganizationId: string;
   proposedPayload: Readonly<Record<string, unknown>>;
 }> {
-  const current = Object.fromEntries(data.entries()), proposed: Record<string, unknown> = { partnerCategory: "organization" }, tenantFields: Record<string, unknown> = {};
+  const previousTenantFields = options.existingPayload?.tenantFields;
+  const current = Object.fromEntries(data.entries()), proposed: Record<string, unknown> = { partnerCategory: "organization" }, tenantFields: Record<string, unknown> = previousTenantFields && typeof previousTenantFields === "object" && !Array.isArray(previousTenantFields) ? { ...previousTenantFields } : {};
   let operatingOrganizationId = "";
   for (const field of descriptor.sections.flatMap(section => section.fields)) {
     if (!isRequestFieldVisible(field, current)) continue;
     const raw = field.widget === "checkbox" ? data.has(field.key) : data.get(field.key);
     if (raw === null || raw === "") {
+      if (options.includeEmpty && field.target === "request_only" && data.has(field.key)) delete tenantFields[field.path];
       if (options.includeEmpty && field.target === "canonical" && (!options.existingPayload || Object.hasOwn(options.existingPayload, field.path))) proposed[field.path] = null;
       continue;
     }

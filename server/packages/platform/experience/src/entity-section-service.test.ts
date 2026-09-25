@@ -9,6 +9,77 @@ const overview = artifact("presentation_section", "business_partner/presentation
 const context = { tenantId: "tenant", principalId: "principal", planeKey: "neon", permissions: { allowed: ["bp.read"] } } as any;
 
 describe("entity runtime resource service", () => {
+  it("projects header tone from the pinned entity surface", async () => {
+    const publishedSurface = artifact("presentation_surface", surface.artifactKey, {...surface.content, header: {titleField: "name", statusField: "status", statusTones: {published: "success"}}});
+    const reader = {surfaceModel: async () => ({release: {release: {releaseId: "release", releaseHash: `sha256:${"a".repeat(64)}`}}, core, surface: publishedSurface}), operation: async () => operation};
+    const service = createEntityRuntimeResourceService({reader: reader as any, headers: {readHeader: async () => ({revision: "1", values: {name: "Example", status: "Published", statusTone: "danger"}})}, sections: {get: vi.fn()}});
+    const result = await service.bootstrap({context, entityCode: "business_partner", recordId: "record", surfaceKey: "detail"});
+    expect(result?.header.values.statusTone).toBe("success");
+  });
+  it("evaluates child visibility using each row, including an empty field projection", async () => {
+    const fields = ["organization", "person"].map(category => ({key: category, dynamicFacets: [{facet: "visibility", engine: "jsonlogic.v1", expression: {"==": [{var: "record.category"}, category]}, valueWhenTrue: "visible", valueWhenFalse: "hidden"}]}));
+    const child = artifact("core", "child/core", {fields});
+    const section = artifact("presentation_section", overview.artifactKey, {...overview.content, childCollections: [{key: "rows", coreRef: "child/core.json", rendererKey: "platform.related-collection.v1", fieldBindings: fields.map(f => ({fieldKey: f.key}))}]});
+    const reader = {surfaceModel: async () => ({release: {release: {releaseId: "release", releaseHash: `sha256:${"a".repeat(64)}`}}, core, surface}), operation: async () => operation, section: async () => section, artifactByKey: async () => child};
+    const service = createEntityRuntimeResourceService({reader: reader as any, headers: {readHeader: vi.fn()}, sections: {get: () => ({read: async () => ({revision: "1", data: {values: {category: "organization"}, collections: {rows: [{category: "person"}, {category: "organization"}, {}]}}})})}});
+    const result = await service.section({context, entityCode: "business_partner", recordId: "partner", surfaceKey: "detail", sectionKey: "overview"});
+    expect(result?.presentation.childCollections[0]?.rowFields?.map(fields => fields.map(f => f.key))).toEqual([["person"], ["organization"], []]);
+  });
+  it("projects an explicit attachment download binding only for UUID fields",async()=>{
+    const typed=artifact('core',core.artifactKey,{fields:[{key:'document',dataType:'uuid',display:{attachmentDownload:true}},{key:'plain',dataType:'uuid'},{key:'invalid',dataType:'string',display:{attachmentDownload:true}}]});
+    const section=artifact('presentation_section',overview.artifactKey,{...overview.content,fieldBindings:['document','plain','invalid'].map(fieldKey=>({fieldKey}))});
+    const reader={surfaceModel:async()=>({release:{release:{releaseId:'release',releaseHash:`sha256:${'a'.repeat(64)}`}},core:typed,surface}),operation:async()=>operation,section:async()=>section};
+    const service=createEntityRuntimeResourceService({reader:reader as any,headers:{readHeader:vi.fn()},sections:{get:()=>({read:async()=>({revision:'1',data:{}})})}});
+    const result=await service.section({context,entityCode:'business_partner',recordId:'partner',surfaceKey:'detail',sectionKey:'overview'});
+    expect(result?.presentation.fields).toEqual([{key:'document',attachmentDownload:true},{key:'plain'},{key:'invalid'}]);
+  });
+  it("normalizes root protection onto its masked field with an explicit reveal target",async()=>{
+    const purposes=[{value:'partner_review',label:{labelKey:'review',defaultText:'Partner review'}}];
+    const typed=artifact('core',core.artifactKey,{entityCode:'business_partner_banking',fields:[{key:'account_last4'}],protections:[{protectedSource:{maskedByFieldKey:'account_last4'},normalProjection:{displayPrefix:'••••'},reveal:{operationKey:'reveal',targetField:'reveal_link_id',purposes}}]});
+    const section=artifact('presentation_section',overview.artifactKey,{...overview.content,fieldBindings:[{fieldKey:'account_last4'}]});
+    const reader={surfaceModel:async()=>({release:{release:{releaseId:'release',releaseHash:`sha256:${'a'.repeat(64)}`}},core:typed,surface}),operation:async()=>operation,section:async()=>section};
+    const service=createEntityRuntimeResourceService({reader:reader as any,headers:{readHeader:vi.fn()},sections:{get:()=>({read:async()=>({revision:'1',data:{}})})}});
+    const result=await service.section({context,entityCode:'business_partner',recordId:'partner',surfaceKey:'detail',sectionKey:'overview'});
+    expect(result?.presentation.fields).toEqual([{key:'account_last4',maskedPrefix:'••••',revealOperation:'business_partner_banking.reveal',revealTargetField:'reveal_link_id',revealPurposes:purposes}]);
+  });
+  it.each([['person',['person_name']],['organization',['legal_name']],[undefined,[]]])("filters category facets from authorized values: %s",async(category,expected)=>{
+    const fields=['legal_name','person_name'].map((key,i)=>({key,dynamicFacets:[{facet:'visibility',engine:'jsonlogic.v1',expression:{'==':[{var:'record.partner_category'},i?'person':'organization']},valueWhenTrue:'visible',valueWhenFalse:'hidden'}]}));
+    const typed=artifact('core',core.artifactKey,{fields});
+    const section=artifact('presentation_section',overview.artifactKey,{...overview.content,fieldBindings:fields.map(f=>({fieldKey:f.key}))});
+    const reader={surfaceModel:async()=>({release:{release:{releaseId:'release',releaseHash:`sha256:${'a'.repeat(64)}`}},core:typed,surface}),operation:async()=>operation,section:async()=>section};
+    const service=createEntityRuntimeResourceService({reader:reader as any,headers:{readHeader:vi.fn()},sections:{get:()=>({read:async()=>({revision:'1',data:{values:category?{partner_category:category}:{}}})})}});
+    const result=await service.section({context,entityCode:'business_partner',recordId:'partner',surfaceKey:'detail',sectionKey:'overview'});
+    expect(result?.presentation.fields.map(f=>f.key)).toEqual(expected);
+  });
+  it("projects enum labels from core metadata without rewriting stored codes", async () => {
+    const options = [{value:"external",label:{labelKey:"test.external",defaultText:"External party"}}];
+    const typed=artifact("core",core.artifactKey,{fields:[{key:"ownership_class",dataType:"enum",display:{lookup:{options}}}]});
+    const section=artifact("presentation_section",overview.artifactKey,{...overview.content,fieldBindings:[{fieldKey:"ownership_class"}]});
+    const reader={surfaceModel:async()=>({release:{release:{releaseId:"release",releaseHash:`sha256:${"a".repeat(64)}`}},core:typed,surface}),operation:async()=>operation,section:async()=>section};
+    const service=createEntityRuntimeResourceService({reader:reader as any,headers:{readHeader:vi.fn()},sections:{get:()=>({read:async()=>({revision:"1",data:{values:{ownership_class:"external"}}})})}});
+    const result=await service.section({context,entityCode:"business_partner",recordId:"partner",surfaceKey:"detail",sectionKey:"overview"});
+    expect(result?.presentation.fields).toEqual([{key:"ownership_class",options}]);
+    expect(result?.data).toEqual({values:{ownership_class:"external"}});
+  });
+  it("resolves child choices from their pinned owning Core and declared catalog", async () => {
+    const child=artifact("core","child/core",{fields:[{key:"status",dataType:"enum",display:{lookup:{options:[{value:"active",label:{labelKey:"child.active",defaultText:"Child active"}}]}}},{key:"scheme",display:{lookup:{code:"shared.classification_scheme"}}}]});
+    const section=artifact("presentation_section",overview.artifactKey,{...overview.content,childCollections:[{key:"rows",coreRef:"child/core.json",rendererKey:"platform.related-collection.v1",fieldBindings:[{fieldKey:"status"},{fieldKey:"scheme"}]}]});
+    const reader={surfaceModel:async()=>({release:{release:{releaseId:"release",releaseHash:`sha256:${"a".repeat(64)}`}},core,surface}),operation:async()=>operation,section:async()=>section,artifactByKey:vi.fn(async()=>child)};
+    const catalog=vi.fn(async()=>[{value:"isic",label:{labelKey:"scheme.isic",defaultText:"Catalog scheme name"}}]);
+    const service=createEntityRuntimeResourceService({reader:reader as any,displayChoices:catalog,headers:{readHeader:vi.fn()},sections:{get:()=>({read:async()=>({revision:"1",data:{collections:{rows:[{status:"active",scheme:"isic"}]}}})})}});
+    const result=await service.section({context,entityCode:"business_partner",recordId:"partner",surfaceKey:"detail",sectionKey:"overview"});
+    expect(reader.artifactByKey).toHaveBeenCalledWith(expect.anything(),"child/core","core");
+    expect(catalog).toHaveBeenCalledWith(context,"shared.classification_scheme");
+    expect(result?.presentation.childCollections[0]?.fields.map(f=>f.options?.[0]?.label.defaultText)).toEqual(["Child active","Catalog scheme name"]);
+  });
+  it("projects explicit collection captions and collapsed reference presentation without leaking internal metadata", async () => {
+    const mapping = {key:"related_mappings",rendererKey:"platform.related-collection.v1",display:"disclosure",label:{labelKey:"classification.related_mappings",defaultText:"Related classification mappings"},description:"Not partner declarations.",fieldBindings:[{fieldKey:"verified",label:{labelKey:"mapping.verified",defaultText:"Mapping verified"}}],handlerSecret:"hidden"};
+    const section=artifact("presentation_section",overview.artifactKey,{...overview.content,childCollections:[mapping]});
+    const reader={surfaceModel:async()=>({release:{release:{releaseId:"release",releaseHash:`sha256:${"a".repeat(64)}`}},core,surface}),operation:async()=>operation,section:async()=>section};
+    const service=createEntityRuntimeResourceService({reader:reader as any,headers:{readHeader:vi.fn()},sections:{get:()=>({read:async()=>({revision:"1",data:{}})})}});
+    const result=await service.section({context,entityCode:"business_partner",recordId:"partner",surfaceKey:"detail",sectionKey:"overview"});
+    expect(result?.presentation.childCollections[0]).toEqual({key:"related_mappings",rendererKey:"platform.related-collection.v1",display:"disclosure",label:mapping.label,description:mapping.description,fields:[{key:"verified",label:mapping.fieldBindings[0]!.label}]});
+  });
   it("uses one header projection and refuses denied sections before handler invocation", async () => {
     const readHeader = vi.fn(async () => ({ revision: "record-1", values: { name: "Acme" } }));
     const handler = { read: vi.fn(async () => ({ revision: "section-1", data: { items: [] } })) };
@@ -29,6 +100,18 @@ describe("entity runtime resource service", () => {
     });
     expect(handler.read).toHaveBeenCalledOnce();
     expect(handler.read).toHaveBeenCalledWith(expect.objectContaining({ limit: 25 }));
+  });
+  it("resolves header catalog labels while retaining the stored code", async () => {
+    const typedCore = artifact("core", core.artifactKey, {fields:[{key:"status",dataType:"enum",display:{lookup:{code:"shared.status"}}}]});
+    const reader = {
+      surfaceModel: vi.fn(async () => ({release:{release:{releaseId:"release-1",releaseHash:`sha256:${"a".repeat(64)}`}},core:typedCore,surface})),
+      operation: vi.fn(async () => operation),
+    };
+    const displayChoices = vi.fn(async () => [{value:"active",label:{labelKey:"active",defaultText:"Active"}}]);
+    const service = createEntityRuntimeResourceService({reader:reader as any,headers:{readHeader:vi.fn(async () => ({revision:"1",values:{status:"active"}}))},sections:{get:vi.fn()},displayChoices});
+    const result = await service.bootstrap({context,entityCode:"business_partner",recordId:"record",surfaceKey:"detail"});
+    expect(result?.header.values).toMatchObject({status:"active",displayLabels:{status:"Active"}});
+    expect(displayChoices).toHaveBeenCalledWith(context,"shared.status",["active"]);
   });
 
   it("reads declared summary cards lazily and isolates an unavailable provider", async () => {

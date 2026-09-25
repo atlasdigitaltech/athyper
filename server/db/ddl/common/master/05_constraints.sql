@@ -14,6 +14,8 @@ ALTER TABLE master.contact_person
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
 ALTER TABLE master.contact_person_role
+    ADD CONSTRAINT contact_person_role_address_fk
+    FOREIGN KEY (tenant_id,address_link_id) REFERENCES master.address_link(tenant_id,id) ON DELETE RESTRICT,
     ADD CONSTRAINT contact_person_role_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT,
     ADD CONSTRAINT contact_person_role_contact_fk

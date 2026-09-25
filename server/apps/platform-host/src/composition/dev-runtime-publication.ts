@@ -11,6 +11,8 @@ import {
   parseEntityAuthorizationRuntime,
 } from "@athyper/server-contract-metadata";
 import type { KyselyPublicationAuthorityWork } from "@athyper/server-service-publication";
+import type { LoadedPublicationArtifact } from "@athyper/server-contract-publication";
+import { validatePublicationRecovery, type PublicationRecoveryArchive } from "./publication-provenance-recovery.js";
 import {
   loadDevPublicationConfiguration,
   type DevPublicationConfiguration,
@@ -270,9 +272,32 @@ export function createDevRuntimePublication(options: {
         return qualify(coordinate);
       },
     } satisfies Review,
-    async authorizeActivation(releaseId: string) {
-      const config = configuration(),
-        q = await qualification(config);
+    async authorizeActivation(releaseId: string, loaded?: LoadedPublicationArtifact) {
+      const config = configuration();
+      if (loaded) {
+        const recovery = await scoped(config, async tx => {
+          const archive = (await sql<PublicationRecoveryArchive>`SELECT a.*,EXISTS(SELECT 1 FROM metadata.publication_recovery_revocation r WHERE r.archive_id=a.id) AS revoked
+            FROM metadata.publication_recovery_archive a WHERE a.tenant_id=${config.tenantId}::uuid AND a.source_release_id=${releaseId}::uuid
+            AND NOT EXISTS(SELECT 1 FROM metadata.publication_recovery_archive successor WHERE successor.supersedes_id=a.id)`.execute(tx)).rows[0];
+          if (!archive) return null;
+          for (const role of ["author", "publisher"] as const) {
+            const p = config[role];
+            const active = await sql`SELECT p.id FROM master.principal p JOIN master.tenant t ON t.id=p.tenant_id
+              WHERE p.tenant_id=${config.tenantId}::uuid AND p.id=${p.principalId}::uuid AND p.code=${p.code}
+              AND p.principal_type='service_account' AND p.provisioning_source='internal' AND p.status='active'
+              AND t.status='active' AND p.auth_epoch=${p.authEpoch} AND p.metadata->'devPublication'->>'role'=${role}
+              AND p.metadata->'devPublication'->>'instance'='dev'`.execute(tx);
+            check(active.rows.length === 1, "DEV_PUBLICATION_WORKLOAD_REVOKED");
+          }
+          const receipt = validatePublicationRecovery({ archive, loaded, config, signingKeyId: options.signingKeyId,
+            catalogHash: hash(await options.compilation.catalog(loaded.document.envelope.targetPlane)) });
+          await options.audit.record({ eventCode: "metadata.publication_recovery.activation_authorized", action: "recover_publication", outcome: "success", severity: "critical", tenantId: config.tenantId,
+            actor: { kind: "service", principalId: config.publisher.principalId }, metadata: { ...receipt, sourceReleaseId: releaseId, historicalApprovalReplayed: false } }, tx);
+          return receipt;
+        });
+        if (recovery) return recovery;
+      }
+      const q = await qualification(config);
       check(
         releaseId === q.coordinate.releaseId,
         "ENTITY_AUTHORIZATION_ACTIVATION_APPROVAL_REQUIRED",

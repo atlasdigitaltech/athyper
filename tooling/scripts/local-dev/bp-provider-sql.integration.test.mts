@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
-import { readBusinessPartner360ExplainabilitySection } from "../../../server/packages/services/master-data/src/kysely-business-partner-360-explainability.js";
+import { readBusinessPartner360ExplainabilitySection } from "../../../server/packages/services/master-data/src/business-partner/relationships/explainability-reader";
 import { createBusinessPartnerStoredScopes } from "../../../server/apps/platform-host/src/composition/business-partner-stored-scopes.js";
 
 const require = createRequire(

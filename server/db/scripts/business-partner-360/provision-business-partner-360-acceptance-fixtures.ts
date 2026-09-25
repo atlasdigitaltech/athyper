@@ -45,9 +45,10 @@ export async function provisionBusinessPartner360AcceptanceFixtures(options: { r
     await neon.query("UPDATE master.operating_organization SET domain='both',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND domain='shared_services'", [context.tenantId, context.customerOrganizationId, context.actorId]);
     const metadata = (family: Family) => JSON.stringify({ _seed: { pack: PACK, version: "1.0.0" }, environment: "disposable_local", acceptanceFamily: family });
     for (const definition of definitions) {
-      await neon.query(`INSERT INTO master.business_partner(id,tenant_id,code,name,partner_category,category_locked_by,registration_country_code,metadata,status,created_by)
-        VALUES($1::uuid,$2::uuid,$3,$4,'organization',$6::uuid,'MY',$5::jsonb,'active',$6::uuid)
+      await neon.query(`INSERT INTO master.business_partner(id,tenant_id,code,name,partner_category,category_locked_by,metadata,status,created_by)
+        VALUES($1::uuid,$2::uuid,$3,$4,'organization',$6::uuid,$5::jsonb,'active',$6::uuid)
         ON CONFLICT(tenant_id,id) DO NOTHING`, [definition.businessPartnerId, context.tenantId, definition.code, `${definition.family.replaceAll("_", " ")} acceptance fixture`, metadata(definition.family), context.actorId]);
+      await neon.query(`SELECT master.update_business_partner_organization_identity($1::uuid,$2::uuid,'{"registrationCountryCode":"MY"}'::jsonb,$3::uuid)`,[context.tenantId,definition.businessPartnerId,context.actorId]);
     }
     const byFamily = new Map(definitions.map((value) => [value.family, value]));
     for (const family of ["supplier", "dual_role", "mesh_linked"] as const) await role(neon, context, byFamily.get(family)!, "supplier", metadata(family));

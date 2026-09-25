@@ -98,10 +98,17 @@ export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeD
   if (constraint.kind === "neon.business_partner.directory.v1") {
     if(descriptor.planeKey!=="neon" || descriptor.storage.schema!=="master" || descriptor.storage.object!=="business_partner") throw new Error("Directory scope storage mismatch");
     const root=sql.ref(`business_partner.${descriptor.storage.idField}`), conditions:RawBuilder<unknown>[]=[];
-    if(constraint.partnerRole) conditions.push(sql`EXISTS(SELECT 1 FROM ${sql.table(`master.${constraint.partnerRole}`)} r WHERE r.tenant_id=${tenantId}::uuid AND r.business_partner_id=${root})`);
+    if(constraint.partnerRole) {
+      // Capability filtering is not eligibility: keep the independent eligibility
+      // intersection below and never infer permission from a retained role row.
+      const column = constraint.partnerRole === "supplier" ? "supplier_enabled"
+        : constraint.partnerRole === "customer" ? "customer_enabled" : undefined;
+      if (!column) throw new Error("Unsupported partner capability");
+      conditions.push(sql`${sql.ref(`business_partner.${column}`)} = TRUE`);
+    }
     if(constraint.eligibleIds) conditions.push(constraint.eligibleIds.length ? sql`${root} IN (${sql.join(constraint.eligibleIds.map(id=>sql`${id}::uuid`))})` : sql`FALSE`);
     if(constraint.organizationIds) conditions.push(constraint.organizationIds.length ? sql`EXISTS(SELECT 1 FROM master.business_partner_operating_organization_assignment a WHERE a.tenant_id=${tenantId}::uuid AND a.business_partner_id=${root} AND a.operating_organization_id IN (${sql.join(constraint.organizationIds.map(id=>sql`${id}::uuid`))}) AND a.status='active' AND a.effective_from<=CURRENT_DATE AND(a.effective_until IS NULL OR a.effective_until>CURRENT_DATE))` : sql`FALSE`);
-    if(constraint.companyIds) conditions.push(constraint.companyIds.length ? sql`(EXISTS(SELECT 1 FROM master.supplier r JOIN master.company_code_supplier_profile p ON p.tenant_id=r.tenant_id AND p.supplier_id=r.id WHERE r.tenant_id=${tenantId}::uuid AND r.business_partner_id=${root} AND p.company_code_id IN (${sql.join(constraint.companyIds.map(id=>sql`${id}::uuid`))})) OR EXISTS(SELECT 1 FROM master.customer r JOIN master.company_code_customer_profile p ON p.tenant_id=r.tenant_id AND p.customer_id=r.id WHERE r.tenant_id=${tenantId}::uuid AND r.business_partner_id=${root} AND p.company_code_id IN (${sql.join(constraint.companyIds.map(id=>sql`${id}::uuid`))})))` : sql`FALSE`);
+    if(constraint.companyIds) conditions.push(constraint.companyIds.length ? sql`(EXISTS(SELECT 1 FROM master.company_code_supplier_profile p WHERE p.tenant_id=${tenantId}::uuid AND p.business_partner_id=${root} AND p.company_code_id IN (${sql.join(constraint.companyIds.map(id=>sql`${id}::uuid`))})) OR EXISTS(SELECT 1 FROM master.company_code_customer_profile p WHERE p.tenant_id=${tenantId}::uuid AND p.business_partner_id=${root} AND p.company_code_id IN (${sql.join(constraint.companyIds.map(id=>sql`${id}::uuid`))})))` : sql`FALSE`);
     return conditions.length ? sql`(${sql.join(conditions,sql` AND `)})` : sql`TRUE`;
   }
   if (constraint.kind === DOCUMENT_RELATIONSHIP_RESOLVER) {

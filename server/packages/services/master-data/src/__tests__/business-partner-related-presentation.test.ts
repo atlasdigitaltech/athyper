@@ -10,7 +10,7 @@ import type {
   BusinessPartner360AddressItem,
   BusinessPartner360AddressEventItem,
 } from "@athyper/server-contract-master-data";
-import { businessPartnerRecordHeader } from "../business-partner-record-header.js";
+import { businessPartnerRecordHeader } from "../business-partner/record/header";
 const config = JSON.parse(
   readFileSync(
     new URL(

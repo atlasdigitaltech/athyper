@@ -1,0 +1,35 @@
+/* Content-only record view keeps the parent tab stable and names the selected child section. */
+.a-entity-record-record-content__context { margin-block-end: var(--a-space-3); }
+.a-entity-record-record-content__context h2 { margin: 0; font-size: var(--a-font-size-heading); }
+
+/* The page frame owns the outer gutter. In the three-pane workspace, panels use
+   their full grid tracks; this avoids spending a second gutter inside both side
+   panes. Each scrollbar remains at its own track edge, inside the inter-pane gap. */
+@media (min-width: 961px) {
+  .a-entity-record-record-body--pinned {
+    --a-entity-record-pane-gap: var(--a-space-4);
+    --a-entity-record-pane-inset: var(--a-space-3);
+    box-sizing: border-box;
+    gap: var(--a-entity-record-pane-gap);
+    padding-block: var(--a-entity-record-pane-inset);
+  }
+  .a-entity-record-record-body--pinned > :is(.a-entity-record-section-outline, .a-entity-record-record-content, .a-entity-record-summary-view) {
+    box-sizing: border-box;
+    padding: 0;
+    scroll-padding-block: var(--a-entity-record-pane-inset);
+  }
+}
+
+/* Compact record tools: each only appears when its metadata section is admitted. */
+.a-entity-record__collaboration-control { display:grid; place-items:center; inline-size:2.75rem; min-inline-size:2.75rem; block-size:3rem; padding:0; border:0; border-radius:var(--a-radius-sm); background:transparent; color:var(--a-muted-foreground); cursor:pointer; }
+.a-entity-record__collaboration-control:hover { background:var(--a-selection-subtle); color:var(--a-primary); }
+.a-entity-record__collaboration-control:focus-visible { outline:var(--a-focus-ring-width,2px) solid var(--a-focus-ring-color,var(--a-primary)); outline-offset:-2px; }
+.a-entity-record__collaboration-control svg { inline-size:1.1rem; block-size:1.1rem; }
+
+
+
+.a-entity-record-record-body:has(> .a-collaboration-mount[data-mode=content]) { display:block; }
+.a-entity-record-record-body:has(> .a-collaboration-mount[data-mode=content]) > :not(.a-collaboration-mount) { display:none; }
+.a-entity-record__collaboration-control:has(span) { display:flex; gap:var(--a-space-2); inline-size:auto; padding-inline:var(--a-space-3); border-radius:0; }
+.a-entity-record__collaboration-control[aria-current=page] { color:var(--a-primary); border-block-end:2px solid var(--a-primary); }
+.a-entity-record-record-body:has(> .a-collaboration-mount[data-mode=content]) { position:static; height:auto; max-block-size:none; overflow:visible; }

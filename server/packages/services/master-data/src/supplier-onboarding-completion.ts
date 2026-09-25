@@ -195,7 +195,7 @@ export async function evaluateSupplierOnboardingCompletion(
       ["QUALIFICATION_"],
     ],
     ["commercial_setup", "company_setup", "configure_company", ["PAYMENT_"]],
-    ["bank_verification", "banking", "register_and_verify_bank", ["BANK_"]],
+    ["bank_account_setup", "banking", "configure_payment_instrument", ["BANK_"]],
     ["risk_blocks", "risk", "resolve_risk_or_blocks", ["RISK_", "BLOCKED_"]],
   ] as const) {
     const reasons = raw?.reasons.filter((r) =>
@@ -211,7 +211,7 @@ export async function evaluateSupplierOnboardingCompletion(
         qualifications:
           code === "qualification" ? raw?.qualifications : undefined,
       },
-      ["bank_verification", "commercial_setup"].includes(code) &&
+      ["bank_account_setup", "commercial_setup"].includes(code) &&
         policy?.operation_code === "purchasing",
     );
     if (

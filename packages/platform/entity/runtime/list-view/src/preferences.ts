@@ -1,3 +1,4 @@
+import { readStorageJson, writeStorageItem, removeStorageItem } from "./browser-storage";
 import { parseSaveableListState, type EntityListDescriptorV1, type ListLocationStateV1, type SaveableListStateV1 } from "@athyper/contract-platform-entity-list";
 
 export interface SavedListView {
@@ -32,7 +33,7 @@ export function savedViewStorageKey(descriptor: EntityListDescriptorV1): string 
 
 export function readSavedViews(key: string, descriptor: EntityListDescriptorV1): readonly SavedListView[] {
   try {
-    const value = JSON.parse(window.localStorage.getItem(key) ?? "[]") as unknown;
+    const value = readStorageJson(key) ?? [];
     if (!Array.isArray(value)) throw new TypeError("Saved views must be an array");
     const views = value.flatMap((candidate): SavedListView[] => {
       if (!candidate || typeof candidate !== "object") return [];
@@ -62,7 +63,7 @@ export function writeSavedViews(key: string, views: readonly SavedListView[]): v
 export function readDisplayPreferences(plane: EntityListDescriptorV1["plane"], namespace?: string): DisplayPreferences | undefined {
   const key = displayPreferenceKey(plane, namespace);
   try {
-    const value = JSON.parse(window.localStorage.getItem(key) ?? "null") as Partial<DisplayPreferences> | null;
+    const value = readStorageJson(key) as Partial<DisplayPreferences> | null;
     if (!value || !["compact", "comfortable", "spacious"].includes(value.density ?? "") || typeof value.mode !== "string") return undefined;
     return {
       density: value.density!,
@@ -75,6 +76,10 @@ export function readDisplayPreferences(plane: EntityListDescriptorV1["plane"], n
   }
 }
 
+export function entityDisplayPreferenceNamespace(descriptor: Pick<EntityListDescriptorV1,"entity"|"surface">): string {
+  return `entity.${descriptor.entity.code}.surface.${descriptor.surface.key}`;
+}
+
 export function writeDisplayPreferences(plane: EntityListDescriptorV1["plane"], preferences: DisplayPreferences, namespace?: string): void {
   writeStorageItem(displayPreferenceKey(plane, namespace), JSON.stringify(preferences));
 }
@@ -85,12 +90,4 @@ export function clearDisplayPreferences(plane: EntityListDescriptorV1["plane"], 
 
 function displayPreferenceKey(plane: EntityListDescriptorV1["plane"], namespace?: string): string {
   return `athyper.entity-list.preferences.${plane}${namespace ? `.${namespace}` : ""}`;
-}
-
-function writeStorageItem(key: string, value: string): void {
-  try { window.localStorage.setItem(key, value); } catch { /* Current-page settings still apply without local storage. */ }
-}
-
-function removeStorageItem(key: string): void {
-  try { window.localStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
 }

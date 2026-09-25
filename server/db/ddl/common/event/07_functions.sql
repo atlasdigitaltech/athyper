@@ -297,7 +297,7 @@ BEGIN
         RETURN QUERY SELECT DISTINCT work.tenant_id FROM (
             SELECT m.tenant_id FROM event.notification_message m WHERE m.status IN ('pending','delivering') AND (m.expires_at IS NULL OR m.expires_at > clock_timestamp())
             UNION
-            SELECT o.tenant_id FROM event.outbox o WHERE o.event_type IS NOT NULL AND EXISTS (SELECT 1 FROM control.notification_routing_rule r WHERE r.event_type=o.event_type AND r.is_enabled AND (r.tenant_id IS NULL OR r.tenant_id=o.tenant_id)) AND NOT EXISTS (SELECT 1 FROM event.notification_outbox_state s WHERE s.tenant_id=o.tenant_id AND s.outbox_id=o.id AND s.status IN ('completed','dead_letter'))
+            SELECT o.tenant_id FROM event.outbox o WHERE o.event_type IS NOT NULL AND (o.event_type LIKE 'collaboration.comment.%' OR o.event_type LIKE 'attachments.%' OR EXISTS (SELECT 1 FROM control.notification_routing_rule r WHERE r.event_type=o.event_type AND r.is_enabled AND (r.tenant_id IS NULL OR r.tenant_id=o.tenant_id))) AND NOT EXISTS (SELECT 1 FROM event.notification_outbox_state s WHERE s.tenant_id=o.tenant_id AND s.outbox_id=o.id AND s.status IN ('completed','dead_letter'))
         ) work LIMIT p_limit;
     ELSIF p_work_kind = 'digest' THEN
         RETURN QUERY SELECT DISTINCT d.tenant_id FROM event.digest_staging d

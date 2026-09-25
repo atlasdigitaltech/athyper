@@ -9,7 +9,7 @@
 -- seed-natural-key: authz.permission(canonical_code);authz.permission_scope_kind(permission_id,scope_kind,propagation_mode)
 -- seed-cross-file-ids: false
 -- seed-id-strategy: deterministic-uuid:athyper.authorization.catalog.v2
--- seed-expected-row-count: exact:72
+-- seed-expected-row-count: exact:70
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
 
@@ -39,7 +39,6 @@ CROSS JOIN (VALUES
     ('b21ba1dc-3b4e-58c2-b37c-0ab8cbe9c7aa'::uuid, 'neon.address.read', 'low', false, false),
     ('06a46af9-8b52-5cf1-9cf5-3ce74af7e260'::uuid, 'neon.address_link.read', 'low', false, false),
     ('6f536107-9059-5ada-9263-aa979bbf23b6'::uuid, 'neon.business_partner_banking.read', 'medium', false, false),
-    ('3b16de24-d9b0-54ab-8509-14cfcff44fca'::uuid, 'neon.business_partner_commodity_capability.read', 'low', false, false),
     ('d408aab3-2dab-54d4-9a0f-9eb602b14f8a'::uuid, 'neon.business_partner_governance_relation.read', 'medium', false, false),
     ('da03b74e-759a-586f-9e71-caadfd76187a'::uuid, 'neon.business_partner_identifier.read', 'medium', false, false),
     ('1f67b6ce-c43e-5075-8d0c-45d605d714d5'::uuid, 'neon.business_partner_industry_classification.read', 'low', false, false),
@@ -92,7 +91,7 @@ FROM authz.permission AS permission
 WHERE permission.canonical_code IN (
   SELECT definition.code FROM (VALUES
     ('neon.address.read'), ('neon.address_link.read'), ('neon.business_partner_banking.read'),
-    ('neon.business_partner_commodity_capability.read'), ('neon.business_partner_governance_relation.read'),
+    ('neon.business_partner_governance_relation.read'),
     ('neon.business_partner_identifier.read'), ('neon.business_partner_industry_classification.read'),
     ('neon.business_partner_operating_organization_assignment.read'), ('neon.business_partner_qualification.read'),
     ('neon.business_partner_request.approve'), ('neon.business_partner_request.create_draft'),
@@ -128,7 +127,7 @@ BEGIN
   IF (SELECT count(*) FROM authz.permission
       WHERE canonical_code IN (SELECT code FROM (VALUES
         ('neon.address.read'), ('neon.address_link.read'), ('neon.business_partner_banking.read'),
-        ('neon.business_partner_commodity_capability.read'), ('neon.business_partner_governance_relation.read'),
+        ('neon.business_partner_governance_relation.read'),
         ('neon.business_partner_identifier.read'), ('neon.business_partner_industry_classification.read'),
         ('neon.business_partner_operating_organization_assignment.read'), ('neon.business_partner_qualification.read'),
         ('neon.business_partner_request.approve'), ('neon.business_partner_request.create_draft'),
@@ -144,7 +143,7 @@ BEGIN
         ('neon.customer_company_profile.read'), ('neon.relationship.business_partner.mesh_publish'),
         ('neon.relationship.business_partner.print'), ('neon.supplier.read'),
         ('neon.supplier_company_profile.read'), ('neon.workforce.read')
-      ) AS definition(code)) AND status='published') <> 36 THEN
+      ) AS definition(code)) AND status='published') <> 35 THEN
     RAISE EXCEPTION 'Compiled entity runtime Business Partner permission count mismatch';
   END IF;
 END

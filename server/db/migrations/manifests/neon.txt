@@ -1,2 +1,5 @@
 # Canonical development baseline. Add only new post-baseline upgrades here.
 20260922_workforce_as_of_projection.sql
+
+20260923_entity_notification_discovery.sql
+20260923_notification_operations_permissions.sql

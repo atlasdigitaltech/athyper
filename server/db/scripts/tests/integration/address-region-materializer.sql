@@ -1,4 +1,8 @@
 BEGIN;
+SET LOCAL app.database_plane='neon';
+SET LOCAL app.current_tenant_id='44444444-4444-4444-8444-444444444444';
+SET LOCAL app.current_principal_id='cca94907-7519-5871-8e3c-6b11aa545c93';
+SET LOCAL ROLE athyperapp;
 DO $test$
 DECLARE NEW record; item jsonb; address_id uuid; saved master.address%ROWTYPE;
 BEGIN

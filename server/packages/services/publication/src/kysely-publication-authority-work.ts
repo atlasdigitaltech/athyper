@@ -245,6 +245,14 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       if (result.rows.length) artifactKind = "entity_runtime";
     }
     if (!result.rows.length) {
+      const available=(await sql<Row>`SELECT to_regprocedure('publication.fn_collection_configuration_compilation_source(uuid)') IS NOT NULL AS available`.execute(this.options.database)).rows[0]?.["available"];
+      if(available){result=await sql<Row>`SELECT * FROM publication.fn_collection_configuration_compilation_source(${releaseId}::uuid)`.execute(this.options.database);if(result.rows.length)artifactKind="entity_runtime";}
+    }
+    if (!result.rows.length) {
+      result = await sql<Row>`SELECT * FROM publication.fn_notification_configuration_compilation_source(${releaseId}::uuid)`.execute(this.options.database);
+      if (result.rows.length) artifactKind = "entity_runtime";
+    }
+    if (!result.rows.length) {
       result =
         await sql<Row>`SELECT pr.id publication_release_id,pr.tenant_id,pr.release_key,pr.release_no,pr.release_kind,
       pr.compatibility_level,pr.minimum_runtime_version,er.release_hash,er.revision_id,er.contract_schema_code,
@@ -271,8 +279,8 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     );
     if (
       selected.length !==
-      (caseContract ||
-      result.rows.some((row) => row["imported_baseline"] !== undefined)
+      (result.rows.every(row=>object(row,"compiled_json")["schema"]==="athyper.published-collection/1") ? result.rows.length : caseContract ||
+      result.rows.some((row) => row["imported_baseline"] !== undefined || object(row, "compiled_json")["schema"] === "athyper.entity-notifications/1")
         ? 1
         : this.options.targetPlanes.length)
     )
@@ -285,7 +293,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       // Vocabulary derivatives explicitly bridge these two existing contracts.
       if (
         artifactKind === "entity_runtime" &&
-        (row["imported_baseline"] !== undefined ||
+        (row["imported_baseline"] !== undefined || ["athyper.entity-notifications/1","athyper.published-collection/1"].includes(String(object(row, "compiled_json")["schema"])) ||
           (
             object(row, "compiled_json")["ai"] as
               { vocabulary?: unknown } | undefined
@@ -674,9 +682,9 @@ function buildUnsigned(
     entityDescriptor: {
       id: string(row, "descriptor_id"),
       plane,
-      descriptorKind: (row["descriptor_kind"] === "entity_case_runtime"
+      descriptorKind: (object(row,"compiled_json")["schema"]==="athyper.published-collection/1" ? "collection_configuration" : object(row, "compiled_json")["schema"] === "athyper.entity-notifications/1" ? "entity_notifications" : row["descriptor_kind"] === "entity_case_runtime"
         ? "entity_case_runtime"
-        : "entity_runtime") as "entity_case_runtime" | "entity_runtime",
+        : "entity_runtime") as "entity_case_runtime" | "entity_runtime" | "entity_notifications" | "collection_configuration",
       descriptorSchemaVersion: "1.0.0",
       sourceContractHash: string(row, "contract_hash"),
       compiledHash: string(row, "compiled_hash"),
@@ -873,4 +881,3 @@ function artifactKindValue(
     throw permanent("PUBLICATION_ARTIFACT_KIND_INVALID");
   return value;
 }
-

@@ -1,8 +1,14 @@
 # Business Partner Phase 2 — Neon relationship and reference expansion
 
-Created: 2026-09-21. Revision: 4 — BP2-00 reconciliation and BP2-01 shared-reference foundation completed. **Status: BP2-00 and BP2-01 complete with explicit corrective follow-ups; BP2-02–BP2-17 not started.**
+**2026-09-24 role-free section audit:** legacy Network role applicability and compiled 403/404 error translation are corrected. Ten screenshot sections read successfully for role-free CATL Aster; Governance & ownership now correctly reports 403 because its existing grant/binding is organization/company scoped. Tenant-level authorization configuration awaits approval. See [audit and remaining blocker](./partner-role-free-section-audit.md).
+
+**2026-09-24 classification UI update:** signed DEV release **25** is active. Industries and Commodities are separate partner collections; crosswalks are collapsed under “Related classification mappings,” and category matches are optional. CATL populated API/browser and cross-tenant-denial checks pass. Capture/setup forms remain pending. See [collection acceptance](./partner-classification-collections.md). Older release references below are historical checkpoints.
+
+Created: 2026-09-21. Revision: 20 — signed local release 19 remains active; partner-level Banking collections published. **Status: BP2-00–BP2-03 complete for the recorded scope; BP2-04 populated local Network, authorized masked reads and audited tax reveal pass; BP2-05 live certificate upload/binding/download and cross-tenant denial pass; published crosswalk evidence and grouped UI verified. The requested BP2-04/05 acceptance gaps are closed for the recorded fixture; older package checklists still require reconciliation before whole-package closure. BP2-06 under reconciliation; BP2-09A complete for the recorded acceptance scope, including final refresh and governed resolution handoff; BP2-09B optional and not started; other BP2-07–BP2-17 work remains planned.** See the [2026-09-23 integration checkpoint](neon-business-partner-ddl-review/bp2-integration-20260923.md) and [BP2-09A checkpoint](neon-business-partner-ddl-review/bp2-09a-implementation.md) for exact changes, checks and evidence limits.
 
 This is a separate plan for foundation closeout and the Neon Business Partner expansion identified in the [DDL/MetaEntity review](neon-business-partner-ddl-review/README.md). `BP2-*` identifiers below are this workstream's packages; they do not refer to the original foundation plan's numbered compiler/runtime phases.
+
+**2026-09-23 BP2-09 update:** Split into **BP2-09A (partner-level banking, no company prerequisite)** and **BP2-09B (optional company usage restrictions)**. BP2-09A is complete for the recorded scope; signed release **19** remains active with separate account/link/provisional collections. The separately approved CATL registration and owner-verification grants are applied. Live company-independent registration, safe replay, masked reads, populated browsers, independent verification and audited reveal pass. Final refresh acceptance combines live browser command replay/invalidation with automated summary refetch and stale-response tests. The approved MFA/checker resolution command passes transactional disposable acceptance and live authorization/directory guards. The live synthetic reference remains unresolved because no legitimate directory match was established; successful live resolution is not claimed. See [BP2-09A implementation and acceptance](neon-business-partner-ddl-review/bp2-09a-implementation.md). The release-18 integration checkpoint remains historical evidence for BP2-04/05.
 
 Existing authority remains with the [foundation plan](build-work-plan.md), [Comments and Attachments plan](entity-comments-and-attachments-build-plan.md), and their domain contracts. This document does not edit those plans or mark their remaining work complete. The [localization plan](localization-guidance-and-build-plan.md) remains separately deferred under its stated prerequisite; this plan neither starts it nor silently adds the entirety of Phase 2 as a new prerequisite.
 
@@ -34,13 +40,13 @@ Work against the current local development model: direct source contract/DDL/see
 
 ## 2. Evidence baseline and status discipline
 
-The preceding review scanned 229 Neon-manifest SQL files and 580 unique CREATE TABLE declarations; 11 legacy request tables are dropped later in the manifest. There are 278 declarations in the requested schemas: 15 shared, 153 master and 110 control. The review found 19 direct storage bindings in the inspected draft core-example set; absence from that set does not prove absence from every runtime metadata source.
+The preceding review scanned 248 Neon-manifest SQL files and 592 unique CREATE TABLE declarations; 11 legacy request tables are dropped later in the manifest. There are 288 declarations in the requested schemas: 15 shared, 163 master and 110 control. The review found 19 direct storage bindings in the inspected draft core-example set; absence from that set does not prove absence from every runtime metadata source.
 
 Use the [278-table review matrix](neon-business-partner-ddl-review/shared-master-control-matrix.csv), [43-table user-list reconciliation](neon-business-partner-ddl-review/user-list-reconciliation.csv), and [all-schema declaration inventory](neon-business-partner-ddl-review/all-neon-table-declarations.csv) as starting evidence. This plan adds a [table-to-work-package allocation](neon-business-partner-ddl-review/phase-2-table-work-packages.csv). Allocation is planned ownership, not proof of implementation or an instruction to expose every row as an entity.
 
 The foundation records contain both implementation notes and older unchecked/status entries. **An unchecked entry is a re-verification candidate, not an instruction to rebuild working functionality.** Conversely, a successful screenshot or a draft JSON file is not proof of full publication/authorization/domain acceptance.
 
-At the final documentation check, the Comments/Attachments owning plan records CA-00–CA-02 complete and CA-03–CA-10 planned. Consume its [CA-01/CA-02 implementation record](entity-comments-and-attachments-ca01-ca02-implementation.md) and latest status during BF-05; do not restart completed packages. That workstream is progressing independently, so its owning record remains authoritative.
+At the 2026-09-23 check, the Comments/Attachments owning plan records CA-00–CA-06 and CA-08/09 complete, with CA-07/10 in progress. CA-03's contradictory completion row is corrected. Consume its latest acceptance record during BF-05; second-entity reuse, mention/inbox and remaining integrated checks are still required. That workstream is progressing independently, so its owning record remains authoritative.
 
 Use these statuses during execution:
 
@@ -229,7 +235,7 @@ For each proposed database change, identify the specific invariant absent from c
 
 ## 5. Phase 2 work package map
 
-BP2-00 reconciliation and BP2-01 shared-reference foundation are complete; BP2-02–BP2-17 remain planned. Dependencies describe implementation order. Reconciliation completion does not imply that the remaining domain expansion or recorded source corrections have been implemented.
+BP2-00 reconciliation and BP2-01 shared-reference foundation are complete. BP2-02/03 source implementation, fresh database checks, signed publication and the governed supplier intake/independent approval/materialization journey pass, including populated address/contact reads. BP2-04/05 have partial implementation and BP2-06 has verified existing components requiring reconciliation; BP2-07–BP2-17 remain planned. Dependencies describe implementation order. Reconciliation completion does not imply completion of the domain expansion.
 
 | ID | Outcome | Depends on | Primary owner |
 |---|---|---|---|
@@ -242,7 +248,8 @@ BP2-00 reconciliation and BP2-01 shared-reference foundation are complete; BP2-0
 | BP2-06 | Role and company/organization context | BP2-01, BP2-04 | BP + organization authority |
 | BP2-07 | Supplier commercial controls | BP2-05, BP2-06 | Supplier domain |
 | BP2-08 | Customer commercial controls | BP2-06 | Customer domain |
-| BP2-09 | Bank directory, usage and verification | BP2-01, BP2-06 | Banking domain |
+| BP2-09A | Partner-level bank directory, accounts, ownership and provisional references | BP2-01 | Banking domain |
+| BP2-09B | Optional company usage, acceptance and verification dependencies | BP2-09A, BP2-06 | Banking domain |
 | BP2-10 | Decision scopes, blocks and history | BP2-07, BP2-08, BP2-09 | BP governance |
 | BP2-11 | External-workforce rate policy | BP2-01, BP2-06, BP2-07 | Workforce commercial policy |
 | BP2-12 | External-worker and engagement graph | BP2-06, BP2-11 | External workforce |
@@ -258,7 +265,7 @@ Publication and focused validation happen in every vertical slice. BP2-16 consol
 
 ### BP2-00 — Reconcile the complete graph before adding entities
 
-**Completion record:** [BP2-00 reconciliation and checks](neon-business-partner-ddl-review/bp2-00/README.md). Read-only active metadata/catalog evidence, table/field/presentation/handler/operation ledgers and concrete corrective work are attached. The retired request Core binding remains an explicit BF-04 correction; no old tables or new entities were created. Source-catalog validation is tested when a final catalog is supplied; publisher integration is tracked as C02 alongside the request correction.
+**Completion record:** [BP2-00 reconciliation and checks](neon-business-partner-ddl-review/bp2-00/README.md). Read-only active metadata/catalog evidence, table/field/presentation/handler/operation ledgers and concrete corrective work are attached. C01's retired request Core binding and C02's publisher catalog integration were corrected in release 14 and retained in release 16; the BF-04 synthetic requester/independent-approver/materializer journey now passes. No retired tables were recreated.
 
 **Inputs:** review CSVs, activated metadata from BF-00, actual registered providers and final DDL order.
 
@@ -294,15 +301,17 @@ Publication and focused validation happen in every vertical slice. BP2-16 consol
 
 **Tables:** `master.address`, `address_link`, `address_event`; `shared.country`, `state_region`, `timezone`; owner registry dependencies.
 
-- [ ] Add missing state/region, manual-region mode and timezone projections to the address core and BP target field bindings where supported by the source contract.
-- [ ] Model state lookup as country-dependent, preserving full subdivision codes and the existing composite FK. Do not add a duplicate country/state relation.
-- [ ] On country change, clear only incompatible subdivision values and reevaluate postal/address rules. The server remains authoritative.
-- [ ] Reuse existing state-code/country validation and active-reference capture; support the existing manual-region path when appropriate without asserting a false reference.
-- [ ] Replace country-specific UI condition branches with the supported country address policy/hints; do not treat `has_postal_codes` as a universal mandatory-postcode flag.
-- [ ] Keep canonical address data separate from link purpose, attention/addressee, primary status, usage status and effective dates.
-- [ ] Verify the polymorphic owner mapping, tenant identity and temporal primary-address behavior in all reads and writes.
-- [ ] Surface validation/provider history as read-only safe events. Do not expose event insertion as an end-user operation.
-- [ ] Apply changes through the existing governed capture/materialization path and invalidate both Addresses and affected Primary Address summary resources.
+**Implementation record:** [BP2-02/03 implementation and checks](neon-business-partner-ddl-review/bp2-02-03-implementation.md). Source implementation, fresh Neon DDL, application-role address persistence and the 25-test disposable repository suite are verified. Release 16 retains the publication; the existing CATL draft has now completed submission, independent approval and materialization, with populated address read-back.
+
+- [x] Add missing state/region, manual-region mode and timezone projections to the address core and BP target field bindings where supported by the source contract.
+- [x] Model state lookup as country-dependent, preserving full subdivision codes and the existing composite FK. Do not add a duplicate country/state relation.
+- [x] On country change, clear only incompatible subdivision values and reevaluate postal/address rules. The server remains authoritative.
+- [x] Reuse existing state-code/country validation and active-reference capture; support the existing manual-region path when appropriate without asserting a false reference.
+- [x] Replace country-specific UI condition branches with the supported country address policy/hints; do not treat `has_postal_codes` as a universal mandatory-postcode flag.
+- [x] Keep canonical address data separate from link purpose, attention/addressee, primary status, usage status and effective dates.
+- [x] Verify the polymorphic owner mapping, tenant identity and temporal primary-address behavior in all reads and writes.
+- [x] Surface validation/provider history as read-only safe events. Do not expose event insertion as an end-user operation.
+- [x] Apply changes through the existing governed capture/materialization path and invalidate both Addresses and affected Primary Address summary resources.
 
 **Done when:** valid country/state/address data travels through intake/amendment, materialization and detail. **Checks:** mismatched country/state, country switch, missing subdivision coverage, inactive state, foreign-owner link, effective-date/primary overlap and historical display.
 
@@ -310,12 +319,14 @@ Publication and focused validation happen in every vertical slice. BP2-16 consol
 
 **Tables:** `contact_person`, `contact_person_role`, `contact_link`, `contact_email`, `contact_phone`, `contact_person_identity_link`; protected person data remains separately owned.
 
-- [ ] Define typed person → role/channel/link relations and their owner resolution; do not conflate a BP contact, person identity and authentication principal.
-- [ ] Reuse channel verification, normalization, purpose and primary-selection logic.
-- [ ] Bind safe contact names and channels to the existing registered contact renderer; avoid raw ID-only cards when a display projection exists.
-- [ ] Admit contact-role/channel commands through their parent with current field permissions; retain verification commands and proof requirements.
-- [ ] Expose person-identity links only to an authorized consumer and never automatically project sensitive person profiles.
-- [ ] Refresh Contacts and Primary Contact summary after relevant child changes without requiring an unrelated BP version increment.
+**Implementation record:** [BP2-02/03 implementation and checks](neon-business-partner-ddl-review/bp2-02-03-implementation.md). Source implementation and focused/disposable tests are verified. Release 16 retains the publication; the governed case now materializes its contact and email channel, and signed-in Contacts read-back passes.
+
+- [x] Define typed person → role/channel/link relations and their owner resolution; do not conflate a BP contact, person identity and authentication principal.
+- [x] Reuse channel verification, normalization, purpose and primary-selection logic.
+- [x] Bind safe contact names and channels to the existing registered contact renderer; avoid raw ID-only cards when a display projection exists.
+- [x] Admit contact-role/channel commands through their parent with current field permissions; retain verification commands and proof requirements.
+- [x] Expose person-identity links only to an authorized consumer and never automatically project sensitive person profiles.
+- [x] Refresh Contacts and Primary Contact summary after relevant child changes without requiring an unrelated BP version increment.
 
 **Done when:** reusable contact graph with correct channel/role detail. **Checks:** cross-owner channel access, primary selection, normalized duplicate behavior, unverified/verified states and identity-linked protected fields.
 
@@ -327,8 +338,8 @@ Publication and focused validation happen in every vertical slice. BP2-16 consol
 - [x] Resolve the alias language ambiguity before adding a new FK: specify base language versus regional locale, supported normalization and validation.
 - [x] Keep commercial relationships distinct from governance membership. Define source/target direction and required permissions explicitly.
 - [x] Link identifiers and tax registrations to their supported type/country/jurisdiction references, including subdivision where applicable.
-- [ ] Retain masked identifier values and audited reveal behavior; exclude protected values from list/search/default projections.
-- [ ] Publish correct child empty-state and field metadata. Do not infer copy or entity relationships from table names.
+- [x] Retain masked identifier values and audited tax reveal behavior; exclude protected values from list/search/default projections. Identifier reveal remains unavailable because it has no registered domain command; a protected-storage flag does not enable it. Authorized populated masked reads and MFA-gated tax reveal pass, with raw-free audit evidence and replay rejection.
+- [x] Publish correct child empty-state and field metadata. Child metadata is retained in release 17; its scoped Network gates pass. Independently approved child activation now supplies populated identifier/tax/relationship/industry reads. Local commercial and governance collections remain distinct.
 - [ ] Keep organization tax registrations organization-owned; provide a reference/drilldown only when the BP relationship actually requires one.
 
 **Done when:** Identity/Relationships/Identifiers & Tax expose the intended graph through governed paths. **Checks:** inverse relationship direction, self-link policy, expired alias, language/locale mismatch, wrong jurisdiction and protected-field denial.
@@ -343,12 +354,18 @@ Identifiers retain their lookup-backed `scheme_code` and optional ISO issuing co
 
 ### BP2-05 — Commodity, industry and certificate graph
 
-**Tables:** `business_partner_commodity_capability`, `commodity_category`, `commodity_code_assignment`, `business_partner_industry_classification`, `certification`, `certification_type`; shared classification tables and applicable control policies.
+**Direct UNSPSC / lightweight registration increment (2026-09-23):** DEV release **23** is active. CATL mapped and unmapped direct UNSPSC declarations and an unmapped tenant category are installed; native and commodity-browser checks pass. Role-free registration passed submit → independent owner approval → materialization/replay, with no commercial role, organization assignment or qualification created. Dedicated `/mdg/business-partner/register` capture/review UI is implemented and signed-in case loading passes. UNSPSC picker, category/mapping administration, navigation integration and full browser-driven journey acceptance remain pending. See [current checkpoint](./partner-core-registration-and-unspsc.md); this supersedes the category-first capture design below without rewriting legacy facts or closing the whole package.
+
+**Tables:** `business_partner_commodity_classification`, `business_partner_qualification_classification`, `commodity_category`, `commodity_code_assignment`, `business_partner_industry_classification`, `certification`, `certification_type`; shared classification tables and applicable control policies. Local clean builds remove the legacy role-bound capability/origin model after guarded zero-data verification.
+
+**Role-independent classification update (2026-09-23):** implemented and active in DEV release **21**. Partner commodity facts now have dedicated governed commands, tenant permissions, a Commodities section and reference evidence; commercial qualification keeps its own role/company controls. Three-tenant Aster demos are populated without commercial roles. CATL live MFA command/audit and separated browser surfaces pass; Athyper/Technostat signed-in checks and a fresh case-materialization journey remain unrecorded. See [classification rollout evidence](./partner-classification-separation.md). This does not mark all BP2-05 acceptance items closed.
+
+**Acceptance checkpoint (2026-09-23):** real disposable PostgreSQL checks pass for hierarchy cycles, tenant/domain identity, mapping ambiguity, distinct routing/primary flags, certificate dates and certificate/attachment parent visibility. A live synthetic PDF was uploaded, scanned, independently approved for binding to the existing certificate, and downloaded through the published attachment capability; refreshed cross-tenant admin receives 403 with no URL. Shared commodity/industry crosswalk readers pass seeded, domain-qualified and deprecated-mapping checks under the application role. Release 18 publishes the reference cores and child bindings; the actual compiled Identity browser surface shows 18 mappings for unchanged `isic:01`. Commodity compiled binding passes with an empty live fixture; populated commodity evidence is disposable coverage. Scoped Network browser admin access and owner denial pass. See the integration checkpoint above before interpreting older unchecked implementation/closure items.
 
 - [ ] Preserve capability → tenant commodity category → code assignment → shared code. Do not bind capability directly to `shared.commodity_code`.
 - [ ] Use domain-qualified code identities, hierarchy and actual effective/version semantics supported by the existing catalog. Do not invent a scheme-version column.
 - [ ] Preserve the industry's `(industry_domain_code, industry_code_id)` identity and supported domain constraints; lookup expansion must not silently broaden the business contract.
-- [ ] Surface crosswalk mappings as reference evidence; classification change remains an explicit domain action.
+- [x] Surface crosswalk mappings as reference evidence; classification change remains an explicit domain action. Readers, closed projection and current compiled-surface bindings are implemented, published in release 18 and checked. Incoming evidence preserves stored direction and never remaps the selected classification.
 - [ ] Keep routing-default mappings and owner-primary mappings distinct; preserve provenance/confidence where relevant.
 - [ ] Model certification type/custom-name alternatives, dates and owner scope; bind certificate evidence to the completed attachment capability.
 - [ ] Separate a certificate's existence from an approved qualification decision.
@@ -357,7 +374,7 @@ Identifiers retain their lookup-backed `scheme_code` and optional ISO issuing co
 
 #### BP2-05 implementation contract
 
-`business_partner_commodity_capability` owns only a tenant `commodity_category_id`. Code evidence is resolved through `commodity_code_assignment`, then `shared.commodity_code`; the capability never stores or joins directly to a shared code. A mapping publishes its domain-qualified code identity, mapping type, confidence and provenance. `is_owner_primary` and `is_code_routing_default` are deliberately separate flags: the former is the preferred code for the category in a domain, while the latter is an inbound code-to-category routing rule.
+`business_partner_commodity_classification` owns a tenant `commodity_category_id`, independently of customer/supplier role or company. The legacy capability is retained for lineage and pre-cutover draft compatibility, not new capture. Code evidence is resolved through `commodity_code_assignment`, then `shared.commodity_code`; the classification never substitutes a shared code or crosswalk for its category. A mapping publishes its domain-qualified code identity, mapping type, confidence and provenance. `is_owner_primary` and `is_code_routing_default` remain distinct. Qualification references the fact without owning its lifecycle.
 
 Industry classification remains the composite `(industry_domain_code, industry_code_id)` identity. The database foreign key is authoritative for the matching shared-code domain, and presentation must not substitute a crosswalk result as the selected classification. Crosswalks are evidence only; changing a classification remains a governed domain action.
 
@@ -402,22 +419,38 @@ A certification is an owner-scoped factual record, not a qualification decision.
 
 **Done when:** customer commercial governance is navigable and consistent with its domain result. **Checks:** cross-company credit read/write, expired designation, stale decision, repeated action, forbidden transition and event immutability.
 
-### BP2-09 — Bank directory, account ownership and company usage
+### BP2-09A — Partner-level bank accounts, ownership and provisional references
 
-**Tables:** shared bank institution/branch/identifier; `master.bank_account`, `bank_account_link`, `bank_account_usage`, `bank_account_company_usage`, `bank_provisional_reference`; bank-validation configuration and verification document dependencies.
+**Tables:** shared bank institution/branch/identifier; `master.bank_account`, `bank_account_link`, `bank_provisional_reference`. **No company selection or BP–company membership prerequisite.** Authorized tenant users can view submitted partner bank facts independently of company usage. Tenant isolation, bank permissions, masks, independent verification and audited reveal remain mandatory.
 
-- [ ] Reuse the existing Banking reader and bank-directory projection, preserving masks and audited reveal operations.
-- [ ] Add institution-dependent branch and identifier lookups; preserve scheme, namespace, jurisdiction and effective dates, not just BIC.
-- [ ] Validate institution/branch compatibility against existing composite constraints on every write.
-- [ ] Keep bank account data, owner relationship, usage scope, company acceptance and verification as distinct resources in metadata.
+- [x] Reuse Banking readers; remove company filtering from partner account visibility, including legacy company-tagged links.
+- [x] Allow protected partner registration without a supplier/company profile; create no company usage row in this mode.
+- [x] Publish separate masked account, ownership-link and provisional-reference collections using existing handlers (release 19).
+- [x] Retain institution-dependent branch/identifier lookups; include scheme namespace, jurisdiction and effective dates in directory results.
+- [x] Preserve the canonical institution/branch composite constraint; mismatch rejected in disposable DB acceptance.
+- [x] Reference misses create tenant-local unresolved provisional references, never global institutions; no generic provisional resolution/editor introduced.
+- [x] Preserve explicit native verification and reveal commands; prevent partner registration from implicitly applying company remittance.
+- [x] Reuse the registration idempotency key after a timeout; capture only after scope validation/locking and discard captures after failed database writes.
+- [x] Complete live authorized company-independent registration, safe replay, masked reads and populated compiled/browser checks for CATL admin and owner. Dedicated registration and independent checker grants were separately approved and applied.
+- [x] Complete native independent verification: CATL owner returned 200; the account is active/verified with a retained verification audit receipt and zero company-usage assignments.
+- [x] Complete audited bank reveal: CATL admin returned 200 with the expected synthetic value; one retained reveal audit receipt, replay rejected with `409 BP_360_REVEAL_REPLAYED`, owner reveal denied with 403, and subsequent ordinary reads remain masked. No raw identifier was found in audit payloads.
+- [x] Verify live successful command replay refreshes Banking, preserves the receipt and dispatches scoped summary invalidation; automated integration verifies actual summary/bootstrap refetch and stale-response exclusion.
+- [x] Implement the approved tenant-local, MFA/checker provisional-resolution command; verify existing-directory compatibility, atomic audit, retry safety, unchanged verified account and refreshed projection in disposable acceptance. Live permission/cross-tenant/directory-denial checks pass; no invented live match or global institution was created.
+
+**Status:** complete for the recorded BP2-09A scope. Registration → independent verification → masked reads → audited reveal pass; refresh and governed provisional-resolution handoff checks pass with the evidence limits above. Release 19 remains active. **Done when:** the protected partner-level account/ownership/provisional graph works without company restrictions through the real authorized workflow. **Checks:** no-company registration/read, legacy company-tagged link visibility, tenant/permission denial, branch mismatch, provisional status, retry safety, maker/checker, reveal audit and context loss. Shared-reference resolution requires a separate multi-owner workflow and is deliberately rejected by this command.
+
+### BP2-09B — Optional company restrictions on bank-account usage
+
+**Tables:** `master.bank_account_usage`, `bank_account_company_usage`; company acceptance, bank-validation configuration and verification document dependencies. This optional feature restricts **use**, never partner bank-data visibility. It must not introduce a BP–company membership visibility gate.
+
 - [ ] Model composite-key usage as an owned resource; no invented `id` or generic update endpoint.
-- [ ] Preserve provisional-bank submission/resolution as a governed process; a reference miss must not create a global institution automatically.
 - [ ] Preserve selected-companies versus all-authorized-companies semantics and per-company accepted disclosure version/fingerprint.
-- [ ] Define explicit verification, usage change, acceptance and reveal actions through existing commands; do not expose protected account identifiers in a generic detail/list payload.
-- [ ] Keep `bank_account_house_config` and `bank_account_house_payment_method` as treasury-owned adjacent setup, not editable supplier bank details.
-- [ ] Refresh Banking/summary state after verified changes and fail safely on context loss or revoked reveal permission.
+- [ ] Keep usage, company acceptance and verification resources distinct from the partner-level account/link/provisional resources.
+- [ ] Reuse explicit usage-change, acceptance and remittance commands; validate unauthorized companies and unaccepted/replaced disclosures.
+- [ ] Refresh Banking/summary after verified usage changes and fail safely on context loss or revoked reveal permission.
+- [ ] Keep `bank_account_house_config` and `bank_account_house_payment_method` treasury-owned; no supplier-detail editing.
 
-**Done when:** Banking metadata describes the full protected ownership/usage graph without duplicating its service. **Checks:** branch/institution mismatch, inaccessible account link, unaccepted/replaced disclosure, unauthorized company, provisional status, reveal audit and safe retry after timeout.
+**Status:** optional, not started in this change; existing usage safety checks remain in place. **Done when:** optional company usage controls are accepted independently without restricting authorized partner-level visibility.
 
 ### BP2-10 — Decision scopes, blocks and evidence
 
@@ -641,7 +674,7 @@ Scheduling and effort estimates should follow BF-00/BP2-00, because metadata gap
 ## 11. Completion checklist and current record
 
 - [ ] Foundation carry-forward reconciled and required existing work complete; no duplicate implementation from stale checkboxes.
-- [ ] All 43 user-listed tables have explicit implemented/dependency/internal/deferred dispositions; all 278 reviewed requested-schema tables remain accounted for.
+- [ ] All 43 user-listed tables have explicit implemented/dependency/internal/deferred dispositions; all 288 reviewed requested-schema tables remain accounted for.
 - [ ] Every implemented section has a real registered provider or validated declarative query, published metadata and passing parent/context admission.
 - [ ] Country/state/address, classifications, Banking and workforce references use the actual source identities and constraints.
 - [ ] Supplier/customer roles, company scope, decisions and protected values preserve domain authority.
@@ -653,11 +686,16 @@ Scheduling and effort estimates should follow BF-00/BP2-00, because metadata gap
 
 | Work | Current status | Execution note |
 |---|---|---|
-| This Phase 2 plan and allocation matrix | Revision 3: BP2-00 record attached | Domain scope and allocation retained |
+| This Phase 2 plan and allocation matrix | Revision 18: compiled crosswalk and scoped browser follow-up | Release 18 active; requested compiled/browser gaps pass; older package checklist reconciliation remains |
 | BF-00–BF-05 | Verify existing / reconcile pending work | Do not infer failures or completion from older status rows |
 | BP2-00 | Complete: reconciliation and targeted admission checks | [Changes, checks and limitations](neon-business-partner-ddl-review/bp2-00/README.md); corrective work assigned to owning packages |
 | BP2-01 | Complete | Reference registry, read-only authoring cores, bounded lookup route/control, dependency validation and historical display resolution are implemented; publish through the governed Neon release path when ready |
-| BP2-02–BP2-17 | Planned; not started | Begin eligible slices alongside foundation; verify consumed dependencies; converge at BP2-17 |
+| BP2-02–BP2-03 | Complete for recorded scope | Existing supplier case submitted, independently approved and materialized; populated Addresses/Contacts reads pass under release 16 |
+| BF-04 C01/C02 | Corrected and published | Request Core uses case projection; real publisher rejects retired target sources before signing/writing; full BF-04 journey remains open |
+| BP2-04 | Acceptance passes; checklist reconciliation remains | Governed children, scoped compiled Network browser admin/owner checks and audited tax reveal verified; reconcile organization-tax disposition before package closure |
+| BP2-05 | Requested acceptance passes; checklist reconciliation remains | Release 18 compiled crosswalk evidence and live certificate journey/denial pass; reconcile broader existing implementation checklist |
+| BP2-06 | Verify existing / reconciliation in progress | Role/company admission tests pass; complete context matrix and repair stale fixture dependencies before claiming completion |
+| BP2-07–BP2-17 | Planned; no new completion claimed | Verify consumed dependencies and converge at BP2-17 |
 | Mesh/Studio apps | Deferred | Neon-only scope |
 | Localization | Separate deferred workstream | Existing plan and prerequisite unchanged |
 | BP2-00 implementation | Compiler registry/source admission and permission-registry reconciliation | Regression tests added; no DDL/data changes or release activation |

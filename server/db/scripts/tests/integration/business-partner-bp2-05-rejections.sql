@@ -15,6 +15,10 @@ DECLARE
   wrong_domain text;
   alias_id uuid := gen_random_uuid();
   rejected boolean;
+  commodity_id uuid;
+  commodity_other uuid;
+  commodity_domain text;
+  assignment_id uuid := gen_random_uuid();
 BEGIN
   SELECT bp.tenant_id, bp.id, bp.created_by INTO tenant_b, partner_b, actor_b
   FROM master.business_partner bp ORDER BY bp.created_at LIMIT 1;
@@ -28,8 +32,8 @@ BEGIN
   VALUES(foreign_category,tenant_a,'TEST.BP205.FOREIGN','Foreign category','active',actor_a);
   rejected := false;
   BEGIN
-    INSERT INTO master.business_partner_commodity_capability(tenant_id,business_partner_id,commodity_category_id,partner_role,effective_from,status,created_by)
-    VALUES(tenant_b,partner_b,foreign_category,'supplier',CURRENT_DATE,'draft',actor_b);
+    INSERT INTO master.business_partner_commodity_classification(tenant_id,business_partner_id,commodity_category_id,source_system,source_reference,effective_from,status,created_by)
+    VALUES(tenant_b,partner_b,foreign_category,'bp2_acceptance','cross-tenant-category',CURRENT_DATE,'draft',actor_b);
   EXCEPTION WHEN foreign_key_violation THEN rejected := true;
   END;
   IF NOT rejected THEN RAISE EXCEPTION 'Cross-tenant commodity category was admitted'; END IF;
@@ -54,6 +58,36 @@ BEGIN
   EXCEPTION WHEN check_violation THEN rejected := true;
   END;
   IF NOT rejected THEN RAISE EXCEPTION 'Commodity hierarchy cycle was admitted'; END IF;
+
+  SELECT id,domain_code INTO STRICT commodity_id,commodity_domain FROM shared.commodity_code WHERE status='active' ORDER BY id LIMIT 1;
+  SELECT id INTO STRICT commodity_other FROM shared.commodity_code WHERE status='active' AND domain_code=commodity_domain AND id<>commodity_id ORDER BY id LIMIT 1;
+  INSERT INTO master.commodity_code_assignment(id,tenant_id,commodity_category_id,commodity_domain_code,commodity_code_id,is_owner_primary,is_code_routing_default,mapping_type,confidence,provenance,created_by)
+  VALUES(assignment_id,tenant_b,category_parent,commodity_domain,commodity_id,true,false,'exact',95,'manual',actor_b);
+  INSERT INTO master.commodity_code_assignment(tenant_id,commodity_category_id,commodity_domain_code,commodity_code_id,is_owner_primary,is_code_routing_default,mapping_type,confidence,provenance,created_by)
+  VALUES(tenant_b,category_child,commodity_domain,commodity_id,false,true,'exact',90,'manual',actor_b);
+  IF NOT EXISTS(SELECT 1 FROM master.commodity_code_assignment WHERE id=assignment_id AND is_owner_primary AND NOT is_code_routing_default AND confidence=95 AND provenance='manual') THEN
+    RAISE EXCEPTION 'Owner-primary and routing-default mapping identities were conflated';
+  END IF;
+  rejected:=false;
+  BEGIN
+    UPDATE master.commodity_code_assignment SET is_code_routing_default=true WHERE id=assignment_id;
+  EXCEPTION WHEN unique_violation THEN rejected:=true;
+  END;
+  IF NOT rejected THEN RAISE EXCEPTION 'Ambiguous inbound routing default was admitted'; END IF;
+  rejected:=false;
+  BEGIN
+    INSERT INTO master.commodity_code_assignment(tenant_id,commodity_category_id,commodity_domain_code,commodity_code_id,is_owner_primary,created_by)
+    VALUES(tenant_b,category_parent,commodity_domain,commodity_other,true,actor_b);
+  EXCEPTION WHEN unique_violation THEN rejected:=true;
+  END;
+  IF NOT rejected THEN RAISE EXCEPTION 'Ambiguous owner-primary mapping was admitted'; END IF;
+  rejected:=false;
+  BEGIN
+    INSERT INTO master.commodity_code_assignment(tenant_id,commodity_category_id,commodity_domain_code,commodity_code_id,created_by)
+    VALUES(tenant_b,category_parent,'bp2_wrong_domain',commodity_other,actor_b);
+  EXCEPTION WHEN foreign_key_violation THEN rejected:=true;
+  END;
+  IF NOT rejected THEN RAISE EXCEPTION 'Cross-domain commodity identity was admitted'; END IF;
 
   rejected := false;
   BEGIN

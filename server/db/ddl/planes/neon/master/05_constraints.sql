@@ -1063,18 +1063,7 @@ ALTER TABLE master.business_partner
     REFERENCES master.tenant (id)
     ON DELETE RESTRICT;
 
-ALTER TABLE master.business_partner
-    ADD CONSTRAINT business_partner_registration_country_fk
-    FOREIGN KEY (registration_country_code)
-    REFERENCES shared.country (code)
-    ON DELETE RESTRICT;
 
-ALTER TABLE master.business_partner
-    ADD CONSTRAINT business_partner_parent_fk
-    FOREIGN KEY (tenant_id, parent_business_partner_id)
-    REFERENCES master.business_partner (tenant_id, id)
-    ON DELETE RESTRICT
-    DEFERRABLE INITIALLY DEFERRED;
 
 ALTER TABLE master.business_partner
     ADD CONSTRAINT business_partner_category_locked_by_fk
@@ -1177,19 +1166,19 @@ ALTER TABLE master.bank_account
     ADD CONSTRAINT bank_account_currency_fk
     FOREIGN KEY (currency_code) REFERENCES shared.currency (code) ON DELETE RESTRICT;
 
-ALTER TABLE master.bank_account_link
-    ADD CONSTRAINT bank_account_link_tenant_fk
+ALTER TABLE master.payment_instrument_link
+    ADD CONSTRAINT payment_instrument_link_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
-ALTER TABLE master.bank_account_link
-    ADD CONSTRAINT bank_account_link_owner_type_fk
+ALTER TABLE master.payment_instrument_link
+    ADD CONSTRAINT payment_instrument_link_owner_type_fk
     FOREIGN KEY (owner_type_id)
     REFERENCES control.owner_type (id) ON DELETE RESTRICT;
-ALTER TABLE master.bank_account_link
-    ADD CONSTRAINT bank_account_link_account_fk
-    FOREIGN KEY (tenant_id, bank_account_id)
-    REFERENCES master.bank_account (tenant_id, id) ON DELETE RESTRICT;
-ALTER TABLE master.bank_account_link
-    ADD CONSTRAINT bank_account_link_company_fk
+ALTER TABLE master.payment_instrument_link
+    ADD CONSTRAINT payment_instrument_link_instrument_fk
+    FOREIGN KEY (tenant_id, payment_instrument_id)
+    REFERENCES master.payment_instrument (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE master.payment_instrument_link
+    ADD CONSTRAINT payment_instrument_link_company_fk
     FOREIGN KEY (tenant_id, company_code_id)
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
 
@@ -1198,8 +1187,8 @@ ALTER TABLE master.bank_account_house_config
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
 ALTER TABLE master.bank_account_house_config
     ADD CONSTRAINT bank_account_house_config_link_fk
-    FOREIGN KEY (tenant_id, bank_account_link_id)
-    REFERENCES master.bank_account_link (tenant_id, id) ON DELETE RESTRICT;
+    FOREIGN KEY (tenant_id, payment_instrument_link_id)
+    REFERENCES master.payment_instrument_link (tenant_id, id) ON DELETE RESTRICT;
 ALTER TABLE master.bank_account_house_config
     ADD CONSTRAINT bank_account_house_config_company_fk
     FOREIGN KEY (tenant_id, company_code_id)
@@ -1226,7 +1215,7 @@ DECLARE
     v_column text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
-        'bank_account', 'bank_account_house_config'
+        'payment_instrument', 'bank_account_house_config'
     ]
     LOOP
         FOREACH v_column IN ARRAY ARRAY['created_by', 'updated_by', 'status_changed_by']
@@ -1244,9 +1233,9 @@ BEGIN
     FOREACH v_column IN ARRAY ARRAY['created_by', 'updated_by']
     LOOP
         EXECUTE format(
-            'ALTER TABLE master.bank_account_link ADD CONSTRAINT %I '
+            'ALTER TABLE master.payment_instrument_link ADD CONSTRAINT %I '
             'FOREIGN KEY (tenant_id, %I) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT',
-            'bank_account_link_' || v_column || '_fk',
+            'payment_instrument_link_' || v_column || '_fk',
             v_column
         );
         EXECUTE format(
@@ -1259,10 +1248,6 @@ BEGIN
 END;
 $$;
 
-ALTER TABLE master.bank_account
-    ADD CONSTRAINT bank_account_verified_by_fk
-    FOREIGN KEY (tenant_id, verified_by)
-    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
 ALTER TABLE master.payment_method
     ADD CONSTRAINT payment_method_tenant_fk
@@ -1396,10 +1381,10 @@ ALTER TABLE master.person
     ADD CONSTRAINT person_country_fk
     FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT;
 
--- Business Partners are organizations; People/Workforce owns individual identities.
+-- Link personal identity without importing workforce ownership or permissions.
 ALTER TABLE master.business_partner
-    ADD CONSTRAINT business_partner_organization_only_chk
-    CHECK (partner_category = 'organization');
+    ADD CONSTRAINT business_partner_person_fk
+    FOREIGN KEY (tenant_id, person_id) REFERENCES master.person(tenant_id,id) ON DELETE RESTRICT;
 
 ALTER TABLE master.person_sensitive_profile
     ADD CONSTRAINT person_sensitive_profile_tenant_fk
@@ -2161,8 +2146,8 @@ ALTER TABLE master.bom_component
 ALTER TABLE master.project
     ADD CONSTRAINT project_company_fk FOREIGN KEY (tenant_id, company_code_id)
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT project_customer_fk FOREIGN KEY (tenant_id, customer_id)
-    REFERENCES master.customer (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT project_business_partner_fk FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT project_responsible_fk FOREIGN KEY (tenant_id, responsible_principal_id)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT project_cost_center_fk FOREIGN KEY (tenant_id, default_cost_center_id)
@@ -2268,14 +2253,6 @@ ALTER TABLE master.business_partner_tax_registration
     FOREIGN KEY (tenant_id, verified_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
-ALTER TABLE master.business_partner_commodity_capability
-    ADD CONSTRAINT business_partner_commodity_capability_owner_fk
-    FOREIGN KEY (tenant_id, business_partner_id)
-    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT business_partner_commodity_capability_category_fk
-    FOREIGN KEY (tenant_id, commodity_category_id)
-    REFERENCES master.commodity_category (tenant_id, id) ON DELETE RESTRICT;
-
 ALTER TABLE master.business_partner_industry_classification
     ADD CONSTRAINT business_partner_industry_classification_owner_fk
     FOREIGN KEY (tenant_id, business_partner_id)
@@ -2317,9 +2294,9 @@ ALTER TABLE master.business_partner_operating_organization_assignment
     ) WHERE (status = 'active');
 
 ALTER TABLE master.company_code_supplier_profile
-    ADD CONSTRAINT company_code_supplier_profile_supplier_fk
-    FOREIGN KEY (tenant_id, supplier_id)
-    REFERENCES master.supplier (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT company_code_supplier_profile_partner_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT company_code_supplier_profile_company_fk
     FOREIGN KEY (tenant_id, company_code_id)
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT,
@@ -2333,15 +2310,15 @@ ALTER TABLE master.company_code_supplier_profile
     REFERENCES master.accounting_profile (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT company_code_supplier_profile_bank_link_fk
     FOREIGN KEY (tenant_id, preferred_remittance_bank_link_id)
-    REFERENCES master.bank_account_link (tenant_id, id) ON DELETE RESTRICT,
+    REFERENCES master.payment_instrument_link (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT company_code_supplier_profile_dimension_fk
     FOREIGN KEY (tenant_id, default_dimension_set_id)
     REFERENCES master.dimension_set (tenant_id, id) ON DELETE RESTRICT;
 
 ALTER TABLE master.company_code_customer_profile
-    ADD CONSTRAINT company_code_customer_profile_customer_fk
-    FOREIGN KEY (tenant_id, customer_id)
-    REFERENCES master.customer (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT company_code_customer_profile_partner_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT company_code_customer_profile_company_fk
     FOREIGN KEY (tenant_id, company_code_id)
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT,
@@ -2400,7 +2377,6 @@ BEGIN
         'business_partner_governance_relation',
         'business_partner_identifier',
         'business_partner_tax_registration',
-        'business_partner_commodity_capability',
         'business_partner_operating_organization_assignment',
         'company_code_supplier_profile',
         'company_code_customer_profile',
@@ -2508,3 +2484,10 @@ ALTER TABLE master.bank_account
  ADD CONSTRAINT bank_account_reference_choice_chk CHECK ((bank_institution_id IS NOT NULL AND provisional_bank_reference_id IS NULL) OR (bank_institution_id IS NULL AND provisional_bank_reference_id IS NOT NULL));
 
 ALTER TABLE master.bank_account ADD CONSTRAINT bank_account_canonical_routing_chk CHECK(bank_institution_id IS NULL OR bic_override IS NULL);
+
+-- A child has only one active parent over an overlapping business period.
+ALTER TABLE master.business_partner_relationship
+ ADD CONSTRAINT business_partner_parent_single_period EXCLUDE USING gist (
+  tenant_id WITH =, source_business_partner_id WITH =,
+  daterange(effective_from,effective_until,'[)') WITH &&
+ ) WHERE (relationship_type_code='parent' AND status='active');

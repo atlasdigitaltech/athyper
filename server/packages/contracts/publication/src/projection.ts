@@ -35,7 +35,7 @@ export interface EntityContractProjection {
 export interface EntityDescriptorProjection {
   readonly id: string;
   readonly plane: PublicationPlane;
-  readonly descriptorKind: "entity_runtime" | "entity_case_runtime";
+  readonly descriptorKind: "entity_runtime" | "entity_case_runtime" | "entity_notifications" | "collection_configuration";
   readonly descriptorSchemaVersion: string;
   readonly sourceContractHash: string;
   readonly compiledHash: string;
@@ -53,6 +53,8 @@ export interface EntityRuntimeProjection {
 /** Prepared split-artifact projection. It is persisted/loaded as immutable release
  * content; authorization and record data are resolved separately at request time. */
 export interface CompiledEntityRuntimeProjectionV2 {
+  /** Signed adoption scope. Omitted only for a global product publication. */
+  readonly tenantId?: string;
   /** Application root selected by this publication; child artifacts may model other entities. */
   readonly entityCode: string;
   readonly release: CompiledEntityReleaseEnvelopeV2;
@@ -133,7 +135,7 @@ export interface ActiveEntityProjection {
   readonly contractHash: string;
   readonly contract: Readonly<Record<string, unknown>>;
   readonly plane: PublicationPlane;
-  readonly descriptorKind: "entity_runtime" | "entity_case_runtime";
+  readonly descriptorKind: "entity_runtime" | "entity_case_runtime" | "entity_notifications" | "collection_configuration";
   readonly compiledHash: string;
   readonly descriptor: Readonly<Record<string, unknown>>;
   readonly activatedAt: string;

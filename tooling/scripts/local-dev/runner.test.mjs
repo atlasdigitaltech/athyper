@@ -244,6 +244,9 @@ test("source search runtimes require the provisioned scoped key and never fall b
         applicationEnvironment(plan, mode).SEARCHCORE_API_KEY,
         "scoped-runtime-key",
       );
+    assert.equal(applicationEnvironment(plan, "api").PROCESS_METRICS_PORT, undefined);
+    assert.equal(applicationEnvironment(plan, "worker").PROCESS_METRICS_PORT, String(plan.ports.workerMetrics));
+    assert.equal(applicationEnvironment(plan, "scheduler").PROCESS_METRICS_PORT, String(plan.ports.schedulerMetrics));
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

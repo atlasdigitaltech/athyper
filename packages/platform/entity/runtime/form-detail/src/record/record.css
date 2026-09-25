@@ -1,0 +1,545 @@
+.a-entity-record {
+  min-width: 0;
+  font-family: var(--a-font-sans);
+  font-size: var(--a-font-size-body);
+  font-weight: var(--a-font-weight-normal);
+  line-height: var(--a-line-height-body);
+}
+.a-entity-record h2 {
+  margin: 0 0 1rem;
+  font-size: var(--a-font-size-md);
+  font-weight: var(--a-font-weight-medium);
+  line-height: var(--a-line-height-snug);
+}
+.a-entity-record h3 {
+  margin: 0 0 0.75rem;
+  font-size: var(--a-font-size-body);
+  font-weight: var(--a-font-weight-medium);
+}
+.a-entity-record p {
+  margin: 0.5rem 0;
+}
+.a-entity-record button,
+.a-entity-record select {
+  font-family: inherit;
+  font-size: var(--a-font-size-sm);
+}
+.a-entity-record :focus-visible {
+  outline: 2px solid var(--a-primary);
+  outline-offset: 3px;
+}
+.a-entity-record .a-card {
+  padding: 1.25rem;
+  box-shadow: none;
+}
+.a-entity-record-record-body {
+  min-width: 0;
+}
+.a-entity-record-record-body--summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+  gap: 1.5rem;
+  align-items: start;
+}
+.a-entity-record-summary-view {
+  display: grid;
+  gap: 0.75rem;
+  position: sticky;
+  top: 1rem;
+}
+.a-entity-record-summary-view > section {
+  border: 1px solid var(--a-color-border, #ccd6e3);
+  border-radius: 0.75rem;
+  background: var(--a-color-surface, #fff);
+  padding: 1rem;
+}
+.a-entity-record-summary-view h2 {
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+}
+.a-entity-record-summary-view dl {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+.a-entity-record-summary-view dl div {
+  display: grid;
+  gap: 0.125rem;
+}
+.a-entity-record-summary-view dt {
+  color: var(--a-color-text-muted, #5d6b82);
+  text-transform: capitalize;
+}
+.a-entity-record-summary-view dd {
+  margin: 0;
+}
+@media (max-width: 960px) {
+  .a-entity-record-record-body--summary {
+    grid-template-columns: 1fr;
+  }
+  .a-entity-record-summary-view {
+    position: static;
+    order: -1;
+  }
+}
+.a-record-page-header > .a-entity-record__tabs .a-entity-record__view-control {
+  position: relative;
+  margin-inline-start: auto;
+}
+.a-entity-record__view-control > summary {
+  display: grid;
+  place-items: center;
+  min-width: 3rem;
+  min-height: 3rem;
+  cursor: pointer;
+  list-style: none;
+}
+.a-entity-record__view-control > summary::-webkit-details-marker {
+  display: none;
+}
+.a-entity-record__view-control > summary svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+.a-entity-record__view-control > div {
+  position: absolute;
+  z-index: var(--a-z-popover);
+  inset-inline-end: 0;
+  top: calc(100% + 0.25rem);
+  display: grid;
+  min-width: 15rem;
+  padding: 0.5rem;
+  border: 1px solid var(--a-border);
+  border-radius: 0.5rem;
+  background: var(--a-surface-raised);
+  box-shadow: var(--a-shadow-overlay);
+}
+.a-entity-record__view-control > div p {
+  margin: 0.4rem 0.5rem;
+  font-weight: 600;
+}
+.a-entity-record__view-control > div button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.5rem;
+  padding: 0.5rem;
+  border: 0;
+  background: transparent;
+  text-align: start;
+}
+.a-entity-record__view-control > div button:hover {
+  background: var(--a-selection-subtle);
+}
+.a-entity-record__view-control > div button[aria-checked="true"]::before {
+  content: "✓";
+}
+.a-entity-record__view-control > div button span {
+  color: var(--a-muted-foreground);
+  font-size: 0.8rem;
+}
+.a-entity-record-record-body--sections {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  gap: 1.5rem;
+}
+.a-entity-record-record-body--sections.a-entity-record-record-body--summary {
+  grid-template-columns: 12rem minmax(0, 1fr) minmax(18rem, 24rem);
+}
+.a-entity-record-section-outline {
+  display: grid;
+  align-content: start;
+  gap: 0.25rem;
+  position: sticky;
+  top: 1rem;
+}
+.a-entity-record-section-outline button {
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-inline-start: 2px solid transparent;
+  background: transparent;
+  text-align: start;
+}
+.a-entity-record-section-outline button[aria-current="page"] {
+  border-inline-start-color: var(--a-primary);
+  background: var(--a-selection-subtle);
+}
+@media (max-width: 960px) {
+  .a-entity-record-record-body--sections,
+  .a-entity-record-record-body--sections.a-entity-record-record-body--summary {
+    grid-template-columns: 1fr;
+  }
+  .a-entity-record-section-outline {
+    position: static;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  }
+}
+.a-runtime-continuous-sections {
+  display: grid;
+  gap: 1.5rem;
+}
+.a-runtime-continuous-section {
+  min-block-size: 12rem;
+  scroll-margin-top: 8rem;
+}
+.a-runtime-continuous-section > h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+}
+.a-runtime-continuous-section__placeholder {
+  min-block-size: 12rem;
+  border: 1px solid var(--a-border);
+  border-radius: var(--a-radius-md, 0.5rem);
+  background: var(--a-surface-subtle);
+}
+/* On wide screens, contextual navigation and decision support remain visible while the
+   continuous record document owns the only scroll surface. */
+@media (min-width: 961px) {
+  .a-entity-record
+    .athyper-page-workspace__body:has(> .a-entity-record-record-body--pinned)
+    > .a-record-page-header
+    > .a-entity-record__tabs {
+    position: sticky;
+    top: var(--a-page-sticky-top);
+    z-index: 16;
+  }
+  .a-entity-record-record-body--pinned {
+    position: sticky;
+    top: calc(var(--a-page-sticky-top) + 3rem);
+    height: calc(100dvh - var(--a-page-sticky-top) - 3rem - var(--a-space-4));
+    min-height: 0;
+    overflow: hidden;
+    align-items: stretch;
+  }
+  .a-entity-record-record-body--pinned > .a-entity-record-record-content {
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    padding-inline-end: var(--a-space-2);
+  }
+  .a-entity-record-record-body--pinned
+    > :is(.a-entity-record-section-outline, .a-entity-record-summary-view) {
+    position: static;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+/* Balanced 15 / 65 / 20 workspace: navigation stays legible, content remains primary,
+   and summary cards retain a useful decision-support width. */
+@media (min-width: 961px) {
+  .a-entity-record-record-body--sections.a-entity-record-record-body--summary {
+    grid-template-columns: minmax(11rem, 15fr) minmax(0, 65fr) minmax(
+        16rem,
+        20fr
+      );
+  }
+  .a-entity-record-record-body--pinned > .a-entity-record-record-content {
+    scrollbar-gutter: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .a-entity-record-record-body--pinned > .a-entity-record-record-content:hover,
+  .a-entity-record-record-body--pinned
+    > .a-entity-record-record-content:focus-within,
+  .a-entity-record-record-body--pinned
+    > .a-entity-record-record-content.is-scrolling {
+    scrollbar-color: color-mix(
+        in srgb,
+        var(--a-muted-foreground) 52%,
+        transparent
+      )
+      transparent;
+  }
+  .a-entity-record-record-body--pinned
+    > .a-entity-record-record-content::-webkit-scrollbar {
+    width: 0.5rem;
+  }
+  .a-entity-record-record-body--pinned
+    > .a-entity-record-record-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .a-entity-record-record-body--pinned
+    > .a-entity-record-record-content::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 999px;
+  }
+  .a-entity-record-record-body--pinned
+    > .a-entity-record-record-content:is(
+      :hover,
+      :focus-within,
+      .is-scrolling
+    )::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--a-muted-foreground) 52%, transparent);
+  }
+}
+/* A compact record crumb remains once the browser page scrolls past record identity. */
+/* Keep this space in the browser scroll range. Removing it with display:none while
+   the root is at its bottom clamps scrollTop and traps the user there. */
+.a-entity-record--header-collapsed
+  .a-record-page-header
+  > .athyper-page-header {
+  visibility: hidden;
+  pointer-events: none;
+}
+.a-entity-record__view-control > div button::before {
+  content: none !important;
+}
+.a-entity-record__view-control > div button {
+  padding-inline: 0.65rem;
+}
+.a-entity-record__view-setting-copy {
+  display: grid;
+  gap: 0.12rem;
+}
+.a-entity-record__view-setting-copy small {
+  color: var(--a-muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.a-entity-record__toggle {
+  position: relative;
+  inline-size: 2.2rem;
+  block-size: 1.25rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--a-muted);
+  transition: background var(--a-motion-fast);
+}
+.a-entity-record__toggle::after {
+  position: absolute;
+  inset-block-start: 0.15rem;
+  inset-inline-start: 0.15rem;
+  inline-size: 0.95rem;
+  block-size: 0.95rem;
+  border-radius: 50%;
+  background: var(--a-surface-raised);
+  box-shadow: var(--a-shadow-raised);
+  content: "";
+  transition: transform var(--a-motion-fast);
+}
+.a-entity-record__view-control
+  > div
+  button[aria-checked="true"]
+  .a-entity-record__toggle {
+  background: var(--a-primary);
+}
+.a-entity-record__view-control
+  > div
+  button[aria-checked="true"]
+  .a-entity-record__toggle::after {
+  transform: translateX(0.95rem);
+}
+.a-entity-record__view-control > div button:disabled .a-entity-record__toggle {
+  opacity: 0.7;
+}
+.a-entity-record-record-identity-line {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--a-space-2);
+}
+/* Sticky record chrome has a fixed stack: shell top bar, breadcrumb, then record navigation. */
+@media (min-width: 961px) {
+  .a-entity-record
+    .athyper-page-workspace__body:has(> .a-entity-record-record-body--pinned)
+    > .a-record-page-header
+    > .a-entity-record__tabs {
+    top: calc(var(--shell-topbar) + var(--shell-crumbs));
+  }
+  .a-entity-record-record-body--pinned {
+    top: calc(var(--shell-topbar) + var(--shell-crumbs) + 3rem);
+    height: calc(
+      100dvh - var(--shell-topbar) - var(--shell-crumbs) - 3rem -
+        var(--a-space-4)
+    );
+  }
+}
+/* Once record identity has collapsed, the existing mode navigation becomes shell chrome.
+   Fixed positioning avoids the record-header containing block clipping its sticky child. */
+@media (min-width: 961px) {
+  .a-entity-record--header-collapsed
+    .a-record-page-header
+    > .a-entity-record__tabs {
+    position: fixed !important;
+    z-index: 8;
+    inset-inline: var(--shell-rail) 0;
+    top: calc(var(--shell-topbar) + var(--shell-crumbs));
+    width: auto;
+    margin: 0;
+    padding-inline: clamp(var(--a-space-4), 2.5vw, var(--a-space-6));
+    background: var(--a-surface);
+    border-block-end: var(--a-border-width) solid var(--a-border);
+  }
+}
+/* After the application page scrolls, promote the record workspace to a fixed three-pane
+   surface. Each pane can then manage its own overflow without the application root moving it. */
+@media (min-width: 961px) {
+  .a-entity-record--header-collapsed .a-entity-record-record-body--pinned {
+    /* Preserve the browser's normal page scroll for record identity, while the
+       three panes remain anchored below the record navigation. */
+    position: sticky;
+    z-index: 6;
+    inset: auto;
+    top: calc(var(--shell-topbar) + var(--shell-crumbs) + 3rem);
+    height: calc(
+      100dvh - var(--shell-topbar) - var(--shell-crumbs) - 3rem -
+        var(--a-space-4)
+    );
+    margin: 0;
+  }
+  .a-entity-record--header-collapsed
+    .a-entity-record-record-body--pinned
+    > :is(.a-entity-record-section-outline, .a-entity-record-summary-view) {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .a-entity-record--header-collapsed
+    .a-entity-record-record-body--pinned
+    > :is(.a-entity-record-section-outline, .a-entity-record-summary-view):is(
+      :hover,
+      :focus-within
+    ) {
+    scrollbar-color: color-mix(
+        in srgb,
+        var(--a-muted-foreground) 52%,
+        transparent
+      )
+      transparent;
+  }
+  .a-entity-record--header-collapsed
+    .a-entity-record-record-body--pinned
+    > :is(
+      .a-entity-record-section-outline,
+      .a-entity-record-summary-view
+    )::-webkit-scrollbar {
+    width: 0.5rem;
+  }
+  .a-entity-record--header-collapsed
+    .a-entity-record-record-body--pinned
+    > :is(
+      .a-entity-record-section-outline,
+      .a-entity-record-summary-view
+    )::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .a-entity-record--header-collapsed
+    .a-entity-record-record-body--pinned
+    > :is(
+      .a-entity-record-section-outline,
+      .a-entity-record-summary-view
+    )::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 999px;
+  }
+  .a-entity-record--header-collapsed
+    .a-entity-record-record-body--pinned
+    > :is(.a-entity-record-section-outline, .a-entity-record-summary-view):is(
+      :hover,
+      :focus-within
+    )::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--a-muted-foreground) 52%, transparent);
+  }
+}
+/* The collapsed record is an application viewport; its fixed panes extend to the
+   shell edge and the ordinary page footer does not participate in this mode. */
+@media (min-width: 961px) {
+  .athyper-shell__body:has(
+      .a-entity-record--header-collapsed .a-entity-record-record-body--pinned
+    )
+    > .athyper-shell__footer {
+    display: none;
+  }
+}
+/* Three-pane record workspace: every independently scrolling pane owns the same
+   reading gutter. Scrollbars stay at the pane edge; cards and section controls
+   retain clear space on every side. */
+@media (min-width: 961px) {
+  .a-entity-record-record-body--pinned {
+    --a-entity-record-pane-padding: var(--a-space-3);
+    --a-entity-record-scrollbar-clearance: 0.5rem;
+  }
+  .a-entity-record-record-body--pinned > .a-entity-record-section-outline,
+  .a-entity-record-record-body--pinned > .a-entity-record-summary-view {
+    padding-block: var(--a-entity-record-pane-padding);
+    padding-inline-start: var(--a-entity-record-pane-padding);
+    padding-inline-end: calc(
+      var(--a-entity-record-pane-padding) +
+        var(--a-entity-record-scrollbar-clearance)
+    );
+    scroll-padding-block: var(--a-entity-record-pane-padding);
+  }
+  .a-entity-record-record-body--pinned > .a-entity-record-section-outline {
+    gap: var(--a-space-1);
+  }
+  .a-entity-record-record-body--pinned
+    > .a-entity-record-section-outline
+    button {
+    min-block-size: var(--a-touch-target);
+    padding-inline: var(--a-space-3);
+  }
+  .a-entity-record-record-body--pinned > .a-entity-record-summary-view {
+    gap: var(--a-space-3);
+  }
+}
+@media (min-width: 961px) {
+  .a-entity-record-record-body--pinned
+    > :is(.a-entity-record-section-outline, .a-entity-record-summary-view) {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .a-entity-record-record-body--pinned
+    > :is(.a-entity-record-section-outline, .a-entity-record-summary-view):is(
+      :hover,
+      :focus-within
+    ) {
+    scrollbar-color: color-mix(
+        in srgb,
+        var(--a-muted-foreground) 52%,
+        transparent
+      )
+      transparent;
+  }
+  .a-entity-record-record-body--pinned
+    > :is(
+      .a-entity-record-section-outline,
+      .a-entity-record-summary-view
+    )::-webkit-scrollbar {
+    width: 0.5rem;
+  }
+  .a-entity-record-record-body--pinned
+    > :is(
+      .a-entity-record-section-outline,
+      .a-entity-record-summary-view
+    )::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .a-entity-record-record-body--pinned
+    > :is(
+      .a-entity-record-section-outline,
+      .a-entity-record-summary-view
+    )::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 999px;
+  }
+  .a-entity-record-record-body--pinned
+    > :is(.a-entity-record-section-outline, .a-entity-record-summary-view):is(
+      :hover,
+      :focus-within
+    )::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--a-muted-foreground) 52%, transparent);
+  }
+}
+/* The final section needs the same landing position as every other section.
+   This tail is scroll range only; it prevents the browser from clamping a last
+   heading to the bottom of the center pane. */
+.a-runtime-continuous-sections__tail {
+  min-block-size: max(18rem, 60dvh);
+}

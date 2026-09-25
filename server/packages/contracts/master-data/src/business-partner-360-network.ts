@@ -29,6 +29,10 @@ export interface BusinessPartner360MeshNetworkSummary {
 }
 
 export interface BusinessPartner360NetworkData {
+  /** NEON-owned records, distinct from the Mesh exchange projection below. */
+  readonly commercialRelationships?: readonly Readonly<Record<string, unknown>>[];
+  readonly governanceRelations?: readonly Readonly<Record<string, unknown>>[];
+  readonly nextCursor?: string;
   readonly local?:BusinessPartner360NetworkLocalData;
   readonly live:Readonly<{state:"ready"|"denied"|"stale"|"unavailable"|"not_requested";reasonCode?:string;summary?:BusinessPartner360MeshNetworkSummary}>;
 }

@@ -1,7 +1,4 @@
-CREATE VIEW document.supplier_registration_invitation WITH (security_invoker=true,security_barrier=true) AS
-SELECT id,tenant_id,invitation_no,requested_role AS registration_role,requested_operating_organization_id,company_code_id AS optional_company_code_id,intended_party_name AS intended_supplier_name,invitee_email_hash,token_hash,expires_at,status,applicant_principal_id,business_partner_request_id,accepted_at,cancelled_at,idempotency_key,row_version,created_at,created_by,updated_at,updated_by
-FROM document.business_partner_invitation WHERE journey_kind='supplier';
-COMMENT ON VIEW document.supplier_registration_invitation IS 'Read-only supplier compatibility projection; controlled writes use the generalized invitation service and this view is retired after consumer cutover.';
+
 
 CREATE VIEW document.active_attachment
 WITH (security_invoker = true, security_barrier = true) AS
@@ -35,7 +32,7 @@ SELECT id,
     order_type,
     status,
     'SUPPLIER'::text AS party_type,
-    supplier_id AS party_id,
+    business_partner_id AS party_id,
     parent_commitment_id,
     release_sequence_no,
     requested_by,
@@ -90,7 +87,7 @@ SELECT id AS purchase_invoice_id,
     tenant_id,
     code,
     status AS invoice_status,
-    supplier_id,
+    business_partner_id,
     payable_amount,
     paid_amount,
     outstanding_amount,
@@ -409,20 +406,20 @@ WITH invoice_balance AS (
     SELECT
         tenant_id,
         company_code_id,
-        supplier_id,
+        business_partner_id,
         currency_code,
         sum(payable_amount) FILTER (WHERE invoice_type='advance') AS advance_issued_amount,
         sum(retention_amount) AS retention_withheld_amount,
         count(*) FILTER (WHERE invoice_type='advance')::bigint AS advance_invoice_count,
         count(*) FILTER (WHERE retention_amount>0)::bigint AS retention_invoice_count
     FROM document.purchase_invoice
-    WHERE status='posted' AND supplier_id IS NOT NULL
-    GROUP BY tenant_id,company_code_id,supplier_id,currency_code
+    WHERE status='posted' AND business_partner_id IS NOT NULL
+    GROUP BY tenant_id,company_code_id,business_partner_id,currency_code
 ), settlement_balance AS (
     SELECT
         pi.tenant_id,
         pi.company_code_id,
-        pi.supplier_id,
+        pi.business_partner_id,
         pea.currency_code,
         sum(CASE WHEN pea.allocation_kind='reversal' THEN -pea.advance_recovery_amount ELSE pea.advance_recovery_amount END)
             AS advance_recovered_amount,
@@ -434,12 +431,12 @@ WITH invoice_balance AS (
     JOIN document.purchase_invoice pi
       ON pi.tenant_id=pea.tenant_id AND pi.id=pea.purchase_invoice_id
     WHERE pe.status IN ('posted','transmitted','cleared')
-    GROUP BY pi.tenant_id,pi.company_code_id,pi.supplier_id,pea.currency_code
+    GROUP BY pi.tenant_id,pi.company_code_id,pi.business_partner_id,pea.currency_code
 )
 SELECT
     i.tenant_id,
     i.company_code_id,
-    i.supplier_id,
+    i.business_partner_id,
     i.currency_code,
     coalesce(i.advance_issued_amount,0) AS advance_issued_amount,
     coalesce(s.advance_recovered_amount,0) AS advance_recovered_amount,
@@ -453,7 +450,7 @@ FROM invoice_balance i
 LEFT JOIN settlement_balance s
   ON s.tenant_id=i.tenant_id
  AND s.company_code_id=i.company_code_id
- AND s.supplier_id=i.supplier_id
+ AND s.business_partner_id=i.business_partner_id
  AND s.currency_code=i.currency_code;
 
 COMMENT ON VIEW document.v_party_advance_balance IS

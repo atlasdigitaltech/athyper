@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { NeonEntityApplication } from "@athyper/product-neon-list-view";
+import { isTenantWorkspaceRoute } from "./tenant-workspace-route";
 export function EntityApplicationLayout({
   entityCode,
   children,
@@ -13,6 +14,7 @@ export function EntityApplicationLayout({
   readonly activePath?: string;
 }) {
   const query = useSearchParams().toString(), pathname = usePathname();
+  if (entityCode === "business_partner" && isTenantWorkspaceRoute(pathname)) return <>{children}</>;
   return (
     <NeonEntityApplication
       initialDirectoryQuery={query}

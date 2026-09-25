@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createHttpApplication } from '@athyper/server-runtime-http';
-import { registerBusinessPartner360Routes } from '../business-partner-360-routes.js';
+import { registerBusinessPartner360Routes } from '../business-partner/legacy-360/routes';
 import { MasterDataError } from '../errors.js';
 
 const servers: ReturnType<typeof createServer>[] = [];

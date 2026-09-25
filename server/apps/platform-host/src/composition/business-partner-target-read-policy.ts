@@ -56,7 +56,7 @@ export function isPublishedBusinessPartnerTargetReveal(
     return false;
   const key = input.resource?.["operationKey"];
   if (
-    (key !== "bank_reveal" && key !== "tax_reveal") ||
+    (key !== "bank_reveal" && key !== "tax_reveal" && key !== "identifier_reveal") ||
     profile.deferredOperations?.includes(key)
   )
     return false;

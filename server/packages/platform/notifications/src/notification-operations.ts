@@ -58,7 +58,9 @@ export class NotificationOperationsError extends HttpError {
   }
 }
 
+export interface NotificationDeliverySummary {readonly id:string;readonly channel:string;readonly status:string;readonly subject:string|null;readonly createdAt:string;readonly error:string|null;readonly attemptCount:number;}
 export interface NotificationOperationsRepository {
+  list?(input:{context:VerifiedRequestContext;before?:string}):Promise<{items:readonly NotificationDeliverySummary[];nextCursor?:string}>;
   timeline(input: {
     readonly context: VerifiedRequestContext;
     readonly deliveryId: string;
@@ -76,6 +78,12 @@ export function createNotificationOperations(options: {
   readonly authorizer: Authorizer;
 }) {
   return {
+    async list(context:VerifiedRequestContext,before?:string){
+      await permit(options.authorizer,context,"notifications.delivery.read");
+      if(before&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(before))throw new HttpError(400,"INVALID_CURSOR","Invalid delivery cursor");
+      if(!options.repository.list)throw new HttpError(503,"NOTIFICATION_OPERATIONS_UNAVAILABLE","Delivery list unavailable");
+      return options.repository.list({context,...(before?{before}:{})});
+    },
     subscriberTimeline(context: VerifiedRequestContext, deliveryId: string) {
       return options.repository.timeline({
         context,
@@ -130,6 +138,13 @@ export function createKyselyNotificationOperationsRepository(
   transactions: PlaneTransactionCoordinator<Tx>,
 ): NotificationOperationsRepository {
   return {
+    async list({context,before}) {
+      return transactions.run(context.planeKey,context,async tx=>{
+        const rows=(await sql<Record<string,unknown>>`SELECT d.id,d.channel,d.status,d.created_at,d.attempt_count,m.subject,(SELECT a.error FROM log.notification_delivery_attempt a WHERE a.tenant_id=d.tenant_id AND a.delivery_id=d.id ORDER BY a.created_at DESC,a.id DESC LIMIT 1) error FROM event.notification_delivery d JOIN event.notification_message m ON m.tenant_id=d.tenant_id AND m.id=d.message_id WHERE d.tenant_id=${context.tenantId}::uuid AND m.plane_key=${context.planeKey} ${before?sql`AND d.id<${before}::uuid`:sql``} ORDER BY d.id DESC LIMIT 51`.execute(tx)).rows;
+        const items=rows.slice(0,50).map(r=>({id:String(r.id),channel:String(r.channel),status:String(r.status),subject:typeof r.subject==="string"?r.subject:null,createdAt:new Date(String(r.created_at)).toISOString(),error:typeof r.error==="string"?r.error:null,attemptCount:Number(r.attempt_count)}));
+        return {items,...(rows.length>50?{nextCursor:items.at(-1)!.id}:{})};
+      });
+    },
     async timeline(input) {
       return transactions.run(
         input.context.planeKey,

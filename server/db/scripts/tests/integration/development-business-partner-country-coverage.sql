@@ -3,7 +3,7 @@ DO $$
 DECLARE failures integer;
 BEGIN
   SELECT count(*) INTO failures
-  FROM master.business_partner b JOIN master.tenant t ON t.id=b.tenant_id
+  FROM master.business_partner_identity_current b JOIN master.tenant t ON t.id=b.tenant_id
   WHERE t.code IN ('athyper','cirrusatlantic')
     AND b.metadata->'_seed'->>'pack'='development.business-partner-two-tenant.v2'
     AND (
@@ -16,7 +16,7 @@ BEGIN
   IF failures<>0 THEN RAISE EXCEPTION 'Incomplete country identity: %',failures; END IF;
 
   SELECT count(*) INTO failures
-  FROM master.business_partner b
+  FROM master.business_partner_identity_current b
   JOIN master.business_partner_operating_organization_assignment a ON a.tenant_id=b.tenant_id AND a.business_partner_id=b.id AND a.partner_role='supplier' AND a.status='active'
   JOIN master.operating_organization_company_assignment c ON c.tenant_id=a.tenant_id AND c.operating_organization_id=a.operating_organization_id AND c.status='active'
   JOIN master.supplier s ON s.tenant_id=b.tenant_id AND s.business_partner_id=b.id
@@ -34,12 +34,12 @@ BEGIN
     );
   IF failures<>0 THEN RAISE EXCEPTION 'Incomplete company/currency/bank coverage: %',failures; END IF;
 
-  SELECT count(*) INTO failures FROM master.business_partner b
+  SELECT count(*) INTO failures FROM master.business_partner_identity_current b
   WHERE b.metadata->'_seed'->>'pack'='development.business-partner-two-tenant.v2'
     AND b.status='draft' AND EXISTS (SELECT 1 FROM control.business_partner_qualification q WHERE q.tenant_id=b.tenant_id AND q.business_partner_id=b.id AND q.decision='approved');
   IF failures<>0 THEN RAISE EXCEPTION 'Draft fixture was approved: %',failures; END IF;
 
-  SELECT count(*) INTO failures FROM master.business_partner b
+  SELECT count(*) INTO failures FROM master.business_partner_identity_current b
   WHERE b.metadata->'_seed'->>'pack'='development.business-partner-two-tenant.v2'
     AND b.status='active' AND b.code NOT LIKE '%HIDDEN'
     AND NOT EXISTS (SELECT 1 FROM control.supplier_preference_designation p
@@ -47,12 +47,12 @@ BEGIN
       WHERE p.tenant_id=b.tenant_id AND p.business_partner_id=b.id AND s.scope_kind='operating_organization');
   IF failures<>0 THEN RAISE EXCEPTION 'Missing normalized preference coverage: %',failures; END IF;
 
-  SELECT count(DISTINCT t.code) INTO failures FROM master.business_partner b JOIN master.tenant t ON t.id=b.tenant_id
+  SELECT count(DISTINCT t.code) INTO failures FROM master.business_partner_identity_current b JOIN master.tenant t ON t.id=b.tenant_id
   WHERE b.code IN ('ATH-BP-SA','CATL-BP-SA') AND b.registration_country_code='SA' AND t.code IN ('athyper','cirrusatlantic');
   IF failures<>2 THEN RAISE EXCEPTION 'Saudi fixture missing in a tenant'; END IF;
 END $$;
 
 SELECT t.code tenant,b.registration_country_code country,count(*) partners
-FROM master.business_partner b JOIN master.tenant t ON t.id=b.tenant_id
+FROM master.business_partner_identity_current b JOIN master.tenant t ON t.id=b.tenant_id
 WHERE b.metadata->'_seed'->>'pack'='development.business-partner-two-tenant.v2'
 GROUP BY t.code,b.registration_country_code ORDER BY t.code,b.registration_country_code;

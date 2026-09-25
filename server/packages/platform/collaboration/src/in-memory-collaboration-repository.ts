@@ -1,4 +1,5 @@
 import type { CommandExecutionStore } from "@athyper/server-contract-events";
+import { MAX_COMMENT_THREAD_DEPTH } from "@athyper/contract-platform-rich-text";
 import { CollaborationError } from "./errors.js";
 import type {
   CollaborationRepository,
@@ -51,7 +52,7 @@ export function createInMemoryCollaborationPersistence(
             "Parent comment was not found in this context",
           );
         depth = parent.threadDepth + 1;
-        if (depth > 5)
+        if (depth > MAX_COMMENT_THREAD_DEPTH)
           throw new CollaborationError(
             422,
             "COMMENT_THREAD_DEPTH_EXCEEDED",
@@ -118,8 +119,9 @@ export function createInMemoryCollaborationPersistence(
         updatedAt: now().toISOString(),
       };
       tx.comments.set(current.id, updated);
+      const addedMentionIds=mentionIds.filter(id=>!(tx.mentions.get(current.id)??[]).includes(id));
       tx.mentions.set(current.id, mentionIds);
-      return { comment: updated, orphanedAttachmentIds: [] };
+      return { comment: updated, orphanedAttachmentIds: [], addedMentionIds };
     },
     async softDelete(tenantId, id, principalId, tx) {
       const item = tx.comments.get(id);

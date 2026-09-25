@@ -1,6 +1,6 @@
 "use client";
-import { BusinessPartnerEditCollaboration } from "./edit-collaboration";
-import { businessLabel } from "./360/display-values";
+import { EntityEditCollaboration } from "@athyper/platform-entity-form-detail";
+import { businessTitle as label } from "./360/display-values";
 import { businessPartnerErrorMessage, useCommandRunner } from "./command-feedback";
 import { useOrganizationSelection } from "./use-organization-selection";
 import { SupplierProcessPreview } from "./supplier-process-preview";
@@ -13,7 +13,7 @@ import { RequestAttachmentField, RequestAttachmentScope } from "./request-attach
 import { EntityDataSurface, EntityIntakeBackButton, EntityDraftSaveButton, dataSurfaceDefaults, dataSurfaceValues, EntityIntakeForm, useEntityIntake } from "@athyper/platform-entity-form-detail";
 import { createOperation, entityApplicationDescriptorOperation } from "@athyper/platform-api-client";
 import { entityRuntimeClient } from "@athyper/platform-entity-descriptor-client";
-import { invalidateEntityRuntimeSectionCache } from "@athyper/platform-entity-form-detail";
+import { useChangedRuntimeResources } from "./changed-runtime-resources";
 import type { EntityIntakeSurfaceV1 } from "@athyper/contract-platform-entity-runtime";
 import { PartnerReferenceField } from "./partner-reference-field";
 import { requestFormFromSurface } from "./meta-request-form";
@@ -80,7 +80,6 @@ import {
   type AddressDraft,
   type ContactDraft,
 } from "./request-relationships";
-import { BusinessPartnerRecordRuntime } from "./record-runtime";
 import {
   caseStatusUiState,
   DecisionDialog,
@@ -102,22 +101,14 @@ export * from "./result-experience";
 export { CustomerControls } from "./customer-controls";
 export { SupplierControls } from "./supplier-controls";
 export { NewCustomerRequest } from "./customer-request";
-export * from "./360/business-partner-360-client";
-export * from "./360/business-partner-360-section-client";
+export * from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-client";
+export * from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-section-client";
 export * from "./360/business-partner-360-role-client";
 export * from "./role-extension-experience";
 export * from "./applicant-experience";
 export * from "./mesh-proposal-experience";
 
 export { BusinessPartnerPageFrame };
-
-export function BusinessPartnerRecord({
-  businessPartnerId,
-}: {
-  readonly businessPartnerId: string;
-}) {
-  return <BusinessPartnerRecordRuntime businessPartnerId={businessPartnerId} />;
-}
 
 export function BusinessPartnerScopeConfiguration({
   businessPartnerId,
@@ -430,17 +421,6 @@ export function BusinessPartnerScopeConfiguration({
   );
 }
 
-function invalidateChangedRuntimeResources(value: unknown): void {
-  if (!Array.isArray(value)) return;
-  for (const resource of value) {
-    if (!resource || typeof resource !== "object") continue;
-    const item = resource as Record<string, unknown>;
-    if (item.entityCode !== "business_partner" || typeof item.recordId !== "string") continue;
-    const sections = Array.isArray(item.sectionKeys) ? item.sectionKeys.filter((key): key is string => typeof key === "string") : [];
-    for (const sectionKey of sections)
-      invalidateEntityRuntimeSectionCache({ cacheScope: "default", entityCode: "business_partner", recordId: item.recordId, surfaceKey: "detail", sectionKey });
-  }
-}
 
 function usePartnerApi() {
   const http = useApiClient();
@@ -993,6 +973,7 @@ export function BusinessPartnerRequestDetail({
   readonly requestId: string;
   readonly notificationPins?: {attemptId?:string;workItemId?:string;documentJobId?:string};
 }) {
+  const invalidateChangedRuntimeResources = useChangedRuntimeResources();
   const api = usePartnerApi(),
     http = useApiClient(),
     [view, setView] = useState<RequestView>(),
@@ -1031,7 +1012,7 @@ export function BusinessPartnerRequestDetail({
     });
     invalidateChangedRuntimeResources(receipt.changedResources);
     return receipt;
-  }, [http]);
+  }, [http, invalidateChangedRuntimeResources]);
   const run = useCommandRunner({
     setBusy, setError, reload, errorMessage: message, blocked: Boolean(busy || loading),
     onStart: () => { setLastSuccess(false); setErrorState(undefined); },
@@ -2003,7 +1984,6 @@ function optionalValue(data: FormData, name: string): string | undefined {
     ? result.trim()
     : undefined;
 }
-function label(value: string): string { return businessLabel(value, "title"); }
 function formatDate(value: unknown): string {
   return typeof value === "string" && Number.isFinite(parseInstant(value))
     ? new Intl.DateTimeFormat(undefined, {
@@ -2081,6 +2061,12 @@ export function BusinessPartnerRequestEdit({
       </div>
     );
   if(request.kind==="new_partner"&&request.source.kind==="manual"&&request.requestedRole==="supplier") return <BusinessPartnerRequestEntry initialRequest={view}/>;
+  if (request.kind !== "new_partner") return (
+    <BusinessPartnerPageFrame title={`Edit ${request.requestNo}`}>
+      <p>This request requires its dedicated capture form. The general partner identity form cannot edit this request kind.</p>
+      <a href={href}>Return to request</a>
+    </BusinessPartnerPageFrame>
+  );
   const payload = request.proposedPayload;
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2128,7 +2114,7 @@ export function BusinessPartnerRequestEdit({
           </Button>
         }
       >
-        <BusinessPartnerEditCollaboration recordId={request.targetBusinessPartnerId}>
+        <EntityEditCollaboration entityCode="business_partner" surfaceKey="detail" recordId={request.targetBusinessPartnerId}>
         <form
           className="bp-form"
           onSubmit={save}
@@ -2199,7 +2185,7 @@ export function BusinessPartnerRequestEdit({
             </Button>
           </div>
         </form>
-        </BusinessPartnerEditCollaboration>
+        </EntityEditCollaboration>
         <UnsavedChangesDialog navigation={navigation} />
       </BusinessPartnerPageFrame>
     </div>
@@ -2229,3 +2215,4 @@ export function AuthorizedNewBusinessPartnerRequest() {
 export { BusinessPartnerTransactionSelector } from "./transaction-selector";
 
 export { BankingWorkspace } from "./banking-workspace";
+export { CorePartnerRegistration } from "./core-registration";

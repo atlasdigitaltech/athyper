@@ -19,3 +19,5 @@ export * from "./runtime-restoration.js";
 export * from "./runtime-restoration-publication.js";
 
 export { prepareDocumentCollectionRelease } from "./document-collection-publication.js";
+export { prepareNotificationConfigurationRelease } from "./notification-publication.js";
+export {prepareCollectionConfigurationRelease} from "./collection-publication.js";

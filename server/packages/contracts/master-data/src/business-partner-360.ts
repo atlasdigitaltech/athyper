@@ -26,14 +26,14 @@ export const BUSINESS_PARTNER_360_SECTION_CODES = Object.freeze([
 export type BusinessPartner360SectionCode =
   (typeof BUSINESS_PARTNER_360_SECTION_CODES)[number];
 export type BusinessPartner360RoleLens = "all" | "supplier" | "customer";
-export type BusinessPartner360PartyCategory = "organization";
+export type BusinessPartner360PartyCategory = "organization" | "person";
 export type BusinessPartner360SectionState =
   "ready" | "empty" | "partial" | "stale" | "unavailable";
 export type BusinessPartner360SectionAuthorization = "granted" | "restricted";
 
 export const BUSINESS_PARTNER_360_PERMISSIONS = Object.freeze({
-  comment: "collaboration.comment.read",
-  attachment: "document.attachment.read",
+  comment: "neon.collaboration.comment.read",
+  attachment: "neon.collaboration.attachment.read",
   record: "neon.relationship.business_partner.read",
   identity: "neon.relationship.business_partner_identity.read",
   contact: "neon.relationship.business_partner_contact.read",
@@ -41,6 +41,7 @@ export const BUSINESS_PARTNER_360_PERMISSIONS = Object.freeze({
   identifierMasked: "neon.relationship.business_partner_identifier.read_masked",
   taxMasked: "neon.relationship.business_partner_tax.read_masked",
   taxReveal: "neon.relationship.business_partner_tax.reveal",
+  identifierReveal: "neon.relationship.business_partner_identifier.reveal",
   bankMasked: "neon.relationship.business_partner_bank.read_masked",
   bankReveal: "neon.relationship.business_partner_bank.reveal",
   qualification: "neon.relationship.business_partner_qualification.read",
@@ -51,7 +52,10 @@ export const BUSINESS_PARTNER_360_PERMISSIONS = Object.freeze({
   workforce: "neon.relationship.business_partner_workforce.read",
   request: "neon.relationship.entity_case.read",
   activity: "neon.relationship.business_partner_activity.read",
-  network: "neon.relationship.business_partner_network.read",
+  // Cleaned relationship/governance facts are tenant-owned. This retained
+  // capability code still requires its own grant and related-partner checks;
+  // it is not permission for Mesh exchange or company transaction controls.
+  network: "neon.relationship.bp_target.network_read",
   amend: "neon.relationship.business_partner_amend.create",
 } as const);
 
@@ -184,7 +188,7 @@ export interface BusinessPartner360Summary {
     lifecycleStatus: string;
   }>;
   readonly roles: readonly Readonly<{
-    id: string;
+    id?: string;
     code: "supplier" | "customer";
     roleCode?: string;
     status: string;
@@ -357,14 +361,14 @@ export interface BusinessPartner360Service {
    * child ownership and replay claims before returning a restricted value. */
   preflightReveal?(
     query: BusinessPartner360Query & {
-      readonly kind: "bank" | "tax";
+      readonly kind: "bank" | "tax" | "identifier";
       readonly historical?: boolean;
     },
   ): Promise<"allowed" | "workflow_blocked" | "not_applicable">;
   /** Bounded record admission/core projection used by generic runtime bootstrap. */
   header(query: BusinessPartner360Query): Promise<BusinessPartner360Header>;
   /** Bounded Overview projection; it never invokes summary fragments or completeness. */
-  overview(query: BusinessPartner360Query): Promise<BusinessPartner360Overview>;
+  overview(query: BusinessPartner360Query, projection?: { readonly requireIdentity: boolean }): Promise<BusinessPartner360Overview>;
   summary(query: BusinessPartner360Query): Promise<BusinessPartner360Summary>;
   section<T = unknown>(
     query: BusinessPartner360PageQuery & {
@@ -376,6 +380,9 @@ export interface BusinessPartner360Service {
   ): Promise<
     import("./business-partner-360-sections.js").BusinessPartner360TaxRevealResult
   >;
+  revealIdentifier?(
+    command: import("./business-partner-360-sections.js").BusinessPartner360IdentifierRevealCommand,
+  ): Promise<import("./business-partner-360-sections.js").BusinessPartner360IdentifierRevealResult>;
   revealBankAccount(
     command: import("./business-partner-360-commercial-controls.js").BusinessPartner360BankRevealCommand,
   ): Promise<
@@ -395,7 +402,7 @@ export interface BusinessPartner360SectionDefinition {
   readonly discoverableWhenDenied: false;
 }
 
-const allCategories = ["organization"] as const;
+const allCategories = ["organization", "person"] as const;
 const allRoles = ["supplier", "customer"] as const;
 const route = (name: string) => `/api/neon/business-partners/:id/360/${name}`;
 
@@ -443,6 +450,7 @@ export const BUSINESS_PARTNER_360_SECTION_DEFINITIONS: readonly BusinessPartner3
       [
         BUSINESS_PARTNER_360_PERMISSIONS.taxMasked,
         BUSINESS_PARTNER_360_PERMISSIONS.taxReveal,
+        BUSINESS_PARTNER_360_PERMISSIONS.identifierReveal,
       ],
     ),
     definition(
@@ -480,8 +488,8 @@ export const BUSINESS_PARTNER_360_SECTION_DEFINITIONS: readonly BusinessPartner3
     definition(
       "banking",
       [route("banking")],
-      ["organization"],
-      ["supplier"],
+      allCategories,
+      allRoles,
       true,
       BUSINESS_PARTNER_360_PERMISSIONS.bankMasked,
       [BUSINESS_PARTNER_360_PERMISSIONS.bankReveal],
@@ -489,7 +497,7 @@ export const BUSINESS_PARTNER_360_SECTION_DEFINITIONS: readonly BusinessPartner3
     definition(
       "qualifications-certificates",
       [route("qualifications"), route("certificates")],
-      ["organization"],
+      allCategories,
       allRoles,
       true,
       BUSINESS_PARTNER_360_PERMISSIONS.qualification,
@@ -552,7 +560,9 @@ export const BUSINESS_PARTNER_360_SECTION_DEFINITIONS: readonly BusinessPartner3
       [route("network")],
       allCategories,
       ["supplier", "customer"],
-      false,
+      // Partner-owned governance and relationships are independent of commercial roles.
+      // Optional Mesh commercial projections retain their own applicability checks.
+      true,
       BUSINESS_PARTNER_360_PERMISSIONS.network,
     ),
   ]);

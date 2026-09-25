@@ -1,4 +1,4 @@
-import { BUSINESS_PARTNER_360_PANEL } from "./panel-definition";
+import { BUSINESS_PARTNER_360_PANEL } from "@athyper/product-neon-entity-extensions/business-partner/clients/panel-definition";
 import { describe, expect, it } from "vitest";
 import {
   parseRecord360Panel,
@@ -55,6 +55,7 @@ describe("published 360 panel", () => {
     });
     expect(value.panel?.tabs.map((tab) => tab.label)).toEqual([
       "360 View",
+      "Qualifications",
       "Roles & scope",
       "Requests",
       "Business Transactions",

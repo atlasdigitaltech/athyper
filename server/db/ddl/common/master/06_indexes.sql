@@ -22,9 +22,11 @@ CREATE INDEX address_event_correlation_idx
 
 CREATE INDEX contact_person_role_contact_idx
     ON master.contact_person_role (tenant_id, contact_person_id, role_code);
-CREATE UNIQUE INDEX contact_person_role_current_uq
-    ON master.contact_person_role (tenant_id, contact_person_id, role_code)
-    WHERE effective_until IS NULL;
-CREATE UNIQUE INDEX contact_person_role_primary_uq
-    ON master.contact_person_role (tenant_id, contact_person_id)
-    WHERE is_primary AND effective_until IS NULL;
+ALTER TABLE master.contact_person_role ADD CONSTRAINT contact_person_role_period_excl
+ EXCLUDE USING gist (tenant_id WITH =,contact_person_id WITH =,role_code WITH =,
+ COALESCE(address_link_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
+ daterange(effective_from,effective_until,'[)') WITH &&);
+ALTER TABLE master.contact_person_role ADD CONSTRAINT contact_person_role_primary_period_excl
+ EXCLUDE USING gist (tenant_id WITH =,contact_person_id WITH =,
+ COALESCE(address_link_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
+ daterange(effective_from,effective_until,'[)') WITH &&) WHERE (is_primary);

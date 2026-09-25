@@ -11,6 +11,8 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@athyper/contract-platform-entity-runtime": "workspace:*",
+    "@athyper/product-neon-entity-extensions": "workspace:*",
     "@athyper/contract-platform-navigation": "workspace:*",
     "@athyper/contract-platform-dashboard": "workspace:*",
     "@athyper/platform-gateway-bff-relay": "workspace:*",

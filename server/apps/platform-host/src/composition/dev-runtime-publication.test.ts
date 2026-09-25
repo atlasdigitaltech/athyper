@@ -86,12 +86,14 @@ function fixture() {
   };
   const configPath = join(dir, "server.json");
   writeFileSync(configPath, JSON.stringify(settings), { mode: 0o600 });
-  const state = { revoked: false, wrongAuthor: false };
+  const state = { revoked: false, wrongAuthor: false, archive: undefined as any };
   const query = vi.fn(async (sql: string) => ({
     rows: sql.includes("FROM master.principal")
       ? state.revoked
         ? []
         : [{ id }]
+      : sql.includes("FROM metadata.publication_recovery_archive")
+        ? state.archive ? [state.archive] : []
       : sql.includes("FROM metadata.entity_release")
         ? [
             {
@@ -134,9 +136,23 @@ function fixture() {
       ATHYPER_DEV_PUBLICATION_CONFIG: configPath,
     },
   });
-  return { service, state, record, human, evidence, configPath };
+  return { service, state, record, human, evidence, configPath, query };
 }
 describe("DEVFULL runtime workload approval", () => {
+  it("does not fall back to normal approval after a recovery permit is revoked", async () => {
+    const f = fixture();
+    f.state.archive = { revoked: true };
+    // A revoked terminal successor must never fall back to an older permit.
+    await expect(f.service.authorizeActivation(id, { document: { envelope: { targetPlane: "neon" } } } as never)).rejects.toThrow("PUBLICATION_RECOVERY_EXPIRED_OR_REVOKED");
+    expect(f.query.mock.calls.some(([query]) => query.includes("fn_runtime_restoration_compilation_source"))).toBe(false);
+    expect(f.query.mock.calls.some(([query]) => query.includes("successor.supersedes_id=a.id"))).toBe(true);
+    expect(f.record).not.toHaveBeenCalled();
+  });
+  it("never uses a recovery archive to qualify new authoring", async () => {
+    const f = fixture(); f.state.archive = { revoked: true };
+    await expect(f.service.review.qualify(coordinate)).resolves.toMatchObject({ mode: "development_auto_approval" });
+    expect(f.query.mock.calls.some(([query]) => query.includes("publication_recovery_archive"))).toBe(false);
+  });
   it("uses durable machine provenance and explicit automation audit, without a human receipt", async () => {
     const f = fixture();
     const receipt = await f.service.review.qualify(coordinate);

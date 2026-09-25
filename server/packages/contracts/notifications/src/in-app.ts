@@ -13,6 +13,8 @@ export interface InAppNotification {
   readonly entityType?: string;
   readonly entityId?: string;
   readonly href?: string;
+  readonly recordLabel?: string;
+  readonly actionLabel?: string;
   readonly subject?: string | null;
   readonly payload: Readonly<Record<string, unknown>>;
   readonly createdAt: string;

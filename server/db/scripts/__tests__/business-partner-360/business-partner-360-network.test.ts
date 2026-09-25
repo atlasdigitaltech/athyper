@@ -6,7 +6,7 @@ const root = resolve(import.meta.dirname, "../../../.."),
   read = (path: string) => readFile(resolve(root, path), "utf8");
 test("BS360-08 reads local NEON evidence first without a cross-plane database join", async () => {
   const source = await read(
-    "packages/services/master-data/src/kysely-business-partner-360-network.ts",
+    "packages/services/master-data/src/business-partner/relationships/network-reader.ts",
   );
   for (const object of [
     "control.mesh_business_partner_account_link",
@@ -27,9 +27,9 @@ test("BS360-08 reads local NEON evidence first without a cross-plane database jo
 });
 test("BS360-08 calls only a typed bounded adapter after relationship and person-role gates", async () => {
   const [service, adapter] = await Promise.all([
-    read("packages/services/master-data/src/business-partner-360-service.ts"),
+    read("packages/services/master-data/src/business-partner/record/service.ts"),
     read(
-      "packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts",
+      "packages/services/master-data/src/business-partner/integrations/mesh-network-adapter.ts",
     ),
   ]);
   assert.match(service, /accountLink\.status==="active"/);
@@ -81,7 +81,7 @@ test("BS360-08 distinguishes received, accepted, ignored, published, withdrawn, 
   const [contract, adapter, component] = await Promise.all([
     read("packages/contracts/master-data/src/business-partner-360-network.ts"),
     read(
-      "packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts",
+      "packages/services/master-data/src/business-partner/integrations/mesh-network-adapter.ts",
     ),
     read(
       "../packages/planes/neon/business-partner/src/360/components/network-section.tsx",

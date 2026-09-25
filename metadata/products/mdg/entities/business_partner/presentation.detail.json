@@ -10,7 +10,13 @@
   "header": {
     "titleField": "name",
     "codeField": "code",
-    "statusField": "status"
+    "statusField": "status",
+    "statusTones": {
+      "draft": "neutral",
+      "active": "success",
+      "inactive": "neutral",
+      "archived": "neutral"
+    }
   },
   "sections": [
     {
@@ -31,6 +37,26 @@
       },
       "presentationRef": "business_partner/presentation.section.identity.json",
       "viewPermission": "neon.relationship.business_partner_identity.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "industries",
+      "label": {
+        "labelKey": "entity.business_partner.classifications.industries",
+        "defaultText": "Industries"
+      },
+      "presentationRef": "business_partner/presentation.section.industries.json",
+      "viewPermission": "neon.relationship.business_partner_identity.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "commodities",
+      "label": {
+        "labelKey": "entity.business_partner.presentation.detail.sections.commodities.label",
+        "defaultText": "Commodities"
+      },
+      "presentationRef": "business_partner/presentation.section.commodities.json",
+      "viewPermission": "neon.business_partner_classification.read",
       "discoverableWhenDenied": false
     },
     {
@@ -107,10 +133,30 @@
       "sectionKey": "qualifications-certificates",
       "label": {
         "labelKey": "entity.business_partner.presentation.detail.sections.qualifications-certificates.label",
-        "defaultText": "Qualifications Certificates"
+        "defaultText": "Qualifications"
       },
       "presentationRef": "business_partner/presentation.section.qualifications-certificates.json",
       "viewPermission": "neon.relationship.business_partner_qualification.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "restrictions",
+      "label": {
+        "labelKey": "entity.partner_decision.restrictions",
+        "defaultText": "Restrictions"
+      },
+      "presentationRef": "business_partner/presentation.section.restrictions.json",
+      "viewPermission": "neon.relationship.business_partner_restriction.read",
+      "discoverableWhenDenied": false
+    },
+    {
+      "sectionKey": "certificates",
+      "label": {
+        "labelKey": "entity.business_partner.presentation.detail.sections.certificates.label",
+        "defaultText": "Certificates"
+      },
+      "presentationRef": "business_partner/presentation.section.certificates.json",
+      "viewPermission": "neon.relationship.business_partner_certificate.read",
       "discoverableWhenDenied": false
     },
     {
@@ -170,7 +216,7 @@
         "defaultText": "Governance & ownership"
       },
       "presentationRef": "business_partner/presentation.section.network.json",
-      "viewPermission": "neon.relationship.business_partner_network.read",
+      "viewPermission": "neon.relationship.bp_target.network_read",
       "discoverableWhenDenied": false
     },
     {
@@ -260,9 +306,12 @@
     "business_partner/presentation.section.requests",
     "business_partner/presentation.section.roles-scope",
     "business_partner/presentation.section.supplier-company",
-    "business_partner/presentation.section.workforce"
+    "business_partner/presentation.section.workforce",
+    "business_partner/presentation.section.commodities",
+    "business_partner/presentation.section.certificates",
+    "business_partner/presentation.section.industries",
+    "business_partner/presentation.section.restrictions"
   ],
-  "artifactHash": "sha256:9f4e5e413fc87d75a90c5b510b157bce0b7b2fb6cb8b9dd83910cddf92260362",
   "navigation": {
     "tabs": [
       {
@@ -275,12 +324,29 @@
         "sectionKeys": [
           "overview",
           "identity",
+          "industries",
+          "commodities",
           "contacts",
           "addresses",
           "identifiers-tax",
           "banking",
-          "qualifications-certificates"
-        ]
+          "certificates",
+          "network"
+        ],
+        "sectionDisplay": "continuous"
+      },
+      {
+        "key": "qualifications",
+        "label": {
+          "labelKey": "entity.business_partner.presentation.detail.tabs.qualifications.label",
+          "defaultText": "Qualifications"
+        },
+        "provider": "section",
+        "sectionKeys": [
+          "qualifications-certificates",
+          "restrictions"
+        ],
+        "sectionDisplay": "continuous"
       },
       {
         "key": "roles",
@@ -289,7 +355,12 @@
           "defaultText": "Roles & scope"
         },
         "provider": "section",
-        "sectionKey": "roles-scope"
+        "sectionKeys": [
+          "roles-scope",
+          "supplier-company",
+          "customer-company"
+        ],
+        "sectionDisplay": "continuous"
       },
       {
         "key": "requests",
@@ -338,7 +409,21 @@
           "defaultText": "Primary Address"
         },
         "provider": "primary-address",
-        "rendererKey": "platform.address.summary.v1"
+        "rendererKey": "platform.address.summary.v1",
+        "displayFields": [
+          {
+            "key": "purpose",
+            "label": {
+              "labelKey": "partner.summary.purpose",
+              "defaultText": "Purpose"
+            },
+            "display": {
+              "lookup": {
+                "code": "master.address_purpose"
+              }
+            }
+          }
+        ]
       },
       {
         "key": "relationship-summary",
@@ -347,7 +432,37 @@
           "defaultText": "Relationships"
         },
         "provider": "relationship-summary",
-        "rendererKey": "platform.summary.metrics.v1"
+        "rendererKey": "platform.summary.metrics.v1",
+        "displayFields": [
+          {
+            "key": "roles",
+            "dataType": "enum",
+            "display": {
+              "lookup": {
+                "options": [
+                  {
+                    "value": "supplier",
+                    "label": {
+                      "labelKey": "partner.summary.roles.supplier",
+                      "defaultText": "Supplier"
+                    }
+                  },
+                  {
+                    "value": "customer",
+                    "label": {
+                      "labelKey": "partner.summary.roles.customer",
+                      "defaultText": "Customer"
+                    }
+                  }
+                ]
+              }
+            },
+            "label": {
+              "labelKey": "partner.summary.roles",
+              "defaultText": "Commercial roles"
+            }
+          }
+        ]
       },
       {
         "key": "governance-state",
@@ -356,8 +471,60 @@
           "defaultText": "Governance"
         },
         "provider": "governance-state",
-        "rendererKey": "platform.summary.status.v1"
+        "rendererKey": "platform.summary.status.v1",
+        "displayFields": [
+          {
+            "key": "completeness",
+            "label": {
+              "labelKey": "partner.summary.completeness",
+              "defaultText": "Completeness"
+            },
+            "dataType": "enum",
+            "display": {
+              "lookup": {
+                "options": [
+                  {
+                    "value": "complete",
+                    "label": {
+                      "labelKey": "partner.summary.completeness.complete",
+                      "defaultText": "Complete"
+                    }
+                  },
+                  {
+                    "value": "incomplete",
+                    "label": {
+                      "labelKey": "partner.summary.completeness.incomplete",
+                      "defaultText": "Incomplete"
+                    }
+                  },
+                  {
+                    "value": "not_applicable",
+                    "label": {
+                      "labelKey": "partner.summary.completeness.not_applicable",
+                      "defaultText": "Not applicable"
+                    }
+                  },
+                  {
+                    "value": "definition_unavailable",
+                    "label": {
+                      "labelKey": "partner.summary.completeness.definition_unavailable",
+                      "defaultText": "Definition unavailable"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "key": "percent",
+            "label": {
+              "labelKey": "partner.summary.percent",
+              "defaultText": "Completion percentage"
+            }
+          }
+        ]
       }
     ]
-  }
+  },
+  "artifactHash": "sha256:db61565ae99e8f57ce3c8408094a730e40b57e8825a0dddc0998246e921fce9c"
 }

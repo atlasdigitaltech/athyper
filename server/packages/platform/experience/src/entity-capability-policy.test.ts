@@ -74,6 +74,14 @@ function fixture(options: {
   };
 }
 describe("shared published capability admission", () => {
+  it("allows ordinary comments with an empty normalized mention list when mentions are disabled", async () => {
+    const f = fixture();
+    f.operation.commentBinding.features.mentions = false;
+    f.operation.commentBinding.actions = f.operation.commentBinding.actions.filter((action: {key:string}) => action.key !== "mention");
+    const input = {...f.input,kind:"comments" as const,action:"create",input:{text:"Plain comment",visibility:"public",idempotencyKey:"plain-comment-key",mentionedPrincipalIds:[]}};
+    await expect(f.policy.resolve(input)).resolves.toBeDefined();
+    await expect(f.policy.resolve({...input,input:{...input.input,mentionedPrincipalIds:["another-principal"]}})).rejects.toMatchObject({statusCode:403});
+  });
   it("authorizes archive preflight without command tokens but never trusts a body preflight flag", async () => {
     const f = fixture();
     const request = { ...f.input, action: "archive", input: {} };
@@ -150,6 +158,34 @@ describe("shared published capability admission", () => {
         operatingOrganizationId: "authorized-org",
       }),
     }));
+  });
+  it("projects each action across all admitted parent scopes, not only the scope that admitted read", async () => {
+    const f = fixture();
+    f.authorizeParent.mockResolvedValue({scopeResources:[{operatingOrganizationId:"read-org"},{operatingOrganizationId:"create-org"}]});
+    const read = f.operation.attachmentBinding.actions.find((action: any) => action.key === "read");
+    const create = f.operation.attachmentBinding.actions.find((action: any) => action.key === "create");
+    f.authorizer.authorize.mockImplementation(async ({permissionCode,resource}: any) => ({allowed:
+      (permissionCode === read.permissionCode && resource.operatingOrganizationId === "read-org") ||
+      (permissionCode === create.permissionCode && resource.operatingOrganizationId === "create-org")
+    }));
+    const result = await f.policy.resolve({...f.input,action:"read",input:{}});
+    expect(result.projection.actions.map(action => action.key)).toContain("create");
+    expect(result.projection.actions.map(action => action.key)).not.toContain("delete");
+  });
+  it("admits role-free tenant parents only with the requested capability grant", async () => {
+    const f = fixture();
+    f.authorizeParent.mockResolvedValue({ scopeResources: [{ tenantId: "tenant" }] });
+    f.authorizer.authorize.mockImplementation(async ({ resource }: { readonly resource?: Readonly<Record<string, unknown>> }) => ({
+      allowed: resource?.tenantId === "tenant" && resource?.operatingOrganizationId === undefined,
+    }));
+    await expect(f.policy.resolve(f.input)).resolves.toBeDefined();
+    // An organization grant cannot be satisfied by caller-invented scope.
+    f.authorizer.authorize.mockImplementation(async ({ resource }: { readonly resource?: Readonly<Record<string, unknown>> }) => ({
+      allowed: resource?.operatingOrganizationId === "unassigned-org",
+    }));
+    await expect(f.policy.resolve({ ...f.input, input: { ...f.input.input, operatingOrganizationId: "unassigned-org" } })).rejects.toMatchObject({ statusCode: 403 });
+    f.authorizeParent.mockResolvedValue(false);
+    await expect(f.policy.resolve(f.input)).rejects.toMatchObject({ statusCode: 403 });
   });
   it("rejects an admitted projection when its tenant, principal, plane, or entity no longer matches", async () => {
     const f = fixture();

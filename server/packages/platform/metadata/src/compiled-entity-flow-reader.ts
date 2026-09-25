@@ -38,11 +38,12 @@ export class CompiledEntityFlowReader {
     const source = input.sourceKind === "manual" ? "internal" : input.sourceKind;
     if (!flow.content.supportedSources.includes(source))
       throw new Error("COMPILED_ENTITY_FLOW_SOURCE_MAPPING_MISSING");
+    const publication = await this.reader.publicationCoordinate(release);
     return Object.freeze({
       code: `${input.planeKey}.${flow.entityCode}.${input.flowKey}`,
-      version: release.release.releaseNo,
-      hash: flow.artifactHash,
-      releaseId: release.release.releaseId,
+      version: publication.releaseNo,
+      hash: persistedHash(flow.artifactHash),
+      releaseId: publication.releaseId,
     });
   }
 
@@ -61,16 +62,23 @@ export class CompiledEntityFlowReader {
     );
     const first = stages.find((stage) => stage.routed);
     if (!first) throw new Error("COMPILED_ENTITY_FLOW_WORKFLOW_ROUTE_EMPTY");
+    const publication = await this.reader.publicationCoordinate(release);
     return Object.freeze({
       code: `${input.planeKey}.${input.entityCode}.${input.journey}.onboarding`,
-      version: release.release.releaseNo,
-      hash: base.artifactHash,
+      version: publication.releaseNo,
+      hash: persistedHash(base.artifactHash),
       stageCode: first.code,
       stageName: first.name,
       stages: Object.freeze(stages),
       definition,
     });
   }
+}
+
+/** The native case persistence contract stores SHA-256 as 64 hex characters. */
+function persistedHash(value: string): string {
+  if (!/^sha256:[a-f0-9]{64}$/.test(value)) throw new Error("COMPILED_ENTITY_FLOW_HASH_INVALID");
+  return value.slice("sha256:".length);
 }
 
 function record(value: unknown): value is Record<string, unknown> {

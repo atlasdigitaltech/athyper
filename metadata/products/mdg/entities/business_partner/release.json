@@ -15,6 +15,13 @@
   },
   "artifacts": [
     {
+      "artifactKey": "business_partner_request/flow.partner.new",
+      "artifactType": "flow",
+      "entityCode": "business_partner_request",
+      "ref": "business_partner_request/flow.partner.new.json",
+      "hash": "sha256:ca1fe70775ef47ada9b410410f12f4c88a552ef097eca0391dcb23d2d6d11547"
+    },
+    {
       "artifactKey": "address/core",
       "artifactType": "core",
       "entityCode": "address",
@@ -96,7 +103,7 @@
       "artifactType": "presentation_surface",
       "entityCode": "business_partner",
       "ref": "business_partner/presentation.detail.json",
-      "hash": "sha256:9f4e5e413fc87d75a90c5b510b157bce0b7b2fb6cb8b9dd83910cddf92260362"
+      "hash": "sha256:db61565ae99e8f57ce3c8408094a730e40b57e8825a0dddc0998246e921fce9c"
     },
     {
       "artifactKey": "business_partner/presentation.list",
@@ -201,7 +208,7 @@
       "artifactType": "presentation_section",
       "entityCode": "business_partner_qualification",
       "ref": "business_partner/presentation.section.qualifications-certificates.json",
-      "hash": "sha256:02dbdcd9d683c2ba3eb61c4a318d1fc36e28ac3ac515ee570d5f30d91ee6df34"
+      "hash": "sha256:6a68eb93c3c48d24c5b74ef1bc30d771f01fbc33f7c17ef3125c53084ea76308"
     },
     {
       "artifactKey": "business_partner/presentation.section.requests",
@@ -260,20 +267,6 @@
       "hash": "sha256:a87740ca82d6fc7e1ea615f5b1943a0c35b86622b890514b560892a6e9af55b6"
     },
     {
-      "artifactKey": "business_partner_commodity_capability/core",
-      "artifactType": "core",
-      "entityCode": "business_partner_commodity_capability",
-      "ref": "business_partner_commodity_capability/core.json",
-      "hash": "sha256:5050f0d64ac7611de394204d70ccd33ca312b2014785f3e89fd19eab22ddb1c9"
-    },
-    {
-      "artifactKey": "business_partner_commodity_capability/operation",
-      "artifactType": "operation",
-      "entityCode": "business_partner_commodity_capability",
-      "ref": "business_partner_commodity_capability/operation.json",
-      "hash": "sha256:e70f1c3b1787b5c40442f958938207100d2ff1b22d781dda866c5170bee9988c"
-    },
-    {
       "artifactKey": "business_partner_governance_relation/core",
       "artifactType": "core",
       "entityCode": "business_partner_governance_relation",
@@ -306,7 +299,7 @@
       "artifactType": "core",
       "entityCode": "business_partner_industry_classification",
       "ref": "business_partner_industry_classification/core.json",
-      "hash": "sha256:9c1cdd6e3be964a9018a20b60fdf67a36efd2664f59c977fedb9dc009fb0fcc8"
+      "hash": "sha256:13ed8c12994bb428ab3a41020ecb0160646128eeed5c500d391c12764f5119da"
     },
     {
       "artifactKey": "business_partner_industry_classification/operation",
@@ -804,6 +797,34 @@
       "entityCode": "workforce",
       "ref": "workforce/operation.json",
       "hash": "sha256:6a2fb17be873f1a517eddabee7ab3cdcf6eb1aabc7343321bf10d414d0c34d4a"
+    },
+    {
+      "artifactKey": "business_partner_commodity_classification/core",
+      "artifactType": "core",
+      "entityCode": "business_partner_commodity_classification",
+      "ref": "business_partner_commodity_classification/core.json",
+      "hash": "sha256:3047da8eb74bcb8dad5fed86e87c80eea007cbcf55a27e200abce6502c2b36d9"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.commodities",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_commodity_classification",
+      "ref": "business_partner/presentation.section.commodities.json",
+      "hash": "sha256:b4b41aaef030abec7da1693dfe71506c975ff7a9681570898ae19c3de24b4f75"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.certificates",
+      "artifactType": "presentation_section",
+      "entityCode": "certification",
+      "ref": "business_partner/presentation.section.certificates.json",
+      "hash": "sha256:79aa95cd696dc0705d5d944c337e50f9e08e43472855a103132b5cf54c5e7405"
+    },
+    {
+      "artifactKey": "business_partner/presentation.section.industries",
+      "artifactType": "presentation_section",
+      "entityCode": "business_partner_industry_classification",
+      "ref": "business_partner/presentation.section.industries.json",
+      "hash": "sha256:8bbf8ba582afdc4f29fb1404a5dbfb0528848c87ad90b76c321c8f44c6259892"
     }
   ],
   "activation": {

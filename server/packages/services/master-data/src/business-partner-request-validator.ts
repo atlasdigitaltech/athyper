@@ -48,8 +48,8 @@ const ruleDefinitions = Object.freeze([
 
 export const businessPartnerRequestRuleset = Object.freeze({
   code: "neon.business_partner.entity_case.phase1",
-  version: 4,
-  hash: createHash("sha256").update(JSON.stringify(ruleDefinitions)).digest("hex"),
+  version: 6,
+  hash: createHash("sha256").update(JSON.stringify({version:6, rules:ruleDefinitions, roleFreeRegistration:true, personRegistration:true})).digest("hex"),
 });
 
 export function createBusinessPartnerRequestValidator<Transaction>(options: BusinessPartnerRequestValidatorOptions<Transaction>): BusinessPartnerRequestValidator<Transaction> {
@@ -64,7 +64,7 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
       const requestedCategory=stringValue(request.proposedPayload,"partnerCategory","partner_category");
       const ownershipClass=stringValue(request.proposedPayload,"ownershipClass","ownership_class");
       const qualificationTypeCode=stringValue(request.proposedPayload,"qualificationTypeCode","qualification_type_code");
-      const createsCommercialRole=["new_partner","add_supplier","add_customer"].includes(request.kind);
+      const createsCommercialRole=["new_partner","add_supplier","add_customer"].includes(request.kind) && Boolean(request.requestedRole);
       const subtypeField=customer?"customerType":"supplierType";
       // Match SQL fallback for legacy/malformed snapshots; never repair an approved payload here.
       const subtype=stringValue(request.proposedPayload,subtypeField)??(customer?"corporate":"general");
@@ -72,14 +72,17 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
         && (ownershipClass==="internal") === (subtype==="intercompany");
       const externalSupplier=request.requestedRole==="supplier"&&ownershipClass==="external";
       const organizationCategory=!requestedCategory||requestedCategory==="organization";
+      const personCategory = requestedCategory === "person" && !request.requestedRole && request.source.kind === "manual"
+        && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(request.proposedPayload["personId"] ?? ""))
+        && !["legalForm", "registrationCountryCode", "incorporationDate"].some(key => Object.hasOwn(request.proposedPayload, key));
       const relationships=recordValue(request.proposedPayload["relationshipProposals"]),addresses=arrayValue(relationships["addresses"]),contactPersons=arrayValue(relationships["contactPersons"]),contactChannels=arrayValue(relationships["contactChannels"]);
       const primaryAddresses=addresses.filter(item=>item["isPrimary"]===true),primaryContacts=contactPersons.filter(item=>item["isPrimary"]===true),primaryContactKey=primaryContacts.length===1?primaryContacts[0]?.["clientItemKey"]:undefined,primaryChannels=contactChannels.filter(item=>item["isPrimary"]===true&&item["contactClientItemKey"]===primaryContactKey);
-      const relationshipRulesApply=isNew&&organizationCategory;
+      const relationshipRulesApply=isNew&&organizationCategory&&Boolean(request.requestedRole);
       const lifecycle=["deactivate","reactivate","archive"].includes(request.kind);
       const lifecycleDependencies=request.proposedPayload["dependencies"];
       const requiredDependencyCodes=["supplier_roles","customer_roles","active_organization_assignments","active_employments","effective_blocks","effective_qualifications"];
       const lifecycleDependenciesValid=Array.isArray(lifecycleDependencies)&&requiredDependencyCodes.every(code=>lifecycleDependencies.some(item=>Boolean(item&&typeof item==="object"&&(item as Record<string,unknown>)["code"]===code&&Number.isSafeInteger((item as Record<string,unknown>)["count"])&&typeof (item as Record<string,unknown>)["blocking"]==="boolean")));
-      const roleless=["amend_partner","deactivate","reactivate","archive"].includes(request.kind);
+      const roleless=["amend_partner","deactivate","reactivate","archive"].includes(request.kind) || (isNew && !request.requestedRole);
       const roleKindCompatible = (isNew && (request.requestedRole === "supplier" || request.requestedRole === "customer"))
         || (request.kind === "add_supplier" && request.requestedRole === "supplier")
         || (request.kind === "add_customer" && request.requestedRole === "customer")
@@ -118,7 +121,7 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
         customer ? finding("customer.sales_scope.required","error","$.operatingOrganizationId",Boolean(request.operatingOrganizationId),"CUSTOMER_SALES_SCOPE_REQUIRED",{operatingOrganizationId:request.operatingOrganizationId??null}) : skipped("customer.sales_scope.required","error","$.operatingOrganizationId","CUSTOMER_SCOPE_NOT_APPLICABLE"),
         customer ? finding("customer.authority_fields.prohibited","error","$.proposedPayload",duplicateCustomerAuthorityFields.length===0,"CUSTOMER_GOVERNED_AUTHORITY_REQUIRED",{prohibitedFields:duplicateCustomerAuthorityFields,designationAuthority:"control.customer_account_designation",creditAuthority:"control.customer_credit_review"}) : skipped("customer.authority_fields.prohibited","error","$.proposedPayload","CUSTOMER_AUTHORITY_NOT_APPLICABLE"),
         externalSupplier ? finding("supplier.qualification_type.required","error","$.qualificationTypeCode",/^[a-z][a-z0-9_.-]{1,62}$/.test(qualificationTypeCode??""),"SUPPLIER_QUALIFICATION_TYPE_REQUIRED",{qualificationTypeCode:qualificationTypeCode??null}) : skipped("supplier.qualification_type.required","error","$.qualificationTypeCode","SUPPLIER_QUALIFICATION_NOT_REQUIRED"),
-        isNew ? finding("identity.organization_boundary","error","$.partnerCategory",organizationCategory,"BUSINESS_PARTNER_ORGANIZATION_REQUIRED",{partnerCategory:requestedCategory??"organization"}) : skipped("identity.organization_boundary","error","$.partnerCategory","EXISTING_IDENTITY_REUSED"),
+        isNew ? finding("identity.organization_boundary","error","$.partnerCategory",organizationCategory || personCategory,"BUSINESS_PARTNER_CATEGORY_IDENTITY_INVALID",{partnerCategory:requestedCategory??"organization"}) : skipped("identity.organization_boundary","error","$.partnerCategory","EXISTING_IDENTITY_REUSED"),
         finding("source.mesh.pin.required", "error", "$.source", meshPinned, "MESH_SOURCE_PIN_REQUIRED", { sourceKind: request.source.kind, sourceVersion: request.source.version ?? null }),
         registrationCountryCode
           ? finding("identity.registration_country.format", "error", "$.registrationCountryCode", /^[A-Z]{2}$/.test(registrationCountryCode), "REGISTRATION_COUNTRY_INVALID", { registrationCountryCode })

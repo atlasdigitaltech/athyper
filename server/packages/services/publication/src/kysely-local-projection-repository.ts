@@ -8,6 +8,7 @@ import {
 } from "./local-definition-preview.js";
 import {
   PublicationContractError,
+  compiledPublicationTenant,
   type ActiveEntityProjection,
   type BusinessPartnerDefinitionProjection,
   type ActiveReleaseProjection,
@@ -110,7 +111,12 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
       ${envelope.publicationKey},${envelope.releaseId}::uuid,${envelope.releaseNo},${input.deployment.deploymentId}::uuid,
       ${input.deployment.artifactHash},${JSON.stringify(input.artifact.manifest)}::jsonb,${JSON.stringify(projectionJson(input.artifact))}::jsonb
     )`.execute(this.database);
-    return mapApplied(required(result.rows[0], "APPLIED_RELEASE_NOT_FOUND"));
+    const applied = mapApplied(
+      required(result.rows[0], "APPLIED_RELEASE_NOT_FOUND"),
+    );
+    if (envelope.artifactKind === "compiled_entity_runtime")
+      await this.stageCompiledOperationBindings(applied.id, envelope.payload);
+    return applied;
   }
 
   async verify(input: {
@@ -132,10 +138,45 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
     await sql`SELECT runtime_meta.fn_activate_release(${input.appliedReleaseId}::uuid,${JSON.stringify(input.evidence ?? {})}::jsonb)`.execute(
       this.database,
     );
+    await sql`SELECT authz.fn_activate_entity_operation_projection(${input.appliedReleaseId}::uuid,clock_timestamp())`.execute(
+      this.database,
+    );
     const release = await this.findById(input.appliedReleaseId);
     if (!release || release.status !== "active" || !release.activatedAt)
       throw new Error("LOCAL_ACTIVATION_HEAD_MISMATCH");
     return { ...release, status: "active", activatedAt: release.activatedAt };
+  }
+
+  /** Runtime contracts carry their reviewed binding rows; stage them with the
+   * same applied-release identity, then activate only after artifact verification. */
+  private async stageCompiledOperationBindings(
+    appliedReleaseId: string,
+    payload: Extract<
+      PublicationArtifactDocumentV1["envelope"],
+      { artifactKind: "compiled_entity_runtime" }
+    >["payload"],
+  ): Promise<void> {
+    for (const artifact of payload.artifacts) {
+      if (artifact.artifactType !== "runtime_contract") continue;
+      const descriptor = artifact.content.descriptor as
+        Record<string, unknown> | undefined;
+      const bindings = descriptor?.["operation_scope_bindings"];
+      if (!Array.isArray(bindings) || bindings.length === 0) continue;
+      const source = descriptor?.["source"] as
+        Record<string, unknown> | undefined;
+      if (
+        typeof source?.["entity_id"] !== "string" ||
+        typeof source?.["release_hash"] !== "string"
+      )
+        throw new PublicationContractError(
+          "ARTIFACT_PAYLOAD_INVALID",
+          "Compiled operation bindings require immutable source coordinates",
+        );
+      await sql`SELECT authz.fn_stage_entity_operation_projection(
+        ${appliedReleaseId}::uuid,${payload.tenantId ?? null}::uuid,${artifact.plane},${payload.release.releaseId},
+        ${artifact.artifactHash.replace(/^sha256:/, "")},${JSON.stringify({ source, operation_scope_bindings: bindings })}::jsonb
+      )`.execute(this.database);
+    }
   }
 
   async findByDeployment(
@@ -304,7 +345,7 @@ function assertArtifactCoordinates(
       ? envelope.payload.entityDescriptor.plane
       : envelope.artifactKind === "compiled_entity_runtime"
         ? envelope.targetPlane
-      : envelope.payload.plane;
+        : envelope.payload.plane;
   if (
     envelope.targetPlane !== deployment.targetPlane ||
     envelope.targetPlane !== payloadPlane
@@ -332,7 +373,7 @@ function assertArtifactCoordinates(
       "Artifact manifest coordinates do not match envelope",
     );
 }
-function projectionJson(artifact: PublicationArtifactDocumentV1) {
+export function projectionJson(artifact: PublicationArtifactDocumentV1) {
   const envelope = artifact.envelope;
   if (envelope.artifactKind === "compiled_entity_runtime") {
     const payload = envelope.payload;
@@ -342,7 +383,7 @@ function projectionJson(artifact: PublicationArtifactDocumentV1) {
         // publication release is the durable UUID identity; the inner compiled
         // release retains its own content-addressed identity and hash.
         id: envelope.releaseId,
-        tenant_id: null,
+        tenant_id: compiledPublicationTenant(envelope.publicationKey, payload),
         artifact_kind: envelope.artifactKind,
         payload_schema_version: "2.0",
         payload_hash: artifact.manifest.payloadSha256,

@@ -1,6 +1,7 @@
 import { CollaborationPresentationContext } from "../../../packages/platform/entity/runtime/form-detail/src/collaboration-visibility";
 import { ToastProvider } from "../../../packages/platform/shell/app-foundation/src/toasts";
 export { useToasts } from "../../../packages/platform/shell/app-foundation/src/toasts";
+export { readBrowserCsrfToken } from "../../../packages/platform/shell/app-foundation/src/browser-csrf";
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { CompiledEntitySectionContent } from "../../../packages/platform/entity/runtime/form-detail/src/compiled-section-content";
@@ -23,7 +24,7 @@ const client = {
   request: async (operation: any, options: any = {}) => {
     const path =
       typeof operation.path === "function"
-        ? operation.path({})
+        ? operation.path(options.params??{})
         : operation.path;
     calls.push({ path, method: operation.method, ...options });
     if (path.startsWith("/api/collab/participants?")) return {items:[{id:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",displayName:"Alex Reviewer"}]};
@@ -77,7 +78,7 @@ function Fixture() {
   Object.assign(window,{setReplyCount,emptyComments:()=>setEmpty(true),pinCommentFile:()=>{item={...item,content:{type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"Evidence attached"}]},{type:"attachmentFile",attrs:{attachmentId:"proof-file",alt:"proof.pdf"}}]},pinnedFiles:[{attachmentId:"proof-file",fileName:"proof.pdf",version:2,sizeBytes:2048}]};refresh(value=>value+1);}});
   const [files,setFiles]=useState(false);Object.assign(window,{showFiles:()=>setFiles(true)});
   const resource: any = {
-    presentation: { rendererKey: "platform.comments.v1", fields: [] },
+    presentation: { rendererKey: "platform.comments.v1", fields: [], childCollections: [] },
     capability: {
       actions: [
         "create",
@@ -93,6 +94,7 @@ function Fixture() {
       allowedAudiences: ["public", "private"],
       defaultAudience: "public",
       maxAttachments: 5,
+      maxDepth: 5,
     },
     data: { items: empty?[]:groupFixture?[{...item,id:"early",authorId:"bob",authorDisplayName:"Bob",createdAt:"2026-09-21T01:00:00Z",text:"Early Bob"},{...item,id:"middle",authorId:"alice",authorDisplayName:"Alice",createdAt:"2026-09-22T01:00:00Z",text:"Alice comment"},{...item,id:"late",authorId:"bob",authorDisplayName:"Bob",createdAt:"2026-09-22T02:00:00Z",text:"Late Bob"}]:[{...item,replyCount}] },
   };
@@ -108,7 +110,11 @@ function Fixture() {
           resource={resource}
           entityCode="fixture"
           recordId="record"
-          onLoadThreadPage={async()=>{calls.push({path:"thread-page"});return ({data:{items:replyItems??[{...item,id:"reply-fixture",text:"A reply",parentCommentId:id,threadDepth:1},{...item,id:"nested-fixture",text:"Nested reply",parentCommentId:"reply-fixture",threadDepth:2}],nextCursor:replyItems?"more":undefined}} as any);}}
+          onLoadMentionsPage={async(cursor)=>{
+            calls.push({path:"mentions-page",cursor});
+            return {data:{items:[{...item,id:cursor?"mentioned-page-2":item.id,text:cursor?"Second mentioned thread":"Mention exists in a visible reply",replyCount:1}],...(!cursor?{nextCursor:"next-mentions"}:{})}} as any;
+          }}
+          onLoadThreadPage={async(_root,cursor)=>{calls.push({path:"thread-page"});if((window as any).eightPages){const n=Number(cursor??0);return {data:{items:[{...item,id:`page-${n}`,text:`Reply page ${n+1}`,parentCommentId:id,threadDepth:1}],nextCursor:n<7?String(n+1):undefined}} as any;}return ({data:{items:replyItems??[{...item,id:"reply-fixture",text:"A reply",parentCommentId:id,threadDepth:1},{...item,id:"nested-fixture",text:"Nested reply",parentCommentId:"reply-fixture",threadDepth:2}],nextCursor:replyItems?"more":undefined}} as any);}}
           onChanged={() => refresh((value) => value + 1)}
         />
       </div>

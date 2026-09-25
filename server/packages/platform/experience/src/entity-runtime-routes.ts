@@ -1,3 +1,4 @@
+import { isEntityRuntimeKey, isEntityRuntimeUuid } from "@athyper/contract-platform-entity-runtime";
 import { EntityCapabilityPolicyError } from "./entity-capability-policy.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { registerContractRoute } from "@athyper/server-runtime-http";
@@ -24,17 +25,17 @@ export function registerEntityRuntimeRoutes(app: Application, options: { readonl
   registerContractRoute(app, entityRuntimeSummaryContract, options.authenticate, run((request, context) => { const selectedContext = resourceContext(request); return options.service.summary({ context, entityCode: code(request.params.entityCode), recordId: uuid(request.params.recordId), surfaceKey: surface(request), ...(selectedContext ? { resourceContext: selectedContext } : {}) }); }));
   registerContractRoute(app, entityRuntimeSectionContract, options.authenticate, run((request, context) => {
     const selectedContext = resourceContext(request);
-    return options.service.section({ context, entityCode: code(request.params.entityCode), recordId: uuid(request.params.recordId), surfaceKey: surface(request), sectionKey: code(request.params.sectionKey), ...(request.query.cursor ? { cursor: uuid(request.query.cursor) } : {}), ...(request.query.limit ? { limit: integerLimit(request.query.limit) } : {}), ...(selectedContext ? { resourceContext: selectedContext } : {}) });
+    return options.service.section({ context, entityCode: code(request.params.entityCode), recordId: uuid(request.params.recordId), surfaceKey: surface(request), sectionKey: code(request.params.sectionKey), ...(request.query.cursor ? { cursor: pageCursor(request.query.cursor) } : {}), ...(request.query.limit ? { limit: integerLimit(request.query.limit) } : {}), ...(selectedContext ? { resourceContext: selectedContext } : {}) });
   }));
   if (options.operations) registerContractRoute(app, entityRuntimeOperationContract, options.authenticate, run((request, context) => options.operations!.execute({ context, entityCode: code(request.params.entityCode), recordId: uuid(request.params.recordId), operationKey: code(request.params.operationKey), expectedVersion: integer(request.header("If-Match")), idempotencyKey: header(request.header("Idempotency-Key")), input: body(request.body) })));
 }
 function surface(request: Request): string { return code(request.query.surface); }
-function code(value: unknown): string { if (typeof value !== "string" || !/^[A-Za-z][A-Za-z0-9_.-]{0,126}$/.test(value)) throw new EntityRuntimeResourceError(403, "ENTITY_RUNTIME_RESOURCE_INVALID"); return value; }
-function uuid(value: unknown): string { if (typeof value !== "string" || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(value)) throw new EntityRuntimeResourceError(403, "ENTITY_RUNTIME_RESOURCE_INVALID"); return value; }
+function code(value: unknown): string { if (!isEntityRuntimeKey(value)) throw new EntityRuntimeResourceError(403, "ENTITY_RUNTIME_RESOURCE_INVALID"); return value; }
+function uuid(value: unknown): string { if (!isEntityRuntimeUuid(value)) throw new EntityRuntimeResourceError(403, "ENTITY_RUNTIME_RESOURCE_INVALID"); return value; }
 function problem(status: number, code: string, detail?: string) { return { type: `urn:athyper:problem:${code.toLowerCase().replaceAll("_", "-")}`, title: code, status, code, ...(detail && detail !== code ? { detail } : {}) }; }
 function resourceContext(request: Request): EntityRuntimeResourceContext | undefined {
   const roleLens = request.query.roleLens;
-  const validRoleLens = roleLens === "all" || roleLens === "supplier" || roleLens === "customer" ? roleLens : undefined;
+  const validRoleLens = isEntityRuntimeKey(roleLens) ? roleLens : undefined;
   const value: EntityRuntimeResourceContext = {
     ...(request.query.operatingOrganizationId ? { operatingOrganizationId: uuid(request.query.operatingOrganizationId) } : {}),
     ...(request.query.companyCodeId ? { companyCodeId: uuid(request.query.companyCodeId) } : {}),
@@ -42,6 +43,7 @@ function resourceContext(request: Request): EntityRuntimeResourceContext | undef
     ...(typeof request.query.asOf === "string" && /^\d{4}-\d{2}-\d{2}$/.test(request.query.asOf) ? { asOf: request.query.asOf } : {}),
     ...(validRoleLens ? { roleLens: validRoleLens } : {}),
     ...(request.query.threadRootId ? { threadRootId: uuid(request.query.threadRootId) } : {}),
+    ...(request.query.commentFilter === "mentions" ? { commentFilter: "mentions" as const } : {}),
   };
   return Object.keys(value).length ? value : undefined;
 }
@@ -50,3 +52,5 @@ function integer(value: unknown): number | undefined { if (value === undefined |
 function integerLimit(value: unknown): number { const parsed = Number(value); if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) throw new EntityRuntimeResourceError(403, "ENTITY_RUNTIME_RESOURCE_INVALID"); return parsed; }
 function header(value: unknown): string | undefined { if (typeof value !== "string" || !value.trim()) return undefined; return value; }
 function body(value: unknown): Readonly<Record<string, unknown>> { if (!value || typeof value !== "object" || Array.isArray(value) || !("input" in value) || !(value as Record<string, unknown>).input || typeof (value as Record<string, unknown>).input !== "object" || Array.isArray((value as Record<string, unknown>).input)) throw new EntityRuntimeOperationError(400, "ENTITY_RUNTIME_OPERATION_INPUT_INVALID"); return Object.freeze({ ...((value as Record<string, unknown>).input as Record<string, unknown>) }); }
+
+function pageCursor(value: unknown): string { if (typeof value !== "string" || value.length > 4096 || !/^[A-Za-z0-9_.=-]+$/.test(value)) throw new EntityRuntimeResourceError(403, "ENTITY_RUNTIME_RESOURCE_INVALID"); return value; }

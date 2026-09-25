@@ -75,11 +75,19 @@ export function createRuntimeMetaCompiledEntityReleaseSource(
           JOIN runtime_meta.applied_release_payload AS payload
             ON payload.applied_release_id=applied.id
          WHERE payload.artifact_kind='compiled_entity_runtime'
-           AND payload.coordinates->>'entityCode'=${coordinate.entityCode}
+           AND (payload.coordinates->>'entityCode'=${coordinate.entityCode}
+             OR EXISTS (
+               SELECT 1 FROM jsonb_array_elements(payload.payload_json->'release'->'artifacts') member
+                WHERE member->>'artifactKey'=${`${coordinate.entityCode}/core`}
+                  AND member->>'artifactType'='core'
+                  AND member->>'entityCode'=${coordinate.entityCode}
+             ))
            AND (payload.tenant_id IS NULL OR payload.tenant_id=${coordinate.tenantId}::uuid)
            AND (${coordinate.releaseId ?? null}::text IS NULL OR payload.payload_json->'release'->>'releaseId'=${coordinate.releaseId ?? null})
            AND (${coordinate.releaseHash ?? null}::text IS NULL OR payload.payload_json->'release'->>'releaseHash'=${coordinate.releaseHash ?? null})
-         ORDER BY (payload.tenant_id IS NOT NULL) DESC, applied.activated_at DESC
+         ORDER BY (payload.tenant_id IS NOT NULL) DESC,
+                  (payload.coordinates->>'entityCode'=${coordinate.entityCode}) DESC,
+                  applied.activated_at DESC
          LIMIT 1
       `.execute(executor);
       const result = options.withTenantTransaction
@@ -88,9 +96,30 @@ export function createRuntimeMetaCompiledEntityReleaseSource(
       const row = result.rows[0];
       return row ? parseCompiledEntityReleaseEnvelope(releaseFromPayload(row.runtime_payload)) : null;
     },
+    async findPublicationCoordinate(input) {
+      const coordinate = input.coordinate;
+      const database = options.databases[coordinate.planeKey];
+      if (!database) throw new Error(`No runtime metadata database registered for ${coordinate.planeKey}`);
+      const execute = async (executor: Database) => sql<{ release_id: string; release_no: number }>`
+        SELECT applied.source_release_id::text AS release_id, applied.source_release_no::int AS release_no
+          FROM runtime_meta.release_activation_head head
+          JOIN runtime_meta.applied_release applied ON applied.id=head.applied_release_id AND applied.status='active'
+          JOIN runtime_meta.applied_release_payload payload ON payload.applied_release_id=applied.id
+         WHERE payload.artifact_kind='compiled_entity_runtime'
+           AND (payload.tenant_id IS NULL OR payload.tenant_id=${coordinate.tenantId}::uuid)
+           AND payload.payload_json->'release'->>'releaseHash'=${input.release.releaseHash}
+           AND payload.payload_json->'release'->>'releaseId'=${input.release.releaseId}
+         ORDER BY (payload.tenant_id IS NOT NULL) DESC, applied.activated_at DESC LIMIT 1
+      `.execute(executor);
+      const result = options.withTenantTransaction
+        ? await options.withTenantTransaction(coordinate.planeKey, coordinate, execute)
+        : await execute(database);
+      const row = result.rows[0];
+      return row ? Object.freeze({ releaseId: row.release_id, releaseNo: row.release_no }) : null;
+    },
     async findArtifact(input: CompiledEntityArtifactReadCoordinate) {
-      const planeKey = input.release.targetPlanes.length === 1 ? input.release.targetPlanes[0] : undefined;
-      if (!planeKey) throw new Error("COMPILED_ENTITY_RELEASE_PLANE_AMBIGUOUS");
+      const planeKey = input.coordinate.planeKey;
+      if (!input.release.targetPlanes.includes(planeKey)) throw new Error("COMPILED_ENTITY_RELEASE_PLANE_NOT_ADMITTED");
       const database = options.databases[planeKey];
       if (!database) throw new Error(`No runtime metadata database registered for ${planeKey}`);
       const execute = async (executor: Database) => sql<{ artifact: unknown }>`
@@ -101,11 +130,15 @@ export function createRuntimeMetaCompiledEntityReleaseSource(
           CROSS JOIN LATERAL jsonb_array_elements(payload.payload_json->'artifacts') AS artifact(value)
          WHERE applied.status='active'
            AND payload.artifact_kind='compiled_entity_runtime'
+           AND (payload.tenant_id IS NULL OR payload.tenant_id=${input.coordinate.tenantId}::uuid)
            AND payload.payload_json->'release'->>'releaseHash'=${input.release.releaseHash}
+           AND payload.payload_json->'release'->>'releaseId'=${input.release.releaseId}
            AND artifact.value->>'artifactKey'=${input.entry.artifactKey}
          LIMIT 1
       `.execute(executor);
-      const result = await execute(database);
+      const result = options.withTenantTransaction
+        ? await options.withTenantTransaction(planeKey, input.coordinate, execute)
+        : await execute(database);
       const row = result.rows[0];
       return row ? parseCompiledEntityArtifact(artifactFromPayload(row.artifact)) : null;
     },

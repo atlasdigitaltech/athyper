@@ -21,37 +21,46 @@
   "coreRef": "business_partner/core.json",
   "fieldBindings": [
     {
-      "fieldKey": "code"
+      "fieldKey": "legal_name"
     },
     {
-      "fieldKey": "name"
+      "fieldKey": "legal_form_label"
     },
     {
       "fieldKey": "registration_country_code"
     },
     {
-      "fieldKey": "partner_category"
-    },
-    {
-      "fieldKey": "ownership_class"
-    },
-    {
-      "fieldKey": "legal_form_value_id"
-    },
-    {
       "fieldKey": "incorporation_date"
     },
     {
-      "fieldKey": "website_url"
+      "fieldKey": "business_type_label"
     },
     {
-      "fieldKey": "description"
+      "fieldKey": "founded_year"
     },
     {
-      "fieldKey": "status"
+      "fieldKey": "employee_count"
     },
     {
-      "fieldKey": "record_version"
+      "fieldKey": "employee_count_as_of"
+    },
+    {
+      "fieldKey": "employee_count_scope"
+    },
+    {
+      "fieldKey": "person_code"
+    },
+    {
+      "fieldKey": "person_first_name"
+    },
+    {
+      "fieldKey": "person_middle_name"
+    },
+    {
+      "fieldKey": "person_last_name"
+    },
+    {
+      "fieldKey": "person_preferred_name"
     }
   ],
   "authorization": {
@@ -115,5 +124,5 @@
       }
     }
   ],
-  "artifactHash": "sha256:3c506fa817231afe44b3c3b3aa59772d2a451ec183f0d224596b9b4f959b5412"
+  "artifactHash": "sha256:94abd6e7b6a5805caba03246310902a5ed20f19c8df60a6fb109f938f4d5b16b"
 }

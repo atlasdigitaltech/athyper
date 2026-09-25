@@ -35,6 +35,8 @@ export interface CommentRecord extends ResourceCoordinate {
 
 /** Internal mutation outcome; the public collaboration service returns `comment`. */
 export interface CommentEditResult {
+  /** Computed under the comment lock, before replacing mention relations. */
+  readonly addedMentionIds: readonly string[];
   readonly comment: CommentRecord;
   /** Active versions made retention-eligible by the replaced comment pins. */
   readonly orphanedAttachmentIds: readonly string[];
@@ -56,6 +58,8 @@ export interface CreateCommentCommand extends ResourceCoordinate {
   readonly intent?: string;
   readonly mentionedPrincipalIds?: readonly string[];
   readonly attachmentIds?: readonly string[];
+  /** Explicitly include selected comment pins in notifications; absent means none. */
+  readonly notificationAttachments?: readonly {readonly attachmentId:string;readonly required:boolean}[];
   readonly idempotencyKey?: string;
 }
 
@@ -71,6 +75,8 @@ export interface EditCommentCommand {
   readonly html?: string;
   readonly mentionedPrincipalIds?: readonly string[];
   readonly attachmentIds?: readonly string[];
+  /** Explicitly include selected comment pins in notifications; absent means none. */
+  readonly notificationAttachments?: readonly {readonly attachmentId:string;readonly required:boolean}[];
   readonly expectedRevision: number;
 }
 

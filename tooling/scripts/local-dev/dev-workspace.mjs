@@ -3,6 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { sourceIdentity } from "./evidence.mjs";
 import { processIdentity } from "./supervisor.mjs";
+import { configureDevProtectedValues } from "./protected-values-config.mjs";
 import {
   existsSync,
   mkdirSync,
@@ -31,6 +32,7 @@ const project = "athyper-dev-source";
 const jsonRead = (path) => JSON.parse(readFileSync(path, "utf8"));
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 export function configureDevPublication(config, preset, path = join(homedir(), ".athyper/instances/dev/secrets/dev-publication/server.json")) {
+  configureDevProtectedValues(config);
   for (const name of ["api", "worker", "scheduler"]) {
     const service = config.services[name];
     if (!service) continue;

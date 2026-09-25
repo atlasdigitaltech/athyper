@@ -79,6 +79,7 @@ export function registerCollaborationRoutes(
           ...rich(b),
           mentionedPrincipalIds: uuids(b.mentionedPrincipalIds),
           attachmentIds: uuids(b.attachmentIds),
+    notificationAttachments: notificationAttachments(b.notificationAttachments),
           expectedRevision: revision(b.expectedRevision),
         }),
       };
@@ -200,6 +201,7 @@ function command(c: VerifiedRequestContext, b: Record<string, unknown>) {
     intent: opt(b, "intent"),
     mentionedPrincipalIds: uuids(b.mentionedPrincipalIds),
     attachmentIds: uuids(b.attachmentIds),
+    notificationAttachments: notificationAttachments(b.notificationAttachments),
     idempotencyKey: opt(b, "idempotencyKey"),
   };
 }
@@ -300,4 +302,10 @@ function one<T extends string>(v: unknown, values: readonly T[]) {
 function revision(value: unknown): number {
  if (!Number.isSafeInteger(value) || Number(value)<1) throw new CollaborationError(400,"COMMENT_REVISION_REQUIRED","A positive expectedRevision is required");
  return value as number;
+}
+
+function notificationAttachments(value:unknown) {
+ if(value===undefined)return undefined;
+ if(!Array.isArray(value)||value.length>10)throw new CollaborationError(400,"INVALID_COLLABORATION_REQUEST","At most ten notification attachment references are allowed");
+ return value.map(v=>{if(!v||typeof v!=="object"||Object.keys(v).some(k=>!["attachmentId","required"].includes(k))||typeof v.required!=="boolean")throw new CollaborationError(400,"INVALID_COLLABORATION_REQUEST","Invalid notification attachment reference");return {attachmentId:uuidOpt(v.attachmentId)??"",required:v.required};});
 }

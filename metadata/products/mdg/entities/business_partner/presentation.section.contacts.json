@@ -23,7 +23,38 @@
     "includeInAggregate": false
   },
   "coreRef": "contact_person/core.json",
-  "fieldBindings": [],
+  "fieldBindings": [
+    {
+      "fieldKey": "contact_name",
+      "dataKey": "displayName"
+    },
+    {
+      "fieldKey": "business_title",
+      "dataKey": "businessTitle"
+    },
+    {
+      "fieldKey": "department_name",
+      "dataKey": "departmentName"
+    },
+    {
+      "fieldKey": "is_primary",
+      "dataKey": "primary"
+    },
+    {
+      "fieldKey": "channels",
+      "label": {
+        "labelKey": "entity.contact_person.channels",
+        "defaultText": "Communication channels"
+      }
+    },
+    {
+      "fieldKey": "roles",
+      "label": {
+        "labelKey": "entity.contact_person.roles",
+        "defaultText": "Responsibilities"
+      }
+    }
+  ],
   "authorization": {
     "viewPermission": "neon.relationship.business_partner_contact.read",
     "fieldPermissions": [],

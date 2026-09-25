@@ -1,0 +1,475 @@
+{
+  "schema": "athyper.compiled-entity-artifact/2.0-draft",
+  "schemaVersion": 2,
+  "contractStatus": "draft_for_review",
+  "artifactType": "core",
+  "artifactKey": "business_partner_commodity_classification/core",
+  "entityCode": "business_partner_commodity_classification",
+  "plane": "neon",
+  "storage": {
+    "kind": "handler_projection",
+    "sourceObjects": [
+      "master.business_partner_commodity_classification",
+      "master.commodity_category",
+      "shared.commodity_code"
+    ],
+    "primaryObject": "master.business_partner_commodity_classification",
+    "idField": "id",
+    "tenantField": "tenant_id",
+    "genericWriteEnabled": false
+  },
+  "fields": [
+    {
+      "key": "id",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_classification",
+        "column": "id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.id.label",
+        "defaultText": "Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      },
+      "writePolicy": "system_managed"
+    },
+    {
+      "key": "business_partner_id",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_classification",
+        "column": "business_partner_id"
+      },
+      "dataType": "uuid",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.business_partner_id.label",
+        "defaultText": "Business Partner Id"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "uuid",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "commodity_category_id",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_classification",
+        "column": "commodity_category_id"
+      },
+      "dataType": "uuid",
+      "storageType": "uuid",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.commodity_category_id.label",
+        "defaultText": "Legacy Commodity Category"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "effective_from",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_classification",
+        "column": "effective_from"
+      },
+      "dataType": "date",
+      "storageType": "date",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.effective_from.label",
+        "defaultText": "Effective From"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "effective_until",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_classification",
+        "column": "effective_until"
+      },
+      "dataType": "date",
+      "storageType": "date",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.effective_until.label",
+        "defaultText": "Effective Until"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "status",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_classification",
+        "column": "status"
+      },
+      "dataType": "enum",
+      "display": {"lookup":{"options":[{"value":"draft","label":{"labelKey":"entity.business_partner_commodity_classification.status.draft","defaultText":"Draft"}},{"value":"active","label":{"labelKey":"entity.business_partner_commodity_classification.status.active","defaultText":"Active"}},{"value":"inactive","label":{"labelKey":"entity.business_partner_commodity_classification.status.inactive","defaultText":"Inactive"}},{"value":"archived","label":{"labelKey":"entity.business_partner_commodity_classification.status.archived","defaultText":"Archived"}}]}},
+      "storageType": "master.partner_extension_status_d",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.status.label",
+        "defaultText": "Status"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "assignment_kind",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_classification",
+        "column": "assignment_kind"
+      },
+      "dataType": "enum",
+      "display": {"lookup":{"options":[{"value":"declared","label":{"labelKey":"entity.business_partner_commodity_classification.assignment_kind.declared","defaultText":"Declared"}},{"value":"imported","label":{"labelKey":"entity.business_partner_commodity_classification.assignment_kind.imported","defaultText":"Imported"}},{"value":"verified","label":{"labelKey":"entity.business_partner_commodity_classification.assignment_kind.verified","defaultText":"Verified"}}]}},
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner.classifications.assignment_kind",
+        "defaultText": "Declaration source"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "source_system",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_classification",
+        "column": "source_system"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.source_system.label",
+        "defaultText": "source system"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "source_reference",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_classification",
+        "column": "source_reference"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.source_reference.label",
+        "defaultText": "source reference"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "record_version",
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_classification",
+        "column": "record_version"
+      },
+      "dataType": "integer",
+      "storageType": "bigint",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.record_version.label",
+        "defaultText": "record version"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "category_code",
+      "binding": {
+        "sourceObject": "master.commodity_category",
+        "column": "code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.category_code.label",
+        "defaultText": "Legacy Category code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "category_name",
+      "binding": {
+        "sourceObject": "master.commodity_category",
+        "column": "name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.category_name.label",
+        "defaultText": "Legacy Category"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "commodity_code",
+      "binding": {
+        "sourceObject": "shared.commodity_code",
+        "column": "code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.commodity_code.label",
+        "defaultText": "Declared UNSPSC code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "commodity_name",
+      "binding": {
+        "sourceObject": "shared.commodity_code",
+        "column": "name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.commodity_name.label",
+        "defaultText": "Declared commodity"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "commodity_level",
+      "binding": {
+        "sourceObject": "shared.commodity_code",
+        "column": "level_no"
+      },
+      "dataType": "integer",
+      "storageType": "integer",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner_commodity_classification.core.fields.commodity_level.label",
+        "defaultText": "UNSPSC hierarchy level"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "classification_basis",
+      "display": {"lookup":{"options":[{"value":"direct_unspsc","label":{"labelKey":"partner.classification_basis.direct_unspsc","defaultText":"Declared UNSPSC code"}},{"value":"legacy_category","label":{"labelKey":"partner.classification_basis.legacy_category","defaultText":"Legacy category assignment"}}]}},
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_classification",
+        "column": "commodity_code_id"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.classifications.classification_basis",
+        "defaultText": "Classification basis"
+      },
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "verification_status",
+      "display": {"lookup":{"options":[{"value":"verified","label":{"labelKey":"partner.verification_status.verified","defaultText":"Verified classification"}},{"value":"unverified","label":{"labelKey":"partner.verification_status.unverified","defaultText":"Not verified"}}]}},
+      "binding": {
+        "sourceObject": "master.business_partner_commodity_classification",
+        "column": "verified_at"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.classifications.verification_status",
+        "defaultText": "Classification verification"
+      },
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "category_matches",
+      "binding": {
+        "sourceObject": "master.commodity_category",
+        "column": "name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.classifications.category_matches",
+        "defaultText": "Optional tenant-category matches"
+      },
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    }
+  ],
+  "businessContext": {
+    "scopeKind": "tenant",
+    "recordOwnershipSource": "persisted_record",
+    "selectorMayChangeOwnership": false,
+    "aggregateAccess": "explicit_authorization_only"
+  },
+  "relations": [],
+  "capabilities": {
+    "audit": {
+      "enabled": true,
+      "serviceKey": "platform.audit.v1",
+      "load": "lazy"
+    },
+    "comments": {
+      "enabled": false
+    },
+    "attachments": {
+      "enabled": false
+    },
+    "customFields": {
+      "enabled": false,
+      "reasonCode": "CUSTOM_ATTRIBUTES_STORAGE_NOT_APPROVED"
+    }
+  },
+  "querySafetyLimits": {
+    "maxFilters": 20,
+    "maxPageSize": 100,
+    "maxSortFields": 3,
+    "maxFilterDepth": 3,
+    "presentationMayOnlyNarrow": true
+  },
+  "readinessFacts": [],
+  "dependencies": [
+    "platform/core-field-defaults.v1"
+  ],
+  "validationAuthority": {
+    "fieldRules": "compiled_and_server_enforced",
+    "domainRules": "registered_handler_and_database_constraints",
+    "missingEvaluator": "block_write",
+    "uiVisibilityGrantsAccess": false
+  },
+  "projectionPolicy": {
+    "unknownField": "deny",
+    "serverOnlyDependenciesNeverSerialized": true
+  },
+  "serverDependencies": [
+    {
+      "sourceObject": "master.business_partner_commodity_classification",
+      "column": "business_partner_id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_commodity_classification",
+      "column": "id",
+      "purpose": "identity_context_or_concurrency"
+    },
+    {
+      "sourceObject": "master.business_partner_commodity_classification",
+      "column": "tenant_id",
+      "purpose": "identity_context_or_concurrency"
+    }
+  ],
+  "defaultsProfile": "platform.core-field-defaults.v1",
+  "defaultsProfileRef": "platform/core-field-defaults.v1.json",
+  "query": {
+    "search": [],
+    "filters": [],
+    "sorts": []
+  },
+  "artifactHash": "sha256:3047da8eb74bcb8dad5fed86e87c80eea007cbcf55a27e200abce6502c2b36d9"
+}

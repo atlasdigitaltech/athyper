@@ -42,6 +42,7 @@ import {
 } from "./supervisor.mjs";
 import { configureIdentity } from "./identity.mjs";
 import { foundation, provisionLocalSearchKey } from "./applications.mjs";
+import { assertSeparateCheckout } from "./separate-checkout.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const usage = `Local source development
@@ -88,6 +89,7 @@ export function parseArgs(args) {
   while (args.length) {
     const flag = args.shift();
     if (flag === "--infrastructure-only") options.infrastructureOnly = true;
+    else if (flag === "--separate-checkout") options.separateCheckout = true;
     else if (flag === "--json") options.json = true;
     else if (flag === "--help") options.command = "help";
     else if (
@@ -269,12 +271,8 @@ async function preflight(plan) {
   // Resolve every image before reset can remove data; freeze local tags to image IDs.
   for (const service of Object.values(document.services)) {
     if (!service.image) continue;
-    const present = await command("docker", [
-      "image",
-      "ls",
-      "-q",
-      service.image,
-    ]);
+    // `image ls` does not resolve image IDs/digests; inspect those directly.
+    const present = await command("docker", ["image", "inspect", "--format", "{{.Id}}", service.image]).catch(() => "");
     if (!present)
       await command("docker", ["pull", service.image], { inherit: true });
     const [image] = JSON.parse(
@@ -437,13 +435,7 @@ export async function main(args = process.argv.slice(2)) {
       homedir(),
       ".athyper/instances/dev/workspace/mode.json",
     );
-    if (
-      existsSync(workspace) &&
-      ["source", "container"].includes(readJson(workspace).mode)
-    )
-      throw new Error(
-        "The shared DEV source workspace is active. Use pnpm devfull/devsimple; do not start a second isolated application workspace.",
-      );
+    assertSeparateCheckout(repoRoot, existsSync(workspace) ? readJson(workspace) : null, options.separateCheckout);
   }
   let plan = createPlan(repoRoot, options);
   if (options.command === "plan") {

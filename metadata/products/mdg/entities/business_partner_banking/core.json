@@ -9,7 +9,9 @@
   "storage": {
     "kind": "handler_projection",
     "sourceObjects": [
-      "master.bank_account"
+      "master.bank_account",
+      "master.payment_instrument",
+      "shared.v_bank_directory"
     ],
     "primaryObject": "master.bank_account",
     "idField": "id",
@@ -17,6 +19,28 @@
     "genericWriteEnabled": false
   },
   "fields": [
+    {"key":"bank_name","binding":{"sourceObject":"shared.v_bank_directory","column":"name"},"dataType":"string","storageType":"text","nullable":true,"label":{"labelKey":"entity.business_partner_banking.bank_name","defaultText":"Bank"},"valueOrigin":"derived","readPolicy":"authorized_projection","writePolicy":"system_managed"},
+    {"key":"branch_name","binding":{"sourceObject":"shared.v_bank_directory","column":"branch_name"},"dataType":"string","storageType":"text","nullable":true,"label":{"labelKey":"entity.business_partner_banking.branch_name","defaultText":"Branch"},"valueOrigin":"derived","readPolicy":"authorized_projection","writePolicy":"system_managed"},
+    {"key":"branch_code","binding":{"sourceObject":"shared.v_bank_directory","column":"branch_code"},"dataType":"string","storageType":"text","nullable":true,"label":{"labelKey":"entity.business_partner_banking.branch_code","defaultText":"Directory branch identifier"},"valueOrigin":"derived","readPolicy":"authorized_projection","writePolicy":"system_managed"},
+    {"key":"bic","binding":{"sourceObject":"shared.v_bank_directory","column":"bic"},"dataType":"string","storageType":"text","nullable":true,"label":{"labelKey":"entity.business_partner_banking.bic","defaultText":"Directory BIC"},"valueOrigin":"derived","readPolicy":"authorized_projection","writePolicy":"system_managed"},
+    {
+      "key": "status",
+      "binding": {
+        "sourceObject": "master.payment_instrument",
+        "column": "status"
+      },
+      "dataType": "enum",
+      "display": {"lookup":{"options":[{"value":"active","label":{"labelKey":"entity.business_partner_banking.status.active","defaultText":"Active"}},{"value":"inactive","label":{"labelKey":"entity.business_partner_banking.status.inactive","defaultText":"Inactive"}},{"value":"closed","label":{"labelKey":"entity.business_partner_banking.status.closed","defaultText":"Closed"}},{"value":"retired","label":{"labelKey":"entity.business_partner_banking.status.retired","defaultText":"Retired"}}]}},
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner_banking.core.fields.status.label",
+        "defaultText": "Account status"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "storageType": "text",
+      "writePolicy": "system_managed"
+    },
     {
       "key": "id",
       "binding": {
@@ -64,7 +88,7 @@
       "nullable": false,
       "label": {
         "labelKey": "entity.business_partner_banking.core.fields.account_last4.label",
-        "defaultText": "Account Last4"
+        "defaultText": "Account number"
       },
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
@@ -72,6 +96,7 @@
     },
     {
       "key": "currency_code",
+      "display": {"lookup":{"code":"shared.currency"}},
       "binding": {
         "sourceObject": "master.bank_account",
         "column": "currency_code"
@@ -85,27 +110,6 @@
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
       "storageType": "character(3)"
-    },
-    {
-      "key": "is_verified",
-      "binding": {
-        "sourceObject": "master.bank_account",
-        "column": "is_verified"
-      },
-      "dataType": "boolean",
-      "nullable": false,
-      "label": {
-        "labelKey": "entity.business_partner_banking.core.fields.is_verified.label",
-        "defaultText": "Is Verified"
-      },
-      "valueOrigin": "stored",
-      "readPolicy": "authorized_projection",
-      "storageType": "boolean",
-      "uiFacets": {
-        "visibility": "visible",
-        "editability": "readonly"
-      },
-      "writePolicy": "system_managed"
     }
   ],
   "businessContext": {
@@ -167,16 +171,18 @@
   ],
   "defaultsProfile": "platform.core-field-defaults.v1",
   "defaultsProfileRef": "platform/core-field-defaults.v1.json",
-  "artifactHash": "sha256:8e56417ae9952448b177693d573a72ce247852a31365ab265fb344ceada406be",
   "protections": [
     {
       "normalProjection": {
         "mode": "masked",
         "maskedDisplay": "last4",
+        "displayPrefix": "••••",
         "plaintextInNormalQueries": false
       },
       "reveal": {
         "operationKey": "reveal",
+        "targetField": "reveal_link_id",
+        "purposes": [{"value":"partner_review","label":{"labelKey":"business_partner.reveal.purpose.partner_review","defaultText":"Partner review"}}],
         "permissionCode": "neon.relationship.business_partner_bank.reveal",
         "requiresElevatedAssurance": true,
         "historicalSnapshotAllowed": false,
@@ -199,5 +205,6 @@
     "search": [],
     "filters": [],
     "sorts": []
-  }
+  },
+  "artifactHash": "sha256:da057870ac534dac1d5363bdfab51c6db5b9e05ecbc8860d4b7c24aacf761dd9"
 }

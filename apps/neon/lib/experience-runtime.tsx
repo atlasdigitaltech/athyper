@@ -15,6 +15,7 @@ import type { ExperienceRuntimeRegistry } from "@athyper/platform-shell-dashboar
 import { useCallback, useMemo, type ReactNode } from "react";
 import { neonCatalogRoutes } from "@/lib/catalog-routes";
 import { useWorkspaceModuleRelevance } from "@/lib/workspace-module-relevance";
+import { entityRecordRouteTemplate } from "@athyper/contract-platform-entity-runtime";
 import {
   moduleBadgesFromItems,
   WorkspaceModuleTabs,
@@ -22,7 +23,7 @@ import {
 
 const HOME_PROPS = {
   citationRoutes: {
-    business_partner: "/mdg/business-partner/{recordId}",
+    business_partner: entityRecordRouteTemplate("business_partner"),
     business_partner_request: "/mdg/business-partner/requests/{recordId}",
   },
   suggestions: [

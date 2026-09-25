@@ -1085,8 +1085,16 @@ export const bp360ResponseSchemas = {
             type: "string",
           },
           category: {
-            const: "organization",
-            type: "string",
+            anyOf: [
+              {
+                const: "organization",
+                type: "string",
+              },
+              {
+                const: "person",
+                type: "string",
+              },
+            ],
           },
           name: {
             type: "string",
@@ -1104,7 +1112,11 @@ export const bp360ResponseSchemas = {
           type: "object",
           properties: {
             id: {
-              type: "string",
+              anyOf: [
+                {
+                  type: "string",
+                },
+              ],
             },
             code: {
               anyOf: [
@@ -1129,7 +1141,7 @@ export const bp360ResponseSchemas = {
               type: "string",
             },
           },
-          required: ["id", "code", "status"],
+          required: ["code", "status"],
           additionalProperties: true,
         },
       },
@@ -2306,11 +2318,15 @@ export const bp360ResponseSchemas = {
                       permission: {
                         anyOf: [
                           {
-                            const: "collaboration.comment.read",
+                            const: "neon.collaboration.attachment.read",
                             type: "string",
                           },
                           {
-                            const: "document.attachment.read",
+                            const: "neon.collaboration.comment.read",
+                            type: "string",
+                          },
+                          {
+                            const: "neon.relationship.bp_target.network_read",
                             type: "string",
                           },
                           {
@@ -2364,12 +2380,12 @@ export const bp360ResponseSchemas = {
                           },
                           {
                             const:
-                              "neon.relationship.business_partner_identity.read",
+                              "neon.relationship.business_partner_identifier.reveal",
                             type: "string",
                           },
                           {
                             const:
-                              "neon.relationship.business_partner_network.read",
+                              "neon.relationship.business_partner_identity.read",
                             type: "string",
                           },
                           {

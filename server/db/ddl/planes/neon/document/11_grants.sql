@@ -43,59 +43,26 @@ $$;
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
-        GRANT SELECT ON document.supplier_registration_invitation TO athyperapp;
+
         GRANT SELECT, INSERT, UPDATE ON
             document.business_partner_invitation,
-            document.business_partner_invitation_recovery,
-            document.business_partner_request
-        TO athyperapp;
-        GRANT SELECT, INSERT ON
-            document.business_partner_request_evidence,
-            document.business_partner_request_validation
-        TO athyperapp;
-        GRANT SELECT, INSERT, UPDATE, DELETE ON
-            document.business_partner_request_address,
-            document.business_partner_request_contact_person,
-            document.business_partner_request_contact_channel,
-            document.business_partner_request_identifier,
-            document.business_partner_request_tax_registration,
-            document.business_partner_request_classification,
-            document.business_partner_request_certification
-        TO athyperapp;
-        GRANT SELECT, INSERT ON
-            document.business_partner_request_materialization_item
-        TO athyperapp;
-        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request() TO athyperapp;
-        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_registration() TO athyperapp;
+            document.business_partner_invitation_recovery TO athyperapp;
+
+
         GRANT EXECUTE ON FUNCTION document.fn_business_partner_payload_has_restricted_key(jsonb) TO athyperapp;
-        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_payload_boundary() TO athyperapp;
-        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_extension() TO athyperapp;
-        GRANT EXECUTE ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) TO athyperapp;
+
+
     END IF;
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON
             document.business_partner_invitation,
-            document.business_partner_invitation_recovery,
-            document.business_partner_request,
-            document.business_partner_request_evidence,
-            document.business_partner_request_validation,
-            document.business_partner_request_address,
-            document.business_partner_request_contact_person,
-            document.business_partner_request_contact_channel,
-            document.business_partner_request_identifier,
-            document.business_partner_request_tax_registration,
-            document.business_partner_request_classification,
-            document.business_partner_request_certification,
-            document.business_partner_request_materialization_item
-        TO athyperadmin;
-        GRANT SELECT ON document.supplier_registration_invitation TO athyperadmin;
-        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request() TO athyperadmin;
-        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_registration() TO athyperadmin;
+            document.business_partner_invitation_recovery TO athyperadmin;
+
+
         GRANT EXECUTE ON FUNCTION document.fn_business_partner_payload_has_restricted_key(jsonb) TO athyperadmin;
-        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_payload_boundary() TO athyperadmin;
-        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_extension() TO athyperadmin;
-        GRANT EXECUTE ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) TO athyperadmin;
+
+
     END IF;
 END;
 $$;
@@ -521,7 +488,6 @@ DO $$ BEGIN
         GRANT ALL PRIVILEGES ON document.mesh_business_partner_match, document.mesh_business_partner_acceptance, document.mesh_business_partner_acceptance_event TO athyperadmin;
     END IF;
 END $$;
-DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT,UPDATE ON document.business_partner_bank_verification TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON document.business_partner_bank_verification TO athyperadmin; END IF; END $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT ON document.business_partner_duplicate_resolution TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT ON document.business_partner_duplicate_resolution TO athyperadmin; END IF; END $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION document.fn_resolve_business_partner_duplicate(uuid,uuid,uuid,text,text,jsonb,jsonb,uuid,uuid) TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION document.fn_resolve_business_partner_duplicate(uuid,uuid,uuid,text,text,jsonb,jsonb,uuid,uuid) TO athyperadmin; END IF; END $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperadmin; END IF; END $$;
@@ -593,28 +559,7 @@ DO $$ BEGIN
   IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION document.command_internal_workforce_identity_intent(uuid,uuid,text,boolean,text,uuid,uuid) TO athyperadmin; END IF;
 END $$;
 -- Canonical clean-build closeout. No legacy request-family object survives.
-ALTER TABLE document.business_partner_invitation DROP COLUMN IF EXISTS business_partner_request_id CASCADE;
-ALTER TABLE document.business_partner_invitation_recovery DROP COLUMN IF EXISTS request_id CASCADE;
-ALTER TABLE document.mesh_business_partner_acceptance_event DROP COLUMN IF EXISTS business_partner_request_id CASCADE;
-DROP VIEW IF EXISTS document.supplier_registration_invitation CASCADE;
-DROP TABLE IF EXISTS document.business_partner_request_contact_channel CASCADE;
-DROP TABLE IF EXISTS document.business_partner_request_contact_person CASCADE;
-DROP TABLE IF EXISTS document.business_partner_request_address CASCADE;
-DROP TABLE IF EXISTS document.business_partner_request_identifier CASCADE;
-DROP TABLE IF EXISTS document.business_partner_request_tax_registration CASCADE;
-DROP TABLE IF EXISTS document.business_partner_request_classification CASCADE;
-DROP TABLE IF EXISTS document.business_partner_request_certification CASCADE;
-DROP TABLE IF EXISTS document.business_partner_request_materialization_item CASCADE;
-DROP TABLE IF EXISTS document.business_partner_request_validation CASCADE;
-DROP TABLE IF EXISTS document.business_partner_request_evidence CASCADE;
-DROP TABLE IF EXISTS document.business_partner_request CASCADE;
-DROP FUNCTION IF EXISTS document.command_backfill_business_partner_request_cases(uuid,text,bigint,text,uuid,text,uuid,bigint,text,text,uuid,uuid);
-DROP FUNCTION IF EXISTS document.fn_business_partner_request_approvers(uuid,uuid,uuid,uuid);
-DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request_payload_boundary();
-DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request_extension();
-DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request();
-DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request_registration();
-DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request_evidence();
+
 
 REVOKE ALL ON document.mesh_profile_change_resolution, document.mesh_profile_change_case FROM PUBLIC;
 REVOKE ALL ON FUNCTION document.trg_mesh_profile_resolution_immutable() FROM PUBLIC;

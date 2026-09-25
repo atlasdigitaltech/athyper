@@ -1,4 +1,6 @@
+import { matchPartnerDecision, publicDecisionScopes, type ScopeRow } from "./partner-decision-scope.js";
 import { MasterDataError } from "./errors.js";
+import {createHash} from "node:crypto";
 import { sql } from "kysely";
 import type {
   BusinessPartnerEligibilityRepository,
@@ -16,11 +18,13 @@ type QualificationRow = {
   id: string;
   tenant_id: string;
   business_partner_id: string;
-  partner_role: "supplier" | "customer";
+  partner_role: "supplier" | "customer" | null;
+  scopes: ScopeRow[];
+  context_kind: string; context_id: string | null; conditions: unknown[]; approved_snapshot_id: string | null;
   role_id: string;
   operating_organization_id: string | null;
   company_code_id: string | null;
-  commodity_capability_id: string | null;
+  commodity_classification_id: string | null;
   qualification_type_code: string;
   decision: BusinessPartnerQualification["decision"];
   decision_reason: string | null;
@@ -149,11 +153,11 @@ type DesignationRow = {
 };
 
 const qualificationReadColumns =
-  sql.raw(`qualification.id,qualification.tenant_id,qualification.business_partner_id,qualification.partner_role,
-  (SELECT role_record.id FROM (SELECT id,tenant_id,business_partner_id,'supplier'::text partner_role FROM master.supplier UNION ALL SELECT id,tenant_id,business_partner_id,'customer'::text partner_role FROM master.customer) role_record WHERE role_record.tenant_id=qualification.tenant_id AND role_record.business_partner_id=qualification.business_partner_id AND role_record.partner_role=qualification.partner_role::text LIMIT 1) role_id,
-  (SELECT scope.operating_organization_id FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=qualification.tenant_id AND scope.qualification_id=qualification.id AND scope.scope_kind='operating_organization' AND scope.scope_mode='include' ORDER BY scope.scope_group,scope.id LIMIT 1) operating_organization_id,
-  (SELECT scope.company_code_id FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=qualification.tenant_id AND scope.qualification_id=qualification.id AND scope.scope_kind='company_code' AND scope.scope_mode='include' ORDER BY scope.scope_group,scope.id LIMIT 1) company_code_id,
-  (SELECT capability.id FROM control.business_partner_decision_scope scope JOIN master.business_partner_commodity_capability capability ON capability.tenant_id=qualification.tenant_id AND capability.business_partner_id=qualification.business_partner_id AND capability.partner_role=qualification.partner_role AND capability.commodity_category_id=scope.commodity_category_id WHERE scope.tenant_id=qualification.tenant_id AND scope.qualification_id=qualification.id AND scope.scope_kind='commodity_category' AND scope.scope_mode='include' ORDER BY capability.effective_from DESC,capability.id LIMIT 1) commodity_capability_id,
+  sql.raw(`qualification.id,qualification.tenant_id,qualification.business_partner_id,
+  (SELECT min(scope.commercial_capacity_code) FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=qualification.tenant_id AND scope.qualification_id=qualification.id AND scope.scope_kind='commercial_capacity' AND scope.scope_mode='include' HAVING count(DISTINCT scope.commercial_capacity_code)=1 AND bool_and(scope.selection_mode='selected')) partner_role,
+  NULL::uuid role_id,NULL::uuid operating_organization_id,NULL::uuid company_code_id,NULL::uuid commodity_classification_id,
+  qualification.context_kind,qualification.context_id,qualification.conditions,qualification.approved_snapshot_id,
+  (SELECT COALESCE(jsonb_agg(to_jsonb(scope) ORDER BY scope.scope_group,scope.id),'[]'::jsonb) FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=qualification.tenant_id AND scope.qualification_id=qualification.id) scopes,
   qualification.qualification_type_code,qualification.decision,qualification.decision_reason,qualification.risk_assessment_id,qualification.effective_from,qualification.effective_until,qualification.reviewed_at,qualification.reviewed_by,qualification.approved_at,qualification.approved_by,qualification.next_review_at,qualification.decision_idempotency_key,qualification.decision_fingerprint,qualification.row_version,qualification.created_at,qualification.created_by,qualification.updated_at,qualification.updated_by`);
 const preferenceReadColumns =
   sql.raw(`preference.id,preference.tenant_id,preference.business_partner_id,preference.supplier_id,
@@ -614,7 +618,7 @@ export class KyselyBusinessPartnerEligibilityRepository implements BusinessPartn
     const created = (
       await sql<{
         aggregate_id: string;
-      }>`SELECT aggregate_id FROM control.command_create_business_partner_decision(${input.tenantId}::uuid,'qualification',${input.businessPartnerId}::uuid,${input.partnerRole},${role.id}::uuid,${input.operatingOrganizationId}::uuid,${input.companyCodeId ?? null}::uuid,(SELECT commodity_category_id FROM master.business_partner_commodity_capability WHERE tenant_id=${input.tenantId}::uuid AND id=${input.commodityCapabilityId ?? null}::uuid),${JSON.stringify({ qualificationTypeCode: input.qualificationTypeCode, riskAssessmentId: input.riskAssessmentId, effectiveFrom: input.effectiveFrom, effectiveUntil: input.effectiveUntil, nextReviewAt: input.nextReviewAt })}::jsonb,${input.idempotencyKey},${input.createdBy}::uuid)`.execute(
+      }>`SELECT aggregate_id FROM control.command_create_business_partner_decision(${input.tenantId}::uuid,'qualification',${input.businessPartnerId}::uuid,${input.partnerRole},${role.id}::uuid,${input.operatingOrganizationId}::uuid,${input.companyCodeId ?? null}::uuid,(SELECT commodity_category_id FROM master.business_partner_commodity_classification WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND id=${input.commodityClassificationId ?? null}::uuid AND status='active'),${JSON.stringify({ commodityClassificationId: input.commodityClassificationId, qualificationTypeCode: input.qualificationTypeCode, riskAssessmentId: input.riskAssessmentId, effectiveFrom: input.effectiveFrom, effectiveUntil: input.effectiveUntil, nextReviewAt: input.nextReviewAt })}::jsonb,${input.idempotencyKey},${input.createdBy}::uuid)`.execute(
         transaction as never,
       )
     ).rows[0];
@@ -656,8 +660,7 @@ export class KyselyBusinessPartnerEligibilityRepository implements BusinessPartn
     const partner = (
       await sql<{
         status: string;
-        role_id: string | null;
-        role_status: string | null;
+        capability_enabled: boolean;
         assignment_id: string | null;
         assignment_status: string | null;
         company_compatible: boolean;
@@ -665,31 +668,27 @@ export class KyselyBusinessPartnerEligibilityRepository implements BusinessPartn
         profile_status: string | null;
         payment_term_id: string | null;
         bank_link_id: string | null;
-      }>`SELECT bp.status,bp.record_version::text partner_version,role_record.record_version::text role_version,assignment.updated_at::text assignment_updated_at,profile.updated_at::text profile_updated_at,role_record.id::text role_id,role_record.status role_status,assignment.id::text assignment_id,assignment.status::text assignment_status,CASE WHEN ${input.companyCodeId ?? null}::uuid IS NULL THEN true ELSE EXISTS(SELECT 1 FROM master.operating_organization_company_assignment edge WHERE edge.tenant_id=bp.tenant_id AND edge.operating_organization_id=${input.operatingOrganizationId}::uuid AND edge.company_code_id=${input.companyCodeId ?? null}::uuid AND edge.status='active' AND edge.effective_from<=${input.businessDate}::date AND (edge.effective_until IS NULL OR edge.effective_until>${input.businessDate}::date)) END company_compatible,profile.id::text profile_id,profile.status profile_status,profile.payment_term_id::text,profile.preferred_remittance_bank_link_id::text bank_link_id FROM master.business_partner bp LEFT JOIN LATERAL (SELECT id,status::text status,record_version FROM master.supplier WHERE ${input.role}='supplier' AND tenant_id=bp.tenant_id AND business_partner_id=bp.id UNION ALL SELECT id,status::text status,record_version FROM master.customer WHERE ${input.role}='customer' AND tenant_id=bp.tenant_id AND business_partner_id=bp.id LIMIT 1) role_record ON true LEFT JOIN master.business_partner_operating_organization_assignment assignment ON assignment.tenant_id=bp.tenant_id AND assignment.business_partner_id=bp.id AND assignment.operating_organization_id=${input.operatingOrganizationId}::uuid AND assignment.partner_role=${input.role}::master.partner_role_d AND assignment.effective_from<=${input.businessDate}::date AND (assignment.effective_until IS NULL OR assignment.effective_until>${input.businessDate}::date) LEFT JOIN LATERAL (SELECT id,status::text status,payment_term_id,preferred_remittance_bank_link_id,updated_at FROM master.company_code_supplier_profile WHERE ${input.role}='supplier' AND tenant_id=bp.tenant_id AND supplier_id=role_record.id AND company_code_id=${input.companyCodeId ?? null}::uuid UNION ALL SELECT id,status::text status,payment_term_id,NULL::uuid preferred_remittance_bank_link_id,updated_at FROM master.company_code_customer_profile WHERE ${input.role}='customer' AND tenant_id=bp.tenant_id AND customer_id=role_record.id AND company_code_id=${input.companyCodeId ?? null}::uuid LIMIT 1) profile ON ${input.companyCodeId ?? null}::uuid IS NOT NULL WHERE bp.tenant_id=${input.tenantId}::uuid AND bp.id=${input.businessPartnerId}::uuid`.execute(
+      }>`SELECT bp.status,bp.record_version::text partner_version,assignment.updated_at::text assignment_updated_at,profile.updated_at::text profile_updated_at,CASE WHEN ${input.role}='supplier' THEN bp.supplier_enabled WHEN ${input.role}='customer' THEN bp.customer_enabled ELSE false END capability_enabled,assignment.id::text assignment_id,assignment.status::text assignment_status,CASE WHEN ${input.companyCodeId ?? null}::uuid IS NULL THEN true ELSE EXISTS(SELECT 1 FROM master.operating_organization_company_assignment edge WHERE edge.tenant_id=bp.tenant_id AND edge.operating_organization_id=${input.operatingOrganizationId}::uuid AND edge.company_code_id=${input.companyCodeId ?? null}::uuid AND edge.status='active' AND edge.effective_from<=${input.businessDate}::date AND (edge.effective_until IS NULL OR edge.effective_until>${input.businessDate}::date)) END company_compatible,profile.id::text profile_id,profile.status profile_status,profile.payment_term_id::text,profile.preferred_remittance_bank_link_id::text bank_link_id FROM master.business_partner bp LEFT JOIN master.business_partner_operating_organization_assignment assignment ON assignment.tenant_id=bp.tenant_id AND assignment.business_partner_id=bp.id AND assignment.operating_organization_id=${input.operatingOrganizationId}::uuid AND assignment.partner_role=${input.role}::master.partner_role_d AND assignment.effective_from<=${input.businessDate}::date AND (assignment.effective_until IS NULL OR assignment.effective_until>${input.businessDate}::date) LEFT JOIN LATERAL (SELECT id,status::text status,payment_term_id,preferred_remittance_bank_link_id,updated_at FROM master.company_code_supplier_profile WHERE ${input.role}='supplier' AND tenant_id=bp.tenant_id AND business_partner_id=bp.id AND company_code_id=${input.companyCodeId ?? null}::uuid UNION ALL SELECT id,status::text status,payment_term_id,NULL::uuid preferred_remittance_bank_link_id,updated_at FROM master.company_code_customer_profile WHERE ${input.role}='customer' AND tenant_id=bp.tenant_id AND business_partner_id=bp.id AND company_code_id=${input.companyCodeId ?? null}::uuid LIMIT 1) profile ON ${input.companyCodeId ?? null}::uuid IS NOT NULL WHERE bp.tenant_id=${input.tenantId}::uuid AND bp.id=${input.businessPartnerId}::uuid`.execute(
         transaction as never,
       )
     ).rows[0];
     if (!partner) return null;
-    const qualificationRows = (
-      await sql<QualificationRow>`SELECT ${qualificationReadColumns} FROM control.business_partner_qualification qualification WHERE qualification.tenant_id=${input.tenantId}::uuid AND qualification.business_partner_id=${input.businessPartnerId}::uuid AND qualification.partner_role=${input.role}::master.partner_role_d AND EXISTS(SELECT 1 FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=qualification.tenant_id AND scope.qualification_id=qualification.id AND scope.scope_mode='include' AND(scope.scope_kind='global' OR(scope.scope_kind='operating_organization' AND scope.operating_organization_id=${input.operatingOrganizationId}::uuid))) AND(NOT EXISTS(SELECT 1 FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=qualification.tenant_id AND scope.qualification_id=qualification.id AND scope.scope_kind='company_code' AND scope.scope_mode='include') OR EXISTS(SELECT 1 FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=qualification.tenant_id AND scope.qualification_id=qualification.id AND scope.scope_kind='company_code' AND scope.scope_mode='include' AND scope.company_code_id=${input.companyCodeId ?? null}::uuid)) ORDER BY qualification.created_at DESC,qualification.id DESC`.execute(
-        transaction as never,
-      )
-    ).rows;
-    const qualifications = qualificationRows.map(mapQualification);
-    const active = qualifications.find(
-      (q) =>
-        (q.decision === "approved" || q.decision === "conditional") &&
-        (!q.effectiveFrom || q.effectiveFrom <= input.businessDate) &&
-        (!q.effectiveUntil || q.effectiveUntil > input.businessDate) &&
-        (!q.nextReviewAt || q.nextReviewAt >= input.businessDate),
-    );
-    const blocks = (
-      await sql<{
-        id: string;
-      }>`SELECT id::text FROM control.business_partner_block WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND status='active' AND partner_role_scope IN ('all',${input.role}) AND operation_code=${input.operationCode} AND (operating_organization_id IS NULL OR operating_organization_id=${input.operatingOrganizationId}::uuid) AND (company_code_id IS NULL OR company_code_id=${input.companyCodeId ?? null}::uuid) AND effective_from<=(${input.businessDate}::date+time '23:59:59') AND (effective_until IS NULL OR effective_until>${input.businessDate}::date) ORDER BY id`.execute(
-        transaction as never,
-      )
-    ).rows;
+    const qualificationRows = (await sql<QualificationRow>`SELECT ${qualificationReadColumns} FROM control.business_partner_qualification qualification
+      WHERE qualification.tenant_id=${input.tenantId}::uuid AND qualification.business_partner_id=${input.businessPartnerId}::uuid
+      ORDER BY qualification.created_at DESC,qualification.id DESC`.execute(transaction as never)).rows;
+    const matchingQualifications = qualificationRows.filter(row=>matchPartnerDecision(row as unknown as ScopeRow,input)==="match");
+    const qualifications = matchingQualifications.map(mapQualification);
+    const activeRow = matchingQualifications.find(q=>q.decision==="approved" && q.approved_snapshot_id && (!q.conditions || q.conditions.length===0)
+      && (!q.effective_from || dateOnly(q.effective_from)<=input.businessDate)
+      && (!q.effective_until || dateOnly(q.effective_until)>input.businessDate)
+      && (!q.next_review_at || dateOnly(q.next_review_at)>=input.businessDate));
+    const active=activeRow?mapQualification(activeRow):undefined;
+    const blockRows = (await sql<ScopeRow>`SELECT b.*,
+      (SELECT COALESCE(jsonb_agg(to_jsonb(s) ORDER BY s.scope_group,s.id),'[]'::jsonb) FROM control.business_partner_decision_scope s WHERE s.tenant_id=b.tenant_id AND s.block_id=b.id) scopes
+      FROM control.business_partner_block b WHERE b.tenant_id=${input.tenantId}::uuid AND b.business_partner_id=${input.businessPartnerId}::uuid
+      AND b.status='active' AND ${input.operationCode}=ANY(b.operation_codes)
+      AND b.effective_from<(${input.businessDate}::date+interval '1 day') AND (b.effective_until IS NULL OR b.effective_until>${input.businessDate}::date)`.execute(transaction as never)).rows;
+    const blocks = blockRows.filter(row=>matchPartnerDecision(row,input)!=="no_match");
     const risk = (
       await sql<{
         id: string;
@@ -708,11 +707,11 @@ export class KyselyBusinessPartnerEligibilityRepository implements BusinessPartn
         : (
             await sql<{
               ready: boolean;
-            }>`SELECT EXISTS(SELECT 1 FROM master.company_code_supplier_profile profile JOIN master.bank_account_link link ON link.tenant_id=profile.tenant_id AND link.id=profile.preferred_remittance_bank_link_id JOIN master.bank_account account ON account.tenant_id=link.tenant_id AND account.id=link.bank_account_id WHERE profile.tenant_id=${input.tenantId}::uuid AND profile.id=${partner.profile_id ?? null}::uuid AND link.effective_from<=${input.businessDate}::date AND (link.effective_until IS NULL OR link.effective_until>${input.businessDate}::date) AND master.bank_account_company_ready(profile.tenant_id,link.id,profile.company_code_id,link.purpose,${input.businessDate}::date) AND account.status='active' AND account.is_verified=true AND (account.metadata->>'verificationExpiresAt' IS NULL OR (account.metadata->>'verificationExpiresAt')::date>=${input.businessDate}::date)) ready`.execute(
+            }>`SELECT EXISTS(SELECT 1 FROM master.company_code_supplier_profile profile JOIN master.payment_instrument_link link ON link.tenant_id=profile.tenant_id AND link.id=profile.preferred_remittance_bank_link_id JOIN master.bank_account account ON account.tenant_id=link.tenant_id AND account.id=link.payment_instrument_id JOIN master.payment_instrument instrument ON instrument.tenant_id=account.tenant_id AND instrument.id=account.id WHERE profile.tenant_id=${input.tenantId}::uuid AND profile.id=${partner.profile_id ?? null}::uuid AND link.effective_from<=${input.businessDate}::date AND (link.effective_until IS NULL OR link.effective_until>${input.businessDate}::date) AND link.owner_type='business_partner' AND link.owner_id=${input.businessPartnerId}::uuid AND link.relationship_role='beneficiary' AND instrument.status='active' AND (link.company_code_id IS NULL OR link.company_code_id=profile.company_code_id)) ready`.execute(
               transaction as never,
             )
           ).rows[0]?.ready === true;
-    const bankEvidence=input.role==="supplier" && input.operationCode==="payment" ? (await sql<{evidence:Record<string,unknown>}>`SELECT jsonb_build_object('linkId',link.id,'accountId',account.id,'linkUpdatedAt',link.updated_at,'accountUpdatedAt',account.updated_at,'effectiveFrom',link.effective_from,'effectiveUntil',link.effective_until,'status',account.status,'verified',account.is_verified,'verifiedAt',account.verified_at,'verificationMethod',account.verification_method,'verificationExpiresAt',account.metadata->>'verificationExpiresAt','companyUsage',(SELECT COALESCE(jsonb_agg(to_jsonb(usage) ORDER BY usage.id),'[]'::jsonb) FROM master.bank_account_company_usage usage WHERE usage.tenant_id=link.tenant_id AND usage.bank_account_link_id=link.id AND usage.company_code_id=${input.companyCodeId ?? null}::uuid)) evidence FROM master.bank_account_link link JOIN master.bank_account account ON account.tenant_id=link.tenant_id AND account.id=link.bank_account_id WHERE link.tenant_id=${input.tenantId}::uuid AND link.id=${partner.bank_link_id}::uuid`.execute(transaction as never)).rows[0]?.evidence : undefined;
+    const bankEvidence=input.role==="supplier" && input.operationCode==="payment" ? (await sql<{evidence:Record<string,unknown>}>`SELECT jsonb_build_object('linkId',link.id,'accountId',account.id,'linkUpdatedAt',link.updated_at,'accountUpdatedAt',account.updated_at,'effectiveFrom',link.effective_from,'effectiveUntil',link.effective_until,'status',instrument.status,'instrumentVersion',instrument.record_version) evidence FROM master.payment_instrument_link link JOIN master.bank_account account ON account.tenant_id=link.tenant_id AND account.id=link.payment_instrument_id JOIN master.payment_instrument instrument ON instrument.tenant_id=account.tenant_id AND instrument.id=account.id WHERE link.tenant_id=${input.tenantId}::uuid AND link.id=${partner.bank_link_id}::uuid`.execute(transaction as never)).rows[0]?.evidence : undefined;
     const reasons: PartnerEligibilityReason[] = [];
     const block = (code: PartnerEligibilityReason["code"], recordId?: string) =>
       reasons.push({
@@ -721,21 +720,15 @@ export class KyselyBusinessPartnerEligibilityRepository implements BusinessPartn
         ...(recordId ? { recordId } : {}),
       });
     if (partner.status !== "active") block("PARTNER_INACTIVE");
-    if (!partner.role_id) block("ROLE_MISSING");
-    else if (
-      partner.role_status !== "active" &&
-      !(
-        input.operationCode === "activation" &&
-        ((input.role === "customer" &&
-          ["prospect", "suspended"].includes(partner.role_status ?? "")) ||
-          (input.role === "supplier" && partner.role_status === "onboarding"))
-      )
-    )
-      block("ROLE_INACTIVE", partner.role_id);
+    // A retained legacy role cannot authorize a transaction. Capability enablement
+    // is a separate governed command; activation is not an eligibility bypass.
+    if (partner.capability_enabled !== true) block("ROLE_INACTIVE", input.businessPartnerId);
     if (!partner.assignment_id || partner.assignment_status !== "active")
       block("ORG_ASSIGNMENT_MISSING", partner.assignment_id ?? undefined);
     if (!partner.company_compatible) block("ORG_COMPANY_INCOMPATIBLE");
     if (input.role === "supplier" && !active) {
+      if(qualificationRows.some(row=>matchPartnerDecision(row as unknown as ScopeRow,input)==="context_required"))block("CONTEXT_REQUIRED");
+      if(matchingQualifications.some(row=>row.decision==="conditional"||(row.conditions?.length??0)>0))block("QUALIFICATION_CONDITIONS_REQUIRED");
       const latest = qualifications[0];
       if (!latest || latest.decision === "pending")
         block("QUALIFICATION_PENDING", latest?.id);
@@ -745,7 +738,7 @@ export class KyselyBusinessPartnerEligibilityRepository implements BusinessPartn
         block("QUALIFICATION_SUSPENDED", latest.id);
       else block("QUALIFICATION_EXPIRED", latest.id);
     }
-    for (const item of blocks) block("BLOCKED_FOR_OPERATION", item.id);
+    for (const item of blocks) block(matchPartnerDecision(item,input)==="context_required"?"CONTEXT_REQUIRED":"BLOCKED_FOR_OPERATION", String(item.id));
     if (!risk) block("RISK_ASSESSMENT_MISSING");
     else {
       if (risk.next_review_at && risk.next_review_at < input.businessDate)
@@ -812,7 +805,9 @@ export class KyselyBusinessPartnerEligibilityRepository implements BusinessPartn
       ),
     );
     return {
-      operationalEvidence: {partner,bank:bankEvidence ?? null},
+      operationalEvidence: {partner,bank:bankEvidence ?? null,
+        qualificationStateHash:createHash('sha256').update(JSON.stringify(qualificationRows)).digest('hex'),
+        restrictionStateHash:createHash('sha256').update(JSON.stringify(blockRows)).digest('hex')},
       businessPartnerId: input.businessPartnerId,
       role: input.role,
       operatingOrganizationId: input.operatingOrganizationId,
@@ -838,7 +833,7 @@ export class KyselyBusinessPartnerEligibilityRepository implements BusinessPartn
             },
           }
         : {}),
-      activeBlockIds: blocks.map((item) => item.id),
+      activeBlockIds: blocks.map((item) => String(item.id)),
       preferredSupplier: preferences.length > 0,
       effectivePreferenceIds: preferences.map((item) => item.id),
     };
@@ -850,15 +845,14 @@ function mapQualification(row: QualificationRow): BusinessPartnerQualification {
     id: row.id,
     tenantId: row.tenant_id,
     businessPartnerId: row.business_partner_id,
-    partnerRole: row.partner_role,
+    ...(row.partner_role?{partnerRole:row.partner_role}:{}),
+    coverage: publicDecisionScopes(row.scopes??[]), contextKind:row.context_kind, ...(row.context_id?{contextId:row.context_id}:{}),
     roleId: row.role_id,
     ...(row.operating_organization_id
       ? { operatingOrganizationId: row.operating_organization_id }
       : {}),
     ...(row.company_code_id ? { companyCodeId: row.company_code_id } : {}),
-    ...(row.commodity_capability_id
-      ? { commodityCapabilityId: row.commodity_capability_id }
-      : {}),
+    ...(row.commodity_classification_id ? {commodityClassificationId: row.commodity_classification_id} : {}),
     qualificationTypeCode: row.qualification_type_code,
     decision: row.decision,
     ...(row.decision_reason ? { decisionReason: row.decision_reason } : {}),

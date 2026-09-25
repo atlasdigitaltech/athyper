@@ -1,6 +1,7 @@
 export * from "./metadata-service.js";
 export * from "./artifact-resolution.js";
 export * from "./compiled-entity-reader.js";
+export * from "./compiled-runtime-contract.js";
 export * from "./compiled-entity-flow-reader.js";
 export * from "./authorized-browser-projection.js";
 export * from "./native-runtime-projection.js";

@@ -7,6 +7,7 @@ import {useBusinessPartner360} from "../business-partner-360-context";
 import {relationshipStatus,useCompanyRelationships} from "../company-relationships";
 import {SupplierCompanySection,CustomerCompanySection} from "./role-company-sections";
 import {BankingWorkspace} from "../../banking-workspace";
+import {writeRecordLocation} from "@athyper/platform-entity-form-detail/record";
 
 export function RolesWorkspace(){
  const {summary,selectScope}=useBusinessPartner360(),relationships=useCompanyRelationships(),work=useNeonWorkContext(),operating=useNeonOperatingOrganization();
@@ -24,7 +25,7 @@ export function RolesWorkspace(){
  const companies=[...new Map((relationships.rows??[]).map(r=>[r.companyCodeId,r.companyName])).entries()];
  const compatible=operating.organizations.filter(o=>o.companyAssignments.some(a=>a.companyCodeId===(pendingCompany||companyId)));
  const chooseCompany=(id:string)=>{if(!id)return;const choices=operating.organizations.filter(o=>o.companyAssignments.some(a=>a.companyCodeId===id));if(choices.length===1){setPendingCompany("");selectScope?.(choices[0]!.id,id);}else setPendingCompany(id);};
- const switchTab=(next:string)=>{setTab(next);const url=new URL(window.location.href);url.searchParams.set("roleTab",next);window.history.replaceState(window.history.state,"",url);};
+ const switchTab=(next:string)=>{setTab(next);writeRecordLocation(url=>url.searchParams.set("roleTab",next),"replace");};
  const action=summary.recordHeader?.actions.find(a=>(a.operationKey??a.key)==="configure_company");
  return <div className="bp360-section-list bp-roles-workspace">
   <Card className="bp360-section-card"><h2>Roles &amp; scope</h2><p>Choose a company to manage buying, selling and bank account usage.</p>

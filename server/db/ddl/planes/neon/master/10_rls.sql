@@ -720,7 +720,7 @@ DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
-        'bank_account', 'bank_account_link',
+        'payment_instrument', 'bank_account', 'payment_instrument_link',
         'bank_account_house_config',
         'bank_account_house_payment_method'
     ]
@@ -742,7 +742,7 @@ BEGIN
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         FOREACH v_table IN ARRAY ARRAY[
-            'bank_account', 'bank_account_link',
+            'payment_instrument', 'bank_account', 'payment_instrument_link',
             'bank_account_house_config',
             'bank_account_house_payment_method'
         ]
@@ -834,7 +834,6 @@ BEGIN
         'business_partner_governance_relation',
         'business_partner_identifier',
         'business_partner_tax_registration',
-        'business_partner_commodity_capability',
         'business_partner_industry_classification',
         'business_partner_operating_organization_assignment',
         'company_code_supplier_profile',

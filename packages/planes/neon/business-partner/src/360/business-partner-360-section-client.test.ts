@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sectionQueryKey } from "./business-partner-360-section-client";
+import { sectionQueryKey } from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-section-client";
 describe("Business Partner 360 common section client", () => {
   it("isolates global section pages by record, date, permission epoch, and opaque cursor", () => {
     const query = {

@@ -130,7 +130,7 @@ try {
     passed: cross.state === "invalid",
   });
   const { readBusinessPartner360ExplainabilitySection } =
-    await import("../../../server/packages/services/master-data/src/kysely-business-partner-360-explainability.ts");
+    await import("../../../server/packages/services/master-data/src/business-partner/relationships/explainability-reader");
   const { sql } = require("kysely");
   const owned = await database.transaction().execute(async (tx: any) => {
     await sql`SET TRANSACTION READ ONLY`.execute(tx);

@@ -39,7 +39,8 @@
         "sourceObject": "shared.industry_crosswalk",
         "column": "source_domain_code"
       },
-      "dataType": "string",
+      "dataType": "enum",
+      "display": {"lookup":{"code":"shared.classification_scheme"}},
       "storageType": "text",
       "nullable": false,
       "label": {
@@ -71,7 +72,8 @@
         "sourceObject": "shared.industry_crosswalk",
         "column": "target_domain_code"
       },
-      "dataType": "string",
+      "dataType": "enum",
+      "display": {"lookup":{"code":"shared.classification_scheme"}},
       "storageType": "text",
       "nullable": false,
       "label": {
@@ -93,6 +95,72 @@
       "label": {
         "labelKey": "entity.industryCrosswalk.core.fields.targetCode.label",
         "defaultText": "Target code"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "mappingType",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "mapping_type"
+      },
+      "dataType": "enum",
+      "display": {"lookup":{"options":[{"value":"EXACT","label":{"labelKey":"entity.industry_crosswalk.mappingtype.exact","defaultText":"Exact"}},{"value":"BROAD","label":{"labelKey":"entity.industry_crosswalk.mappingtype.broad","defaultText":"Broad"}},{"value":"NARROW","label":{"labelKey":"entity.industry_crosswalk.mappingtype.narrow","defaultText":"Narrow"}},{"value":"PARTIAL","label":{"labelKey":"entity.industry_crosswalk.mappingtype.partial","defaultText":"Partial"}},{"value":"RELATED","label":{"labelKey":"entity.industry_crosswalk.mappingtype.related","defaultText":"Related"}}]}},
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.industry_crosswalk.core.fields.mappingType.label",
+        "defaultText": "Mapping type (reference only)"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "confidence",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "confidence"
+      },
+      "dataType": "decimal",
+      "storageType": "numeric(5,2)",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.industry_crosswalk.core.fields.confidence.label",
+        "defaultText": "Confidence"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "provenance",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "provenance"
+      },
+      "dataType": "enum",
+      "display": {"lookup":{"options":[{"value":"OFFICIAL","label":{"labelKey":"entity.industry_crosswalk.provenance.official","defaultText":"Official"}},{"value":"AI_GENERATED","label":{"labelKey":"entity.industry_crosswalk.provenance.ai_generated","defaultText":"AI generated"}},{"value":"AI_VERIFIED","label":{"labelKey":"entity.industry_crosswalk.provenance.ai_verified","defaultText":"AI verified"}},{"value":"MANUAL","label":{"labelKey":"entity.industry_crosswalk.provenance.manual","defaultText":"Manual"}},{"value":"IMPORTED","label":{"labelKey":"entity.industry_crosswalk.provenance.imported","defaultText":"Imported"}}]}},
+      "storageType": "text",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.industry_crosswalk.core.fields.provenance.label",
+        "defaultText": "Provenance"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection"
+    },
+    {
+      "key": "verified",
+      "binding": {
+        "sourceObject": "shared.industry_crosswalk",
+        "column": "is_verified"
+      },
+      "dataType": "boolean",
+      "storageType": "boolean",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.industry_crosswalk.core.fields.verified.label",
+        "defaultText": "Verified"
       },
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection"

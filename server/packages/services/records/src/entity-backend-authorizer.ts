@@ -356,6 +356,9 @@ export function createEntityBackendAuthorizer(
           options.isolatedExecution ? evaluator : selected
         ).evaluate({ ...target, context });
         // Stable denial reason deliberately cannot trigger legacy scope retries.
+        if (operation.effect === "reveal" && target.phase === "discover" &&
+            !legacy.allowed && legacy.reason === "mfa_required" && decision.state === "verification_required")
+          return finish({ allowed: false, reason: "mfa_required" });
         if ((!canonical && !legacy.allowed) || decision.state !== "allowed")
           return finish({
             allowed: false,

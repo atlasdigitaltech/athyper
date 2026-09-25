@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "kind": "activity_collections_phase1_local_verification_access_proposal",
+  "status": "proposed_not_applied",
+  "environment": "local-dev",
+  "database": "athyper_studio",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "scopeTargetId": "1d2550e6-6e20-5f74-81d9-388d1e75d20f",
+  "scopeKind": "tenant",
+  "propagation": "exact",
+  "durationMinutes": 120,
+  "revokeAfterVerification": true,
+  "assignments": [
+    {
+      "account": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "permissions": [
+        "metadata.entity.author",
+        "metadata.entity.validate",
+        "metadata.entity.test",
+        "metadata.entity.submit",
+        "metadata.entity.publish"
+      ]
+    },
+    {
+      "account": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "permissions": [
+        "metadata.entity.review"
+      ]
+    }
+  ],
+  "purpose": "Publish Notifications, Inbox and an Inbox default update through normal authenticated Studio authoring and signed publication APIs; verify target readers in Neon, Mesh and Studio.",
+  "constraints": [
+    "Existing MFA and independent-review checks remain enforced.",
+    "The permission catalog scopes authoring grants to the tenant, not individual drafts. These permissions temporarily cover all configuration drafts in this tenant; the setup script uses only its collection fixture drafts.",
+    "No Neon or Mesh permission changes. Each target reader uses its own authenticated plane session.",
+    "No direct writes to collection configuration, publication snapshots or runtime activation heads.",
+    "No notification sends or workflow task actions."
+  ]
+}

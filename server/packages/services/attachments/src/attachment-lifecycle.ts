@@ -136,7 +136,8 @@ export interface AttachmentLifecycleOptions<T> {
   readonly quota: AttachmentQuotaLedger<T>;
   readonly quotaPolicies: AttachmentQuotaPolicyResolver;
   readonly outbox: OutboxWriter<T>;
-  readonly commandExecutions?: CommandExecutionStore<T, { readonly folderId: string | null; readonly revision: number }>;
+  /** Durable receipts cover retried folder and lifecycle mutation commands. */
+  readonly commandExecutions?: CommandExecutionStore<T, any>;
   readonly scheduler?: AttachmentLifecycleScheduler;
   readonly uploadUrlTtlSeconds?: number;
   readonly seriesRepository?: SeriesRepository<T>;
@@ -155,8 +156,8 @@ export interface AttachmentFinalizeOptions {
 
 export interface AttachmentLifecycle {
   archiveOutcome?(identity: AttachmentIdentity): Promise<{ readonly activeLinks: number; readonly legalHold: boolean }>;
-  archive?(identity: AttachmentIdentity): Promise<{ readonly activeLinks: number; readonly legalHold: boolean }>;
-  setCategory?(identity: AttachmentIdentity, input: { readonly entityType: string; readonly entityId: string; readonly category: "general" | "evidence" }): Promise<void>;
+  archive?(identity: AttachmentIdentity, input?: { readonly idempotencyKey?: string }): Promise<{ readonly activeLinks: number; readonly legalHold: boolean }>;
+  setCategory?(identity: AttachmentIdentity, input: { readonly entityType: string; readonly entityId: string; readonly category: "general" | "evidence"; readonly idempotencyKey?: string }): Promise<void>;
   manageFolder?(
     identity: AttachmentIdentity,
     input: { readonly command: "create" | "move" | "delete"; readonly entityType: string; readonly entityId: string; readonly folderId: string | null; readonly expectedRevision: number; readonly idempotencyKey: string; readonly name?: string; readonly parentFolderId?: string; readonly attachmentId?: string },
@@ -185,7 +186,7 @@ export interface AttachmentLifecycle {
   ): Promise<{ readonly unlinked: boolean; readonly orphaned: boolean }>;
   rename?(
     identity: AttachmentIdentity,
-    input: { readonly displayName: string; readonly expectedSeriesRevision: string },
+    input: { readonly displayName: string; readonly expectedSeriesRevision: string; readonly idempotencyKey?: string },
   ): Promise<AttachmentRecord>;
   expire(identity: AttachmentIdentity): Promise<void>;
   purge(identity: AttachmentIdentity): Promise<boolean>;
@@ -210,6 +211,35 @@ export function createAttachmentLifecycle<T>(
   const now = options.now ?? (() => new Date());
   const scanStreamTimeoutMs = options.scanStreamTimeoutMs ?? 5 * 60 * 1_000;
   const activeScanOperations = new Set<AbortController>();
+  async function executeRetriableCommand<TResult extends Readonly<Record<string, unknown>>>(
+    identity: AttachmentIdentity,
+    commandCode: string,
+    idempotencyKey: string | undefined,
+    request: Readonly<Record<string, unknown>>,
+    work: (tx: T) => Promise<TResult>,
+  ): Promise<TResult> {
+    if (!idempotencyKey) return options.transactions.run(identity.planeKey, identity, work);
+    const key = parseIdempotencyKey(idempotencyKey);
+    if (!key.ok) throw new TypeError("Attachment idempotency key is invalid");
+    if (!options.commandExecutions)
+      throw new Error("Attachment command receipts are unavailable");
+    return options.transactions.run(identity.planeKey, identity, async (tx) => {
+      const receipt = await options.commandExecutions!.begin({
+        tenantId: identity.tenantId,
+        commandCode,
+        idempotencyKey: key.value,
+        requestFingerprint: fingerprintCommand({ principalId: identity.principalId, ...request }),
+        actorPrincipalId: identity.principalId,
+        sourceService: "attachments",
+      }, tx);
+      if (receipt.kind === "replay") return receipt.result as TResult;
+      if (receipt.kind !== "started")
+        throw new AttachmentConflictError("Attachment command is already in progress or conflicts with a prior request");
+      const result = await work(tx);
+      await options.commandExecutions!.complete(receipt.executionId, result, identity.principalId, tx);
+      return result;
+    });
+  }
   async function purgeAttachment(identity: AttachmentIdentity, maintenance = false): Promise<boolean> {
     return options.transactions.run(identity.planeKey, identity, async tx => {
       // The production maintenance read locks both attachment and series until
@@ -244,15 +274,15 @@ export function createAttachmentLifecycle<T>(
       if (!options.repository.archiveOutcome) throw new Error("Attachment repository does not support archive outcome");
       return options.transactions.run(identity.planeKey,identity,tx=>options.repository.archiveOutcome!(identity,tx));
     },
-    async archive(identity) {
+    async archive(identity, input = {}) {
       if (!options.repository.archive) throw new Error("Attachment repository does not support archive");
-      const outcome=await options.transactions.run(identity.planeKey,identity,async tx=>{ const result=await options.repository.archive!(identity,tx); if(result.legalHold) throw new AttachmentConflictError("A legal hold prevents lifecycle archive"); await options.quota.release(identity,tx); await appendLifecycleEvent(options.outbox,identity,"attachments.archived",`attachment:${identity.attachmentId}:archived`,result,tx); return result; });
+      const outcome=await executeRetriableCommand(identity,"attachments.archive",input.idempotencyKey,{attachmentId:identity.attachmentId},async tx=>{ const result=await options.repository.archive!(identity,tx); if(result.legalHold) throw new AttachmentConflictError("A legal hold prevents lifecycle archive"); await options.quota.release(identity,tx); await appendLifecycleEvent(options.outbox,identity,"attachments.archived",`attachment:${identity.attachmentId}:archived`,result,tx); return result; });
       await options.scheduler?.scheduleSearchRemoval?.(identity,"archived");
       await options.scheduler?.schedulePurge(identity,{jobId:`attachment:${identity.attachmentId}:purge`}); return outcome;
     },
     async setCategory(identity, input) {
       if (!options.repository.setCategory || !["general", "evidence"].includes(input.category)) throw new TypeError("Attachment category is invalid");
-      await options.transactions.run(identity.planeKey, identity, async tx => { await options.repository.setCategory!(identity,input,tx); await appendLifecycleEvent(options.outbox,identity,"attachments.categorized",`attachment:${identity.attachmentId}:category:${input.category}`,{category:input.category},tx); });
+      await executeRetriableCommand(identity,"attachments.category",input.idempotencyKey,{attachmentId:identity.attachmentId,entityType:input.entityType,entityId:input.entityId,category:input.category},async tx => { await options.repository.setCategory!(identity,input,tx); await appendLifecycleEvent(options.outbox,identity,"attachments.categorized",`attachment:${identity.attachmentId}:category:${input.category}`,{category:input.category},tx); return {category:input.category}; });
     },
     async manageFolder(identity, input) {
       if (!options.repository.manageFolder) throw new Error("Attachment repository does not support folders");
@@ -268,8 +298,8 @@ export function createAttachmentLifecycle<T>(
         if(receipt.kind === "replay") return receipt.result;
         if(receipt.kind !== "started") throw new AttachmentConflictError("Attachment folder command is already in progress or conflicts with a prior request");
         const changed=await options.repository.manageFolder!(identity, { ...input, folderId }, tx);
-        if(changed.revision === undefined) throw new AttachmentConflictError("Attachment workspace has changed; refresh before retrying");
-        await appendLifecycleEvent(options.outbox, { ...identity, attachmentId: folderId ?? input.attachmentId! }, `attachments.folder_${input.command}`, `attachment-folder:${folderId}:${input.command}:${input.attachmentId ?? ""}`, { folderId, entityType: input.entityType, entityId: input.entityId }, tx);
+        if(changed.revision === undefined) throw new AttachmentConflictError("Attachment workspace has changed; refresh before retrying", "ATTACHMENT_WORKSPACE_REVISION_CONFLICT");
+        await appendLifecycleEvent(options.outbox, { ...identity, attachmentId: folderId ?? input.attachmentId! }, `attachments.folder_${input.command}`, `attachment-folder-command:${receipt.executionId}`, { folderId, entityType: input.entityType, entityId: input.entityId }, tx);
         const result={folderId,revision:changed.revision};
         await options.commandExecutions!.complete(receipt.executionId,result,identity.principalId,tx);
         return result;
@@ -562,11 +592,11 @@ export function createAttachmentLifecycle<T>(
         throw new TypeError("A positive series revision is required");
       if (!options.repository.rename)
         throw new Error("Attachment repository does not support rename");
-      const renamed = await options.transactions.run(identity.planeKey, identity, async (tx) => {
+      const renamed = await executeRetriableCommand(identity,"attachments.rename",input.idempotencyKey,{attachmentId:identity.attachmentId,displayName,expectedSeriesRevision:input.expectedSeriesRevision},async (tx) => {
         const current = await options.repository.rename!(identity, { displayName, expectedSeriesRevision: input.expectedSeriesRevision }, tx);
         if (!current) throw new AttachmentConflictError("Attachment series changed before it could be renamed");
         await appendLifecycleEvent(options.outbox, identity, "attachments.renamed", `attachment:${identity.attachmentId}:rename:${input.expectedSeriesRevision}`, { displayName, seriesId: current.seriesId }, tx);
-        return current;
+        return current as AttachmentRecord & Readonly<Record<string, unknown>>;
       });
       return renamed;
     },
@@ -800,7 +830,9 @@ export class AttachmentDownloadError extends Error {
   }
 }
 
-export class AttachmentConflictError extends Error {}
+export class AttachmentConflictError extends Error {
+  constructor(message:string, readonly code="ATTACHMENT_CONFLICT"){super(message);}
+}
 
 function awaitingUpload(record: AttachmentRecord, now: Date): void {
   if (

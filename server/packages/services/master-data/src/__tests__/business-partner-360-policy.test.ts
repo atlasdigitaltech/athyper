@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateBusinessPartner360Policy } from "../business-partner-360-policy.js";
+import { evaluateBusinessPartner360Policy } from "../business-partner/record/access-policy";
 import { BUSINESS_PARTNER_360_PERMISSIONS as P } from "@athyper/server-contract-master-data";
 import type { Authorizer } from "@athyper/server-contract-auth";
 const input = {
@@ -11,17 +11,64 @@ const input = {
   scoped: false,
   counts: {},
   directoryAdmitted: true,
+  directoryScopeResources: [{operatingOrganizationId:"admitted-org"}],
 };
 const authorizer = (denied?: string): Authorizer => ({
   async authorize(query) {
     if (query.permissionCode === denied)
       return { allowed: false, reason: "denied_by_grant" };
-    if (query.resource)
+    if (query.resource?.operatingOrganizationId !== "admitted-org")
       return { allowed: false, reason: "scope_not_contained" };
     return { allowed: true };
   },
 });
+it("never replaces record scopes with a permission-only authorization",async()=>{
+ const calls: Parameters<Authorizer["authorize"]>[0][]=[];
+ const check:Authorizer={async authorize(query){calls.push(query);return query.resource ? {allowed:false,reason:"scope_not_contained"} : {allowed:true};}};
+ expect((await evaluateBusinessPartner360Policy(check,input)).sections).toEqual([]);
+ expect(calls.every(call=>Boolean(call.resource))).toBe(true);
+ expect((await evaluateBusinessPartner360Policy(authorizer(),{...input,directoryScopeResources:[]})).sections).toEqual([]);
+});
 describe("metadata-admitted section navigation", () => {
+  it("admits partner-fact sections without commercial roles or company context while retaining permission gates", async () => {
+    const facts = ["overview","identity","contacts","addresses","identifiers-tax","banking","qualifications-certificates","network"];
+    for (const roleLens of ["all","supplier","customer"] as const) {
+      const core = {...input,roles:[],roleLens,scoped:false};
+      const allowed = await evaluateBusinessPartner360Policy({authorize:async()=>({allowed:true})},core);
+      for(const code of facts) expect(allowed.sections.find(section=>section.code===code)).toMatchObject({authorization:"granted"});
+      for(const code of ["supplier-company","customer-company","credit","business-activity"])
+        expect(allowed.sections.some(section=>section.code===code)).toBe(false);
+      const denied = await evaluateBusinessPartner360Policy({authorize:async()=>({allowed:false,reason:"denied_by_grant"})},core);
+      expect(denied.sections).toEqual([]);
+      expect(allowed.granted.has(P.network)).toBe(true);
+    }
+  });
+  it("uses only the scoped Network capability and preserves denial", async () => {
+    expect(P.network).toBe("neon.relationship.bp_target.network_read");
+    const calls: Parameters<Authorizer["authorize"]>[0][] = [];
+    const scoped = { ...input, scoped: true, operatingOrganizationId: "org", companyCodeId: "company" };
+    const check: Authorizer = { async authorize(query) {
+      calls.push(query);
+      return { allowed: query.permissionCode === P.network &&
+        query.resource?.["operatingOrganizationId"] === "org" &&
+        query.resource?.["companyCodeId"] === "company" };
+    } };
+    const result = await evaluateBusinessPartner360Policy(check, scoped);
+    expect(result.sections.some(section => section.code === "network")).toBe(true);
+    expect(calls.find(call => call.permissionCode === P.network)?.resource).toMatchObject({
+      entityCode: "business_partner", operationKey: "network_read",
+      businessPartnerId: "partner", operatingOrganizationId: "org", companyCodeId: "company",
+    });
+    for (const variant of [{ ...scoped, companyCodeId: "other" }, input]) {
+      const denied = await evaluateBusinessPartner360Policy(check, variant);
+      expect(denied.sections.some(section => section.code === "network")).toBe(false);
+    }
+    const legacyOnly = await evaluateBusinessPartner360Policy({ async authorize(query) {
+      return { allowed: query.permissionCode === "neon.relationship.business_partner_network.read" };
+    } }, scoped);
+    expect(legacyOnly.sections.some(section => section.code === "network")).toBe(false);
+    expect(calls.some(call => call.permissionCode === "neon.relationship.business_partner_network.read")).toBe(false);
+  });
   it("shows granted global tabs and requires context for scoped tabs", async () => {
     const result = await evaluateBusinessPartner360Policy(authorizer(), input);
     for (const key of [

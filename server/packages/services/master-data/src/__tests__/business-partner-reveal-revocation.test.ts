@@ -1,13 +1,14 @@
 import { expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { BUSINESS_PARTNER_360_PERMISSIONS } from "@athyper/server-contract-master-data";
-import { createBusinessPartner360Service } from "../business-partner-360-service.js";
+import { createBusinessPartner360Service } from "../business-partner/record/service";
 
 function fixture(
-  kind: "tax" | "bank",
+  kind: "tax" | "bank" | "identifier",
   change: "none" | "revoke" | "expire" | "denied",
-  scope: { operatingOrganizationId?: string; companyCodeId?: string } = {},
+  scope: { operatingOrganizationId?: string; companyCodeId?: string; legalEntityId?: string } = {},
   compatible = true,
+  assurance: "elevated" | "standard" = "elevated",
 ) {
   let instant = Date.parse("2026-09-12T02:00:00Z"),
     profileHash = "permitted";
@@ -18,7 +19,7 @@ function fixture(
     realmKey: "test",
     authEpoch: 1,
     profileHash,
-    assurance: "elevated",
+    assurance,
   } as const;
   const restrictedRead = vi.fn(async () => ({
     protected: true,
@@ -32,7 +33,7 @@ function fixture(
   const audit = vi.fn(),
     claim = vi.fn(async () => true);
   const permission =
-    kind === "tax"
+    kind === "identifier" ? BUSINESS_PARTNER_360_PERMISSIONS.identifierReveal : kind === "tax"
       ? BUSINESS_PARTNER_360_PERMISSIONS.taxReveal
       : BUSINESS_PARTNER_360_PERMISSIONS.bankReveal;
   const authorize = vi.fn(
@@ -62,6 +63,7 @@ function fixture(
       resolveCore,
       claimRestrictedReveal: claim,
       readRestrictedTaxValue: restrictedRead,
+      readRestrictedIdentifierValue: restrictedRead,
       readRestrictedBankValue: restrictedRead,
     } as never,
     transactions: {
@@ -83,7 +85,7 @@ function fixture(
     purposeExpiresAt: new Date(instant + 30_000).toISOString(),
   };
   const execute = () =>
-    kind === "tax"
+    kind === "identifier" ? service.revealIdentifier!({...command,identifierId:"identifier"}) : kind === "tax"
       ? service.revealTaxRegistration({ ...command, taxRegistrationId: "tax" })
       : service.revealBankAccount({ ...command, bankAccountLinkId: "bank" });
   return {
@@ -97,7 +99,22 @@ function fixture(
   };
 }
 
-it.each(["tax", "bank"] as const)(
+it.each(["tax", "bank", "identifier"] as const)("denies direct %s reveal without elevated assurance before reading or claiming", async (kind) => {
+  const f = fixture(kind, "none", {}, true, "standard");
+  await expect(f.execute()).rejects.toMatchObject({ code: "BP_360_STEP_UP_REQUIRED" });
+  expect(f.restrictedRead).not.toHaveBeenCalled();
+  expect(f.reveal).not.toHaveBeenCalled();
+  expect(f.claim).not.toHaveBeenCalled();
+});
+
+it.each(["tax", "bank", "identifier"] as const)("preserves legal entity scope for %s reveal", async (kind) => {
+  const f = fixture(kind, "none", { legalEntityId: "legal" });
+  await f.execute();
+  expect(f.resolveCore).toHaveBeenCalledWith(expect.objectContaining({ legalEntityId: "legal" }), expect.anything());
+  expect(f.authorize).toHaveBeenCalledWith(expect.objectContaining({ resource: expect.objectContaining({ legalEntityId: "legal" }) }));
+});
+
+it.each(["tax", "bank", "identifier"] as const)(
   "returns populated %s only with separate reveal permission",
   async (kind) => {
     const allowed = fixture(kind, "none");
@@ -114,7 +131,7 @@ it.each(["tax", "bank"] as const)(
   },
 );
 
-it.each(["tax", "bank"] as const)(
+it.each(["tax", "bank", "identifier"] as const)(
   "withholds populated %s when authority changes during protected-value resolution",
   async (kind) => {
     const f = fixture(kind, "revoke");
@@ -125,7 +142,7 @@ it.each(["tax", "bank"] as const)(
   },
 );
 
-it.each(["tax", "bank"] as const)(
+it.each(["tax", "bank", "identifier"] as const)(
   "withholds populated %s when its reveal purpose expires during execution",
   async (kind) => {
     const f = fixture(kind, "expire");
@@ -135,7 +152,7 @@ it.each(["tax", "bank"] as const)(
     expect(f.reveal).toHaveBeenCalledTimes(1);
   },
 );
-it.each(["tax", "bank"] as const)(
+it.each(["tax", "bank", "identifier"] as const)(
   "carries selected context through %s source authorization and stored ownership checks",
   async (kind) => {
     const scope = {
@@ -149,7 +166,7 @@ it.each(["tax", "bank"] as const)(
       expect.anything(),
     );
     const permission =
-      kind === "tax"
+      kind === "identifier" ? BUSINESS_PARTNER_360_PERMISSIONS.identifierReveal : kind === "tax"
         ? BUSINESS_PARTNER_360_PERMISSIONS.taxReveal
         : BUSINESS_PARTNER_360_PERMISSIONS.bankReveal;
     expect(f.authorize).toHaveBeenCalledWith(

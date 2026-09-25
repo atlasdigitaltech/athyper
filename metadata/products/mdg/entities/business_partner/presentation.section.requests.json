@@ -31,9 +31,6 @@
     },
     {
       "fieldKey": "target_business_partner_id"
-    },
-    {
-      "fieldKey": "base_record_version"
     }
   ],
   "authorization": {

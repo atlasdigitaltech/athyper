@@ -5,6 +5,20 @@
     "scope": "draft registry evidence"
   },
   "entries": [
+    {"kind":"permission","key":"neon.relationship.business_partner.capability_supplier_manage","status":"requires_registry_publication"},
+    {"kind":"permission","key":"neon.relationship.business_partner.capability_customer_manage","status":"requires_registry_publication"},
+    {"kind":"handler","key":"neon.bp.capability.supplier.v1","status":"requires_registry_publication"},
+    {"kind":"handler","key":"neon.bp.capability.customer.v1","status":"requires_registry_publication"},
+    {
+      "kind": "permission",
+      "key": "neon.relationship.business_partner_restriction.read",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.restrictions.v1",
+      "status": "requires_registry_publication"
+    },
     {
       "kind": "evaluator",
       "key": "neon.bp.completeness.customer.role.v1",
@@ -312,6 +326,11 @@
     },
     {
       "kind": "handler",
+      "key": "neon.bp.section.qualifications.v2",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
       "key": "neon.bp.section.qualifications-certificates.v1",
       "status": "requires_registry_publication"
     },
@@ -338,6 +357,11 @@
     {
       "kind": "handler",
       "key": "neon.bp.tax.reveal.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.identifier.reveal.v1",
       "status": "requires_registry_publication"
     },
     {
@@ -911,6 +935,12 @@
     },
     {
       "kind": "permission",
+      "key": "neon.relationship.business_partner_identifier.reveal",
+      "status": "source_seed_verified",
+      "source": "server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql"
+    },
+    {
+      "kind": "permission",
       "key": "neon.relationship.entity_case.create",
       "status": "source_seed_verified",
       "source": "server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql"
@@ -918,6 +948,12 @@
     {
       "kind": "permission",
       "key": "neon.relationship.entity_case.materialize",
+      "status": "source_seed_verified",
+      "source": "server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql"
+    },
+    {
+      "kind": "permission",
+      "key": "neon.relationship.entity_case.read",
       "status": "source_seed_verified",
       "source": "server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql"
     },
@@ -968,6 +1004,11 @@
       "status": "published"
     },
     {
+      "kind": "permission",
+      "key": "neon.relationship.bp_target.network_read",
+      "status": "published"
+    },
+    {
       "kind": "handler",
       "key": "platform.attachments.preview.v1",
       "status": "implemented_source",
@@ -984,6 +1025,41 @@
       "key": "platform.attachments.search.v1",
       "status": "implemented_source",
       "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.commodities.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.industries.v1",
+      "status": "implemented_source"
+    },
+    {
+      "kind": "handler",
+      "key": "neon.bp.section.certificates.v1",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "permission",
+      "key": "neon.business_partner_classification.read",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "permission",
+      "key": "neon.business_partner_classification.declare",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "permission",
+      "key": "neon.business_partner_classification.verify",
+      "status": "requires_registry_publication"
+    },
+    {
+      "kind": "permission",
+      "key": "neon.business_partner_classification.archive",
+      "status": "requires_registry_publication"
     }
   ],
   "capabilityContractEvidence": {

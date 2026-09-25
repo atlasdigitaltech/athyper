@@ -21,6 +21,7 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
+    "@athyper/contract-platform-rich-text": "workspace:*",
     "@athyper/platform-ui": "workspace:*"
   }
 }

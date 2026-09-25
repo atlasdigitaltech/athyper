@@ -8,25 +8,10 @@ export interface BusinessPartner360BankAccountItem {
   readonly bankProjectionId?: string;
   readonly receivedAt?: string;
   readonly disclosureExpiresAt?: string;
-  readonly companyAssignments?: readonly Readonly<{
-    assignmentId?: string;
-    companyCodeId: string;
-    companyName: string;
-    purpose: string;
-    primary: boolean;
-    effectiveFrom: string;
-    effectiveUntil?: string;
-    acceptance: string;
-    acceptanceCurrent?: boolean;
-    acceptedDisclosureVersion?: number;
-    verificationId?: string;
-  }>[];
   readonly source?: string;
   readonly sourceAccountId?: string;
   readonly disclosureVersion?: number;
   readonly disclosureStatus?: string;
-  readonly acceptance?: string;
-  readonly companyUsage?: string;
   readonly bic?: string;
   readonly accountIdType?: string;
   readonly linkId: string;
@@ -42,27 +27,25 @@ export interface BusinessPartner360BankAccountItem {
   readonly companyCodeId?: string;
   readonly primary: boolean;
   readonly accountStatus: string;
-  readonly verified: boolean | null;
-  readonly verificationMethod?: string;
-  readonly verifiedAt?: string;
-  readonly verificationState?: Readonly<{
-    id: string;
-    status: string;
-    createdAt: string;
-  }>;
   readonly effectiveFrom?: string;
   readonly effectiveUntil?: string;
   readonly revealable: boolean;
 }
 export interface BusinessPartner360BankingData {
-  readonly supplierCompanyProfileId?: string;
+  /** Closed masked instrument/account/ownership/provisional facts; no verification or company acceptance. */
+  readonly collections?: Readonly<Record<string, readonly Readonly<Record<string, unknown>>[]>>;
   readonly readOnly: boolean;
   readonly scopeState: "missing_scope" | "scoped" | "historical" | "global";
   readonly accounts: readonly BusinessPartner360BankAccountItem[];
   readonly manageHref: string;
-  readonly verifyHref: string;
 }
 export interface BusinessPartner360CommodityCodeItem {
+  readonly crosswalks?: readonly Readonly<{
+    id: string; sourceDomainCode: string; sourceCode: string;
+    targetDomainCode: string; targetCode: string; targetName: string;
+    mappingType: string; confidence: number | null; provenance: string;
+    verified: boolean; readOnly: true;
+  }>[];
   readonly domainCode: string;
   readonly code: string;
   readonly name: string;
@@ -140,6 +123,8 @@ export interface BusinessPartner360AttachmentManifestItem {
 export interface BusinessPartner360CertificationItem {
   readonly id: string;
   readonly name: string;
+  readonly customName?: string;
+  readonly certificationTypeId?: string;
   readonly issuingBody?: string;
   readonly certificateNumber?: string;
   readonly certifiedBy?: string;
@@ -197,6 +182,7 @@ export type BusinessPartner360SupplierControlsSection =
 export type BusinessPartner360CreditReviewSection =
   BusinessPartner360Section<BusinessPartner360CreditReviewData>;
 export interface BusinessPartner360BankRevealCommand {
+  readonly legalEntityId?: string;
   readonly operatingOrganizationId?: string;
   readonly companyCodeId?: string;
   readonly context: VerifiedRequestContext;

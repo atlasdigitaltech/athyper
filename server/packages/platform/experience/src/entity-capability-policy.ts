@@ -17,6 +17,9 @@ export class EntityCapabilityPolicyError extends Error {
     super("Entity capability is unavailable or not authorized");
   }
 }
+export function canReplyAtDepth(status: string, parentDepth: number, maxDepth: number): boolean {
+  return status !== "deleted" && parentDepth + 1 <= maxDepth;
+}
 export interface EntityCapabilityRequest {
   readonly context: VerifiedRequestContext;
   readonly entityCode: string;
@@ -169,7 +172,7 @@ export function createEntityCapabilityPolicy(options: {
         if (parent && !canReplyWith(parent.visibility, requested)) return deny();
         if (requested === "internal" && !(await isParticipant(options.audience, input)))
           return deny();
-        if (Array.isArray(value.mentionedPrincipalIds)) {
+        if (Array.isArray(value.mentionedPrincipalIds) && value.mentionedPrincipalIds.length > 0) {
           if (!commentBinding.features.mentions) return deny();
           const ids=value.mentionedPrincipalIds;
           if(ids.length && (ids.some(id=>typeof id!=="string") || !options.audience?.validateMentions || !await options.audience.validateMentions({...input,input:{...value,visibility:target?.visibility ?? requested}},ids))) return deny();
@@ -243,17 +246,20 @@ export function createEntityCapabilityPolicy(options: {
           return deny();
       }
       const allowed = new Set<string>();
-      for (const candidate of binding.actions)
-        if (
-          (
-            await options.authorizer.authorize({
-              context: input.context,
-              permissionCode: candidate.permissionCode,
-              resource,
-            })
-          ).allowed
-        )
-          allowed.add(candidate.permissionCode);
+      for (const candidate of binding.actions) {
+        // Each action may be admitted by a different parent scope. The scope
+        // which admitted the current action is not a proof for every action.
+        for (const scopeResource of scopeResources) {
+          if ((await options.authorizer.authorize({
+            context: input.context,
+            permissionCode: candidate.permissionCode,
+            resource: { ...baseResource, ...scopeResource },
+          })).allowed) {
+            allowed.add(candidate.permissionCode);
+            break;
+          }
+        }
+      }
       return {
         binding,
         action,

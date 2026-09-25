@@ -20,6 +20,7 @@
     "submit:derivative-scan-backfill": "tsx src/scripts/submit-derivative-scan-backfill.ts"
   },
   "dependencies": {
+    "@athyper/contract-platform-rich-text": "workspace:*",
     "@athyper/contract-platform-entity-runtime": "workspace:*",
     "@athyper/server-adapter-ai-ollama": "workspace:*",
     "@athyper/server-adapter-auth-keycloak": "workspace:*",
@@ -105,7 +106,9 @@
     "cross-env": "^7.0.3",
     "dotenv": "^17.4.2",
     "kysely": "^0.28.17",
-    "pino": "^10.3.1"
+    "pino": "^10.3.1",
+    "@athyper/contract-platform-collection": "workspace:*",
+    "@athyper/contract-platform-activity": "workspace:*"
   },
   "devDependencies": {
     "@athyper/server-adapter-publication-signing": "workspace:*",

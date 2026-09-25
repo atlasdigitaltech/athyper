@@ -40,8 +40,20 @@ describe("pinned compiled entity reader", () => {
     expect(first?.release.release.releaseId).toBe("bp-release-1");
     expect(first?.core.content.fieldDefaults).toEqual({ readPolicy: "authorized_projection", customizationPolicy: "locked" });
     expect(second?.surface.artifactKey).toBe("business_partner/presentation.detail");
-    expect(source.findAdmittedRelease).toHaveBeenCalledOnce();
+    expect(source.findAdmittedRelease).toHaveBeenCalledTimes(2);
     expect(source.findArtifact).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not reuse an unpinned cached head after activation or withdrawal", async () => {
+    const source = sourceFor();
+    const cache = memoryCache();
+    await cache.setRelease(coordinate, release, 60000);
+    const reader = new PinnedCompiledEntityReader({ source, cache });
+    expect((await reader.resolve(coordinate))?.release.releaseHash).toBe(release.releaseHash);
+    source.findAdmittedRelease.mockResolvedValueOnce({ ...release, releaseHash: hash("d"), releaseNo: 2 });
+    expect((await reader.resolve(coordinate))?.release.releaseHash).toBe(hash("d"));
+    source.findAdmittedRelease.mockResolvedValueOnce(null);
+    expect(await reader.resolve(coordinate)).toBeNull();
   });
 
   it("falls back to the verified source when the cache is unavailable", async () => {
@@ -65,6 +77,7 @@ describe("pinned compiled entity reader", () => {
     await reader.core(pinned!);
     await reader.section(pinned!, "overview");
     expect(source.findArtifact.mock.calls.map(([input]) => input.release.releaseId)).toEqual(["bp-release-1", "bp-release-1"]);
+    expect(source.findArtifact.mock.calls.every(([input]) => input.coordinate === pinned!.coordinate)).toBe(true);
   });
 });
 

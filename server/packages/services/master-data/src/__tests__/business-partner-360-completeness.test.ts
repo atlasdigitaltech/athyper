@@ -1,6 +1,6 @@
 import {describe,expect,it} from "vitest";
 import type {BusinessPartner360RequirementPackDefinition} from "@athyper/server-contract-master-data";
-import {evaluateBusinessPartner360Completeness,parseBusinessPartner360Definition,type BusinessPartner360ResolvedDefinition} from "../business-partner-360-completeness.js";
+import {evaluateBusinessPartner360Completeness,parseBusinessPartner360Definition,type BusinessPartner360ResolvedDefinition} from "../business-partner/workflow/onboarding-completeness";
 
 const packs:readonly BusinessPartner360RequirementPackDefinition[]=[
  {code:"organization_base",version:1,category:"organization",scope:"global",requirements:[{code:"organization.name",fieldCode:"partner.name",sectionCode:"identity",severity:"required",actionCode:"amend_partner",label:"Add legal name"},{code:"organization.tax",fieldCode:"identifier.primary",sectionCode:"identifiers-tax",severity:"recommended",requiresVerified:true,actionCode:"amend_partner",label:"Add identifier"}]},

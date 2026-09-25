@@ -8,6 +8,24 @@
   "plane": "neon",
   "operations": [
     {
+      "key": "capability_supplier_manage",
+      "permissionCode": "neon.relationship.business_partner.capability_supplier_manage",
+      "execution": {"handlerKey":"neon.bp.capability.supplier.v1","registryRequired":true},
+      "inputSchema": {"required":["enabled","reason"],"properties":{"enabled":{"type":"boolean"},"reason":{"type":"string"}},"additionalProperties":false},
+      "scopeBinding": {"scopeSource":"persisted_record","resolverKey":"neon.business-context.v1","denyUnresolved":true},
+      "idempotency":"required",
+      "targetBinding":{"targetEntityCode":"business_partner","targetResolution":"operation_context_only","clientSuppliedTargetEntityCode":"forbidden","handlerMustRejectTargetMismatch":true}
+    },
+    {
+      "key": "capability_customer_manage",
+      "permissionCode": "neon.relationship.business_partner.capability_customer_manage",
+      "execution": {"handlerKey":"neon.bp.capability.customer.v1","registryRequired":true},
+      "inputSchema": {"required":["enabled","reason"],"properties":{"enabled":{"type":"boolean"},"reason":{"type":"string"}},"additionalProperties":false},
+      "scopeBinding": {"scopeSource":"persisted_record","resolverKey":"neon.business-context.v1","denyUnresolved":true},
+      "idempotency":"required",
+      "targetBinding":{"targetEntityCode":"business_partner","targetResolution":"operation_context_only","clientSuppliedTargetEntityCode":"forbidden","handlerMustRejectTargetMismatch":true}
+    },
+    {
       "key": "read",
       "permissionCode": "neon.relationship.business_partner.read",
       "execution": {

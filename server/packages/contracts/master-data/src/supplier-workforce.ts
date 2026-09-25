@@ -89,7 +89,7 @@ export interface WorkforceRequisition {
 }
 
 export interface WorkforceRequisitionDistributionProof {
-  readonly supplierId: string;
+  readonly businessPartnerId: string;
   readonly networkRelationshipId: string;
   readonly capabilityId: string;
   readonly qualificationId: string;
@@ -99,7 +99,7 @@ export interface WorkforceRequisitionDistributionProof {
 }
 
 export interface SupplierWorkforceDistributionEligibility {
-  evaluate(input: Readonly<{ context: import("@athyper/server-contract-auth").VerifiedRequestContext; requisition: WorkforceRequisition; supplierId: string; responseDueAt?: string }>): Promise<Readonly<{ allowed: boolean; reasonCodes: readonly string[]; proof?: WorkforceRequisitionDistributionProof }>>;
+  evaluate(input: Readonly<{ context: import("@athyper/server-contract-auth").VerifiedRequestContext; requisition: WorkforceRequisition; businessPartnerId: string; responseDueAt?: string }>): Promise<Readonly<{ allowed: boolean; reasonCodes: readonly string[]; proof?: WorkforceRequisitionDistributionProof }>>;
 }
 
 const commercialBoundaries = new Set<SupplierWorkforceCommandBoundary>([

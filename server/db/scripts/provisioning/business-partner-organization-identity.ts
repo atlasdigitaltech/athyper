@@ -10,7 +10,7 @@ const retiredNames = new Set([
   "legalName",
 ]);
 
-/** Canonical BP identity: one registered name, organization-only, aliases retained. */
+/** Canonical BP identity: common display name, category-safe identity, aliases retained. */
 export function withBusinessPartnerOrganizationIdentity(
   source: MetaEntityGraph,
 ): MetaEntityGraph {
@@ -52,7 +52,7 @@ export function withBusinessPartnerOrganizationIdentity(
       if (field?.fieldKey === "partner_category" && config?.lookup) {
         config.lookup = {
           ...(config.lookup as object),
-          options: [{ value: "organization", label: "Organization" }],
+          options: [{ value: "organization", label: "Organization" }, { value: "person", label: "Person" }],
         };
       }
       const registeredName =
@@ -62,7 +62,7 @@ export function withBusinessPartnerOrganizationIdentity(
       return {
         ...b,
         entityFieldId: renamed ? nameId : b.entityFieldId,
-        ...(registeredName ? { labelOverride: "Registered name" } : {}),
+        ...(registeredName ? { labelOverride: "Display name" } : {}),
         ...(config
           ? {
               displayConfig: {
@@ -163,7 +163,7 @@ function rewriteConfiguration(value: unknown): unknown {
     result.validation = { ...(result.validation as object), maxLength: 320 };
     result.list = {
       ...(result.list as object),
-      label: "Registered name",
+      label: "Display name",
       semanticRole: "title",
       defaultVisible: true,
       defaultOrder: 1,
@@ -175,7 +175,7 @@ function rewriteConfiguration(value: unknown): unknown {
   ) {
     result.validation = {
       ...(result.validation as object),
-      options: ["organization"],
+      options: ["organization", "person"],
     };
     result.list = { ...(result.list as object), defaultVisible: false };
   }

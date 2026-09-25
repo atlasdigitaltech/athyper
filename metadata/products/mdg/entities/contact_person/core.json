@@ -18,6 +18,30 @@
   },
   "fields": [
     {
+      "key": "channels",
+      "display": {"itemFields":[{"key":"type","label":{"labelKey":"partner.view.type","defaultText":"Channel"},"dataType":"enum","display":{"lookup":{"options":[{"value":"email","label":{"labelKey":"partner.view.type.email","defaultText":"Email"}},{"value":"phone","label":{"labelKey":"partner.view.type.phone","defaultText":"Telephone"}},{"value":"fax","label":{"labelKey":"partner.view.type.fax","defaultText":"Fax"}},{"value":"sms","label":{"labelKey":"partner.view.type.sms","defaultText":"SMS"}},{"value":"website","label":{"labelKey":"partner.view.type.website","defaultText":"Website"}},{"value":"other","label":{"labelKey":"partner.view.type.other","defaultText":"Other"}}]}}},{"key":"value","label":{"labelKey":"partner.view.channel_value","defaultText":"Value"}},{"key":"verified","label":{"labelKey":"partner.view.verified","defaultText":"Verified"}}]},
+      "dataType": "json",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "label": {
+        "labelKey": "entity.contact_person.view.channels",
+        "defaultText": "Communication channels"
+      }
+    },
+    {
+      "key": "roles",
+      "display": {"itemFields":[{"key":"code","dataType":"enum","label":{"labelKey":"partner.view.responsibility","defaultText":"Responsibility"},"display":{"lookup":{"code":"master.contact_role"}}}]},
+      "dataType": "json",
+      "nullable": true,
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "label": {
+        "labelKey": "entity.contact_person.view.roles",
+        "defaultText": "Responsibilities"
+      }
+    },
+    {
       "key": "id",
       "binding": {
         "sourceObject": "master.contact_person",
@@ -108,7 +132,8 @@
         "sourceObject": "master.contact_person",
         "column": "status"
       },
-      "dataType": "string",
+      "dataType": "enum",
+      "display": {"lookup":{"options":[{"value":"active","label":{"labelKey":"entity.contact_person.status.active","defaultText":"Active"}},{"value":"inactive","label":{"labelKey":"entity.contact_person.status.inactive","defaultText":"Inactive"}},{"value":"archived","label":{"labelKey":"entity.contact_person.status.archived","defaultText":"Archived"}}]}},
       "nullable": false,
       "label": {
         "labelKey": "entity.contact_person.core.fields.status.label",

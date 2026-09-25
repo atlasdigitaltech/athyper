@@ -1,6 +1,7 @@
 import { PublicationContractError } from "./errors.js";
 import { parseCapabilityBinding, parseCapabilityDeclaration, validateEntityCapabilities } from "./entity-capabilities.js";
 import type { BusinessPartnerDefinitionProjection, CompiledEntityRuntimeProjectionV2, EntityRuntimeProjection, PublicationCompatibilityLevel, PublicationPlane } from "./projection.js";
+import {compiledPublicationTenant} from './compiled-publication-scope.js';
 
 export const PUBLICATION_ARTIFACT_SCHEMA_V1 = "athyper.publication-artifact.v1" as const;
 export const PUBLICATION_ARTIFACT_MEDIA_TYPE_V1 = "application/vnd.athyper.publication-artifact.v1+json" as const;
@@ -16,6 +17,7 @@ export const COMPILED_ENTITY_ARTIFACT_SCHEMA_V2_DRAFT =
   "athyper.compiled-entity-artifact/2.0-draft" as const;
 export type CompiledEntityArtifactType =
   | "core"
+  | "runtime_contract"
   | "operation"
   | "presentation_surface"
   | "presentation_section"
@@ -125,6 +127,7 @@ const compiledKeyPattern = /^[a-z][a-z0-9_.-]{0,126}$/;
 const compiledArtifactKeyPattern = /^[A-Za-z][A-Za-z0-9_.-]{0,126}(?:\/[A-Za-z][A-Za-z0-9_.-]{0,126})+$/;
 const compiledHashPattern = /^sha256:[a-f0-9]{64}$/;
 const compiledArtifactKeys: Readonly<Record<CompiledEntityArtifactType, ReadonlySet<string>>> = {
+  runtime_contract: new Set(["schema", "schemaVersion", "contractStatus", "artifactType", "artifactKey", "entityCode", "plane", "dependencies", "artifactHash", "descriptor"]),
   core: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","businessContext","capabilities","coreKind","defaultsProfile","defaultsProfileRef","deferredRelations","editRuntimeTier","fieldAccess","fieldDefaults","fields","operationDefaults","ownerBinding","profileKey","projectionPolicy","protections","query","querySafetyLimits","readinessFacts","referencePicker","relationDefaults","relations","serverDependencies","storage","validationAuthority"]),
   operation: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","commentBinding","attachmentBinding","browserProjection","concurrency","consumedBy","disclosureBinding","evaluationContract","handlerBindingStatus","lifecycleBinding","lifecycleOperationBindings","materialization","numberingBinding","operationDefaultsProfile","operationDefaultsProfileRef","operations","policyBindings","policyManifestProjection","printBinding","reasonCodeCatalog","snapshotBinding","transactionOrder","validationDeclarations"]),
   presentation_surface: new Set(["schema","schemaVersion","contractStatus","artifactType","artifactKey","entityCode","plane","dependencies","artifactHash","actions","columns","contextControl","dataAuthority","excludedCapabilities","fieldDiff","header","layout","navigation","pageSizes","policyManifest","queryPresentation","restrictedValues","sections","sort","summaryView","surfaceKey"]),
@@ -174,9 +177,17 @@ export function parseCompiledEntityArtifact(value: unknown): CompiledEntityArtif
   if (value.schema !== COMPILED_ENTITY_ARTIFACT_SCHEMA_V2_DRAFT || value.schemaVersion !== 2)
     throw new PublicationContractError("COMPILED_ENTITY_ARTIFACT_SCHEMA_UNSUPPORTED", "Compiled entity artifact schema is unsupported");
   const artifactType = value.artifactType;
-  if (!(["core", "operation", "presentation_surface", "presentation_section", "flow"] as const).includes(artifactType as never))
+  if (!(["core", "runtime_contract", "operation", "presentation_surface", "presentation_section", "flow"] as const).includes(artifactType as never))
     throw new PublicationContractError("COMPILED_ENTITY_ARTIFACT_TYPE_UNSUPPORTED", "Compiled entity artifact type is unsupported");
   const type = artifactType as CompiledEntityArtifactType;
+  if (type === "runtime_contract" && (
+    value.artifactKey !== `${String(value.entityCode)}/runtime` ||
+    !isRecord(value.descriptor) ||
+    value.descriptor.schema !== "athyper.entity-runtime-descriptor/1.0" ||
+    value.descriptor.entityCode !== value.entityCode || value.descriptor.planeKey !== value.plane ||
+    !Array.isArray(value.dependencies) || !value.dependencies.includes(`${String(value.entityCode)}/core`) ||
+    !value.dependencies.includes(`${String(value.entityCode)}/operation`)
+  )) throw new PublicationContractError("COMPILED_ENTITY_ARTIFACT_INVALID", "Invalid compiled server-runtime contract");
   if(type === "core" && value.capabilities !== undefined) {
     if(!isRecord(value.capabilities)) throw new PublicationContractError("ENTITY_CAPABILITY_INVALID", `${String(value.artifactKey)}.capabilities must be an object`);
     const known = new Set(["comments","attachments","audit","customFields","lifecycle","numbering","print","snapshot"]);
@@ -229,7 +240,7 @@ export function parseCompiledEntityReleaseEnvelope(value: unknown): CompiledEnti
   const artifacts = compiledArray(value.artifacts, "artifacts").map((entry) => {
     if (!isRecord(entry)) throw new PublicationContractError("COMPILED_ENTITY_RELEASE_INVALID", "Compiled entity release artifact is invalid");
     const type = entry.artifactType;
-    if (!(["core", "operation", "presentation_surface", "presentation_section", "flow"] as const).includes(type as never))
+    if (!(["core", "runtime_contract", "operation", "presentation_surface", "presentation_section", "flow"] as const).includes(type as never))
       throw new PublicationContractError("COMPILED_ENTITY_RELEASE_INVALID", "Compiled entity release artifact type is invalid");
     return Object.freeze({ artifactKey: compiledArtifactKey(entry.artifactKey, "release artifact key"), artifactType: type as CompiledEntityArtifactType, entityCode: compiledKey(entry.entityCode, "release artifact entity"), ref: typeof entry.ref === "string" && entry.ref.endsWith(".json") ? entry.ref : (() => { throw new PublicationContractError("COMPILED_ENTITY_RELEASE_INVALID", "release artifact ref is invalid"); })(), hash: compiledHash(entry.hash, "release artifact hash") });
   });
@@ -283,6 +294,7 @@ export function validateCompiledEntityRelease(
       const sources = new Set([
         ...compiledReferences(artifact.content, "sourceObject"),
         ...compiledReferences(artifact.content, "primaryObject"),
+        ...compiledReferences(artifact.content, "readObject"),
         ...compiledReferences(artifact.content, "sourceObjects"),
       ]);
       for (const source of sources)
@@ -366,6 +378,7 @@ export function parsePublicationArtifactEnvelope(value: unknown): PublicationArt
   } else if (value.artifactKind === "compiled_entity_runtime") {
     try {
       assertCompiledEntityRuntimePublication(value.payload as unknown as CompiledEntityRuntimeProjectionV2);
+      compiledPublicationTenant(value.publicationKey, value.payload as unknown as CompiledEntityRuntimeProjectionV2);
     } catch (error) {
       if (error instanceof PublicationContractError) throw error;
       throw new PublicationContractError("ARTIFACT_PAYLOAD_INVALID", "Compiled entity runtime payload is required");

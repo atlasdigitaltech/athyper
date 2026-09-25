@@ -93,24 +93,20 @@ BEGIN
         REVOKE ALL ON master.mv_company_postable_account FROM athyperapp;
         GRANT SELECT ON master.v_company_postable_account TO athyperapp;
         GRANT SELECT, INSERT, UPDATE
-            ON master.bank_account_link,
+            ON master.payment_instrument, master.payment_instrument_link,
                master.bank_account_house_config,
                master.bank_account_house_payment_method
             TO athyperapp;
         GRANT INSERT, UPDATE ON master.bank_account TO athyperapp;
         GRANT SELECT (
-            id, tenant_id, code, name, bank_institution_id, bank_branch_id, provisional_bank_reference_id,
-            account_holder_name, account_id_type, account_last4,
-            currency_code, bic_override, bank_name_override,
-            bank_country_override, account_nature, provider_account_ref,
-            correspondent_bank_institution_id, is_verified, verified_at,
-            verified_by, verification_method, metadata, status, is_active,
-            status_changed_at, status_changed_by,
+            id, tenant_id, bank_institution_id, bank_branch_id, provisional_bank_reference_id,
+            account_holder_name, account_id_type, account_last4, currency_code, bic_override,
+            account_nature, provider_account_ref, correspondent_bank_institution_id, metadata,
             created_at, created_by, updated_at, updated_by
         ) ON master.bank_account TO athyperapp;
         GRANT SELECT ON
             master.v_bank_account_resolved,
-            master.v_bank_account_link_resolved
+            master.v_payment_instrument_link_resolved
             TO athyperapp;
         GRANT SELECT, INSERT ON master.payment_term TO athyperapp;
         GRANT UPDATE (
@@ -166,7 +162,7 @@ BEGIN
             TO athyperapp;
         GRANT EXECUTE ON FUNCTION master.fn_refresh_mv_cpa()
             TO athyperapp;
-        GRANT EXECUTE ON FUNCTION master.end_bank_account_link(
+        GRANT EXECUTE ON FUNCTION master.end_payment_instrument_link(
             uuid, uuid, date, uuid
         ) TO athyperapp;
         GRANT EXECUTE ON FUNCTION master.activate_payment_term(
@@ -216,7 +212,6 @@ BEGIN
             master.business_partner_governance_relation,
             master.business_partner_identifier,
             master.business_partner_tax_registration,
-            master.business_partner_commodity_capability,
             master.business_partner_industry_classification,
             master.business_partner_operating_organization_assignment,
             master.company_code_supplier_profile,
@@ -235,7 +230,6 @@ BEGIN
             master.business_partner_governance_relation,
             master.business_partner_identifier,
             master.business_partner_tax_registration,
-            master.business_partner_commodity_capability,
             master.business_partner_industry_classification,
             master.business_partner_operating_organization_assignment,
             master.company_code_supplier_profile,
@@ -448,8 +442,7 @@ BEGIN
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
         REVOKE UPDATE ON master.business_partner,master.supplier,master.customer,
             master.business_partner_relationship FROM athyperapp;
-        GRANT UPDATE(name,legal_form,registration_country_code,
-            incorporation_date,website_url,parent_business_partner_id,description,metadata,updated_at,updated_by)
+        GRANT UPDATE(name,website_url,description,metadata,updated_at,updated_by)
             ON master.business_partner TO athyperapp;
         GRANT UPDATE(supplier_type,metadata,updated_at,updated_by) ON master.supplier TO athyperapp;
         GRANT UPDATE(customer_type,metadata,updated_at,updated_by) ON master.customer TO athyperapp;
@@ -459,8 +452,7 @@ BEGIN
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
         REVOKE UPDATE ON master.business_partner,master.supplier,master.customer,
             master.business_partner_relationship FROM athyperadmin;
-        GRANT UPDATE(name,legal_form,registration_country_code,
-            incorporation_date,website_url,parent_business_partner_id,description,metadata,updated_at,updated_by)
+        GRANT UPDATE(name,website_url,description,metadata,updated_at,updated_by)
             ON master.business_partner TO athyperadmin;
         GRANT UPDATE(supplier_type,metadata,updated_at,updated_by) ON master.supplier TO athyperadmin;
         GRANT UPDATE(customer_type,metadata,updated_at,updated_by) ON master.customer TO athyperadmin;
@@ -477,12 +469,28 @@ DO $$ BEGIN
 END $$;
 
 REVOKE ALL ON FUNCTION master.command_materialize_mesh_profile_change_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION master.fn_pin_business_partner_child_activation(uuid,uuid,jsonb,boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION master.fn_pin_business_partner_child_activation(uuid,uuid,jsonb,boolean) TO athyperapp,athyperadmin;
 GRANT EXECUTE ON FUNCTION master.command_materialize_mesh_profile_change_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp,athyperadmin;
 
 REVOKE ALL ON FUNCTION master.fn_materialize_business_partner_case_relationships() FROM PUBLIC;
 
+-- Core registration uses the identity-only materializer. The existing service
+-- authorizer and independently approved, contract-pinned case remain mandatory.
+REVOKE ALL ON FUNCTION master.command_materialize_business_partner_registration_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+  GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_registration_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp;
+ END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+  GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_registration_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin;
+ END IF;
+END $$;
+
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
  GRANT SELECT,INSERT ON master.bank_provisional_reference TO athyperapp;
+ -- Governed checker resolution only; submitted identity and tenant remain immutable to the command.
+ GRANT UPDATE(status,resolved_institution_id,resolved_branch_id) ON master.bank_provisional_reference TO athyperapp;
  END IF;
 END $$;

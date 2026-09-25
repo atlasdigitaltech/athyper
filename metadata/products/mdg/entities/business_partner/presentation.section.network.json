@@ -21,7 +21,7 @@
   "coreRef": "business_partner/core.json",
   "fieldBindings": [],
   "authorization": {
-    "viewPermission": "neon.relationship.business_partner_network.read",
+    "viewPermission": "neon.relationship.bp_target.network_read",
     "fieldPermissions": [],
     "discoverableWhenDenied": false,
     "enforceBeforeDataQuery": true

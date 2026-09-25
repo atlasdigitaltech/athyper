@@ -218,6 +218,14 @@ Global Search federates supported authorized providers for pages, records, Wiki 
 
 Atlas displays its current record/business scope, cites accessible sources/revisions and requires explicit authorized execution for publishing or changing content.
 
+### 8.1 Activity center
+
+Notifications and Inbox share panel tabs, filter controls, item presentation, theme tokens and empty/error vocabulary across the drawer and full pages. An item separates its human-readable title, authorized record identity, summary, timestamp/status and primary destination. Notifications use View comment/View record; workflow items use the owning provider's review/task destination. A generic Complete action must not substitute for a domain approval command.
+
+Resolve destinations from authorized record services and published route metadata, preserving work-item/attempt or comment coordinates. Do not make arbitrary message-body URLs clickable. Deleted/inaccessible records or comments show an unavailable state without stale sensitive snippets. Notification dismissal never completes a task.
+
+Preferences open from a header action rather than preceding the activity feed. Refresh preserves loaded page depth and browsing context; count availability and partial results remain explicit. The shared component implementation and local verification are described in [Activity center UX review](activity-center-ux-review.md). The accepted [published collection build plan](metadata-driven-activity-center-build-plan.md) extends Business Partner list reuse to Activity center in Neon, Mesh and Studio, with Studio backend publication first and authoring screens later.
+
 ## 9. Package and application structure
 
 Keep one monorepo, three thin deployable apps and shared packages compiled into each artifact. Shared packages are not remote runtime services. App-to-app separation does not require microfrontends or backend service splitting.

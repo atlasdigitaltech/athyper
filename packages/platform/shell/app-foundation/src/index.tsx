@@ -14,15 +14,32 @@ import { createHttpClient, ApiTransportError, type ExperienceBootstrap, type Exp
 import { getBrowserQueryClient, PlatformQueryProvider, PrincipalQueryLifecycle, type DehydratedState, type QueryClient } from "@athyper/platform-query";
 import { AccessProvider, createAccessSnapshot, type AccessDiagnostic } from "@athyper/platform-shell-runtime";
 import { validateSurfaceOpen, type SurfaceFrame, type SurfaceKind } from "@athyper/platform-surface-kit";
-import { DENSITY_STORAGE_KEY, THEME_STORAGE_KEY, type ColorMode } from "@athyper/platform-theme/tokens";
+import { DEFAULT_THEME_FAMILY, DENSITY_STORAGE_KEY, isThemeFamily, THEME_FAMILY_STORAGE_KEY, THEME_STORAGE_KEY, type ColorMode, type ThemeFamily } from "@athyper/platform-theme/tokens";
 import { ToastProvider, useToasts } from "./toasts";
 export { useToasts } from "./toasts";
 import * as React from "react";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 export type AppearancePreference = Partial<Pick<ExperienceProfile, "appearanceMode" | "densityCode">>;
-export interface AppearanceProfileHandle { readonly profile: ExperienceProfile; readonly setPreference: (patch: AppearancePreference) => void; }
+export interface AppearanceProfileHandle {
+  readonly profile: ExperienceProfile;
+  readonly setPreference: (patch: AppearancePreference) => void;
+  /** Design system (color palette) choice; client-only, not part of the server-backed profile. */
+  readonly themeFamily: ThemeFamily;
+  readonly setThemeFamily: (family: ThemeFamily) => void;
+}
 const AppearanceContext = createContext<AppearanceProfileHandle | undefined>(undefined);
+function readThemeFamilyPreference(): ThemeFamily {
+  try {
+    const stored = localStorage.getItem(THEME_FAMILY_STORAGE_KEY);
+    return isThemeFamily(stored) ? stored : DEFAULT_THEME_FAMILY;
+  } catch { return DEFAULT_THEME_FAMILY; }
+}
+function writeThemeFamilyPreference(family: ThemeFamily): void {
+  try { localStorage.setItem(THEME_FAMILY_STORAGE_KEY, family); } catch { /* Keep the in-memory choice for this session. */ }
+  /** Read server-side by auth-bff's requestThemeFamily so the KC login page opens matching this choice. */
+  try { document.cookie = `athyper_theme_family=${family}; Path=/; Max-Age=31536000; SameSite=Lax`; } catch { /* Non-fatal; login page falls back to its own default. */ }
+}
 /** Same keys the blocking ThemeScript reads before first paint (see @athyper/platform-theme); keep them in sync to avoid a themed-then-flash-to-light reload. */
 function storedColorMode(mode: ExperienceProfile["appearanceMode"]): ColorMode | undefined {
   if (mode === "high_contrast") return "high-contrast";
@@ -124,6 +141,7 @@ export function AppFoundationProviders(props: AppFoundationProvidersProps) {
 
 function AppearanceProvider({ profile, children }: { readonly profile: ExperienceProfile; readonly children: ReactNode }) {
   const [preference, setPreferenceState] = useState<AppearancePreference>(() => (typeof window === "undefined" ? {} : readAppearancePreference()));
+  const [themeFamily, setThemeFamilyState] = useState<ThemeFamily>(() => (typeof window === "undefined" ? DEFAULT_THEME_FAMILY : readThemeFamilyPreference()));
   const effectiveProfile = useMemo(() => Object.freeze({ ...profile, ...preference }), [profile, preference]);
   useLayoutEffect(() => {
     const root = document.documentElement;
@@ -133,6 +151,7 @@ function AppearanceProvider({ profile, children }: { readonly profile: Experienc
       const mode = resolveProfileColorMode(effectiveProfile.appearanceMode, dark.matches, contrast.matches);
       root.dataset.theme = mode;
       root.dataset.density = effectiveProfile.densityCode;
+      root.dataset.themeFamily = themeFamily;
       root.style.colorScheme = mode === "dark" || mode === "high-contrast" ? "dark" : "light";
     };
     apply();
@@ -143,12 +162,16 @@ function AppearanceProvider({ profile, children }: { readonly profile: Experienc
       dark.removeEventListener("change", apply);
       contrast.removeEventListener("change", apply);
     };
-  }, [effectiveProfile.appearanceMode, effectiveProfile.densityCode]);
+  }, [effectiveProfile.appearanceMode, effectiveProfile.densityCode, themeFamily]);
   const setPreference = useCallback((patch: AppearancePreference) => {
     writeAppearancePreference(patch);
     setPreferenceState((current) => Object.freeze({ ...current, ...patch }));
   }, []);
-  const handle = useMemo(() => Object.freeze({ profile: effectiveProfile, setPreference }), [effectiveProfile, setPreference]);
+  const setThemeFamily = useCallback((family: ThemeFamily) => {
+    writeThemeFamilyPreference(family);
+    setThemeFamilyState(family);
+  }, []);
+  const handle = useMemo(() => Object.freeze({ profile: effectiveProfile, setPreference, themeFamily, setThemeFamily }), [effectiveProfile, setPreference, themeFamily, setThemeFamily]);
   return <AppearanceContext.Provider value={handle}>{children}</AppearanceContext.Provider>;
 }
 

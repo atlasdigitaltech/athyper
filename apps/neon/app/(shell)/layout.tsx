@@ -1,4 +1,4 @@
-import { NeonShell } from "@athyper/product-neon-shell";
+import { NeonRouteShell as NeonShell } from "@/lib/neon-route-shell";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { loadProtectedAppBootstrap } from "@/lib/bootstrap";

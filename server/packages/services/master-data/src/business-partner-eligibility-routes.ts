@@ -124,6 +124,7 @@ export function registerBusinessPartnerEligibilityRoutes(
             body["commodityCapabilityId"],
             "commodityCapabilityId",
           ),
+          commodityClassificationId: uuidOptional(body["commodityClassificationId"], "commodityClassificationId"),
           qualificationTypeCode: required(
             body["qualificationTypeCode"],
             "qualificationTypeCode",

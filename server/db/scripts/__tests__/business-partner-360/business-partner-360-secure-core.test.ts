@@ -8,7 +8,7 @@ const read = (path: string) => readFile(resolve(root, path), "utf8");
 
 test("BS360-02 keeps summary reads bounded, masked, tenant-bound, and owner-aware", async () => {
   const repository = await read(
-    "packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+    "packages/services/master-data/src/business-partner/record/repository.ts",
   );
   assert.match(repository, /tenant_id=\$\{input\.tenantId\}::uuid/);
   assert.match(repository, /operating_organization_company_assignment/);
@@ -24,8 +24,8 @@ test("BS360-02 keeps summary reads bounded, masked, tenant-bound, and owner-awar
 
 test("BS360-02 wires safe routes, compatibility, and an explicit relay allowlist", async () => {
   const [routes, contracts, legacy, relay, host] = await Promise.all([
-    read("packages/services/master-data/src/business-partner-360-routes.ts"),
-    read("packages/services/master-data/src/business-partner-360-route-contracts.ts"),
+    read("packages/services/master-data/src/business-partner/legacy-360/routes.ts"),
+    read("packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts"),
     read(
       "packages/services/master-data/src/business-partner-request-routes.ts",
     ),
@@ -59,21 +59,24 @@ test("BS360-02 wires safe routes, compatibility, and an explicit relay allowlist
   assert.match(host, /createPermissionAuthorizer/);
 });
 
-test("BS360-02 ships a dark manifest-driven shell with deterministic cancellation-safe state", async () => {
-  const [shell, client, entry, page] = await Promise.all([
+test("BS360-02 routes records to the shared runtime with cancellation-safe state", async () => {
+  const [shell, client, entry, page, resource, url, location] = await Promise.all([
     read(
-      "../packages/planes/neon/business-partner/src/360/business-partner-360.tsx",
+      "../packages/platform/entity/runtime/form-detail/src/record/entity-record-page.tsx",
     ),
     read(
-      "../packages/planes/neon/business-partner/src/360/business-partner-360-client.ts",
+      "../packages/planes/neon/entity-extensions/src/business-partner/clients/business-partner-360-client.ts",
     ),
-    read("../packages/planes/neon/business-partner/src/index.tsx"),
+    read("../apps/neon/lib/entity-record-adapters.tsx"),
     read("../apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx"),
+    read("../packages/platform/entity/runtime/form-detail/src/use-section-resource.ts"),
+    read("../packages/platform/entity/runtime/form-detail/src/record/record-url-state.ts"),
+    read("../packages/platform/entity/runtime/form-detail/src/record/write-record-location.ts"),
   ]);
-  assert.match(shell, /AbortController/);
+  assert.match(resource, /AbortController/);
   assert.match(shell, /popstate/);
-  assert.match(shell, /pushState/);
-  assert.match(shell, /replaceState/);
+  assert.match(location, /pushState/);
+  assert.match(location, /replaceState/);
   for (const coordinate of [
     "section",
     "roleLens",
@@ -82,13 +85,15 @@ test("BS360-02 ships a dark manifest-driven shell with deterministic cancellatio
     "legalEntityId",
     "asOf",
   ])
-    assert.match(shell, new RegExp(coordinate));
+    assert.match(url, new RegExp(coordinate));
   assert.match(client, /authEpoch/);
-  assert.match(client, /75\*1024/);
+  assert.match(client, /75\s*\*\s*1024/);
   assert.match(client, /bootstrap contains a restricted field/);
-  assert.match(shell, /summary\.sections\.map/);
-  assert.match(entry, /useFeature\("neon\.business_partner\.view_360"\)/);
-  assert.match(page, /BusinessPartnerRecord/);
+  assert.match(shell, /EntityRuntimeWorkspace/);
+  assert.match(entry, /resolveEntityRecordAdapter/);
+  assert.match(entry, /<EntityRecordPage/);
+  assert.match(page, /redirectEntityRecord/);
+  assert.doesNotMatch(entry + page, /BusinessPartner360Shell/);
 });
 
 test("BS360-00 locks the permission catalog and DDL manifest", async () => {

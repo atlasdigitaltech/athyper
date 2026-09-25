@@ -204,10 +204,10 @@
   --a-primary: color-mix(in srgb, var(--a-brand) 32%, white);
   --a-primary-foreground: color-mix(in srgb, var(--a-brand) 24%, black);
   --a-primary-hover: var(--a-brand-hover);
-  --a-selection-strong: var(--a-primary);
-  --a-selection-strong-foreground: var(--a-primary-foreground);
-  --a-selection-subtle: var(--a-brand-soft);
-  --a-selection-subtle-foreground: var(--a-primary);
+  --a-selection-strong: #17345c;
+  --a-selection-strong-foreground: #b9d4ff;
+  --a-selection-subtle: #17345c;
+  --a-selection-subtle-foreground: #b9d4ff;
   --a-panel-background: var(--a-surface);
   --a-panel-header-background: var(--a-surface-raised);
   --a-panel-toolbar-background: var(--a-muted);
@@ -302,6 +302,118 @@
   --a-story-surface-active: #000000;
   --a-story-selection-border: #ffff00;
   color-scheme: dark;
+}
+
+/* Atlas Mono: danger/warning/success/focus intentionally inherit from the blocks above. */
+:root[data-theme-family="atlas-mono"] { --a-theme-family: atlas-mono; }
+:root[data-theme-family="atlas-mono"][data-theme="light"], :root[data-theme-family="atlas-mono"] {
+  --a-background: #fafafa;
+  --a-foreground: #1a1a1a;
+  --a-surface: #ffffff;
+  --a-surface-raised: #ffffff;
+  --a-muted: #f0f0f0;
+  --a-muted-foreground: #595959;
+  --a-border: #d9d9d9;
+  --a-input: #a6a6a6;
+  --a-primary: var(--a-brand);
+  --a-primary-foreground: var(--a-brand-foreground);
+  --a-primary-hover: var(--a-brand-hover);
+  --a-selection-strong: var(--a-primary);
+  --a-selection-strong-foreground: var(--a-primary-foreground);
+  --a-selection-subtle: var(--a-brand-soft);
+  --a-selection-subtle-foreground: var(--a-primary);
+  --a-panel-background: var(--a-surface);
+  --a-panel-header-background: var(--a-surface);
+  --a-panel-toolbar-background: var(--a-muted);
+  --a-danger: #b42318;
+  --a-danger-foreground: #ffffff;
+  --a-warning: #b54708;
+  --a-warning-foreground: #ffffff;
+  --a-success: #067647;
+  --a-success-foreground: #ffffff;
+  --a-focus: #2e90fa;
+  --a-scrim: rgb(15 23 42 / 0.58);
+  --a-contrast: #151515;
+  --a-contrast-foreground: #ffffff;
+  --a-warning-subtle: #fff8eb;
+  --a-warning-subtle-foreground: #172033;
+  --a-danger-subtle: #fef3f2;
+  --a-danger-subtle-foreground: #172033;
+  --a-success-subtle: #ecfdf3;
+  --a-success-subtle-foreground: #172033;
+  --a-brand: #1a1a1a;
+  --a-brand-foreground: #FFFFFF;
+  --a-brand-hover: color-mix(in srgb, var(--a-brand) 82%, black);
+  --a-brand-soft: color-mix(in srgb, var(--a-brand) 8%, white);
+  --a-story-start: color-mix(in srgb, var(--a-brand) 24%, black);
+  --a-story-end: color-mix(in srgb, var(--a-brand) 64%, black);
+  --a-story-foreground: var(--a-brand-foreground);
+  --a-story-muted: color-mix(in srgb, var(--a-brand-foreground) 78%, transparent);
+  --a-story-eyebrow: color-mix(in srgb, var(--a-brand) 38%, white);
+  --a-story-wave: color-mix(in srgb, var(--a-brand) 55%, white);
+  --a-story-wave-bright: color-mix(in srgb, var(--a-brand) 38%, white);
+  --a-story-glow: color-mix(in srgb, var(--a-brand) 30%, transparent);
+  --a-story-dot: color-mix(in srgb, var(--a-brand-foreground) 70%, transparent);
+  --a-story-border: color-mix(in srgb, var(--a-story-foreground) 14%, transparent);
+  --a-story-surface: color-mix(in srgb, var(--a-story-foreground) 6%, transparent);
+  --a-story-surface-hover: color-mix(in srgb, var(--a-story-foreground) 10%, transparent);
+  --a-story-surface-active: color-mix(in srgb, var(--a-story-wave) 22%, transparent);
+  --a-story-selection-border: color-mix(in srgb, var(--a-story-wave-bright) 38%, transparent);
+}
+
+:root[data-theme-family="atlas-mono"][data-theme="dark"] {
+  --a-background: #121212;
+  --a-foreground: #ededed;
+  --a-surface: #1c1c1c;
+  --a-surface-raised: #242424;
+  --a-muted: #262626;
+  --a-muted-foreground: #a6a6a6;
+  --a-border: #3d3d3d;
+  --a-input: #595959;
+  --a-primary: color-mix(in srgb, var(--a-brand) 32%, white);
+  --a-primary-foreground: color-mix(in srgb, var(--a-brand) 24%, black);
+  --a-primary-hover: var(--a-brand-hover);
+  --a-selection-strong: #333333;
+  --a-selection-strong-foreground: #f0f0f0;
+  --a-selection-subtle: #333333;
+  --a-selection-subtle-foreground: #f0f0f0;
+  --a-panel-background: var(--a-surface);
+  --a-panel-header-background: var(--a-surface-raised);
+  --a-panel-toolbar-background: var(--a-muted);
+  --a-danger: #f97066;
+  --a-danger-foreground: #230402;
+  --a-warning: #fec84b;
+  --a-warning-foreground: #241400;
+  --a-success: #47cd89;
+  --a-success-foreground: #031b12;
+  --a-focus: #84caff;
+  --a-scrim: rgb(0 0 0 / 0.72);
+  --a-contrast: #f4f6f8;
+  --a-contrast-foreground: #11151c;
+  --a-warning-subtle: #2b2110;
+  --a-warning-subtle-foreground: #f5f7fa;
+  --a-danger-subtle: #2d1512;
+  --a-danger-subtle-foreground: #f5f7fa;
+  --a-success-subtle: #0c2418;
+  --a-success-subtle-foreground: #f5f7fa;
+  --a-brand: #e0e0e0;
+  --a-brand-foreground: #121212;
+  --a-brand-hover: color-mix(in srgb, var(--a-brand) 42%, white);
+  --a-brand-soft: color-mix(in srgb, var(--a-brand) 52%, black);
+  --a-story-start: color-mix(in srgb, var(--a-brand) 24%, black);
+  --a-story-end: color-mix(in srgb, var(--a-brand) 64%, black);
+  --a-story-foreground: var(--a-brand-foreground);
+  --a-story-muted: color-mix(in srgb, var(--a-brand-foreground) 78%, transparent);
+  --a-story-eyebrow: color-mix(in srgb, var(--a-brand) 38%, white);
+  --a-story-wave: color-mix(in srgb, var(--a-brand) 55%, white);
+  --a-story-wave-bright: color-mix(in srgb, var(--a-brand) 38%, white);
+  --a-story-glow: color-mix(in srgb, var(--a-brand) 30%, transparent);
+  --a-story-dot: color-mix(in srgb, var(--a-brand-foreground) 70%, transparent);
+  --a-story-border: color-mix(in srgb, var(--a-story-foreground) 14%, transparent);
+  --a-story-surface: color-mix(in srgb, var(--a-story-foreground) 6%, transparent);
+  --a-story-surface-hover: color-mix(in srgb, var(--a-story-foreground) 10%, transparent);
+  --a-story-surface-active: color-mix(in srgb, var(--a-story-wave) 22%, transparent);
+  --a-story-selection-border: color-mix(in srgb, var(--a-story-wave-bright) 38%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

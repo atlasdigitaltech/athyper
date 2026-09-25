@@ -26,6 +26,7 @@ import type {
 export interface BusinessPartnerRequestRepository<Transaction = unknown> {
   /** Compare governed import retry with immutable creation evidence, not an enriched/current view. */
   matchesGovernedImportCreation?(input: {readonly context: CreateBusinessPartnerRequestCommand["context"]; readonly command: Omit<CreateBusinessPartnerRequestCommand,"context">; readonly schema: BusinessPartnerRequestSchemaReference; readonly existing: BusinessPartnerRequest}, transaction: Transaction): Promise<boolean>;
+  matchesCoreRegistrationCreation?(input: {readonly context: CreateBusinessPartnerRequestCommand["context"]; readonly command: Omit<CreateBusinessPartnerRequestCommand,"context">; readonly schema: BusinessPartnerRequestSchemaReference; readonly existing: BusinessPartnerRequest}, transaction: Transaction): Promise<boolean>;
   findByIdempotencyKey(
     tenantId: string,
     idempotencyKey: string,

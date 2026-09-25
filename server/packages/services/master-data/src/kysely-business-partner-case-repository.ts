@@ -1,6 +1,10 @@
 import { prepareSupplierActivation } from "./supplier-activation-readiness.js";
+import { registrationMaterializer } from "./business-partner/workflow/registration-materializer.js";
+import { parseChildActivation } from "./business-partner-child-activation.js";
 import { linkRequestCaptureDocuments } from "./business-partner-request-capture.js";
 import { createHash, randomUUID } from "node:crypto";
+import { validateRegistrationIdentity } from "./business-partner-registration-identity.js";
+import { PartnerIdentityContractError } from "./business-partner/identity/contract";
 import type {
   BusinessPartnerAggregate,
   BusinessPartnerRequest,
@@ -78,6 +82,25 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
       transaction,
     );
     return rows.rows.length === 1;
+  }
+  async matchesCoreRegistrationCreation(input: Parameters<NonNullable<BusinessPartnerRequestRepository<Tx>["matchesCoreRegistrationCreation"]>>[0], transaction: Tx): Promise<boolean> {
+    const {command,context,existing,schema} = input;
+    if (Object.keys(command.extensions ?? {}).length) return false;
+    if (command.kind !== "new_partner" || command.requestedRole || command.targetBusinessPartnerId || command.operatingOrganizationId || command.companyCodeId || command.source.kind !== "manual" || Object.entries(command.source).some(([key,value]) => key !== "kind" && value !== undefined) || (command.registrationMode ?? "direct") !== "direct" || existing.tenantId !== context.tenantId || existing.createdBy !== context.principalId) return false;
+    // Compare the immutable creation snapshot, not the evolving case projection.
+    // Storage supplies the generated partner code and internal channel defaults.
+    const payload = casePayload({...command, extensions: undefined}, existing.requestNo);
+    const result = await sql`SELECT 1 FROM document.entity_case c
+      JOIN document.entity_case_command_evidence e ON e.tenant_id=c.tenant_id AND e.entity_case_id=c.id
+      JOIN snapshot.entity_snapshot s ON s.tenant_id=e.tenant_id AND s.snapshot_id=e.result_snapshot_id
+      WHERE c.tenant_id=${context.tenantId}::uuid AND c.id=${existing.id}::uuid
+        AND c.idempotency_key=${command.idempotencyKey} AND c.created_by=${context.principalId}::uuid
+        AND c.form_template_release_id=${schema.releaseId ?? null}::uuid
+        AND c.form_template_release_no=${schema.version}
+        AND c.form_template_hash=${schema.hash}
+        AND e.command_code='entity.case.draft.write' AND e.before_version=0
+        AND (CASE WHEN s.payload_json->'relationshipProposals'='{}'::jsonb THEN s.payload_json-'relationshipProposals' ELSE s.payload_json END)=${JSON.stringify(payload)}::jsonb`.execute(transaction);
+    return result.rows.length === 1;
   }
   async findByIdempotencyKey(tenantId: string, key: string, transaction: Tx) {
     const row = await this.readOne(
@@ -199,8 +222,9 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     ].includes(input.command.kind);
     if (isChange) {
       targetIdentity = (
-        await sql<Row>`SELECT * FROM master.business_partner
-        WHERE tenant_id=${input.tenantId}::uuid AND id=${input.command.targetBusinessPartnerId}::uuid FOR SHARE`.execute(
+        await sql<Row>`SELECT identity.* FROM master.business_partner bp
+        JOIN master.business_partner_identity_current identity ON identity.tenant_id=bp.tenant_id AND identity.id=bp.id
+        WHERE bp.tenant_id=${input.tenantId}::uuid AND bp.id=${input.command.targetBusinessPartnerId}::uuid FOR SHARE OF bp`.execute(
           transaction,
         )
       ).rows[0];
@@ -212,7 +236,10 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         );
     }
     let meshResolution: Row | undefined;
-    if (input.command.kind === "amend_partner") {
+    const childActivation = input.command.proposedPayload["childActivation"];
+    if (childActivation !== undefined && (input.command.kind !== "amend_partner" || input.command.source.kind !== "manual" || input.command.extensions))
+      throw new MasterDataError(400, "BP_CHILD_ACTIVATION_INVALID", "Child activation requires a manual amendment without new child proposals");
+    if (input.command.kind === "amend_partner" && childActivation === undefined) {
       if (input.command.source.kind !== "mesh")
         throw new MasterDataError(
           409,
@@ -246,6 +273,16 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         ),
         priorStatus: String(targetIdentity["status"]),
       });
+    if (childActivation !== undefined) {
+      const proposal = parseChildActivation(childActivation);
+      if (input.command.proposedPayload["meshChangeResolutionId"] ||
+          Object.keys(input.command.proposedPayload).some(key => !["childActivation", "reasonCode"].includes(key)) ||
+          !/^[A-Z][A-Z0-9_.-]{2,126}$/.test(String(input.command.proposedPayload["reasonCode"] ?? "")))
+        throw new MasterDataError(400, "BP_CHILD_ACTIVATION_INVALID", "Child activation requires only selected records and a reason code");
+      const pinned = (await sql<{ items: unknown }>`SELECT master.fn_pin_business_partner_child_activation(
+        ${input.tenantId}::uuid,${input.command.targetBusinessPartnerId}::uuid,${JSON.stringify(proposal.items)}::jsonb,false) items`.execute(transaction)).rows[0];
+      Object.assign(payload, { childActivation: { schema: proposal.schema, items: pinned!.items } });
+    }
     if (meshResolution) {
       const mapping: Record<string, string> = {
         legalName: "name",
@@ -281,8 +318,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
         await sql<Row>`SELECT projection.current_snapshot_id,profile.preferred_remittance_bank_link_id
         FROM control.mesh_bank_account_projection projection
         JOIN control.mesh_business_partner_account_link link ON link.tenant_id=projection.tenant_id AND link.id=projection.account_link_id AND link.status='active'
-        JOIN master.supplier supplier ON supplier.tenant_id=link.tenant_id AND supplier.business_partner_id=link.business_partner_id
-        JOIN master.company_code_supplier_profile profile ON profile.tenant_id=supplier.tenant_id AND profile.supplier_id=supplier.id
+        JOIN master.company_code_supplier_profile profile ON profile.tenant_id=link.tenant_id AND profile.business_partner_id=link.business_partner_id
         WHERE projection.tenant_id=${input.tenantId}::uuid AND projection.id=${input.command.proposedPayload["bankProjectionId"]}::uuid
           AND link.business_partner_id=${input.command.targetBusinessPartnerId}::uuid
           AND profile.id=${input.command.proposedPayload["supplierCompanyProfileId"]}::uuid
@@ -465,7 +501,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
       )
     ).rows[0];
     const bp = (
-      await sql<Row>`SELECT bp.* FROM master.business_partner bp
+      await sql<Row>`SELECT bp.* FROM master.business_partner_identity_current bp
         LEFT JOIN master.business_partner_operating_organization_assignment a
           ON a.tenant_id=bp.tenant_id AND a.business_partner_id=bp.id
          AND a.operating_organization_id=${operatingOrganizationId}::uuid
@@ -492,9 +528,8 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     ]);
     const supplierProfiles =
       await sql<Row>`SELECT profile.* FROM master.company_code_supplier_profile profile
-      JOIN master.supplier supplier ON supplier.tenant_id=profile.tenant_id AND supplier.id=profile.supplier_id
       JOIN master.operating_organization_company_assignment scope ON scope.tenant_id=profile.tenant_id AND scope.company_code_id=profile.company_code_id
-      WHERE profile.tenant_id=${tenantId}::uuid AND supplier.business_partner_id=${businessPartnerId}::uuid
+      WHERE profile.tenant_id=${tenantId}::uuid AND profile.business_partner_id=${businessPartnerId}::uuid
         AND scope.operating_organization_id=${operatingOrganizationId}::uuid AND scope.status='active' AND scope.effective_from<=CURRENT_DATE AND (scope.effective_until IS NULL OR scope.effective_until>CURRENT_DATE) AND profile.status='active'`.execute(
         transaction,
       );
@@ -578,6 +613,8 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     );
     if (!current)
       return null;
+    if (object(current["payload_json"])["childActivation"] || input.proposedPayload["childActivation"] !== undefined)
+      throw new MasterDataError(409, "BP_CHILD_ACTIVATION_IMMUTABLE", "Create a new amendment to change the selected activation rows");
     if (object(current["payload_json"])["meshChangeResolutionId"])
       throw new MasterDataError(
         409,
@@ -653,6 +690,8 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     if (!current || mapCase(current).rowVersion !== input.expectedVersion)
       return null;
     const previous = object(current["payload_json"]);
+    if (previous["childActivation"] || input.proposedPayload["childActivation"] !== undefined)
+      throw new MasterDataError(409, "BP_CHILD_ACTIVATION_IMMUTABLE", "Create a new amendment to change the selected activation rows");
     if (previous["meshChangeResolutionId"])
       throw new MasterDataError(
         409,
@@ -1035,20 +1074,45 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     if (!current) return null;
     if (current["operation_code"] === "activate_supplier")
       return applySupplierActivationCase(input, current, transaction);
+    // Materialized-case retries remain with the authoritative idempotent SQL command.
+    if (current["operation_code"] === "new_partner" && current["status"] === "approved") {
+      const clock = (await sql<{ today: string }>`SELECT CURRENT_DATE::text today`.execute(transaction)).rows[0]!;
+      try {
+        await validateRegistrationIdentity(object(current["payload_json"]), clock.today, async code => {
+          const values = (await sql<{ id: string }>`SELECT v.id::text FROM control.lookup_value v
+            JOIN control.lookup_domain d ON d.code=v.domain_code
+            WHERE v.domain_code='master.legal_form' AND v.code=${code} AND v.status='active' AND d.status='active'
+              AND (v.tenant_id IS NULL OR v.tenant_id=${input.tenantId}::uuid)
+            ORDER BY (v.tenant_id IS NOT NULL) DESC LIMIT 1`.execute(transaction)).rows;
+          return values[0]?.id ?? null;
+        });
+      } catch (error) {
+        if (error instanceof PartnerIdentityContractError)
+          throw new MasterDataError(400, error.code, `Invalid registration identity field: ${error.field}`);
+        throw error;
+      }
+    }
     const change = [
       "change_bank",
       "deactivate",
       "reactivate",
       "archive",
     ].includes(String(current["operation_code"]));
-    const materializer =
+    const materializer = registrationMaterializer({
+      operationCode: current["operation_code"],
+      requestedRole: object(current["payload_json"])["requestedRole"],
+      status: current["status"],
+      materializerCode: current["materializer_code"],
+    }) ?? (
       current["operation_code"] === "amend_partner"
-        ? "master.command_materialize_mesh_profile_change_case"
+        ? object(current["payload_json"])["childActivation"]
+          ? "master.command_materialize_business_partner_change_case"
+          : "master.command_materialize_mesh_profile_change_case"
         : current["operation_code"] === "configure_company"
           ? "master.command_materialize_business_partner_company_case"
           : change
             ? "master.command_materialize_business_partner_change_case"
-            : "master.command_materialize_business_partner_role_case";
+            : "master.command_materialize_business_partner_role_case");
     const raw = (
       await executeCaseCommand(async () =>
         sql<Row>`SELECT * FROM ${sql.raw(materializer)}(
@@ -1087,7 +1151,7 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
                     ? ("partner_reactivated" as const)
                     : request.kind === "archive"
                       ? ("partner_archived" as const)
-                      : ("partner_role_created" as const),
+                      : request.kind === "new_partner" && !role ? ("partner_registered" as const) : ("partner_role_created" as const),
         ...(nullable(raw["bank_verification_id"])
           ? { bankVerificationId: text(raw, "bank_verification_id") }
           : {}),
@@ -1317,6 +1381,7 @@ const CASE_SELECT = `c.*,s.payload_json,s.captured_at snapshot_observed_at,i.id 
   (SELECT e.result_code FROM document.entity_case_command_evidence e WHERE e.tenant_id=c.tenant_id AND e.entity_case_id=c.id AND e.command_code='entity.case.decision' ORDER BY e.recorded_at DESC LIMIT 1) latest_decision,
   (SELECT e.recorded_at FROM document.entity_case_command_evidence e WHERE e.tenant_id=c.tenant_id AND e.entity_case_id=c.id AND e.command_code='entity.case.decision' ORDER BY e.recorded_at DESC LIMIT 1) latest_decision_at,
   (SELECT e.recorded_at FROM document.entity_case_command_evidence e WHERE e.tenant_id=c.tenant_id AND e.entity_case_id=c.id AND e.command_code='entity.case.draft.write' ORDER BY e.recorded_at DESC LIMIT 1) latest_draft_at,
+ (SELECT m.materializer_code FROM document.entity_case_materialization m WHERE m.tenant_id=c.tenant_id AND m.entity_case_id=c.id AND m.status='succeeded' ORDER BY m.attempt_no DESC LIMIT 1) materializer_code,
  (SELECT m.completed_at FROM document.entity_case_materialization m WHERE m.tenant_id=c.tenant_id AND m.entity_case_id=c.id AND m.status='succeeded' ORDER BY m.attempt_no DESC LIMIT 1) applied_at,
  (SELECT m.completed_by FROM document.entity_case_materialization m WHERE m.tenant_id=c.tenant_id AND m.entity_case_id=c.id AND m.status='succeeded' ORDER BY m.attempt_no DESC LIMIT 1) applied_by,
  (SELECT m.result_evidence FROM document.entity_case_command_evidence m WHERE m.tenant_id=c.tenant_id AND m.entity_case_id=c.id AND m.command_code='entity.case.materialize' ORDER BY m.recorded_at DESC LIMIT 1) materialization_evidence`;

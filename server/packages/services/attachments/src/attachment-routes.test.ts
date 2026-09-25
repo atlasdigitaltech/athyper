@@ -386,7 +386,7 @@ describe("attachment route security regressions", () => {
     expect(f.output.status).toBe(200);
     expect(f.attachments.manageFolder).toHaveBeenCalledOnce();
     expect(f.attachments.manageFolder).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ expectedRevision: 1, idempotencyKey: "folder-command-0001", folderId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" }));
-    await f.invoke("/api/attachments/:attachmentId/category", { category: "evidence", ...coordinate });
+    await f.invoke("/api/attachments/:attachmentId/category", { category: "evidence", ...coordinate }, "category-command-0001");
     expect(f.output.status).toBe(204);
     expect(f.attachments.setCategory).toHaveBeenCalledOnce();
     expect(f.authorize).not.toHaveBeenCalled();
@@ -443,7 +443,7 @@ describe("attachment route security regressions", () => {
     await f.invoke("PATCH /api/attachments/:attachmentId", {
       attachmentId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       displayName: "Renamed", expectedSeriesRevision: "2026-09-22T00:00:00Z",
-    });
+    }, "rename-command-0001");
     expect(authorizeCapability).toHaveBeenCalledWith(expect.anything(), "rename",
       expect.objectContaining({ attachmentId }));
     expect(f.attachments.rename).toHaveBeenCalledWith(expect.objectContaining({ attachmentId }), expect.anything());
@@ -463,7 +463,7 @@ describe("attachment route security regressions", () => {
     const f = fixture([], undefined, authorizeCapability);
     await f.invoke("/api/attachments/:attachmentId/category", {
       attachmentId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", entityType: "business_partner", entityId: "record-1", category: "evidence",
-    });
+    }, "category-command-0002");
     expect(authorizeCapability).toHaveBeenCalledWith(expect.anything(), "category", expect.objectContaining({ attachmentId }));
     expect(f.attachments.setCategory).toHaveBeenCalledWith(expect.objectContaining({ attachmentId }), expect.anything());
   });

@@ -1,23 +1,11 @@
 CREATE INDEX business_partner_qualification_partner_idx
     ON control.business_partner_qualification
-       (tenant_id, business_partner_id, partner_role, decision);
+       (tenant_id, business_partner_id, decision);
 CREATE UNIQUE INDEX business_partner_qualification_idempotency_uq
     ON control.business_partner_qualification (tenant_id, idempotency_key);
 CREATE UNIQUE INDEX business_partner_qualification_decision_idempotency_uq
     ON control.business_partner_qualification (tenant_id, decision_idempotency_key)
     WHERE decision_idempotency_key IS NOT NULL;
-CREATE INDEX business_partner_qualification_org_idx
-    ON control.business_partner_qualification
-       (tenant_id, operating_organization_id)
-    WHERE operating_organization_id IS NOT NULL;
-CREATE INDEX business_partner_qualification_company_idx
-    ON control.business_partner_qualification
-       (tenant_id, company_code_id)
-    WHERE company_code_id IS NOT NULL;
-CREATE INDEX business_partner_qualification_capability_idx
-    ON control.business_partner_qualification
-       (tenant_id, commodity_capability_id)
-    WHERE commodity_capability_id IS NOT NULL;
 CREATE INDEX business_partner_qualification_review_due_idx
     ON control.business_partner_qualification
        (tenant_id, next_review_at)
@@ -25,8 +13,7 @@ CREATE INDEX business_partner_qualification_review_due_idx
       AND next_review_at IS NOT NULL;
 CREATE INDEX business_partner_qualification_readiness_idx
     ON control.business_partner_qualification
-       (tenant_id, business_partner_id, partner_role,
-        operating_organization_id, company_code_id,
+       (tenant_id, business_partner_id,
         qualification_type_code, decision, effective_from, effective_until);
 
 CREATE UNIQUE INDEX supplier_preference_designation_idempotency_uq
@@ -64,18 +51,11 @@ CREATE INDEX customer_account_designation_customer_idx
 CREATE INDEX business_partner_block_partner_idx
     ON control.business_partner_block
        (tenant_id, business_partner_id, status, effective_from);
-CREATE INDEX business_partner_block_org_idx
-    ON control.business_partner_block
-       (tenant_id, operating_organization_id)
-    WHERE operating_organization_id IS NOT NULL;
-CREATE INDEX business_partner_block_company_idx
-    ON control.business_partner_block
-       (tenant_id, company_code_id)
-    WHERE company_code_id IS NOT NULL;
 CREATE INDEX business_partner_block_active_operation_idx
-    ON control.business_partner_block
-       (tenant_id, business_partner_id, partner_role_scope, operation_code)
-    WHERE status = 'active';
+ ON control.business_partner_block USING gin(operation_codes) WHERE status='active';
+CREATE INDEX business_partner_decision_scope_block_idx ON control.business_partner_decision_scope(tenant_id,block_id,scope_group) WHERE block_id IS NOT NULL;
+CREATE INDEX business_partner_decision_scope_capacity_idx ON control.business_partner_decision_scope(tenant_id,commercial_capacity_code) WHERE scope_kind='commercial_capacity';
+CREATE INDEX business_partner_decision_scope_country_purpose_idx ON control.business_partner_decision_scope(tenant_id,country_purpose,country_code) WHERE scope_kind='country';
 
 CREATE INDEX subscription_plan_active_pidx
     ON control.subscription_plan (sort_order, code)
@@ -504,7 +484,7 @@ CREATE INDEX external_workforce_rate_card_active_idx
     ON control.external_workforce_rate_card (tenant_id, company_code_id, effective_from, effective_until)
     WHERE status = 'active';
 CREATE INDEX external_workforce_rate_match_idx
-    ON control.external_workforce_rate (tenant_id, rate_card_id, supplier_id, job_id, site_id, worker_classification, effective_from)
+    ON control.external_workforce_rate (tenant_id, rate_card_id, business_partner_id, job_id, site_id, worker_classification, effective_from)
     WHERE status = 'active';
 CREATE INDEX business_partner_decision_scope_authority_idx
 ON control.business_partner_decision_scope

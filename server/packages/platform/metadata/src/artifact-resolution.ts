@@ -15,6 +15,8 @@ import type { PlaneKey } from "@athyper/server-foundation/context";
 export interface CompiledEntityReleaseSource {
   findAdmittedRelease(input: CompiledEntityReleaseCoordinate): Promise<CompiledEntityReleaseEnvelopeV2 | null>;
   findArtifact(input: CompiledEntityArtifactReadCoordinate): Promise<CompiledEntityArtifactV2 | null>;
+  /** Persisted publication identity for a pinned IR; never infer it from its logical releaseId. */
+  findPublicationCoordinate?(input: CompiledEntityResolvedRelease): Promise<Readonly<{ releaseId: string; releaseNo: number }> | null>;
 }
 
 export interface CompiledEntityReleaseCoordinate {
@@ -29,6 +31,8 @@ export interface CompiledEntityReleaseCoordinate {
 }
 
 export interface CompiledEntityArtifactReadCoordinate {
+  /** Carry the admitted tenant/actor through fragment reads, not just head reads. */
+  readonly coordinate: CompiledEntityReleaseCoordinate;
   readonly release: CompiledEntityReleaseEnvelopeV2;
   readonly entry: CompiledEntityReleaseArtifactV2;
 }

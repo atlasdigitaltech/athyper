@@ -208,15 +208,15 @@ COMMENT ON TABLE control.risk_source_config IS
 CREATE TABLE control.business_partner_qualification (
     id                        uuid                             NOT NULL DEFAULT shared.uuidv7(),
     tenant_id                 uuid                             NOT NULL,
+    context_kind text NOT NULL DEFAULT 'standing' CHECK (context_kind IN ('standing','rfp','engagement','contract','project')),
+    context_id uuid,
+    CHECK ((context_kind='standing')=(context_id IS NULL)),
     business_partner_id       uuid                             NOT NULL,
-    partner_role              master.partner_role_d            NOT NULL,
-    role_id                   uuid                             NOT NULL,
-    operating_organization_id uuid,
-    company_code_id           uuid,
-    commodity_capability_id   uuid,
     qualification_type_code   text                             NOT NULL,
     idempotency_key           text                             NOT NULL,
     decision                  control.qualification_decision_d NOT NULL DEFAULT 'pending',
+    conditions jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(conditions)='array'),
+    approved_snapshot_id uuid,
     decision_reason           text,
     risk_assessment_id        uuid,
     effective_from            date,
@@ -266,7 +266,7 @@ CREATE TABLE control.business_partner_qualification (
         CHECK (reviewed_by IS NULL OR reviewed_by <> created_by),
     CONSTRAINT business_partner_qualification_approved_chk
         CHECK (decision NOT IN ('approved', 'conditional')
-               OR approved_at IS NOT NULL),
+               OR (approved_at IS NOT NULL AND approved_snapshot_id IS NOT NULL)),
     CONSTRAINT business_partner_qualification_metadata_chk
         CHECK (jsonb_typeof(metadata) = 'object' AND octet_length(metadata::text) <= 16384),
     CONSTRAINT business_partner_qualification_audit_pair_chk
@@ -413,11 +413,18 @@ COMMENT ON COLUMN control.customer_account_designation.priority_tier IS
 CREATE TABLE control.business_partner_block (
     id                        uuid                           NOT NULL DEFAULT shared.uuidv7(),
     tenant_id                 uuid                           NOT NULL,
+    context_kind text NOT NULL DEFAULT 'standing' CHECK (context_kind IN ('standing','rfp','engagement','contract','project')),
+    context_id uuid,
+    CHECK ((context_kind='standing')=(context_id IS NULL)),
     business_partner_id       uuid                           NOT NULL,
-    partner_role_scope        control.partner_role_scope_d   NOT NULL DEFAULT 'all',
-    operating_organization_id uuid,
-    company_code_id           uuid,
-    operation_code            text                           NOT NULL,
+    operation_codes text[] NOT NULL,
+    restriction_mode text NOT NULL DEFAULT 'scope' CHECK (restriction_mode IN ('scope','target')),
+    target_entity_type text,
+    target_entity_id uuid,
+    target_line_id uuid,
+    scope_sealed boolean NOT NULL DEFAULT false,
+    CHECK ((restriction_mode='scope' AND num_nonnulls(target_entity_type,target_entity_id,target_line_id)=0)
+       OR (restriction_mode='target' AND nullif(btrim(target_entity_type),'') IS NOT NULL AND target_entity_id IS NOT NULL)),
     reason_code               text,
     reason                    text                           NOT NULL,
     effective_from            timestamptz                    NOT NULL DEFAULT now(),
@@ -437,7 +444,7 @@ CREATE TABLE control.business_partner_block (
     CONSTRAINT business_partner_block_pkey PRIMARY KEY (id),
     CONSTRAINT business_partner_block_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT business_partner_block_operation_chk
-        CHECK (operation_code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
+        CHECK (cardinality(operation_codes)>0 AND array_position(operation_codes,NULL) IS NULL),
     CONSTRAINT business_partner_block_reason_code_chk
         CHECK (reason_code IS NULL OR reason_code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
     CONSTRAINT business_partner_block_reason_chk
@@ -2435,7 +2442,7 @@ CREATE TABLE control.business_partner_mutation_evidence (
     CONSTRAINT business_partner_mutation_evidence_pkey PRIMARY KEY(id),
     CONSTRAINT business_partner_mutation_evidence_tenant_id_uq UNIQUE(tenant_id,id),
     CONSTRAINT business_partner_mutation_evidence_kind_chk CHECK(aggregate_kind IN(
-        'business_partner','supplier','customer','business_partner_relationship',
+        'business_partner','business_partner_capability','supplier','customer','business_partner_relationship',
         'qualification','supplier_preference','customer_designation','customer_credit_review')),
     CONSTRAINT business_partner_mutation_evidence_code_chk CHECK(command_code ~ '^[a-z][a-z0-9_.-]{2,126}$'),
     CONSTRAINT business_partner_mutation_evidence_state_chk CHECK(
@@ -2505,6 +2512,11 @@ COMMENT ON TABLE control.customer_lifecycle_event IS 'Immutable audited and idem
 CREATE TABLE control.business_partner_decision_scope (
     id                        uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id                 uuid        NOT NULL,
+    block_id uuid,
+    commodity_classification_id uuid,
+    commercial_capacity_code text CHECK (commercial_capacity_code IN ('supplier','customer')),
+    country_purpose text CHECK (country_purpose IN ('registration','delivery','service_performance')),
+    selection_mode text NOT NULL DEFAULT 'selected' CHECK (selection_mode IN ('all','selected')),
     qualification_id          uuid,
     supplier_preference_id    uuid,
     customer_designation_id   uuid,
@@ -2518,7 +2530,7 @@ CREATE TABLE control.business_partner_decision_scope (
     country_code              character(2),
     tax_jurisdiction_id       uuid,
     organization_unit_id      uuid,
-    effective_from            date        NOT NULL DEFAULT CURRENT_DATE,
+    effective_from            date,
     effective_until           date,
     hierarchy_version         bigint,
     resolution_fingerprint    text,
@@ -2528,21 +2540,29 @@ CREATE TABLE control.business_partner_decision_scope (
     CONSTRAINT business_partner_decision_scope_pkey PRIMARY KEY (id),
     CONSTRAINT business_partner_decision_scope_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT business_partner_decision_scope_authority_chk CHECK (
-        num_nonnulls(qualification_id, supplier_preference_id,
+        num_nonnulls(block_id, qualification_id, supplier_preference_id,
                      customer_designation_id, credit_review_id) = 1),
     CONSTRAINT business_partner_decision_scope_group_chk CHECK (scope_group BETWEEN 1 AND 100),
     CONSTRAINT business_partner_decision_scope_mode_chk CHECK (scope_mode IN ('include','exclude')),
     CONSTRAINT business_partner_decision_scope_kind_chk CHECK (
-        scope_kind IN ('global','operating_organization','company_code','commodity_category',
+        scope_kind IN ('commercial_capacity','commodity_classification','global','operating_organization','company_code','commodity_category',
                        'country','tax_jurisdiction','organization_unit')),
     CONSTRAINT business_partner_decision_scope_target_chk CHECK (
-        (scope_kind='global' AND num_nonnulls(operating_organization_id,company_code_id,commodity_category_id,country_code,tax_jurisdiction_id,organization_unit_id)=0)
-        OR (scope_kind='operating_organization' AND operating_organization_id IS NOT NULL AND num_nonnulls(company_code_id,commodity_category_id,country_code,tax_jurisdiction_id,organization_unit_id)=0)
-        OR (scope_kind='company_code' AND company_code_id IS NOT NULL AND num_nonnulls(operating_organization_id,commodity_category_id,country_code,tax_jurisdiction_id,organization_unit_id)=0)
-        OR (scope_kind='commodity_category' AND commodity_category_id IS NOT NULL AND num_nonnulls(operating_organization_id,company_code_id,country_code,tax_jurisdiction_id,organization_unit_id)=0)
-        OR (scope_kind='country' AND country_code IS NOT NULL AND num_nonnulls(operating_organization_id,company_code_id,commodity_category_id,tax_jurisdiction_id,organization_unit_id)=0)
-        OR (scope_kind='tax_jurisdiction' AND tax_jurisdiction_id IS NOT NULL AND num_nonnulls(operating_organization_id,company_code_id,commodity_category_id,country_code,organization_unit_id)=0)
-        OR (scope_kind='organization_unit' AND organization_unit_id IS NOT NULL AND num_nonnulls(operating_organization_id,company_code_id,commodity_category_id,country_code,tax_jurisdiction_id)=0)),
+      (scope_kind='global' AND qualification_id IS NULL AND block_id IS NULL AND num_nonnulls(operating_organization_id,company_code_id,commodity_category_id,commodity_classification_id,commercial_capacity_code,country_code,tax_jurisdiction_id,organization_unit_id)=0)
+      OR (scope_kind<>'global' AND selection_mode='all' AND scope_mode='include' AND num_nonnulls(operating_organization_id,company_code_id,commodity_category_id,commodity_classification_id,commercial_capacity_code,country_code,tax_jurisdiction_id,organization_unit_id)=0)
+      OR (selection_mode='selected' AND num_nonnulls(operating_organization_id,company_code_id,commodity_category_id,commodity_classification_id,commercial_capacity_code,country_code,tax_jurisdiction_id,organization_unit_id)=1 AND (
+        (scope_kind='operating_organization' AND operating_organization_id IS NOT NULL)
+        OR (scope_kind='company_code' AND company_code_id IS NOT NULL)
+        OR (scope_kind='commodity_category' AND commodity_category_id IS NOT NULL)
+        OR (scope_kind='commodity_classification' AND commodity_classification_id IS NOT NULL)
+        OR (scope_kind='commercial_capacity' AND commercial_capacity_code IS NOT NULL)
+        OR (scope_kind='country' AND country_code IS NOT NULL)
+        OR (scope_kind='tax_jurisdiction' AND tax_jurisdiction_id IS NOT NULL)
+        OR (scope_kind='organization_unit' AND organization_unit_id IS NOT NULL)))),
+    CHECK ((scope_kind='country')=(country_purpose IS NOT NULL)),
+    CHECK (CASE WHEN qualification_id IS NOT NULL OR block_id IS NOT NULL
+      THEN effective_from IS NULL AND effective_until IS NULL
+      ELSE effective_from IS NOT NULL END),
     CONSTRAINT business_partner_decision_scope_range_chk CHECK (effective_until IS NULL OR effective_until>effective_from),
     CONSTRAINT business_partner_decision_scope_hierarchy_chk CHECK ((hierarchy_version IS NULL)=(resolution_fingerprint IS NULL) AND (hierarchy_version IS NULL OR hierarchy_version>=1)),
     CONSTRAINT business_partner_decision_scope_fingerprint_chk CHECK (resolution_fingerprint IS NULL OR resolution_fingerprint ~ '^[a-f0-9]{64}$'),
@@ -2550,7 +2570,7 @@ CREATE TABLE control.business_partner_decision_scope (
 );
 
 COMMENT ON TABLE control.business_partner_decision_scope IS
-  'Normalized include/exclude scope coordinates for BP qualification, preference, designation, and credit decisions.';
+  'Single grouped include/exclude coverage authority for partner qualification and restriction; also retains preference, designation and credit owners. Qualification/restriction validity is header-owned.';
 -- Fieldglass-inspired external-workforce pricing policy.  Rate cards are
 -- governed configuration; accepted commercial rates are snapshotted on work
 -- order/SOW revisions and transaction lines.
@@ -2590,7 +2610,7 @@ CREATE TABLE control.external_workforce_rate (
     id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id           uuid        NOT NULL,
     rate_card_id        uuid        NOT NULL,
-    supplier_id         uuid,
+    business_partner_id         uuid,
     job_id              uuid,
     site_id             uuid,
     worker_classification text,

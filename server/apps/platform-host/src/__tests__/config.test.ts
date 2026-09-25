@@ -12,6 +12,12 @@ describe("loadConfig", () => {
   }
   const snapshot: Record<string, string | undefined> = {};
   const keys = [
+    "METADATA_COMPILED_ONLY_PLANES",
+    "PROTECTED_VALUES_INFISICAL_URL",
+    "PROTECTED_VALUES_INFISICAL_TOKEN",
+    "PROTECTED_VALUES_INFISICAL_WORKSPACE_ID",
+    "PROTECTED_VALUES_INFISICAL_ENVIRONMENT",
+    "PROTECTED_VALUES_INFISICAL_SECRET_PATH",
     "PORT",
     "ATHYPER_ENV",
     "ENVIRONMENT",
@@ -196,6 +202,27 @@ describe("loadConfig", () => {
         process.env[k] = snapshot[k];
       }
     }
+  });
+
+  it("uses an explicit plane-wide compiled-only cutover, not a page-specific toggle", () => {
+    expect(loadConfig().compiledMetadataPlanes).toEqual([]);
+    process.env.METADATA_COMPILED_ONLY_PLANES = "neon,neon";
+    expect(loadConfig().compiledMetadataPlanes).toEqual(["neon"]);
+    process.env.METADATA_COMPILED_ONLY_PLANES = "business_partner";
+    expect(() => loadConfig()).toThrow("METADATA_COMPILED_ONLY_PLANES");
+  });
+
+  it("fails closed on partial protected-store configuration and keeps publication separate", () => {
+    process.env.PROTECTED_VALUES_INFISICAL_URL='https://secrets.example';
+    expect(()=>loadConfig()).toThrow('PROTECTED_VALUES_INFISICAL_TOKEN is required');
+    process.env.PROTECTED_VALUES_INFISICAL_TOKEN='capture-token';
+    process.env.PROTECTED_VALUES_INFISICAL_WORKSPACE_ID='capture-project';
+    process.env.PROTECTED_VALUES_INFISICAL_ENVIRONMENT='dev';
+    process.env.PROTECTED_VALUES_INFISICAL_SECRET_PATH='/';
+    process.env.INFISICAL_TOKEN='publication-token';
+    const config=loadConfig();
+    expect(config.protectedValuesStore).toMatchObject({token:'capture-token',workspaceId:'capture-project'});
+    expect(config.infisical.token).toBe('publication-token');
   });
 
   it("defaults to port 4000, env=local, mode=api", () => {

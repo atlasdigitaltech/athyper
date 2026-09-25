@@ -76,6 +76,7 @@ import {
 
 export type NeonWorkContextSelection = Readonly<
   | { mode: "unresolved" }
+  | { mode: "legal_entity"; legalEntityId: string }
   | { mode: "company"; companyCodeId: string; legalEntityId: string }
 >;
 export interface NeonWorkContextValue {
@@ -202,6 +203,7 @@ export type NeonShellMessages = Readonly<{ [K in keyof typeof EN]: string }>;
 
 export function NeonShell({
   bootstrap,
+  tenantWorkspace = false,
   initialCollapsed,
   children,
   onNavigationDiagnostic,
@@ -210,6 +212,8 @@ export function NeonShell({
   messages,
 }: {
   readonly bootstrap: ExperienceBootstrap;
+  /** Only for explicitly tenant-native routes. Does not change API authorization. */
+  readonly tenantWorkspace?: boolean;
   readonly principalId?: string;
   readonly initialCollapsed?: boolean;
   readonly children: ReactNode;
@@ -290,7 +294,7 @@ export function NeonShell({
             navigation={navigation}
           >
             <ActivityCenterDataProvider value={activity}>
-              <NeonContextContent work={work} labels={labels}>
+              <NeonContextContent work={work} labels={labels} tenantWorkspace={tenantWorkspace}>
                 {children}
               </NeonContextContent>
             </ActivityCenterDataProvider>
@@ -373,7 +377,9 @@ function NeonWorkContextProvider({
         companyCodeId: selected.companyCodeId,
         legalEntityId: selected.legalEntityId,
       }
-    : { mode: "unresolved" };
+    : selected
+      ? { mode: "legal_entity", legalEntityId: selected.legalEntityId }
+      : { mode: "unresolved" };
   const entities = useMemo(
     () => legalEntities(state.catalog?.companies ?? []),
     [state.catalog],
@@ -501,11 +507,14 @@ function NeonContextContent({
   work,
   labels,
   children,
+  tenantWorkspace = false,
 }: {
   work: NeonWorkContextValue;
   labels: NeonShellMessages;
   children: ReactNode;
+  tenantWorkspace?: boolean;
 }) {
+  if (tenantWorkspace) return <>{children}</>;
   if (work.status === "loading")
     return <div className="neon-context-pending" aria-busy="true">{children}</div>;
   if (work.status === "error")

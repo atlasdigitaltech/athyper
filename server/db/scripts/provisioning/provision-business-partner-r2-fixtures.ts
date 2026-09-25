@@ -85,8 +85,8 @@ export async function provisionBusinessPartnerR2Fixtures(options: {
       await client.query(
         `INSERT INTO master.business_partner(
         id,tenant_id,code,name,partner_category,ownership_class,
-        category_locked_by,registration_country_code,metadata,status,created_by
-      ) VALUES($1::uuid,$2::uuid,$3,$4,'organization','external',$5::uuid,'MY',$6::jsonb,'active',$5::uuid)
+        category_locked_by,metadata,status,created_by
+      ) VALUES($1::uuid,$2::uuid,$3,$4,'organization','external',$5::uuid,$6::jsonb,'active',$5::uuid)
       ON CONFLICT(tenant_id,id) DO NOTHING`,
         [
           item.businessPartnerId,
@@ -104,6 +104,7 @@ export async function provisionBusinessPartnerR2Fixtures(options: {
       );
       if (state.code !== item.code || state.pack !== PACK)
         throw new Error(`R2 fixture identity conflict: ${item.scenario}`);
+      await client.query(`SELECT master.update_business_partner_organization_identity($1::uuid,$2::uuid,'{"registrationCountryCode":"MY"}'::jsonb,$3::uuid)`,[context.tenant_id,item.businessPartnerId,context.actor_id]);
       if (item.existingRole === "supplier")
         await client.query(
           `INSERT INTO master.supplier(id,tenant_id,business_partner_id,supplier_code,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4,'onboarding',$5::uuid) ON CONFLICT(tenant_id,business_partner_id) DO NOTHING`,

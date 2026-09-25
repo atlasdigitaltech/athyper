@@ -25,7 +25,7 @@ export function EntitySectionNavigation({
 }) {
   return (
     <nav className={`a-section-navigation ${className}`} aria-label={label}>
-      <label className="a-record-360__picker">
+      <label className="a-entity-record__picker">
         {label}
         <select
           value={activeSection}
@@ -40,7 +40,7 @@ export function EntitySectionNavigation({
           ))}
         </select>
       </label>
-      <div className="a-record-360__links">
+      <div className="a-entity-record__links">
         {sections.map((s) => (
           <button
             type="button"
@@ -51,7 +51,7 @@ export function EntitySectionNavigation({
             <span>{s.label}</span>
             {s.count === undefined ? null : <small>{s.count}</small>}
             {s.status ? (
-              <small className="a-record-360__section-status">{s.status}</small>
+              <small className="a-entity-record__section-status">{s.status}</small>
             ) : null}
           </button>
         ))}

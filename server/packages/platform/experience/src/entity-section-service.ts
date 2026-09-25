@@ -1,3 +1,4 @@
+import { resolveEntityStatusTone } from "@athyper/contract-platform-entity-runtime";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { createEntityCapabilityPolicy } from "./entity-capability-policy.js";
 import type { CompiledEntityArtifactV2 } from "@athyper/server-contract-publication";
@@ -23,13 +24,17 @@ export interface EntityRuntimeResourceContext {
   readonly companyCodeId?: string;
   readonly legalEntityId?: string;
   readonly asOf?: string;
-  readonly roleLens?: "all" | "supplier" | "customer";
+  /** Entity-specific lens; the registered domain adapter validates its vocabulary. */
+  readonly roleLens?: string;
   /** A validated root comment whose direct replies are being paged independently. */
   readonly threadRootId?: string;
+  readonly commentFilter?: "mentions";
 }
 
 export interface EntityRuntimeSectionHandler {
   read(input: {
+    /** Already authorized against this request's pinned metadata release. */
+    readonly capability?: Awaited<ReturnType<ReturnType<typeof createEntityCapabilityPolicy>["resolve"]>>;
     readonly context: VerifiedRequestContext;
     readonly release: CompiledEntityResolvedRelease;
     readonly core: CompiledEntityArtifactV2;
@@ -65,6 +70,7 @@ export interface EntityRuntimeSectionHandlerRegistry {
 export function createEntityRuntimeResourceService(options: {
   readonly capabilities?: ReturnType<typeof createEntityCapabilityPolicy>;
   readonly reader: PinnedCompiledEntityReader;
+  readonly displayChoices?: (context: VerifiedRequestContext, catalog: string, values?: readonly string[]) => Promise<readonly { value: string; label: { labelKey: string; defaultText: string } }[]>;
   readonly headers: EntityRuntimeHeaderRepository;
   readonly sections: EntityRuntimeSectionHandlerRegistry;
   readonly summaries?: EntityRuntimeSummaryHandlerRegistry;
@@ -87,7 +93,25 @@ export function createEntityRuntimeResourceService(options: {
         fieldKeys: plan.headerFieldKeys,
       });
       if (!header) return null;
-      return Object.freeze({ releaseId: model.release.release.releaseId, releaseHash: model.release.release.releaseHash, plan, header });
+      const headerCatalogs = new Map<string, ReturnType<NonNullable<typeof options.displayChoices>>>();
+      const displayLabels = Object.fromEntries((await Promise.all(array(model.core.content.fields).map(async field => {
+        if (!record(field) || typeof field.key !== "string" || !Object.hasOwn(header.values, field.key)) return [];
+        const lookup = record(field.display) && record(field.display.lookup) ? field.display.lookup : {};
+        if (field.dataType !== "enum" && typeof lookup.code !== "string" && !Array.isArray(lookup.options)) return [];
+        let choices = array(lookup.options);
+        if (typeof lookup.code === "string") {
+          if (!options.displayChoices) throw new EntityRuntimeResourceError(503, "ENTITY_ENUM_LABEL_UNAVAILABLE");
+          const key = `${lookup.code}:${String(header.values[field.key])}`;
+          if (!headerCatalogs.has(key)) headerCatalogs.set(key, options.displayChoices(input.context, lookup.code, [String(header.values[field.key])]));
+          choices = [...await headerCatalogs.get(key)!];
+        }
+        const option = choices.find(option=>record(option)&&option.value===header.values[field.key as string]);
+        return [[field.key, record(option) ? localized(option.label)?.defaultText ?? null : null]];
+      }))).flat());
+      const headerDefinition = record(model.surface.content.header) ? model.surface.content.header : {};
+      const statusField = typeof headerDefinition.statusField === "string" ? headerDefinition.statusField : undefined;
+      const statusTone = resolveEntityStatusTone(statusField ? header.values[statusField] : undefined, headerDefinition.statusTones);
+      return Object.freeze({ releaseId: model.release.release.releaseId, releaseHash: model.release.release.releaseHash, plan, header: {...header,values:{...header.values,displayLabels,statusTone}} });
     },
     async summary(input: {
       readonly context: VerifiedRequestContext;
@@ -107,7 +131,15 @@ export function createEntityRuntimeResourceService(options: {
         const handler = options.summaries!.get(card.provider);
         if (!handler) return Object.freeze({ key: card.key, state: "unavailable" as const });
         try {
-          return Object.freeze({ key: card.key, state: "ready" as const, data: await handler.read({ context: input.context, release: model.release, core: model.core, recordId: input.recordId, ...(input.resourceContext ? { resourceContext: input.resourceContext } : {}), requestCache }) });
+          const data = await handler.read({ context: input.context, release: model.release, core: model.core, recordId: input.recordId, ...(input.resourceContext ? { resourceContext: input.resourceContext } : {}), requestCache });
+          const definition = record(model.surface.content.summaryView) ? array(model.surface.content.summaryView.cards).find(value=>record(value)&&value.key===card.key) : undefined;
+          const fields = await Promise.all((record(definition)?array(definition.displayFields):[]).map(async field=>{
+            if(!record(field)||!record(field.display)||!record(field.display.lookup)||typeof field.display.lookup.code!=="string") return field;
+            if(!options.displayChoices) throw new EntityRuntimeResourceError(503,"ENTITY_ENUM_LABEL_UNAVAILABLE");
+            return {...field,dataType:"enum",display:{lookup:{options:await options.displayChoices(input.context,field.display.lookup.code)}}};
+          }));
+          const presentation = browserSectionPresentation({...model.core,content:{fields}}, {...model.surface,content:{fieldBindings:fields.filter(record).map(f=>({fieldKey:f.key}))}}, {});
+          return Object.freeze({ key: card.key, state: "ready" as const, data: record(data)?{...data,displayFields:presentation.fields}:data });
         } catch (error) {
           if (isContextRequired(error)) return Object.freeze({ key: card.key, state: "context_required" as const });
           return Object.freeze({ key: card.key, state: "unavailable" as const });
@@ -132,13 +164,15 @@ export function createEntityRuntimeResourceService(options: {
       if (!plan.sections.some((section) => section.key === input.sectionKey)) return null;
       const section = await options.reader.section(model.release, input.sectionKey);
       const kind=section.content.rendererKey==="platform.comments.v1"?"comments":section.content.rendererKey==="platform.attachments.v1"?"attachments":undefined;
+      if (kind && input.cursor && !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(input.cursor))
+        throw new EntityRuntimeResourceError(403, "ENTITY_RUNTIME_RESOURCE_INVALID");
       const capability=kind && options.capabilities ? await options.capabilities.resolve({...input,kind,action:"read"},model.release) : undefined;
       if(kind && !capability) throw new EntityRuntimeResourceError(403,"ENTITY_CAPABILITY_DENIED");
       const handler = sectionHandler(options.sections, section);
       if (!handler) throw new EntityRuntimeResourceError(503, "ENTITY_RUNTIME_SECTION_HANDLER_UNAVAILABLE");
       let result: { readonly revision: string; readonly data: unknown };
       try {
-        result = await handler.read({ context: input.context, release: model.release, core: model.core, section, recordId: input.recordId, limit: Math.min(100, Math.max(1, input.limit ?? 25)), ...(input.cursor ? { cursor: input.cursor } : {}), ...(input.resourceContext ? { resourceContext: input.resourceContext } : {}) });
+        result = await handler.read({ capability, context: input.context, release: model.release, core: model.core, section, recordId: input.recordId, limit: Math.min(100, Math.max(1, input.limit ?? 25)), ...(input.cursor ? { cursor: input.cursor } : {}), ...(input.resourceContext ? { resourceContext: input.resourceContext } : {}) });
       } catch (error) {
         // A registered reader may require a resolved business context. Preserve that
         // expected state without exposing a domain exception as a generic 500.
@@ -146,11 +180,35 @@ export function createEntityRuntimeResourceService(options: {
           throw new EntityRuntimeResourceError(409, "ENTITY_RUNTIME_CONTEXT_REQUIRED", "Select an authorized organization and company context for this section.");
         throw error;
       }
+      const cores = new Map<string, CompiledEntityArtifactV2>();
+      const catalogCache = new Map<string, ReturnType<NonNullable<typeof options.displayChoices>>>();
+      const refs = [section.content.coreRef, ...array(section.content.childCollections).map(child => record(child) ? child.coreRef : undefined)];
+      for (const ref of refs) {
+        if (typeof ref !== "string" || cores.has(ref)) continue;
+        const key = ref.replace(/\.json$/, "");
+        const source = key === model.core.artifactKey ? model.core : await options.reader.artifactByKey(model.release, key, "core");
+        const hydrate = async (field: unknown): Promise<unknown> => {
+          if (!record(field) || !record(field.display)) return field;
+          const nested = field.display.itemFields ? {itemFields:await Promise.all(array(field.display.itemFields).map(hydrate))} : {};
+          if (!record(field.display.lookup) || typeof field.display.lookup.code !== "string") return {...field,display:{...field.display,...nested}};
+          if (!options.displayChoices) throw new EntityRuntimeResourceError(503, "ENTITY_ENUM_LABEL_UNAVAILABLE");
+          const catalog = field.display.lookup.code;
+          const ids: string[]=[];
+          const collect=(value:unknown):void=>{if(Array.isArray(value))value.forEach(collect);else if(record(value)){if(typeof field.key==='string'&&typeof value[field.key]==='string')ids.push(value[field.key] as string);Object.values(value).forEach(child=>{if(child&&typeof child==='object')collect(child);});}};
+          if(field.dataType==='uuid')collect(result.data);
+          const cacheKey=field.dataType==='uuid'?catalog+JSON.stringify(ids):catalog;
+          if(!catalogCache.has(cacheKey)) catalogCache.set(cacheKey,options.displayChoices(input.context,catalog,...(field.dataType==='uuid'?[ids] as const:[])));
+          const choices = await catalogCache.get(cacheKey)!;
+          return { ...field, dataType: "enum", display: { ...field.display, ...nested, lookup: { ...field.display.lookup, options: choices } } };
+        };
+        const fields = await Promise.all(array(source.content.fields).map(hydrate));
+        cores.set(ref, { ...source, content: { ...source.content, fields } });
+      }
       return Object.freeze({
         releaseId: model.release.release.releaseId,
         releaseHash: model.release.release.releaseHash,
         sectionKey: input.sectionKey,
-        presentation: browserSectionPresentation(model.core, section),
+        presentation: browserSectionPresentation(cores.get(String(section.content.coreRef)) ?? model.core, section, result.data, cores),
         ...(capability ? {capability:capability.projection} : {}),
         ...result,
       });
@@ -159,7 +217,7 @@ export function createEntityRuntimeResourceService(options: {
 }
 
 export class EntityRuntimeResourceError extends Error {
-  constructor(readonly status: 403 | 409 | 503, readonly code: string, message = code) { super(message); }
+  constructor(readonly status: 400 | 403 | 404 | 409 | 503, readonly code: string, message = code) { super(message); }
 }
 
 function isContextRequired(error: unknown): boolean {
@@ -188,22 +246,67 @@ function sectionHandler(registry: EntityRuntimeSectionHandlerRegistry, section: 
 
 
 /** Browser-safe renderer projection; handler/storage/policy internals never leave the server. */
-function browserSectionPresentation(core: CompiledEntityArtifactV2, section: CompiledEntityArtifactV2) {
+type DisplayField = { key: string; temporalType?: "date" | "datetime"; label?: { labelKey: string; defaultText: string }; options?: readonly { value: string; label: { labelKey: string; defaultText: string } }[]; itemFields?: readonly DisplayField[] };
+type SectionPresentation = { rendererKey: string; emptyState?: { title: string; detail: string }; fields: readonly DisplayField[]; childCollections: readonly { key: string; rendererKey: string; fields: readonly DisplayField[]; rowFields?: readonly (readonly DisplayField[])[]; label?: { labelKey: string; defaultText: string }; display?: "disclosure"; description?: string }[] };
+function browserSectionPresentation(core: CompiledEntityArtifactV2, section: CompiledEntityArtifactV2, data: unknown, cores = new Map<string, CompiledEntityArtifactV2>()): SectionPresentation {
+  const values = record(data) && record(data.values) ? data.values : {};
+  const hidden = new Set(array(core.content.fields).flatMap(value =>
+    record(value) && typeof value.key === "string" && !fieldVisible(value, values) ? [value.key] : []));
   const labels = new Map(array(core.content.fields).flatMap((value) => {
     if (!record(value) || typeof value.key !== "string") return [];
     return [[value.key, localized(value.label)] as const];
   }));
+  const choices = new Map(array(core.content.fields).flatMap(value => {
+    if (!record(value) || typeof value.key !== "string" || (value.dataType !== "enum" && !(record(value.display) && record(value.display.lookup) && Array.isArray(value.display.lookup.options)))) return [];
+    const lookup = record(value.display) && record(value.display.lookup) ? value.display.lookup : {};
+    const options = array(lookup.options).map(option => {
+      if (!record(option) || typeof option.value !== "string" || !localized(option.label))
+        throw new EntityRuntimeResourceError(503, "ENTITY_ENUM_LABEL_UNAVAILABLE");
+      return { value: option.value, label: localized(option.label)! };
+    });
+    if (!Array.isArray(lookup.options)) throw new EntityRuntimeResourceError(503, "ENTITY_ENUM_LABEL_UNAVAILABLE");
+    return [[value.key, options] as const];
+  }));
   const fields = array(section.content.fieldBindings).flatMap((value) => {
     const key = record(value) && typeof value.fieldKey === "string" ? value.fieldKey : undefined;
-    return key ? [Object.freeze({ key, ...(labels.get(key) ? { label: labels.get(key)! } : {}) })] : [];
+    const label = record(value) ? localized(value.label) ?? (key ? labels.get(key) : undefined) : undefined;
+    const dataKey = record(value) && typeof value.dataKey === "string" ? value.dataKey : key;
+    const definition = array(core.content.fields).find(field=>record(field)&&field.key===key);
+    const nested = record(definition) && record(definition.display) ? array(definition.display.itemFields) : [];
+    const itemFields = nested.length ? browserSectionPresentation({...core,content:{fields:nested}}, {...section,content:{fieldBindings:nested.filter(record).map(f=>({fieldKey:f.key}))}}, {}).fields : undefined;
+    const rootProtections = array(core.content.protections).filter(p => record(p) && record(p.protectedSource) && p.protectedSource.maskedByFieldKey === key);
+    if (rootProtections.length > 1) throw new EntityRuntimeResourceError(503, "ENTITY_PROTECTION_AMBIGUOUS");
+    const protection = record(definition) && record(definition.protection) ? definition.protection : rootProtections[0];
+    const reveal = record(protection) && record(protection.reveal) ? protection.reveal : undefined;
+    const revealOperation = reveal && typeof reveal.operationKey === "string" && typeof core.content.entityCode === "string" ? `${core.content.entityCode}.${reveal.operationKey}` : undefined;
+    const revealPurposes = reveal ? array(reveal.purposes).map(value => {
+      if (!record(value) || typeof value.value !== "string" || !localized(value.label)) throw new EntityRuntimeResourceError(503, "ENTITY_REVEAL_PURPOSE_UNAVAILABLE");
+      return {value:value.value, label:localized(value.label)!};
+    }) : undefined;
+    const revealTargetField = reveal && typeof reveal.targetField === "string" ? reveal.targetField : "id";
+    const maskedPrefix = record(protection) && record(protection.normalProjection) && typeof protection.normalProjection.displayPrefix === "string" ? protection.normalProjection.displayPrefix : undefined;
+    return key && dataKey && !hidden.has(key) ? [Object.freeze({ key: dataKey, ...(record(definition) && record(definition.display) && definition.display.attachmentDownload === true && definition.dataType === "uuid" ? {attachmentDownload:true as const} : {}), ...(record(definition) && (definition.dataType === "date" || definition.dataType === "datetime") ? {temporalType:definition.dataType as "date" | "datetime"} : {}), ...(maskedPrefix ? {maskedPrefix} : {}), ...(revealOperation ? {revealOperation, revealPurposes, revealTargetField} : {}), ...(label ? { label } : {}), ...(choices.has(key) ? { options: choices.get(key)! } : {}), ...(itemFields?{itemFields}:{}) })] : [];
   });
   const childCollections = array(section.content.childCollections).flatMap((value) => {
     if (!record(value) || typeof value.key !== "string" || typeof value.rendererKey !== "string") return [];
-    const childFields = array(value.fieldBindings).flatMap((binding) => {
-      const key = record(binding) && typeof binding.fieldKey === "string" ? binding.fieldKey : undefined;
-      return key ? [Object.freeze({ key, ...(labels.get(key) ? { label: labels.get(key)! } : {}) })] : [];
-    });
-    return [Object.freeze({ key: value.key, rendererKey: value.rendererKey, fields: Object.freeze(childFields) })];
+    const childCore = cores.get(String(value.coreRef));
+    const childFields = childCore
+      ? browserSectionPresentation(childCore, { ...section, content: { ...value, childCollections: [] } }, {}).fields
+      : array(value.fieldBindings).flatMap(binding => record(binding) && typeof binding.fieldKey === "string"
+        ? [{ key: binding.fieldKey, ...(localized(binding.label) ? { label: localized(binding.label)! } : {}) }] : []);
+    const envelope = record(data) && record(data.data) ? data.data : data;
+    const collections = record(envelope) && record(envelope.collections) ? envelope.collections : {};
+    const rows = array(collections[value.key]).filter(record);
+    const hasFacets = childCore && array(childCore.content.fields).some(field =>
+      record(field) && array(field.dynamicFacets).some(facet => record(facet) && facet.facet === "visibility"));
+    const rowFields = hasFacets ? rows.map(row => browserSectionPresentation(
+      childCore!, { ...section, content: { ...value, childCollections: [] } }, { values: row },
+    ).fields) : undefined;
+    return [Object.freeze({ key: value.key, rendererKey: value.rendererKey, fields: Object.freeze(childFields),
+      ...(rowFields ? { rowFields } : {}),
+      ...(localized(value.label) ? {label: localized(value.label)} : {}),
+      ...(value.display === "disclosure" ? {display: "disclosure" as const} : {}),
+      ...(typeof value.description === "string" ? {description: value.description} : {}) })];
   });
   const empty = record(section.content.emptyState) && typeof section.content.emptyState.title === "string" && section.content.emptyState.title.trim() && typeof section.content.emptyState.detail === "string" && section.content.emptyState.detail.trim()
     ? Object.freeze({ title: section.content.emptyState.title, detail: section.content.emptyState.detail })
@@ -213,6 +316,20 @@ function browserSectionPresentation(core: CompiledEntityArtifactV2, section: Com
     ...(empty ? { emptyState: empty } : {}),
     fields: Object.freeze(fields),
     childCollections: Object.freeze(childCollections),
+  });
+}
+/** Bounded presentation-only equality facet. Unsupported expressions fail hidden;
+ * this is never a substitute for the registered reader's field authorization. */
+function fieldVisible(field: Readonly<Record<string, unknown>>, values: Readonly<Record<string, unknown>>): boolean {
+  return array(field.dynamicFacets).every(facet => {
+    if (!record(facet) || facet.facet !== "visibility") return true;
+    if (facet.engine !== "jsonlogic.v1" || !record(facet.expression)) return false;
+    const operands = facet.expression["=="];
+    if (!Array.isArray(operands) || operands.length !== 2 || !record(operands[0]) || typeof operands[0].var !== "string"
+      || !/^record\.[a-z][a-z0-9_]*$/.test(operands[0].var) || typeof operands[1] !== "string") return false;
+    const key = operands[0].var.slice(7);
+    if (!Object.hasOwn(values, key)) return false;
+    return (values[key] === operands[1] ? facet.valueWhenTrue : facet.valueWhenFalse) === "visible";
   });
 }
 function array(value: unknown): readonly unknown[] { return Array.isArray(value) ? value : []; }

@@ -219,6 +219,7 @@ function allowedActions(
   if (
     editable &&
     !request.proposedPayload["meshChangeResolutionId"] &&
+    !request.proposedPayload["childActivation"] &&
     permissions.has(operationPermissions.update!)
   )
     actions.push(action("edit", "Edit"));

@@ -85,8 +85,6 @@ export function createPermissionAuthorizer(
       );
       if (requirement && !requirement.entitled)
         return { allowed: false, reason: "entitlement_unavailable" };
-      if (requirement?.requiresMfa && context.assurance !== "elevated")
-        return { allowed: false, reason: "mfa_required" };
       const operationFailure = validateOperationBinding(
         permissions,
         permissionCode,
@@ -114,6 +112,10 @@ export function createPermissionAuthorizer(
       ) {
         return { allowed: false, reason: "scope_not_contained" };
       }
+      // Report step-up only after checking the grant and available scope evidence.
+      // This remains a denial, never an elevation or authorization bypass.
+      if (requirement?.requiresMfa && context.assurance !== "elevated")
+        return { allowed: false, reason: "mfa_required" };
       if (requirement?.requiresSod && !options.policyGate)
         return { allowed: false, reason: "sod_evidence_required" };
       if (

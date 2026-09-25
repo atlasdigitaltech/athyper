@@ -39,20 +39,25 @@
       "writePolicy": "system_managed"
     },
     {
-      "key": "customer_id",
+      "key": "business_partner_id",
       "binding": {
         "sourceObject": "master.company_code_customer_profile",
-        "column": "customer_id"
+        "column": "business_partner_id"
       },
       "dataType": "uuid",
       "nullable": false,
       "label": {
-        "labelKey": "entity.customer_company_profile.core.fields.customer_id.label",
-        "defaultText": "Customer Id"
+        "labelKey": "entity.customer_company_profile.core.fields.business_partner_id.label",
+        "defaultText": "Business Partner"
       },
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
-      "storageType": "uuid"
+      "storageType": "uuid",
+      "display": {
+        "lookup": {
+          "code": "master.business_partner"
+        }
+      }
     },
     {
       "key": "company_code_id",
@@ -64,11 +69,16 @@
       "nullable": false,
       "label": {
         "labelKey": "entity.customer_company_profile.core.fields.company_code_id.label",
-        "defaultText": "Company Code Id"
+        "defaultText": "Company"
       },
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
-      "storageType": "uuid"
+      "storageType": "uuid",
+      "display": {
+        "lookup": {
+          "code": "master.company_code"
+        }
+      }
     },
     {
       "key": "currency_code",
@@ -80,11 +90,16 @@
       "nullable": true,
       "label": {
         "labelKey": "entity.customer_company_profile.core.fields.currency_code.label",
-        "defaultText": "Currency Code"
+        "defaultText": "Currency"
       },
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
-      "storageType": "character(3)"
+      "storageType": "character(3)",
+      "display": {
+        "lookup": {
+          "code": "shared.currency"
+        }
+      }
     },
     {
       "key": "payment_term_id",
@@ -96,11 +111,16 @@
       "nullable": true,
       "label": {
         "labelKey": "entity.customer_company_profile.core.fields.payment_term_id.label",
-        "defaultText": "Payment Term Id"
+        "defaultText": "Payment terms"
       },
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
-      "storageType": "uuid"
+      "storageType": "uuid",
+      "display": {
+        "lookup": {
+          "code": "master.payment_term"
+        }
+      }
     },
     {
       "key": "statement_cycle_code",
@@ -137,7 +157,41 @@
         "visibility": "visible",
         "editability": "readonly"
       },
-      "writePolicy": "system_managed"
+      "writePolicy": "system_managed",
+      "display": {
+        "lookup": {
+          "options": [
+            {
+              "value": "draft",
+              "label": {
+                "labelKey": "entity.company_profile.status.draft",
+                "defaultText": "Draft"
+              }
+            },
+            {
+              "value": "active",
+              "label": {
+                "labelKey": "entity.company_profile.status.active",
+                "defaultText": "Active"
+              }
+            },
+            {
+              "value": "inactive",
+              "label": {
+                "labelKey": "entity.company_profile.status.inactive",
+                "defaultText": "Inactive"
+              }
+            },
+            {
+              "value": "archived",
+              "label": {
+                "labelKey": "entity.company_profile.status.archived",
+                "defaultText": "Archived"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "businessContext": {
@@ -212,7 +266,7 @@
     },
     {
       "sourceObject": "master.company_code_customer_profile",
-      "column": "customer_id",
+      "column": "business_partner_id",
       "purpose": "identity_context_or_concurrency"
     },
     {

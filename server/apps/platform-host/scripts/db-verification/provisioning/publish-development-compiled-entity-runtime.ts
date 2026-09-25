@@ -1,4 +1,7 @@
 #!/usr/bin/env tsx
+import { navigationDisplayArtifactKeys, navigationDisplayOverlay } from "./navigation-display-overlay.js";
+import { qualificationContractArtifactKeys, qualificationContractOverlay } from "./qualification-contract-overlay.js";
+import { validatePartnerSectionPublication } from "../../../src/composition/entities/partner-section-contract.js";
 
 /**
  * Publishes one already-reviewed split entity runtime set to a local DEV plane.
@@ -13,6 +16,8 @@ import { readFile, readdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
+import { decisionViewArtifactKeys, decisionViewOverlay } from "./decision-view-overlay.js";
+import { companyProfileArtifactKeys, companyProfileOverlay, capabilityArtifactKeys, capabilityOverlay } from "./company-profile-overlay.js";
 import type { PublicationSigner, PublicationVerifier } from "@athyper/server-contract-publication";
 import {
   compileBusinessPartnerCompiledEntity,
@@ -25,6 +30,8 @@ const SIGNATURE_ALGORITHM = "development-local-sha256";
 const SIGNING_KEY_ID = "local-development-compiled-entity-publisher";
 const UUID_NAMESPACE = Buffer.from("2cbfecc4e5be5da0b81b5011abdbef11", "hex");
 
+import { statusToneArtifactKeys, statusToneOverlay } from "./status-tone-overlay.js";
+
 type QueryClient = Pick<Client, "query">;
 type Json = Record<string, unknown>;
 
@@ -34,8 +41,16 @@ export async function publishDevelopmentCompiledEntityRuntime(options: {
   readonly entityCode: string;
   readonly authoringRoot: string;
   readonly sourceDefinitionReleaseId: string;
+  /** Code-owned read-view overlay over the pinned active compiled release. */
+  readonly statusToneOverlay?: { readonly sourceSha256: string };
+  readonly navigationDisplayOverlay?: { readonly sourceSha256: string };
+  readonly qualificationContractOverlay?: { readonly sourceSha256: string };
+  readonly decisionViewsOverlay?: { readonly sourceSha256: string };
+  readonly companyProfilesOverlay?: { readonly sourceSha256: string; readonly includeCapabilities?: boolean };
   /** A frozen scoped candidate compiled by compile-release-candidate.mts. */
   readonly candidateOutput?: string;
+  /** Frozen candidates may extend an existing signed compiled release, without a legacy definition bundle. */
+  readonly sourceCompiledRelease?: boolean;
   readonly confirmation?: string;
   readonly dryRun?: boolean;
   /** Scoped DEVFULL machine authority, checked before any publication writes. */
@@ -52,7 +67,18 @@ export async function publishDevelopmentCompiledEntityRuntime(options: {
 }) {
   if (!options.dryRun && (!options.authority || !options.expectedActiveArtifactHash))
     throw new Error("Scoped workload authority, signer and pinned active artifact are required");
+  if (options.sourceCompiledRelease && (!options.candidateOutput || !options.expectedActiveArtifactHash))
+    throw new Error("COMPILED_SOURCE_REQUIRES_PINNED_CANDIDATE");
+  if (options.decisionViewsOverlay && (options.entityCode !== "business_partner" || options.candidateOutput || !options.expectedActiveArtifactHash || !/^[a-f0-9]{64}$/.test(options.decisionViewsOverlay.sourceSha256)))
+    throw new Error("DECISION_VIEW_OVERLAY_SCOPE_INVALID");
+  if (options.statusToneOverlay && (options.decisionViewsOverlay || options.companyProfilesOverlay || options.sourceCompiledRelease || options.entityCode !== "business_partner" || options.candidateOutput || !options.expectedActiveArtifactHash || !/^[a-f0-9]{64}$/.test(options.statusToneOverlay.sourceSha256)))
+    throw Error("STATUS_TONE_OVERLAY_SCOPE_INVALID");
+  if (options.qualificationContractOverlay && (options.statusToneOverlay || options.decisionViewsOverlay || options.companyProfilesOverlay || options.sourceCompiledRelease || options.entityCode !== "business_partner" || options.candidateOutput || !options.expectedActiveArtifactHash || !/^[a-f0-9]{64}$/.test(options.qualificationContractOverlay.sourceSha256)))
+    throw Error("QUALIFICATION_CONTRACT_OVERLAY_SCOPE_INVALID");
+  if (options.navigationDisplayOverlay && (options.qualificationContractOverlay || options.statusToneOverlay || options.decisionViewsOverlay || options.companyProfilesOverlay || options.sourceCompiledRelease || options.entityCode !== "business_partner" || options.candidateOutput || !options.expectedActiveArtifactHash || !/^[a-f0-9]{64}$/.test(options.navigationDisplayOverlay.sourceSha256)))
+    throw Error("NAVIGATION_DISPLAY_OVERLAY_SCOPE_INVALID");
   const neonUrl = new URL(options.neonDatabaseUrl);
+  if(options.companyProfilesOverlay && (options.decisionViewsOverlay || options.entityCode!=="business_partner" || options.candidateOutput || !options.expectedActiveArtifactHash || !/^[a-f0-9]{64}$/.test(options.companyProfilesOverlay.sourceSha256)))throw Error("COMPANY_PROFILE_OVERLAY_SCOPE_INVALID");
   const studioUrl = new URL(options.studioDatabaseUrl ?? siblingDatabaseUrl(options.neonDatabaseUrl, "athyper_studio"));
   if (!localDatabase(neonUrl) || neonUrl.pathname !== "/athyper_neon") throw new Error("compiled entity publication requires local athyper_neon");
   if (!localDatabase(studioUrl) || studioUrl.pathname !== "/athyper_studio") throw new Error("compiled entity publication requires local athyper_studio");
@@ -63,7 +89,15 @@ export async function publishDevelopmentCompiledEntityRuntime(options: {
   const neon = new Client({ connectionString: neonUrl.toString() });
   await Promise.all([studio.connect(), neon.connect()]);
   try {
-    const source = await one<{ tenant_id: string; bundle_json: Json; release_no: number; release_key: string }>(studio, `
+    const source = options.navigationDisplayOverlay || options.qualificationContractOverlay || options.statusToneOverlay || options.decisionViewsOverlay || options.companyProfilesOverlay || options.sourceCompiledRelease
+      ? await one<{ tenant_id: string; bundle_json: Json; release_no: number; release_key: string }>(studio, `
+        SELECT r.tenant_id::text,'{}'::jsonb AS bundle_json,r.release_no::int,r.release_key
+        FROM publication.release r JOIN publication.artifact a ON a.publication_release_id=r.id
+        JOIN publication.artifact_compilation c ON c.publication_release_id=r.id AND c.artifact_kind=a.artifact_kind AND c.plane_code=a.plane_code
+        WHERE r.id=$1::uuid AND r.release_key=$2 AND r.status='published' AND a.status='signed'
+        AND a.artifact_kind='compiled_entity_runtime' AND a.plane_code='neon' AND c.unsigned_hash=$3`,
+        [options.sourceDefinitionReleaseId,`metadata.compiled_entity.${options.entityCode}`,options.expectedActiveArtifactHash])
+      : await one<{ tenant_id: string; bundle_json: Json; release_no: number; release_key: string }>(studio, `
       SELECT revision.tenant_id::text, revision.bundle_json, release.release_no::int, release.release_key
       FROM publication.release release
       JOIN publication.business_partner_definition_release_link link ON link.publication_release_id=release.id
@@ -87,10 +121,35 @@ export async function publishDevelopmentCompiledEntityRuntime(options: {
     }
     const signatureAlgorithm = authority ? "Ed25519" : SIGNATURE_ALGORITHM;
     const signingKeyId = authority?.keyId ?? SIGNING_KEY_ID;
-    const authoring = options.candidateOutput
+    const authoring = options.navigationDisplayOverlay
+      ? await readDecisionViewOverlay(neon, options.authoringRoot, options.expectedActiveArtifactHash!, options.navigationDisplayOverlay.sourceSha256, false, false, false, false, true)
+      : options.qualificationContractOverlay
+      ? await readDecisionViewOverlay(neon, options.authoringRoot, options.expectedActiveArtifactHash!, options.qualificationContractOverlay.sourceSha256, false, false, false, true)
+      : options.statusToneOverlay
+      ? await readDecisionViewOverlay(neon, options.authoringRoot, options.expectedActiveArtifactHash!, options.statusToneOverlay.sourceSha256, false, false, true)
+      : options.companyProfilesOverlay
+      ? await readDecisionViewOverlay(neon, options.authoringRoot, options.expectedActiveArtifactHash!, options.companyProfilesOverlay.sourceSha256, true, options.companyProfilesOverlay.includeCapabilities===true)
+      : options.decisionViewsOverlay
+      ? await readDecisionViewOverlay(neon, options.authoringRoot, options.expectedActiveArtifactHash!, options.decisionViewsOverlay.sourceSha256)
+      : options.candidateOutput
       ? await readFrozenCandidate(options.candidateOutput, options.authoringRoot)
       : await readAuthoring(options.authoringRoot);
-    const registry = registryFrom(authoring.registry);
+    validatePartnerSectionPublication(authoring.artifacts.map(a => a.value));
+    // Validate against the target's final catalog, never historical CREATE
+    // declarations or author-supplied source names. This also checks pinned
+    // artifacts carried forward by a scoped candidate before signing anything.
+    const sourceCatalog = await neon.query<{ source_object: string }>(`
+      SELECT n.nspname || '.' || c.relname AS source_object
+      FROM pg_catalog.pg_class c
+      JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+      WHERE c.relkind IN ('r','p','v','m','f')
+        AND n.nspname NOT IN ('pg_catalog','information_schema')
+        AND n.nspname NOT LIKE 'pg_%'`);
+    if (!sourceCatalog.rows.length) throw new Error("Target source catalog is empty");
+    const registry = {
+      ...registryFrom(authoring.registry),
+      sourceObjects: new Set(sourceCatalog.rows.map((row) => row.source_object)),
+    };
     const releaseContent = publishedReleaseAuthoring(authoring.release, options.entityCode, options.sourceDefinitionReleaseId, signatureAlgorithm, signingKeyId);
     const compileInput = {
       artifacts: authoring.artifacts.map(({ ref, value }) => ({ ref, content: publishedArtifact(value) })),
@@ -99,7 +158,7 @@ export async function publishDevelopmentCompiledEntityRuntime(options: {
     // BP's broad authoring tree still uses its domain compiler. A frozen scoped
     // candidate already carries the pinned, validated artifact set and must go
     // through the generic compiler so it cannot silently expand back to that tree.
-    const compilation = options.entityCode === "business_partner" && !options.candidateOutput
+    const compilation = options.entityCode === "business_partner" && !options.candidateOutput && !options.decisionViewsOverlay && !options.companyProfilesOverlay && !options.statusToneOverlay && !options.qualificationContractOverlay && !options.navigationDisplayOverlay
       ? compileBusinessPartnerCompiledEntity({ definition: { bundle: source.bundle_json, plane: "neon", canonicalizer }, compiledEntity: { artifacts: compileInput.artifacts, release: compileInput.release, registry } }).compiled
       : compileCompiledEntityArtifacts(compileInput);
     const publicationKey = `metadata.compiled_entity.${options.entityCode}`;
@@ -186,13 +245,24 @@ export async function publishDevelopmentCompiledEntityRuntime(options: {
   } finally { await Promise.all([studio.end(), neon.end()]); }
 }
 
+async function readDecisionViewOverlay(neon: QueryClient, root: string, baselineHash: string, sourceHash: string, companyProfiles=false, capabilities=false, statusTones=false, qualificationContract=false, navigationDisplay=false) {
+  const row=await one<{payload_json:Json}>(neon,`SELECT p.payload_json FROM runtime_meta.release_activation_head h
+    JOIN runtime_meta.applied_release_payload p ON p.applied_release_id=h.applied_release_id
+    WHERE h.publication_key='metadata.compiled_entity.business_partner' AND h.artifact_hash=$1`,[baselineHash]);
+  const bytes=await Promise.all((navigationDisplay?navigationDisplayArtifactKeys:qualificationContract?qualificationContractArtifactKeys:statusTones?statusToneArtifactKeys:capabilities?capabilityArtifactKeys:companyProfiles?companyProfileArtifactKeys:decisionViewArtifactKeys).map(key=>readFile(resolve(root,`${key}.json`),"utf8")));
+  if(createHash("sha256").update(JSON.stringify(bytes)).digest("hex")!==sourceHash)throw Error("DECISION_VIEW_SOURCES_CHANGED");
+  const artifacts=(navigationDisplay?navigationDisplayOverlay:qualificationContract?qualificationContractOverlay:statusTones?statusToneOverlay:capabilities?capabilityOverlay:companyProfiles?companyProfileOverlay:decisionViewOverlay)((row.payload_json.artifacts as Json[]).map(a=>a.content),bytes.map(b=>JSON.parse(b)))
+    .map(value=>({ref:`${value.artifactKey}.json`,value}));
+  const registry=JSON.parse(await readFile(resolve(root,"../review/registry-catalog.json"),"utf8")) as Json;
+  return {release:row.payload_json.release as Json,registry,artifacts};
+}
 async function readAuthoring(rootPath: string) {
   const root = resolve(rootPath), paths = await jsonPaths(root);
   const documents = await Promise.all(paths.map(async (ref) => ({ ref, value: JSON.parse(await readFile(resolve(root, ref), "utf8")) as Json })));
   const release = documents.find((doc) => doc.value.artifactType === "release_envelope")?.value;
   const registry = JSON.parse(await readFile(resolve(root, "../review/registry-catalog.json"), "utf8")) as Json;
   if (!release || !registry) throw new Error("authoring root lacks release or registry catalog");
-  return { release, registry, artifacts: documents.filter(({ value }) => ["core", "operation", "presentation_surface", "presentation_section", "flow"].includes(String(value.artifactType))) };
+  return { release, registry, artifacts: documents.filter(({ value }) => ["core", "runtime_contract", "operation", "presentation_surface", "presentation_section", "flow"].includes(String(value.artifactType))) };
 }
 async function readFrozenCandidate(candidateOutput: string, authoringRoot: string) {
   const root = resolve(candidateOutput);
@@ -201,7 +271,7 @@ async function readFrozenCandidate(candidateOutput: string, authoringRoot: strin
   const documents = await Promise.all(paths.map(async (ref) => ({ ref, value: JSON.parse(await readFile(resolve(artifactsRoot, ref), "utf8")) as Json })));
   const release = documents.find((doc) => doc.ref === "release.json")?.value;
   if (!release) throw new Error("frozen candidate lacks release.json");
-  const artifacts = documents.filter(({ value }) => ["core", "operation", "presentation_surface", "presentation_section", "flow"].includes(String(value.artifactType)));
+  const artifacts = documents.filter(({ value }) => ["core", "runtime_contract", "operation", "presentation_surface", "presentation_section", "flow"].includes(String(value.artifactType)));
   if (!artifacts.length || !Array.isArray(release.artifacts) || artifacts.length !== release.artifacts.length)
     throw new Error("frozen candidate artifact set is incomplete");
   const registry = JSON.parse(await readFile(resolve(authoringRoot, "../review/registry-catalog.json"), "utf8")) as Json;

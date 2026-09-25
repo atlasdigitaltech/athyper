@@ -1,5 +1,5 @@
 import {it, expect, vi} from "vitest";
-import {createBusinessPartner360Service} from "../business-partner-360-service.js";
+import {createBusinessPartner360Service} from "../business-partner/record/service";
 const context = {tenantId: "tenant", principalId: "principal", planeKey: "neon", assurance: "elevated"} as never;
 function fixture(auditAvailable = true, replayAvailable = true) {
   const authorize = vi.fn(), reveal = vi.fn(), claim = vi.fn(), audit = vi.fn();

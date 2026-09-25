@@ -3,7 +3,7 @@ import {useApiClient,useSessionIdentity} from "@athyper/platform-shell-app-found
 import {useBusinessPartner360} from "./business-partner-360-context";
 import {createBusinessPartner360RoleClient} from "./business-partner-360-role-client";
 export type Relationship={companyCodeId:string;companyName:string;operatingOrganizationId:string;operatingOrganizationName:string;role:"supplier"|"customer";roleStatus:string;assignmentStatus:string;profileStatus?:string};
-export const relationshipStatus=(row:Relationship)=> !row.profileStatus?"Not extended":row.profileStatus==="active"&&row.assignmentStatus==="active"&&row.roleStatus==="active"?"Active": [row.profileStatus,row.assignmentStatus,row.roleStatus].some(s=>["blocked","suspended","inactive","archived"].includes(s??""))?"Inactive / blocked":"Setup incomplete";
+export const relationshipStatus=(row:Relationship)=> row.roleStatus==="disabled"?"Capability disabled":!row.profileStatus?"Not extended":row.profileStatus==="active"&&row.assignmentStatus==="active"&&row.roleStatus==="enabled"?"Active": [row.profileStatus,row.assignmentStatus,row.roleStatus].some(s=>["blocked","suspended","inactive","archived"].includes(s??""))?"Inactive / blocked":"Setup incomplete";
 export function relationshipCounts(rows:readonly Relationship[]) {
  return {buying:new Set(rows.filter(r=>r.role==="supplier"&&relationshipStatus(r)==="Active").map(r=>r.companyCodeId)).size,selling:new Set(rows.filter(r=>r.role==="customer"&&relationshipStatus(r)==="Active").map(r=>r.companyCodeId)).size,gaps:new Set(rows.filter(r=>relationshipStatus(r)==="Setup incomplete").map(r=>`${r.companyCodeId}:${r.role}`)).size};
 }

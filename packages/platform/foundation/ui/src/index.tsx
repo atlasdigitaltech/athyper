@@ -286,3 +286,4 @@ export { ComposerFrame, ComposerHeader, ComposerFooter, type ComposerFrameProps 
 export { PanelHeader, PanelTabs, PanelEmptyState, type PanelTab } from "./panel";
 export { SearchField, type SearchFieldProps } from "./search-field";
 export { FilterChipGroup, type FilterChipItem } from "./filter-chip-group";
+export { ViewSelector } from "./view-selector";

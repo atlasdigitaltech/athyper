@@ -187,6 +187,9 @@ importers:
       '@athyper/contract-platform-dashboard':
         specifier: workspace:*
         version: link:../../packages/contracts/platform/dashboard
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../packages/contracts/platform/entity-runtime
       '@athyper/contract-platform-navigation':
         specifier: workspace:*
         version: link:../../packages/contracts/platform/navigation
@@ -244,6 +247,9 @@ importers:
       '@athyper/product-neon-business-partner':
         specifier: workspace:*
         version: link:../../packages/planes/neon/business-partner
+      '@athyper/product-neon-entity-extensions':
+        specifier: workspace:*
+        version: link:../../packages/planes/neon/entity-extensions
       '@athyper/product-neon-list-view':
         specifier: workspace:*
         version: link:../../packages/planes/neon/list-view
@@ -528,6 +534,9 @@ importers:
       '@athyper/tsconfig':
         specifier: workspace:*
         version: link:../../../../tooling/tsconfig
+      esbuild:
+        specifier: ^0.27.7
+        version: 0.27.7
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -560,6 +569,19 @@ importers:
         version: 6.0.3
 
   packages/contracts/neon/sales:
+    devDependencies:
+      '@athyper/tsconfig':
+        specifier: workspace:*
+        version: link:../../../../tooling/tsconfig
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/contracts/platform/activity:
+    dependencies:
+      '@athyper/contract-platform-collection':
+        specifier: workspace:*
+        version: link:../collection
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
@@ -602,6 +624,19 @@ importers:
         version: 6.0.3
 
   packages/contracts/platform/authorization:
+    devDependencies:
+      '@athyper/tsconfig':
+        specifier: workspace:*
+        version: link:../../../../tooling/tsconfig
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/contracts/platform/collection:
+    dependencies:
+      '@athyper/contract-platform-entity-list':
+        specifier: workspace:*
+        version: link:../entity-list
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
@@ -657,6 +692,15 @@ importers:
         version: 6.0.3
 
   packages/contracts/platform/numbering:
+    devDependencies:
+      '@athyper/tsconfig':
+        specifier: workspace:*
+        version: link:../../../../tooling/tsconfig
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/contracts/platform/rich-text:
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
@@ -747,6 +791,9 @@ importers:
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../../platform/foundation/api-client
+      '@athyper/platform-communications-collaboration-ui':
+        specifier: workspace:*
+        version: link:../../../platform/communications/collaboration-ui
       '@athyper/platform-entity-descriptor-client':
         specifier: workspace:*
         version: link:../../../platform/entity/runtime/descriptor-client
@@ -771,6 +818,9 @@ importers:
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../../platform/foundation/ui
+      '@athyper/product-neon-entity-extensions':
+        specifier: workspace:*
+        version: link:../entity-extensions
       '@athyper/product-neon-shell':
         specifier: workspace:*
         version: link:../shell
@@ -805,6 +855,37 @@ importers:
       vitest:
         specifier: ^4.1.4
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
+
+  packages/planes/neon/entity-extensions:
+    dependencies:
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../../contracts/platform/entity-runtime
+      '@athyper/platform-api-client':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/api-client
+      '@athyper/platform-entity-descriptor-client':
+        specifier: workspace:*
+        version: link:../../../platform/entity/runtime/descriptor-client
+      '@athyper/platform-entity-form-detail':
+        specifier: workspace:*
+        version: link:../../../platform/entity/runtime/form-detail
+      '@athyper/platform-icons':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/icons
+      react:
+        specifier: ^19.2.5
+        version: 19.2.8
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../../../tooling/config
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
   packages/planes/neon/list-view:
     dependencies:
@@ -1074,6 +1155,9 @@ importers:
 
   packages/platform/communications/collaboration-ui:
     dependencies:
+      '@athyper/contract-platform-rich-text':
+        specifier: workspace:*
+        version: link:../../../contracts/platform/rich-text
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../foundation/ui
@@ -1121,6 +1205,40 @@ importers:
       '@athyper/tsconfig':
         specifier: workspace:*
         version: link:../../../../../tooling/tsconfig
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/platform/entity/runtime/collection-controls:
+    dependencies:
+      '@athyper/contract-platform-entity-list':
+        specifier: workspace:*
+        version: link:../../../../contracts/platform/entity-list
+      '@athyper/platform-i18n':
+        specifier: workspace:*
+        version: link:../../../foundation/i18n
+      '@athyper/platform-icons':
+        specifier: workspace:*
+        version: link:../../../foundation/icons
+      '@athyper/platform-ui':
+        specifier: workspace:*
+        version: link:../../../foundation/ui
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../../../../tooling/config
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      react:
+        specifier: ^19.2.5
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.2.8(react@19.2.8)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1207,6 +1325,9 @@ importers:
 
   packages/platform/entity/runtime/list-view:
     dependencies:
+      '@athyper/contract-platform-collection':
+        specifier: workspace:*
+        version: link:../../../../contracts/platform/collection
       '@athyper/contract-platform-entity-list':
         specifier: workspace:*
         version: link:../../../../contracts/platform/entity-list
@@ -1216,6 +1337,9 @@ importers:
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../../foundation/api-client
+      '@athyper/platform-collection-controls':
+        specifier: workspace:*
+        version: link:../collection-controls
       '@athyper/platform-i18n':
         specifier: workspace:*
         version: link:../../../foundation/i18n
@@ -1579,6 +1703,12 @@ importers:
 
   packages/platform/shell/activity-center-data:
     dependencies:
+      '@athyper/contract-platform-activity':
+        specifier: workspace:*
+        version: link:../../../contracts/platform/activity
+      '@athyper/contract-platform-collection':
+        specifier: workspace:*
+        version: link:../../../contracts/platform/collection
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../foundation/api-client
@@ -1597,6 +1727,9 @@ importers:
       '@athyper/platform-shell-work-inbox':
         specifier: workspace:*
         version: link:../work-inbox
+      '@athyper/platform-ui':
+        specifier: workspace:*
+        version: link:../../foundation/ui
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -1747,9 +1880,18 @@ importers:
 
   packages/platform/shell/shell:
     dependencies:
+      '@athyper/contract-platform-activity':
+        specifier: workspace:*
+        version: link:../../../contracts/platform/activity
+      '@athyper/contract-platform-collection':
+        specifier: workspace:*
+        version: link:../../../contracts/platform/collection
       '@athyper/platform-ai-agent-ui':
         specifier: workspace:*
         version: link:../../ai/agent-ui
+      '@athyper/platform-collection-controls':
+        specifier: workspace:*
+        version: link:../../entity/runtime/collection-controls
       '@athyper/platform-communications-collaboration-ui':
         specifier: workspace:*
         version: link:../../communications/collaboration-ui
@@ -1768,6 +1910,9 @@ importers:
       '@athyper/platform-temporal':
         specifier: workspace:*
         version: link:../../foundation/temporal
+      '@athyper/platform-theme':
+        specifier: workspace:*
+        version: link:../../foundation/theme
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../foundation/ui
@@ -1824,9 +1969,18 @@ importers:
 
   server/apps/platform-host:
     dependencies:
+      '@athyper/contract-platform-activity':
+        specifier: workspace:*
+        version: link:../../../packages/contracts/platform/activity
+      '@athyper/contract-platform-collection':
+        specifier: workspace:*
+        version: link:../../../packages/contracts/platform/collection
       '@athyper/contract-platform-entity-runtime':
         specifier: workspace:*
         version: link:../../../packages/contracts/platform/entity-runtime
+      '@athyper/contract-platform-rich-text':
+        specifier: workspace:*
+        version: link:../../../packages/contracts/platform/rich-text
       '@athyper/server-adapter-ai-ollama':
         specifier: workspace:*
         version: link:../../packages/adapters/ai-ollama
@@ -3088,6 +3242,9 @@ importers:
 
   server/packages/contracts/publication:
     dependencies:
+      '@athyper/contract-platform-collection':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/collection
       '@athyper/server-contract-master-data':
         specifier: workspace:*
         version: link:../master-data
@@ -3350,6 +3507,9 @@ importers:
 
   server/packages/planes/studio/meta-entity-authoring:
     dependencies:
+      '@athyper/contract-platform-collection':
+        specifier: workspace:*
+        version: link:../../../../../packages/contracts/platform/collection
       '@athyper/contract-platform-entity-list':
         specifier: workspace:*
         version: link:../../../../../packages/contracts/platform/entity-list
@@ -3517,6 +3677,9 @@ importers:
 
   server/packages/platform/collaboration:
     dependencies:
+      '@athyper/contract-platform-rich-text':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/rich-text
       '@athyper/server-contract-audit':
         specifier: workspace:*
         version: link:../../contracts/audit
@@ -3868,6 +4031,9 @@ importers:
 
   server/packages/platform/notifications:
     dependencies:
+      '@athyper/contract-platform-activity':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/activity
       '@athyper/server-contract-auth':
         specifier: workspace:*
         version: link:../../contracts/auth
@@ -3883,6 +4049,9 @@ importers:
       '@athyper/server-contract-notifications':
         specifier: workspace:*
         version: link:../../contracts/notifications
+      '@athyper/server-contract-publication':
+        specifier: workspace:*
+        version: link:../../contracts/publication
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
@@ -3896,6 +4065,9 @@ importers:
         specifier: ^0.28.17
         version: 0.28.17
     devDependencies:
+      '@athyper/contract-platform-collection':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/collection
       '@types/express':
         specifier: ^5.0.6
         version: 5.0.6
@@ -4038,6 +4210,9 @@ importers:
 
   server/packages/platform/workflow:
     dependencies:
+      '@athyper/contract-platform-activity':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/activity
       '@athyper/platform-temporal':
         specifier: workspace:*
         version: link:../../../../packages/platform/foundation/temporal
@@ -4544,6 +4719,9 @@ importers:
 
   server/packages/services/publication:
     dependencies:
+      '@athyper/contract-platform-collection':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/collection
       '@athyper/server-contract-audit':
         specifier: workspace:*
         version: link:../../contracts/audit
@@ -12076,7 +12254,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
+      vitest: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@8.3.0(@types/node@25.6.0)(esbuild@0.28.2)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
     optional: true
 
   '@vitest/expect@4.1.4':

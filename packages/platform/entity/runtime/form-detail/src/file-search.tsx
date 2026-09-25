@@ -1,4 +1,5 @@
 "use client";
+import { fileFilterBody } from "./file-filter-body";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createOperation } from "@athyper/platform-api-client";
@@ -46,7 +47,7 @@ export function useFileSearch(
     reset();
     setScopeState("names");
     return () => pending.current?.abort();
-  }, [entityType, entityId]);
+  }, [entityType, entityId, client, allowed]);
   useEffect(() => {
     // Retain the typed query, but never mix result pages from different filters.
     pending.current?.abort();
@@ -92,7 +93,7 @@ export function useFileSearch(
         }>({ method: "POST", path: () => "/api/attachments/search" }),
         {
           signal: controller.signal,
-          body: { entityType, entityId, q: term, ...(folderFilter === "__unfiled" ? {unfiled:true} : folderFilter ? {folderId:folderFilter} : {}), ...(categoryFilter ? {category:categoryFilter} : {}), ...(after ? { after } : {}) },
+          body: { entityType, entityId, q: term, ...fileFilterBody(folderFilter, categoryFilter), ...(after ? { after } : {}) },
         },
       );
       if (controller.signal.aborted) return;
@@ -191,13 +192,13 @@ export function FileSearchInput({
   );
 }
 
-function excerpt(text: string, query: string) {
+function excerpt(text: string, query: string, expanded = false) {
   const normalized = text.replace(/\s+/g, " ").trim();
   const position = normalized
     .toLocaleLowerCase()
     .indexOf(query.toLocaleLowerCase());
-  const start = Math.max(0, position - 75);
-  const value = normalized.slice(start, start + 280);
+  const start = expanded ? 0 : Math.max(0, position - 75);
+  const value = expanded ? normalized : normalized.slice(start, start + 280);
   const index = value.toLocaleLowerCase().indexOf(query.toLocaleLowerCase());
   return (
     <>
@@ -218,15 +219,28 @@ function excerpt(text: string, query: string) {
 
 function SearchExcerpt({ text, query }: { text: string; query: string }) {
   const [expanded, setExpanded] = useState(false);
+  const [clipped, setClipped] = useState(false);
+  const paragraph = useRef<HTMLParagraphElement>(null);
+  useEffect(() => { setExpanded(false); }, [text, query]);
+  useEffect(() => {
+    const element = paragraph.current;
+    if (!element || expanded) return;
+    const measure = () => setClipped(element.scrollHeight > element.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [text, query, expanded]);
   return (
     <>
       <p
+        ref={paragraph}
         className="a-file-search-excerpt"
         data-expanded={expanded || undefined}
       >
-        {excerpt(text, query)}
+        {excerpt(text, query, expanded)}
       </p>
-      {text.length > 140 ? (
+      {expanded || clipped || text.replace(/\s+/g, " ").trim().length > 280 ? (
         <button
           className="a-file-search-excerpt__toggle"
           type="button"
@@ -255,7 +269,7 @@ export function FileSearchResults({
   onPreview: (hit: FileSearchHit) => void;
   onDownload: (id: string) => void;
   selected?: string;
-  downloading?: string;
+  downloading?: ReadonlySet<string>;
 }) {
   return (
     <section
@@ -287,9 +301,12 @@ export function FileSearchResults({
       {search.submitted &&
       !search.busy &&
       !search.error &&
+      !search.cursor &&
       !search.hits.length ? (
         <PanelEmptyState className="a-files-empty-state" role="status" icon={<FileTextIcon size={22}/>} title="No matching file contents" description="Try different words or search file names." action={<Button variant="secondary" type="button" onClick={()=>search.setScope("names")}>Search file names</Button>}/>
       ) : null}
+      {search.submitted && !search.busy && !search.error && !search.hits.length && search.cursor
+        ? <p role="status">No accessible matches on this page. More results are available.</p> : null}
       <ul>
         {search.hits.map((hit) => (
           <li
@@ -322,7 +339,7 @@ export function FileSearchResults({
                 ) : null}
                 {canDownload ? (
                   <FileAction label="Download" icon={<DownloadIcon size={18} aria-hidden="true"/>}
-                    disabled={downloading === hit.attachmentId}
+                    disabled={downloading?.has(hit.attachmentId)}
                     onClick={() => onDownload(hit.attachmentId)}
                   >
                     Download

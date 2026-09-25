@@ -12,6 +12,8 @@ export interface InfisicalSecretStoreConfig {
   readonly secretPath?: string;
   readonly timeoutMs?: number;
   readonly fetch?: typeof globalThis.fetch;
+  /** Immutable opaque values are created once, never overwritten. */
+  readonly createOnly?: boolean;
 }
 
 export function createInfisicalSecretStore(
@@ -84,7 +86,7 @@ export function createInfisicalSecretStore(
       endpoint,
     );
     const response = await fetcher(url, {
-      method: "PUT",
+      method: config.createOnly ? "POST" : "PUT",
       headers: {
         Authorization: `Bearer ${requireValue(config.token, "token")}`,
         "Content-Type": "application/json",
@@ -94,6 +96,7 @@ export function createInfisicalSecretStore(
         workspaceId: requireValue(config.workspaceId, "workspaceId"),
         environment: requireValue(config.environment, "environment"),
         secretPath: config.secretPath?.trim() || "/",
+        type: "shared",
         secretValue: Buffer.from(value).toString("base64"),
         secretEncoding: "base64",
       }),
@@ -122,6 +125,27 @@ export function createInfisicalSecretStore(
   return {
     resolve: request,
     put,
+    ...(config.createOnly ? {async create(reference: string, value: Uint8Array) {
+      const receipt = await put(reference, value);
+      let discarded = false;
+      return {...receipt, async discard() {
+        if (discarded) return;
+        const current = await request(reference).catch(error => {
+          if (error.code === "SECRET_NOT_FOUND") return undefined;
+          throw error;
+        });
+        if (!current) { discarded = true; return; }
+        if (current.version !== receipt.version || receipt.version === "current") throw new Error("SECRET_STORE_COMPENSATION_VERSION_MISMATCH");
+        const response = await fetcher(new URL(`/api/v3/secrets/raw/${encodeURIComponent(infisicalSecretName(reference))}`, endpoint), {
+          method: "DELETE",
+          headers: {Authorization: `Bearer ${requireValue(config.token, "token")}`, "Content-Type": "application/json"},
+          body: JSON.stringify({workspaceId: config.workspaceId, environment: config.environment, secretPath: config.secretPath?.trim() || "/", type: "shared"}),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+        if (!response.ok && response.status !== 404) throw new Error("SECRET_STORE_COMPENSATION_FAILED");
+        discarded = true;
+      }};
+    }} : {}),
     async health() {
       try {
         if (closed) return { healthy: false, message: "closed" };
@@ -134,6 +158,31 @@ export function createInfisicalSecretStore(
     close() {
       closed = true;
     },
+  };
+}
+
+/** Separate publication authority from protected business-value capture. */
+export function withProtectedValueStore(legacy: SecretStore, protectedValues: SecretStore): SecretStore {
+  const isProtected = (reference: string) => /^protected-values\/[0-9a-f-]{36}\/(tax|bank|certificate):[0-9a-f-]{36}$/i.test(reference);
+  return {
+    ...(protectedValues.create ? {async create(reference: string, value: Uint8Array) {
+      if (!isProtected(reference)) throw new Error("PROTECTED_VALUE_REFERENCE_INVALID");
+      return protectedValues.create!(reference, value);
+    }} : {}),
+    async resolve(reference) {
+      if (!isProtected(reference)) return legacy.resolve(reference);
+      try { return await protectedValues.resolve(reference); }
+      catch (error) {
+        // Existing references remain readable; never fall back on an authorization failure.
+        if ((error as {code?: string}).code !== "SECRET_NOT_FOUND") throw error;
+        return legacy.resolve(reference);
+      }
+    },
+    async put(reference, value) {
+      if (!isProtected(reference) || !protectedValues.put) throw new Error("PROTECTED_VALUE_REFERENCE_INVALID");
+      return protectedValues.put(reference, value);
+    },
+    async close() { await protectedValues.close?.(); await legacy.close?.(); },
   };
 }
 

@@ -55,30 +55,6 @@
             "widget": "text"
           },
           {
-            "key": "legalName",
-            "label": {
-              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.form.sections.identity.fields.legalName.label",
-              "defaultText": "Legal name"
-            },
-            "maxLength": 255,
-            "path": "legalName",
-            "required": true,
-            "target": "canonical",
-            "widget": "text"
-          },
-          {
-            "key": "displayName",
-            "label": {
-              "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.form.sections.identity.fields.displayName.label",
-              "defaultText": "Display name"
-            },
-            "maxLength": 255,
-            "path": "displayName",
-            "required": false,
-            "target": "canonical",
-            "widget": "text"
-          },
-          {
             "key": "registrationCountryCode",
             "label": {
               "labelKey": "entity.business_partner_request.presentation.section.form.supplierRequest.form.sections.identity.fields.registrationCountryCode.label",

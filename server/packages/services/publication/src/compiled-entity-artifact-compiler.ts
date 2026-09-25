@@ -10,6 +10,7 @@ import {
   type CompiledEntityRuntimeProjectionV2,
   type PublicationCanonicalizer,
 } from "@athyper/server-contract-publication";
+import { validateCompiledRuntimeContracts } from "@athyper/server-platform-metadata";
 
 export const COMPILED_ENTITY_ARTIFACT_COMPILER_VERSION = "1.0.0";
 
@@ -22,6 +23,9 @@ export interface CompiledEntityReleaseAuthoringInputV2 {
   readonly content: Readonly<Record<string, unknown>>;
 }
 export interface CompiledEntityArtifactCompilationInputV2 {
+  /** Server lowering output from the same reviewed MetaEntity source. It becomes
+   * a signed compiled member, never a separately activated native descriptor. */
+  readonly runtimeContracts?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   /** Canonical saved Studio members, indexed by entity; absent for direct artifact authoring. */
   readonly capabilityMembers?: Readonly<Record<string, readonly EntityCapabilityAuthoringMember[]>>;
   readonly artifacts: readonly CompiledEntityArtifactAuthoringInputV2[];
@@ -52,7 +56,18 @@ export function compileCompiledEntityArtifacts(
   input: CompiledEntityArtifactCompilationInputV2,
 ): CompiledEntityArtifactCompilationV2 {
   const seenRefs = new Set<string>();
-  const compiled = input.artifacts.map((source) => {
+  const sources = [...input.artifacts];
+  for (const [entityCode, descriptor] of Object.entries(input.runtimeContracts ?? {})) {
+    const core = sources.find(source => source.content.artifactKey === `${entityCode}/core`);
+    if (!core) throw new TypeError("COMPILED_ENTITY_RUNTIME_CORE_REQUIRED");
+    sources.push({ref: `${entityCode}/runtime.json`, content: {
+      schema: core.content.schema, schemaVersion: core.content.schemaVersion,
+      contractStatus: core.content.contractStatus, artifactType: "runtime_contract",
+      artifactKey: `${entityCode}/runtime`, entityCode, plane: core.content.plane,
+      dependencies: [`${entityCode}/core`, `${entityCode}/operation`], descriptor,
+    }});
+  }
+  const compiled = sources.map((source) => {
     const members=input.capabilityMembers?.[String(source.content.entityCode)];
     if(members && ["core","operation"].includes(String(source.content.artifactType))) {
       const mapped=capabilityArtifactMembers(String(source.content.entityCode),members);
@@ -103,6 +118,7 @@ export function compileCompiledEntityArtifacts(
     compiled.map((item) => item.artifact),
     input.registry,
   );
+  validateCompiledRuntimeContracts(compiled.map(item => item.artifact));
   const report = Object.freeze({
     schema: "athyper.compiled-entity-artifact-compile-report/1" as const,
     compilerVersion: COMPILED_ENTITY_ARTIFACT_COMPILER_VERSION,
@@ -121,7 +137,10 @@ export function compiledEntityRuntimeProjection(
   compilation: CompiledEntityArtifactCompilationV2,
   generatedAt: string,
   entityCode: string,
+  tenantId?: string,
 ): CompiledEntityRuntimeProjectionV2 {
+  if (tenantId !== undefined && !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(tenantId))
+    throw new TypeError("COMPILED_ENTITY_RUNTIME_TENANT_INVALID");
   if (Number.isNaN(Date.parse(generatedAt)))
     throw new TypeError("COMPILED_ENTITY_RUNTIME_GENERATED_AT_INVALID");
   if (!/^[a-z][a-z0-9_.-]{0,126}$/.test(entityCode))
@@ -130,6 +149,7 @@ export function compiledEntityRuntimeProjection(
     throw new TypeError("COMPILED_ENTITY_RUNTIME_ENTITY_NOT_IN_RELEASE");
   return Object.freeze({
     entityCode,
+    ...(tenantId === undefined ? {} : {tenantId}),
     release: compilation.release,
     artifacts: Object.freeze(compilation.artifacts.map((item) => item.artifact)),
     generatedAt,

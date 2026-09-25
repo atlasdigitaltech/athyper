@@ -1,8 +1,12 @@
-import { ATLAS_MODERN_BRAND } from "@athyper/platform-brand";
+import { ATLAS_MODERN_BRAND, ATLAS_MONO_BRAND } from "@athyper/platform-brand";
 
-export const THEME_FAMILIES = [ATLAS_MODERN_BRAND.id] as const;
+export const THEME_FAMILIES = [ATLAS_MODERN_BRAND.id, ATLAS_MONO_BRAND.id] as const;
 export type ThemeFamily = (typeof THEME_FAMILIES)[number];
 export const DEFAULT_THEME_FAMILY: ThemeFamily = ATLAS_MODERN_BRAND.id;
+
+export function isThemeFamily(value: unknown): value is ThemeFamily {
+  return typeof value === "string" && (THEME_FAMILIES as readonly string[]).includes(value);
+}
 
 export const COLOR_MODES = ["light", "dark", "high-contrast"] as const;
 export const DENSITY_MODES = ["compact", "comfortable", "spacious"] as const;
@@ -13,6 +17,7 @@ export type ThemePreference = ColorMode | "system";
 /** Read by the blocking ThemeScript before first paint; keep in sync with any client-side preference writer. */
 export const THEME_STORAGE_KEY = "athyper.theme";
 export const DENSITY_STORAGE_KEY = "athyper.density";
+export const THEME_FAMILY_STORAGE_KEY = "athyper.themeFamily";
 
 export const REQUIRED_COLOR_TOKENS = [
   "background",
@@ -247,6 +252,63 @@ export const COLOR_TOKENS: Readonly<Record<ColorMode, ColorTokenSet>> =
       storySelectionBorder: "#ffff00",
     }),
   });
+
+/**
+ * Atlas Mono: greyscale surfaces/chrome. Danger/warning/success/focus are
+ * copied unchanged from COLOR_TOKENS so status meaning never depends on hue
+ * alone — see foundation theme assessment in the design-system rollout notes.
+ */
+export const MONO_COLOR_TOKENS: Readonly<Record<ColorMode, ColorTokenSet>> =
+  Object.freeze({
+    light: Object.freeze({
+      ...COLOR_TOKENS.light,
+      background: "#fafafa",
+      foreground: "#1a1a1a",
+      surface: "#ffffff",
+      surfaceRaised: "#ffffff",
+      muted: "#f0f0f0",
+      mutedForeground: "#595959",
+      border: "#d9d9d9",
+      input: "#a6a6a6",
+      brand: ATLAS_MONO_BRAND.colors.primary,
+      brandForeground: ATLAS_MONO_BRAND.colors.primaryForeground,
+      brandHover: ATLAS_MONO_BRAND.colors.primaryHover,
+      brandSoft: ATLAS_MONO_BRAND.colors.primarySoft,
+    }),
+    dark: Object.freeze({
+      ...COLOR_TOKENS.dark,
+      background: "#121212",
+      foreground: "#ededed",
+      surface: "#1c1c1c",
+      surfaceRaised: "#242424",
+      muted: "#262626",
+      mutedForeground: "#a6a6a6",
+      border: "#3d3d3d",
+      input: "#595959",
+      primary: "color-mix(in srgb, var(--a-brand) 32%, white)",
+      primaryForeground: "color-mix(in srgb, var(--a-brand) 24%, black)",
+      selectionStrong: "#333333",
+      selectionStrongForeground: "#f0f0f0",
+      selectionSubtle: "#333333",
+      selectionSubtleForeground: "#f0f0f0",
+      brand: "#e0e0e0",
+      brandForeground: "#121212",
+      brandHover: "color-mix(in srgb, var(--a-brand) 42%, white)",
+      brandSoft: "color-mix(in srgb, var(--a-brand) 52%, black)",
+    }),
+    /** High contrast is an accessibility mode, not a brand — identical across families. */
+    "high-contrast": COLOR_TOKENS["high-contrast"],
+  });
+
+export const FAMILY_COLOR_TOKENS: Readonly<Record<ThemeFamily, Readonly<Record<ColorMode, ColorTokenSet>>>> =
+  Object.freeze({
+    "atlas-modern": COLOR_TOKENS,
+    "atlas-mono": MONO_COLOR_TOKENS,
+  });
+
+export function resolveFamilyColorTokens(family: ThemeFamily, mode: ColorMode): ColorTokenSet {
+  return FAMILY_COLOR_TOKENS[family][mode];
+}
 
 export const DENSITY_TOKENS = Object.freeze({
   compact: Object.freeze({

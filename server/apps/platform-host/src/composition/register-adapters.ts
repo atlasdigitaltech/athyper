@@ -100,6 +100,7 @@ import {
 } from "@athyper/server-adapter-publication-signing";
 import {
   createInfisicalSecretStore,
+  withProtectedValueStore,
   type InfisicalSecretStoreConfig,
 } from "@athyper/server-adapter-secretstore-infisical";
 import type { SecretStore } from "@athyper/server-contract-secrets";
@@ -668,6 +669,10 @@ export function registerAdapters(
     lifecycle.onShutdown(() => writers.close());
   }
   // Protected business values need the configured store independently of publication.
+  if (config.protectedValuesStore &&
+      (!config.infisical?.endpoint || !config.infisical.token || !config.infisical.workspaceId)) {
+    throw new Error("Protected-value routing requires the existing read authority");
+  }
   if (
     config.infisical?.endpoint &&
     config.infisical.token &&
@@ -682,8 +687,13 @@ export function registerAdapters(
       environment: config.infisical.environment,
       secretPath: config.infisical.secretPath,
     });
-    container.adapters.secretStore = secretStore;
-    lifecycle.onShutdown(() => secretStore.close?.());
+    const effectiveStore = config.protectedValuesStore
+      ? withProtectedValueStore(secretStore, (dependencies.createSecretStore ?? createInfisicalSecretStore)({
+          ...config.protectedValuesStore, createOnly: true,
+        }))
+      : secretStore;
+    container.adapters.secretStore = effectiveStore;
+    lifecycle.onShutdown(() => effectiveStore.close?.());
   }
   const publicationEnabled =
     config.publication?.authoringEnabled ||

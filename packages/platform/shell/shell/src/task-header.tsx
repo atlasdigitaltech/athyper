@@ -23,6 +23,9 @@ const TaskHeaderContext = createContext<
     }
   | undefined
 >(undefined);
+// Registration must not subscribe to its own header updates: callers may render
+// fresh action elements, which otherwise causes an effect/register/render loop.
+const TaskHeaderRegistrationContext = createContext<((header:EntityTaskHeader)=>()=>void) | undefined>(undefined);
 /** Scoped to one entity application. An unmounted task always restores its normal header. */
 export function EntityTaskHeaderProvider({
   children,
@@ -46,16 +49,16 @@ export function EntityTaskHeaderProvider({
     [registration, register],
   );
   return (
-    <TaskHeaderContext.Provider value={value}>
+    <TaskHeaderRegistrationContext.Provider value={register}><TaskHeaderContext.Provider value={value}>
       {children}
-    </TaskHeaderContext.Provider>
+    </TaskHeaderContext.Provider></TaskHeaderRegistrationContext.Provider>
   );
 }
 export function useEntityTaskHeader() {
   return useContext(TaskHeaderContext)?.header;
 }
 export function useRegisterEntityTaskHeader(header: EntityTaskHeader) {
-  const register = useContext(TaskHeaderContext)?.register;
+  const register = useContext(TaskHeaderRegistrationContext);
   useEffect(() => register?.(header), [register, header]);
   return Boolean(register);
 }

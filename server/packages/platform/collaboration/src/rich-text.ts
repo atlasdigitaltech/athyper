@@ -4,6 +4,7 @@ import {
   type RichTextMark,
   type RichTextNode,
 } from "@athyper/server-contract-collaboration";
+import { richTextPlain, safeRichTextHref } from "@athyper/contract-platform-rich-text";
 import { CollaborationError } from "./errors.js";
 
 const CONTAINERS = new Set([
@@ -22,7 +23,6 @@ const CONTAINERS = new Set([
 const LEAVES = new Set(["text", "hardBreak", "mention", "attachmentImage", "attachmentFile"]);
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const SAFE_PROTOCOL = /^(https?:|mailto:)/i;
 
 export interface RichTextProjection {
   readonly document: RichTextDocument;
@@ -47,7 +47,7 @@ export function projectRichText(
   };
   validateNode(root, state, 0, true);
   const document = value as RichTextDocument;
-  const text = plain(document).trim();
+  const text = richTextPlain(document).trim();
   if (!text && state.attachments.size === 0)
     invalid("Rich text must contain text or an attachment image");
   if (text.length > 50_000)
@@ -164,32 +164,10 @@ function validateMarks(marks?: readonly RichTextMark[]): void {
     if (mark.type === "link") {
       const href =
         typeof mark.attrs?.["href"] === "string" ? mark.attrs["href"] : "";
-      if (!SAFE_PROTOCOL.test(href) || href.length > 2_048)
+      if (!safeRichTextHref(href))
         invalid("Unsafe link URL");
     }
   }
-}
-function plain(node: RichTextNode): string {
-  if (node.type === "text") return node.text ?? "";
-  if (node.type === "hardBreak") return "\n";
-  if (node.type === "mention")
-    return `@${typeof node.attrs?.["label"] === "string" ? node.attrs["label"] : "mention"}`;
-  if ((node.type === "attachmentImage" || node.type === "attachmentFile"))
-    return `[${node.type === "attachmentFile" ? "Attachment" : "Image"}: ${typeof node.attrs?.["alt"] === "string" ? node.attrs["alt"] : "attachment"}]`;
-  const separator =
-    node.type === "tableRow"
-      ? "\t"
-      : [
-            "doc",
-            "blockquote",
-            "bulletList",
-            "orderedList",
-            "listItem",
-            "table",
-          ].includes(node.type)
-        ? "\n"
-        : "";
-  return (node.content ?? []).map(plain).join(separator);
 }
 function render(node: RichTextNode): string {
   if (node.type === "text")

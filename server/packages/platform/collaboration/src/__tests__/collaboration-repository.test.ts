@@ -28,6 +28,7 @@ async function run(
     repository: ReturnType<typeof createKyselyCollaborationRepository>,
     tx: CollaborationTransaction,
   ) => Promise<unknown>,
+  captured: {sql: string; parameters: readonly unknown[]}[] = [],
 ) {
   const queries: string[] = [];
   const db = new Kysely<Record<string, never>>({
@@ -38,7 +39,10 @@ async function run(
       createQueryCompiler: () => new PostgresQueryCompiler(),
     },
     log: (event) => {
-      if (event.level === "query") queries.push(event.query.sql);
+      if (event.level === "query") {
+        queries.push(event.query.sql);
+        captured.push({sql: event.query.sql, parameters: event.query.parameters});
+      }
     },
     plugins: [
       {
@@ -61,6 +65,37 @@ async function run(
   }
 }
 describe("collaboration SQL regressions", () => {
+  it("keeps a reply in its legacy parent's immutable coordinate", async () => {
+    const captured: {sql: string; parameters: readonly unknown[]}[] = [];
+    await run([[{active: true}], [{active: true}], [{thread_depth: 0, entity_type: "master.business_partner"}], [{id: "reply", created_at: "2026-09-25T00:00:00Z", entity_type: "master.business_partner"}]], async (repo, tx) => {
+      await repo.create({...command, entityType: "business_partner"}, [], tx);
+    }, captured);
+    const parent = captured.find(q => q.sql.includes("SELECT thread_depth"))!;
+    expect(parent.parameters).toContainEqual(["business_partner", "master.business_partner"]);
+    expect(parent.parameters).toContain(context.tenantId);
+    expect(parent.parameters).toContain(command.entityId);
+    expect(captured.find(q => q.sql.startsWith("INSERT INTO document.comment("))?.parameters).toContain("master.business_partner");
+  });
+  it("keeps legacy reply drafts under the parent coordinate", async () => {
+    const captured: {sql: string; parameters: readonly unknown[]}[] = [];
+    await run([[{active: true}], [{id: command.parentCommentId, entity_type: "master.business_partner"}], [{id: "draft"}]], async (repo, tx) => {
+      await repo.putDraft({...command, entityType: "business_partner"}, tx);
+    }, captured);
+    expect(captured.find(q => q.sql.startsWith("INSERT INTO document.comment_draft"))?.parameters).toContain("master.business_partner");
+  });
+  it("marks both BP feed generations read in the same tenant and principal", async () => {
+    const captured: {sql: string; parameters: readonly unknown[]}[] = [];
+    await run([[], []], async (repo, tx) => {
+      await repo.markRead(context.tenantId, context.principalId, {entityType: "business_partner", entityId: command.entityId}, "2026-09-25T00:00:00Z", tx);
+    }, captured);
+    expect(captured).toHaveLength(2);
+    expect(captured[0]!.parameters).toContain("business_partner");
+    expect(captured[1]!.parameters).toContain("master.business_partner");
+    for (const query of captured) {
+      expect(query.parameters).toContain(context.tenantId);
+      expect(query.parameters).toContain(context.principalId);
+    }
+  });
   it("checks full parent coordinates without invoking the author-only update policy before inserting", async () => {
     const queries = await run(
       [[{ active: true }], [{ active: true }], []],

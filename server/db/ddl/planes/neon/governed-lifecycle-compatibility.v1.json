@@ -9,7 +9,7 @@
       "disposition": "replace",
       "consumers": [
         "server/packages/services/master-data/src/kysely-business-partner-case-repository.ts",
-        "server/packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "server/packages/services/master-data/src/business-partner/record/repository.ts",
         "packages/planes/neon/business-partner/src/index.tsx"
       ],
       "usageMeasureSql": "SELECT count(*) AS retained_rows, count(*) FILTER (WHERE status IN ('draft','validating','validation_failed','pending_approval','returned','approved','applying','failed')) AS open_rows FROM document.business_partner_request",

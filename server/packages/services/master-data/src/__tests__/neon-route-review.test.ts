@@ -29,7 +29,7 @@ it("does not let invitation callers reset their rate limit by changing User-Agen
 });
 
 
-import { registerBusinessPartner360Routes } from "../business-partner-360-routes.js";
+import { registerBusinessPartner360Routes } from "../business-partner/legacy-360/routes";
 it.each(["2026-02-30","2026-13-01"])("rejects impossible Business Partner 360 dates: %s",async asOf=>{
   const app=express(),read=vi.fn();
   registerBusinessPartner360Routes(app,{authenticate:(_req,_res,next)=>next(),readContext:()=>({planeKey:"neon"} as never),service:new Proxy({}, {get:()=>read}) as Parameters<typeof registerBusinessPartner360Routes>[1]["service"]});

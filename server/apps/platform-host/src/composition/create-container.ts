@@ -17,6 +17,7 @@ import type {
 import type { SecretStore } from "@athyper/server-contract-secrets";
 import type {
   PublicationArtifactStore,
+  PublicationArtifactLoader,
   PublicationAuthorityRepository,
   PublicationSigner,
   PublicationVerifier,
@@ -293,6 +294,7 @@ export interface Container {
     businessPartnerNetworkExchange?: BusinessPartnerNetworkExchangeService;
     businessPartnerAccountBankLinkage?: BusinessPartnerAccountBankLinkageService;
     publication?: {
+      readonly loaders?: Readonly<Partial<Record<PublicationPlane, PublicationArtifactLoader>>>;
       readonly authority: PublicationAuthorityRepository;
       readonly projections: Readonly<
         Partial<Record<PublicationPlane, LocalProjectionRepository>>

@@ -43,7 +43,7 @@ const sourcePaths = [
  'server/apps/platform-host/src/composition/business-partner-permission-transitions.ts',
  'server/apps/platform-host/src/composition/business-partner-backend-mapping.ts',
  'server/packages/services/records/src/entity-backend-authorizer.ts',
- 'server/packages/services/master-data/src/business-partner-360-service.ts',
+ 'server/packages/services/master-data/src/business-partner/record/service.ts',
  'server/apps/platform-host/src/composition/business-partner-case-runtime.ts',
  'server/apps/platform-host/src/composition/business-partner-read-runtime.ts',
  'server/apps/platform-host/src/composition/business-partner-action-runtime.ts',

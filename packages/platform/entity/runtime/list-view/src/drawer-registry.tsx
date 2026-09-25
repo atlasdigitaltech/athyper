@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useRef, type ReactNode } from "react";
+import {CollectionDrawerHost} from "@athyper/platform-collection-controls";
+import React, { type ReactNode } from "react";
 import type { EntityListDescriptorV1 } from "@athyper/contract-platform-entity-list";
 import { CheckIcon, ChevronDownIcon, ColumnsIcon, FilterIcon, GroupIcon, LayoutIcon, SortIcon } from "@athyper/platform-icons";
 import { Drawer, Menu, MenuContent, MenuItem, MenuTrigger } from "@athyper/platform-ui";
@@ -23,15 +24,6 @@ export function ListDrawerHost({ active, onSelect, onOpenChange, descriptor, sec
   readonly sections: Record<ListDrawerKey, ReactNode>;
   readonly allowedKeys?: readonly ListDrawerKey[];
 }) {
-  const selector = useRef<HTMLSpanElement>(null);
-  const [visited, setVisited] = useState<readonly ListDrawerKey[]>([active]);
-  const options = LIST_DRAWERS.filter(item => item.available(descriptor) && (!allowedKeys || allowedKeys.includes(item.key)));
-  const current = options.find(item => item.key === active) ?? options[0]!;
-  const { Icon } = current;
-  const select = (key: ListDrawerKey) => { setVisited(keys => keys.includes(key) ? keys : [...keys, key]); onSelect(key); selector.current?.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')?.focus(); };
-  return <Drawer.Root open onOpenChange={onOpenChange}><Drawer.Panel size="wide" variant="task" mobilePresentation="fullscreen" className="a-entity-list__controls-drawer">
-    <Drawer.Header icon={<Icon/>} title={<span ref={selector}><Menu><MenuTrigger className="a-entity-list__drawer-selector" aria-label={`Switch list controls, current: ${current.label}`}>{current.label}<ChevronDownIcon size={16}/></MenuTrigger><MenuContent className="a-entity-list__drawer-menu">{options.map(item => <MenuItem key={item.key} aria-current={item.key === current.key ? "true" : undefined} onClick={() => select(item.key)}><item.Icon size={18}/><span>{item.label}</span>{item.key === current.key ? <CheckIcon size={16}/> : null}</MenuItem>)}</MenuContent></Menu></span>} description={current.description(descriptor)} closeLabel={`Close ${current.label.toLocaleLowerCase()}`}/>
-    <span className="a-visually-hidden" role="status" aria-live="polite">{current.label} controls</span>
-    {options.filter(item => visited.includes(item.key) || item.key === current.key).map(item => <div key={item.key} hidden={item.key !== current.key} inert={item.key !== current.key} className={`a-entity-list__drawer-section a-entity-list__${item.key === "views" ? "manage-views" : item.key === "display" ? "display-settings" : item.key === "filters" ? "filter" : item.key}-drawer`} data-list-drawer={item.key}>{sections[item.key]}</div>)}
-  </Drawer.Panel></Drawer.Root>;
+  const options = LIST_DRAWERS.filter(item => item.available(descriptor) && (!allowedKeys || allowedKeys.includes(item.key))).map(item=>({...item,description:item.description(descriptor)}));
+  return <CollectionDrawerHost active={active} onSelect={onSelect} onOpenChange={onOpenChange} options={options} sections={sections}/>;
 }

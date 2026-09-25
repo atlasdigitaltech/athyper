@@ -23,8 +23,8 @@ vi.mock("../business-partner-360-context", () => ({
     roleLens: "all",
   }),
 }));
-vi.mock("../business-partner-360-section-client", async () => ({
-  ...(await vi.importActual("../business-partner-360-section-client")),
+vi.mock("@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-section-client", async () => ({
+  ...(await vi.importActual("@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-section-client")),
   createBusinessPartner360SectionClient: () => ({ read: state.read }),
 }));
 vi.mock("@athyper/platform-ui", () => ({

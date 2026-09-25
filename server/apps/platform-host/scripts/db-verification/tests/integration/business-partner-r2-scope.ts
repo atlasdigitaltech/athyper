@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
-import { KyselyBusinessPartner360Repository } from "@athyper/server-service-master-data/kysely-business-partner-360-repository";
+import { KyselyBusinessPartner360Repository } from "@athyper/server-service-master-data/business-partner/record/repository";
 import { buildR2DatabaseFixtures } from "@athyper/server-db/test-fixtures/business-partner-r2";
 
 const databaseUrl = process.env.ATHYPER_NEON_DATABASE_ADMIN_URL;

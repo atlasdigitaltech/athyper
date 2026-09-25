@@ -1,5 +1,5 @@
 import {createOperation,encodePathSegment,type HttpClient} from "@athyper/platform-api-client";
-import type {SummaryQuery} from "./business-partner-360-client";
+import type {SummaryQuery} from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-client";
 
 export interface NetworkSection {readonly schemaVersion:1;readonly sectionCode:"network";readonly state:"ready"|"empty"|"partial"|"stale"|"unavailable";readonly data:Readonly<Record<string,unknown>>;readonly provenance:readonly Readonly<{plane:string;service:string;sourceObject:string;observedAt:string}>[];}
 export interface NetworkQuery extends SummaryQuery {readonly sectionCode:"network";}

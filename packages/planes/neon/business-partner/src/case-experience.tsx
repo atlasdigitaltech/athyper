@@ -1,6 +1,7 @@
 "use client";
 import { useContextDepartureGuard } from "@athyper/platform-shell";
-import { businessLabel } from "./360/display-values";
+import { businessTitle as title } from "./360/display-values";
+import { statusTone as caseTone } from "./workflow";
 
 import type {
   GovernedCaseStatusV1,
@@ -413,24 +414,3 @@ export function UnsavedChangesDialog({
     />
   );
 }
-
-function caseTone(
-  status: GovernedCaseStatusV1,
-): "neutral" | "success" | "warning" | "danger" {
-  if (["approved", "applied", "materialized"].includes(status))
-    return "success";
-  if (
-    [
-      "validation_failed",
-      "pending_approval",
-      "in_review",
-      "returned",
-      "conflicted",
-    ].includes(status)
-  )
-    return "warning";
-  if (["rejected", "failed", "cancelled"].includes(status)) return "danger";
-  return "neutral";
-}
-
-function title(value: string): string { return businessLabel(value, "title"); }

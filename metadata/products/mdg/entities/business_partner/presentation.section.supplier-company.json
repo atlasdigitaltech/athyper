@@ -21,7 +21,7 @@
   "coreRef": "supplier_company_profile/core.json",
   "fieldBindings": [
     {
-      "fieldKey": "supplier_id"
+      "fieldKey": "business_partner_id"
     },
     {
       "fieldKey": "company_code_id"
@@ -86,27 +86,6 @@
           }
         },
         {
-          "actionCode": "change_bank",
-          "code": "supplier.bank",
-          "fieldCode": "bank.verified_presence",
-          "label": {
-            "labelKey": "entity.business_partner.presentation.section.supplier-company.completenessPacks.supplier_payable.requirements.supplier.bank.label",
-            "defaultText": "Verify bank account"
-          },
-          "requiresVerified": true,
-          "sectionCode": "banking",
-          "severity": "required",
-          "factRef": {
-            "entityCode": "supplier",
-            "code": "BANK_VERIFIED_WHEN_PAYABLE"
-          },
-          "enforcement": "operation_gate",
-          "operationBindingRef": {
-            "artifactRef": "business_partner_request/operation.json",
-            "bindingKey": "supplier.readiness"
-          }
-        },
-        {
           "actionCode": "qualification",
           "code": "supplier.qualification",
           "fieldCode": "qualification.current",
@@ -157,5 +136,5 @@
     "missingResolver": "hide_action_with_diagnostic",
     "noImplicitOperationAuthority": true
   },
-  "artifactHash": "sha256:d2d9c4f97ea9d7e5f522c4bf9a6bc74687d3ba3c171337b7577b416d855df9ad"
+  "artifactHash": "sha256:db0d2a28af34d0d79155a2ac415f063162a9a9d28fa337b2f2847a41c9ca428c"
 }

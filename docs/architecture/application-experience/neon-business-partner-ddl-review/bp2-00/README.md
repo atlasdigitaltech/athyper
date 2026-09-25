@@ -1,12 +1,14 @@
 # BP2-00 — Complete graph reconciliation
 
+**Latest integration, 2026-09-23:** Signed release 16 is active (101 artifacts), retaining C01/C02's release-14 corrections. Fresh read-only reconciliation reports 249 manifest entries, zero source mismatches and Core binding gaps, with seven draft/active differences. The initial BF-04 supplier draft has now completed independent approval and governed materialization. The current request Core uses `document.entity_case`, and the actual publisher supplies the target catalog before signing. [Changes, checks and remaining acceptance](../bp2-integration-20260923.md). The detailed findings below retain the original reconciliation context; current activation and binding counts are in the regenerated ledgers and `active-reconciliation.json`.
+
 Implementation record: 2026-09-21 local date. Scope: reconciliation, typed admission checks and corrective ownership. No new business entity, DDL reset, data mutation or metadata activation was performed. Existing foundation/Comments/Attachments work remains independently owned.
 
 ## Result
 
-The inventory covers **580 unique reviewed table declarations**, including **278 Shared/Master/Control tables** and **all 43 user-listed tables**. Final declaration order contains **11 retired request tables**. All 43 have an explicit exposure, owning domain, planned consumer/exclusion and current source evidence. This is not a claim that every table needs a Core or that every declared operation is implemented.
+The inventory covers **592 unique reviewed table declarations**, including **288 Shared/Master/Control tables** and **all 43 user-listed tables**. Final declaration order contains **11 retired request tables**. All 43 have an explicit exposure, owning domain, planned consumer/exclusion and current source evidence. This is not a claim that every table needs a Core or that every declared operation is implemented.
 
-The running local `athyper_neon` activation head was inspected read-only, rather than inferring activation from draft JSON. It contains one compiled BP publication with **93 artifacts**. Both draft and active sets contain **22 Core artifacts** (including two platform policy/default artifacts). Field bindings resolve in the local catalog except for the six fields in the retired request Core; its draft and active copies are both flagged. Valid bindings alone do not establish complete relationships, command admission or UI behavior: each Core has specific remaining domain work in its ledger.
+The running local `athyper_neon` activation head was inspected read-only, rather than inferring activation from draft JSON. At the latest capture it contains source release **13** with **95 artifacts**, while authoring contains **113 artifacts**. The draft has **40 Core artifacts** and the active release has **24**. Field bindings resolve in the local catalog except for the six fields in the retired request Core; its draft and active copies are both flagged. Valid bindings alone do not establish complete relationships, command admission or UI behavior: each Core has specific remaining domain work in its ledger.
 
 The exact activation coordinates, hash and capture timestamp are in [active-reconciliation.json](active-reconciliation.json). This is a database activation snapshot; it does not claim a new browser journey, signature verification or publication test of that persisted release.
 
@@ -42,7 +44,7 @@ The generator asserts unique table coverage, exact agreement with the original r
 
 `business_partner_request` remains the logical request entity. The registered submit/materialize commands and request service use `KyselyBusinessPartnerCaseRepository`, backed by `document.entity_case`, command evidence/validation/materialization and `snapshot.entity_snapshot`/identity. They do not need the retired tables recreated.
 
-The active and draft `business_partner_request/core` still declare `document.business_partner_request`. This is a real metadata mismatch despite working service commands. BF-04 owns the corrective projection with BP2-00 evidence; update the example, parser/reader contract and tests together, then publish a new immutable release after the affected checks pass. Replacing the table name alone would misrepresent derived fields.
+The original reconciliation found active and draft `business_partner_request/core` declaring `document.business_partner_request`. **Resolved in release 14:** the Core now declares a case-backed handler projection, the unused baseline display field is removed, and the amendment command's distinct baseline contract is retained. The mapping below records the original decision inputs; C01/C02's current disposition is in `corrective-work.csv`. Remaining BF-04 governed requester/approver/materializer acceptance is separate.
 
 | Existing Core key | Current authority / required mapping |
 |---|---|
@@ -86,7 +88,7 @@ For ordinary dictionaries and simple admitted child collections, prefer validate
 
 ### Metadata gaps versus unsupported operations
 
-The operation ledger contains **51 declarations in each of the draft and active sets**. Of these, 23 reference one of the six registered domain command keys, and 28 do not have generic domain-command registration. All 51 reference locally published permission codes. Registration and permission existence still do not prove that a particular record/context is eligible.
+The operation ledger contains **55 draft declarations** and **51 active declarations**. Of the active declarations, 23 reference one of the six registered domain command keys and 28 do not have generic domain-command registration. Registration and permission existence still do not prove that a particular record/context is eligible.
 
 Use these distinct states:
 

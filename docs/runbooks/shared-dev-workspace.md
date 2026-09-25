@@ -62,9 +62,22 @@ The workspace must enter legacy mode before ordinary Stack v2 can replace the
 original DEV deployment. Do not use legacy mode for everyday metadata preview.
 
 The former isolated runner is retained as `pnpm dev:isolated` / `pnpm dev:local`
-for explicit disposable-environment work. Its application startup is rejected
-while the shared source workspace is selected. Do not use it as a metadata
-promotion stage.
+for explicit disposable-environment work. Startup from the shared checkout is
+rejected while the shared workspace is selected. Side-by-side qualification can
+use `--separate-checkout` from a clean detached checkout outside shared DEV, with
+its own installed dependencies. The runner still checks independent owned Docker
+resources, loopback ports, memory and its single isolated-environment registry.
+Never symlink the shared checkout's dependencies or build outputs. This creates
+an isolated local realm and synthetic personas, not copies of DEV sessions or grants.
+Do not use it as a metadata promotion stage.
+
+For a full fresh foundation, the database may require a larger
+`max_locks_per_transaction` budget (512 was qualified for the September 2026
+three-plane manifests). Apply this only to the owned isolated database and
+restart that database, never shared DEV. After first-time foundation completion,
+refresh the isolated connection pools before application startup so pooled
+connections inherit the new database-plane settings. Foundation staging uses
+writable `/tmp`; keep the container root filesystem read-only.
 
 ## Fast BP metadata preview
 

@@ -429,7 +429,7 @@ function isBusinessPartner(
     descriptor.planeKey === "neon" &&
     descriptor.entityCode === "business_partner" &&
     descriptor.storage.schema === "master" &&
-    descriptor.storage.object === "business_partner"
+    ["business_partner", "business_partner_identity_current"].includes(descriptor.storage.object)
   );
 }
 

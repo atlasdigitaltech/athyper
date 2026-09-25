@@ -3,7 +3,7 @@
 import { pathToFileURL } from "node:url";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
-import { KyselyBusinessPartner360Repository } from "@athyper/server-service-master-data/kysely-business-partner-360-repository";
+import { KyselyBusinessPartner360Repository } from "@athyper/server-service-master-data/business-partner/record/repository";
 
 export async function verifyBusinessPartner360Reads(options: {
   databaseUrl: string;

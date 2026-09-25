@@ -902,4 +902,4 @@ try:
 except AssertionError: pass
 else: raise AssertionError('Validator accepted conflicting translation keys')
 candidate_note = f" Scoped candidate {candidate_scope['key']} carries {len(candidate_scope['baseline_artifacts'])} pinned baseline artifacts and compiles {len(candidate_scope['artifacts'])} runtime artifacts." if candidate_scope else ''
-print(f'PASS: {len(artifacts)} artifacts; hashes, catalog types, query/index allow-lists, protection/reveal contracts, relation defaults, scopes, translations, 19 flow variants and source coverage. Request table uses pinned source-DDL evidence, not live DB verification.{candidate_note}')
+print(f'PASS: {len(artifacts)} artifacts; hashes, catalog types, query/index allow-lists, protection/reveal contracts, relation defaults, scopes, translations, 19 flow variants and source coverage. Offline catalog validation; publication also checks the target source catalog.{candidate_note}')

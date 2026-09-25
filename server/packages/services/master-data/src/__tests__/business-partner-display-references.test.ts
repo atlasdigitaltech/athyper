@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { DummyDriver, Kysely, PostgresAdapter, PostgresIntrospector, PostgresQueryCompiler, type Transaction } from "kysely";
-import { businessPartnerDisplayReferences } from "../business-partner-display-references.js";
+import { businessPartnerDisplayReferences } from "../business-partner/record/display-references";
 
 it("resolves registered IDs in one tenant-bound query while preserving technical references",async()=>{
   const id="11111111-1111-4111-8111-111111111111",queries:{sql:string;parameters:readonly unknown[]}[]=[];

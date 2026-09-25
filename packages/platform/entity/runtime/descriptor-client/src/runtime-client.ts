@@ -1,3 +1,4 @@
+import { entitySectionDisplay, entityNavigationProvider, isEntityNavigationKey } from "@athyper/contract-platform-entity-runtime";
 import {
   createOperation,
   encodePathSegment,
@@ -23,7 +24,8 @@ export interface EntityRuntimeNavigationPlan {
 export interface EntityRuntimeNavigationTabPlan {
   readonly key: string;
   readonly label: Readonly<{ readonly labelKey: string; readonly defaultText: string }>;
-  readonly provider: "360" | "section";
+  readonly provider: "overview" | "section";
+  readonly sectionDisplay: "continuous" | "selected";
   readonly sectionKeys: readonly string[];
 }
 export interface EntityRuntimeSummaryViewPlan {
@@ -55,8 +57,10 @@ export interface EntityRuntimeResourceContext {
   readonly companyCodeId?: string;
   readonly legalEntityId?: string;
   readonly asOf?: string;
-  readonly roleLens?: "all" | "supplier" | "customer";
+  /** Entity-specific lens; the registered domain adapter validates its vocabulary. */
+  readonly roleLens?: string;
   readonly threadRootId?: string;
+  readonly commentFilter?: "mentions";
 }
 
 export interface EntityRuntimeHeaderResource {
@@ -78,12 +82,24 @@ export interface EntityRuntimeSummaryResource {
   readonly cards: readonly Readonly<{ readonly key: string; readonly state: "ready" | "empty" | "context_required" | "unavailable"; readonly data?: unknown }> [];
 }
 
+export interface EntityRuntimeDisplayField {
+  readonly attachmentDownload?: true;
+  readonly temporalType?: "date" | "datetime";
+  readonly revealOperation?: string;
+  readonly revealTargetField?: string;
+  readonly maskedPrefix?: string;
+  readonly revealPurposes?: readonly { readonly value: string; readonly label: { readonly labelKey: string; readonly defaultText: string } }[];
+  readonly key: string;
+  readonly label?: { readonly labelKey: string; readonly defaultText: string };
+  readonly options?: readonly { readonly value: string; readonly label: { readonly labelKey: string; readonly defaultText: string } }[];
+  readonly itemFields?: readonly EntityRuntimeDisplayField[];
+}
 export interface EntityRuntimeSectionPresentation {
   readonly rendererKey: string;
   /** Optional section-authored copy for an empty collection. */
   readonly emptyState?: Readonly<{ readonly title: string; readonly detail: string }>;
-  readonly fields: readonly Readonly<{ readonly key: string; readonly label?: Readonly<{ readonly labelKey: string; readonly defaultText: string }> }> [];
-  readonly childCollections: readonly Readonly<{ readonly key: string; readonly rendererKey: string; readonly fields: readonly Readonly<{ readonly key: string; readonly label?: Readonly<{ readonly labelKey: string; readonly defaultText: string }> }> [] }> [];
+  readonly fields: readonly EntityRuntimeDisplayField[];
+  readonly childCollections: readonly Readonly<{ readonly key: string; readonly rendererKey: string; readonly label?: Readonly<{labelKey:string;defaultText:string}>; readonly display?: "disclosure"; readonly description?: string; readonly rowFields?: readonly (readonly EntityRuntimeDisplayField[])[]; readonly fields: readonly EntityRuntimeDisplayField[] }> [];
 }
 /** Public allowlist shared by drawer and content consumers. */
 export interface EntityRuntimeCapability {
@@ -175,6 +191,7 @@ function resourceContextQuery(value?: EntityRuntimeResourceContext): Readonly<Re
     ...(value.asOf ? { asOf: value.asOf } : {}),
     ...(value.roleLens ? { roleLens: value.roleLens } : {}),
     ...(value.threadRootId ? { threadRootId: value.threadRootId } : {}),
+    ...(value.commentFilter ? { commentFilter: value.commentFilter } : {}),
   };
 }
 
@@ -230,14 +247,14 @@ function parseNavigation(value: unknown, sections: readonly EntityRuntimeSection
   const root = object(value, "entity runtime navigation");
   const tabs = array(root.tabs, "entity runtime navigation.tabs").map((value, index) => {
     const item = object(value, `entity runtime navigation.tabs[${index}]`);
-    const provider = item.provider;
+    const provider = entityNavigationProvider(item.provider);
     const label = localized(item.label);
-    if ((provider !== "360" && provider !== "section") || !label) invalid("entity runtime navigation tab");
+    if (!provider || !label) invalid("entity runtime navigation tab");
     const sectionKeys = array(item.sectionKeys, "entity runtime navigation tab sections").map((keyValue) => key(keyValue, "entity runtime navigation section key"));
     if (!sectionKeys.length || sectionKeys.some((sectionKey) => !sections.some((section) => section.key === sectionKey))) invalid("entity runtime navigation tab sections");
-    return Object.freeze({ key: navigationKey(item.key, "entity runtime navigation tab key"), label, provider, sectionKeys: Object.freeze(sectionKeys) });
+    return Object.freeze({ key: navigationKey(item.key, "entity runtime navigation tab key"), label, provider, sectionDisplay: entitySectionDisplay(item.sectionDisplay, provider), sectionKeys: Object.freeze(sectionKeys) });
   });
-  if (!tabs.length || new Set(tabs.map((tab) => tab.key)).size !== tabs.length || tabs.filter((tab) => tab.provider === "360").length > 1) invalid("entity runtime navigation");
+  if (!tabs.length || new Set(tabs.map((tab) => tab.key)).size !== tabs.length || tabs.filter((tab) => tab.provider === "overview").length > 1) invalid("entity runtime navigation");
   return Object.freeze({ tabs: Object.freeze(tabs) });
 }
 function parseSummaryView(value: unknown): EntityRuntimeSummaryViewPlan {
@@ -307,13 +324,25 @@ function parseCapability(value: unknown): EntityRuntimeCapability {
 
 function parsePresentation(value: unknown): EntityRuntimeSectionPresentation {
   const root = object(value, "entity runtime section presentation");
-  const field = (value: unknown, name: string) => {
+  const field = (value: unknown, name: string): EntityRuntimeDisplayField => {
     const item = object(value, name);
-    return Object.freeze({ key: key(item.key, `${name}.key`), ...(localized(item.label) ? { label: localized(item.label) } : {}) });
+    if (item.attachmentDownload !== undefined && item.attachmentDownload !== true) invalid(`${name}.attachmentDownload`);
+    const options = item.options === undefined ? undefined : array(item.options, `${name}.options`).map(value => {
+      const option = object(value, `${name}.option`);
+      const label = localized(option.label);
+      if (!label) invalid(`${name}.option.label`);
+      return { value: text(option.value, `${name}.option.value`), label };
+    });
+    const revealPurposes = item.revealPurposes === undefined ? undefined : array(item.revealPurposes, `${name}.revealPurposes`).map(value => {
+      const option = object(value, `${name}.revealPurpose`); const label = localized(option.label);
+      if (!label) invalid(`${name}.revealPurpose.label`);
+      return {value:key(option.value, `${name}.revealPurpose.value`), label};
+    });
+    return Object.freeze({ ...(item.attachmentDownload === true ? {attachmentDownload:true as const} : {}), ...(item.temporalType === "date" || item.temporalType === "datetime" ? {temporalType:item.temporalType} : {}), ...(item.revealTargetField === undefined ? {} : {revealTargetField:key(item.revealTargetField, `${name}.revealTargetField`)}), ...(item.maskedPrefix === undefined ? {} : {maskedPrefix:text(item.maskedPrefix, `${name}.maskedPrefix`)}), ...(revealPurposes ? {revealPurposes} : {}), ...(item.revealOperation === undefined ? {} : {revealOperation:key(item.revealOperation, `${name}.revealOperation`)}), key: key(item.key, `${name}.key`), ...(localized(item.label) ? { label: localized(item.label) } : {}), ...(options ? { options } : {}), ...(item.itemFields ? {itemFields:array(item.itemFields,`${name}.itemFields`).map(v=>field(v,`${name}.itemField`))} : {}) });
   };
   const collections = array(root.childCollections, "entity runtime section child collections").map((value, index) => {
     const item = object(value, `entity runtime child collection ${index}`);
-    return Object.freeze({ key: key(item.key, "entity runtime child collection key"), rendererKey: text(item.rendererKey, "entity runtime child collection renderer"), fields: Object.freeze(array(item.fields, "entity runtime child collection fields").map((fieldValue, fieldIndex) => field(fieldValue, `entity runtime child collection ${index}.fields[${fieldIndex}]`))) });
+    return Object.freeze({ ...(item.rowFields === undefined ? {} : {rowFields: array(item.rowFields, "child row fields").map((row, rowIndex) => array(row, "child row fields entry").map((value, fieldIndex) => field(value, `child row ${rowIndex} field ${fieldIndex}`)))}), key: key(item.key, "entity runtime child collection key"), rendererKey: text(item.rendererKey, "entity runtime child collection renderer"), ...(localized(item.label) ? {label:localized(item.label)} : {}), ...(item.display === "disclosure" ? {display:"disclosure" as const} : {}), ...(typeof item.description === "string" ? {description:item.description} : {}), fields: Object.freeze(array(item.fields, "entity runtime child collection fields").map((fieldValue, fieldIndex) => field(fieldValue, `entity runtime child collection ${index}.fields[${fieldIndex}]`))) });
   });
   const empty = root.emptyState === undefined ? undefined : object(root.emptyState, "entity runtime section empty state");
   const emptyState = empty && typeof empty.title === "string" && empty.title.trim() && typeof empty.detail === "string" && empty.detail.trim()
@@ -325,7 +354,7 @@ function object(value: unknown, name: string): Record<string, unknown> { if (!va
 function array(value: unknown, name: string): readonly unknown[] { if (!Array.isArray(value)) invalid(name); return value; }
 function text(value: unknown, name: string): string { if (typeof value !== "string" || !value.trim() || value.length > 512) invalid(name); return value; }
 function key(value: unknown, name: string): string { const result = text(value, name); if (!/^[A-Za-z][A-Za-z0-9_.-]{0,126}$/.test(result)) invalid(name); return result; }
-function navigationKey(value: unknown, name: string): string { const result = text(value, name); if (result !== "360" && !/^[A-Za-z][A-Za-z0-9_.-]{0,126}$/.test(result)) invalid(name); return result; }
+function navigationKey(value: unknown, name: string): string { const result = text(value, name); if (!isEntityNavigationKey(result)) invalid(name); return result; }
 function sha256(value: unknown, name: string): string { const result = text(value, name); if (!/^sha256:[a-f0-9]{64}$/.test(result)) invalid(name); return result; }
 function localized(value: unknown): Readonly<{ readonly labelKey: string; readonly defaultText: string }> | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;

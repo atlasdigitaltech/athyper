@@ -30,7 +30,20 @@
     "fieldDiff": {},
     "header": {},
     "layout": {},
-    "navigation": {},
+    "navigation": {
+      "type": "object",
+      "properties": {
+        "tabs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sectionDisplay": { "enum": ["continuous", "selected"] }
+            }
+          }
+        }
+      }
+    },
     "pageSizes": {},
     "plane": {
       "const": "neon"

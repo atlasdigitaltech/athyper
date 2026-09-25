@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { mapBusinessPartner360Activity } from "../business-partner-360-activity-mapper.js";
+import { mapBusinessPartner360Activity } from "../business-partner/workflow/activity-mapper";
 
 function activity(eventCode: string) {
   return mapBusinessPartner360Activity({
@@ -15,6 +15,12 @@ function activity(eventCode: string) {
 }
 
 describe("Business Partner 360 request activity", () => {
+  it.each(["enabled", "not_enabled"])("maps governed capability %s without inventing legacy activation", state => {
+    expect(activity(`business_partner.business_partner_capability.${state}`)).toMatchObject({
+      source: "lifecycle", changedFields: ["status"],
+      title: state === "enabled" ? "Partner capability enabled" : "Partner capability disabled",
+    });
+  });
   it.each([
     ["business_partner.case.materialized", "Request applied"],
     ["business_partner.workflow.stage.activated", "Approval stage activated"],

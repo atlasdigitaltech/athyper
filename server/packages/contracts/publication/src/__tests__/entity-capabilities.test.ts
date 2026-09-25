@@ -121,6 +121,7 @@ describe("typed entity capabilities", () => {
       "attachmentBinding",
       (v: any) => {
         v.processing.search = true;
+        v.processing.extraction = false;
       },
     ],
     [

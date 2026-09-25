@@ -41,8 +41,6 @@
   "requiredContext": "resolve_from_target_core",
   "dependencies": [
     "business_partner/core",
-    "business_partner_commodity_capability/core",
-    "business_partner_commodity_capability/operation",
     "business_partner_industry_classification/core",
     "business_partner_industry_classification/operation"
   ],
@@ -87,31 +85,6 @@
       ],
       "load": "on_visible",
       "operationRef": "business_partner_industry_classification/operation.json"
-    },
-    {
-      "key": "commodity_capabilities",
-      "entityCode": "business_partner_commodity_capability",
-      "coreRef": "business_partner_commodity_capability/core.json",
-      "rendererKey": "platform.related-collection.v1",
-      "fieldBindings": [
-        {
-          "fieldKey": "commodity_category_id"
-        },
-        {
-          "fieldKey": "partner_role"
-        },
-        {
-          "fieldKey": "effective_from"
-        },
-        {
-          "fieldKey": "effective_until"
-        },
-        {
-          "fieldKey": "status"
-        }
-      ],
-      "load": "on_visible",
-      "operationRef": "business_partner_commodity_capability/operation.json"
     }
   ]
 }

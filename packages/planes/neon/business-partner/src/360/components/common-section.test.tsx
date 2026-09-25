@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import {
   createBusinessPartner360SectionClient,
   type CommonSectionItem,
-} from "../business-partner-360-section-client";
+} from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-section-client";
 
 const client = {} as ReturnType<typeof createBusinessPartner360SectionClient>;
 const render = (item: CommonSectionItem) =>

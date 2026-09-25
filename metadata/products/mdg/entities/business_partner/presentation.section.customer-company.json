@@ -21,7 +21,7 @@
   "coreRef": "customer_company_profile/core.json",
   "fieldBindings": [
     {
-      "fieldKey": "customer_id"
+      "fieldKey": "business_partner_id"
     },
     {
       "fieldKey": "company_code_id"

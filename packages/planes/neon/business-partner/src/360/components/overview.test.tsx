@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { Summary } from "../business-partner-360-client";
+import type { Summary } from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-client";
 import { BusinessPartner360Provider } from "../business-partner-360-context";
 import { Overview } from "./overview";
 import { SectionStatePanel } from "./section-state";

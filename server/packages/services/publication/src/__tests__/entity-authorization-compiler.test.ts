@@ -204,6 +204,7 @@ async function load(
   input: EntityAuthorizationPublicationInput,
   withRuntime = true,
   change?: (document: any) => void,
+  loaderRuntime = input.runtime,
 ) {
   const document = await compileEntityAuthorizationPublication(input);
   change?.(document);
@@ -236,10 +237,16 @@ async function load(
     verifier,
     canonicalizer,
     runtimeVersion: "1.0.0",
-    ...(withRuntime ? { authorizationRuntime: input.runtime } : {}),
+    ...(withRuntime ? { authorizationRuntime: loaderRuntime } : {}),
   }).load(deployment);
 }
 describe("native entity authorization publication (synthetic approved catalog)", () => {
+  it("retains the qualification cause while rejecting a correctly signed incompatible runtime", async () => {
+    const cause = new TypeError("Unqualified authorization runtime binding: read");
+    await expect(load(fixture(), true, undefined, {
+      qualify() { throw cause; },
+    })).rejects.toMatchObject({code: "RUNTIME_INCOMPATIBLE", cause});
+  });
   it("signs and loads tenant-owned native artifacts without publishing or grants", async () => {
     const input = fixture();
     const loaded = await load(input);

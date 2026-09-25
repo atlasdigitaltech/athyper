@@ -18,6 +18,61 @@ const surface = artifact("presentation_surface", {
 const operation = artifact("operation", { operations: [{ key: "request_change", permissionCode: "bp.amend" }] });
 
 describe("entity page planner", () => {
+  it("uses explicit display modes independently of tab names and providers", () => {
+    const tabs = [
+      {key: "alpha", provider: "section", sectionDisplay: "continuous", sectionKeys: ["overview", "contacts"]},
+      {key: "beta", provider: "overview", sectionDisplay: "selected", sectionKeys: ["banking"]},
+    ].map(t => ({...t, label: {labelKey: "tab." + t.key, defaultText: t.key}}));
+    const plan = planEntityPage({release: {releaseId: "r", releaseHash: "sha256:a"}, core,
+      surface: artifact("presentation_surface", {...surface.content, navigation: {tabs}}),
+      grantedPermissions: new Set(["bp.read", "bp.contacts.read", "bp.bank.read"])});
+    expect(plan.navigation?.tabs.map(t => t.sectionDisplay)).toEqual(["continuous", "selected"]);
+    expect(() => planEntityPage({release: {releaseId: "r", releaseHash: "sha256:a"}, core,
+      surface: artifact("presentation_surface", {...surface.content, navigation: {tabs: [{...tabs[0], sectionDisplay: "invalid"}]}}),
+      grantedPermissions: new Set(["bp.read"])})).toThrow("ENTITY_SECTION_DISPLAY_INVALID");
+  });
+  it("hides Restrictions independently without orphaning Qualifications", () => {
+    const configured = artifact("presentation_surface", { ...surface.content,
+      sections: [
+        {sectionKey: "qualifications-certificates", presentationRef: "business_partner/presentation.section.qualifications-certificates.json", viewPermission: "qualification.read"},
+        {sectionKey: "restrictions", presentationRef: "business_partner/presentation.section.restrictions.json", viewPermission: "restriction.read"},
+      ], navigation: {tabs: [{key: "qualifications", provider: "section", label: {labelKey: "tabs.qualifications", defaultText: "Qualifications"}, sectionKeys: ["qualifications-certificates", "restrictions"]}]} });
+    for (const allowed of [false, true]) {
+      const plan = planEntityPage({release: {releaseId: "r", releaseHash: "sha256:a"}, core, surface: configured,
+        grantedPermissions: new Set(["qualification.read", ...(allowed ? ["restriction.read"] : [])])});
+      expect(plan.navigation?.tabs[0]?.sectionKeys).toEqual(allowed ? ["qualifications-certificates", "restrictions"] : ["qualifications-certificates"]);
+      expect(plan.sections.map(s => s.key)).toEqual(plan.navigation?.tabs[0]?.sectionKeys);
+    }
+  });
+  it.each(["360", "overview"])("normalizes %s providers without changing published keys or labels", (provider) => {
+    const plan = planEntityPage({ release: {releaseId: "r", releaseHash: "sha256:a"}, core,
+      surface: artifact("presentation_surface", {...surface.content, navigation: {tabs: [
+        {key: "360", provider, label: {labelKey: "tabs.record", defaultText: "360 View"}, sectionKeys: ["overview"]}
+      ]}}), grantedPermissions: new Set(["bp.read"]) });
+    expect(plan.navigation?.tabs[0]).toMatchObject({key: "360", provider: "overview", label: {defaultText: "360 View"}, sectionKeys: ["overview"]});
+  });
+  it("rejects duplicate overview providers including mixed legacy metadata", () => {
+    expect(() => planEntityPage({release: {releaseId: "r", releaseHash: "sha256:a"}, core,
+      surface: artifact("presentation_surface", {...surface.content, navigation: {tabs: ["360", "overview"].map(provider => ({
+        key: provider, provider, label: {labelKey: "tabs.record", defaultText: "Record"}, sectionKeys: ["overview"]
+      }))}}), grantedPermissions: new Set(["bp.read"])})).toThrow("NAVIGATION_INVALID");
+  });
+  it("filters each destination independently in a multi-section tab", () => {
+    const plan = planEntityPage({release:{releaseId:"release-1",releaseHash:`sha256:${"a".repeat(64)}`},core,
+      surface:artifact("presentation_surface",{...surface.content,navigation:{tabs:[{key:"decisions",provider:"section",label:{labelKey:"tabs.decisions",defaultText:"Decisions"},sectionKeys:["contacts","banking"]}]}}),
+      grantedPermissions:new Set(["bp.contacts.read"])});
+    expect(plan.navigation?.tabs).toEqual([expect.objectContaining({key:"decisions",sectionKeys:["contacts"]})]);
+    expect(plan.sections.map(section=>section.key)).toEqual(["contacts"]);
+  });
+  it("omits navigation when every published destination is denied", () => {
+    const plan = planEntityPage({release:{releaseId:"release-1",releaseHash:`sha256:${"a".repeat(64)}`},core,
+      surface:artifact("presentation_surface",{...surface.content,navigation:{tabs:[{key:"overview",provider:"section",label:{labelKey:"tabs.overview",defaultText:"Overview"},sectionKey:"overview"}]}}),grantedPermissions:new Set()});
+    expect(plan.sections).toEqual([]);
+    expect(plan.navigation).toBeUndefined();
+  });
+  it("still rejects an empty published navigation definition", () => {
+    expect(()=>planEntityPage({release:{releaseId:"release-1",releaseHash:`sha256:${"a".repeat(64)}`},core,surface:artifact("presentation_surface",{...surface.content,navigation:{tabs:[]}}),grantedPermissions:new Set()})).toThrow("ENTITY_PAGE_PLAN_NAVIGATION_INVALID");
+  });
   it("returns one shared header projection and only authorized sections", () => {
     const plan = planEntityPage({
       release: { releaseId: "release-1", releaseHash: "sha256:a".padEnd(71, "a") },

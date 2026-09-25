@@ -139,7 +139,7 @@ function matches(taskCode: string, input: BusinessPartnerOnboardingCycleEvent): 
   return false; // Case approval cannot certify supplier qualification.
 }
 
-function externalTaskCodes(eventCode:string):readonly string[]{switch(eventCode){case"business_partner.qualification.approved":return["QUALIFICATION"];case"business_partner.bank_registration.protected":return["BANK_REGISTRATION"];case"business_partner.bank_verification.verified":case"business_partner.bank_verification.applied":return["BANK_VERIFICATION"];case"business_partner.supplier.readiness.completed":return["SUPPLIER_READINESS"];case"business_partner.supplier.activated":return["SUPPLIER_READINESS","ACTIVATION"];default:return[];}}
+function externalTaskCodes(eventCode:string):readonly string[]{switch(eventCode){case"business_partner.qualification.approved":return["QUALIFICATION"];case"business_partner.bank_registration.protected":return["BANK_REGISTRATION"];case"business_partner.supplier.readiness.completed":return["SUPPLIER_READINESS"];case"business_partner.supplier.activated":return["SUPPLIER_READINESS","ACTIVATION"];default:return[];}}
 
 async function unlock(input: BusinessPartnerOnboardingCycleEvent, runId: string, predecessorId: string, transaction: Tx): Promise<void> {
   await sql`UPDATE governance.cycle_task successor SET status='ready',status_changed_at=now(),status_changed_by=${input.principalId}::uuid,updated_at=now(),updated_by=${input.principalId}::uuid,version=successor.version+1

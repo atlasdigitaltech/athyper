@@ -18,7 +18,7 @@ export function createNeonBusinessPartnerImportAdapter(): GovernedImportAdapter<
       descriptor.planeKey === "neon" &&
       descriptor.entityCode === "business_partner" &&
       descriptor.storage.schema === "master" &&
-      descriptor.storage.object === "business_partner",
+      ["business_partner", "business_partner_identity_current"].includes(descriptor.storage.object),
     operations: () =>
       Object.freeze([
         "create",
@@ -103,9 +103,9 @@ export function createNeonBusinessPartnerImportAdapter(): GovernedImportAdapter<
         existing?.id ??
         (
           await sql<{ id: string }>`INSERT INTO master.business_partner(
-          tenant_id,code,name,partner_category,ownership_class,legal_classification,legal_form,registration_country_code,incorporation_date,website_url,description,metadata,status,created_by
+          tenant_id,code,name,partner_category,ownership_class,legal_classification,website_url,description,metadata,status,created_by
         ) VALUES(
-          ${context.tenantId}::uuid,${code},${text(row, "name")},'organization',${structural.ownership}::master.business_partner_ownership_d,${structural.classification ?? null}::master.business_partner_legal_classification_d,${nullableText(row, "legal_form")},${nullableText(row, "registration_country_code")},${nullableText(row, "incorporation_date")}::date,${nullableText(row, "website_url")},${nullableText(row, "description")},${JSON.stringify(object(row, "metadata"))}::jsonb,${nullableText(row, "status") ?? "draft"},${context.principalId}::uuid
+          ${context.tenantId}::uuid,${code},${text(row, "name")},'organization',${structural.ownership}::master.business_partner_ownership_d,${structural.classification ?? null}::master.business_partner_legal_classification_d,${nullableText(row, "website_url")},${nullableText(row, "description")},${JSON.stringify(object(row, "metadata"))}::jsonb,${nullableText(row, "status") ?? "draft"},${context.principalId}::uuid
         ) RETURNING id`.execute(transaction)
         ).rows[0]!.id;
       if (!existing && has(row, "aliases"))
@@ -113,9 +113,15 @@ export function createNeonBusinessPartnerImportAdapter(): GovernedImportAdapter<
           await sql`INSERT INTO master.business_partner_alias(tenant_id,business_partner_id,alias_name,created_by) VALUES(${context.tenantId}::uuid,${partnerId}::uuid,${alias},${context.principalId}::uuid)`.execute(
             transaction,
           );
+      const organizationPatch: Record<string, unknown> = {};
+      for (const [field, target] of Object.entries({name:"legalName",legal_form:"legalForm",legal_form_value_id:"legalFormValueId",registration_country_code:"registrationCountryCode",incorporation_date:"incorporationDate",business_type_value_id:"businessTypeValueId",founded_year:"foundedYear",employee_count:"employeeCount",employee_count_as_of:"employeeCountAsOf",employee_count_scope:"employeeCountScope"})) {
+        if (has(row, field)) organizationPatch[target] = row[field];
+      }
+      if (Object.keys(organizationPatch).length)
+        await sql`SELECT master.update_business_partner_organization_identity(${context.tenantId}::uuid,${partnerId}::uuid,${JSON.stringify(organizationPatch)}::jsonb,${context.principalId}::uuid)`.execute(transaction);
       if (existing)
         await sql`UPDATE master.business_partner SET
-          name=COALESCE(${nullableText(row, "name")},name),legal_form=COALESCE(${nullableText(row, "legal_form")},legal_form),registration_country_code=COALESCE(${nullableText(row, "registration_country_code")},registration_country_code),incorporation_date=COALESCE(${nullableText(row, "incorporation_date")}::date,incorporation_date),website_url=COALESCE(${nullableText(row, "website_url")},website_url),description=COALESCE(${nullableText(row, "description")},description),metadata=CASE WHEN ${has(row, "metadata")} THEN ${JSON.stringify(object(row, "metadata"))}::jsonb ELSE metadata END,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid
+          name=COALESCE(${nullableText(row, "name")},name),website_url=COALESCE(${nullableText(row, "website_url")},website_url),description=COALESCE(${nullableText(row, "description")},description),metadata=CASE WHEN ${has(row, "metadata")} THEN ${JSON.stringify(object(row, "metadata"))}::jsonb ELSE metadata END,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid
           WHERE tenant_id=${context.tenantId}::uuid AND id=${partnerId}::uuid`.execute(
           transaction,
         );

@@ -6,6 +6,10 @@ export interface OpaqueSecretValue {
 }
 
 export interface SecretStore {
+  /** Create immutable material; compensation is bound to this successful creation only. */
+  create?(reference: string, value: Uint8Array): Promise<{
+    readonly reference: string; readonly version: string; discard(): Promise<void>;
+  }>;
   resolve(reference: string): Promise<OpaqueSecretValue>;
   /** Persist verification/signing material and return only its opaque reference. */
   put?(reference: string, value: Uint8Array): Promise<{ readonly reference: string; readonly version: string }>;

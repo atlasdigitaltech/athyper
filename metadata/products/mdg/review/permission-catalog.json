@@ -187,6 +187,10 @@
       "status": "published"
     },
     {
+      "code": "neon.relationship.bp_target.network_read",
+      "status": "published"
+    },
+    {
       "code": "neon.relationship.business_partner_person.read",
       "status": "published"
     },
@@ -200,6 +204,10 @@
     },
     {
       "code": "neon.relationship.business_partner_tax.reveal",
+      "status": "published"
+    },
+    {
+      "code": "neon.relationship.business_partner_identifier.reveal",
       "status": "published"
     },
     {
@@ -232,6 +240,22 @@
     },
     {
       "code": "neon.workforce.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_classification.read",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_classification.declare",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_classification.verify",
+      "status": "published"
+    },
+    {
+      "code": "neon.business_partner_classification.archive",
       "status": "published"
     }
   ],

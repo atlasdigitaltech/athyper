@@ -1,0 +1,342 @@
+{
+  "contractSchema": "athyper.meta-entity-contract/2.1",
+  "entity": {
+    "entityCode": "activity_inbox_configuration",
+    "entityClass": "configuration",
+    "ownershipModel": "tenant"
+  },
+  "runtimeProfiles": [
+    {
+      "profileKey": "default",
+      "backingKind": "virtual",
+      "apiExposure": "catalog_only",
+      "readMode": "none",
+      "writeMode": "none"
+    }
+  ],
+  "fields": [],
+  "operations": [],
+  "surfaces": [
+    {
+      "id": "d3228585-1346-484b-b84a-64c7d67b37b1",
+      "surfaceKey": "collection_configuration",
+      "surfaceKind": "embedded",
+      "title": "Inbox",
+      "isDefault": true,
+      "layoutConfig": {
+        "collectionConfiguration": {
+          "schema": "athyper.collection-presentation/1",
+          "collectionKey": "activity.inbox",
+          "title": "Inbox",
+          "description": "Updates and work that need your attention",
+          "providerKey": "platform.activity.inbox.v1",
+          "providerVersion": 1,
+          "viewVersion": 1,
+          "targetPlanes": [
+            "neon",
+            "mesh",
+            "studio"
+          ],
+          "rendererKey": "activity.task.v1",
+          "searchFields": [
+            "title",
+            "summary",
+            "recordLabel"
+          ],
+          "fields": [
+            {
+              "key": "title",
+              "label": "Title",
+              "valueKind": "text",
+              "operators": [
+                "contains"
+              ],
+              "sortable": false,
+              "groupable": false
+            },
+            {
+              "key": "summary",
+              "label": "Summary",
+              "valueKind": "text",
+              "operators": [
+                "contains"
+              ],
+              "sortable": false,
+              "groupable": false
+            },
+            {
+              "key": "recordLabel",
+              "label": "Related record",
+              "valueKind": "text",
+              "operators": [
+                "contains"
+              ],
+              "sortable": false,
+              "groupable": false
+            },
+            {
+              "key": "status",
+              "label": "Task status",
+              "valueKind": "enum",
+              "operators": [
+                "eq",
+                "in"
+              ],
+              "sortable": false,
+              "groupable": true,
+              "choices": [
+                {
+                  "value": "open",
+                  "label": "open"
+                },
+                {
+                  "value": "claimed",
+                  "label": "claimed"
+                },
+                {
+                  "value": "in_progress",
+                  "label": "in progress"
+                },
+                {
+                  "value": "blocked",
+                  "label": "blocked"
+                },
+                {
+                  "value": "completed",
+                  "label": "completed"
+                },
+                {
+                  "value": "cancelled",
+                  "label": "cancelled"
+                }
+              ]
+            },
+            {
+              "key": "priority",
+              "label": "Priority",
+              "valueKind": "enum",
+              "operators": [
+                "eq",
+                "in"
+              ],
+              "sortable": true,
+              "groupable": true,
+              "choices": [
+                {
+                  "value": "low",
+                  "label": "low"
+                },
+                {
+                  "value": "normal",
+                  "label": "normal"
+                },
+                {
+                  "value": "high",
+                  "label": "high"
+                },
+                {
+                  "value": "urgent",
+                  "label": "urgent"
+                }
+              ]
+            },
+            {
+              "key": "assignment",
+              "label": "Assignment",
+              "valueKind": "enum",
+              "operators": [
+                "eq",
+                "in"
+              ],
+              "sortable": false,
+              "groupable": false,
+              "choices": [
+                {
+                  "value": "me",
+                  "label": "me"
+                },
+                {
+                  "value": "team",
+                  "label": "team"
+                }
+              ]
+            },
+            {
+              "key": "due",
+              "label": "Due date",
+              "valueKind": "enum",
+              "operators": [
+                "eq",
+                "in"
+              ],
+              "sortable": false,
+              "groupable": true,
+              "choices": [
+                {
+                  "value": "overdue",
+                  "label": "overdue"
+                },
+                {
+                  "value": "today",
+                  "label": "today"
+                },
+                {
+                  "value": "upcoming",
+                  "label": "upcoming"
+                },
+                {
+                  "value": "none",
+                  "label": "none"
+                }
+              ]
+            },
+            {
+              "key": "dueAt",
+              "label": "Due at",
+              "valueKind": "datetime",
+              "operators": [
+                "eq",
+                "gte",
+                "lte",
+                "relative"
+              ],
+              "sortable": true,
+              "groupable": true
+            },
+            {
+              "key": "createdAt",
+              "label": "Created",
+              "valueKind": "datetime",
+              "operators": [
+                "eq",
+                "gte",
+                "lte",
+                "relative"
+              ],
+              "sortable": true,
+              "groupable": true
+            },
+            {
+              "key": "entity",
+              "label": "Entity type",
+              "valueKind": "reference",
+              "operators": [
+                "eq",
+                "in"
+              ],
+              "sortable": false,
+              "groupable": true,
+              "choiceSource": "activity.authorized-entities.v1"
+            }
+          ],
+          "quickFields": [
+            "status",
+            "priority",
+            "assignment"
+          ],
+          "defaultState": {
+            "query": "",
+            "filters": [
+              {
+                "field": "status",
+                "operator": "in",
+                "value": [
+                  "open",
+                  "claimed",
+                  "in_progress",
+                  "blocked"
+                ]
+              }
+            ],
+            "sort": [
+              {
+                "field": "dueAt",
+                "direction": "asc"
+              }
+            ],
+            "group": "due",
+            "density": "comfortable"
+          },
+          "views": [
+            {
+              "key": "all",
+              "label": "All eligible work",
+              "state": {
+                "query": "",
+                "filters": [
+                  {
+                    "field": "status",
+                    "operator": "in",
+                    "value": [
+                      "open",
+                      "claimed",
+                      "in_progress",
+                      "blocked"
+                    ]
+                  }
+                ],
+                "sort": [
+                  {
+                    "field": "dueAt",
+                    "direction": "asc"
+                  }
+                ],
+                "group": "due",
+                "density": "comfortable"
+              }
+            },
+            {
+              "key": "my_work",
+              "label": "My open work",
+              "state": {
+                "query": "",
+                "filters": [
+                  {
+                    "field": "status",
+                    "operator": "in",
+                    "value": [
+                      "open",
+                      "claimed",
+                      "in_progress",
+                      "blocked"
+                    ]
+                  },
+                  {
+                    "field": "assignment",
+                    "operator": "eq",
+                    "value": "me"
+                  }
+                ],
+                "sort": [
+                  {
+                    "field": "dueAt",
+                    "direction": "asc"
+                  }
+                ],
+                "group": "due",
+                "density": "comfortable"
+              }
+            }
+          ],
+          "surfaces": [
+            "page",
+            "drawer"
+          ],
+          "actionKeys": [
+            "open_record",
+            "open_task"
+          ],
+          "maxPageSize": 100
+        }
+      }
+    }
+  ],
+  "tests": [
+    {
+      "key": "collection_schema",
+      "assertion": "path_equals",
+      "path": "surfaces.0.layoutConfig.collectionConfiguration.schema",
+      "expected": "athyper.collection-presentation/1"
+    }
+  ]
+}

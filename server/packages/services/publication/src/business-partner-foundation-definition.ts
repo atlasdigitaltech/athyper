@@ -1025,15 +1025,6 @@ const partner360CompletenessPacks = Object.freeze([
         "Configure supplier company",
       ),
       requirement(
-        "supplier.bank",
-        "bank.verified_presence",
-        "banking",
-        "required",
-        "change_bank",
-        "Verify bank account",
-        true,
-      ),
-      requirement(
         "supplier.qualification",
         "qualification.current",
         "qualifications-certificates",

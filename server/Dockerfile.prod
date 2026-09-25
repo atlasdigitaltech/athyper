@@ -39,6 +39,10 @@ RUN pnpm --filter "@athyper/contract-platform-entity-list" run build
 RUN pnpm --filter "@athyper/contract-athyper-onboarding" run build
 RUN pnpm --filter "@athyper/contract-platform-dashboard" run build
 RUN pnpm --filter "@athyper/contract-platform-ai" run build
+RUN pnpm --filter "@athyper/contract-platform-rich-text" run build
+RUN pnpm --filter "@athyper/contract-neon-party" run build
+RUN pnpm --filter "@athyper/contract-platform-collection" run build
+RUN pnpm --filter "@athyper/contract-platform-activity" run build
 # Generate every plane's types from the committed Prisma schemas. A clean
 # candidate must not depend on ignored files left by a developer's local pull.
 RUN pnpm --filter "@athyper/server-db" run codegen
@@ -53,6 +57,10 @@ RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platf
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/athyper/onboarding
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/dashboard
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/ai
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/rich-text
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/neon/party
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/collection
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/activity
 
 # Cache registry metadata as well as package tarballs: legacy deployment
 # re-resolves metadata, and failed build layers otherwise discard successful fetches.
@@ -72,7 +80,11 @@ RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharin
     node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/entity-runtime /runtime && \
     node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/athyper/onboarding /runtime && \
     node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/dashboard /runtime && \
-    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/ai /runtime
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/ai /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/rich-text /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/neon/party /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/collection /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/activity /runtime
 
 # Exercise the emitted dependency graph before an image can replace a running API.
 RUN cd /runtime && node --input-type=module -e \

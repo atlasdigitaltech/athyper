@@ -302,60 +302,6 @@ CREATE POLICY tenant_access ON document.business_partner_invitation_recovery FOR
 CREATE POLICY seed_write ON document.business_partner_invitation FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
 CREATE POLICY seed_write ON document.business_partner_invitation_recovery FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
 
-ALTER TABLE document.business_partner_request ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.business_partner_request FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_access ON document.business_partner_request
-    FOR ALL
-    USING (tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY seed_write ON document.business_partner_request
-    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
-
-ALTER TABLE document.business_partner_request_evidence ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.business_partner_request_evidence FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_read ON document.business_partner_request_evidence
-    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON document.business_partner_request_evidence
-    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY seed_write ON document.business_partner_request_evidence
-    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
-
-ALTER TABLE document.business_partner_request_validation ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.business_partner_request_validation FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_read ON document.business_partner_request_validation
-    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON document.business_partner_request_validation
-    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY seed_write ON document.business_partner_request_validation
-    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
-
-DO $$
-DECLARE
-    v_table text;
-BEGIN
-    FOREACH v_table IN ARRAY ARRAY[
-        'business_partner_request_address',
-        'business_partner_request_contact_person',
-        'business_partner_request_contact_channel',
-        'business_partner_request_identifier',
-        'business_partner_request_tax_registration',
-        'business_partner_request_classification',
-        'business_partner_request_certification',
-        'business_partner_request_materialization_item'
-    ]
-    LOOP
-        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY', v_table);
-        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY', v_table);
-        EXECUTE format(
-            'CREATE POLICY tenant_access ON document.%I '
-            'USING (tenant_id = shared.current_tenant_id()) '
-            'WITH CHECK (tenant_id = shared.current_tenant_id())',
-            v_table
-        );
-    END LOOP;
-END;
-$$;
-
 DO $$
 DECLARE
     v_table text;
@@ -767,10 +713,6 @@ ALTER TABLE document.mesh_business_partner_acceptance_event FORCE ROW LEVEL SECU
 CREATE POLICY tenant_read ON document.mesh_business_partner_acceptance_event FOR SELECT USING (tenant_id=shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON document.mesh_business_partner_acceptance_event FOR INSERT WITH CHECK (tenant_id=shared.current_tenant_id());
 CREATE POLICY seed_write ON document.mesh_business_partner_acceptance_event FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
-ALTER TABLE document.business_partner_bank_verification ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.business_partner_bank_verification FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_access ON document.business_partner_bank_verification USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
-CREATE POLICY seed_write ON document.business_partner_bank_verification FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
 ALTER TABLE document.business_partner_duplicate_resolution ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.business_partner_duplicate_resolution FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_access ON document.business_partner_duplicate_resolution USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());

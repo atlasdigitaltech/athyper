@@ -57,9 +57,9 @@ if (!process.argv.includes("--inside")) {
   const { KyselyBusinessPartnerCaseRepository } =
     await import("../../../../server/packages/services/master-data/src/kysely-business-partner-case-repository.js");
   const { readBusinessPartner360ExplainabilitySection: read } =
-    await import("../../../../server/packages/services/master-data/src/kysely-business-partner-360-explainability.js");
+    await import("../../../../server/packages/services/master-data/src/business-partner/relationships/explainability-reader");
   const { KyselyBusinessPartner360Repository } =
-    await import("../../../../server/packages/services/master-data/src/kysely-business-partner-360-repository.js");
+    await import("../../../../server/packages/services/master-data/src/business-partner/record/repository");
   const { BUSINESS_PARTNER_360_PERMISSIONS: P } =
     await import("../../../../server/packages/contracts/master-data/src/business-partner-360.js");
   const db = new Kysely({

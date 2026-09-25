@@ -16,9 +16,9 @@ test("S2 removes workforce execution and UI from Business Partner 360", async ()
     await assert.rejects(access(resolve(root, path), constants.F_OK));
   }
   const [service, repository, shell] = await Promise.all([
-    read("packages/services/master-data/src/business-partner-360-service.ts"),
-    read("packages/services/master-data/src/kysely-business-partner-360-repository.ts"),
-    read("../packages/planes/neon/business-partner/src/360/business-partner-360.tsx"),
+    read("packages/services/master-data/src/business-partner/record/service.ts"),
+    read("packages/services/master-data/src/business-partner/record/repository.ts"),
+    read("../packages/planes/neon/entity-extensions/src/business-partner/adapter.tsx"),
   ]);
   assert.doesNotMatch(service, /readWorkforceSection|change_employment/);
   assert.doesNotMatch(repository, /person\.business_partner_id|['"]workforce['"]/);
@@ -62,5 +62,5 @@ test("S2 keeps person and workforce fields out of MESH and generic BP exports", 
   assert.match(mesh, /person\./);
   assert.match(mesh, /workforce\./);
   assert.match(records, /BUSINESS_PARTNER_EXPORT_WORKFORCE_FORBIDDEN/);
-  assert.match(records, /entityCode!=="business_partner"/);
+  assert.match(records, /entityCode\s*!==\s*"business_partner"/);
 });

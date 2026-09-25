@@ -533,7 +533,7 @@ BEGIN
                   AND status = 'active'
            )
            OR EXISTS (
-               SELECT 1 FROM master.bank_account_link
+               SELECT 1 FROM master.payment_instrument_link
                 WHERE owner_type_id = OLD.id
                   AND effective_from <= CURRENT_DATE
                   AND (
@@ -665,9 +665,17 @@ BEGIN
         v_domain := 'control.business_partner_qualification_type';
         v_code := NEW.qualification_type_code;
     ELSIF TG_ARGV[0] = 'operation' THEN
-        NEW.operation_code := lower(btrim(NEW.operation_code));
-        v_domain := 'control.business_partner_block_operation';
-        v_code := NEW.operation_code;
+        IF cardinality(NEW.operation_codes)=0 OR array_position(NEW.operation_codes,NULL) IS NOT NULL THEN
+          RAISE EXCEPTION 'At least one non-null block action is required' USING ERRCODE='23514';
+        END IF;
+        SELECT array_agg(code ORDER BY code) INTO NEW.operation_codes
+          FROM (SELECT DISTINCT lower(btrim(x)) code FROM unnest(NEW.operation_codes) x) codes;
+        FOREACH v_code IN ARRAY NEW.operation_codes LOOP
+          IF NOT control.lookup_value_is_active('control.business_partner_block_operation',v_code,NEW.tenant_id) THEN
+            RAISE EXCEPTION 'Unknown block action %',v_code USING ERRCODE='23514';
+          END IF;
+        END LOOP;
+        RETURN NEW;
     ELSE
         IF NEW.reason_code IS NULL THEN
             RETURN NEW;
@@ -693,15 +701,19 @@ AS $$
 DECLARE
     v_role master.partner_role_d;
 BEGIN
+    IF TG_TABLE_NAME='business_partner_qualification' THEN
+      IF NEW.risk_assessment_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM master.party_risk_assessment r WHERE r.tenant_id=NEW.tenant_id AND r.id=NEW.risk_assessment_id AND r.business_partner_id=NEW.business_partner_id) THEN
+        RAISE EXCEPTION 'Risk assessment must belong to the same partner' USING ERRCODE='23514';
+      END IF;
+      RETURN NEW;
+    END IF;
     -- The command validates the exact role and normalized scope before inserting
     -- the head. Compatibility-column validation is intentionally bypassed when
     -- those retired writer inputs are absent.
     IF current_setting('app.normalized_decision_scope_write', true) = 'on' THEN
         RETURN NEW;
     END IF;
-    IF TG_TABLE_NAME = 'business_partner_qualification' THEN
-        v_role := NEW.partner_role;
-    ELSIF TG_TABLE_NAME = 'supplier_preference_designation' THEN
+    IF TG_TABLE_NAME = 'supplier_preference_designation' THEN
         v_role := 'supplier';
     ELSIF NEW.partner_role_scope <> 'all' THEN
         v_role := NEW.partner_role_scope::text::master.partner_role_d;
@@ -752,21 +764,6 @@ BEGIN
             USING ERRCODE = 'check_violation';
     END IF;
 
-    IF TG_TABLE_NAME = 'business_partner_qualification'
-       AND (to_jsonb(NEW)->>'commodity_capability_id') IS NOT NULL
-       AND NOT EXISTS (
-           SELECT 1
-             FROM master.business_partner_commodity_capability capability
-            WHERE capability.tenant_id = NEW.tenant_id
-              AND capability.id = (to_jsonb(NEW)->>'commodity_capability_id')::uuid
-              AND capability.business_partner_id = NEW.business_partner_id
-              AND capability.partner_role = (to_jsonb(NEW)->>'partner_role')::master.partner_role_d
-       ) THEN
-        RAISE EXCEPTION
-            'Commodity capability does not belong to the selected partner role'
-            USING ERRCODE = 'check_violation';
-    END IF;
-
     IF TG_TABLE_NAME = 'supplier_preference_designation' AND NOT EXISTS (
         SELECT 1 FROM master.supplier supplier
          WHERE supplier.tenant_id = NEW.tenant_id
@@ -797,16 +794,15 @@ BEGIN
     IF TG_TABLE_NAME = 'supplier_preference_designation'
        AND (to_jsonb(NEW)->>'commodity_category_id') IS NOT NULL
        AND NOT EXISTS (
-        SELECT 1 FROM master.business_partner_commodity_capability capability
-         WHERE capability.tenant_id = NEW.tenant_id
-           AND capability.business_partner_id = NEW.business_partner_id
-           AND capability.partner_role = 'supplier'
-           AND capability.commodity_category_id = (to_jsonb(NEW)->>'commodity_category_id')::uuid
-           AND capability.status = 'active'
-           AND capability.effective_from <= NEW.effective_from
-           AND (capability.effective_until IS NULL OR capability.effective_until > NEW.effective_from)
-           AND (capability.effective_until IS NULL OR
-                (NEW.effective_until IS NOT NULL AND capability.effective_until >= NEW.effective_until))
+        SELECT 1 FROM master.business_partner_commodity_classification classification
+         WHERE classification.tenant_id = NEW.tenant_id
+           AND classification.business_partner_id = NEW.business_partner_id
+           AND classification.commodity_category_id = (to_jsonb(NEW)->>'commodity_category_id')::uuid
+           AND classification.status = 'active'
+           AND classification.effective_from <= NEW.effective_from
+           AND (classification.effective_until IS NULL OR classification.effective_until > NEW.effective_from)
+           AND (classification.effective_until IS NULL OR
+                (NEW.effective_until IS NOT NULL AND classification.effective_until >= NEW.effective_until))
     ) THEN
         RAISE EXCEPTION 'Supplier has no active capability for the selected commodity category at effective start'
             USING ERRCODE = 'check_violation';
@@ -829,29 +825,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION control.trg_validate_qualification_role_pair()
-RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,control,master AS $$
-BEGIN
-    IF NEW.partner_role='supplier' THEN
-        SELECT supplier.id INTO NEW.role_id FROM master.supplier supplier
-         WHERE supplier.tenant_id=NEW.tenant_id
-           AND supplier.business_partner_id=NEW.business_partner_id
-           AND (NEW.role_id IS NULL OR supplier.id=NEW.role_id)
-           AND supplier.status<>'archived';
-    ELSE
-        SELECT customer.id INTO NEW.role_id FROM master.customer customer
-         WHERE customer.tenant_id=NEW.tenant_id
-           AND customer.business_partner_id=NEW.business_partner_id
-           AND (NEW.role_id IS NULL OR customer.id=NEW.role_id)
-           AND customer.status<>'archived';
-    END IF;
-    IF NEW.role_id IS NULL THEN
-        RAISE EXCEPTION 'Qualification role does not belong to the selected Business Partner'
-            USING ERRCODE='foreign_key_violation';
-    END IF;
-    RETURN NEW;
-END;
-$$;
+
 
 CREATE OR REPLACE FUNCTION control.trg_validate_decision_scope()
 RETURNS trigger
@@ -860,6 +834,7 @@ SET search_path = pg_catalog, control, master
 AS $$
 DECLARE v_count integer;
 BEGIN
+    IF NEW.selection_mode='all' THEN RETURN NEW; END IF;
     IF NEW.scope_kind='operating_organization' AND NOT EXISTS (
         SELECT 1 FROM master.operating_organization x WHERE x.tenant_id=NEW.tenant_id AND x.id=NEW.operating_organization_id AND x.is_active
     ) THEN RAISE EXCEPTION 'Decision scope operating organization must be active' USING ERRCODE='foreign_key_violation'; END IF;
@@ -883,6 +858,7 @@ BEGIN
     END IF;
     SELECT count(*) INTO v_count FROM control.business_partner_decision_scope s
      WHERE s.tenant_id=NEW.tenant_id AND s.id IS DISTINCT FROM NEW.id
+       AND s.block_id IS NOT DISTINCT FROM NEW.block_id
        AND s.qualification_id IS NOT DISTINCT FROM NEW.qualification_id
        AND s.supplier_preference_id IS NOT DISTINCT FROM NEW.supplier_preference_id
        AND s.customer_designation_id IS NOT DISTINCT FROM NEW.customer_designation_id
@@ -897,17 +873,9 @@ RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = pg_catalog, control, master
 AS $$
-DECLARE v_commodity uuid;
 BEGIN
     IF current_setting('app.normalized_decision_scope_write',true)='on' THEN RETURN NEW; END IF;
-    IF TG_TABLE_NAME='business_partner_qualification' THEN
-        IF NEW.commodity_capability_id IS NOT NULL THEN SELECT commodity_category_id INTO v_commodity FROM master.business_partner_commodity_capability WHERE tenant_id=NEW.tenant_id AND id=NEW.commodity_capability_id; END IF;
-        INSERT INTO control.business_partner_decision_scope(tenant_id,qualification_id,scope_kind,operating_organization_id,company_code_id,commodity_category_id,effective_from,effective_until,created_by)
-        SELECT NEW.tenant_id,NEW.id,x.kind,x.org_id,x.company_id,x.commodity_id,COALESCE(NEW.effective_from,CURRENT_DATE),NEW.effective_until,NEW.created_by FROM (VALUES
-          ('operating_organization',NEW.operating_organization_id,NULL::uuid,NULL::uuid),('company_code',NULL::uuid,NEW.company_code_id,NULL::uuid),('commodity_category',NULL::uuid,NULL::uuid,v_commodity)
-        ) x(kind,org_id,company_id,commodity_id) WHERE COALESCE(x.org_id,x.company_id,x.commodity_id) IS NOT NULL;
-        IF NOT FOUND THEN INSERT INTO control.business_partner_decision_scope(tenant_id,qualification_id,scope_kind,effective_from,effective_until,created_by) VALUES(NEW.tenant_id,NEW.id,'global',COALESCE(NEW.effective_from,CURRENT_DATE),NEW.effective_until,NEW.created_by); END IF;
-    ELSIF TG_TABLE_NAME='supplier_preference_designation' THEN
+    IF TG_TABLE_NAME='supplier_preference_designation' THEN
         INSERT INTO control.business_partner_decision_scope(tenant_id,supplier_preference_id,scope_kind,operating_organization_id,company_code_id,commodity_category_id,effective_from,effective_until,created_by)
         SELECT NEW.tenant_id,NEW.id,x.kind,x.org_id,x.company_id,x.commodity_id,NEW.effective_from,NEW.effective_until,NEW.created_by FROM (VALUES
           ('operating_organization',NEW.operating_organization_id,NULL::uuid,NULL::uuid),('company_code',NULL::uuid,NEW.company_code_id,NULL::uuid),('commodity_category',NULL::uuid,NULL::uuid,NEW.commodity_category_id)
@@ -950,8 +918,8 @@ BEGIN
        OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 200 THEN
         RAISE EXCEPTION 'Invalid Business Partner decision creation command' USING ERRCODE='check_violation';
     END IF;
-    IF p_aggregate_kind='qualification' AND (p_partner_role NOT IN('supplier','customer') OR p_role_id IS NULL) THEN
-        RAISE EXCEPTION 'Qualification requires an exact commercial role' USING ERRCODE='check_violation';
+    IF p_aggregate_kind='qualification' THEN
+      RAISE EXCEPTION 'Use the explicit partner qualification scope contract; legacy role-based creation is retired' USING ERRCODE='0A000';
     END IF;
     IF p_aggregate_kind<>'qualification' AND p_operating_organization_id IS NULL THEN
         RAISE EXCEPTION 'Scoped commercial decision requires an operating organization' USING ERRCODE='check_violation';
@@ -999,13 +967,7 @@ BEGIN
     v_from:=COALESCE(NULLIF(p_payload->>'effectiveFrom','')::date,CURRENT_DATE);
     v_until:=NULLIF(p_payload->>'effectiveUntil','')::date;
     PERFORM set_config('app.normalized_decision_scope_write','on',true);
-    IF p_aggregate_kind='qualification' THEN
-      INSERT INTO control.business_partner_qualification(id,tenant_id,business_partner_id,partner_role,
-        qualification_type_code,idempotency_key,risk_assessment_id,effective_from,effective_until,next_review_at,created_by)
-      VALUES(v_id,p_tenant_id,p_business_partner_id,p_partner_role::master.partner_role_d,
-        p_payload->>'qualificationTypeCode',p_idempotency_key,NULLIF(p_payload->>'riskAssessmentId','')::uuid,
-        NULLIF(p_payload->>'effectiveFrom','')::date,v_until,NULLIF(p_payload->>'nextReviewAt','')::date,p_actor_id);
-    ELSIF p_aggregate_kind='supplier_preference' THEN
+    IF p_aggregate_kind='supplier_preference' THEN
       INSERT INTO control.supplier_preference_designation(id,tenant_id,business_partner_id,supplier_id,
         effective_from,effective_until,rationale,idempotency_key,created_by)
       VALUES(v_id,p_tenant_id,p_business_partner_id,p_role_id,v_from,v_until,p_payload->>'rationale',p_idempotency_key,p_actor_id);
@@ -1419,11 +1381,19 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, control
 AS $$
 BEGIN
+    IF TG_OP='UPDATE' AND OLD.decision<>'pending' AND
+       ROW(NEW.context_kind,NEW.context_id,NEW.qualification_type_code,NEW.conditions,
+           NEW.effective_from,NEW.effective_until,NEW.risk_assessment_id,NEW.approved_snapshot_id)
+       IS DISTINCT FROM
+       ROW(OLD.context_kind,OLD.context_id,OLD.qualification_type_code,OLD.conditions,
+           OLD.effective_from,OLD.effective_until,OLD.risk_assessment_id,OLD.approved_snapshot_id) THEN
+        RAISE EXCEPTION 'Reviewed qualification content is immutable; create a replacement decision'
+            USING ERRCODE='23514';
+    END IF;
     IF TG_OP = 'UPDATE' AND (
         NEW.id IS DISTINCT FROM OLD.id
         OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
         OR NEW.business_partner_id IS DISTINCT FROM OLD.business_partner_id
-        OR NEW.partner_role IS DISTINCT FROM OLD.partner_role
         OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
         OR NEW.created_at IS DISTINCT FROM OLD.created_at
         OR NEW.created_by IS DISTINCT FROM OLD.created_by
@@ -1479,11 +1449,10 @@ BEGIN
         NEW.id IS DISTINCT FROM OLD.id
         OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
         OR NEW.business_partner_id IS DISTINCT FROM OLD.business_partner_id
-        OR NEW.partner_role_scope IS DISTINCT FROM OLD.partner_role_scope
-        OR NEW.operating_organization_id
-            IS DISTINCT FROM OLD.operating_organization_id
-        OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
-        OR NEW.operation_code IS DISTINCT FROM OLD.operation_code
+        OR NEW.operation_codes IS DISTINCT FROM OLD.operation_codes
+        OR ROW(NEW.context_kind,NEW.context_id,NEW.restriction_mode,NEW.target_entity_type,NEW.target_entity_id,NEW.target_line_id,NEW.effective_from,NEW.effective_until)
+           IS DISTINCT FROM ROW(OLD.context_kind,OLD.context_id,OLD.restriction_mode,OLD.target_entity_type,OLD.target_entity_id,OLD.target_line_id,OLD.effective_from,OLD.effective_until)
+        OR (OLD.scope_sealed AND NOT NEW.scope_sealed)
         OR NEW.blocked_at IS DISTINCT FROM OLD.blocked_at
         OR NEW.blocked_by IS DISTINCT FROM OLD.blocked_by
         OR NEW.created_at IS DISTINCT FROM OLD.created_at
@@ -4130,6 +4099,126 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+-- Capability activation is separate from both partner lifecycle and qualification.
+-- Keep execution private until the authorized operation/workflow cutover is wired.
+CREATE OR REPLACE FUNCTION control.command_business_partner_capability(
+    p_tenant_id uuid, p_business_partner_id uuid, p_capability text,
+    p_enabled boolean, p_expected_version bigint, p_reason text,
+    p_idempotency_key text, p_actor_id uuid
+) RETURNS TABLE(business_partner_id uuid, capability text, enabled boolean,
+    record_version bigint, evidence_id uuid, replayed boolean)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, control, master
+AS $$
+DECLARE
+    v_partner master.business_partner%ROWTYPE;
+    v_existing control.business_partner_mutation_evidence%ROWTYPE;
+    v_fingerprint text; v_evidence_id uuid; v_enabled boolean;
+BEGIN
+    IF p_tenant_id IS NULL OR p_actor_id IS NULL
+       OR NULLIF(current_setting('app.current_tenant_id',true),'')::uuid IS DISTINCT FROM p_tenant_id
+       OR NULLIF(current_setting('app.current_principal_id',true),'')::uuid IS DISTINCT FROM p_actor_id THEN
+        RAISE EXCEPTION 'Capability context does not match tenant and actor' USING ERRCODE='insufficient_privilege';
+    END IF;
+    IF p_business_partner_id IS NULL OR p_capability IS NULL OR p_capability NOT IN ('supplier','customer')
+       OR p_enabled IS NULL OR p_expected_version IS NULL OR p_expected_version < 1
+       OR p_reason IS NULL OR length(btrim(p_reason)) NOT BETWEEN 1 AND 4000
+       OR p_idempotency_key IS NULL OR btrim(p_idempotency_key)<>p_idempotency_key
+       OR length(p_idempotency_key) NOT BETWEEN 8 AND 200 THEN
+        RAISE EXCEPTION 'Invalid Business Partner capability command' USING ERRCODE='check_violation';
+    END IF;
+    v_fingerprint := encode(public.digest(convert_to(jsonb_build_object(
+        'tenantId',p_tenant_id,'businessPartnerId',p_business_partner_id,'capability',p_capability,
+        'enabled',p_enabled,'expectedVersion',p_expected_version,'reason',p_reason,
+        'idempotencyKey',p_idempotency_key,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
+    PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':bp-idempotency:'||p_idempotency_key,0));
+    SELECT * INTO v_existing FROM control.business_partner_mutation_evidence
+      WHERE tenant_id=p_tenant_id AND idempotency_key=p_idempotency_key;
+    IF FOUND THEN
+        IF v_existing.command_fingerprint IS DISTINCT FROM v_fingerprint
+           OR v_existing.aggregate_kind<>'business_partner_capability' THEN
+            RAISE EXCEPTION 'Capability idempotency key was reused' USING ERRCODE='unique_violation';
+        END IF;
+        RETURN QUERY SELECT p_business_partner_id,p_capability,v_existing.to_state='enabled',
+          v_existing.resulting_version,v_existing.id,true;
+        RETURN;
+    END IF;
+    SELECT * INTO v_partner FROM master.business_partner
+      WHERE tenant_id=p_tenant_id AND id=p_business_partner_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Business Partner not found in tenant' USING ERRCODE='no_data_found';
+    END IF;
+    IF v_partner.record_version<>p_expected_version THEN
+        RAISE EXCEPTION 'Business Partner version changed' USING ERRCODE='serialization_failure';
+    END IF;
+    IF p_enabled AND v_partner.status<>'active' THEN
+        RAISE EXCEPTION 'Only an active Business Partner can enable a capability' USING ERRCODE='check_violation';
+    END IF;
+    v_enabled := CASE p_capability WHEN 'supplier' THEN v_partner.supplier_enabled ELSE v_partner.customer_enabled END;
+    IF v_enabled=p_enabled THEN
+        RAISE EXCEPTION 'Capability already has requested state' USING ERRCODE='check_violation';
+    END IF;
+    v_evidence_id := control.fn_record_business_partner_mutation(
+        p_tenant_id,'business_partner_capability',p_business_partner_id,p_business_partner_id,
+        'set_'||p_capability||'_enabled',CASE WHEN v_enabled THEN 'enabled' ELSE 'not_enabled' END,
+        CASE WHEN p_enabled THEN 'enabled' ELSE 'not_enabled' END,p_expected_version,p_reason,
+        p_idempotency_key,v_fingerprint,jsonb_build_object('capability',p_capability),p_actor_id);
+    PERFORM set_config('app.business_partner_capability_evidence_id',v_evidence_id::text,true);
+    UPDATE master.business_partner SET
+      supplier_enabled=CASE WHEN p_capability='supplier' THEN p_enabled ELSE supplier_enabled END,
+      customer_enabled=CASE WHEN p_capability='customer' THEN p_enabled ELSE customer_enabled END,
+      updated_by=p_actor_id
+      WHERE tenant_id=p_tenant_id AND id=p_business_partner_id;
+    PERFORM set_config('app.business_partner_capability_evidence_id','',true);
+    RETURN QUERY SELECT p_business_partner_id,p_capability,p_enabled,p_expected_version+1,v_evidence_id,false;
+END;
+$$;
+REVOKE ALL ON FUNCTION control.command_business_partner_capability(uuid,uuid,text,boolean,bigint,text,text,uuid) FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION control.trg_guard_business_partner_capability()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, control AS $$
+DECLARE
+    v_capability text; v_from boolean; v_to boolean; v_evidence_id uuid;
+BEGIN
+    IF TG_OP='INSERT' THEN
+        IF NEW.supplier_enabled OR NEW.customer_enabled THEN
+            RAISE EXCEPTION 'Registration cannot enable commercial capabilities' USING ERRCODE='insufficient_privilege';
+        END IF;
+        RETURN NEW;
+    END IF;
+    IF NEW.supplier_enabled IS NOT DISTINCT FROM OLD.supplier_enabled
+       AND NEW.customer_enabled IS NOT DISTINCT FROM OLD.customer_enabled THEN RETURN NEW; END IF;
+    IF NEW.supplier_enabled IS DISTINCT FROM OLD.supplier_enabled
+       AND NEW.customer_enabled IS DISTINCT FROM OLD.customer_enabled THEN
+        RAISE EXCEPTION 'One capability per command is required' USING ERRCODE='insufficient_privilege';
+    END IF;
+    v_capability := CASE WHEN NEW.supplier_enabled IS DISTINCT FROM OLD.supplier_enabled THEN 'supplier' ELSE 'customer' END;
+    v_from := CASE v_capability WHEN 'supplier' THEN OLD.supplier_enabled ELSE OLD.customer_enabled END;
+    v_to := CASE v_capability WHEN 'supplier' THEN NEW.supplier_enabled ELSE NEW.customer_enabled END;
+    BEGIN
+        v_evidence_id := NULLIF(current_setting('app.business_partner_capability_evidence_id',true),'')::uuid;
+    EXCEPTION WHEN invalid_text_representation THEN v_evidence_id := NULL; END;
+    IF NEW.status IS DISTINCT FROM OLD.status
+       OR NULLIF(current_setting('app.current_tenant_id',true),'')::uuid IS DISTINCT FROM NEW.tenant_id
+       OR NULLIF(current_setting('app.current_principal_id',true),'')::uuid IS DISTINCT FROM NEW.updated_by
+       OR NOT EXISTS (
+        SELECT 1 FROM control.business_partner_mutation_evidence e
+        WHERE e.id=v_evidence_id AND e.tenant_id=NEW.tenant_id
+          AND e.aggregate_kind='business_partner_capability' AND e.aggregate_id=NEW.id
+          AND e.business_partner_id=NEW.id AND e.command_code='set_'||v_capability||'_enabled'
+          AND e.evidence->>'capability'=v_capability
+          AND e.from_state=CASE WHEN v_from THEN 'enabled' ELSE 'not_enabled' END
+          AND e.to_state=CASE WHEN v_to THEN 'enabled' ELSE 'not_enabled' END
+          AND e.expected_version=OLD.record_version AND e.resulting_version=NEW.record_version
+          AND e.occurred_by=NEW.updated_by
+    ) THEN
+        RAISE EXCEPTION 'Capability mutation requires its command evidence' USING ERRCODE='insufficient_privilege';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION control.trg_guard_business_partner_capability() FROM PUBLIC;
 
 CREATE OR REPLACE FUNCTION control.command_business_partner_lifecycle(
     p_tenant_id uuid, p_aggregate_kind text, p_aggregate_id uuid,

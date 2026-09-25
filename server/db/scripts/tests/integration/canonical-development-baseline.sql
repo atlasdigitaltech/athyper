@@ -43,7 +43,12 @@ BEGIN
  IF NOT has_table_privilege('athyperapp','master.saved_view_default','SELECT,INSERT,UPDATE') THEN RAISE EXCEPTION 'Application saved-view grants missing'; END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
   IF NOT has_function_privilege('athyper_runtime','ai.fn_atlas_conversation_access(uuid,uuid,boolean)','EXECUTE') OR NOT has_function_privilege('athyper_runtime','ai.fn_is_atlas_conversation(uuid,uuid)','EXECUTE') THEN RAISE EXCEPTION 'Optional runtime conversation grants missing'; END IF;
-  IF has_table_privilege('athyper_runtime','master.saved_view_default','SELECT') THEN RAISE EXCEPTION 'Legacy saved-view grant survived'; END IF;
+  -- The runtime login legitimately inherits athyperapp in deployed clusters.
+  -- Reject only the retired direct ACL, not access through that standard role.
+  IF EXISTS(SELECT 1 FROM pg_class c CROSS JOIN LATERAL aclexplode(c.relacl) a
+    WHERE c.oid='master.saved_view_default'::regclass
+      AND a.grantee=(SELECT oid FROM pg_roles WHERE rolname='athyper_runtime'))
+  THEN RAISE EXCEPTION 'Legacy saved-view grant survived'; END IF;
  END IF;
  SELECT pg_get_constraintdef(oid) INTO STRICT definition FROM pg_constraint WHERE conrelid='ai.ai_agent_run'::regclass AND conname='ai_agent_run_aar_completed_usage_chk';
  IF position('model_call_count = 0' in definition)=0 OR position('tool_call_count > 0' in definition)=0 THEN RAISE EXCEPTION 'Tool-only run constraint missing'; END IF;

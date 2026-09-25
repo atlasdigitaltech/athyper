@@ -128,6 +128,21 @@ const DEFAULT_TIMEOUTS: Readonly<Record<RelayRequestClass, number>> = {
 /** Explicit Studio authoring surfaces; upstream owns tenant scope, permissions and independent review. */
 export const STUDIO_META_ENTITY_AUTHORING_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
+    {id:"studio.collections.providers",method:"GET",path:"/api/meta-entity-authoring/collection-providers",requiresTenant:true,maxBodyBytes:0},
+    ...([["GET",""],["PUT",""],["POST","/validate"],["POST","/preview"]] as const).map(([method,suffix])=>({id:`studio.collections.${method}${suffix}`,method,path:`/api/meta-entity-authoring/change-sets/:id/collection${suffix}` as const,requiresTenant:true,idempotency:"none" as const,maxBodyBytes:method==="GET"?0:128*1024})),
+
+    {id:"studio.metaEntity.notifications.inspect",method:"GET",path:"/api/meta-entity-authoring/inspection/notifications/:entityCode",requiresTenant:true,idempotency:"none",maxBodyBytes:0},
+    {id:"studio.metaEntity.notifications.list",method:"GET",path:"/api/meta-entity-authoring/change-sets/:id/notifications",requiresTenant:true,maxBodyBytes:0},
+    ...([
+      ["GET", "", "configuration"], ["GET", "/templates", "templates"], ["GET", "/templates/:key", "template"],
+      ["PUT", "/templates/:key", "saveTemplate"], ["PUT", "/policy", "savePolicy"],
+      ["POST", "/validate", "validateNotifications"], ["POST", "/preview", "previewNotifications"],
+    ] as const).map(([method, suffix, name]) => ({
+      id: `studio.metaEntity.notifications.${name}`, method,
+      path: `/api/meta-entity-authoring/change-sets/:id/notifications/:capability${suffix}` as const,
+      requestClass: "json" as const, requiresTenant: true, idempotency: "none" as const,
+      allowedQuery: ["channel", "locale", "version"], maxBodyBytes: method === "GET" ? 0 : 128 * 1024,
+    })),
     ...(["/api/meta-entity-authoring/inspection/releases", "/api/meta-entity-authoring/inspection/releases/:id", "/api/meta-entity-authoring/inspection/releases/:id/activation"] as const).map((path, index) => ({
       id: `studio.metaEntity.inspection.${index}`, method: "GET" as const, path,
       requestClass: "json" as const, requiresTenant: true, idempotency: "none" as const, maxBodyBytes: 0,
@@ -356,6 +371,14 @@ export const ATTACHMENT_STATUS_OPERATION: RelayOperation = Object.freeze({
   requestClass: "json",
   requiresTenant: true,
 });
+export const ATTACHMENT_BROWSE_OPERATION: RelayOperation = Object.freeze({
+  id: "attachments.browse",
+  method: "POST",
+  path: "/api/attachments/browse",
+  requestClass: "json",
+  requiresTenant: true,
+  maxBodyBytes: 4096,
+});
 export const ATTACHMENT_REMOVE_OPERATION: RelayOperation = Object.freeze({
   id: "attachments.remove",
   method: "DELETE",
@@ -427,6 +450,7 @@ export const ATLAS_ANSWER_RELAY_OPERATIONS: readonly RelayOperation[] =
     ATTACHMENT_STAGE_OPERATION,
     ATTACHMENT_FINALIZE_OPERATION,
     ATTACHMENT_STATUS_OPERATION,
+    ATTACHMENT_BROWSE_OPERATION,
     ATTACHMENT_REMOVE_OPERATION,
     ATTACHMENT_RENAME_OPERATION,
     ATTACHMENT_FOLDER_OPERATION,
@@ -1391,6 +1415,14 @@ export const BUSINESS_PARTNER_360_TAX_REVEAL_OPERATION: RelayOperation =
     requestClass: "json",
     requiresTenant: true,
   });
+export const BUSINESS_PARTNER_360_IDENTIFIER_REVEAL_OPERATION: RelayOperation = Object.freeze({
+  id: "neon.business-partners.360.identifier-reveal",
+  method: "POST",
+  path: "/api/neon/business-partners/:businessPartnerId/360/identifiers/reveal",
+  requestClass: "json",
+  requiresTenant: true,
+  maxBodyBytes: 4096,
+});
 export const BUSINESS_PARTNER_360_BANK_REVEAL_OPERATION: RelayOperation =
   Object.freeze({
     id: "neon.business-partners.360.bank-reveal",
@@ -1539,7 +1571,7 @@ export const BUSINESS_PARTNER_CUSTOMER_DESIGNATION_OPERATIONS: readonly RelayOpe
       path: "/api/neon/business-partners/:businessPartnerId/customer-designations",
       requestClass: "json",
       requiresTenant: true,
-    },
+  },
     {
       id: "neon.business-partners.customer-designations.create",
       method: "POST",
@@ -1762,11 +1794,13 @@ export const BUSINESS_PARTNER_RELAY_OPERATIONS: readonly RelayOperation[] =
     { id: "supplier.cycle.complete", method: "POST", path: "/api/governance/supplier-onboarding/runs/:runId/completion", requestClass: "json", requiresTenant: true, allowedQuery: [], idempotency: "required", maxBodyBytes: 16384 },
     ...(["view", "start", "decide", "cancel", "information", "escalate", "edit-preview"] as const).map(action => ({ id: `supplier.process-tasks.${action}`, method: action === "view" ? "GET" as const : "POST" as const, path: `/api/governance/process-tasks/cases/:caseId/${action}` as const, requestClass: "json" as const, requiresTenant: true, allowedQuery: [], ...(action !== "view" ? { idempotency: "required" as const, maxBodyBytes: action === "edit-preview" ? 65536 : 16384 } : {}) })),
     BUSINESS_PARTNER_GOVERNED_IMPORT_OPERATION,
+    { id: "neon.business-partner-intake.protect", method: "POST", path: "/api/neon/business-partner-intake/protected-values", requestClass: "json", requiresTenant: true, allowedQuery: [], maxBodyBytes: 4096 },
     BUSINESS_PARTNER_360_COMMENT_CREATE_OPERATION,
     ...BUSINESS_PARTNER_CASE_RELAY_OPERATIONS,
     BUSINESS_PARTNER_AGGREGATE_READ_OPERATION,
     BUSINESS_PARTNER_360_SUMMARY_OPERATION,
     BUSINESS_PARTNER_360_TAX_REVEAL_OPERATION,
+    BUSINESS_PARTNER_360_IDENTIFIER_REVEAL_OPERATION,
     BUSINESS_PARTNER_360_BANK_REVEAL_OPERATION,
     BUSINESS_PARTNER_360_GOVERNANCE_OPERATION,
     PERSON_RESTRICTED_EVIDENCE_REVEAL_OPERATION,
@@ -1774,6 +1808,7 @@ export const BUSINESS_PARTNER_RELAY_OPERATIONS: readonly RelayOperation[] =
     { id: "attachments.preview", method: "POST", path: "/api/attachments/:attachmentId/preview", requestClass: "json", requiresTenant: true, maxBodyBytes: 4096 },
     { id: "attachments.extract", method: "POST", path: "/api/attachments/:attachmentId/extract", requestClass: "json", requiresTenant: true, maxBodyBytes: 4096 },
     { id: "attachments.search", method: "POST", path: "/api/attachments/search", requestClass: "json", requiresTenant: true, maxBodyBytes: 4096 },
+    ATTACHMENT_BROWSE_OPERATION,
     ...BUSINESS_PARTNER_360_SECTION_OPERATIONS,
     BUSINESS_PARTNER_ELIGIBILITY_READ_OPERATION,
     BUSINESS_PARTNER_SUPPLIER_ACTIVATION_OPERATION,
@@ -2104,6 +2139,12 @@ export const WORKFLOW_ITEM_ACTION_OPERATION: RelayOperation = Object.freeze({
 });
 export const ACTIVITY_CENTER_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
+    ...(["GET","POST"] as const).map(method=>({id:`activity.collection.views.${method}`,method,path:"/api/collections/:entityCode/views" as const,requiresTenant:true,idempotency:"none" as const,maxBodyBytes:method==="GET"?0:65536})),
+    {id:"activity.collection.descriptor",method:"GET",path:"/api/collections/:collectionKey/descriptor",requiresTenant:true,maxBodyBytes:0},
+    {id:"activity.collection.configuration",method:"GET",path:"/api/collections/:collectionKey/configuration",requiresTenant:true,maxBodyBytes:0},
+    {id:"notifications.deliveries.list",method:"GET",path:"/api/operations/notifications/deliveries",requiresTenant:true,allowedQuery:["before"]},
+    {id:"notifications.deliveries.timeline",method:"GET",path:"/api/operations/notifications/deliveries/:id/timeline",requiresTenant:true},
+    {id:"notifications.deliveries.replay",method:"POST",path:"/api/operations/notifications/deliveries/:id/replay",requiresTenant:true,idempotency:"required"},
     NOTIFICATION_INBOX_OPERATION,
     NOTIFICATION_COUNTS_OPERATION,
     NOTIFICATION_STREAM_OPERATION,
@@ -2756,8 +2797,47 @@ export const STUDIO_BP_CASE_CONTRACT_RELAY_OPERATIONS: readonly RelayOperation[]
     ),
   );
 
+export const NEON_BP_CLASSIFICATION_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
+  {id: "neon.partner-classification.read", method: "GET", path: "/api/neon/business-partners/:businessPartnerId/commodity-classifications", requestClass: "json", requiresTenant: true},
+  ...(["declare", "verify", "archive"] as const).map(action => ({id: `neon.partner-classification.${action}`, method: "POST" as const,
+    path: `/api/neon/business-partners/:businessPartnerId/commodity-classifications/${action}` as RelayOperation["path"],
+    requestClass: "json" as const, requiresTenant: true, idempotency: "required" as const, maxBodyBytes: 8192})),
+]);
+
 export const NEON_BP_BANK_VERIFICATION_RELAY_OPERATIONS: readonly RelayOperation[] =
   Object.freeze([
+    {
+      id: "neon.bank-registration.create",
+      method: "POST",
+      path: "/api/neon/business-partners/:businessPartnerId/protected-bank-registrations",
+      requestClass: "json",
+      requiresTenant: true,
+      idempotency: "required",
+      maxBodyBytes: 16384,
+    },
+    {
+      id: "neon.bank-registration.read",
+      method: "GET",
+      path: "/api/neon/protected-bank-registrations/:bankAccountLinkId",
+      requestClass: "json",
+      requiresTenant: true,
+    },
+    {
+      id: "neon.bank-provisional.resolve",
+      method: "POST",
+      path: "/api/neon/protected-bank-registrations/:bankAccountLinkId/provisional-resolution",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 4096,
+    },
+    {
+      id: "neon.bank-registration.decide",
+      method: "POST",
+      path: "/api/neon/protected-bank-registrations/:bankAccountLinkId/decisions",
+      requestClass: "json",
+      requiresTenant: true,
+      maxBodyBytes: 32768,
+    },
     {
       id: "neon.bank-verification.read",
       method: "GET",

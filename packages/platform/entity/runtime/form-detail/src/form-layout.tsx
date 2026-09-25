@@ -48,7 +48,7 @@ export function EntityFormLayout({
         ".a-section-navigation",
       );
       if (!rail) return 0;
-      if (rail.querySelector(".a-record-360__picker")?.getClientRects().length)
+      if (rail.querySelector(".a-entity-record__picker")?.getClientRects().length)
         return rail.getBoundingClientRect().bottom + 16;
       return (parseFloat(getComputedStyle(rail).top) || 0) + 24;
     },

@@ -49,6 +49,7 @@ export type BusinessPartnerRequestStatus =
   | "superseded";
 export type BusinessPartnerApplicationResultKind =
   | "partner_role_created"
+  | "partner_registered"
   | "partner_amended"
   | "organization_assigned"
   | "company_configured"

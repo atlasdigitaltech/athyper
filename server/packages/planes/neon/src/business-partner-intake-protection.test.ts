@@ -7,26 +7,43 @@ const context = {
   requestId: "test-request",
   permissions: { allowed: [] },
 } as any;
-function fixture(allowed = true) {
-  const put = vi.fn(async (_key: string, _value: Uint8Array) => {}),
+function fixture(allowed = true, failCommit = false) {
+  const discard = vi.fn(async () => {});
+  const put = vi.fn(async (_key: string, _value: Uint8Array) => ({reference:_key,version:'1',discard})),
     record = vi.fn(async () => {}),
     intakeOrganization = vi.fn(async () => ({ id: "org" }));
   return {
     put,
+    discard,
     record,
     intakeOrganization,
     service: createBusinessPartnerAccountBankLinkageService({
       authorizer: { authorize: async () => ({ allowed }) } as any,
       repository: { intakeOrganization } as any,
       transactions: {
-        run: async (_p: any, _a: any, work: any) => work({}),
+        run: async (_p: any, _a: any, work: any) => { const result=await work({}); if(failCommit&&put.mock.calls.length)throw Error('commit failed'); return result; },
       } as any,
-      secrets: { put } as any,
+      secrets: { create: put } as any,
       audit: { record } as any,
     }),
   };
 }
 describe("protected intake values", () => {
+  it("checks audit before storage and compensates a failed commit without returning a token", async () => {
+    const f=fixture(true,true);
+    await expect(f.service.protectIntakeValue({context,operatingOrganizationId:'org',kind:'tax',value:'TEST-1234'})).rejects.toThrow('commit failed');
+    expect(f.record.mock.invocationCallOrder[0]).toBeLessThan(f.put.mock.invocationCallOrder[0]!);
+    expect(f.discard).toHaveBeenCalledTimes(1);
+  });
+  it("does not write when audit admission fails", async () => {
+    const f=fixture();f.record.mockRejectedValueOnce(Error('audit unavailable'));
+    await expect(f.service.protectIntakeValue({context,operatingOrganizationId:'org',kind:'tax',value:'TEST-1234'})).rejects.toThrow('audit unavailable');
+    expect(f.put).not.toHaveBeenCalled();expect(f.discard).not.toHaveBeenCalled();
+  });
+  it("surfaces failed compensation without exposing protected material", async () => {
+    const f=fixture(true,true);f.discard.mockRejectedValueOnce(Error('store unavailable'));
+    await expect(f.service.protectIntakeValue({context,operatingOrganizationId:'org',kind:'tax',value:'TEST-1234'})).rejects.toMatchObject({status:503,code:'NEON_PROTECTED_CAPTURE_CLEANUP_REQUIRED'});
+  });
   it("writes only to tenant protected storage and returns masked proof without the value", async () => {
     const f = fixture();
     const result = await f.service.protectIntakeValue({

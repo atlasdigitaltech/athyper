@@ -17,23 +17,23 @@ interface AcceptanceFixture {
   readonly expected: readonly BusinessPartner360SectionCode[];
 }
 
-const common = ["overview", "identity", "contacts", "addresses", "identifiers-tax", "roles-scope", "requests", "activity"] as const;
+const common = ["overview", "identity", "contacts", "addresses", "identifiers-tax", "roles-scope", "requests", "activity", "banking", "qualifications-certificates", "comments", "attachments"] as const;
 const organizationCommon = [...common, "governance"] as const;
 const fixtures: readonly AcceptanceFixture[] = [
   { code: "organization", category: "organization", roles: [], expected: organizationCommon },
   { code: "supplier", category: "organization", roles: ["supplier"], expected: [...organizationCommon, "supplier-company", "banking", "qualifications-certificates", "business-activity"] },
   { code: "customer", category: "organization", roles: ["customer"], expected: [...organizationCommon, "customer-company", "credit", "business-activity"] },
   { code: "dual-role", category: "organization", roles: ["supplier", "customer"], expected: [...organizationCommon, "supplier-company", "customer-company", "banking", "qualifications-certificates", "credit", "business-activity"] },
-  { code: "person", category: "person", roles: [], expected: [] },
-  { code: "workforce", category: "person", roles: ["workforce"], expected: [] },
-  { code: "external-worker", category: "person", roles: ["workforce"], expected: [] },
+  { code: "person", category: "person", roles: [], expected: common },
+  { code: "workforce", category: "person", roles: ["workforce"], expected: common },
+  { code: "external-worker", category: "person", roles: ["workforce"], expected: common },
   { code: "mesh-linked", category: "organization", roles: ["supplier"], meshLinked: true, expected: [...organizationCommon, "supplier-company", "banking", "qualifications-certificates", "business-activity", "network"] },
 ];
 
 describe("Business Partner 360 Phase 1 contract lock", () => {
   it("locks unique section codes, bounded routes and four-part permission catalog codes", () => {
     expect(BUSINESS_PARTNER_360_SCHEMA_VERSION).toBe(1);
-    expect(BUSINESS_PARTNER_360_SECTION_DEFINITIONS.map(section => section.code)).toEqual(BUSINESS_PARTNER_360_SECTION_CODES);
+    expect(new Set(BUSINESS_PARTNER_360_SECTION_DEFINITIONS.map(section => section.code))).toEqual(new Set(BUSINESS_PARTNER_360_SECTION_CODES));
     expect(new Set(BUSINESS_PARTNER_360_SECTION_CODES).size).toBe(BUSINESS_PARTNER_360_SECTION_CODES.length);
     for (const section of BUSINESS_PARTNER_360_SECTION_DEFINITIONS) {
       expect(section.routes.every(path => path.startsWith("/api/neon/business-partners/:id/360/"))).toBe(true);

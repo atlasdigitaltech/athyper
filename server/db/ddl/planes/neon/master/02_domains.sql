@@ -170,11 +170,9 @@ BEGIN
     'asset_status_d',
     'bank_account_id_type_d',
     'bank_account_nature_d',
-    'bank_account_status_d',
     'bank_institution_type_d',
     'bank_reconciliation_mode_d',
     'bank_relationship_role_d',
-    'bank_verification_method_d',
     'book_conflict_strategy_d',
     'business_day_convention_d',
     'business_partner_category_d',
@@ -247,7 +245,7 @@ ALTER DOMAIN master.business_partner_category_d
     DROP CONSTRAINT IF EXISTS business_partner_category_d_check;
 ALTER DOMAIN master.business_partner_category_d
     ADD CONSTRAINT business_partner_category_d_check
-    CHECK (VALUE = 'organization');
+    CHECK (VALUE IN ('organization','person'));
 
 ALTER DOMAIN master.business_partner_status_d
     DROP CONSTRAINT IF EXISTS business_partner_status_d_check;
@@ -274,7 +272,7 @@ CREATE DOMAIN master.business_partner_legal_classification_d AS text
     CHECK (VALUE IN ('government', 'nonprofit', 'sole_proprietor'));
 
 COMMENT ON DOMAIN master.business_partner_category_d IS
-  'Business Partners are organizations. People and workforce identities are managed separately.';
+  'Partner structural category: organization identity or a tenant-consistent person reference. Personal identity remains People-owned.';
 COMMENT ON DOMAIN master.business_partner_ownership_d IS
   'Tenant ownership axis, independent of structural party kind and commercial role.';
 COMMENT ON DOMAIN master.business_partner_legal_classification_d IS

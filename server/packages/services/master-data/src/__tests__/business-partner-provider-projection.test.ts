@@ -1,10 +1,59 @@
 import { expect, it, vi } from "vitest";
 import type { BusinessPartner360Query } from "@athyper/server-contract-master-data";
-import { projectBusinessPartnerProvider } from "../business-partner-provider-projection.js";
+import { projectBusinessPartnerProvider } from "../business-partner/record/projection-policy";
 const query = {
   context: { tenantId: "tenant", principalId: "principal", planeKey: "neon" },
   businessPartnerId: "partner",
 } as BusinessPartner360Query;
+it("exposes directory linkage only through bank-read projection and never account plaintext", async () => {
+  const data={collections:{bank_accounts:[{id:"account",bank_name:"Directory bank",branch_name:"Branch",branch_code:"DEMO0001",bic:"DEMOXXXX",account_last4:"3002",account_id_value:"secret"}],payment_instrument_links:[{id:"link",account_last4:"3002",is_primary:false}]}};
+  const allowed=await projectBusinessPartnerProvider({query,section:"banking",data,authorizer:{authorize:async()=>({allowed:true as const})}});
+  expect(JSON.stringify(allowed)).toContain("DEMO0001");expect(JSON.stringify(allowed)).toContain('"is_primary":false');expect(JSON.stringify(allowed)).not.toContain("secret");
+  const denied=await projectBusinessPartnerProvider({query,section:"banking",data,authorizer:{authorize:async()=>({allowed:false as const,reason:"denied"})}});
+  expect(JSON.stringify(denied)).not.toContain("Directory bank");expect(JSON.stringify(denied)).not.toContain("3002");
+});
+it("keeps legal and display names distinct under identity-read authorization", async () => {
+  const data = {items:[{id:"partner",name:"Display",legalName:"Registered",personSensitiveProfile:{secret:true}}]};
+  const allowed = await projectBusinessPartnerProvider({query,section:"identity",data,authorizer:{authorize:async()=>({allowed:true as const})}});
+  expect(allowed).toEqual({items:[{id:"partner",name:"Display",legalName:"Registered"}]});
+  const denied = await projectBusinessPartnerProvider({query,section:"identity",data,authorizer:{authorize:async()=>({allowed:false as const,reason:"denied"})}});
+  expect(JSON.stringify(denied)).not.toContain("Registered");
+  expect(JSON.stringify(denied)).not.toContain("Display");
+});
+it("closed certificate projection requires native per-file admission and excludes undeclared evidence fields", async () => {
+  const input = { query, section: "qualifications-certificates", data: { certifications: [{ id: "cert", attachment: { attachmentId: "file", fileName: "evidence.pdf", storageKey: "secret" } }] }, authorizer: { authorize: async () => ({ allowed: true as const }) } };
+  expect(await projectBusinessPartnerProvider(input)).toEqual({ certifications: [{ id: "cert" }] });
+  expect(await projectBusinessPartnerProvider({ ...input, authorizeCertificateAttachment: async () => false })).toEqual({ certifications: [{ id: "cert" }] });
+  const authorize = vi.fn(async () => true);
+  expect(await projectBusinessPartnerProvider({ ...input, authorizeCertificateAttachment: authorize })).toEqual({ certifications: [{ id: "cert", attachment: { attachmentId: "file", fileName: "evidence.pdf" } }] });
+  expect(authorize).toHaveBeenCalledWith("file");
+});
+it("retains read-only crosswalk evidence without substituting selected classification", async () => {
+  const result = await projectBusinessPartnerProvider({ query, section: "identity",
+    data: { items: [{ id: "classification", industryDomainCode: "naics", industryCode: "11", crosswalks: [{ sourceDomainCode: "naics", sourceCode: "11", targetDomainCode: "isic", targetCode: "A", provenance: "AI_GENERATED", verified: false, readOnly: true, metadata: { secret: true } }] }] },
+    authorizer: { authorize: async () => ({ allowed: true as const }) },
+  });
+  expect(result).toEqual({ items: [{ id: "classification", industryDomainCode: "naics", industryCode: "11", crosswalks: [{ sourceDomainCode: "naics", sourceCode: "11", targetDomainCode: "isic", targetCode: "A", provenance: "AI_GENERATED", verified: false, readOnly: true }] }] });
+});
+it("projects local Network rows without reversing coordinates and independently gates governance", async () => {
+  const result = await projectBusinessPartnerProvider({
+    query, section: "network",
+    data: {
+      commercialRelationships: [{ id: "rel", sourceBusinessPartnerId: "source", targetBusinessPartnerId: "partner", direction: "incoming", readOnly: true, secret: "excluded" }],
+      governanceRelations: [{ id: "gov", memberName: "Restricted" }],
+      collections: {
+        commercial_relationships: [{ id: "rel", source_business_partner_id: "source", target_business_partner_id: "partner", metadata: { secret: true } }],
+        governance_relations: [{ id: "gov", member_name: "Restricted" }],
+      },
+    },
+    authorizer: { authorize: async request => request.permissionCode === "neon.relationship.bp_target.network_read" ? { allowed: true as const } : { allowed: false as const, reason: "denied" } },
+  });
+  expect(result).toEqual({
+    commercialRelationships: [{ id: "rel", sourceBusinessPartnerId: "source", targetBusinessPartnerId: "partner", direction: "incoming", readOnly: true }],
+    governanceRelations: [],
+    collections: { commercial_relationships: [{ id: "rel", source_business_partner_id: "source", target_business_partner_id: "partner" }], governance_relations: [] },
+  });
+});
 it("projects known nested fields and removes undeclared objects/arrays", async () => {
   const result = await projectBusinessPartnerProvider({
     query,
@@ -87,6 +136,19 @@ it("tax rows require tax permission independently from identifier permission", a
     ),
   ).toBe(true);
 });
+it("masks identifier values and excludes raw values and protected tokens from the provider projection", async () => {
+  const result = await projectBusinessPartnerProvider({
+    query, section: "identifiers-tax",
+    data: {items: [{kind:"identifier",id:"identifier-id",maskedValue:"123456789",identifier_value:"123456789",registration_number:"123456789",protectedValueToken:"opaque-token",metadata:{protected:true}}]},
+    authorizer: {authorize: async () => ({allowed:true})},
+  });
+  expect(result).toEqual({items:[{kind:"identifier",id:"identifier-id",maskedValue:"••••6789"}]});
+  const denied = await projectBusinessPartnerProvider({
+    query, section:"identifiers-tax", data:{items:[{kind:"identifier",id:"identifier-id",maskedValue:"123456789"}]},
+    authorizer:{authorize:async()=>({allowed:false,reason:"denied"})},
+  });
+  expect(denied).toEqual({items:[]});
+});
 it("does not reuse a decision from another nested field", async () => {
   const result = await projectBusinessPartnerProvider({
     query,
@@ -150,7 +212,7 @@ it("declares every BP section and keeps independent attachment admission separat
   const { BUSINESS_PARTNER_360_SECTION_CODES } =
     await import("@athyper/server-contract-master-data");
   const { businessPartnerProviderPolicies } =
-    await import("../business-partner-provider-projection.js");
+    await import("../business-partner/record/projection-policy");
   expect(Object.keys(businessPartnerProviderPolicies).sort()).toEqual(
     [...BUSINESS_PARTNER_360_SECTION_CODES].sort(),
   );
@@ -181,7 +243,7 @@ it("declares every BP section and keeps independent attachment admission separat
 
 it("omits deferred summary fields while keeping allowed contact fields", async () => {
   const { businessPartnerSummaryFieldPolicy } =
-    await import("../business-partner-provider-projection.js");
+    await import("../business-partner/record/projection-policy");
   const result = await projectBusinessPartnerProvider({
     query,
     section: "summary",

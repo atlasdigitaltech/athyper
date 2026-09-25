@@ -1,3 +1,4 @@
+import { entityApplicationHref } from "@athyper/contract-platform-entity-runtime";
 import {
   validateCatalogRoutes,
   type CatalogWorkspaceRoute,
@@ -151,18 +152,18 @@ const internalRouteIndex = new Map(
 export function resolveNeonEntityApplicationPublicRoute(
   pathname: string,
 ): NeonEntityApplicationRoute | undefined {
-  return publicRouteIndex.get(normalizeEntityApplicationPath(pathname));
+  const normalized = normalizeEntityApplicationPath(pathname);
+  return normalized ? publicRouteIndex.get(normalized) : undefined;
 }
 
 export function resolveNeonEntityApplicationInternalRoute(
   entityCode: string,
   segments: readonly string[] = [],
 ): NeonEntityApplicationRoute | undefined {
-  return internalRouteIndex.get(
-    normalizeEntityApplicationPath(
-      `/app/entity/${entityCode}/${segments.join("/")}`,
-    ),
+  const normalized = normalizeEntityApplicationPath(
+      `${entityApplicationHref(entityCode)}/${segments.map(encodeURIComponent).join("/")}`,
   );
+  return normalized ? internalRouteIndex.get(normalized) : undefined;
 }
 
 export function entityApplicationPublicPath(
@@ -173,9 +174,15 @@ export function entityApplicationPublicPath(
     ?.publicPath;
 }
 
-function normalizeEntityApplicationPath(value: string): string {
+function normalizeEntityApplicationPath(value: string): string | undefined {
   const pathname = value.replace(/\/+$/u, "") || "/";
   if (!pathname.startsWith("/") || pathname.includes("//") || pathname.includes(".."))
-    throw new TypeError("Invalid entity application route path");
+    return undefined;
+  try {
+    if (pathname.split("/").slice(1).some(segment => {
+      const decoded = decodeURIComponent(segment);
+      return decoded === "." || decoded === ".." || /[\\/\u0000-\u001f]/.test(decoded);
+    })) return undefined;
+  } catch { return undefined; }
   return pathname;
 }

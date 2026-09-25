@@ -1,4 +1,5 @@
 "use client";
+export { ProtectedValueProvider, type ProtectedValueRequest } from "./protected-value";
 import { parseEntityRecordPresentation, resolveRecordHeader } from "@athyper/contract-platform-entity-runtime";
 import { EntityRecordHeader } from "./record-header";
 import { useEffect, useState, type FormEvent } from "react";
@@ -81,11 +82,19 @@ export { EntitySectionWorkspace } from "./section-workspace";
 export {
   useEntityRuntimeSectionWorkspace,
   invalidateEntityRuntimeSectionCache,
+  invalidateEntityRuntimeRecord,
+  subscribeEntityRuntimeRecord,
+  type EntityRuntimeRecordScope,
   type EntityRuntimeSectionState,
   type EntityRuntimeWorkspaceState,
 } from "./use-section-resource";
 export { EntityRuntimeWorkspace, type EntityRuntimeHeaderNavigation } from "./entity-runtime-workspace";
 export { EntityCollaborationSurface } from "./collaboration-surface";
+export { EntityEditCollaboration, type EntityEditCollaborationProps } from "./entity-edit-collaboration";
+export { isCollaborationRequested } from "./collaboration-route";
 
 export { CompiledEntitySectionContent } from "./compiled-section-content";
 export * from "./registered-renderers";
+export { Fields as MetadataFields } from "./section-primitives";
+export { EntityRecordPage } from "./record/entity-record-page";
+export type { EntityRecordAdapter, EntityRecordOperationContext, RecordRevealHandler, RecordActionHandler } from "./record/record-contracts";

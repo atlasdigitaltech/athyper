@@ -9,15 +9,61 @@
   "storage": {
     "kind": "table",
     "sourceObjects": [
-      "master.business_partner"
+      "master.business_partner",
+      "master.business_partner_organization_identity",
+      "master.person",
+      "master.business_partner_identity_current"
     ],
     "primaryObject": "master.business_partner",
     "idField": "id",
     "tenantField": "tenant_id",
     "genericWriteEnabled": false,
-    "versionField": "record_version"
+    "versionField": "record_version",
+    "readObject": "master.business_partner_identity_current"
   },
   "fields": [
+    {
+      "key": "supplier_enabled",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "supplier_enabled"
+      },
+      "dataType": "boolean",
+      "storageType": "boolean",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.supplier_enabled.label",
+        "defaultText": "Supplier capability enabled"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "customer_enabled",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "customer_enabled"
+      },
+      "dataType": "boolean",
+      "storageType": "boolean",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.customer_enabled.label",
+        "defaultText": "Customer capability enabled"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
     {
       "key": "id",
       "binding": {
@@ -70,7 +116,7 @@
       "nullable": false,
       "label": {
         "labelKey": "entity.business_partner.core.fields.name.label",
-        "defaultText": "Name"
+        "defaultText": "Display name"
       },
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
@@ -86,9 +132,53 @@
       }
     },
     {
-      "key": "registration_country_code",
+      "key": "legal_name",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.business_partner_organization_identity",
+        "column": "legal_name"
+      },
+      "dataType": "string",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.legal_name.label",
+        "defaultText": "Legal name"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "storageType": "text",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "dynamicFacets": [
+        {
+          "facet": "visibility",
+          "engine": "jsonlogic.v1",
+          "expression": {
+            "==": [
+              {
+                "var": "record.partner_category"
+              },
+              "organization"
+            ]
+          },
+          "valueWhenTrue": "visible",
+          "valueWhenFalse": "hidden",
+          "evaluationFailure": "hide",
+          "serverAuthoritative": false
+        }
+      ]
+    },
+    {
+      "key": "registration_country_code",
+      "display": {
+        "lookup": {
+          "code": "shared.country"
+        }
+      },
+      "binding": {
+        "sourceObject": "master.business_partner_organization_identity",
         "column": "registration_country_code"
       },
       "dataType": "string",
@@ -103,7 +193,25 @@
         "targetEntityCode": "country",
         "valueField": "code"
       },
-      "storageType": "character(2)"
+      "storageType": "character(2)",
+      "dynamicFacets": [
+        {
+          "facet": "visibility",
+          "engine": "jsonlogic.v1",
+          "expression": {
+            "==": [
+              {
+                "var": "record.partner_category"
+              },
+              "organization"
+            ]
+          },
+          "valueWhenTrue": "visible",
+          "valueWhenFalse": "hidden",
+          "evaluationFailure": "hide",
+          "serverAuthoritative": false
+        }
+      ]
     },
     {
       "key": "partner_category",
@@ -111,7 +219,7 @@
         "sourceObject": "master.business_partner",
         "column": "partner_category"
       },
-      "dataType": "string",
+      "dataType": "enum",
       "nullable": false,
       "label": {
         "labelKey": "entity.business_partner.core.fields.partner_category.label",
@@ -119,7 +227,27 @@
       },
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
-      "storageType": "master.business_partner_category_d"
+      "storageType": "master.business_partner_category_d",
+      "display": {
+        "lookup": {
+          "options": [
+            {
+              "value": "organization",
+              "label": {
+                "labelKey": "entity.business_partner.category.organization",
+                "defaultText": "Organization"
+              }
+            },
+            {
+              "value": "person",
+              "label": {
+                "labelKey": "entity.business_partner.category.person",
+                "defaultText": "Person"
+              }
+            }
+          ]
+        }
+      }
     },
     {
       "key": "ownership_class",
@@ -127,7 +255,7 @@
         "sourceObject": "master.business_partner",
         "column": "ownership_class"
       },
-      "dataType": "string",
+      "dataType": "enum",
       "nullable": false,
       "label": {
         "labelKey": "entity.business_partner.core.fields.ownership_class.label",
@@ -135,12 +263,32 @@
       },
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
-      "storageType": "master.business_partner_ownership_d"
+      "storageType": "master.business_partner_ownership_d",
+      "display": {
+        "lookup": {
+          "options": [
+            {
+              "value": "external",
+              "label": {
+                "labelKey": "entity.business_partner.ownership.external",
+                "defaultText": "External"
+              }
+            },
+            {
+              "value": "internal",
+              "label": {
+                "labelKey": "entity.business_partner.ownership.internal",
+                "defaultText": "Internal"
+              }
+            }
+          ]
+        }
+      }
     },
     {
       "key": "incorporation_date",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.business_partner_organization_identity",
         "column": "incorporation_date"
       },
       "dataType": "date",
@@ -151,7 +299,25 @@
       },
       "valueOrigin": "stored",
       "readPolicy": "authorized_projection",
-      "storageType": "date"
+      "storageType": "date",
+      "dynamicFacets": [
+        {
+          "facet": "visibility",
+          "engine": "jsonlogic.v1",
+          "expression": {
+            "==": [
+              {
+                "var": "record.partner_category"
+              },
+              "organization"
+            ]
+          },
+          "valueWhenTrue": "visible",
+          "valueWhenFalse": "hidden",
+          "evaluationFailure": "hide",
+          "serverAuthoritative": false
+        }
+      ]
     },
     {
       "key": "website_url",
@@ -191,7 +357,41 @@
         "sourceObject": "master.business_partner",
         "column": "status"
       },
-      "dataType": "string",
+      "dataType": "enum",
+      "display": {
+        "lookup": {
+          "options": [
+            {
+              "value": "draft",
+              "label": {
+                "labelKey": "entity.business_partner.status.draft",
+                "defaultText": "Draft"
+              }
+            },
+            {
+              "value": "active",
+              "label": {
+                "labelKey": "entity.business_partner.status.active",
+                "defaultText": "Active"
+              }
+            },
+            {
+              "value": "inactive",
+              "label": {
+                "labelKey": "entity.business_partner.status.inactive",
+                "defaultText": "Inactive"
+              }
+            },
+            {
+              "value": "archived",
+              "label": {
+                "labelKey": "entity.business_partner.status.archived",
+                "defaultText": "Archived"
+              }
+            }
+          ]
+        }
+      },
       "nullable": false,
       "label": {
         "labelKey": "entity.business_partner.core.fields.status.label",
@@ -230,7 +430,7 @@
     {
       "key": "legal_form_value_id",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.business_partner_organization_identity",
         "column": "legal_form_value_id"
       },
       "dataType": "uuid",
@@ -271,7 +471,7 @@
     {
       "key": "business_type_value_id",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.business_partner_organization_identity",
         "column": "business_type_value_id"
       },
       "dataType": "uuid",
@@ -311,7 +511,7 @@
     {
       "key": "founded_year",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.business_partner_organization_identity",
         "column": "founded_year"
       },
       "dataType": "integer",
@@ -344,7 +544,7 @@
     {
       "key": "employee_count",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.business_partner_organization_identity",
         "column": "employee_count"
       },
       "dataType": "integer",
@@ -377,7 +577,7 @@
     {
       "key": "employee_count_as_of",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.business_partner_organization_identity",
         "column": "employee_count_as_of"
       },
       "dataType": "date",
@@ -410,10 +610,30 @@
     {
       "key": "employee_count_scope",
       "binding": {
-        "sourceObject": "master.business_partner",
+        "sourceObject": "master.business_partner_organization_identity",
         "column": "employee_count_scope"
       },
-      "dataType": "string",
+      "dataType": "enum",
+      "display": {
+        "lookup": {
+          "options": [
+            {
+              "value": "organization",
+              "label": {
+                "labelKey": "entity.business_partner.employee_count_scope.organization",
+                "defaultText": "Organization"
+              }
+            },
+            {
+              "value": "consolidated_group",
+              "label": {
+                "labelKey": "entity.business_partner.employee_count_scope.consolidated_group",
+                "defaultText": "Consolidated group"
+              }
+            }
+          ]
+        }
+      },
       "storageType": "text",
       "nullable": true,
       "label": {
@@ -439,6 +659,369 @@
           "serverAuthoritative": false
         }
       ]
+    },
+    {
+      "key": "legal_form_label",
+      "binding": {
+        "sourceObject": "master.business_partner_organization_identity",
+        "column": "legal_form_value_id"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.legal_form_label.label",
+        "defaultText": "Legal form"
+      },
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "dynamicFacets": [
+        {
+          "facet": "visibility",
+          "engine": "jsonlogic.v1",
+          "expression": {
+            "==": [
+              {
+                "var": "record.partner_category"
+              },
+              "organization"
+            ]
+          },
+          "valueWhenTrue": "visible",
+          "valueWhenFalse": "hidden",
+          "evaluationFailure": "hide",
+          "serverAuthoritative": false
+        }
+      ]
+    },
+    {
+      "key": "business_type_label",
+      "binding": {
+        "sourceObject": "master.business_partner_organization_identity",
+        "column": "business_type_value_id"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.business_type_label.label",
+        "defaultText": "Business type"
+      },
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "dynamicFacets": [
+        {
+          "facet": "visibility",
+          "engine": "jsonlogic.v1",
+          "expression": {
+            "==": [
+              {
+                "var": "record.partner_category"
+              },
+              "organization"
+            ]
+          },
+          "valueWhenTrue": "visible",
+          "valueWhenFalse": "hidden",
+          "evaluationFailure": "hide",
+          "serverAuthoritative": false
+        }
+      ]
+    },
+    {
+      "key": "legal_classification",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "legal_classification"
+      },
+      "dataType": "enum",
+      "display": {
+        "lookup": {
+          "options": [
+            {
+              "value": "government",
+              "label": {
+                "labelKey": "entity.business_partner.legal.government",
+                "defaultText": "Government"
+              }
+            },
+            {
+              "value": "nonprofit",
+              "label": {
+                "labelKey": "entity.business_partner.legal.nonprofit",
+                "defaultText": "Nonprofit"
+              }
+            },
+            {
+              "value": "sole_proprietor",
+              "label": {
+                "labelKey": "entity.business_partner.legal.sole_proprietor",
+                "defaultText": "Sole proprietor"
+              }
+            }
+          ]
+        }
+      },
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.legal_classification.label",
+        "defaultText": "Legal classification"
+      },
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "person_code",
+      "binding": {
+        "sourceObject": "master.person",
+        "column": "code"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.person_code.label",
+        "defaultText": "Person reference"
+      },
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "dynamicFacets": [
+        {
+          "facet": "visibility",
+          "engine": "jsonlogic.v1",
+          "expression": {
+            "==": [
+              {
+                "var": "record.partner_category"
+              },
+              "person"
+            ]
+          },
+          "valueWhenTrue": "visible",
+          "valueWhenFalse": "hidden",
+          "evaluationFailure": "hide",
+          "serverAuthoritative": false
+        }
+      ]
+    },
+    {
+      "key": "person_first_name",
+      "binding": {
+        "sourceObject": "master.person",
+        "column": "first_name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.person_first_name.label",
+        "defaultText": "First name"
+      },
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "dynamicFacets": [
+        {
+          "facet": "visibility",
+          "engine": "jsonlogic.v1",
+          "expression": {
+            "==": [
+              {
+                "var": "record.partner_category"
+              },
+              "person"
+            ]
+          },
+          "valueWhenTrue": "visible",
+          "valueWhenFalse": "hidden",
+          "evaluationFailure": "hide",
+          "serverAuthoritative": false
+        }
+      ]
+    },
+    {
+      "key": "person_middle_name",
+      "binding": {
+        "sourceObject": "master.person",
+        "column": "middle_name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.person_middle_name.label",
+        "defaultText": "Middle name"
+      },
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "dynamicFacets": [
+        {
+          "facet": "visibility",
+          "engine": "jsonlogic.v1",
+          "expression": {
+            "==": [
+              {
+                "var": "record.partner_category"
+              },
+              "person"
+            ]
+          },
+          "valueWhenTrue": "visible",
+          "valueWhenFalse": "hidden",
+          "evaluationFailure": "hide",
+          "serverAuthoritative": false
+        }
+      ]
+    },
+    {
+      "key": "person_last_name",
+      "binding": {
+        "sourceObject": "master.person",
+        "column": "last_name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.person_last_name.label",
+        "defaultText": "Last name"
+      },
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "dynamicFacets": [
+        {
+          "facet": "visibility",
+          "engine": "jsonlogic.v1",
+          "expression": {
+            "==": [
+              {
+                "var": "record.partner_category"
+              },
+              "person"
+            ]
+          },
+          "valueWhenTrue": "visible",
+          "valueWhenFalse": "hidden",
+          "evaluationFailure": "hide",
+          "serverAuthoritative": false
+        }
+      ]
+    },
+    {
+      "key": "person_preferred_name",
+      "binding": {
+        "sourceObject": "master.person",
+        "column": "preferred_name"
+      },
+      "dataType": "string",
+      "storageType": "text",
+      "nullable": true,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.person_preferred_name.label",
+        "defaultText": "Preferred name"
+      },
+      "valueOrigin": "derived",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "visible",
+        "editability": "readonly"
+      },
+      "dynamicFacets": [
+        {
+          "facet": "visibility",
+          "engine": "jsonlogic.v1",
+          "expression": {
+            "==": [
+              {
+                "var": "record.partner_category"
+              },
+              "person"
+            ]
+          },
+          "valueWhenTrue": "visible",
+          "valueWhenFalse": "hidden",
+          "evaluationFailure": "hide",
+          "serverAuthoritative": false
+        }
+      ]
+    },
+    {
+      "key": "is_active",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "is_active"
+      },
+      "dataType": "boolean",
+      "storageType": "boolean",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.is_active.label",
+        "defaultText": "Active"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      }
+    },
+    {
+      "key": "updated_at",
+      "binding": {
+        "sourceObject": "master.business_partner",
+        "column": "updated_at"
+      },
+      "dataType": "datetime",
+      "storageType": "timestamptz",
+      "nullable": false,
+      "label": {
+        "labelKey": "entity.business_partner.core.fields.updated_at.label",
+        "defaultText": "Updated at"
+      },
+      "valueOrigin": "stored",
+      "readPolicy": "authorized_projection",
+      "writePolicy": "system_managed",
+      "uiFacets": {
+        "visibility": "hidden",
+        "editability": "readonly"
+      }
     }
   ],
   "businessContext": {
@@ -548,12 +1131,6 @@
             "segments": [
               {
                 "sourceObject": "master.company_code_supplier_profile",
-                "fromColumn": "supplier_id",
-                "toObject": "master.supplier",
-                "toColumn": "id"
-              },
-              {
-                "sourceObject": "master.supplier",
                 "fromColumn": "business_partner_id",
                 "toObject": "master.business_partner",
                 "toColumn": "id"
@@ -575,12 +1152,6 @@
             "segments": [
               {
                 "sourceObject": "master.company_code_customer_profile",
-                "fromColumn": "customer_id",
-                "toObject": "master.customer",
-                "toColumn": "id"
-              },
-              {
-                "sourceObject": "master.customer",
                 "fromColumn": "business_partner_id",
                 "toObject": "master.business_partner",
                 "toColumn": "id"
@@ -629,20 +1200,6 @@
           "ownerMapping": {
             "template": "direct_business_partner_owner",
             "sourceObject": "master.business_partner_governance_relation"
-          }
-        }
-      }
-    },
-    {
-      "relationKey": "business_partner.business_partner_commodity_capability",
-      "targetEntityCode": "business_partner_commodity_capability",
-      "binding": {
-        "handlerKey": "neon.bp.relation.business_partner_commodity_capability.v1",
-        "scopeContract": {
-          "targetResolution": "registered_handler",
-          "ownerMapping": {
-            "template": "direct_business_partner_owner",
-            "sourceObject": "master.business_partner_commodity_capability"
           }
         }
       }
@@ -849,7 +1406,6 @@
   "dependencies": [
     "address_link/core",
     "business_partner_banking/core",
-    "business_partner_commodity_capability/core",
     "business_partner_governance_relation/core",
     "business_partner_identifier/core",
     "business_partner_industry_classification/core",
@@ -1018,12 +1574,12 @@
   "deferredRelations": [
     {
       "targetEntityCode": "business_partner_banking",
-      "reason": "master.bank_account_link is not yet catalogued as a reviewed ownership path"
+      "reason": "master.payment_instrument_link ownership is enforced by the registered banking reader, not a generic relation writer"
     },
     {
       "targetEntityCode": "workforce",
       "reason": "master.employee has no persisted business_partner ownership path"
     }
   ],
-  "artifactHash": "sha256:a68fbbbd3c578daac7f23ae8761700e2a2545a99b19e8c9b7fc3dd8a8b6e1271"
+  "artifactHash": "sha256:2d4ec7da57871b837fca4261999ca99592aac5425ed9ab2f467031827dac69e0"
 }

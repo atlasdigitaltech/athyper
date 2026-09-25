@@ -1,3 +1,17 @@
+-- A submitted bank address belongs to the provisional reference, not the partner.
+INSERT INTO control.owner_type (
+ tenant_id,code,name,description,category,source_type,target_schema,target_table,
+ pk_column,is_tenant_scoped,tenant_column,supports_address,supports_contact,
+ supports_external_reference,sort_order,status,created_by
+) VALUES (
+ NULL,'bank_provisional_reference','Provisional bank reference','Pending bank-directory identification.',
+ 'asset','platform','master','bank_provisional_reference','id',true,'tenant_id',true,false,false,37,'active',
+ '00000000-0000-0000-0000-000000000000'
+);
+INSERT INTO control.owner_type_purpose(owner_type_id,capability,purpose_code,created_by)
+ SELECT id,'address','default','00000000-0000-0000-0000-000000000000'::uuid
+ FROM control.owner_type WHERE tenant_id IS NULL AND code='bank_provisional_reference';
+
 INSERT INTO control.lookup_domain (
     code, name, description, source_schema, is_extensible,
     metadata, status, created_by

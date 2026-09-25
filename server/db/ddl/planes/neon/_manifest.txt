@@ -102,6 +102,8 @@ planes/neon/control/07_functions.sql
 common/control/07_functions.sql
 common/runtime_meta/07_functions.sql
 planes/neon/master/07_functions.sql
+planes/neon/master/33_partner_organization_identity.sql
+planes/neon/master/14_payment_instrument_integrity.sql
 common/master/07_functions.sql
 common/snapshot/07_functions.sql
 common/audit/07_functions.sql
@@ -223,19 +225,18 @@ planes/neon/control/16_supplier_communications_reference_seed.sql
 common/authz/13_management.sql
 common/control/14_admin_integrations.sql
 common/control/15_lookup_reference_governance.sql
-planes/neon/master/15_bank_account_company_usage.sql
 common/master/19_entity_saved_views.sql
 common/runtime_meta/12_baseline_precondition.sql
 planes/neon/ai/12_attachment_knowledge.sql
 planes/neon/document/07_task_interactions.sql
 common/control/17_process_task_rule_publication.sql
-planes/neon/master/18_business_partner_business_profile.sql
 common/document/12_collaboration_integrity.sql
 common/shared/99_security_definer_hardening.sql
 
 common/master/21_reference_choice_recent.sql
 
 common/document/13_processing_grants.sql
+common/document/14_collaboration_participant_directory.sql
 planes/neon/document/14_workforce_case_reconciliation.sql
 planes/neon/master/22_employee_personal_profile.sql
 planes/neon/document/15_person_evidence_access_audit.sql
@@ -251,5 +252,12 @@ planes/neon/master/25_hr_stage2_user_rls.sql
 planes/neon/master/26_hr_setup_publication.sql
 planes/neon/authz/22_hr_setup_governance_permissions.sql
 planes/neon/authz/23_hr_policy_simulate_permission.sql
+planes/neon/authz/24_notification_operations_permissions.sql
 planes/neon/master/27_hr_setup_effective_refs.sql
 planes/neon/master/28_hr_setup_reference_guards.sql
+planes/neon/master/29_partner_commodity_classification.sql
+planes/neon/authz/25_partner_classification_permissions.sql
+planes/neon/master/31_partner_direct_commodity.sql
+planes/neon/control/18_partner_decision_contract.sql
+planes/neon/authz/26_partner_registration_permission.sql
+planes/neon/document/31_partner_registration_approvers.sql

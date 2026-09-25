@@ -3,6 +3,36 @@
   "baseline": "2026-09-14",
   "entries": [
     {
+      "originalPath": "migrations/20260924_publication_recovery_audit.sql",
+      "path": "migrations/20260924_publication_recovery_audit.sql",
+      "sha256": "af7265650c08eaf3d4fff9d2ab40457ab7954b98425c7264ce9511cdd32d8eaf",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Register exact recovery activation audit event; service-account-only, critical, tenant scoped.",
+      "canonicalPaths": ["ddl/planes/studio/metadata/20_publication_recovery_audit.sql"]
+    },
+    {
+      "originalPath": "migrations/20260924_publication_recovery_successor.sql",
+      "path": "migrations/20260924_publication_recovery_successor.sql",
+      "sha256": "de63f4c56ea6ec18214d670ce9cd950725ea444bd27d9d57d5d7ff926e3a124b",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Append-only reviewed successor permits preserve revoked evidence and permit catalog-only rebinding.",
+      "canonicalPaths": ["ddl/planes/studio/metadata/19_publication_recovery_successor.sql"]
+    },
+    {
+      "originalPath": "migrations/20260924_publication_provenance_recovery.sql",
+      "path": "migrations/20260924_publication_provenance_recovery.sql",
+      "sha256": "7a56639c3350798adb0328c2b972389f4cce34cee6ab41b239831755ccbea7e4",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Immutable operator-controlled provenance archive; no authoring guard bypass or permission grants.",
+      "canonicalPaths": ["ddl/planes/studio/metadata/18_publication_recovery.sql"]
+    },
+    {
       "originalPath": "migrations/20260906_identity_replay_approval.sql",
       "sha256": "b7ce9db91f5a77852a407297d6f1ffb41166c2cbdee25a285b6ac221092435d7",
       "planes": [],
@@ -1115,6 +1145,56 @@
       "canonicalPaths": [
         "ddl/common/audit/12_reference_seed.sql"
       ]
+    },
+    {
+      "originalPath": "migrations/20260923_collection_configuration.sql",
+      "path": "migrations/20260923_collection_configuration.sql",
+      "sha256": "e6a890614ef5a4af13bc6e47ea9f3367d60920c7cf73b89a5efed59146d75847",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Collection configuration publication functions; retain exact existing SQL bytes.",
+      "canonicalPaths": ["ddl/planes/studio/publication/13_collection_configuration.sql"]
+    },
+    {
+      "originalPath": "migrations/20260923_notification_configuration.sql",
+      "path": "migrations/20260923_notification_configuration.sql",
+      "sha256": "cb2ad1ca79bfd464df25424b1b953fe89e7543da00a00c9329fdbfea8d28dd5d",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Notification configuration publication; retain exact existing SQL bytes.",
+      "canonicalPaths": ["ddl/planes/studio/publication/12_notification_configuration.sql"]
+    },
+    {
+      "originalPath": "migrations/20260923_notification_compilation_source.sql",
+      "path": "migrations/20260923_notification_compilation_source.sql",
+      "sha256": "31d6f1e9a1652c4c81f812361029cb523597fc756ffb6b8c575e6bd4749c8818",
+      "planes": ["studio"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Reviewed notification compilation source; retain exact existing SQL bytes.",
+      "canonicalPaths": ["ddl/planes/studio/publication/12_notification_configuration.sql"]
+    },
+    {
+      "originalPath": "migrations/20260923_entity_notification_discovery.sql",
+      "path": "migrations/20260923_entity_notification_discovery.sql",
+      "sha256": "5c9a1acb51616024aaab96140a32e65c079ba4e5fea2ffeb416e19a288f01e90",
+      "planes": ["neon"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Entity notification discovery and dedup index; retain exact existing SQL bytes.",
+      "canonicalPaths": ["ddl/common/event/07_functions.sql", "ddl/common/event/06_indexes.sql"]
+    },
+    {
+      "originalPath": "migrations/20260923_notification_operations_permissions.sql",
+      "path": "migrations/20260923_notification_operations_permissions.sql",
+      "sha256": "53a64412ec4f729b252c6e61caaa58e0e1c1864793f84812429e02f8bdefa6b2",
+      "planes": ["neon"],
+      "disposition": "forward-upgrade",
+      "callers": [],
+      "reason": "Notification operations capability catalog; no user grants. Retain exact existing SQL bytes.",
+      "canonicalPaths": ["ddl/planes/neon/authz/24_notification_operations_permissions.sql"]
     },
     {
       "originalPath": "migrations/20260922_workforce_as_of_projection.sql",

@@ -1,6 +1,7 @@
 "use client";
 import React, {
   useId,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -226,6 +227,13 @@ export function CollectionSection({
   const [added, setAdded] = useState<string>();
   const [removing, setRemoving] = useState<string>();
   const [checked, setChecked] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    const keys = new Set(rows.map(row => String(row.key)));
+    setChecked(current => {
+      const next = new Set([...current].filter(key => keys.has(key)));
+      return next.size === current.size ? current : next;
+    });
+  }, [rows]);
   const validation = useDataValidation();
   const p = field.presentation;
   useLayoutEffect(() => {
@@ -419,6 +427,7 @@ export function CollectionSection({
               },
               item,
               row,
+              surfaces,
             ).join(" · ")
           : title;
         const impact =

@@ -1,4 +1,8 @@
 "use client";
+import { rollbackBookmarks } from "./bookmark-state";
+import { entityLocationSearch } from "./entity-location";
+import { retryRequiresDescriptor } from "./retry-policy";
+import {CollectionDraftFooter} from "@athyper/platform-collection-controls";
 import { isListViewAllowed, constrainEmbeddedViewState } from "./view-policy";
 import { lookupInitialState } from "./lookup-directory";
 import { EntityTaskHeaderProvider, useEntityTaskHeader } from "@athyper/platform-shell";
@@ -107,6 +111,7 @@ import {
 import {
   Badge,
   ObjectSearch,
+  ViewSelector,
   Button,
   Card,
   Checkbox,
@@ -139,6 +144,7 @@ import React, {
 } from "react";
 import {
   clearDisplayPreferences,
+  entityDisplayPreferenceNamespace,
   readDisplayPreferences,
   readSavedViews,
   saveableViewState,
@@ -571,11 +577,23 @@ function EntityCollectionRuntime({
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState(0);
   const [refreshAttempt, setRefreshAttempt] = useState(0);
+  const retryResults = () => {
+    if (retryRequiresDescriptor(error)) setAttempt(value => value + 1);
+    else setRefreshAttempt(value => value + 1);
+  };
   const [cursorHistory, setCursorHistory] = useState<
     readonly (string | undefined)[]
   >([]);
   const scopeKey = JSON.stringify(scopeCoordinate ?? {}),
     authorityKey = `${entityCode}:${scopeKey}`;
+  const bookmarkEpoch = useMemo(() => ({}), [authorityKey, client, attempt]);
+  const bookmarkEpochRef = useRef(bookmarkEpoch);
+  bookmarkEpochRef.current = bookmarkEpoch;
+  useEffect(() => {
+    bookmarkEpochRef.current = bookmarkEpoch;
+    return () => { if (bookmarkEpochRef.current === bookmarkEpoch) bookmarkEpochRef.current = {}; };
+  }, [bookmarkEpoch]);
+  const bookmarkRequests = useRef(new Map<string, object>());
   const serverQueryKey = JSON.stringify(
     state
       ? {
@@ -599,6 +617,7 @@ function EntityCollectionRuntime({
     filterChoiceControllers.current.clear(); filterChoiceRequests.current.clear();
   }, [authorityKey]);
   const previousAuthorityKey = useRef<string | undefined>(undefined);
+  const previousEntityLocation = useRef<{entityCode:string;pathname:string} | undefined>(undefined);
   const [loadedAuthorityKey, setLoadedAuthorityKey] = useState<string>();
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -674,7 +693,8 @@ function EntityCollectionRuntime({
         }
         if (controller.signal.aborted) return;
         if (embedding?.options.recordAccess === "readOnly") next = {...next, actions: [], dataOperations: undefined};
-        let nextState = embedding ? lookupInitialState(next, embedding.options, embedding.initialQuery) : readListLocation(next);
+        const effectiveSearch = entityLocationSearch(previousEntityLocation.current, entityCode, window.location);
+        let nextState = embedding ? lookupInitialState(next, embedding.options, embedding.initialQuery) : readListLocation(next, effectiveSearch);
         if (embedding) {
           const pref = readDisplayPreferences(next.plane, embedding.options.display.preferenceScope === "surface" ? `${next.entity.code}.${next.scope.fingerprint}.${embedding.preferenceNamespace ?? "lookup"}` : undefined);
           embedding.onSearchBehaviorChange?.(pref && embedding.options.display.userOverrides.includes("searchBehavior") ? pref.searchBehavior : embedding.options.display.defaults.searchBehavior);
@@ -687,7 +707,7 @@ function EntityCollectionRuntime({
           else setActionStatus("The selected view is unavailable. The configured default has been applied.");
         }
         const requestedView =
-          (embedding ? embedding.options.views.defaultViewKey : new URLSearchParams(window.location.search).get("vid")) ??
+          (embedding ? embedding.options.views.defaultViewKey : new URLSearchParams(effectiveSearch).get("vid")) ??
           next.viewCatalog?.personalDefault ??
           next.viewCatalog?.sharedDefault;
         if (
@@ -698,8 +718,8 @@ function EntityCollectionRuntime({
           setActionStatus(
             "The selected view is unavailable. System default has been applied.",
           );
-        const parameters = new URLSearchParams(window.location.search),
-          preferences = readDisplayPreferences(next.plane);
+        const parameters = new URLSearchParams(effectiveSearch),
+          preferences = readDisplayPreferences(next.plane, entityDisplayPreferenceNamespace(next));
         if (
           !embedding && !nextState.savedViewId &&
           !parameters.has("density") &&
@@ -720,6 +740,7 @@ function EntityCollectionRuntime({
         setDescriptor(next);
         setScopeSnapshot({ entityCode, scope: next.scope });
         setState(nextState);
+        previousEntityLocation.current = {entityCode,pathname:window.location.pathname};
         setLoadedAuthorityKey(authorityKey);
       })
       .catch((cause) => {
@@ -953,6 +974,7 @@ function EntityCollectionRuntime({
           headerOnly={applicationOnly}
           density={state?.density ?? initialDensity}
           title="Loading list"
+          entityName={inherited?.descriptor.surface.header ? resolveEntityText(inherited.descriptor.surface.header.title, locale) : inherited?.descriptor.surface.title}
           loading={scopePending || loading}
           error={error}
           retry={() => setAttempt((value) => value + 1)}
@@ -1049,7 +1071,7 @@ function EntityCollectionRuntime({
         title={title}
         loading
         error={error}
-        retry={() => setAttempt((value) => value + 1)}
+        retry={retryResults}
         applicationName={applicationName}
       />
     );
@@ -1069,11 +1091,12 @@ function EntityCollectionRuntime({
     rows: readonly EntityListRowV1[],
   ) => {
     if (!rows.length || allMatchingSelected) return;
-    const ids = rows.map((row) => row.id),
-      previous = new Set(bookmarkedIds),
-      pending = new Set(pendingBookmarkIds);
-    for (const id of ids) pending.add(id);
-    setPendingBookmarkIds(pending);
+    const epoch = bookmarkEpoch;
+    rows = rows.filter(row => bookmarkRequests.current.get(row.id) !== epoch);
+    if (!rows.length) return;
+    const ids = rows.map(row => row.id), previous = new Set(bookmarkedIds);
+    for (const id of ids) bookmarkRequests.current.set(id, epoch);
+    setPendingBookmarkIds(current => new Set([...current, ...ids]));
     setBookmarkedIds((current) => {
       const next = new Set(current);
       for (const id of ids)
@@ -1104,6 +1127,7 @@ function EntityCollectionRuntime({
           idempotencyKey: `record-bookmark:${operation}:${crypto.randomUUID()}`,
         },
       );
+      if (bookmarkEpochRef.current !== epoch) return;
       setActionStatus(
         `${ids.length} ${ids.length === 1 ? "record" : "records"} ${operation === "add" ? "added to" : "removed from"} favourites.`,
       );
@@ -1113,13 +1137,16 @@ function EntityCollectionRuntime({
         }),
       );
     } catch (cause) {
-      setBookmarkedIds(previous);
+      if (bookmarkEpochRef.current !== epoch) return;
+      setBookmarkedIds(current => rollbackBookmarks(current, previous, ids));
       setActionStatus(
         cause instanceof Error
           ? cause.message
           : "Favourites could not be updated.",
       );
     } finally {
+      for (const id of ids) if (bookmarkRequests.current.get(id) === epoch) bookmarkRequests.current.delete(id);
+      if (bookmarkEpochRef.current !== epoch) return;
       setPendingBookmarkIds((current) => {
         const next = new Set(current);
         for (const id of ids) next.delete(id);
@@ -1227,7 +1254,7 @@ function EntityCollectionRuntime({
           {error ? (
             <ErrorState
               error={error}
-              retry={() => setAttempt((value) => value + 1)}
+              retry={retryResults}
               compact={Boolean(page)}
             />
           ) : null}
@@ -1392,7 +1419,7 @@ function ListChrome({
 }) {
   const generatedSearchId = useId();
   const searchId = embedding ? generatedSearchId : "entity-list-search";
-  const preferenceNamespace = embedding?.options.display.preferenceScope === "surface" ? `${descriptor.entity.code}.${descriptor.scope.fingerprint}.${embedding.preferenceNamespace ?? "lookup"}` : undefined;
+  const preferenceNamespace = embedding ? (embedding.options.display.preferenceScope === "surface" ? `${descriptor.entity.code}.${descriptor.scope.fingerprint}.${embedding.preferenceNamespace ?? "lookup"}` : undefined) : entityDisplayPreferenceNamespace(descriptor);
   const [displayVersion, setDisplayVersion] = useState(0);
   const directory = useDirectoryFilters(),
     directoryKinds = descriptor.scope.filterKinds ?? [];
@@ -1643,17 +1670,7 @@ function ListChrome({
         <form className="a-entity-list__search" role="search" onSubmit={submit}>
           <ObjectSearch ref={search} id={searchId} label={`Search ${descriptor.entity.pluralLabel}`} value={query} onValueChange={setQuery} placeholder={`Search by ${searchHint(descriptor)}…`} />
         </form>
-        <Menu>
-          <MenuTrigger
-            className="a-entity-list__view-trigger"
-            disabled={embedding?.options.views.allowSwitching === false}
-            aria-label="Select view"
-          >
-            View: {activeView?.name ?? "System default"}
-            {dirty ? " (modified)" : ""}
-            <ChevronDownIcon size={14} />
-          </MenuTrigger>
-          <MenuContent>
+        <ViewSelector className="a-entity-list__view-trigger" disabled={embedding?.options.views.allowSwitching === false} name={activeView?.name ?? "System default"} modified={dirty}>
             {isListViewAllowed({savedViewId: "system"}, embedding?.options.views.allowedViewKeys) ? <MenuItem onClick={reset}>System default</MenuItem> : null}
             {eligibleViews.map((view) => (
               <MenuItem
@@ -1676,8 +1693,7 @@ function ListChrome({
               </MenuItem>
             ))}
             {!embedding || embedding.options.views.allowSwitching ? <MenuItem onClick={() => setActiveDrawer("views")}>Manage views…</MenuItem> : null}
-          </MenuContent>
-        </Menu>
+        </ViewSelector>
         <div className="a-entity-list__toolbar-actions">
           {listDrawer("filters").available(descriptor) ? (
             <Button
@@ -2137,7 +2153,7 @@ function FilterDialog({
   const invalid = draft.some(
     (item) =>
       !!filterValidationError(
-        filterable.find((field) => field.key === item.field)!,
+        filterable.find((field) => field.key === item.field),
         item.operator,
         item.value,
       ),
@@ -2151,17 +2167,6 @@ function FilterDialog({
         filterable.find((field) => field.key === item.field)?.valueKind,
         filterable.find((field) => field.key === item.field)?.filterOptions,
       );
-      if (
-        value === "" ||
-        (typeof value === "number" && !Number.isFinite(value)) ||
-        (Array.isArray(value) &&
-          (!value.length ||
-            (item.operator === "between" && value.length !== 2) ||
-            value.some(
-              (entry) => typeof entry === "number" && !Number.isFinite(entry),
-            )))
-      )
-        return [];
       return [
         {
           field: item.field,
@@ -2507,9 +2512,7 @@ function FilterDialog({
             </div>
           </Drawer.TabPanel>
         </Drawer.Body>
-        <Drawer.Footer className="a-entity-list__filter-actions">
-          <Drawer.FooterSummary>
-            <strong>
+        <CollectionDraftFooter className="a-entity-list__filter-actions" dirty={dirty} applyDisabled={invalid || Boolean(directoryDirty && directory?.unavailable)} resetDisabled={!draft.length && directorySelectionKey(directoryDraft) === directorySelectionKey({})} summary={<><strong>
               {dirty ? "Changes ready to apply" : `${recordLabel} matching`}
             </strong>
             <span>
@@ -2517,41 +2520,8 @@ function FilterDialog({
                 ? `${recordLabel} in the current list`
                 : `${draft.length + (directoryDraft.operatingOrganizationIds?.length ?? 0) + (directoryDraft.companyCodeIds?.length ?? 0) + (descriptor.scope.quickFilters?.filter((filter) => directoryDraft[filter.key]).length ?? 0)} active filters`}
             </span>
-          </Drawer.FooterSummary>
-          <Drawer.FooterActions>
-            <Button
-              variant="ghost"
-              size="small"
-              disabled={
-                !draft.length &&
-                directorySelectionKey(directoryDraft) === directorySelectionKey({})
-              }
-              onClick={() => {
-                setDraft([]);
-                setDirectoryDraft({});
-              }}
-            >
-              Reset filters
-            </Button>
-            <Drawer.Close className="a-button a-button--secondary a-button--small">
-              Cancel
-            </Drawer.Close>
-            <Button
-              size="small"
-              disabled={
-                !dirty ||
-                invalid ||
-                Boolean(directoryDirty && directory?.unavailable)
-              }
-              onClick={apply}
-            >
-              <span className="a-entity-list__apply-desktop">
-                Apply filters
-              </span>
-              <span className="a-entity-list__apply-mobile">Show results</span>
-            </Button>
-          </Drawer.FooterActions>
-        </Drawer.Footer>
+          </>} onReset={()=>{setDraft([]);setDirectoryDraft({});}} onApply={apply} resetLabel="Reset filters" applyLabel={<><span className="a-entity-list__apply-desktop">Apply filters</span><span className="a-entity-list__apply-mobile">Show results</span></>}/>
+
       </Drawer.Tabs>
     </>
   );
@@ -3791,7 +3761,7 @@ function DisplaySettingsDialog({
           <strong>
             {dirty ? "Changes ready to save" : "Personal defaults are current"}
           </strong>
-          <span>These preferences apply to lists on this device.</span>
+          <span>These preferences apply to this list on this device.</span>
         </Drawer.FooterSummary>
         <Drawer.FooterActions>
           <Button variant="ghost" size="small" onClick={reset}>
@@ -5101,6 +5071,7 @@ function ListFrame({
   headerOnly = false,
   density = "comfortable",
   applicationName,
+  entityName,
 }: {
   readonly contentOnly?: boolean;
   readonly headerOnly?: boolean;
@@ -5110,6 +5081,7 @@ function ListFrame({
   readonly error?: ApiTransportError;
   readonly retry: () => void;
   readonly applicationName?: string;
+  readonly entityName?: string;
 }) {
   return (
     <PageFrame
@@ -5163,7 +5135,7 @@ function ListFrame({
         />
       ) : null}
       {error ? (
-        <ErrorState error={error} retry={retry} application={headerOnly} applicationName={applicationName} />
+        <ErrorState error={error} retry={retry} application={headerOnly} applicationName={applicationName} entityName={entityName ?? (title.startsWith("Loading") ? undefined : title)} />
       ) : loading ? (
         <>
           {!headerOnly ? (
@@ -5190,14 +5162,16 @@ function ErrorState({
   compact = false,
   application = false,
   applicationName,
+  entityName,
 }: {
   readonly error: ApiTransportError;
   readonly retry: () => void;
   readonly compact?: boolean;
   readonly application?: boolean;
   readonly applicationName?: string;
+  readonly entityName?: string;
 }) {
-  const model = classifyAppError({ error });
+  const model = classifyAppError({ error, applicationName: entityName });
   if (application) return <ErrorSurface model={model} reset={retry} surface="content" applicationName={applicationName} />;
   return (
     <Card
@@ -5209,13 +5183,13 @@ function ErrorState({
       </span>
       <div>
         <h2>
-          {model.kind === "not-found"
+          {model.kind === "not-found" || model.kind === "service-unavailable"
             ? model.title
             : compact
               ? "The latest results could not be loaded"
               : "This list is unavailable"}
         </h2>
-        <p>{model.kind === "not-found" ? model.description : "We couldn’t load this page. Please try again."}</p>
+        <p>{model.kind === "not-found" || model.kind === "service-unavailable" ? model.description : "We couldn’t load this page. Please try again."}</p>
       </div>
       {model.canRetry ? (
         <Button size="small" variant="secondary" onClick={retry}>

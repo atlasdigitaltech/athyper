@@ -1,6 +1,7 @@
 "use client";
 import { useOptionalAppearanceProfile, type AppearancePreference } from "@athyper/platform-shell-app-foundation";
 import { localeDefinition, type SupportedLocale } from "@athyper/platform-i18n";
+import { THEME_FAMILIES, type ThemeFamily } from "@athyper/platform-theme/tokens";
 import { useState, type ReactNode } from "react";
 import { useShellI18n } from "./shell-i18n";
 
@@ -46,6 +47,12 @@ export function UtilitiesMenu({
               { value: "spacious", label: t("shell.utilities.densitySpacious") },
             ]}
             onChange={(value) => setPreference({ densityCode: value as "comfortable" | "compact" | "spacious" })}
+          />
+          <UtilitiesToggleGroup
+            label={t("shell.utilities.designSystem")}
+            value={appearance.themeFamily}
+            options={THEME_FAMILIES.map((family) => ({ value: family, label: t(designSystemLabelKey(family)) }))}
+            onChange={(value) => appearance.setThemeFamily(value as ThemeFamily)}
           />
         </UtilitiesSection>
       ) : null}
@@ -101,6 +108,10 @@ export function UtilitiesMenu({
       </UtilitiesSection>
     </div>
   );
+}
+
+function designSystemLabelKey(family: ThemeFamily): "shell.utilities.designSystemModern" | "shell.utilities.designSystemMono" {
+  return family === "atlas-mono" ? "shell.utilities.designSystemMono" : "shell.utilities.designSystemModern";
 }
 
 function UtilitiesSection({ title, children }: { readonly title: string; readonly children: ReactNode }) {

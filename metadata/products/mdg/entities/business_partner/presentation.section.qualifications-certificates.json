@@ -9,27 +9,61 @@
   "sectionKey": "qualifications-certificates",
   "rendererKey": "platform.related-collection.v1",
   "emptyState": {
-    "title": "No qualification certificates yet",
-    "detail": "When qualification certificates are added, they’ll appear here."
+    "title": "No qualifications",
+    "detail": "No qualification records are available for this partner."
   },
   "dataBinding": {
     "kind": "registered_service",
-    "handlerKey": "neon.bp.section.qualifications-certificates.v1",
-    "existingRoutes": [
-      "/api/neon/business-partners/:id/360/qualifications",
-      "/api/neon/business-partners/:id/360/certificates"
-    ],
+    "handlerKey": "neon.bp.section.qualifications.v2",
     "ownerEntityCode": "business_partner",
     "scopeAuthority": "server",
     "includeInAggregate": false
   },
   "coreRef": "business_partner_qualification/core.json",
-  "fieldBindings": [],
+  "fieldBindings": [
+    {
+      "fieldKey": "id"
+    },
+    {
+      "fieldKey": "qualification_type_code"
+    },
+    {
+      "fieldKey": "context_kind"
+    },
+    {
+      "fieldKey": "context_reference"
+    },
+    {
+      "fieldKey": "decision"
+    },
+    {
+      "fieldKey": "coverage"
+    },
+    {
+      "fieldKey": "condition_summaries"
+    },
+    {
+      "fieldKey": "recorded_condition_count"
+    },
+    {
+      "fieldKey": "effective_from"
+    },
+    {
+      "fieldKey": "effective_until"
+    },
+    {
+      "fieldKey": "next_review_at"
+    },
+    {
+      "fieldKey": "date_window"
+    },
+    {
+      "fieldKey": "assessed_at"
+    }
+  ],
   "authorization": {
     "viewPermission": "neon.relationship.business_partner_qualification.read",
-    "fieldPermissions": [
-      "neon.relationship.business_partner_certificate.read"
-    ],
+    "fieldPermissions": [],
     "discoverableWhenDenied": false,
     "enforceBeforeDataQuery": true
   },
@@ -46,92 +80,9 @@
   },
   "load": "on_visible",
   "requiredContext": "resolve_from_target_core",
-  "additionalCoreRefs": [
-    "certification/core.json",
-    "business_partner_commodity_capability/core.json"
-  ],
+  "additionalCoreRefs": [],
   "dependencies": [
-    "business_partner_commodity_capability/core",
-    "business_partner_qualification/core",
-    "business_partner_qualification/operation",
-    "certification/core",
-    "certification/operation"
+    "business_partner_qualification/core"
   ],
-  "childCollections": [
-    {
-      "key": "qualifications",
-      "entityCode": "business_partner_qualification",
-      "coreRef": "business_partner_qualification/core.json",
-      "rendererKey": "platform.related-collection.v1",
-      "fieldBindings": [
-        {
-          "fieldKey": "partner_role"
-        },
-        {
-          "fieldKey": "qualification_type_code"
-        },
-        {
-          "fieldKey": "decision"
-        },
-        {
-          "fieldKey": "effective_from"
-        },
-        {
-          "fieldKey": "effective_until"
-        },
-        {
-          "fieldKey": "next_review_at"
-        }
-      ],
-      "load": "on_visible",
-      "operationRef": "business_partner_qualification/operation.json"
-    },
-    {
-      "key": "certifications",
-      "entityCode": "certification",
-      "coreRef": "certification/core.json",
-      "rendererKey": "platform.related-collection.v1",
-      "fieldBindings": [
-        {
-          "fieldKey": "owner_type"
-        },
-        {
-          "fieldKey": "owner_id"
-        },
-        {
-          "fieldKey": "certification_type_id"
-        },
-        {
-          "fieldKey": "custom_name"
-        },
-        {
-          "fieldKey": "certificate_number"
-        },
-        {
-          "fieldKey": "certified_by"
-        },
-        {
-          "fieldKey": "company_code_id"
-        },
-        {
-          "fieldKey": "site_id"
-        },
-        {
-          "fieldKey": "document_attachment_id"
-        },
-        {
-          "fieldKey": "effective_from"
-        },
-        {
-          "fieldKey": "effective_until"
-        },
-        {
-          "fieldKey": "status"
-        }
-      ],
-      "load": "on_visible",
-      "operationRef": "certification/operation.json"
-    }
-  ],
-  "artifactHash": "sha256:02dbdcd9d683c2ba3eb61c4a318d1fc36e28ac3ac515ee570d5f30d91ee6df34"
+  "childCollections": []
 }

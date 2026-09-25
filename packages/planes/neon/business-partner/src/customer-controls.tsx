@@ -1,5 +1,7 @@
 "use client";
 import { useOrganizationSelection } from "./use-organization-selection";
+import { PartnerControlScope } from "./partner-control-scope";
+import { requiredControlValue as required } from "./control-form-values";
 
 import { businessPartnerErrorMessage, useCommandRunner } from "./command-feedback";
 import {
@@ -41,6 +43,11 @@ export const customerControlPermissions = {
   deactivate: "neon.customer.lifecycle.deactivate",
   archive: "neon.customer.lifecycle.archive",
 } as const;
+
+export function validCreditApproval(limit: string, currency: string): boolean {
+  return limit.trim() !== "" && Number.isFinite(Number(limit)) &&
+    Number(limit) >= 0 && /^[A-Z]{3}$/i.test(currency.trim());
+}
 
 export type CustomerLifecycleAction =
   "activate" | "suspend" | "reactivate" | "deactivate" | "archive";
@@ -208,7 +215,7 @@ export function CustomerControls({
             data.get("requestedCurrencyCode") || "",
           ).toUpperCase(),
           riskClassCode: String(data.get("riskClassCode") || ""),
-          effectiveFrom: String(data.get("effectiveFrom") || ""),
+          effectiveFrom: required(data, "effectiveFrom"),
           ...(data.get("effectiveUntil")
             ? { effectiveUntil: String(data.get("effectiveUntil")) }
             : {}),
@@ -231,6 +238,8 @@ export function CustomerControls({
       .map((code) => code.trim())
       .filter(Boolean)
       .map((code) => ({ code }));
+    if (decision !== "rejected" && !validCreditApproval(draft.limit, draft.currency)) return;
+    if (decision === "conditional" && conditions.length === 0) return;
     await run(
       `decision-${review.id}`,
       () =>
@@ -243,7 +252,7 @@ export function CustomerControls({
           draft.currency
             ? {
                 approvedCreditLimit: approvedLimit,
-                approvedCurrencyCode: draft.currency.toUpperCase(),
+                approvedCurrencyCode: draft.currency.trim().toUpperCase(),
               }
             : {}),
           ...(decision === "conditional" ? { conditions } : {}),
@@ -269,13 +278,13 @@ export function CustomerControls({
           ...(data.get("channelCode")
             ? { channelCode: String(data.get("channelCode")).toLowerCase() }
             : {}),
-          designationType: String(data.get("designationType")),
+          designationType: required(data, "designationType"),
           priorityTier: tier,
-          effectiveFrom: String(data.get("effectiveFrom")),
+          effectiveFrom: required(data, "effectiveFrom"),
           ...(data.get("effectiveUntil")
             ? { effectiveUntil: String(data.get("effectiveUntil")) }
             : {}),
-          rationale: String(data.get("rationale")),
+          rationale: required(data, "rationale"),
         }),
       "Customer designation opened",
     );
@@ -344,46 +353,7 @@ export function CustomerControls({
         </a>
       }
     >
-      <Card className="bp-filter-bar">
-        <div>
-          <Label htmlFor="customer-controls-organization">
-            Sales organization
-          </Label>
-          <Select
-            id="customer-controls-organization"
-            value={organizationId}
-            onChange={(event) => setOrganizationId(event.currentTarget.value)}
-          >
-            <option value="">Select an authorized sales organization</option>
-            {organizations.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.code} · {item.displayName}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="customer-controls-company">AR company</Label>
-          <Input
-            id="customer-controls-company"
-            readOnly
-            value={companyCodeId ?? "Select a company in the work context"}
-          />
-        </div>
-      </Card>
-      {error ? (
-        <div className="bp-error" role="alert">
-          <strong>Unable to complete the command</strong>
-          <p>{error}</p>
-        </div>
-      ) : null}
-      {!companyCodeId ? (
-        <Card>
-          <p>
-            Select a company in the NEON work context to review AR readiness.
-          </p>
-        </Card>
-      ) : null}
+      <PartnerControlScope id="customer-controls" organizationLabel="Sales organization" companyLabel="AR company" organizations={organizations} organizationId={organizationId} companyCodeId={companyCodeId} onOrganizationChange={setOrganizationId} error={error} />
       {loading ? (
         <Card>
           <p>Loading customer controls…</p>
@@ -598,6 +568,10 @@ export function CustomerControls({
                               variant="secondary"
                               loading={busy === `decision-${review.id}`}
                               onClick={() => void decide(review, "approved")}
+                              disabled={!validCreditApproval(
+                                creditDrafts[review.id]?.limit ?? String(review.requestedCreditLimit ?? ""),
+                                creditDrafts[review.id]?.currency ?? review.requestedCurrencyCode ?? "",
+                              )}
                             >
                               Approve
                             </Button>
@@ -605,6 +579,10 @@ export function CustomerControls({
                               variant="secondary"
                               loading={busy === `decision-${review.id}`}
                               disabled={
+                                !validCreditApproval(
+                                  creditDrafts[review.id]?.limit ?? String(review.requestedCreditLimit ?? ""),
+                                  creditDrafts[review.id]?.currency ?? review.requestedCurrencyCode ?? "",
+                                ) ||
                                 !(
                                   creditDrafts[review.id]?.conditions ?? ""
                                 ).trim()

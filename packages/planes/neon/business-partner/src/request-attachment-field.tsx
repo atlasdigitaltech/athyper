@@ -1,4 +1,5 @@
 "use client";
+import { runAttachmentUpload, validateUploadFile } from "@athyper/platform-communications-collaboration-ui";
 import {
   createContext,
   useContext,
@@ -90,6 +91,7 @@ export function RequestAttachmentField({
     [error, setError] = useState<string>(),
     [fileName, setFileName] = useState<string>();
   const generation = useRef(0);
+  const uploadIntent=useRef<{file:File;attachmentId:string}|undefined>(undefined);
   useEffect(() => {
     choices.report(id, busy ? labels.uploading : error);
   }, [id, busy, error, choices.report, labels.uploading]);
@@ -126,34 +128,21 @@ export function RequestAttachmentField({
     setBusy(true);
     setError(undefined);
     try {
-      const contentType = file.type || "application/octet-stream";
-      const attachmentId = crypto.randomUUID();
-      const staged = await http.request(stage, {
-        idempotencyKey: attachmentId,
-        body: {
-          attachmentId,
-          fileName: file.name,
-          contentType,
-          sizeBytes: file.size,
-        },
-      });
-      const response = await fetch(staged.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": contentType },
-        body: file,
-        credentials: "omit",
-      });
-      if (!response.ok) throw Error(labels.uploadFailed);
-      await http.request(finalize(staged.attachmentId), {
-        idempotencyKey: staged.attachmentId,
-        body: { contentType },
-      });
-      const current = await http.request(status(staged.attachmentId), {});
+      const contentType=validateUploadFile(file,{});
+      const prior=uploadIntent.current;
+      const retry=Boolean(prior && prior.file.name===file.name && prior.file.size===file.size && prior.file.lastModified===file.lastModified && prior.file.type===file.type);
+      const attachmentId=retry?prior!.attachmentId:crypto.randomUUID();uploadIntent.current={file,attachmentId};
+      await runAttachmentUpload({file,contentType,retry,
+        stage:()=>http.request(stage,{idempotencyKey:attachmentId,body:{attachmentId,fileName:file.name,contentType,sizeBytes:file.size}}),
+        status:()=>http.request(status(attachmentId),{}).catch(cause=>{if(cause instanceof ApiTransportError && cause.status===404)return undefined;throw cause;}),
+        finalize:signal=>http.request(finalize(attachmentId),{idempotencyKey:attachmentId,body:{contentType},signal})});
+      uploadIntent.current=undefined;
+      const current = await http.request(status(attachmentId), {});
       if (attempt !== generation.current) return;
       if (current.status !== "active") throw Error(labels.processing);
       setFileName(file.name);
-      choices.remember(staged.attachmentId, file.name);
-      onChange(staged.attachmentId);
+      choices.remember(attachmentId, file.name);
+      onChange(attachmentId);
     } catch (cause) {
       if (attempt === generation.current) {
         const denied =

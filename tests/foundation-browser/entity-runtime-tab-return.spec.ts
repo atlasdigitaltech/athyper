@@ -18,7 +18,7 @@ const bundle = build({
         sectionNavigation="header" onSelectSection={setSection} onObserveSection={setSection}
         renderSection={({sectionKey}) => <div style={{height: 400}}>{sectionKey} data</div>}
         renderHeader={(_, __, ___, navigation) => <nav>
-          {['activity', 'banking', 'overview'].map(key => <button key={key} onClick={() => {
+          {['activity', 'banking', 'overview', 'policy', 'limits'].map(key => <button key={key} onClick={() => {
             navigation.onSelectSection(key);
             setTab(key === 'activity' ? 'activity' : '360');
           }}>{key}</button>)}
@@ -33,10 +33,10 @@ const bundle = build({
     builder.onResolve({ filter: /use-section-resource$/ }, () => ({ path: "resources", namespace: "fixture" }));
     builder.onResolve({ filter: /^@athyper\/platform-shell-app-foundation$/ }, () => ({ path: "shell", namespace: "fixture" }));
     builder.onLoad({ filter: /.*/, namespace: "fixture" }, ({path}) => ({ loader: "tsx", resolveDir: process.cwd(), contents: path === "shell"
-      ? `export const useApiClient = () => ({}); export const useSessionIdentity = () => ({});`
+      ? `export const useApiClient = () => ({}); export const useSessionIdentity = () => ({}); export const useToasts = () => ({push:()=>{}}); export const readBrowserCsrfToken = () => undefined;`
       : `import {useState} from 'react';
-         const keys = ['overview', 'contacts', 'banking', 'activity'];
-         const bootstrap = {header:{values:{},revision:'1'}, plan:{actions:[], sections:keys.map(key=>({key,label:{defaultText:key}})),navigation:{tabs:[{key:'360',provider:'360',sectionKeys:keys.slice(0,3)}]}}};
+         const keys = ['overview', 'contacts', 'banking', 'activity', 'policy', 'limits'];
+         const bootstrap = {header:{values:{},revision:'1'}, plan:{actions:[], sections:keys.map(key=>({key,label:{defaultText:key}})),navigation:{tabs:[{key:'360',provider:'overview',sectionDisplay:'continuous',label:{defaultText:'Record'},sectionKeys:keys.slice(0,3)},{key:'arbitrary-group',provider:'section',sectionDisplay:'continuous',label:{defaultText:'Policy'},sectionKeys:['policy','limits']}]}}};
          const sections = Object.fromEntries(keys.map(key=>[key,{status:'ready',resource:{}}]));
          export function useEntityRuntimeSectionWorkspace() {
            const [activeSectionKey, selectSection] = useState('activity');
@@ -48,7 +48,7 @@ const bundle = build({
   define: { "process.env.NODE_ENV": '"test"' }, tsconfig: resolve("tooling/config/tsconfig-react.json"), logLevel: "silent",
 }).then(result => result.outputFiles.find(file => file.path.endsWith('.js'))!.text);
 
-test("returning from Activity to Banking scrolls the newly mounted 360 document", async ({page}) => {
+test("returning from Activity to Banking jumps directly in the newly mounted record document", async ({page}) => {
   await page.setContent('<style>.a-runtime-continuous-sections__tail{height:400px}h2{margin:0}</style><div id="root"></div>');
   await page.addScriptTag({content: await bundle});
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -63,4 +63,56 @@ test("returning from Activity to Banking scrolls the newly mounted 360 document"
   await page.getByRole('button', {name:'overview', exact:true}).click();
   await expect(page.locator('output')).toHaveText('overview');
   await expect.poll(() => page.locator('#content').evaluate(el => el.scrollTop)).toBe(0);
+});
+
+test("metadata gives another tab the same continuous navigation without rendering other groups", async ({page}) => {
+  await page.setContent('<style>.a-runtime-continuous-sections__tail{height:400px}h2{margin:0}</style><div id="root"></div>');
+  await page.addScriptTag({content: await bundle});
+  await page.getByRole('button', {name:'limits', exact:true}).click();
+  await expect(page.locator('#entity-runtime-heading-limits')).toBeFocused();
+  await expect(page.locator('#entity-runtime-section-policy')).toHaveCount(1);
+  await expect(page.locator('#entity-runtime-section-banking')).toHaveCount(0);
+  await page.locator('#content').hover();
+  await page.mouse.wheel(0, -800);
+  await expect(page.locator('output')).toHaveText('policy');
+  await page.getByRole('button', {name:'banking', exact:true}).click();
+  await expect(page.locator('#entity-runtime-heading-banking')).toBeFocused();
+  await expect(page.locator('#entity-runtime-section-policy')).toHaveCount(0);
+});
+
+test("explicit navigation never animates and focuses the destination heading", async ({page}) => {
+  await page.setContent('<style>#content{scroll-behavior:smooth}.a-runtime-continuous-sections__tail{height:400px}h2{margin:0}</style><div id="root"></div>');
+  await page.evaluate(() => {
+    const original = Element.prototype.scrollTo;
+    (window as any).scrollBehaviors = [];
+    Element.prototype.scrollTo = function (...args: any[]) {
+      (window as any).scrollBehaviors.push(args[0]?.behavior);
+      return (original as any).apply(this, args);
+    };
+  });
+  await page.addScriptTag({content: await bundle});
+  await page.getByRole('button', {name:'banking', exact:true}).click();
+  await expect(page.locator('#entity-runtime-heading-banking')).toBeFocused();
+  await expect.poll(() => page.locator('#content').evaluate(el => el.scrollTop)).toBeGreaterThan(700);
+  const behaviors = await page.evaluate(() => (window as any).scrollBehaviors);
+  expect(behaviors.length).toBeGreaterThan(0);
+  expect(behaviors.every((behavior: string) => behavior === 'instant')).toBe(true);
+  await expect(page.locator('output')).toHaveText('banking');
+});
+
+test("late preceding content stays anchored until the user takes control", async ({page}) => {
+  await page.setContent('<style>.a-runtime-continuous-sections__tail{height:400px}h2{margin:0}</style><div id="root"></div>');
+  await page.addScriptTag({content: await bundle});
+  await page.getByRole('button', {name:'banking', exact:true}).click();
+  await expect(page.locator('#entity-runtime-heading-banking')).toBeFocused();
+  await page.locator('#entity-runtime-section-contacts').evaluate(el => { el.style.height = '1000px'; });
+  await expect.poll(() => page.locator('#entity-runtime-section-banking').evaluate(el =>
+    Math.abs(el.getBoundingClientRect().top - document.getElementById('content')!.getBoundingClientRect().top)
+  )).toBeLessThan(3);
+  await expect(page.locator('output')).toHaveText('banking');
+  await page.locator('#content').hover();
+  await page.mouse.wheel(0, -600);
+  await expect.poll(() => page.locator('#entity-runtime-section-banking').evaluate(el =>
+    el.getBoundingClientRect().top - document.getElementById('content')!.getBoundingClientRect().top
+  )).toBeGreaterThan(100);
 });

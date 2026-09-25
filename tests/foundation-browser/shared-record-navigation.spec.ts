@@ -50,7 +50,7 @@ test("record view shares navigation without scrolling feedback loops", async ({
   page,
 }) => {
   await mount(page);
-  const nav = page.getByRole("navigation", { name: "360 sections" });
+  const nav = page.getByRole("navigation", { name: "360 View sections" });
   await nav.getByRole("button", { name: "Contacts", exact: true }).click();
   await expect(page.locator('[data-record-section="contacts"]')).toBeFocused();
   await expect(

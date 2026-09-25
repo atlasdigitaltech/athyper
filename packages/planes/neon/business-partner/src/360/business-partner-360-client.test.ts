@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summaryQueryKey } from "./business-partner-360-client";
+import { summaryQueryKey } from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-client";
 describe("Business Partner 360 client identity", () => {
   it("invalidates by BP, deterministic scope, as-of and permission epoch", () => {
     const base = {

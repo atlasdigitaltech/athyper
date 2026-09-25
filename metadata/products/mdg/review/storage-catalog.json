@@ -3297,598 +3297,6 @@
       "nullable": true
     },
     {
-      "table": "document.business_partner_request",
-      "column": "id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "tenant_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "request_no",
-      "type": "text",
-      "baseType": "text",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "request_kind",
-      "type": "document.business_partner_request_kind_d",
-      "baseType": "text",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "source_kind",
-      "type": "text",
-      "baseType": "text",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "registration_mode",
-      "type": "text",
-      "baseType": "text",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "invitation_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "applicant_principal_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "represented_party_name",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "representation_evidence_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "target_business_partner_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "base_record_version",
-      "type": "bigint",
-      "baseType": "bigint",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "base_snapshot_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "base_payload_hash",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "source_system_code",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "source_entity_code",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "source_entity_id",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "source_entity_code_value",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "source_projection_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "source_version",
-      "type": "bigint",
-      "baseType": "bigint",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "source_payload_hash",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "requested_role",
-      "type": "document.business_partner_requested_role_d",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "operating_organization_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "company_code_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "legal_entity_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "org_unit_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "position_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "payload_schema_code",
-      "type": "text",
-      "baseType": "text",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "payload_schema_version",
-      "type": "integer",
-      "baseType": "integer",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "payload_schema_hash",
-      "type": "text",
-      "baseType": "text",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "proposed_payload",
-      "type": "jsonb",
-      "baseType": "jsonb",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "extension_mode",
-      "type": "text",
-      "baseType": "text",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "extension_fingerprint",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "extension_counts",
-      "type": "jsonb",
-      "baseType": "jsonb",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "validation_summary",
-      "type": "jsonb",
-      "baseType": "jsonb",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "duplicate_summary",
-      "type": "jsonb",
-      "baseType": "jsonb",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "change_impact",
-      "type": "jsonb",
-      "baseType": "jsonb",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "workflow_request_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialized_business_partner_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialized_supplier_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialized_customer_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialized_person_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialized_employee_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialized_employment_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialized_work_assignment_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialized_principal_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialized_bank_verification_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialized_supplier_company_profile_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialized_customer_company_profile_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialized_operating_organization_assignment_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "materialization_snapshot_id",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "application_idempotency_key",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "application_fingerprint",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "application_result_kind",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "application_reason_code",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "decision_fingerprint",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "idempotency_key",
-      "type": "text",
-      "baseType": "text",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "status",
-      "type": "text",
-      "baseType": "text",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "submitted_at",
-      "type": "timestamp with time zone",
-      "baseType": "timestamp with time zone",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "submitted_by",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "approved_at",
-      "type": "timestamp with time zone",
-      "baseType": "timestamp with time zone",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "approved_by",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "applied_at",
-      "type": "timestamp with time zone",
-      "baseType": "timestamp with time zone",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "applied_by",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "failure_code",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "failure_detail",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "support_reference",
-      "type": "text",
-      "baseType": "text",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "row_version",
-      "type": "bigint",
-      "baseType": "bigint",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "status_changed_at",
-      "type": "timestamp with time zone",
-      "baseType": "timestamp with time zone",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "status_changed_by",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "created_at",
-      "type": "timestamp with time zone",
-      "baseType": "timestamp with time zone",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "created_by",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": false,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "updated_at",
-      "type": "timestamp with time zone",
-      "baseType": "timestamp with time zone",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
-      "table": "document.business_partner_request",
-      "column": "updated_by",
-      "type": "uuid",
-      "baseType": "uuid",
-      "nullable": true,
-      "evidence": "source_ddl_only"
-    },
-    {
       "table": "master.business_partner",
       "column": "id",
       "type": "uuid",
@@ -4606,7 +4014,7 @@
       "table": "master.business_partner_relationship",
       "column": "country_code",
       "type": "character(2)",
-      "baseType": "character(2)",
+      "baseType": "character",
       "nullable": true
     },
     {
@@ -4629,16 +4037,415 @@
       "type": "master.partner_extension_status_d",
       "baseType": "text",
       "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "case_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "current_snapshot_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "decision_snapshot_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "document.entity_case",
+      "column": "entity_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "entity_contract_hash",
+      "type": "character(64)",
+      "baseType": "character",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "entity_contract_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "form_template_hash",
+      "type": "character(64)",
+      "baseType": "character",
+      "nullable": true
+    },
+    {
+      "table": "document.entity_case",
+      "column": "form_template_release_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "document.entity_case",
+      "column": "form_template_release_no",
+      "type": "bigint",
+      "baseType": "bigint",
+      "nullable": true
+    },
+    {
+      "table": "document.entity_case",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "idempotency_key",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "operation_code",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "owner_company_code_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "document.entity_case",
+      "column": "pre_materialization_ref",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "document.entity_case",
+      "column": "result_snapshot_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "document.entity_case",
+      "column": "row_version",
+      "type": "bigint",
+      "baseType": "bigint",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "status",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "document.entity_case",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "document.entity_case",
+      "column": "submitted_snapshot_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "document.entity_case",
+      "column": "target_entity_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "document.entity_case",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "document.entity_case",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "document.entity_case",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "snapshot.entity_snapshot",
+      "column": "captured_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "snapshot.entity_snapshot",
+      "column": "payload_json",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "snapshot.entity_snapshot",
+      "column": "snapshot_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "snapshot.entity_snapshot",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "is_active",
+      "type": "boolean",
+      "baseType": "boolean",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "metadata",
+      "type": "jsonb",
+      "baseType": "jsonb",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "notes",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "record_version",
+      "type": "bigint",
+      "baseType": "bigint",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "status_changed_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "status_changed_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_relationship",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "tenant_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "business_partner_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "commodity_category_id",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "assignment_kind",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "effective_from",
+      "type": "date",
+      "baseType": "date",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "effective_until",
+      "type": "date",
+      "baseType": "date",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "source_system",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "source_reference",
+      "type": "text",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "notes",
+      "type": "text",
+      "baseType": "text",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "status",
+      "type": "master.partner_extension_status_d",
+      "baseType": "text",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "verified_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "verified_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "record_version",
+      "type": "bigint",
+      "baseType": "bigint",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "created_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": false
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "baseType": "timestamp with time zone",
+      "nullable": true
+    },
+    {
+      "table": "master.business_partner_commodity_classification",
+      "column": "updated_by",
+      "type": "uuid",
+      "baseType": "uuid",
+      "nullable": true
     }
   ],
   "ddlFallbacks": [
-    {
-      "table": "document.business_partner_request",
-      "path": "server/db/ddl/planes/neon/document/03_tables.sql",
-      "sha256": "5c74ff46421dd1194c513bf164c5c2daea9fcd1630ccca8d8162ab40d6dea3aa",
-      "reason": "TABLE_ABSENT_FROM_LOCAL_DATABASE",
-      "parserBoundary": "column_declarations_before_first_table_constraint"
-    },
     {
       "path": "server/db/ddl/planes/neon/master/18_business_partner_business_profile.sql",
       "sha256": "f387205bfad4e0571dadbaa4b1695da97b60fdd644766d6d2d1a8eb98c4e6609",
@@ -4653,13 +4460,6 @@
       "path": "server/db/ddl/common/shared/03_bank_master.sql",
       "sha256": "d2b0f60d67ae7336df176d65703efe6711ec7f735a091cc94e81f3d840ec2fcd",
       "verification": "BP2-01 shared-reference field bindings reconciled against pinned DDL; live schema verification remains release-readiness work."
-    },
-    {
-      "table": "master.business_partner_relationship",
-      "path": "server/db/ddl/planes/neon/master/03_tables.sql",
-      "sha256": "4c490266735d8b29a429e7a6101dc2db241496c5f7caad959efd449865bfaf46",
-      "reason": "TABLE_ABSENT_FROM_LOCAL_DATABASE",
-      "parserBoundary": "column_declarations_before_first_table_constraint"
     }
   ]
 }

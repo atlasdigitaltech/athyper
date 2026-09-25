@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { createBusinessPartner360Service } from "../../server/packages/services/master-data/src/business-partner-360-service.js";
+import { createBusinessPartner360Service } from "../../server/packages/services/master-data/src/business-partner/record/service";
 import { MasterDataError } from "../../server/packages/services/master-data/src/errors.js";
 import { RecordServiceError } from "../../server/packages/services/records/src/errors.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";

@@ -3,7 +3,7 @@ import type { BusinessPartner360Summary } from "@athyper/server-contract-master-
 import {
   businessPartnerRecordHeader,
   businessPartnerRecordPresentation,
-} from "../business-partner-record-header.js";
+} from "../business-partner/record/header";
 const summary = {
   identity: {
     id: "bp-1",
@@ -52,6 +52,10 @@ describe("Business Partner record header", () => {
     );
     expect(header.sections[0]?.label).toBe("People");
     expect(header.sections.some((item) => item.key === "secret")).toBe(false);
+    expect(header.sections.find((item) => item.key === "overview")).toMatchObject({
+      label: "Overview",
+      placement: "direct",
+    });
   });
   it("keeps historical records read-only", () => {
     const header = businessPartnerRecordHeader(

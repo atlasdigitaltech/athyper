@@ -338,19 +338,22 @@ export async function provisionDevelopmentBusinessPartnerFixtures(options: {
       "SELECT set_config('app.current_tenant_id',$1,true),set_config('app.current_principal_id',$2,true)",
       [catl.tenantId, catl.actorId],
     );
-    await client.query(
-      `
-      UPDATE master.operating_organization
-      SET domain='both',updated_by=$2::uuid
-      WHERE tenant_id=$1::uuid AND code='catl.operations' AND domain='corporate'
-    `,
-      [catl.tenantId, catl.actorId],
-    );
+    // The canonical authorization seed owns organization capabilities. Do not
+    // widen authority or update the retired organization.domain column here.
     await one(
       client,
       `
-      SELECT id FROM master.operating_organization
-      WHERE tenant_id=$1::uuid AND code='catl.operations' AND domain='both' AND status='active'
+      SELECT organization.id FROM master.operating_organization organization
+      WHERE organization.tenant_id=$1::uuid AND organization.code='catl.operations'
+        AND organization.status='active'
+        AND EXISTS (
+          SELECT 1 FROM master.operating_organization_capability capability
+          WHERE capability.tenant_id=organization.tenant_id
+            AND capability.operating_organization_id=organization.id
+            AND capability.capability_code='procurement' AND capability.status='active'
+            AND capability.effective_from<=CURRENT_DATE
+            AND (capability.effective_until IS NULL OR capability.effective_until>CURRENT_DATE)
+        )
     `,
       [catl.tenantId],
     );
@@ -377,8 +380,8 @@ export async function provisionDevelopmentBusinessPartnerFixtures(options: {
         `
         INSERT INTO master.business_partner (
           id,tenant_id,code,name,partner_category,
-          registration_country_code,metadata,status,created_by
-        ) VALUES ($1::uuid,$2::uuid,$3,$4,'organization',$5,$6::jsonb,$7,$8::uuid)
+          metadata,status,created_by
+        ) VALUES ($1::uuid,$2::uuid,$3,$4,'organization',$5::jsonb,$6,$7::uuid)
         ON CONFLICT DO NOTHING
       `,
         [
@@ -386,7 +389,6 @@ export async function provisionDevelopmentBusinessPartnerFixtures(options: {
           coordinate.tenantId,
           fixture.code,
           fixture.name,
-          fixture.countryCode,
           metadata,
           fixture.status,
           coordinate.actorId,
@@ -741,7 +743,7 @@ async function provisionDevelopmentBusinessPartner360Details(
       `360:certification:${fixture.tenantCode}:${fixture.code}`,
     );
   await client.query(
-    `UPDATE master.business_partner SET legal_form='private_limited',incorporation_date='2008-04-15',website_url=$5,metadata=metadata || $3::jsonb,updated_at=clock_timestamp(),updated_by=$4::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND (legal_form IS DISTINCT FROM 'private_limited' OR incorporation_date IS DISTINCT FROM '2008-04-15'::date OR website_url IS DISTINCT FROM $5 OR NOT metadata @> $3::jsonb OR updated_at IS NULL)`,
+    `UPDATE master.business_partner SET website_url=$5,metadata=metadata || $3::jsonb,updated_at=clock_timestamp(),updated_by=$4::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND (website_url IS DISTINCT FROM $5 OR NOT metadata @> $3::jsonb OR updated_at IS NULL)`,
     [
       coordinate.tenantId,
       fixture.id,
@@ -749,6 +751,10 @@ async function provisionDevelopmentBusinessPartner360Details(
       coordinate.actorId,
       profile.website,
     ],
+  );
+  await client.query(
+    `SELECT master.update_business_partner_organization_identity($1::uuid,$2::uuid,$3::jsonb,$4::uuid)`,
+    [coordinate.tenantId, fixture.id, JSON.stringify({legalForm:'private_limited',incorporationDate:'2008-04-15',registrationCountryCode:fixture.countryCode}),coordinate.actorId],
   );
   await client.query(
     `INSERT INTO master.business_partner_alias(tenant_id,business_partner_id,alias_name,alias_kind,created_by) VALUES($1::uuid,$2::uuid,$4,'trading',$3::uuid),($1::uuid,$2::uuid,$5,'search',$3::uuid) ON CONFLICT DO NOTHING`,
@@ -926,15 +932,20 @@ async function provisionDevelopmentBusinessPartner360Details(
     "SELECT id::text FROM master.commodity_category WHERE tenant_id=$1::uuid AND code='industrial_supplies'",
     [coordinate.tenantId],
   );
+  const independentClassifications = await one<{available:boolean}>(client,
+    "SELECT to_regclass('master.business_partner_commodity_classification') IS NOT NULL AS available");
   await client.query(
-    `INSERT INTO master.business_partner_commodity_capability(id,tenant_id,business_partner_id,commodity_category_id,partner_role,effective_from,notes,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,'supplier',$5::date,'Primary industrial supply capability',$6::jsonb,'active',$7::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+    independentClassifications.available
+      ? `INSERT INTO master.business_partner_commodity_classification(id,tenant_id,business_partner_id,commodity_category_id,effective_from,source_system,source_reference,notes,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::date,'development_fixture',$1::text,'Industrial supply declaration; not a qualification decision.','active',$6::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`
+      // Pre-upgrade fixture compatibility only. The installed cutover forbids this writer.
+      : `INSERT INTO master.business_partner_commodity_capability(id,tenant_id,business_partner_id,commodity_category_id,partner_role,effective_from,notes,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,'supplier',$5::date,'Primary industrial supply capability',$6::jsonb,'active',$7::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
     [
       capabilityId,
       coordinate.tenantId,
       fixture.id,
       commodity.id,
       EFFECTIVE_FROM,
-      metadata,
+      ...(independentClassifications.available ? [] : [metadata]),
       coordinate.actorId,
     ],
   );
@@ -985,14 +996,15 @@ async function provisionDevelopmentBusinessPartner360Details(
       coordinate.actorId,
     ],
   );
+  // Seeding a verified account/link does not constitute company acceptance.
+  // Leave the preference unset until the governed acceptance path selects it.
   await client.query(
-    `INSERT INTO master.company_code_supplier_profile(id,tenant_id,supplier_id,company_code_id,currency_code,preferred_remittance_bank_link_id,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$8,$5::uuid,$6::jsonb,'active',$7::uuid) ON CONFLICT(tenant_id,supplier_id,company_code_id) DO NOTHING`,
+    `INSERT INTO master.company_code_supplier_profile(id,tenant_id,supplier_id,company_code_id,currency_code,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$7,$5::jsonb,'active',$6::uuid) ON CONFLICT(tenant_id,supplier_id,company_code_id) DO NOTHING`,
     [
       profileId,
       coordinate.tenantId,
       fixture.supplierId,
       context.company_code_id,
-      bankLinkId,
       metadata,
       coordinate.actorId,
       profile.currency,
@@ -1108,8 +1120,8 @@ async function provisionDevelopmentBusinessPartner360Details(
 
   if (fixture.status === "active") {
     await client.query(
-      `INSERT INTO control.supplier_preference_designation(id,tenant_id,business_partner_id,supplier_id,effective_from,rationale,status,idempotency_key,metadata,created_by)
-       VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::date,'Synthetic development supplier preference','pending',$6,$7::jsonb,$8::uuid)
+      `INSERT INTO control.supplier_preference_designation(id,tenant_id,business_partner_id,supplier_id,effective_from,rationale,status,idempotency_key,metadata,created_by,operating_organization_id)
+       VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::date,'Synthetic development supplier preference','pending',$6,$7::jsonb,$8::uuid,$9::uuid)
        ON CONFLICT(tenant_id,id) DO NOTHING`,
       [
         preferenceId,
@@ -1120,6 +1132,7 @@ async function provisionDevelopmentBusinessPartner360Details(
         `${fixture.code}:preference:v1`,
         metadata,
         coordinate.actorId,
+        context.organization_id,
       ],
     );
   }
@@ -1165,10 +1178,10 @@ async function provisionDevelopmentBusinessPartner360Details(
       ],
     );
     await client.query(
-      `INSERT INTO master.company_code_supplier_profile(id,tenant_id,supplier_id,company_code_id,currency_code,payment_term_id,preferred_remittance_bank_link_id,metadata,status,created_by)
-       VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6::uuid,$7::uuid,$8::jsonb,'active',$9::uuid)
+      `INSERT INTO master.company_code_supplier_profile(id,tenant_id,supplier_id,company_code_id,currency_code,payment_term_id,metadata,status,created_by)
+       VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6::uuid,$7::jsonb,'active',$8::uuid)
        ON CONFLICT(tenant_id,supplier_id,company_code_id) DO UPDATE SET payment_term_id=EXCLUDED.payment_term_id,updated_by=EXCLUDED.created_by
-       WHERE company_code_supplier_profile.metadata->'_seed'->>'pack'=$10 AND company_code_supplier_profile.payment_term_id IS NULL`,
+       WHERE company_code_supplier_profile.metadata->'_seed'->>'pack'=$9 AND company_code_supplier_profile.payment_term_id IS NULL`,
       [
         scope.company_code_id === context.company_code_id
           ? profileId
@@ -1180,7 +1193,6 @@ async function provisionDevelopmentBusinessPartner360Details(
         scope.company_code_id,
         profile.currency,
         paymentTerm.id,
-        linkId,
         metadata,
         coordinate.actorId,
         FIXTURE_PACK,

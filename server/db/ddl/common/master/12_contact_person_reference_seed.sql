@@ -91,3 +91,19 @@ SELECT owner.id, 'contact', purpose.code,
  WHERE owner.tenant_id IS NULL
    AND owner.code = 'contact_person'
 ON CONFLICT DO NOTHING;
+
+-- Generic address association can own a site's communication channels. This is
+-- not a new person/contact copy and is shared by all consuming planes.
+INSERT INTO control.owner_type (
+ tenant_id,code,name,description,category,source_type,target_schema,target_table,
+ pk_column,is_tenant_scoped,tenant_column,supports_address,supports_contact,
+ supports_external_reference,sort_order,status,created_by
+) VALUES (
+ NULL,'address_link','Address association','Communication channels for an owner-specific address.',
+ 'party','platform','master','address_link','id',true,'tenant_id',false,true,false,36,'active',
+ '00000000-0000-0000-0000-000000000000'
+);
+INSERT INTO control.owner_type_purpose(owner_type_id,capability,purpose_code,created_by)
+ SELECT id,'contact',purpose.code,'00000000-0000-0000-0000-000000000000'::uuid
+ FROM control.owner_type CROSS JOIN (VALUES('default'),('business'),('notification'),('escalation')) purpose(code)
+ WHERE tenant_id IS NULL AND control.owner_type.code='address_link';

@@ -519,6 +519,20 @@ END $$;
 -- S5 Business Partner mutation authority: runtime roles create requests and invoke
 -- commands, but cannot directly write lifecycle/decision or evidence columns.
 REVOKE ALL ON control.business_partner_mutation_evidence FROM PUBLIC;
+-- Staged capability replacement: do not expose this writer before the
+-- capability-specific authorization and workflow/consumer cutover is installed.
+REVOKE ALL ON FUNCTION control.command_business_partner_capability(uuid,uuid,text,boolean,bigint,text,text,uuid),
+    control.trg_guard_business_partner_capability() FROM PUBLIC;
+DO $$ BEGIN
+    IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+        REVOKE ALL ON FUNCTION control.command_business_partner_capability(uuid,uuid,text,boolean,bigint,text,text,uuid),
+            control.trg_guard_business_partner_capability() FROM athyperapp;
+    END IF;
+    IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+        REVOKE ALL ON FUNCTION control.command_business_partner_capability(uuid,uuid,text,boolean,bigint,text,text,uuid),
+            control.trg_guard_business_partner_capability() FROM athyperadmin;
+    END IF;
+END $$;
 REVOKE ALL ON FUNCTION control.trg_guard_business_partner_mutation_evidence_payload() FROM PUBLIC;
 REVOKE ALL ON FUNCTION
     control.fn_record_business_partner_mutation(uuid,text,uuid,uuid,text,text,text,bigint,text,text,text,jsonb,uuid),

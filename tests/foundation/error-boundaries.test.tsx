@@ -72,6 +72,17 @@ test("classifies the complete application error taxonomy", () => {
   assert.equal(classifyAppError({ error: new ApiTransportError("network", "secret"), online: false }).kind, "offline");
 });
 
+test("missing publication explains the required administrator action without suggesting retries", () => {
+  const model = classifyAppError({ error: { status: 503, code: "ENTITY_APPLICATION_UNAVAILABLE", requestId: "req-publication" } });
+  assert.equal(model.title, "Application unavailable");
+  assert.match(model.description, /publish and activate/);
+  assert.equal(model.canRetry, false);
+  assert.equal(model.action, "none");
+  assert.equal(model.requestId, "req-publication");
+  assert.equal(classifyAppError({ error: { status: 503 } }).canRetry, true);
+  assert.equal(classifyAppError({ error: { status: 403, code: "ENTITY_APPLICATION_UNAVAILABLE" } }).kind, "permission-denied");
+});
+
 test("keeps conflict and validation input, bounds retry guidance, and sanitizes identifiers", () => {
   assert.equal(classifyAppError({ error: { status: 409 } }).preserveInput, true);
   assert.equal(classifyAppError({ error: { status: 422 } }).preserveInput, true);

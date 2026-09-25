@@ -4,6 +4,10 @@ export type WorkItemStatus = "open" | "claimed" | "in_progress" | "blocked" | "c
 export type WorkItemPriority = "low" | "normal" | "high" | "urgent";
 
 export interface WorkItem {
+  readonly assignmentLabel?: string;
+  readonly recordLabel?: string;
+  readonly actionLabel?: string;
+  readonly href?: string;
   readonly id: string;
   readonly tenantId: string;
   readonly workTypeCode: string;

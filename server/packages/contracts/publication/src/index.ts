@@ -1,4 +1,5 @@
 export * from "./artifact.js";
+export * from "./compiled-publication-scope.js";
 export * from "./errors.js";
 export type * from "./authority.js";
 export type * from "./deployment.js";
@@ -8,3 +9,5 @@ export { BUSINESS_PARTNER_DEFINITION_BUNDLE_SCHEMA_V1 } from "./projection.js";
 export type * from "./signing.js";
 export type * from "./operations.js";
 export * from "./entity-capabilities.js";
+export * from "./notification-policy.js";
+export * from "./collection-configuration.js";

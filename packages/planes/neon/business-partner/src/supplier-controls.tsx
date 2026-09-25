@@ -1,6 +1,7 @@
 "use client";
 import { useOrganizationSelection } from "./use-organization-selection";
-import { BankVerificationControls } from "./bank-verification-controls";
+import { PartnerControlScope } from "./partner-control-scope";
+import { requiredControlValue as required, optionalControlValue as optional } from "./control-form-values";
 
 import { businessPartnerErrorMessage, useCommandRunner } from "./command-feedback";
 import {
@@ -183,39 +184,7 @@ export function SupplierControls({
       "Supplier activation case created",
     );
   }
-  async function bankChange(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!companyCodeId) return;
-    const data = new FormData(event.currentTarget),
-      profile = aggregate?.supplierCompanyProfiles.find(
-        (item) => item.companyCodeId === companyCodeId,
-      );
-    if (!profile) {
-      setError(
-        "An active supplier company profile is required before bank verification can start.",
-      );
-      return;
-    }
-    await run(
-      "bank",
-      async () => {
-        const result = await api.proposeBankChange(
-          businessPartnerId,
-          organizationId,
-          companyCodeId,
-          {
-            bankProjectionId: required(data, "bankProjectionId"),
-            supplierCompanyProfileId: profile.id,
-            reasonCode: required(data, "reason"),
-          },
-        );
-        navigation.push(
-          `/mdg/business-partner/requests/${encodeURIComponent(result.case.id)}`,
-        );
-      },
-      "Bank verification case created",
-    );
-  }
+
   async function lifecycle(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget),
@@ -253,39 +222,7 @@ export function SupplierControls({
       }
     >
       {requestScope ? <p>Readiness is opened in the request's organization and company scope.</p> : null}
-      <Card className="bp-filter-bar">
-        <div>
-          <Label htmlFor="supplier-controls-organization">
-            Purchasing organization
-          </Label>
-          <Select
-            id="supplier-controls-organization"
-            value={organizationId}
-            onChange={(event) => setOrganizationId(event.currentTarget.value)}
-          >
-            <option value="">Select an authorized organization</option>
-            {organizations.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.code} · {item.displayName}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="supplier-controls-company">Payment company</Label>
-          <Input
-            id="supplier-controls-company"
-            readOnly
-            value={companyCodeId ?? "No company selected"}
-          />
-        </div>
-      </Card>
-      {error ? (
-        <div className="bp-error" role="alert">
-          <strong>Unable to complete the command</strong>
-          <p>{error}</p>
-        </div>
-      ) : null}
+      <PartnerControlScope id="supplier-controls" organizationLabel="Purchasing organization" companyLabel="Payment company" organizations={organizations} organizationId={organizationId} companyCodeId={companyCodeId} onOrganizationChange={setOrganizationId} error={error} />
       {loading ? (
         <Card>
           <p>Loading supplier controls…</p>
@@ -513,43 +450,6 @@ export function SupplierControls({
               empty="No preference designations exist in this scope."
             />
           </Card>
-          {companyCodeId ? <BankVerificationControls key={`${businessPartnerId}:${companyCodeId}`} businessPartnerId={businessPartnerId} companyCodeId={companyCodeId} /> : null}
-          {companyCodeId && grants.has(supplierControlPermissions.lifecycle) ? (
-            <Card className="bp-section">
-              <h2>Bank verification</h2>
-              <p>
-                A bank change enters the governed case workflow. Materialization
-                starts the native maker/checker verification; activation remains
-                blocked until payment readiness passes.
-              </p>
-              <form className="bp-grid" onSubmit={bankChange}>
-                <div>
-                  <Label htmlFor="supplier-bank-projection">
-                    Received bank disclosure projection
-                  </Label>
-                  <Input
-                    id="supplier-bank-projection"
-                    name="bankProjectionId"
-                    required
-                    pattern="[0-9a-fA-F-]{36}"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="supplier-bank-reason">Reason code</Label>
-                  <Input
-                    id="supplier-bank-reason"
-                    name="reason"
-                    required
-                    pattern="[A-Z][A-Z0-9_.-]{2,126}"
-                    defaultValue="SUPPLIER_BANK_CHANGE"
-                  />
-                </div>
-                <Button type="submit" loading={busy === "bank"}>
-                  Create bank change case
-                </Button>
-              </form>
-            </Card>
-          ) : null}
           {grants.has(supplierControlPermissions.lifecycle) ? (
             <Card className="bp-section">
               <h2>Governed lifecycle change</h2>
@@ -624,16 +524,6 @@ function ControlTable({
   ) : (
     <p>{empty}</p>
   );
-}
-function required(data: FormData, name: string) {
-  const value = data.get(name);
-  if (typeof value !== "string" || !value.trim())
-    throw new Error(`${name} is required`);
-  return value.trim();
-}
-function optional(data: FormData, name: string) {
-  const value = data.get(name);
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 export function supplierLifecycleEvidence(
   aggregate?: PartnerAggregate,

@@ -81,6 +81,8 @@ export type SupplierPreferenceStatus =
 export type SupplierPreferenceTemporalStatus =
   "pending" | "scheduled" | "active" | "expired" | "rejected" | "revoked";
 export type PartnerEligibilityReasonCode =
+  | "CONTEXT_REQUIRED"
+  | "QUALIFICATION_CONDITIONS_REQUIRED"
   | "PARTNER_INACTIVE"
   | "ROLE_MISSING"
   | "ROLE_INACTIVE"
@@ -183,14 +185,17 @@ export interface CustomerLifecycleResult {
 }
 
 export interface BusinessPartnerQualification {
+  readonly coverage?: readonly Readonly<Record<string,unknown>>[];
+  readonly contextKind?: string; readonly contextId?: string;
   readonly id: string;
   readonly tenantId: string;
   readonly businessPartnerId: string;
-  readonly partnerRole: PartnerEligibilityRole;
+  readonly partnerRole?: PartnerEligibilityRole;
   readonly roleId?: string;
   readonly operatingOrganizationId?: string;
   readonly companyCodeId?: string;
   readonly commodityCapabilityId?: string;
+  readonly commodityClassificationId?: string;
   readonly qualificationTypeCode: string;
   readonly decision: PartnerQualificationDecision;
   readonly decisionReason?: string;
@@ -308,6 +313,14 @@ export interface SupplierPreferenceDesignation {
 }
 
 export interface ResolvePartnerEligibilityQuery {
+  /** Trusted document adapters supply these coordinates; absence never widens coverage. */
+  readonly commodityClassificationId?: string;
+  readonly countries?: Readonly<Record<string,string>>;
+  readonly contextKind?: string;
+  readonly contextId?: string;
+  readonly targetEntityType?: string;
+  readonly targetEntityId?: string;
+  readonly targetLineId?: string;
   readonly context: VerifiedRequestContext;
   readonly businessPartnerId: string;
   readonly role: PartnerEligibilityRole;
@@ -327,6 +340,7 @@ export interface CreateBusinessPartnerQualificationCommand {
   readonly operatingOrganizationId: string;
   readonly companyCodeId?: string;
   readonly commodityCapabilityId?: string;
+  readonly commodityClassificationId?: string;
   readonly qualificationTypeCode: string;
   readonly riskAssessmentId?: string;
   readonly effectiveFrom?: string;

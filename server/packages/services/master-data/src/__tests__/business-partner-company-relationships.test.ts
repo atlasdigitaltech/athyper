@@ -1,6 +1,6 @@
 import {describe,it,expect,vi} from "vitest";
 import {Kysely,PostgresAdapter,PostgresIntrospector,PostgresQueryCompiler,type Transaction} from "kysely";
-import {readCompanyRelationships} from "../kysely-business-partner-360-role-sections.js";
+import {readCompanyRelationships} from "../business-partner/relationships/roles-and-scope-reader";
 const candidates=[{company_id:"uk",company_name:"UK",organization_id:"org",organization_name:"Trading",role:"supplier",role_status:"active",assignment_status:"active",profile_status:"active"},{company_id:"secret",company_name:"Restricted company",organization_id:"restricted-org",organization_name:"Private",role:"customer",role_status:"active",assignment_status:"active",profile_status:"draft"}];
 const input={tenantId:"tenant",businessPartnerId:"partner",sectionCode:"roles-scope" as const,asOf:"2026-09-09",historical:false};
 function database(){const execute=vi.fn(async()=>({rows:candidates}));const db=new Kysely<Record<string,never>>({dialect:{createAdapter:()=>new PostgresAdapter(),createIntrospector:db=>new PostgresIntrospector(db),createQueryCompiler:()=>new PostgresQueryCompiler(),createDriver:()=>({async init(){},async acquireConnection(){return {executeQuery:execute,async *streamQuery(){}} as never;},async releaseConnection(){},async beginTransaction(){},async commitTransaction(){},async rollbackTransaction(){},async destroy(){}})}});return {tx:db as unknown as Transaction<Record<string,never>>,execute};}

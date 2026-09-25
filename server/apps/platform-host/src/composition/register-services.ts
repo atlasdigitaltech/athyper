@@ -1,10 +1,17 @@
-import { commentDescendants } from "./comment-descendants.js";
+import { collaborationEntityCode, collaborationEntityTypes } from "@athyper/server-platform-collaboration";
+import { parseCollectionState } from "@athyper/contract-platform-collection";
+import {createPartnerCapabilityOperations} from './entities/partner-capability-operations.js';
+import { activityCollectionState, collectionActivityQuery, type ActivityQuery } from "@athyper/contract-platform-activity";
+import { createActivityPresentation } from "./activity-presentation.js";
+import { createCollaborationSectionProviders } from "./entities/collaboration/index.js";
+import { businessPartnerContextAdmission } from "./business-partner-context-admission.js";
+import { admitBusinessPartnerProfileReferences } from "./business-partner-reference-admission.js";
 import { createEntityAttachmentAdmission, type AttachmentCapabilitySubject } from "./entity-attachment-admission.js";
 import { createAttachmentDiscoveryService, registerAttachmentDiscoveryRoutes } from "@athyper/server-service-attachments";
 import { createRecordParticipantResolver } from "@athyper/server-platform-experience";
 import { createKyselyPermissionResolver } from "@athyper/server-platform-iam";
 import { expireCommentDrafts } from "@athyper/server-platform-collaboration";
-import { createEntityCapabilityPolicy, EntityCapabilityPolicyError } from "@athyper/server-platform-experience";
+import { createEntityCapabilityPolicy, EntityCapabilityPolicyError, canReplyAtDepth } from "@athyper/server-platform-experience";
 import { createMetaEntityActivationInspector } from "./meta-entity-activation-inspection.js";
 import { sweepSupplierInformation } from "./supplier-information-sla.js";
 import { createTaskEditPolicyAuthoring, mountTaskEditPolicyAuthoring } from "./task-edit-policy-authoring.js";
@@ -23,7 +30,7 @@ import { supplierRequirementSurface } from "@athyper/server-service-master-data"
 import { addressFormChoices, bankFormChoices, bankFormSources, createSharedReferenceDirectory, isSharedReferenceSourceKey, registerSharedReferenceDirectoryRoutes, requiresSharedReferenceDependency } from "@athyper/server-service-records";
 import { validateProfileIntake } from "@athyper/server-service-master-data";
 import {validateDataInput,dataFieldVisible} from "@athyper/server-contract-metadata";
-import { companySetupCaseInitialSchema } from "@athyper/server-service-publication";
+import { companySetupCaseInitialSchema, readPublishedNotificationConfiguration, readPublishedCollectionConfiguration } from "@athyper/server-service-publication";
 import {
   createBusinessPartnerCompanyPilotService,
   BP_COMPANY_PILOT_CASE_ENTITY,
@@ -69,6 +76,10 @@ import {
 import { businessPartnerImportPolicy } from "./business-partner-import-runtime.js";
 import { createBusinessPartnerExportRegistration } from "./business-partner-export-runtime.js";
 import { registerBusinessPartnerGovernedImportRoutes } from "@athyper/server-service-master-data";
+import { createPartnerClassificationService, registerPartnerClassificationRoutes } from "@athyper/server-service-master-data";
+import { createBusinessPartnerRecordProviders } from "./entities/business-partner-record-providers.js";
+import { createPartnerDecisionViews, createPartnerCompanyProfileViews } from "@athyper/server-service-master-data";
+import { createRecordDisplayChoices } from "./entities/record-display-choices.js";
 import { createEntityAuthorizationRuntimeRegistry } from "@athyper/server-contract-metadata";
 import { createConfiguredAuthorizationManagement } from "./authorization-management-config.js";
 import {
@@ -220,7 +231,6 @@ import {
   createEntityRuntimeResourceService,
   createEntityOperationDispatcher,
   EntityRuntimeOperationError,
-  EntityRuntimeResourceError,
   registerEntityRuntimeRoutes,
   registerEntityIntakeOperationRoutes,
   registerExperienceRoutes,
@@ -230,6 +240,7 @@ import {
   createDistributedDescriptorCache,
   createDistributedCompiledEntityArtifactCache,
   createMetadataService,
+  createCompiledMetadataReader,
   createRuntimeMetaCompiledEntityReleaseSource,
   createRuntimeDescriptorRepository,
   PinnedCompiledEntityReader,
@@ -266,6 +277,7 @@ import {
   createSavedViewService,
   registerSavedViewRoutes,
   registerEntityViewRoutes,
+  registerViewCollectionRoutes,
   registerReferenceChoiceRoutes,
   createReferenceHistoryStore,
 } from "@athyper/server-platform-preferences";
@@ -383,6 +395,8 @@ import {
   ONBOARDING_MAINTENANCE_QUEUE,
   PublicationServiceMetaEntityAdapter,
   registerMetaEntityAuthoringRoutes,
+  prepareNotificationConfigurationRelease,
+  prepareCollectionConfigurationRelease,
   registerOnboardingRoutes,
 } from "@athyper/server-plane-studio";
 import {
@@ -418,6 +432,7 @@ import {
   financeJobDefinitions,
   financeSliceOrder,
   KyselyBusinessPartnerAccountBankRepository,
+  meshAccountBankPermissions,
   KyselyBusinessPartnerProfileMatchRepository,
   KyselyBusinessPartnerProfileProjectionRepository,
   registerBusinessPartnerAccountBankLinkageRoutes,
@@ -446,6 +461,9 @@ import {
   createNotificationOperations,
   createNotificationOutboxSweepHandler,
   createNotificationPlanner,
+  createCollaborationNotificationPolicy,
+  createEntityNotificationDeliveryGuard,
+  resolveEntityNotificationRoute,
   createNotificationPreferenceService,
   createKyselyNotificationPreferenceStore,
   createKyselyNotificationOperationsRepository,
@@ -968,14 +986,14 @@ export function registerServices(
               }
               if (
                 input.operationKey === "bank_reveal" ||
-                input.operationKey === "tax_reveal"
+                input.operationKey === "tax_reveal" || input.operationKey === "identifier_reveal"
               ) {
                 if (!input.recordId) return "not_applicable";
                 return (
                   container.services.businessPartner360?.preflightReveal?.({
                     context: input.context,
                     businessPartnerId: input.recordId,
-                    kind: input.operationKey === "bank_reveal" ? "bank" : "tax",
+                    kind: input.operationKey === "bank_reveal" ? "bank" : input.operationKey === "identifier_reveal" ? "identifier" : "tax",
                     historical: input.historical,
                   }) ?? "not_applicable"
                 );
@@ -2545,17 +2563,21 @@ export function registerServices(
             link_table: string | null;
             inbox_table: string | null;
             projection_table: string | null;
-            verification_table: string | null;
+            instrument_table: string | null;
+            instrument_link_table: string | null;
+            bank_table: string | null;
             permission_count: number;
-          }>`SELECT to_regclass('control.mesh_business_partner_account_link')::text link_table,to_regclass('control.mesh_bank_account_disclosure_inbox')::text inbox_table,to_regclass('control.mesh_bank_account_projection')::text projection_table,to_regclass('document.business_partner_bank_verification')::text verification_table,(SELECT count(*)::int FROM authz.permission WHERE (canonical_code LIKE 'neon.mesh_account_link.%' OR canonical_code LIKE 'neon.mesh_bank_projection.%' OR canonical_code LIKE 'neon.business_partner_bank.%') AND status='published') permission_count`.execute(
+          }>`SELECT to_regclass('control.mesh_business_partner_account_link')::text link_table,to_regclass('control.mesh_bank_account_disclosure_inbox')::text inbox_table,to_regclass('control.mesh_bank_account_projection')::text projection_table,to_regclass('master.payment_instrument')::text instrument_table,to_regclass('master.payment_instrument_link')::text instrument_link_table,to_regclass('master.bank_account')::text bank_table,(SELECT count(*)::int FROM authz.permission WHERE canonical_code IN (${sql.join(Object.values(meshAccountBankPermissions))}) AND status='published') permission_count`.execute(
             neonDatabase,
           );
           const row = result.rows[0];
           return row?.link_table &&
             row.inbox_table &&
             row.projection_table &&
-            row.verification_table &&
-            row.permission_count === 6
+            row.instrument_table &&
+            row.instrument_link_table &&
+            row.bank_table &&
+            row.permission_count === Object.keys(meshAccountBankPermissions).length
             ? { status: "healthy" }
             : {
                 status: "unhealthy",
@@ -3006,26 +3028,7 @@ export function registerServices(
           access: dependencies.notificationAttachmentAccessPolicy,
         })
       : undefined);
-  const metadata =
-    dependencies.metadata ??
-    createMetadataService({
-      repository: createRuntimeDescriptorRepository({
-        databases: metadataDatabases,
-        withTenantTransaction: (planeKey, actor, work) =>
-          transactions.run(planeKey, actor, work),
-      }),
-      ...(container.adapters.redisCache
-        ? {
-            cache: createDistributedDescriptorCache(
-              container.adapters.redisCache,
-            ),
-          }
-        : {}),
-    });
-  container.platform.metadata = metadata;
-  // This reader has no BP-specific behavior. It resolves only verified, activated
-  // split artifacts; phase 5 injects it into the generic bootstrap/section service.
-  // Until a v2 payload is active it returns no release and cannot affect v1 reads.
+  // One split-artifact reader is shared by query descriptors and record sections.
   container.platform.compiledEntityReader = new PinnedCompiledEntityReader({
     source: createRuntimeMetaCompiledEntityReleaseSource({
       databases: metadataDatabases,
@@ -3036,6 +3039,24 @@ export function registerServices(
       ? { cache: createDistributedCompiledEntityArtifactCache(container.adapters.redisCache) }
       : {}),
   });
+  const compiledMetadata = createCompiledMetadataReader(container.platform.compiledEntityReader);
+  const legacyMetadata = createMetadataService({
+    repository: createRuntimeDescriptorRepository({
+      databases: metadataDatabases,
+      withTenantTransaction: (planeKey, actor, work) => transactions.run(planeKey, actor, work),
+    }),
+    ...(container.adapters.redisCache ? {cache: createDistributedDescriptorCache(container.adapters.redisCache)} : {}),
+  });
+  // Temporary rollout boundary between planes, not entities/pages. A cut-over
+  // plane NEVER falls back to native rows or local graph previews on a miss.
+  const metadata = dependencies.metadata ?? {
+    getEntityDescriptor: ((context, entityCode) =>
+      config?.compiledMetadataPlanes?.includes(context.planeKey)
+        ? compiledMetadata.getEntityDescriptor(context, entityCode)
+        : legacyMetadata.getEntityDescriptor(context, entityCode)
+    ) satisfies import("@athyper/server-contract-metadata").MetadataReader["getEntityDescriptor"],
+  };
+  container.platform.metadata = metadata;
   const authorizeCapabilityParent = async ({context, entityCode, recordId}: import("@athyper/server-platform-experience").EntityCapabilityRequest) => {
       if(entityCode==="workforce"&&context.planeKey==="neon"){
         const rows=await transactions.run(context.planeKey,context,async tx=>(await sql<{company_code_id:string}>`
@@ -3053,9 +3074,9 @@ export function registerServices(
       if(!descriptor?.operations.read || !records || descriptor.planeKey !== context.planeKey) return false;
       const found = await records.list({context,entityCode,recordIds:[recordId],fields:[descriptor.storage.idField],limit:1,countMode:"none",hydrateReferences:false});
       if(found.data.length !== 1 || String(found.data[0]?.[descriptor.storage.idField]) !== recordId) return false;
-      // Collaboration permissions are granted at the owning Business Partner
-      // operating-organization scope. Resolve that scope from the admitted
-      // parent record so a browser cannot widen it with a query parameter.
+      // Tenant-owned partner facts do not require commercial assignments.
+      // The capability policy still checks each action's permission. Preserve
+      // server-resolved organization candidates for organization-scoped grants.
       if(entityCode !== "business_partner") return true;
       const assignments = await transactions.run(context.planeKey,context,async tx =>
         (await sql<{operating_organization_id:string}>`
@@ -3069,18 +3090,20 @@ export function registerServices(
            ORDER BY 1
         `.execute(tx)).rows,
       );
-      if(!assignments.length) return false;
-      return Object.freeze({scopeResources:Object.freeze(assignments.map((assignment) =>
-        Object.freeze({operatingOrganizationId:assignment.operating_organization_id}),
-      ))});
+      const scopeResources = [
+        ...(descriptor.directoryScope?.mode === "tenant" ? [Object.freeze({tenantId:context.tenantId})] : []),
+        ...assignments.map(assignment => Object.freeze({operatingOrganizationId:assignment.operating_organization_id})),
+      ];
+      if(!scopeResources.length) return false;
+      return Object.freeze({scopeResources:Object.freeze(scopeResources)});
   };
   const participantPermissions = createKyselyPermissionResolver({run:(identity,work)=>transactions.run(identity.planeKey,identity,work)});
   const recordParticipants = createRecordParticipantResolver({
     async candidates(input,query,limit) {
-      return transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{id:string;displayName:string}>`SELECT id::text,name AS "displayName" FROM master.principal WHERE tenant_id=${input.context.tenantId}::uuid AND status='active' AND name ILIKE ${"%"+query+"%"} ORDER BY name,id LIMIT ${limit}`.execute(tx)).rows);
+      return transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{id:string;displayName:string}>`SELECT id::text,display_name AS "displayName" FROM document.collaboration_principal_candidates(${query},NULL) LIMIT ${limit}`.execute(tx)).rows);
     },
     async admit(input,principalId) {
-      const row=await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{auth_epoch:number}>`SELECT auth_epoch FROM master.principal WHERE tenant_id=${input.context.tenantId}::uuid AND id=${principalId}::uuid AND status='active'`.execute(tx)).rows[0]);
+      const row=await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{auth_epoch:number}>`SELECT auth_epoch::int FROM document.collaboration_principal_candidates('',${principalId}::uuid)`.execute(tx)).rows[0]);
       if(!row) return false;
       // Build a fresh, baseline authorization subject. Never copy the requester's
       // permissions, organization scope, or elevated authentication to a recipient.
@@ -3097,7 +3120,7 @@ export function registerServices(
     authorizeParent: authorizeCapabilityParent,
     audience: {
       async loadComment({context,entityCode,recordId,commentId,includeDeleted}) {
-        return transactions.run(context.planeKey,context,async tx => (await sql<{id:string;entity_type:string;entity_id:string;commenter_id:string;visibility:"public"|"internal"|"private";parent_comment_id:string|null}>`SELECT id::text,entity_type,entity_id,commenter_id::text,visibility,parent_comment_id::text FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${commentId}::uuid AND entity_type=${entityCode} AND entity_id=${recordId} ${includeDeleted ? sql`` : sql`AND status<>'deleted'`}`.execute(tx)).rows[0] ?? null).then(row => row ? ({commentId:row.id,entityCode:row.entity_type,recordId:row.entity_id,authorId:row.commenter_id,visibility:row.visibility,...(row.parent_comment_id ? {parentCommentId:row.parent_comment_id} : {})}) : null);
+        return transactions.run(context.planeKey,context,async tx => (await sql<{id:string;entity_type:string;entity_id:string;commenter_id:string;visibility:"public"|"internal"|"private";parent_comment_id:string|null}>`SELECT id::text,entity_type,entity_id,commenter_id::text,visibility,parent_comment_id::text FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${commentId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId} ${includeDeleted ? sql`` : sql`AND status<>'deleted'`}`.execute(tx)).rows[0] ?? null).then(row => row ? ({commentId:row.id,entityCode:collaborationEntityCode(row.entity_type),recordId:row.entity_id,authorId:row.commenter_id,visibility:row.visibility,...(row.parent_comment_id ? {parentCommentId:row.parent_comment_id} : {})}) : null);
       },
       isCurrentRecordParticipant: async (input) => Boolean(await authorizeCapabilityParent(input)),
       validateMentions:(input,ids)=>recordParticipants.validate(input,ids),
@@ -3108,7 +3131,7 @@ export function registerServices(
     load: (context, attachmentId) => transactions.run(context.planeKey, context, async tx =>
       (await sql<AttachmentCapabilitySubject>`SELECT attachment.metadata->>'entity_type' entity_type,attachment.metadata->>'entity_id' entity_id,attachment.admitted_policy_hash,attachment.content_type,attachment.size_bytes,attachment.draft_id::text,attachment.uploaded_by::text,EXISTS(SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id AND link.entity_type=attachment.metadata->>'entity_type' AND link.entity_id=attachment.metadata->>'entity_id') has_record_link,(SELECT link.entity_id FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.pinned_attachment_id=attachment.id AND link.entity_type='document.comment' AND link.link_kind='comment' LIMIT 1) comment_id FROM document.attachment attachment WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.id=${attachmentId}::uuid`.execute(tx)).rows[0]),
     ownsDraft: (context, draftId, entityCode, recordId) => transactions.run(context.planeKey, context, async tx =>
-      Boolean((await sql`SELECT id FROM document.comment_draft WHERE tenant_id=${context.tenantId}::uuid AND id=${draftId}::uuid AND principal_id=${context.principalId}::uuid AND entity_type=${entityCode} AND entity_id=${recordId} AND expires_at>clock_timestamp()`.execute(tx)).rows[0])),
+      Boolean((await sql`SELECT id FROM document.comment_draft WHERE tenant_id=${context.tenantId}::uuid AND id=${draftId}::uuid AND principal_id=${context.principalId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId} AND expires_at>clock_timestamp()`.execute(tx)).rows[0])),
     resolve: input => capabilityPolicy.resolve(input),
   });
 
@@ -3237,13 +3260,13 @@ export function registerServices(
               reason: "invitation_governed_proposal_required",
             };
           }
-          if (input.permissionCode === "neon.relationship.entity_case.submit")
+          if (["neon.relationship.entity_case.submit","neon.business_partner_registration.submit"].includes(input.permissionCode))
             return {
               allowed: input.resource?.["makerCheckerEnforced"] === true,
               sodSatisfied: input.resource?.["makerCheckerEnforced"] === true,
               reason: "maker_checker_policy_required",
             };
-          if (input.permissionCode === "neon.relationship.entity_case.decide") {
+          if (["neon.relationship.entity_case.decide", "neon.business_partner_registration.decide"].includes(input.permissionCode)) {
             const submittedBy = input.resource?.["submittedBy"];
             const separated =
               typeof submittedBy === "string" &&
@@ -3255,7 +3278,7 @@ export function registerServices(
             };
           }
           if (
-            input.permissionCode === "neon.relationship.entity_case.materialize"
+            ["neon.relationship.entity_case.materialize","neon.business_partner_registration.materialize"].includes(input.permissionCode)
           ) {
             const pinned = input.resource?.["approvedEvidencePinned"] === true;
             return {
@@ -3376,6 +3399,9 @@ export function registerServices(
               "neon.relationship.entity_case.read",
               "neon.relationship.entity_case.update",
               "neon.relationship.entity_case.validate",
+              "neon.business_partner_registration.create",
+              "neon.business_partner_registration.read",
+              "neon.business_partner_registration.validate",
               "neon.relationship.business_partner.read",
               "neon.customer.credit.read",
               "neon.customer.designation.read",
@@ -3427,6 +3453,13 @@ export function registerServices(
               allowed: true,
               reason: "bounded_business_partner_360_read",
             };
+          if (input.permissionCode === "neon.relationship.business_partner_restriction.read")
+            return {
+              allowed: input.resource?.["tenantId"] === input.context.tenantId && typeof input.resource?.["businessPartnerId"] === "string",
+              reason: "bounded_business_partner_restriction_read",
+            };
+          if(['neon.relationship.business_partner.capability_supplier_manage','neon.relationship.business_partner.capability_customer_manage'].includes(input.permissionCode))
+            return {allowed:input.context.planeKey==='neon'&&input.resource?.['tenantId']===input.context.tenantId&&input.resource?.['resourceCode']==='business_partner'&&typeof input.resource?.['businessPartnerId']==='string',reason:'bounded_partner_capability_command'};
           return {
             allowed: false,
             reason: "business_partner_hard_policy_not_configured",
@@ -3569,19 +3602,20 @@ export function registerServices(
               "DIRECTORY_UNAVAILABLE",
               "Record directory admission is unavailable",
             );
-          const result = await records.queries.get({
-            context: query.context,
-            entityCode: "business_partner",
-            recordId: query.businessPartnerId,
-          });
-          if (!result.data)
+          const admission = await authorizeCapabilityParent({context:query.context,entityCode:"business_partner",recordId:query.businessPartnerId,kind:"comments",action:"read"});
+          if (!admission)
             throw new MasterDataError(
               404,
               "BP_360_NOT_FOUND",
               "Business Partner is unavailable",
             );
+          return {scopeResources: typeof admission === "object" ? admission.scopeResources ?? [] : []};
         },
         definitions: businessPartner360Definitions,
+        authorizeCertificateAttachment: async (query, attachmentId) => {
+          try { return Boolean(await authorizeAttachmentCapability(query.context, "download", { attachmentId }, { preflight: true })); }
+          catch { return false; }
+        },
         metadata,
         businessActivityProviders:
           createUnavailableBusinessPartner360ActivityProviders([
@@ -3639,140 +3673,72 @@ export function registerServices(
           ]),
       });
     container.services.businessPartner360 = businessPartner360;
+    const partnerClassifications = createPartnerClassificationService({
+      authorizer: createPermissionAuthorizer({policyGate: {async evaluate(input) {
+        const allowed = input.resource?.["governedWorkflow"] === true;
+        return {allowed, sodSatisfied: allowed, reason: "governed_classification_workflow_required"};
+      }}}),
+      transactions: transactions as never,
+      audit: audit as never,
+    });
+    container.platform.httpRegistrars.push(application => registerPartnerClassificationRoutes(application, {
+      authenticate: createIamAuthenticationMiddleware(iam),
+      readContext: readVerifiedRequestContext,
+      service: partnerClassifications,
+    }));
+    const decisionViews = createPartnerDecisionViews({
+      authorizer: businessPartnerAuthorizer,
+      transactions,
+      async resolveReference(context, entityCode, recordId) {
+        const records = container.services.records;
+        if (!records) return null;
+        try {
+          const descriptor = await metadata.getEntityDescriptor(context, entityCode);
+          const titleField = descriptor?.recordPresentation?.titleField;
+          if (!titleField) return null;
+          const result = await records.queries.get({context,entityCode,recordId});
+          const title = result.data?.[titleField];
+          return typeof title === "string" && title.trim() ? title : null;
+        } catch (error) {
+          const status = (error as {status?:number;statusCode?:number}).status ?? (error as {statusCode?:number}).statusCode;
+          if (status === 403 || status === 404) return null;
+          throw error;
+        }
+      },
+      async admitPartner(context, recordId) {
+        const records = container.services.records;
+        if (!records) throw new MasterDataError(503, "DIRECTORY_UNAVAILABLE", "Record directory unavailable");
+        const result = await records.queries.get({ context, entityCode: "business_partner", recordId });
+        if (!result.data) throw new MasterDataError(404, "BP_360_NOT_FOUND", "Business Partner unavailable");
+      },
+    });
+    const companyProfileViews=createPartnerCompanyProfileViews({
+      authorizer:businessPartnerAuthorizer,transactions,
+      async admitPartner(context,recordId){
+        const records=container.services.records;
+        if(!records)throw new MasterDataError(503,"DIRECTORY_UNAVAILABLE","Record directory unavailable");
+        const result=await records.queries.get({context,entityCode:"business_partner",recordId});
+        if(!result.data)throw new MasterDataError(404,"BP_360_NOT_FOUND","Business Partner unavailable");
+      },
+    });
+    const partnerRecordProviders = createBusinessPartnerRecordProviders(businessPartner360, partnerClassifications, decisionViews, companyProfileViews);
     const entityRuntime = createEntityRuntimeResourceService({
       capabilities: capabilityPolicy,
+      displayChoices: createRecordDisplayChoices(transactions),
       reader: container.platform.compiledEntityReader!,
-      headers: {
-        async readHeader({ context, recordId, fieldKeys }) {
-          const header = await businessPartner360.header({ context, businessPartnerId: recordId });
-          const source: Record<string, unknown> = {
-            id: header.identity.id,
-            code: header.identity.code,
-            name: header.identity.name,
-            status: header.identity.lifecycleStatus,
-            partner_category: header.identity.category,
-          };
-          return Object.freeze({
-            revision: String(header.businessPartnerVersion),
-            values: Object.freeze(Object.fromEntries(fieldKeys.flatMap((key) => key in source ? [[key, source[key]]] : []))),
-          });
-        },
-      },
+      headers: partnerRecordProviders.headers,
       sections: {
-        get(handlerKey) {
-          // This is a domain registration map, not a BP-specific runtime reader. The
-          // generic service admits the section artifact and owns caching/transport.
-          // Each registered handler remains an independently authorized BP read.
-          const sectionCodes = {
-            "neon.bp.section.overview.v1": "overview",
-            "neon.bp.section.identity.v1": "identity",
-            "neon.bp.section.contacts.v1": "contacts",
-            "neon.bp.section.addresses.v1": "addresses",
-            "neon.bp.section.identifiers-tax.v1": "identifiers-tax",
-            "neon.bp.section.roles-scope.v1": "roles-scope",
-            "neon.bp.section.supplier-company.v1": "supplier-company",
-            "neon.bp.section.customer-company.v1": "customer-company",
-            "neon.bp.section.banking.v1": "banking",
-            "neon.bp.section.qualifications-certificates.v1": "qualifications-certificates",
-            "neon.bp.section.credit.v1": "credit",
-            "neon.bp.section.requests.v1": "requests",
-            "neon.bp.section.activity.v1": "activity",
-            "neon.bp.section.business-activity.v1": "business-activity",
-            "neon.bp.section.network.v1": "network",
-          } as const;
-          if (!Object.hasOwn(sectionCodes, handlerKey)) return undefined;
-          const sectionCode = sectionCodes[handlerKey as keyof typeof sectionCodes];
-          if (!sectionCode) return undefined;
-          return {
-            async read({ context, recordId, resourceContext }) {
-              const scope = {
-                ...(resourceContext?.operatingOrganizationId ? { operatingOrganizationId: resourceContext.operatingOrganizationId } : {}),
-                ...(resourceContext?.companyCodeId ? { companyCodeId: resourceContext.companyCodeId } : {}),
-                ...(resourceContext?.legalEntityId ? { legalEntityId: resourceContext.legalEntityId } : {}),
-                ...(resourceContext?.asOf ? { asOf: resourceContext.asOf } : {}),
-                ...(resourceContext?.roleLens === "all" || resourceContext?.roleLens === "supplier" || resourceContext?.roleLens === "customer" ? { roleLens: resourceContext.roleLens } : {}),
-              };
-              if (sectionCode === "overview") {
-                const result = await businessPartner360.overview({ context, businessPartnerId: recordId, ...scope });
-                return Object.freeze({ revision: String(result.businessPartnerVersion), data: Object.freeze({ state: "ready", values: result.values }) });
-              }
-              const result = await businessPartner360.section({ context, businessPartnerId: recordId, sectionCode, ...scope });
-              return Object.freeze({ revision: String(result.businessPartnerVersion), data: result });
-            },
-          };
-        },
-        getService(serviceKey) {
-          if (serviceKey === "platform.comments.v1") return {
-            async read({ context, core, recordId, limit, cursor, resourceContext }) {
-              // Section admission has already established current record participation.
-              // Private rows remain author-only even for another record collaborator.
-              const threadRootId = resourceContext?.threadRootId;
-              const pageLimit = threadRootId ? Math.min(limit,20) : limit;
-              const descendants = (root: ReturnType<typeof sql>) => commentDescendants({tenantId:context.tenantId,principalId:context.principalId,entityType:core.entityCode,entityId:recordId,root});
-              const result = await transactions.run(context.planeKey, context, async (tx) => {
-                const [rows, draft, unread, total] = await Promise.all([
-                  (await sql<{ id: string; text: string; content_json: unknown; content_format: string; revision_no: number; author_id: string; author_display_name: string | null; visibility: string; status: string; report_status: string | null; viewer_report:Record<string,unknown>|null; decision_code: string | null; reactions: unknown; viewer_reactions: unknown; pinned_files: unknown; created_at: Date | string; updated_at: Date | string | null; parent_comment_id: string | null; reply_count: string; reply_to_name: string|null; reply_parent:{deleted:boolean;excerpt:string}|null; thread_depth: number }>`SELECT comment.id::text,comment.comment_text text,comment.content_json,comment.content_format,comment.revision_no,comment.commenter_id::text author_id,principal.name author_display_name,comment.visibility,comment.status,(SELECT flag.status FROM event.comment_flag flag WHERE flag.tenant_id=comment.tenant_id AND flag.comment_id=comment.id AND flag.reporter_principal_id=${context.principalId}::uuid ORDER BY flag.created_at DESC,flag.id DESC LIMIT 1) report_status,(SELECT jsonb_build_object('reason',flag.reason_code,'detail',flag.detail,'submittedAt',flag.created_at,'status',COALESCE(moderation.status::text,flag.status::text),'decision',moderation.decision_code) FROM event.comment_flag flag LEFT JOIN governance.comment_moderation moderation ON moderation.tenant_id=flag.tenant_id AND moderation.comment_flag_id=flag.id WHERE flag.tenant_id=comment.tenant_id AND flag.comment_id=comment.id AND flag.reporter_principal_id=${context.principalId}::uuid ORDER BY flag.created_at DESC,flag.id DESC LIMIT 1) viewer_report,(SELECT moderation.decision_code FROM event.comment_flag flag JOIN governance.comment_moderation moderation ON moderation.tenant_id=flag.tenant_id AND moderation.comment_flag_id=flag.id WHERE flag.tenant_id=comment.tenant_id AND flag.comment_id=comment.id AND flag.reporter_principal_id=${context.principalId}::uuid ORDER BY flag.created_at DESC,flag.id DESC LIMIT 1) decision_code,COALESCE((SELECT jsonb_agg(jsonb_build_object('code',reaction_type,'count',count)) FROM (SELECT reaction_type,count(*) count FROM document.comment_reaction reaction WHERE reaction.tenant_id=comment.tenant_id AND reaction.comment_id=comment.id GROUP BY reaction_type) grouped),'[]'::jsonb) reactions,COALESCE((SELECT jsonb_agg(reaction_type) FROM document.comment_reaction reaction WHERE reaction.tenant_id=comment.tenant_id AND reaction.comment_id=comment.id AND reaction.principal_id=${context.principalId}::uuid),'[]'::jsonb) viewer_reactions,COALESCE((SELECT jsonb_agg(jsonb_build_object('attachmentId',attachment.id::text,'fileName',attachment.file_name,'version',attachment.version_no,'sizeBytes',attachment.size_bytes)) FROM document.attachment_link link JOIN document.attachment attachment ON attachment.tenant_id=link.tenant_id AND attachment.id=link.pinned_attachment_id WHERE link.tenant_id=comment.tenant_id AND link.entity_type='document.comment' AND link.entity_id=comment.id::text AND link.link_kind='comment'),'[]'::jsonb) pinned_files,${threadRootId ? sql`'0'::text` : sql`(SELECT count(*)::text FROM (${descendants(sql`comment.id`)}) replies)`} reply_count,(SELECT author.name FROM document.comment parent LEFT JOIN master.principal author ON author.tenant_id=parent.tenant_id AND author.id=parent.commenter_id WHERE parent.id=comment.parent_comment_id AND parent.tenant_id=comment.tenant_id AND parent.context_type=comment.context_type AND parent.entity_type=comment.entity_type AND parent.entity_id=comment.entity_id AND (parent.visibility IN ('public','internal') OR parent.commenter_id=${context.principalId}::uuid)) reply_to_name,(SELECT jsonb_build_object('deleted',parent.status='deleted','excerpt',CASE WHEN parent.status='deleted' THEN '' ELSE left(parent.comment_text,140) END) FROM document.comment parent WHERE parent.id=comment.parent_comment_id AND parent.tenant_id=comment.tenant_id AND parent.context_type=comment.context_type AND parent.entity_type=comment.entity_type AND parent.entity_id=comment.entity_id AND (parent.visibility IN ('public','internal') OR parent.commenter_id=${context.principalId}::uuid)) reply_parent,comment.thread_depth,comment.created_at,comment.updated_at,comment.parent_comment_id::text FROM document.comment comment LEFT JOIN master.principal principal ON principal.tenant_id=comment.tenant_id AND principal.id=comment.commenter_id WHERE comment.tenant_id=${context.tenantId}::uuid AND comment.context_type='entity' AND comment.entity_type=${core.entityCode} AND comment.entity_id=${recordId} AND (comment.visibility IN ('public','internal') OR comment.commenter_id=${context.principalId}::uuid) ${threadRootId ? sql`AND comment.id IN (${descendants(sql`${threadRootId}::uuid`)})` : sql`AND comment.parent_comment_id IS NULL`} ${cursor ? sql`AND (comment.created_at,comment.id)${threadRootId ? sql`>` : sql`<`}(SELECT created_at,id FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY comment.created_at ${threadRootId ? sql`ASC` : sql`DESC`},comment.id ${threadRootId ? sql`ASC` : sql`DESC`} LIMIT ${pageLimit + 1}`.execute(tx)).rows,
-                  (await sql<{ id: string; draft_text: string; content_format: string; content_json: unknown; content_schema: string | null; visibility: string; updated_at: Date | string | null; created_at: Date | string; parent_comment_id: string | null }>`SELECT id::text,draft_text,content_format,content_json,content_schema,visibility,updated_at,created_at,parent_comment_id::text FROM document.comment_draft WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid AND context_type='entity' AND entity_type=${core.entityCode} AND entity_id=${recordId} AND parent_comment_id IS NOT DISTINCT FROM ${threadRootId ?? null}::uuid AND expires_at>clock_timestamp() LIMIT 1`.execute(tx)).rows[0],
-                  (await sql<{ count: string | number }>`SELECT count(*)::text count FROM document.comment comment LEFT JOIN document.comment_feed_cursor cursor ON cursor.tenant_id=comment.tenant_id AND cursor.principal_id=${context.principalId}::uuid AND cursor.entity_type=comment.entity_type AND cursor.entity_id=comment.entity_id WHERE comment.tenant_id=${context.tenantId}::uuid AND comment.context_type='entity' AND comment.entity_type=${core.entityCode} AND comment.entity_id=${recordId} AND comment.status<>'deleted' AND comment.commenter_id<>${context.principalId}::uuid AND (comment.visibility IN ('public','internal') OR comment.commenter_id=${context.principalId}::uuid) AND comment.created_at>COALESCE(cursor.last_read_at,'-infinity'::timestamptz)`.execute(tx)).rows[0]?.count,
-                  (await sql<{ count: string | number }>`SELECT count(*)::text count FROM document.comment comment WHERE comment.tenant_id=${context.tenantId}::uuid AND comment.context_type='entity' AND comment.entity_type=${core.entityCode} AND comment.entity_id=${recordId} AND (comment.visibility IN ('public','internal') OR comment.commenter_id=${context.principalId}::uuid) ${threadRootId ? sql`AND comment.id IN (${descendants(sql`${threadRootId}::uuid`)})` : sql`AND comment.parent_comment_id IS NULL`}`.execute(tx)).rows[0]?.count,
-                ]);
-                return { rows, draft, unread: Number(unread ?? 0), total: Number(total ?? 0) };
-              });
-              const rows = result.rows;
-              const items = rows.slice(0, pageLimit).map((row) => Object.freeze({ id: row.id, replyCount: Number(row.reply_count), threadDepth: row.thread_depth, ...(row.reply_parent?{replyToDeleted:row.reply_parent.deleted,replyToExcerpt:row.reply_parent.excerpt}:{}), ...(row.reply_to_name?{replyToName:row.reply_to_name}:{}), text: row.status === "deleted" ? "" : row.text, ...(row.status !== "deleted" && row.content_format === "rich_json" && row.content_json ? { content: row.content_json, format: "rich_json" } : {}), revision: row.revision_no, authorId: row.author_id, ...(row.author_display_name ? { authorDisplayName: row.author_display_name } : {}), visibility: row.visibility, tombstone: row.status === "deleted", ...(row.report_status ? {reportStatus:row.report_status} : {}), ...(row.viewer_report?{viewerReport:row.viewer_report}:{}), ...(row.decision_code ? {moderationDecision:row.decision_code} : {}), reactions: row.status === "deleted" ? [] : row.reactions, viewerReactions: row.status === "deleted" ? [] : row.viewer_reactions, pinnedFiles: row.status === "deleted" ? [] : row.pinned_files, createdAt: new Date(row.created_at).toISOString(), ...(row.updated_at ? { updatedAt: new Date(row.updated_at).toISOString() } : {}), ...(row.parent_comment_id ? { parentCommentId: row.parent_comment_id } : {}) }));
-              const draft = result.draft ? Object.freeze({ id: result.draft.id, text: result.draft.draft_text, format: result.draft.content_format, ...(result.draft.content_json ? { content: result.draft.content_json } : {}), ...(result.draft.content_schema ? { contentSchema: result.draft.content_schema } : {}), visibility: result.draft.visibility, revision: new Date(result.draft.updated_at ?? result.draft.created_at).toISOString() }) : undefined;
-              return Object.freeze({ revision: createHash("sha256").update(JSON.stringify({items,draft,total:result.total,unread:result.unread})).digest("hex"), data: Object.freeze({ items, totalCount: result.total, unreadCount: result.unread, ...(threadRootId ? { threadRootId } : {}), ...(draft ? { draft } : {}), ...(rows.length > pageLimit && items.at(-1)?.id ? { nextCursor: items.at(-1)!.id } : {}) }) });
-            },
-          };
-          if (serviceKey === "platform.attachments.v1") return {
-            async read({ context, core, recordId, limit, cursor }) {
-              // A record can have several semantic links to a series.  The reader
-              // deliberately selects one current/pinned version per series so a
-              // drawer and content view cannot disagree by displaying duplicates.
-              const rows = await transactions.run(context.planeKey, context, async (tx) => (await sql<{ id: string; series_id: string; link_id: string; pinned_attachment_id: string | null; link_kind: string; folder_id: string | null; folder_name: string | null; category: string | null; version_no: number; file_name: string; display_name: string | null; content_type: string | null; size_bytes: string | number | null; status: string; created_at: Date | string; updated_at: Date | string | null; series_revision: string }>`WITH visible AS (SELECT DISTINCT ON (attachment.series_id) attachment.id::text,attachment.series_id::text,link.id::text link_id,link.pinned_attachment_id::text,link.link_kind,link.folder_id::text,folder.name folder_name,link.metadata->>'category' category,attachment.version_no,attachment.file_name,series.display_name,attachment.content_type,attachment.size_bytes,attachment.status,attachment.created_at,attachment.updated_at,series.revision_no::text series_revision FROM document.attachment attachment JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id LEFT JOIN document.attachment_folder folder ON folder.tenant_id=link.tenant_id AND folder.id=link.folder_id WHERE attachment.tenant_id=${context.tenantId}::uuid AND link.entity_type=${core.entityCode} AND link.entity_id=${recordId} AND attachment.id=COALESCE(link.pinned_attachment_id,series.current_attachment_id) AND attachment.is_active AND attachment.is_virus_scanned AND attachment.status='active' AND (attachment.expires_at IS NULL OR attachment.expires_at>clock_timestamp()) ${cursor ? sql`AND (attachment.created_at,attachment.id)<(SELECT created_at,id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY attachment.series_id,(link.pinned_attachment_id IS NOT NULL) DESC,link.created_at DESC,link.id DESC,attachment.created_at DESC,attachment.id DESC) SELECT * FROM visible ORDER BY created_at DESC,id DESC LIMIT ${limit + 1}`.execute(tx)).rows);
-              const pendingRows = await transactions.run(context.planeKey, context, async (tx) => (await sql<{ id: string; series_id: string; link_id: string; pinned_attachment_id: string | null; link_kind: string; folder_id: string | null; folder_name: string | null; category: string | null; version_no: number; file_name: string; display_name: string | null; content_type: string | null; size_bytes: string | number | null; status: string; created_at: Date | string; updated_at: Date | string | null; series_revision: string }>`SELECT attachment.id::text,attachment.series_id::text,link.id::text link_id,NULL::text pinned_attachment_id,link.link_kind,link.folder_id::text,folder.name folder_name,link.metadata->>'category' category,attachment.version_no,attachment.file_name,series.display_name,attachment.content_type,attachment.size_bytes,attachment.status,attachment.created_at,attachment.updated_at,series.revision_no::text series_revision FROM document.attachment attachment JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id LEFT JOIN document.attachment_folder folder ON folder.tenant_id=link.tenant_id AND folder.id=link.folder_id WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.uploaded_by=${context.principalId}::uuid AND link.entity_type=${core.entityCode} AND link.entity_id=${recordId} AND attachment.status IN ('pending','uploading','uploaded','processing','failed','quarantined','rejected') ${cursor ? sql`AND (attachment.created_at,attachment.id)<(SELECT created_at,id FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND id=${cursor}::uuid)` : sql``} ORDER BY attachment.created_at DESC,attachment.id DESC LIMIT ${limit + 1}`.execute(tx)).rows);
-              // Pending transfer rows are private to the uploader, even when their
-              // eventual series is already associated with this shared record.
-              const allRows = [...rows, ...pendingRows].sort((left, right) => String(right.created_at).localeCompare(String(left.created_at)) || right.id.localeCompare(left.id));
-              const [folders, workspace] = await transactions.run(context.planeKey, context, async (tx) => Promise.all([
-                sql<{ id: string; name: string; parent_id: string | null }>`SELECT id::text,name,parent_id::text FROM document.attachment_folder WHERE tenant_id=${context.tenantId}::uuid AND entity_type=${core.entityCode} AND entity_id=${recordId} ORDER BY name,id`.execute(tx),
-                sql<{ revision_no: string }>`SELECT revision_no::text FROM document.attachment_workspace WHERE tenant_id=${context.tenantId}::uuid AND entity_type=${core.entityCode} AND entity_id=${recordId}`.execute(tx),
-              ]));
-              const folderItems=folders.rows.map((folder) => Object.freeze({ id: folder.id, name: folder.name, ...(folder.parent_id ? { parentId: folder.parent_id } : {}) }));
-              const workspaceRevision=workspace.rows[0]?.revision_no ?? "1";
-              const histories = new Map((await transactions.run(context.planeKey, context, async tx => Promise.all([...new Set(allRows.map(row => row.series_id))].map(async seriesId => [seriesId, (await sql<{ id: string; version_no: number; file_name: string; status: string; created_at: Date | string }>`SELECT id::text,version_no,file_name,status,created_at FROM document.attachment WHERE tenant_id=${context.tenantId}::uuid AND series_id=${seriesId}::uuid ORDER BY version_no DESC,id DESC`.execute(tx)).rows] as const)))).map(([seriesId, history]) => [seriesId, history] as const));
-              const items = allRows.slice(0, limit).map((row) => Object.freeze({ id: row.id, seriesId: row.series_id, linkId: row.link_id, ...(row.pinned_attachment_id ? { pinnedAttachmentId: row.pinned_attachment_id } : {}), linkKind: row.link_kind, ...(row.folder_id ? { folderId: row.folder_id } : {}), ...(row.folder_name ? { folderName: row.folder_name } : {}), ...(row.category ? { category: row.category } : {}), version: row.version_no, fileName: row.file_name, ...(row.display_name ? { displayName: row.display_name } : {}), ...(row.content_type ? { contentType: row.content_type } : {}), ...(row.size_bytes === null ? {} : { sizeBytes: Number(row.size_bytes) }), processingStatus: row.status, revision: row.series_revision, createdAt: new Date(row.created_at).toISOString(), versionHistory: (histories.get(row.series_id) ?? []).map(version => Object.freeze({ id: version.id, version: version.version_no, fileName: version.file_name, status: version.status, createdAt: new Date(version.created_at).toISOString() })) }));
-              return Object.freeze({ revision: workspaceRevision, data: Object.freeze({ items, folders: folderItems, workspaceRevision, ...(allRows.length > limit && items.at(-1)?.id ? { nextCursor: items.at(-1)!.id } : {}) }) });
-            },
-          };
-          return undefined;
-        },
+        get: partnerRecordProviders.sections.get,
+        getService: createCollaborationSectionProviders(transactions).getService,
       },
-      summaries: {
-        get(provider) {
-          if (!new Set(["primary-contact", "primary-address", "relationship-summary", "governance-state"]).has(provider)) return undefined;
-          return {
-            async read({ context, core, recordId, resourceContext, requestCache }) {
-              if (core.entityCode !== "business_partner") throw new EntityRuntimeResourceError(503, "ENTITY_RUNTIME_SUMMARY_HANDLER_UNAVAILABLE");
-              const cacheKey = "business_partner:summary";
-              const source = requestCache.get(cacheKey) ?? Promise.resolve(businessPartner360.summary({
-                context,
-                businessPartnerId: recordId,
-                ...(resourceContext?.operatingOrganizationId ? { operatingOrganizationId: resourceContext.operatingOrganizationId } : {}),
-                ...(resourceContext?.companyCodeId ? { companyCodeId: resourceContext.companyCodeId } : {}),
-                ...(resourceContext?.legalEntityId ? { legalEntityId: resourceContext.legalEntityId } : {}),
-                ...(resourceContext?.asOf ? { asOf: resourceContext.asOf } : {}),
-                ...(resourceContext?.roleLens ? { roleLens: resourceContext.roleLens } : {}),
-              }));
-              requestCache.set(cacheKey, source);
-              const summary = await source as Awaited<ReturnType<typeof businessPartner360.summary>>;
-              if (provider === "primary-contact") return Object.freeze({ state: summary.primaryContact ? "ready" : "empty", value: summary.primaryContact ?? null });
-              if (provider === "primary-address") return Object.freeze({ state: summary.primaryAddress ? "ready" : "empty", value: summary.primaryAddress ?? null });
-              if (provider === "relationship-summary") return Object.freeze({ state: "ready", value: Object.freeze({ roles: summary.roles.map((role) => role.code), openWork: summary.openWork, sectionCounts: Object.fromEntries(summary.sections.flatMap((section) => section.count === undefined ? [] : [[section.code, section.count]])) }) });
-              return Object.freeze({ state: "ready", value: Object.freeze({ completeness: summary.completeness.status, percent: summary.completeness.percent, openWork: summary.openWork }) });
-            },
-          };
-        },
+      summaries: partnerRecordProviders.summaries,
+    });
+    const partnerCapabilityOperations=createPartnerCapabilityOperations({authorizer:businessPartnerAuthorizer,transactions,
+      async admitPartner(context,recordId){
+        const records=container.services.records;
+        if(!records)throw new EntityRuntimeOperationError(503,'ENTITY_RUNTIME_OPERATION_HANDLER_UNAVAILABLE');
+        const result=await records.queries.get({context,entityCode:'business_partner',recordId});
+        if(!result.data)throw new EntityRuntimeOperationError(404,'ENTITY_RUNTIME_RECORD_UNAVAILABLE');
       },
     });
     const entityOperations = createEntityOperationDispatcher({
@@ -3787,6 +3753,8 @@ export function registerServices(
       },
       handlers: {
         get(handlerKey) {
+          const partnerCapability=partnerCapabilityOperations.get(handlerKey);
+          if(partnerCapability)return partnerCapability;
           const capabilityHandler=/^platform\.(comments|attachments)\.([a-z_]+)\.v1$/.exec(handlerKey);
           if(capabilityHandler) return {async execute(command) {
             const {context,entityCode,recordId,input,expectedVersion,idempotencyKey}=command;
@@ -3805,7 +3773,7 @@ export function registerServices(
               if(action==="mention") { if(!service.participants) throw new EntityCapabilityPolicyError(); return {items:await service.participants({context,entityType:entityCode,entityId:recordId,query:String(input.query ?? ""),visibility:input.visibility === "private" ? "private" : input.visibility === "internal" ? "internal" : "public"})}; }
               if(action==="draft") return {id:await service.putDraft({...input,context,entityType:entityCode,entityId:recordId,text:String(input.text ?? "")})};
               const commentId=String(input.commentId ?? "");
-              const target=await transactions.run(context.planeKey,context,async tx=>(await sql`SELECT id FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${commentId}::uuid AND entity_type=${entityCode} AND entity_id=${recordId}`.execute(tx)).rows[0]);
+              const target=await transactions.run(context.planeKey,context,async tx=>(await sql`SELECT id FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${commentId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId}`.execute(tx)).rows[0]);
               if(!target) throw new EntityCapabilityPolicyError();
               if(action==="history") { if(!service.history) throw new EntityCapabilityPolicyError(); return {...await service.history({context,commentId,...(typeof input.beforeRevision === "number" ? {beforeRevision:input.beforeRevision} : {})})}; }
               if(action==="update_own") return {...await service.edit({...input,context,commentId,text:String(input.text ?? ""),expectedRevision:expectedVersion!})};
@@ -3953,10 +3921,9 @@ export function registerServices(
       {
         supplierSubmission,
         guardAmendment: supplierEdits.guard,
-        ...(container.platform.experience ? {validateBusinessContext: async (command) => {
-          if (!command.operatingOrganizationId || !command.companyCodeId) return;
-          await container.platform.experience!.service.validateNeonBusinessContext(command.context, "neon.relationship.entity_case.create", {companyCodeId: command.companyCodeId, operatingOrganizationId: command.operatingOrganizationId});
-        }} : {}),
+        ...(container.platform.experience ? {
+          validateBusinessContext: businessPartnerContextAdmission(container.platform.experience.service),
+        } : {}),
         authorizer: businessPartnerAuthorizer,
         repository,
         transactions,
@@ -3985,7 +3952,7 @@ export function registerServices(
           async resolve(input, transaction) {
             const candidates = await sql<{
               principal_id: string;
-            }>`SELECT principal_id::text FROM document.fn_entity_case_approvers(${input.context.tenantId}::uuid,${input.request.operatingOrganizationId!}::uuid,${input.request.companyCodeId ?? null}::uuid,${input.context.principalId}::uuid)`.execute(
+            }>`SELECT principal_id::text FROM ${sql.raw(input.request.kind === "new_partner" && !input.request.requestedRole ? "document.fn_role_free_partner_registration_approvers" : "document.fn_entity_case_approvers")}(${input.context.tenantId}::uuid,${input.request.operatingOrganizationId ?? null}::uuid,${input.request.companyCodeId ?? null}::uuid,${input.context.principalId}::uuid)`.execute(
               transaction,
             );
             const selection = businessPartnerFlowSelection(input.request.kind, input.request.requestedRole);
@@ -4023,7 +3990,11 @@ export function registerServices(
       };
     const businessPartnerRequests = createBusinessPartnerRequestService(
       {...businessPartnerRequestOptions, activationReadiness: authorizeSupplierActivationReadiness, validateIntake: async command => {
-        if(command.kind!=="new_partner" || command.source.kind!=="manual")return;
+        await transactions.run("neon",command.context,tx=>admitBusinessPartnerProfileReferences(command.extensions,async(domain,code)=>{
+          const row=(await sql<{active:boolean}>`SELECT control.lookup_value_is_active(${domain},${code},${command.context.tenantId}::uuid) AS active`.execute(tx)).rows[0];
+          return row?.active===true;
+        }));
+        if(command.kind!=="new_partner" || command.source.kind!=="manual" || !command.requestedRole)return;
         if(!intakeApplicationDescriptor)throw new MasterDataError(503,"INTAKE_VALIDATION_UNAVAILABLE","Intake validation is unavailable.");
         const descriptor=await intakeApplicationDescriptor(command.context,"business_partner",{operatingOrganizationId:command.operatingOrganizationId,...(command.companyCodeId?{companyCodeId:command.companyCodeId}:{})});
         const publishedSurface=descriptor.intakeSurfaces?.find(s=>s.key==="intake_details");
@@ -4541,9 +4512,10 @@ export function registerServices(
         ) => {
           if (!container.services.collaboration)
             throw new Error("Collaboration is unavailable");
+          await capabilityPolicy.resolve({context,entityCode:"business_partner",recordId:businessPartnerId,kind:"comments",action:"create",input:{text,visibility:"internal"}});
           return container.services.collaboration.create({
             context,
-            entityType: "master.business_partner",
+            entityType: "business_partner",
             entityId: businessPartnerId,
             contextType: "entity",
             text,
@@ -5000,12 +4972,13 @@ export function registerServices(
           const row=await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{entity_type:string;entity_id:string}>`SELECT entity_type,entity_id FROM document.comment WHERE tenant_id=${input.context.tenantId}::uuid AND id=${input.commentId}::uuid`.execute(tx)).rows[0]);
           entityCode=row?.entity_type;recordId=row?.entity_id;
         }
+        if (entityCode) entityCode = collaborationEntityCode(entityCode);
         if(entityCode === "content.item") { if(action === "mention" || action === "history") throw new EntityCapabilityPolicyError(); return; }
         if(!entityCode || !recordId) throw new EntityCapabilityPolicyError();
         const resolved=await capabilityPolicy.resolve({context:input.context,entityCode,recordId,kind:"comments",action,input:value});
         if ("maxDepth" in resolved.binding && typeof value.parentCommentId === "string") {
-          const parent = await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{thread_depth:number}>`SELECT thread_depth FROM document.comment WHERE tenant_id=${input.context.tenantId}::uuid AND id=${value.parentCommentId}::uuid AND entity_type=${entityCode} AND entity_id=${recordId} AND status<>'deleted'`.execute(tx)).rows[0]);
-          if(!parent || parent.thread_depth + 1 > resolved.binding.maxDepth) throw new EntityCapabilityPolicyError();
+          const parent = await transactions.run(input.context.planeKey,input.context,async tx=>(await sql<{thread_depth:number}>`SELECT thread_depth FROM document.comment WHERE tenant_id=${input.context.tenantId}::uuid AND id=${value.parentCommentId}::uuid AND entity_type=ANY(${collaborationEntityTypes(entityCode)}::text[]) AND entity_id=${recordId} AND status<>'deleted'`.execute(tx)).rows[0]);
+          if(!parent || !canReplyAtDepth("active", parent.thread_depth, resolved.binding.maxDepth)) throw new EntityCapabilityPolicyError();
         }
         return {defaultAudience: "defaultAudience" in resolved.binding ? resolved.binding.defaultAudience : undefined,draftRetentionDays: "draftRetentionDays" in resolved.binding ? resolved.binding.draftRetentionDays : undefined};
       },
@@ -5094,6 +5067,20 @@ export function registerServices(
       }),
     );
   }
+  const effectiveCollection = async (context: VerifiedRequestContext, key:string) => {
+    if(!["activity.notifications","activity.inbox"].includes(key))throw new HttpError(404,"COLLECTION_NOT_FOUND","Unknown activity collection");
+    if(key==="activity.inbox" && !(await authorizer.authorize({context,permissionCode:"workflow.work_item.read"})).allowed)throw new HttpError(403,"COLLECTION_ACCESS_REQUIRED","Workflow inbox access is required");
+    const value=await exactTransactions.run(context.planeKey,context,tx=>readPublishedCollectionConfiguration(tx as unknown as Kysely<Record<string,never>>,context.tenantId,context.planeKey,key));
+    if(!value)throw new HttpError(404,"COLLECTION_CONFIGURATION_NOT_PUBLISHED","Activity configuration is not published for this workspace");
+    return value;
+  };
+  const validateActivityCollection = async(context:VerifiedRequestContext,kind:"notifications"|"inbox",query:ActivityQuery,limit:number) => {
+    const {configuration:c}=await effectiveCollection(context,`activity.${kind}`);
+    if(limit>c.maxPageSize)throw new TypeError("Page size exceeds published collection limit");
+    const state=activityCollectionState(kind,query,c);
+    if(state.query&&!c.searchFields.length)throw new TypeError("Search is unavailable for this collection");
+    return {...collectionActivityQuery(kind,state,query.timeZone),searchFields:c.searchFields};
+  };
   const savedViews = createSavedViewService(
     createKyselySavedViewRepository(transactions),
     undefined,
@@ -5110,6 +5097,7 @@ export function registerServices(
       });
       return decision.allowed && (!decision.scope || decision.scope.tenantWide);
     },
+    async(scope,view)=>{if(view.entityCode.startsWith("activity.")){if(view.surfaceCode!=="activity_center")throw new TypeError("Activity view surface mismatch");const {configuration:c}=await effectiveCollection(scope as VerifiedRequestContext,view.entityCode);const state=view.state as Record<string,unknown>;if(state.schemaVersion!==c.viewVersion)throw new TypeError("Saved view version is incompatible; recreate the view");parseCollectionState(state.collection,c.fields);}},
   );
   container.platform.httpRegistrars.push((application) =>
     registerSavedViewRoutes(application, {
@@ -5118,6 +5106,11 @@ export function registerServices(
       savedViews,
     }),
   );
+  container.platform.httpRegistrars.push(application=>application.get("/api/collections/:collectionKey/descriptor",createIamAuthenticationMiddleware(iam),async(req,res,next)=>{try{const value=await effectiveCollection(readVerifiedRequestContext(res),String(req.params.collectionKey));res.setHeader("Cache-Control","private, no-store");res.json(value);}catch(e){next(e);}}));
+  container.platform.httpRegistrars.push(application=>registerViewCollectionRoutes(application,{
+    path:"/api/collections/:entityCode/views",surface:"activity_center",authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,service:savedViews,
+    descriptor:async(context,key)=>{const {configuration:c}=await effectiveCollection(context,key);return {standardViews:c.views.map(v=>({key:v.key,label:v.label,state:{schemaVersion:c.viewVersion,collection:v.state}})),validate:(raw:unknown)=>{const v=raw as {schemaVersion?:number;collection?:unknown};if(v?.schemaVersion!==c.viewVersion)throw new TypeError("Saved view is incompatible; recreate it using current fields");return {schemaVersion:c.viewVersion,collection:parseCollectionState(v.collection,c.fields)};}};}
+  }));
   const notificationEvents =
     container.adapters.notificationEvents ?? createNotificationEventBus();
   const sesDeliveryRepository =
@@ -5185,9 +5178,75 @@ export function registerServices(
   container.services.notifications = notifications;
   let communicationArtifactAuthority: ((context:VerifiedRequestContext,id:string,tx:RecordTransaction)=>Promise<void>) | undefined;
   const supplierCommunications=createSupplierProcessCommunications({transactions:exactTransactions,consent:consent??denyAllConsent,authorizer:processDocumentAuthority??authorizer,authorizeArtifact:async(context,id,tx)=>{if(!communicationArtifactAuthority)throw Error("SUPPLIER_DOCUMENT_AUTHORITY_UNAVAILABLE");await communicationArtifactAuthority(context,id,tx);}});
-  if(!notificationAttachmentResolver&&objectStorage)notificationAttachmentResolver=createNotificationAttachmentResolver({transactions,artifacts:dependencies.documentArtifactRepository??createKyselyDocumentArtifactRepository(),storage:objectStorage,access:supplierCommunications.attachmentAccess});
+
+  const notificationRecipientContext=async(source:import("@athyper/server-contract-notifications").NotificationSourceEvent,principalId:string)=>{
+    const row=await transactions.run(source.planeKey,{tenantId:source.tenantId,principalId},async tx=>(await sql<{auth_epoch:number}>`SELECT auth_epoch FROM master.principal WHERE tenant_id=${source.tenantId}::uuid AND id=${principalId}::uuid AND status='active'`.execute(tx)).rows[0]);
+    if(!row)return null;
+    const identity={planeKey:source.planeKey,realmKey:"athyper",tenantId:source.tenantId,principalId,authEpoch:row.auth_epoch,assurance:"baseline" as const};
+    const permissions=await participantPermissions.resolve(identity);
+    return {...identity,permissions,profileHash:permissions.profileHash,requestId:source.id};
+  };
+  const authorizeNotificationRecipient = async (source:import("@athyper/server-contract-notifications").NotificationSourceEvent,principalId:string) => {
+    const entityCode=source.payload.entity_type,recordId=source.payload.entity_id;
+    if(typeof entityCode!=="string"||typeof recordId!=="string")return false;
+    const context=await notificationRecipientContext(source,principalId);
+    if(!context)return false;
+    try {
+      const commentId=source.payload.comment_id??source.payload.resource_id;
+      await capabilityPolicy.resolve({context,entityCode,recordId,kind:source.eventCode.startsWith("collaboration.comment.")?"comments":"attachments",action:"read",input:typeof commentId==="string"&&source.eventCode.startsWith("collaboration.comment.")?{commentId}:{}});
+      return true;
+    } catch(error) {if(error instanceof EntityCapabilityPolicyError)return false;throw error;}
+  };
+  if(!notificationAttachmentResolver&&objectStorage)notificationAttachmentResolver=createNotificationAttachmentResolver({transactions,artifacts:dependencies.documentArtifactRepository??createKyselyDocumentArtifactRepository(),storage:objectStorage,access:{async authorize(input){
+    const {request,attachment}=input;
+    if(await supplierCommunications.attachmentAccess.authorize(input))return true;
+    if(request.planeKey!=="neon"||request.versionPolicy!=="pinned"||request.attachmentVersionId!==attachment.attachmentVersionId)return false;
+    // Restrict access to the delivery's parent/comment, not any unrelated file link.
+    return exactTransactions.run("neon",{tenantId:request.tenantId,principalId:request.recipientPrincipalId},async tx=>{
+      const row=(await sql<{payload:Record<string,unknown>}>`SELECT m.payload FROM event.notification_delivery d JOIN event.notification_message m ON m.tenant_id=d.tenant_id AND m.id=d.message_id WHERE d.tenant_id=${request.tenantId}::uuid AND d.id=${request.deliveryId}::uuid AND d.recipient_id=${request.recipientPrincipalId}::uuid`.execute(tx)).rows[0];
+      const data=row?.payload;if(!data||typeof data.resource_id!=="string"||typeof data.notification_event_code!=="string")return false;
+      if(!attachment.links.some(link=>link.entityType==="document.comment"&&link.entityId===data.resource_id))return false;
+      return authorizeNotificationRecipient({id:request.deliveryId,planeKey:"neon",tenantId:request.tenantId,actorPrincipalId:request.actorPrincipalId,eventCode:data.notification_event_code,entityId:data.resource_id,payload:data},request.recipientPrincipalId);
+    });
+  }}});
+  const activityPresentation=createActivityPresentation(async(context,coordinate)=>{
+    try {
+      if(coordinate.entityCode==="business_partner_case"||coordinate.entityCode==="business_partner_request") {
+        if(context.planeKey!=="neon")return undefined;
+        const request=await container.services.businessPartnerRequests?.get({context,requestId:coordinate.recordId});
+        if(!request)return undefined;
+        const name=request.proposedPayload.name??request.proposedPayload.display_name??request.representedPartyName;
+        return {href:`/mdg/business-partner/requests/${encodeURIComponent(request.id)}`,recordLabel:["Business Partner request",typeof name==="string"?name:undefined,request.caseNo??request.requestNo].filter(Boolean).join(" · "),actionLabel:"Review request"};
+      }
+      let threadRootId:string|undefined;
+      if(coordinate.commentId){
+        await capabilityPolicy.resolve({context,entityCode:coordinate.entityCode,recordId:coordinate.recordId,kind:"comments",action:"read",input:{commentId:coordinate.commentId}});
+        threadRootId=await exactTransactions.run(context.planeKey,{tenantId:context.tenantId,principalId:context.principalId},async tx=>(await sql<{id:string}>`WITH RECURSIVE parents AS (SELECT id,parent_comment_id,0 depth FROM document.comment WHERE tenant_id=${context.tenantId}::uuid AND id=${coordinate.commentId}::uuid UNION ALL SELECT c.id,c.parent_comment_id,p.depth+1 FROM document.comment c JOIN parents p ON c.id=p.parent_comment_id WHERE c.tenant_id=${context.tenantId}::uuid AND p.depth<32) SELECT id::text FROM parents WHERE parent_comment_id IS NULL LIMIT 1`.execute(tx)).rows[0]?.id);
+      }
+      const descriptor=await metadata.getEntityDescriptor(context,coordinate.entityCode);
+      if(!descriptor?.detailRouteTemplate)return undefined;
+      const record=await container.services.records?.queries.get({context,entityCode:coordinate.entityCode,recordId:coordinate.recordId});
+      if(!record?.data)return undefined;
+      const label=(descriptor.recordPresentation?record.data[descriptor.recordPresentation.titleField]:undefined)??record.data.name??record.data.display_name??record.data.code;
+      const recordHref=descriptor.detailRouteTemplate.replace(":recordId",encodeURIComponent(coordinate.recordId));
+      const href=threadRootId?`${recordHref}${recordHref.includes("?")?"&":"?"}threadRootId=${encodeURIComponent(threadRootId)}`:recordHref;
+      return {href,recordLabel:[coordinate.entityCode.replaceAll("_"," "),typeof label==="string"?label:undefined].filter(Boolean).join(" · "),actionLabel:"View record"};
+    } catch(error) {
+      const status=error&&typeof error==="object"?("statusCode" in error?error.statusCode:"status" in error?error.status:undefined):undefined;
+      if(status===403||status===404)return undefined;
+      throw error;
+    }
+  });
+  const collaborationNotificationPolicy=createCollaborationNotificationPolicy({fallback:supplierCommunications.policy,authorize:authorizeNotificationRecipient,async recordHref(source){
+    const context=await notificationRecipientContext(source,source.actorPrincipalId);
+    if(!context)return undefined;
+    const descriptor=await metadata.getEntityDescriptor(context,String(source.payload.entity_type));
+    const path=descriptor?.detailRouteTemplate?.replace(":recordId",encodeURIComponent(String(source.payload.entity_id)));
+    return path?.startsWith("/")&&!path.startsWith("//")&&!path.includes("\\")?path:undefined;
+  }});
   const notificationPlanner = createNotificationPlanner({
-    policy:supplierCommunications.policy,
+    entityRoute:(source,tx)=>resolveEntityNotificationRoute(source,entityCode=>readPublishedNotificationConfiguration(tx,source.tenantId,entityCode)),
+    policy:collaborationNotificationPolicy,
     transactions: exactTransactions,
     consent: consent ?? denyAllConsent,
   });
@@ -5307,7 +5366,7 @@ export function registerServices(
       NOTIFICATION_MAINTENANCE_QUEUE,
       DELIVERY_SWEEP_JOB,
       createDeliverySweepHandler({
-        authorizeDelivery:supplierCommunications.authorizeDelivery,
+        authorizeDelivery:createEntityNotificationDeliveryGuard({transactions:exactTransactions,consent:consent??denyAllConsent,policy:collaborationNotificationPolicy,route:(source,tx)=>resolveEntityNotificationRoute(source,entityCode=>readPublishedNotificationConfiguration(tx,source.tenantId,entityCode)),fallback:supplierCommunications.authorizeDelivery}),
         repository: durableDelivery,
         handlers: notificationHandlers,
         events: notificationEvents,
@@ -5413,11 +5472,50 @@ export function registerServices(
       return reconciler.reconcile();
     };
   }
+  container.platform.httpRegistrars.push((application) => {
+    application.get(
+      "/api/collections/:collectionKey/configuration",
+      createIamAuthenticationMiddleware(iam),
+      async (req, res, next) => {
+        try {
+          const context = readVerifiedRequestContext(res),
+            key = String(req.params.collectionKey);
+          if (!["activity.notifications", "activity.inbox"].includes(key)) {
+            res.status(404).json({ code: "COLLECTION_NOT_FOUND" });
+            return;
+          }
+          const plane = context.planeKey;
+          if (plane !== "neon" && plane !== "mesh" && plane !== "studio")
+            throw new HttpError(
+              403,
+              "COLLECTION_PLANE_FORBIDDEN",
+              "Application plane required",
+            );
+          const value = await exactTransactions.run(plane, context, (tx) =>
+            readPublishedCollectionConfiguration(
+              tx as unknown as Kysely<Record<string, never>>,
+              context.tenantId,
+              plane,
+              key,
+            ),
+          );
+          res.setHeader("Cache-Control", "private, no-store");
+          res
+            .status(value ? 200 : 404)
+            .json(value ?? { code: "COLLECTION_CONFIGURATION_NOT_PUBLISHED" });
+        } catch (error) {
+          next(error);
+        }
+      },
+    );
+  });
   container.platform.httpRegistrars.push((application) =>
     registerNotificationRoutes(application, {
       authenticate: createIamAuthenticationMiddleware(iam),
       readContext: readVerifiedRequestContext,
       inbox: notificationRepositories,
+      validateActivityQuery:(context,query,limit)=>validateActivityCollection(context,"notifications",query,limit),
+      presentInbox: activityPresentation.notifications,
       push: notificationRepositories,
       webPushPublicKey: config?.webPush.publicKey,
       webPushAvailable: container.adapters.pushTransports.some((transport) =>
@@ -5482,6 +5580,7 @@ export function registerServices(
                 throw new Error("Eligibility directory adapter unavailable");
               const { eligibleOperation, ...scopeCoordinate } = coordinate;
               const ids: string[] = [];
+              const businessDate = new Date().toISOString().slice(0, 10);
               let cursor: string | undefined,
                 examined = 0;
               do {
@@ -5497,7 +5596,9 @@ export function registerServices(
                   throw new Error(
                     "Narrow directory scope before checking transaction eligibility",
                   );
-                for (const row of page.data) {
+                // Bound independent eligibility checks without exhausting the DB pool.
+                for (let offset = 0; offset < page.data.length; offset += 8) {
+                  const eligibleIds = await Promise.all(page.data.slice(offset, offset + 8).map(async (row) => {
                   const id = String(row["id"]);
                   const decision = await eligibility.resolve({
                     context,
@@ -5507,9 +5608,11 @@ export function registerServices(
                       coordinate.operatingOrganizationId!,
                     companyCodeId: coordinate.companyCodeId!,
                     operationCode: eligibleOperation!,
-                    businessDate: new Date().toISOString().slice(0, 10),
+                    businessDate,
                   });
-                  if (decision.eligible) ids.push(id);
+                  return decision.eligible ? id : undefined;
+                  }));
+                  ids.push(...eligibleIds.filter((id): id is string => id !== undefined));
                 }
                 cursor = page.pagination.nextCursor;
               } while (cursor);
@@ -5861,9 +5964,11 @@ export function registerServices(
     container.services.workflow = workflow;
     container.platform.httpRegistrars.push((application) =>
       registerWorkflowRoutes(application, {
+        validateActivityQuery:(context,query,limit)=>validateActivityCollection(context,"inbox",query,limit),
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
         workflow,
+        presentInbox: activityPresentation.inbox,
       }),
     );
   }
@@ -7101,6 +7206,8 @@ function registerStudioAuthoring(
       ),
     (db) =>
       new KyselyMetaEntityAuthoringRepository(db, async (tx, input) => {
+        if (await prepareCollectionConfigurationRelease(tx, input)) return;
+        if (await prepareNotificationConfigurationRelease(tx, input)) return;
         const restored = await prepareRuntimeRestorationRelease(
           tx,
           input,
@@ -7370,6 +7477,7 @@ function registerStudioAuthoring(
   );
   container.platform.httpRegistrars.push((application) =>
     registerMetaEntityAuthoringRoutes(application, {
+      inspectNotificationConfiguration: (context, entityCode) => transactions.run("neon", {tenantId:context.tenantId,principalId:context.principalId}, tx=>readPublishedNotificationConfiguration(tx as unknown as Kysely<Record<string,never>>,context.tenantId,entityCode)),
       addressPreviewChoices: context => transactions.run("studio", {tenantId: context.tenantId, principalId: context.principalId}, async tx => ({
         "iso.country": await addressFormChoices(tx, "iso.country"),
         "shared.state_region": await addressFormChoices(tx, "shared.state_region"),
@@ -7554,6 +7662,7 @@ function registerPublication(
   const orchestrators: Partial<
     Record<PublicationPlane, PublicationOrchestrator>
   > = {};
+  const loaders: Partial<Record<PublicationPlane, VerifiedPublicationArtifactLoader>> = {};
   for (const plane of config.publication.applyEnabled
     ? config.publication.targetPlanes
     : []) {
@@ -7571,6 +7680,7 @@ function registerPublication(
         ? { authorizationRuntime: authorizationCompilation.runtime }
         : {}),
     });
+    loaders[plane] = loader;
     orchestrators[plane] = new TenantPublicationOrchestrator(
       authorityDatabase,
       database,
@@ -7579,13 +7689,13 @@ function registerPublication(
         if (loaded.document.manifest.evidence?.authorizationReviewMode !== "development_auto_approval") return;
         if (!devRuntime || deployment.targetEnvironment !== "local" || deployment.signingKeyId !== config.publication.signingKeyId)
           throw Error("DEV_RUNTIME_ACTIVATION_DENIED");
-        const receipt = await devRuntime.authorizeActivation(deployment.sourceReleaseId);
+        const receipt = await devRuntime.authorizeActivation(deployment.sourceReleaseId, loaded);
         if (receipt.receiptSha256 !== loaded.document.manifest.evidence.authorizationReviewReceiptSha256)
           throw Error("DEV_RUNTIME_APPROVAL_CHANGED");
       },
     );
   }
-  container.services.publication = { authority, projections, orchestrators };
+  container.services.publication = { authority, projections, orchestrators, loaders };
   container.runtimes.health.register("publication.database", async () => {
     try {
       await sql`SELECT 1`.execute(authorityDatabase);
@@ -8160,7 +8270,7 @@ function businessPartnerNotificationLifecycle(eventCode: string): string {
 function businessPartnerFlowSelection(kind: string, requestedRole?: string): { readonly flowKey: string; readonly journey: string } {
   const commercial = () => { if (requestedRole !== "supplier" && requestedRole !== "customer") throw new MasterDataError(422, "BUSINESS_PARTNER_REQUEST_ROLE_REQUIRED", "A supplier or customer role is required."); return requestedRole; };
   switch (kind) {
-    case "new_partner": { const role=commercial(); return {flowKey:`${role}.new`, journey:role}; }
+    case "new_partner": { if (!requestedRole) return {flowKey:"partner.new",journey:"governance"}; const role=commercial(); return {flowKey:`${role}.new`, journey:role}; }
     case "add_supplier": return {flowKey:"supplier.add",journey:"supplier"};
     case "add_customer": return {flowKey:"customer.add",journey:"customer"};
     case "configure_company": { const role=commercial(); return {flowKey:`${role}.company`,journey:role}; }

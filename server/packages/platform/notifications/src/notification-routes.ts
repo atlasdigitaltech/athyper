@@ -1,3 +1,4 @@
+import { parseActivityQuery, queryActivity, type ActivityQuery } from "@athyper/contract-platform-activity";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type {
   InAppNotificationRepository,
@@ -21,9 +22,11 @@ import type { createNotificationOperations } from "./notification-operations.js"
 export function registerNotificationRoutes(
   application: Application,
   options: {
+  readonly validateActivityQuery?: (context:VerifiedRequestContext,query:ActivityQuery,limit:number)=>Promise<ActivityQuery>;
     readonly authenticate: RequestHandler;
     readonly readContext: (response: Response) => VerifiedRequestContext;
     readonly inbox: InAppNotificationRepository;
+    readonly presentInbox?: (context: VerifiedRequestContext, items: Awaited<ReturnType<InAppNotificationRepository["list"]>>) => Promise<Awaited<ReturnType<InAppNotificationRepository["list"]>>>;
     readonly push: PushSubscriptionRepository;
     readonly webPushPublicKey?: string;
     /** True only when a transport supporting browser push is registered. */
@@ -119,6 +122,7 @@ export function registerNotificationRoutes(
     );
   }
   if (options.operations) {
+    application.get("/api/operations/notifications/deliveries",options.authenticate,async(request,response,next)=>{try {response.setHeader("Cache-Control","private, no-store");response.json(await options.operations!.list(options.readContext(response),typeof request.query.before==="string"?request.query.before:undefined));}catch(error){next(error);}});
     application.get(
       "/api/notifications/deliveries/:id/timeline",
       options.authenticate,
@@ -190,6 +194,27 @@ export function registerNotificationRoutes(
       try {
         const context = options.readContext(response);
         const limit = integer(request.query["limit"], 50);
+        if (request.query["activityQuery"] !== undefined) {
+          let query;
+          if(request.query["cursor"] !== undefined && typeof request.query["cursor"] !== "string") {response.status(400).json({error:"INVALID_ACTIVITY_CURSOR"});return;}
+          try { query = parseActivityQuery("notifications", request.query["activityQuery"]); }
+          catch(error) { response.status(400).json({error:"INVALID_ACTIVITY_QUERY",message:(error as Error).message}); return; }
+          try {if(options.validateActivityQuery) query=await options.validateActivityQuery(context,query,limit);} catch(error){if(!(error instanceof TypeError))throw error;response.status(400).json({code:"INVALID_COLLECTION_QUERY",message:error.message});return;}
+          const rows: Awaited<ReturnType<typeof options.inbox.list>>[number][] = [];
+          let scanCursor: ReturnType<typeof cursor>;
+          do {
+            const batch = await options.inbox.list({tenantId:context.tenantId,principalId:context.principalId,planeKey:context.planeKey,limit:100,cursor:scanCursor});
+            rows.push(...batch); const last=batch.at(-1);
+            scanCursor=batch.length===100 && last ? Buffer.from(JSON.stringify({createdAt:last.createdAt,id:last.id})).toString("base64url") : undefined;
+          } while(scanCursor);
+          const presented=options.presentInbox ? await options.presentInbox(context,rows) : rows;
+          const unreadCount=await options.inbox.countUnread({tenantId:context.tenantId,principalId:context.principalId,planeKey:context.planeKey});
+          try {
+            const result=queryActivity({kind:"notifications",query,rows:presented,limit,cursor:typeof request.query["cursor"]==="string" ? request.query["cursor"] : undefined,scope:JSON.stringify([context.tenantId,context.principalId,context.planeKey]),project:item=>({id:item.id,createdAt:item.createdAt,title:item.title,summary:item.body,recordLabel:item.recordLabel,entity:item.entityType??"",type:item.eventCode,unread:!item.readAt})});
+            response.json({...result,notifications:result.data,unreadCount});
+          } catch(error) { response.status(400).json({error:"INVALID_ACTIVITY_CURSOR",message:(error as Error).message}); }
+          return;
+        }
         const notifications = await options.inbox.list({
           tenantId: context.tenantId,
           principalId: context.principalId,
@@ -205,7 +230,7 @@ export function registerNotificationRoutes(
         });
         const last = notifications.at(-1);
         response.status(200).json({
-          notifications,
+          notifications: options.presentInbox ? await options.presentInbox(context, notifications) : notifications,
           unreadCount,
           ...(last && notifications.length === limit
             ? {

@@ -90,6 +90,7 @@ export function collaborationTime(value: unknown) {
       }).format(date);
 }
 export function collaborationFileSize(value: unknown) {
+  if (value === null || value === undefined) return "";
   const bytes = Number(value);
   return Number.isFinite(bytes)
     ? bytes < 1024

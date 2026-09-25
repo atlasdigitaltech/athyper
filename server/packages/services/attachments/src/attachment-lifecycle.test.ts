@@ -917,19 +917,44 @@ describe("attachment lifecycle", () => {
   });
 
   it("replays a lost folder response and rejects concurrent folder mutations with a stale workspace revision", async () => {
-    const receipts = new Map<string, { readonly folderId: string | null; readonly revision: number }>(); let revision = 1;
+    const receipts = new Map<string, { readonly folderId: string | null; readonly revision: number }>(); let revision = 1; const events: OutboxEventInput[] = [];
     const manageFolder = vi.fn(async (_identity: unknown, input: { readonly expectedRevision: number }) => input.expectedRevision === revision ? { revision: ++revision } : { revision: undefined });
-    const lifecycle = createAttachmentLifecycle({ transactions:{run:async(_p,_a,work)=>work({})}, repository:{manageFolder,createStaged:async()=>{throw new Error("unused");},load:async()=>null,finalizeClean:async()=>{throw new Error("unused");},quarantine:async()=>undefined,deactivate:async()=>undefined,expire:async()=>undefined,markPurged:async()=>undefined}, commandExecutions:{begin:async input=>receipts.has(input.idempotencyKey)?{kind:"replay",result:receipts.get(input.idempotencyKey)!}:{kind:"started",executionId:input.idempotencyKey},complete:async(id,result)=>{receipts.set(id,result);}}, storage:{createUploadUrl:async()=>"",createDownloadUrl:async()=>"",put:async()=>undefined,get:async()=>new Uint8Array(),delete:async()=>undefined,copy:async()=>undefined,exists:async()=>false}, scanner:{scan:async()=>({status:"clean",scanner:"test",scannedAt:new Date().toISOString(),durationMs:1})},quota:{reserve:async()=>"created",commit:async()=>undefined,release:async()=>true,expire:async()=>[]},quotaPolicies:{resolve:async()=>({kind:"attachment.storage",limitBytes:1,limitItems:1,reservationTtlSeconds:1,retryAfterSeconds:1})},outbox:{append:async()=>undefined} });
+    const lifecycle = createAttachmentLifecycle({ transactions:{run:async(_p,_a,work)=>work({})}, repository:{manageFolder,createStaged:async()=>{throw new Error("unused");},load:async()=>null,finalizeClean:async()=>{throw new Error("unused");},quarantine:async()=>undefined,deactivate:async()=>undefined,expire:async()=>undefined,markPurged:async()=>undefined}, commandExecutions:{begin:async input=>receipts.has(input.idempotencyKey)?{kind:"replay",result:receipts.get(input.idempotencyKey)!}:{kind:"started",executionId:input.idempotencyKey},complete:async(id,result)=>{receipts.set(id,result);}}, storage:{createUploadUrl:async()=>"",createDownloadUrl:async()=>"",put:async()=>undefined,get:async()=>new Uint8Array(),delete:async()=>undefined,copy:async()=>undefined,exists:async()=>false}, scanner:{scan:async()=>({status:"clean",scanner:"test",scannedAt:new Date().toISOString(),durationMs:1})},quota:{reserve:async()=>"created",commit:async()=>undefined,release:async()=>true,expire:async()=>[]},quotaPolicies:{resolve:async()=>({kind:"attachment.storage",limitBytes:1,limitItems:1,reservationTtlSeconds:1,retryAfterSeconds:1})},outbox:{append:async event=>{events.push(event);}} });
     const identity={planeKey:"neon" as const,tenantId:"11111111-1111-4111-8111-111111111111",principalId:"22222222-2222-4222-8222-222222222222",attachmentId:"33333333-3333-4333-8333-333333333333"}; const command={command:"move" as const,entityType:"business_partner",entityId:"record-1",folderId:"44444444-4444-4444-8444-444444444444",attachmentId:identity.attachmentId,expectedRevision:1,idempotencyKey:"folder-move-command-0001"};
     await expect(lifecycle.manageFolder!(identity,command)).resolves.toEqual({folderId:command.folderId,revision:2});
     await expect(lifecycle.manageFolder!(identity,command)).resolves.toEqual({folderId:command.folderId,revision:2});
-    await expect(lifecycle.manageFolder!(identity,{...command,command:"delete",attachmentId:undefined,idempotencyKey:"folder-delete-command-1"})).rejects.toThrow("Attachment workspace has changed");
+    await expect(lifecycle.manageFolder!(identity,{...command,command:"delete",attachmentId:undefined,idempotencyKey:"folder-delete-command-1"})).rejects.toMatchObject({code:"ATTACHMENT_WORKSPACE_REVISION_CONFLICT"});
     expect(manageFolder).toHaveBeenCalledTimes(2);
     const unfiled={...command,folderId:null,expectedRevision:2,idempotencyKey:"folder-unfile-command-1"};
     await expect(lifecycle.manageFolder!(identity,unfiled)).resolves.toEqual({folderId:null,revision:3});
     await expect(lifecycle.manageFolder!(identity,unfiled)).resolves.toEqual({folderId:null,revision:3});
+    const returnToFolder={...command,expectedRevision:3,idempotencyKey:"folder-return-command-1"};
+    await expect(lifecycle.manageFolder!(identity,returnToFolder)).resolves.toEqual({folderId:command.folderId,revision:4});
+    await expect(lifecycle.manageFolder!(identity,returnToFolder)).resolves.toEqual({folderId:command.folderId,revision:4});
+    expect(events).toHaveLength(3);
+    expect(new Set(events.map(event=>event.eventKey)).size).toBe(3);
     await expect(lifecycle.manageFolder!(identity,{...unfiled,command:"delete"})).rejects.toThrow("Attachment folder command is invalid");
-    expect(manageFolder).toHaveBeenCalledTimes(3);
+    expect(manageFolder).toHaveBeenCalledTimes(4);
+  });
+
+  it("replays archive with the original idempotency key instead of applying it twice", async () => {
+    const receipts = new Map<string, Readonly<Record<string, unknown>>>();
+    const archive = vi.fn(async () => ({ activeLinks: 1, legalHold: false }));
+    const identity = { planeKey: "neon" as const, tenantId: "11111111-1111-4111-8111-111111111111", principalId: "22222222-2222-4222-8222-222222222222", attachmentId: "33333333-3333-4333-8333-333333333333" };
+    const lifecycle = createAttachmentLifecycle({
+      transactions: { run: async (_plane, _actor, work) => work({}) },
+      repository: { archive, createStaged: async () => { throw new Error("unused"); }, load: async () => null, finalizeClean: async () => { throw new Error("unused"); }, quarantine: async () => undefined, deactivate: async () => undefined, expire: async () => undefined, markPurged: async () => undefined },
+      commandExecutions: { begin: async input => receipts.has(input.idempotencyKey) ? { kind: "replay" as const, result: receipts.get(input.idempotencyKey)! } : { kind: "started" as const, executionId: input.idempotencyKey }, complete: async (id, result) => { receipts.set(id, result); } },
+      storage: { createUploadUrl: async () => "", createDownloadUrl: async () => "", put: async () => undefined, get: async () => new Uint8Array(), delete: async () => undefined, copy: async () => undefined, exists: async () => false },
+      scanner: { scan: async () => ({ status: "clean" as const, scanner: "test", scannedAt: new Date().toISOString(), durationMs: 1 }) },
+      quota: { reserve: async () => "created" as const, commit: async () => undefined, release: async () => true, expire: async () => [] },
+      quotaPolicies: { resolve: async () => ({ kind: "attachment.storage", limitBytes: 1, limitItems: 1, reservationTtlSeconds: 1, retryAfterSeconds: 1 }) },
+      outbox: { append: async () => undefined },
+    });
+    const command = { idempotencyKey: "attachment-archive-command-0001" };
+    await expect(lifecycle.archive!(identity, command)).resolves.toEqual({ activeLinks: 1, legalHold: false });
+    await expect(lifecycle.archive!(identity, command)).resolves.toEqual({ activeLinks: 1, legalHold: false });
+    expect(archive).toHaveBeenCalledOnce();
   });
 
   it("retries the complete original, staging, and derivative purge manifest after storage failure", async () => {

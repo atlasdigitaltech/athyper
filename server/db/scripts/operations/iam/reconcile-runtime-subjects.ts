@@ -29,7 +29,11 @@ const databases = [
 const results = [];
 for (const [plane, database] of databases) {
   const client = new pg.Client({
-    connectionString: `postgresql://postgres:${encodeURIComponent(postgresPassword)}@db:5432/${database}`,
+    host: process.env.POSTGRES_HOST?.trim() || "db",
+    port: 5432,
+    user: "postgres",
+    password: postgresPassword,
+    database,
     application_name: "iam-runtime-subject-reconciliation",
   });
   await client.connect();

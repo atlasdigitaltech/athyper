@@ -1,6 +1,6 @@
 import { RelationshipOverview } from "./relationship-overview";
 import { Card } from "@athyper/platform-ui";
-import type { Summary } from "../business-partner-360-client";
+import type { Summary } from "@athyper/product-neon-entity-extensions/business-partner/clients/business-partner-360-client";
 import { useBusinessPartner360 } from "../business-partner-360-context";
 
 export function partnerLabel(value: string) {

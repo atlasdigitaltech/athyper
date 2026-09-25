@@ -2,6 +2,50 @@ import { buildSync } from "esbuild";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test, expect } from "@playwright/test";
+test("shared composer sends the comment previously covered by the retired BP shell", async ({ page }) => {
+  const editor = page.getByRole("textbox", { name: "Comment", exact: true });
+  await editor.fill("Reviewed certificate renewal.");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).commentCalls
+    .find((call: any) => call.method === "POST" && call.path.endsWith("/comments"))?.body.text))
+    .toBe("Reviewed certificate renewal.");
+  await expect(editor).toBeEmpty();
+});
+test("mentions use server matching threads and independent pagination",async({page})=>{
+  await page.getByRole("button",{name:"Mentions",exact:true}).click();
+  await expect(page.getByText("Mention exists in a visible reply",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Load more mentions",exact:true}).click();
+  await expect(page.getByText("Second mentioned thread",{exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>(window as any).commentCalls.filter((call:any)=>call.path==="mentions-page").map((call:any)=>call.cursor??null))).toEqual([null,"next-mentions"]);
+});
+test("mention-only paste autosaves without deleting the draft",async({page})=>{
+  const editor=page.locator(".a-comment-composer-card").getByRole("textbox",{name:"Comment",exact:true});
+  await editor.evaluate(element=>{
+    const data=new DataTransfer();
+    data.setData("application/x-athyper-rich-text+json",JSON.stringify({type:"doc",schema:"athyper.rich-text/1.0",content:[{type:"paragraph",content:[{type:"mention",attrs:{principalId:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",label:"Ada"}}]}]}));
+    element.dispatchEvent(new ClipboardEvent("paste",{clipboardData:data,bubbles:true,cancelable:true}));
+  });
+  await expect.poll(()=>page.evaluate(()=>(window as any).commentCalls.find((call:any)=>call.path.endsWith("/drafts")&&call.method==="POST")?.body.text)).toBe("@Ada");
+  expect(await page.evaluate(()=>(window as any).commentCalls.filter((call:any)=>call.path.endsWith("/drafts")&&call.method==="DELETE").length)).toBe(0);
+});
+test("image paste prepares a draft and blocks a concurrent picker submission",async({page})=>{
+  let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});let stages=0;
+  await page.route("**/api/relay/attachments/**",async route=>{if(route.request().url().endsWith("/stage")){stages++;await gate;await route.fulfill({json:{attachmentId:route.request().postDataJSON().attachmentId,uploadUrl:"https://storage.test/paste"}});}else await route.fulfill({json:{status:"active"}});});
+  await page.route("https://storage.test/paste",route=>route.fulfill({status:200,headers:{"access-control-allow-origin":"*"}}));
+  const composer=page.locator(".a-comment-composer-card");
+  await composer.getByRole("textbox",{name:"Comment",exact:true}).evaluate(element=>{const data=new DataTransfer();data.items.add(new File(["png"],"pasted.png",{type:"image/png"}));element.dispatchEvent(new ClipboardEvent("paste",{clipboardData:data,bubbles:true,cancelable:true}));});
+  await expect.poll(()=>stages).toBe(1);await expect(composer.getByRole("button",{name:"Send",exact:true})).toBeDisabled();
+  await composer.getByLabel("Choose comment attachments").setInputFiles({name:"concurrent.pdf",mimeType:"application/pdf",buffer:Buffer.from("pdf")});
+  expect(stages).toBe(1);release();await expect(composer.getByRole("list",{name:"Comment attachments"}).getByRole("listitem")).toHaveCount(1);
+});
+test("refresh preserves eight loaded reply pages",async({page})=>{
+  await page.evaluate(()=>{(window as any).eightPages=true;(window as any).setReplyCount(8);});
+  await page.getByRole("button",{name:/Show.*repl/i}).click();
+  for(let n=2;n<=8;n++){await page.getByRole("button",{name:"Load more replies"}).click();await expect(page.getByText(`Reply page ${n}`,{exact:true})).toBeVisible();}
+  await page.getByRole("button",{name:"Like comment",exact:true}).first().click();
+  await expect(page.getByText("Reply page 8",{exact:true})).toBeVisible();
+  await expect.poll(()=>page.evaluate(()=>(window as any).commentCalls.filter((c:any)=>c.path==="thread-page").length)).toBeGreaterThanOrEqual(16);
+});
 const fixture = resolve(
   "tooling/scripts/verification/comment-actions-browser-fixture.tsx",
 );
@@ -96,7 +140,8 @@ test("edit errors preserve text; report/history open focused dialogs and reactio
     .getByRole("button", { name: "Save comment", exact: true })
     .click();
   await expect(editor).toHaveText("Unsaved edit");
-  await expect(dialog.getByRole("alert").first()).toBeVisible();
+  await expect(dialog.getByRole("alert")).toHaveCount(1);
+  await expect(dialog.getByRole("alert")).toBeVisible();
   await dialog
     .getByRole("button", { name: "Review latest saved revision" })
     .click();
@@ -128,7 +173,7 @@ test("edit errors preserve text; report/history open focused dialogs and reactio
   await expect(page.getByText("Report submitted for review",{exact:true})).toBeVisible();
   await expect(dialog).toHaveCount(0);
   await expect(item.getByText("Report pending review",{exact:true})).toBeVisible();
-  await item.getByRole("button",{name:"View your report",exact:true}).click();
+  await action("View your report");
   const report=page.getByRole("dialog",{name:"Your report",exact:true});
   await expect(report).toContainText("Spam");
   await expect(report).toContainText("Review this fixture");
@@ -151,7 +196,7 @@ test("PDF picker pins a draft-scoped file and preserves it while editing", async
     if (route.request().url().endsWith("/stage")) {
       stages.push(route.request().postDataJSON());
       await route.fulfill({
-        json: { attachmentId: id, uploadUrl: "https://storage.test/upload" },
+        json: { attachmentId: route.request().postDataJSON().attachmentId, uploadUrl: "https://storage.test/upload" },
       });
     } else await route.fulfill({ json: { status: "active" } });
   });
@@ -196,7 +241,11 @@ test("PDF picker pins a draft-scoped file and preserves it while editing", async
       (window as any).commentCalls.find((call: any) => call.method === "PATCH")
         .body,
   );
-  expect(edit.attachmentIds).toEqual([id]);
+  expect(edit.attachmentIds).toEqual([stages[1].attachmentId]);
+  const drafts=await page.evaluate(()=>(window as any).commentCalls.filter((call:any)=>call.path.endsWith("/drafts")));
+  expect(drafts.find((call:any)=>call.method==="POST" && call.body.contextType?.startsWith("entity_edit_"))).toBeTruthy();
+  expect(drafts.find((call:any)=>call.method==="DELETE").query.contextType).toMatch(/^entity_edit_/);
+  await expect(composer.getByRole("list",{name:"Comment attachments"})).toContainText("proof.pdf");
   expect(
     edit.content.content.some((node: any) => node.type === "attachmentFile"),
   ).toBe(true);
@@ -438,6 +487,7 @@ test("edit supports audience-scoped mentions and explains locked visibility", as
   await item.getByRole('button',{name:'Edit',exact:true}).click();
   const edit=item.getByRole('region',{name:'Edit comment',exact:true});
   await expect(edit.getByRole('button',{name:'Audience: Public'})).toHaveCount(0);
+  await expect(edit.getByRole('textbox',{name:'Comment',exact:true})).toBeFocused();
   const audience=edit.locator('.a-rich-comment-composer__locked-audience');
   await audience.focus();
   await expect(edit.getByRole('tooltip',{name:'Visibility is fixed after posting. Editing keeps the original audience.'})).toHaveCSS('opacity','1');
@@ -522,4 +572,17 @@ test("comment attachment eye opens the shared preview and close restores focus",
   expect(await page.evaluate(()=>(window as any).commentCalls.filter((call:any)=>call.path.endsWith("/preview")).at(-1)?.body.rendition)).toBe("preview_default");
   await page.getByRole("button",{name:"Close preview",exact:true}).click();
   await expect(preview).toBeFocused();
+});
+
+test('notification deep link bounds automatic paging and allows manual continuation',async({page})=>{
+ await page.route('https://comments.test/?**',route=>route.fulfill({contentType:'text/html',body:`<html><head><style>${css}</style></head><body><div id="root"></div></body></html>`}));
+ await page.goto('https://comments.test/?commentId=page-7&threadRootId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+ await page.evaluate(()=>{(window as any).eightPages=true;});
+ await page.evaluate(bundle);
+ await expect(page.getByText('The linked reply is not loaded. Use Load more replies to continue.')).toBeVisible();
+ expect(await page.evaluate(()=>(window as any).commentCalls.filter((call:any)=>call.path==="thread-page").length)).toBeLessThanOrEqual(6);
+ while (!await page.getByText('Reply page 8',{exact:true}).isVisible()) {
+   await page.getByRole('button',{name:'Load more replies',exact:true}).click();
+ }
+ await expect(page.getByText('Reply page 8',{exact:true})).toBeVisible();
 });

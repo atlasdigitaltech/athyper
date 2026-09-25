@@ -27,6 +27,7 @@ export function countryName(value: string | undefined): string | undefined {
     return value;
   }
 }
+export function businessTitle(value: string): string { return businessLabel(value, "title"); }
 export function safeDocumentUrl(value: string): string | undefined {
   try {
     const url = new URL(value, window.location.origin);

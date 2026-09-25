@@ -20,29 +20,39 @@ export async function foundation(plan) {
   const ddl = join(plan.checkout, "server/db/ddl");
   const scripts = join(plan.checkout, "deploy/compose/instance/scripts");
   const checksum = treeHash(ddl);
+  const staging = "/tmp/athyper-local-foundation";
   await command("docker", [
     "exec",
     db.Id,
     "mkdir",
     "-p",
-    "/athyper/reconciliation",
+    `${staging}/reconciliation`,
   ]);
-  await command("docker", ["cp", ddl, `${db.Id}:/athyper/`]);
-  for (const file of ["run-foundation.sh", "runtime-worker-grants-v1.sql"])
-    await command("docker", [
-      "cp",
-      join(scripts, file),
-      `${db.Id}:/athyper/reconciliation/${file}`,
-    ]);
+  // docker cp rejects read-only roots even when the destination is tmpfs.
+  // Stream into the container's writable /tmp without relaxing its rootfs.
+  await command("bash", [
+    "-o", "pipefail", "-c",
+    'tar -C "$1" -cf - ddl | docker exec -i "$2" tar -C "$3" -xf -',
+    "local-foundation", join(plan.checkout, "server/db"), db.Id, staging,
+  ]);
+  await command("bash", [
+    "-o", "pipefail", "-c",
+    'tar -C "$1" -cf - run-foundation.sh runtime-worker-grants-v1.sql | docker exec -i "$2" tar -C "$3" -xf -',
+    "local-foundation", scripts, db.Id, `${staging}/reconciliation`,
+  ]);
   await command("docker", [
     "exec",
     "-e",
     "PGUSER=postgres",
     "-e",
     `ATHYPER_DDL_SHA256=${checksum}`,
+    "-e",
+    `ATHYPER_DDL_ROOT=${staging}/ddl`,
+    "-e",
+    `ATHYPER_RECONCILIATION_ROOT=${staging}/reconciliation`,
     db.Id,
     "sh",
-    "/athyper/reconciliation/run-foundation.sh",
+    `${staging}/reconciliation/run-foundation.sh`,
   ]);
   await command(
     join(plan.checkout, "node_modules/.bin/tsx"),
@@ -111,11 +121,11 @@ export function applicationEnvironment(plan, mode) {
     ATHYPER_ENV: "local",
     ENVIRONMENT: "local",
     PROCESS_METRICS_HOST: "127.0.0.1",
-    PROCESS_METRICS_PORT: String(
+    ...(mode === "worker" || mode === "scheduler" ? { PROCESS_METRICS_PORT: String(
       mode === "scheduler"
         ? (plan.ports.schedulerMetrics ?? plan.ports.gateway + 15)
         : (plan.ports.workerMetrics ?? plan.ports.gateway + 14),
-    ),
+    ) } : {}),
     MODE: mode,
     PORT: String(plan.ports.api),
     HOST: "127.0.0.1",

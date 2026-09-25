@@ -1,12 +1,15 @@
+import { parseActivityQuery, queryActivity, type ActivityQuery } from "@athyper/contract-platform-activity";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { WorkflowService, WorkItemPriority, WorkItemStatus } from "@athyper/server-contract-workflow";
 import type { Application, RequestHandler, Response } from "express";
 import { WorkflowError } from "./errors.js";
 
 export interface WorkflowRouteOptions {
+  readonly validateActivityQuery?: (context:VerifiedRequestContext,query:ActivityQuery,limit:number)=>Promise<ActivityQuery>;
   readonly authenticate: RequestHandler;
   readonly readContext: (response: Response) => VerifiedRequestContext;
   readonly workflow: WorkflowService;
+  readonly presentInbox?: (context: VerifiedRequestContext, items: Awaited<ReturnType<WorkflowService["listInbox"]>>["data"]) => Promise<Awaited<ReturnType<WorkflowService["listInbox"]>>["data"]>;
 }
 
 export function registerWorkflowRoutes(application: Application, options: WorkflowRouteOptions): void {
@@ -16,8 +19,27 @@ export function registerWorkflowRoutes(application: Application, options: Workfl
   });
   application.get("/api/workflow/inbox", options.authenticate, async (request, response, next) => {
     try {
+      if (request.query["activityQuery"] !== undefined) {
+        const context=options.readContext(response);
+        const activityLimit=integer(request.query["limit"])??50,activityCursor=queryText(request.query["cursor"],"cursor");
+        let query;
+        try {query=parseActivityQuery("inbox",request.query["activityQuery"]);} catch(error) {response.status(400).json({error:"INVALID_ACTIVITY_QUERY",message:(error as Error).message});return;}
+        try {if(options.validateActivityQuery) query=await options.validateActivityQuery(context,query,activityLimit);} catch(error){if(!(error instanceof TypeError))throw error;response.status(400).json({code:"INVALID_COLLECTION_QUERY",message:error.message});return;}
+        const rows: Awaited<ReturnType<typeof options.workflow.listInbox>>["data"][number][]=[];
+        let scanCursor:string|undefined;
+        do {
+          const batch=await options.workflow.listInbox({context,limit:100,cursor:scanCursor,statuses:["open","claimed","in_progress","blocked","completed","cancelled"]});
+          rows.push(...batch.data);scanCursor=batch.nextCursor;
+        } while(scanCursor);
+        const presented=options.presentInbox ? await options.presentInbox(context,rows) : rows;
+        try {
+          const result=queryActivity({kind:"inbox",query,rows:presented,limit:activityLimit,cursor:activityCursor,scope:JSON.stringify([context.tenantId,context.principalId,context.planeKey]),project:item=>({id:item.id,createdAt:item.createdAt,title:item.title,summary:item.description,recordLabel:item.recordLabel,entity:item.sourceEntityCode,type:item.workTypeCode,status:item.status,priority:item.priority,dueAt:item.dueAt,assignment:(item.claimantPrincipalId??item.assigneePrincipalId)===context.principalId ? "me" : item.assigneeTeamId ? "team" : "other"})});
+          response.json({...result,totalCount:rows.filter(item=>["open","claimed","in_progress","blocked"].includes(item.status)).length});
+        } catch(error) {response.status(400).json({error:"INVALID_ACTIVITY_CURSOR",message:(error as Error).message});}
+        return;
+      }
       const result = await options.workflow.listInbox({ context: options.readContext(response), limit: integer(request.query["limit"]), cursor: queryText(request.query["cursor"], "cursor"), statuses: statuses(request.query["status"]) });
-      response.json(result);
+      response.json(options.presentInbox ? {...result, data: await options.presentInbox(options.readContext(response), result.data)} : result);
     } catch (error) { sendError(error, response, next); }
   });
   application.post("/api/workflow/work-items", options.authenticate, async (request, response, next) => {
