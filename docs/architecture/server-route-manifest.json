@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1353,
+    "identities": 1361,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 485,
+    "currentOnly": 493,
     "legacyOccurrences": 898,
-    "currentOccurrences": 551
+    "currentOccurrences": 559
   },
   "routes": [
     {
@@ -164,7 +164,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 87,
+          "line": 88,
           "declaredPath": "/api/collab/comments/:id",
           "kind": "direct"
         }
@@ -179,7 +179,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 119,
+          "line": 120,
           "declaredPath": "/api/collab/comments/:id/reactions/:code",
           "kind": "direct"
         }
@@ -201,7 +201,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 140,
+          "line": 141,
           "declaredPath": "/api/collab/drafts",
           "kind": "direct"
         }
@@ -742,7 +742,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 399,
+          "line": 424,
           "declaredPath": "/api/notifications/push-subscriptions/:id",
           "kind": "direct"
         }
@@ -2103,6 +2103,36 @@
       "status": "current-only"
     },
     {
+      "identity": "GET /api/collections/:param/configuration",
+      "method": "GET",
+      "path": "/api/collections/:param/configuration",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/register-services.ts",
+          "line": 5476,
+          "declaredPath": "/api/collections/:collectionKey/configuration",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/collections/:param/descriptor",
+      "method": "GET",
+      "path": "/api/collections/:param/descriptor",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/register-services.ts",
+          "line": 5109,
+          "declaredPath": "/api/collections/:collectionKey/descriptor",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "GET /api/content/admin/quarantined",
       "method": "GET",
       "path": "/api/content/admin/quarantined",
@@ -2819,7 +2849,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 29,
+          "line": 37,
           "declaredPath": "/api/entity-runtime/:entityCode/application-descriptor",
           "kind": "contract"
         }
@@ -2834,7 +2864,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 32,
+          "line": 40,
           "declaredPath": "/api/entity-runtime/:entityCode/detail-descriptor",
           "kind": "contract"
         }
@@ -2849,7 +2879,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 31,
+          "line": 39,
           "declaredPath": "/api/entity-runtime/:entityCode/form-descriptor",
           "kind": "contract"
         }
@@ -2864,7 +2894,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 34,
+          "line": 42,
           "declaredPath": "/api/entity-runtime/:entityCode/list",
           "kind": "contract"
         }
@@ -2879,7 +2909,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 30,
+          "line": 38,
           "declaredPath": "/api/entity-runtime/:entityCode/list-descriptor",
           "kind": "contract"
         }
@@ -2894,7 +2924,7 @@
       "current": [
         {
           "source": "server/packages/services/records/src/entity-list-routes.ts",
-          "line": 33,
+          "line": 41,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId",
           "kind": "contract"
         }
@@ -2909,7 +2939,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/entity-runtime-contracts.ts",
-          "line": 7,
+          "line": 8,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/bootstrap",
           "kind": "contract"
         }
@@ -2924,7 +2954,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/entity-runtime-contracts.ts",
-          "line": 10,
+          "line": 11,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/sections/:sectionKey",
           "kind": "contract"
         }
@@ -2939,7 +2969,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/entity-runtime-contracts.ts",
-          "line": 8,
+          "line": 9,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/summary",
           "kind": "contract"
         }
@@ -2956,21 +2986,6 @@
           "source": "server/packages/platform/preferences/src/reference-choice-routes.ts",
           "line": 180,
           "declaredPath": "/api/entity-runtime/:entityCode/reference-history",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/entity-runtime/:param/views",
-      "method": "GET",
-      "path": "/api/entity-runtime/:param/views",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/platform/preferences/src/entity-views-routes.ts",
-          "line": 46,
-          "declaredPath": "/api/entity-runtime/:entityCode/views",
           "kind": "direct"
         }
       ],
@@ -5463,7 +5478,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 66,
+          "line": 83,
           "declaredPath": "/api/meta-entity-authoring/change-sets",
           "kind": "direct"
         }
@@ -5478,7 +5493,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 74,
+          "line": 91,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/graph",
           "kind": "direct"
         }
@@ -5493,7 +5508,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 24,
+          "line": 41,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/history",
           "kind": "direct"
         }
@@ -5508,8 +5523,68 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 29,
+          "line": 46,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/history/:revision",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/meta-entity-authoring/change-sets/:param/notifications",
+      "method": "GET",
+      "path": "/api/meta-entity-authoring/change-sets/:param/notifications",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
+          "line": 142,
+          "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/meta-entity-authoring/change-sets/:param/notifications/:param/templates",
+      "method": "GET",
+      "path": "/api/meta-entity-authoring/change-sets/:param/notifications/:param/templates",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
+          "line": 179,
+          "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications/:capability/templates",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/meta-entity-authoring/change-sets/:param/notifications/:param/templates/:param",
+      "method": "GET",
+      "path": "/api/meta-entity-authoring/change-sets/:param/notifications/:param/templates/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
+          "line": 192,
+          "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications/:capability/templates/:key",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/meta-entity-authoring/collection-providers",
+      "method": "GET",
+      "path": "/api/meta-entity-authoring/collection-providers",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/collection-authoring-routes.ts",
+          "line": 50,
+          "declaredPath": "/api/meta-entity-authoring/collection-providers",
           "kind": "direct"
         }
       ],
@@ -5523,8 +5598,23 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 38,
+          "line": 55,
           "declaredPath": "/api/meta-entity-authoring/inspection/address-preview-choices",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/meta-entity-authoring/inspection/notifications/:param",
+      "method": "GET",
+      "path": "/api/meta-entity-authoring/inspection/notifications/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
+          "line": 27,
+          "declaredPath": "/api/meta-entity-authoring/inspection/notifications/:entityCode",
           "kind": "direct"
         }
       ],
@@ -5538,7 +5628,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 54,
+          "line": 71,
           "declaredPath": "/api/meta-entity-authoring/inspection/releases",
           "kind": "direct"
         }
@@ -5553,7 +5643,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 58,
+          "line": 75,
           "declaredPath": "/api/meta-entity-authoring/inspection/releases/:id",
           "kind": "direct"
         }
@@ -5568,7 +5658,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 45,
+          "line": 62,
           "declaredPath": "/api/meta-entity-authoring/inspection/releases/:id/activation",
           "kind": "direct"
         }
@@ -6296,21 +6386,6 @@
       "status": "current-only"
     },
     {
-      "identity": "GET /api/neon/business-partner-bank-verifications/:param",
-      "method": "GET",
-      "path": "/api/neon/business-partner-bank-verifications/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 19,
-          "declaredPath": "/api/neon/business-partner-bank-verifications/:verificationId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "GET /api/neon/business-partner-invitation-templates/:param",
       "method": "GET",
       "path": "/api/neon/business-partner-invitation-templates/:param",
@@ -6422,7 +6497,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/master-data/src/business-partner-360-route-contracts.ts",
+          "source": "server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts",
           "line": 92,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/:section",
           "kind": "contract"
@@ -6437,7 +6512,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/master-data/src/business-partner-360-route-contracts.ts",
+          "source": "server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts",
           "line": 74,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/summary",
           "kind": "contract"
@@ -6453,7 +6528,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 334,
+          "line": 335,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/customer-credit-reviews",
           "kind": "direct"
         }
@@ -6468,7 +6543,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 254,
+          "line": 255,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/customer-designations",
           "kind": "direct"
         }
@@ -6498,7 +6573,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 166,
+          "line": 167,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/preferences",
           "kind": "direct"
         }
@@ -6738,7 +6813,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 11,
+          "line": 9,
           "declaredPath": "/api/neon/mesh-business-partner-account-links/:linkId",
           "kind": "direct"
         }
@@ -6768,7 +6843,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 15,
+          "line": 13,
           "declaredPath": "/api/neon/protected-bank-registrations/:bankAccountLinkId",
           "kind": "direct"
         }
@@ -6783,7 +6858,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts",
-          "line": 2,
+          "line": 51,
           "declaredPath": "/api/neon/supplier-workforce/policy-readiness",
           "kind": "direct"
         }
@@ -6798,7 +6873,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts",
-          "line": 2,
+          "line": 56,
           "declaredPath": "/api/neon/supplier-workforce/requisitions",
           "kind": "direct"
         }
@@ -7038,7 +7113,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 476,
+          "line": 501,
           "declaredPath": "/api/notifications/counts",
           "kind": "contract"
         }
@@ -7053,7 +7128,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 122,
+          "line": 126,
           "declaredPath": "/api/notifications/deliveries/:id/timeline",
           "kind": "direct"
         }
@@ -7068,7 +7143,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 186,
+          "line": 190,
           "declaredPath": "/api/notifications/inbox",
           "kind": "direct"
         }
@@ -7120,7 +7195,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 63,
+          "line": 66,
           "declaredPath": "/api/notifications/preferences",
           "kind": "direct"
         }
@@ -7150,7 +7225,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 446,
+          "line": 471,
           "declaredPath": "/api/notifications/push-configuration",
           "kind": "contract"
         }
@@ -7195,7 +7270,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 334,
+          "line": 359,
           "declaredPath": "/api/notifications/stream",
           "kind": "direct"
         }
@@ -7278,6 +7353,21 @@
       "status": "legacy-only"
     },
     {
+      "identity": "GET /api/operations/notifications/deliveries",
+      "method": "GET",
+      "path": "/api/operations/notifications/deliveries",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/notifications/src/notification-routes.ts",
+          "line": 125,
+          "declaredPath": "/api/operations/notifications/deliveries",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "GET /api/operations/notifications/deliveries/:param/timeline",
       "method": "GET",
       "path": "/api/operations/notifications/deliveries/:param/timeline",
@@ -7285,7 +7375,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 144,
+          "line": 148,
           "declaredPath": "/api/operations/notifications/deliveries/:id/timeline",
           "kind": "direct"
         }
@@ -9710,7 +9800,7 @@
       "current": [
         {
           "source": "server/packages/platform/workflow/src/workflow-routes.ts",
-          "line": 17,
+          "line": 20,
           "declaredPath": "/api/workflow/inbox",
           "kind": "direct"
         }
@@ -9792,7 +9882,7 @@
       "current": [
         {
           "source": "server/packages/platform/workflow/src/workflow-routes.ts",
-          "line": 13,
+          "line": 16,
           "declaredPath": "/api/workflow/requests/:id/context",
           "kind": "direct"
         }
@@ -10799,7 +10889,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 77,
+          "line": 80,
           "declaredPath": "/api/notifications/preferences",
           "kind": "direct"
         }
@@ -11510,7 +11600,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 105,
+          "line": 144,
           "declaredPath": "/api/attachments/:attachmentId/extract",
           "kind": "direct"
         }
@@ -11540,8 +11630,23 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 101,
+          "line": 140,
           "declaredPath": "/api/attachments/:attachmentId/preview",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/attachments/browse",
+      "method": "POST",
+      "path": "/api/attachments/browse",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
+          "line": 152,
+          "declaredPath": "/api/attachments/browse",
           "kind": "direct"
         }
       ],
@@ -11570,7 +11675,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 109,
+          "line": 148,
           "declaredPath": "/api/attachments/search",
           "kind": "direct"
         }
@@ -11776,7 +11881,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 169,
+          "line": 170,
           "declaredPath": "/api/collab/comments/:id/flag",
           "kind": "direct"
         }
@@ -11798,7 +11903,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 105,
+          "line": 106,
           "declaredPath": "/api/collab/comments/:id/reactions",
           "kind": "direct"
         }
@@ -11842,7 +11947,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 156,
+          "line": 157,
           "declaredPath": "/api/collab/comments/mark-all-read",
           "kind": "direct"
         }
@@ -11864,7 +11969,7 @@
       "current": [
         {
           "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
-          "line": 132,
+          "line": 133,
           "declaredPath": "/api/collab/drafts",
           "kind": "direct"
         }
@@ -12728,7 +12833,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/entity-runtime-contracts.ts",
-          "line": 14,
+          "line": 15,
           "declaredPath": "/api/entity-runtime/:entityCode/intake/:flowKey/operations/:operation",
           "kind": "contract"
         }
@@ -12743,7 +12848,7 @@
       "current": [
         {
           "source": "server/packages/platform/experience/src/entity-runtime-contracts.ts",
-          "line": 12,
+          "line": 13,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/operations/:operationKey",
           "kind": "contract"
         }
@@ -12760,21 +12865,6 @@
           "source": "server/packages/platform/preferences/src/reference-choice-routes.ts",
           "line": 185,
           "declaredPath": "/api/entity-runtime/:entityCode/reference-history",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/entity-runtime/:param/views",
-      "method": "POST",
-      "path": "/api/entity-runtime/:param/views",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/platform/preferences/src/entity-views-routes.ts",
-          "line": 47,
-          "declaredPath": "/api/entity-runtime/:entityCode/views",
           "kind": "direct"
         }
       ],
@@ -15707,8 +15797,38 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 94,
+          "line": 111,
           "declaredPath": "/api/meta-entity-authoring/change-sets",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/meta-entity-authoring/change-sets/:param/notifications/:param/preview",
+      "method": "POST",
+      "path": "/api/meta-entity-authoring/change-sets/:param/notifications/:param/preview",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
+          "line": 283,
+          "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications/:capability/preview",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/meta-entity-authoring/change-sets/:param/notifications/:param/validate",
+      "method": "POST",
+      "path": "/api/meta-entity-authoring/change-sets/:param/notifications/:param/validate",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
+          "line": 263,
+          "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications/:capability/validate",
           "kind": "direct"
         }
       ],
@@ -15722,7 +15842,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 174,
+          "line": 191,
           "declaredPath": "/api/meta-entity-authoring/releases/:id/activate",
           "kind": "direct"
         }
@@ -15737,7 +15857,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 191,
+          "line": 208,
           "declaredPath": "/api/meta-entity-authoring/releases/:id/rollback",
           "kind": "direct"
         }
@@ -16195,81 +16315,6 @@
       "status": "legacy-only"
     },
     {
-      "identity": "POST /api/neon/bank-account-links/:param/company-usage",
-      "method": "POST",
-      "path": "/api/neon/bank-account-links/:param/company-usage",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 9,
-          "declaredPath": "/api/neon/bank-account-links/:linkId/company-usage",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/bank-account-links/:param/usage-scope",
-      "method": "POST",
-      "path": "/api/neon/bank-account-links/:param/usage-scope",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 8,
-          "declaredPath": "/api/neon/bank-account-links/:linkId/usage-scope",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-bank-verifications",
-      "method": "POST",
-      "path": "/api/neon/business-partner-bank-verifications",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 18,
-          "declaredPath": "/api/neon/business-partner-bank-verifications",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-bank-verifications/:param/applications",
-      "method": "POST",
-      "path": "/api/neon/business-partner-bank-verifications/:param/applications",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 21,
-          "declaredPath": "/api/neon/business-partner-bank-verifications/:verificationId/applications",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-bank-verifications/:param/decisions",
-      "method": "POST",
-      "path": "/api/neon/business-partner-bank-verifications/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 20,
-          "declaredPath": "/api/neon/business-partner-bank-verifications/:verificationId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "POST /api/neon/business-partner-imports",
       "method": "POST",
       "path": "/api/neon/business-partner-imports",
@@ -16367,7 +16412,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 222,
+          "line": 223,
           "declaredPath": "/api/neon/business-partner-preferences/:preferenceId/decisions",
           "kind": "direct"
         }
@@ -16382,7 +16427,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 240,
+          "line": 241,
           "declaredPath": "/api/neon/business-partner-preferences/:preferenceId/revocations",
           "kind": "direct"
         }
@@ -16487,7 +16532,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 143,
+          "line": 144,
           "declaredPath": "/api/neon/business-partner-qualifications/:qualificationId/decisions",
           "kind": "direct"
         }
@@ -16501,8 +16546,8 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/master-data/src/business-partner-360-route-contracts.ts",
-          "line": 177,
+          "source": "server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts",
+          "line": 195,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/banking/reveal",
           "kind": "contract"
         }
@@ -16516,7 +16561,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/master-data/src/business-partner-360-route-contracts.ts",
+          "source": "server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts",
           "line": 125,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/comments",
           "kind": "contract"
@@ -16531,10 +16576,70 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/master-data/src/business-partner-360-route-contracts.ts",
-          "line": 159,
+          "source": "server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts",
+          "line": 177,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/identifiers-tax/reveal",
           "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/business-partners/:param/360/identifiers/reveal",
+      "method": "POST",
+      "path": "/api/neon/business-partners/:param/360/identifiers/reveal",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts",
+          "line": 159,
+          "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/identifiers/reveal",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/business-partners/:param/commodity-classifications/archive",
+      "method": "POST",
+      "path": "/api/neon/business-partners/:param/commodity-classifications/archive",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/business-partner/classification/routes.ts",
+          "line": 63,
+          "declaredPath": "/api/neon/business-partners/:businessPartnerId/commodity-classifications/archive",
+          "kind": "loop"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/business-partners/:param/commodity-classifications/declare",
+      "method": "POST",
+      "path": "/api/neon/business-partners/:param/commodity-classifications/declare",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/business-partner/classification/routes.ts",
+          "line": 63,
+          "declaredPath": "/api/neon/business-partners/:businessPartnerId/commodity-classifications/declare",
+          "kind": "loop"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/neon/business-partners/:param/commodity-classifications/verify",
+      "method": "POST",
+      "path": "/api/neon/business-partners/:param/commodity-classifications/verify",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/services/master-data/src/business-partner/classification/routes.ts",
+          "line": 63,
+          "declaredPath": "/api/neon/business-partners/:businessPartnerId/commodity-classifications/verify",
+          "kind": "loop"
         }
       ],
       "status": "current-only"
@@ -16547,7 +16652,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 352,
+          "line": 353,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/customer-credit-reviews",
           "kind": "direct"
         }
@@ -16562,7 +16667,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 276,
+          "line": 277,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/customer-designations",
           "kind": "direct"
         }
@@ -16577,7 +16682,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 433,
+          "line": 434,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/customer-lifecycle",
           "kind": "direct"
         }
@@ -16592,7 +16697,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 192,
+          "line": 193,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/preferences",
           "kind": "direct"
         }
@@ -16607,7 +16712,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 14,
+          "line": 12,
           "declaredPath": "/api/neon/business-partners/:businessPartnerId/protected-bank-registrations",
           "kind": "direct"
         }
@@ -16652,7 +16757,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 398,
+          "line": 399,
           "declaredPath": "/api/neon/customer-credit-reviews/:reviewId/decisions",
           "kind": "direct"
         }
@@ -16667,7 +16772,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 315,
+          "line": 316,
           "declaredPath": "/api/neon/customer-designations/:designationId/decisions",
           "kind": "direct"
         }
@@ -17282,7 +17387,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 13,
+          "line": 11,
           "declaredPath": "/api/neon/mesh-bank-account-events",
           "kind": "direct"
         }
@@ -17297,7 +17402,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 10,
+          "line": 8,
           "declaredPath": "/api/neon/mesh-business-partner-account-links",
           "kind": "direct"
         }
@@ -17312,7 +17417,7 @@
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 12,
+          "line": 10,
           "declaredPath": "/api/neon/mesh-business-partner-account-links/:linkId/decisions",
           "kind": "direct"
         }
@@ -17335,30 +17440,15 @@
       "status": "current-only"
     },
     {
-      "identity": "POST /api/neon/protected-bank-registrations/:param/applications",
+      "identity": "POST /api/neon/protected-bank-registrations/:param/provisional-resolution",
       "method": "POST",
-      "path": "/api/neon/protected-bank-registrations/:param/applications",
+      "path": "/api/neon/protected-bank-registrations/:param/provisional-resolution",
       "legacy": [],
       "current": [
         {
           "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 17,
-          "declaredPath": "/api/neon/protected-bank-registrations/:bankAccountLinkId/applications",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/protected-bank-registrations/:param/decisions",
-      "method": "POST",
-      "path": "/api/neon/protected-bank-registrations/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 16,
-          "declaredPath": "/api/neon/protected-bank-registrations/:bankAccountLinkId/decisions",
+          "line": 14,
+          "declaredPath": "/api/neon/protected-bank-registrations/:bankAccountLinkId/provisional-resolution",
           "kind": "direct"
         }
       ],
@@ -17417,7 +17507,7 @@
       "current": [
         {
           "source": "server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts",
-          "line": 2,
+          "line": 68,
           "declaredPath": "/api/neon/supplier-workforce/requisitions/:requisitionId/publications",
           "kind": "direct"
         }
@@ -17642,7 +17732,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 519,
+          "line": 544,
           "declaredPath": "/api/notifications/:id/dismiss",
           "kind": "contract"
         }
@@ -17657,7 +17747,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 243,
+          "line": 268,
           "declaredPath": "/api/notifications/:id/read",
           "kind": "direct"
         }
@@ -17687,7 +17777,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 55,
+          "line": 58,
           "declaredPath": "/api/notifications/preferences/email-consent",
           "kind": "direct"
         }
@@ -17702,7 +17792,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 100,
+          "line": 103,
           "declaredPath": "/api/notifications/preferences/preview",
           "kind": "direct"
         }
@@ -17717,7 +17807,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 355,
+          "line": 380,
           "declaredPath": "/api/notifications/push-subscriptions",
           "kind": "direct"
         }
@@ -17747,7 +17837,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 496,
+          "line": 521,
           "declaredPath": "/api/notifications/read-all",
           "kind": "contract"
         }
@@ -17882,7 +17972,7 @@
       "current": [
         {
           "source": "server/packages/platform/notifications/src/notification-routes.ts",
-          "line": 165,
+          "line": 169,
           "declaredPath": "/api/operations/notifications/deliveries/:id/replay",
           "kind": "direct"
         }
@@ -19897,7 +19987,7 @@
       "current": [
         {
           "source": "server/packages/platform/workflow/src/workflow-routes.ts",
-          "line": 46,
+          "line": 68,
           "declaredPath": "/api/workflow/items/:id/actions/:action",
           "kind": "direct"
         }
@@ -20002,7 +20092,7 @@
       "current": [
         {
           "source": "server/packages/platform/workflow/src/workflow-routes.ts",
-          "line": 23,
+          "line": 45,
           "declaredPath": "/api/workflow/work-items",
           "kind": "direct"
         }
@@ -20017,7 +20107,7 @@
       "current": [
         {
           "source": "server/packages/platform/workflow/src/workflow-routes.ts",
-          "line": 38,
+          "line": 60,
           "declaredPath": "/api/workflow/work-items/:workItemId/cancel",
           "kind": "loop"
         }
@@ -20032,7 +20122,7 @@
       "current": [
         {
           "source": "server/packages/platform/workflow/src/workflow-routes.ts",
-          "line": 38,
+          "line": 60,
           "declaredPath": "/api/workflow/work-items/:workItemId/claim",
           "kind": "loop"
         }
@@ -20047,7 +20137,7 @@
       "current": [
         {
           "source": "server/packages/platform/workflow/src/workflow-routes.ts",
-          "line": 38,
+          "line": 60,
           "declaredPath": "/api/workflow/work-items/:workItemId/complete",
           "kind": "loop"
         }
@@ -20527,8 +20617,38 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 115,
+          "line": 132,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/graph",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "PUT /api/meta-entity-authoring/change-sets/:param/notifications/:param/policy",
+      "method": "PUT",
+      "path": "/api/meta-entity-authoring/change-sets/:param/notifications/:param/policy",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
+          "line": 239,
+          "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications/:capability/policy",
+          "kind": "direct"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "PUT /api/meta-entity-authoring/change-sets/:param/notifications/:param/templates/:param",
+      "method": "PUT",
+      "path": "/api/meta-entity-authoring/change-sets/:param/notifications/:param/templates/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/planes/studio/meta-entity-authoring/src/notification-authoring-routes.ts",
+          "line": 215,
+          "declaredPath": "/api/meta-entity-authoring/change-sets/:id/notifications/:capability/templates/:key",
           "kind": "direct"
         }
       ],

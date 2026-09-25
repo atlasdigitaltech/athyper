@@ -120,6 +120,10 @@ export function extractStaticUrlRoutes(source) {
       );
     if (ts.isPropertyAccessExpression(node))
       return value(node.expression, env, depth + 1)?.[node.name.text];
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+      const left = value(node.left, env, depth + 1), right = value(node.right, env, depth + 1);
+      return typeof left === "string" && typeof right === "string" ? left + right : undefined;
+    }
     if (
       ts.isBinaryExpression(node) &&
       node.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken
@@ -264,6 +268,8 @@ export function extractStaticUrlRoutes(source) {
         receivers.has(expression.expression.getText(file))
       ) {
         attempted.set(node.pos, node);
+        const method = value(expression.argumentExpression, env);
+        if (methods.has(method)) emit(node, method, value(node.arguments[0], env), "direct");
         return;
       }
       // An explicit callback passed without a mount path is middleware, not an

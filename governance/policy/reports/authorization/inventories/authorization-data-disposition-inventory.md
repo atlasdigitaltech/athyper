@@ -6,7 +6,7 @@
 - Policy: `authorization-wave0-data-disposition`
 - Policy hash: `7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285`
 - Approval: **pending**
-- Cataloged database tables: 756
+- Cataloged database tables: 747
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
 - Unclassified tables: 0
@@ -28,14 +28,14 @@ or multiply classified runtime objects.
 | authentication_authority | 1 |
 | authorization_authority | 21 |
 | authorization_cache | 1 |
-| business_master_transactional | 160 |
+| business_master_transactional | 161 |
 | business_scope_context_non_authorizing | 2 |
 | business_workflow_transactional | 10 |
 | database_backup_object | 1 |
 | ddl_catalog_reference | 127 |
 | derived_projection | 23 |
 | derived_runtime_projection | 13 |
-| document_metadata | 171 |
+| document_metadata | 159 |
 | document_object | 2 |
 | event_outbox_inbox | 21 |
 | event_stream | 1 |
@@ -46,7 +46,7 @@ or multiply classified runtime objects.
 | mesh_owned | 43 |
 | mesh_owned_document_object | 1 |
 | mesh_provisioning_ledger | 1 |
-| metadata_authority | 33 |
+| metadata_authority | 35 |
 | operational_log | 1 |
 | operational_state_and_evidence | 20 |
 | provisioning_ledger | 1 |
@@ -261,21 +261,9 @@ or multiply classified runtime objects.
 | `document.bank_statement_line` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.budget_allocation` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.budget_profile` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.business_partner_bank_verification` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.business_partner_duplicate_resolution` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.business_partner_invitation` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.business_partner_invitation_recovery` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.business_partner_request` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.business_partner_request_address` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.business_partner_request_certification` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.business_partner_request_classification` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.business_partner_request_contact_channel` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.business_partner_request_contact_person` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.business_partner_request_evidence` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.business_partner_request_identifier` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.business_partner_request_materialization_item` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.business_partner_request_tax_registration` | document_metadata | migrate_with_referenced_objects | schema_default |
-| `document.business_partner_request_validation` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.catalog_import` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.catalog_import_line` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `document.comment` | document_metadata | migrate_with_referenced_objects | schema_default |
@@ -481,11 +469,8 @@ or multiply classified runtime objects.
 | `master.audit_event_contract` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.audit_reason_code` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bank_account` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.bank_account_company_usage` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bank_account_house_config` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bank_account_house_payment_method` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.bank_account_link` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.bank_account_usage` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bank_provisional_reference` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bom` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bom_component` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
@@ -493,11 +478,13 @@ or multiply classified runtime objects.
 | `master.business_intent` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.business_partner` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.business_partner_alias` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.business_partner_commodity_capability` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.business_partner_classification_command` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.business_partner_commodity_classification` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.business_partner_governance_relation` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.business_partner_identifier` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.business_partner_industry_classification` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.business_partner_operating_organization_assignment` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.business_partner_organization_identity` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.business_partner_relationship` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.business_partner_tax_registration` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.canonical_party` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
@@ -582,6 +569,8 @@ or multiply classified runtime objects.
 | `master.pay_group` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.pay_structure` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.pay_structure_line` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.payment_instrument` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.payment_instrument_link` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.payment_method` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.payment_term` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.payment_term_clause` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
@@ -713,6 +702,8 @@ or multiply classified runtime objects.
 | `metadata.entity_surface_field_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_surface_operation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `metadata.entity_surface_section` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.publication_recovery_archive` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.publication_recovery_revocation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
 | `onboarding.onboarding_case` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
 | `onboarding.onboarding_case_check` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
 | `onboarding.onboarding_case_guest_access` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
