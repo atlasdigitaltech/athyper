@@ -24,12 +24,12 @@
     }
   },
   "summary": {
-    "identities": 1361,
+    "identities": 1229,
     "matched": 66,
     "legacyOnly": 802,
-    "currentOnly": 493,
+    "currentOnly": 361,
     "legacyOccurrences": 898,
-    "currentOccurrences": 559
+    "currentOccurrences": 427
   },
   "routes": [
     {
@@ -2110,7 +2110,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 5476,
+          "line": 2593,
           "declaredPath": "/api/collections/:collectionKey/configuration",
           "kind": "direct"
         }
@@ -2125,7 +2125,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-services.ts",
-          "line": 5109,
+          "line": 2266,
           "declaredPath": "/api/collections/:collectionKey/descriptor",
           "kind": "direct"
         }
@@ -2941,6 +2941,21 @@
           "source": "server/packages/platform/experience/src/entity-runtime-contracts.ts",
           "line": 8,
           "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/bootstrap",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/entity-runtime/:param/records/:param/collaboration/:param",
+      "method": "GET",
+      "path": "/api/entity-runtime/:param/records/:param/collaboration/:param",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/experience/src/entity-runtime-routes.ts",
+          "line": 27,
+          "declaredPath": "/api/entity-runtime/:entityCode/records/:recordId/collaboration/:kind",
           "kind": "contract"
         }
       ],
@@ -4447,21 +4462,6 @@
       "status": "current-only"
     },
     {
-      "identity": "GET /api/governance/process-documents/cases/:param/view",
-      "method": "GET",
-      "path": "/api/governance/process-documents/cases/:param/view",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/supplier-process-document-runtime.ts",
-          "line": 38,
-          "declaredPath": "/api/governance/process-documents/cases/:id/view",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "GET /api/governance/process-selection/cases/:param/preview",
       "method": "GET",
       "path": "/api/governance/process-selection/cases/:param/preview",
@@ -5261,21 +5261,6 @@
       "status": "legacy-only"
     },
     {
-      "identity": "GET /api/master/owners/:param/:param/:param/profile",
-      "method": "GET",
-      "path": "/api/master/owners/:param/:param/:param/profile",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/master-data-routes.ts",
-          "line": 31,
-          "declaredPath": "/api/master/owners/:entityCode/:ownerTypeId/:ownerId/profile",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "GET /api/master/owners/:param/:param/address-contact-profile",
       "method": "GET",
       "path": "/api/master/owners/:param/:param/address-contact-profile",
@@ -5319,66 +5304,6 @@
       ],
       "current": [],
       "status": "legacy-only"
-    },
-    {
-      "identity": "GET /api/mesh/business-partner-bank-disclosures/:param",
-      "method": "GET",
-      "path": "/api/mesh/business-partner-bank-disclosures/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts",
-          "line": 103,
-          "declaredPath": "/api/mesh/business-partner-bank-disclosures/:disclosureId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/mesh/business-partner-network-workspace",
-      "method": "GET",
-      "path": "/api/mesh/business-partner-network-workspace",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 72,
-          "declaredPath": "/api/mesh/business-partner-network-workspace",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/mesh/business-partner-profile-publications",
-      "method": "GET",
-      "path": "/api/mesh/business-partner-profile-publications",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts",
-          "line": 86,
-          "declaredPath": "/api/mesh/business-partner-profile-publications",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/mesh/business-partner-profile-publications/:param",
-      "method": "GET",
-      "path": "/api/mesh/business-partner-profile-publications/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts",
-          "line": 100,
-          "declaredPath": "/api/mesh/business-partner-profile-publications/:publicationId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
     },
     {
       "identity": "GET /api/mesh/documents/:param/:param",
@@ -5478,7 +5403,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 83,
+          "line": 84,
           "declaredPath": "/api/meta-entity-authoring/change-sets",
           "kind": "direct"
         }
@@ -5493,7 +5418,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 91,
+          "line": 92,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/graph",
           "kind": "direct"
         }
@@ -5508,7 +5433,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 41,
+          "line": 42,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/history",
           "kind": "direct"
         }
@@ -5523,7 +5448,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 46,
+          "line": 47,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/history/:revision",
           "kind": "direct"
         }
@@ -5598,7 +5523,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 55,
+          "line": 56,
           "declaredPath": "/api/meta-entity-authoring/inspection/address-preview-choices",
           "kind": "direct"
         }
@@ -5613,7 +5538,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 27,
+          "line": 28,
           "declaredPath": "/api/meta-entity-authoring/inspection/notifications/:entityCode",
           "kind": "direct"
         }
@@ -5628,7 +5553,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 71,
+          "line": 72,
           "declaredPath": "/api/meta-entity-authoring/inspection/releases",
           "kind": "direct"
         }
@@ -5643,7 +5568,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 75,
+          "line": 76,
           "declaredPath": "/api/meta-entity-authoring/inspection/releases/:id",
           "kind": "direct"
         }
@@ -5658,7 +5583,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 62,
+          "line": 63,
           "declaredPath": "/api/meta-entity-authoring/inspection/releases/:id/activation",
           "kind": "direct"
         }
@@ -6386,216 +6311,6 @@
       "status": "current-only"
     },
     {
-      "identity": "GET /api/neon/business-partner-invitation-templates/:param",
-      "method": "GET",
-      "path": "/api/neon/business-partner-invitation-templates/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 11,
-          "declaredPath": "/api/neon/business-partner-invitation-templates/:journeyKind",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partner-invitations/:param",
-      "method": "GET",
-      "path": "/api/neon/business-partner-invitations/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 13,
-          "declaredPath": "/api/neon/business-partner-invitations/:invitationId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partner-profile-events/quarantine",
-      "method": "GET",
-      "path": "/api/neon/business-partner-profile-events/quarantine",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-profile-projection-routes.ts",
-          "line": 15,
-          "declaredPath": "/api/neon/business-partner-profile-events/quarantine",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partner-profile-events/receipts",
-      "method": "GET",
-      "path": "/api/neon/business-partner-profile-events/receipts",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-profile-projection-routes.ts",
-          "line": 14,
-          "declaredPath": "/api/neon/business-partner-profile-events/receipts",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partner-profile-matches/:param",
-      "method": "GET",
-      "path": "/api/neon/business-partner-profile-matches/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-profile-match-routes.ts",
-          "line": 14,
-          "declaredPath": "/api/neon/business-partner-profile-matches/:matchId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partner-profile-projections",
-      "method": "GET",
-      "path": "/api/neon/business-partner-profile-projections",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-profile-projection-routes.ts",
-          "line": 13,
-          "declaredPath": "/api/neon/business-partner-profile-projections",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partners/:param",
-      "method": "GET",
-      "path": "/api/neon/business-partners/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-request-routes.ts",
-          "line": 197,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partners/:param/360/:param",
-      "method": "GET",
-      "path": "/api/neon/business-partners/:param/360/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts",
-          "line": 92,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/:section",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partners/:param/360/summary",
-      "method": "GET",
-      "path": "/api/neon/business-partners/:param/360/summary",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts",
-          "line": 74,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/summary",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partners/:param/customer-credit-reviews",
-      "method": "GET",
-      "path": "/api/neon/business-partners/:param/customer-credit-reviews",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 335,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/customer-credit-reviews",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partners/:param/customer-designations",
-      "method": "GET",
-      "path": "/api/neon/business-partners/:param/customer-designations",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 255,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/customer-designations",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partners/:param/eligibility",
-      "method": "GET",
-      "path": "/api/neon/business-partners/:param/eligibility",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 63,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/eligibility",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/business-partners/:param/preferences",
-      "method": "GET",
-      "path": "/api/neon/business-partners/:param/preferences",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 167,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/preferences",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/external/business-partner-invitations/:param/requests/:param/status",
-      "method": "GET",
-      "path": "/api/neon/external/business-partner-invitations/:param/requests/:param/status",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 18,
-          "declaredPath": "/api/neon/external/business-partner-invitations/:journeyKind/requests/:requestId/status",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "GET /api/neon/finance/budget/balance",
       "method": "GET",
       "path": "/api/neon/finance/budget/balance",
@@ -6701,126 +6416,6 @@
       "status": "current-only"
     },
     {
-      "identity": "GET /api/neon/hr-setup/calendar-day-changes",
-      "method": "GET",
-      "path": "/api/neon/hr-setup/calendar-day-changes",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 29,
-          "declaredPath": "/api/neon/hr-setup/calendar-day-changes",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/hr-setup/catalog",
-      "method": "GET",
-      "path": "/api/neon/hr-setup/catalog",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 20,
-          "declaredPath": "/api/neon/hr-setup/catalog",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/hr-setup/drafts",
-      "method": "GET",
-      "path": "/api/neon/hr-setup/drafts",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 22,
-          "declaredPath": "/api/neon/hr-setup/drafts",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/hr-setup/org-candidates",
-      "method": "GET",
-      "path": "/api/neon/hr-setup/org-candidates",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 26,
-          "declaredPath": "/api/neon/hr-setup/org-candidates",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/hr-setup/org-company-assignments",
-      "method": "GET",
-      "path": "/api/neon/hr-setup/org-company-assignments",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 25,
-          "declaredPath": "/api/neon/hr-setup/org-company-assignments",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/hr-setup/policy-assignments",
-      "method": "GET",
-      "path": "/api/neon/hr-setup/policy-assignments",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 32,
-          "declaredPath": "/api/neon/hr-setup/policy-assignments",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/hr-setup/policy-effective",
-      "method": "GET",
-      "path": "/api/neon/hr-setup/policy-effective",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 33,
-          "declaredPath": "/api/neon/hr-setup/policy-effective",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/mesh-business-partner-account-links/:param",
-      "method": "GET",
-      "path": "/api/neon/mesh-business-partner-account-links/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 9,
-          "declaredPath": "/api/neon/mesh-business-partner-account-links/:linkId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "GET /api/neon/operating-organizations",
       "method": "GET",
       "path": "/api/neon/operating-organizations",
@@ -6836,111 +6431,6 @@
       "status": "current-only"
     },
     {
-      "identity": "GET /api/neon/protected-bank-registrations/:param",
-      "method": "GET",
-      "path": "/api/neon/protected-bank-registrations/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 13,
-          "declaredPath": "/api/neon/protected-bank-registrations/:bankAccountLinkId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/supplier-workforce/policy-readiness",
-      "method": "GET",
-      "path": "/api/neon/supplier-workforce/policy-readiness",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts",
-          "line": 51,
-          "declaredPath": "/api/neon/supplier-workforce/policy-readiness",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/supplier-workforce/requisitions",
-      "method": "GET",
-      "path": "/api/neon/supplier-workforce/requisitions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts",
-          "line": 56,
-          "declaredPath": "/api/neon/supplier-workforce/requisitions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/users",
-      "method": "GET",
-      "path": "/api/neon/users",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 36,
-          "declaredPath": "/api/neon/users",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/users/:param",
-      "method": "GET",
-      "path": "/api/neon/users/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 43,
-          "declaredPath": "/api/neon/users/:principalId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/users/me/profile-change",
-      "method": "GET",
-      "path": "/api/neon/users/me/profile-change",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 37,
-          "declaredPath": "/api/neon/users/me/profile-change",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/users/profile-changes/review",
-      "method": "GET",
-      "path": "/api/neon/users/profile-changes/review",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 40,
-          "declaredPath": "/api/neon/users/profile-changes/review",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "GET /api/neon/work-contexts",
       "method": "GET",
       "path": "/api/neon/work-contexts",
@@ -6951,126 +6441,6 @@
           "line": 24,
           "declaredPath": "/api/neon/work-contexts",
           "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/workforce",
-      "method": "GET",
-      "path": "/api/neon/workforce",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 195,
-          "declaredPath": "/api/neon/workforce",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/workforce-requests",
-      "method": "GET",
-      "path": "/api/neon/workforce-requests",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 91,
-          "declaredPath": "/api/neon/workforce-requests",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/workforce-requests/:param",
-      "method": "GET",
-      "path": "/api/neon/workforce-requests/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 119,
-          "declaredPath": "/api/neon/workforce-requests/:requestId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/workforce/:param",
-      "method": "GET",
-      "path": "/api/neon/workforce/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 243,
-          "declaredPath": "/api/neon/workforce/:employeeId",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/workforce/:param/authority",
-      "method": "GET",
-      "path": "/api/neon/workforce/:param/authority",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 44,
-          "declaredPath": "/api/neon/workforce/:employeeId/authority",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/workforce/:param/onboarding-checklist",
-      "method": "GET",
-      "path": "/api/neon/workforce/:param/onboarding-checklist",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 266,
-          "declaredPath": "/api/neon/workforce/:employeeId/onboarding-checklist",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/workforce/:param/readiness",
-      "method": "GET",
-      "path": "/api/neon/workforce/:param/readiness",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 253,
-          "declaredPath": "/api/neon/workforce/:employeeId/readiness",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "GET /api/neon/workforce/:param/sections/:param",
-      "method": "GET",
-      "path": "/api/neon/workforce/:param/sections/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 213,
-          "declaredPath": "/api/neon/workforce/:employeeId/sections/:section",
-          "kind": "direct"
         }
       ],
       "status": "current-only"
@@ -7471,6 +6841,21 @@
       ],
       "current": [],
       "status": "legacy-only"
+    },
+    {
+      "identity": "GET /api/platform-control/session",
+      "method": "GET",
+      "path": "/api/platform-control/session",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/control-plane/session.ts",
+          "line": 9,
+          "declaredPath": "/api/platform-control/session",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
     },
     {
       "identity": "GET /api/platform/admin/enterprise-features",
@@ -9597,7 +8982,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/publication/src/business-partner-case-contract-routes.ts",
+          "source": "server/packages/services/publication/src/entity-case-contract-routes.ts",
           "line": 62,
           "declaredPath": "/api/studio/business-partner-case-contracts/:revisionId",
           "kind": "contract"
@@ -9612,7 +8997,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
+          "source": "server/packages/services/publication/src/entity-definition-routes.ts",
           "line": 78,
           "declaredPath": "/api/studio/business-partner-definitions/:revisionId",
           "kind": "contract"
@@ -9642,7 +9027,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
+          "source": "server/packages/services/publication/src/entity-definition-routes.ts",
           "line": 25,
           "declaredPath": "/api/studio/local-business-partner-preview",
           "kind": "contract"
@@ -9658,7 +9043,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/task-edit-policy-authoring.ts",
-          "line": 101,
+          "line": 104,
           "declaredPath": "/api/studio/supplier-task-rule-baselines",
           "kind": "contract"
         }
@@ -9673,7 +9058,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/task-edit-policy-authoring.ts",
-          "line": 102,
+          "line": 105,
           "declaredPath": "/api/studio/task-edit-policies/:id",
           "kind": "contract"
         }
@@ -10650,21 +10035,6 @@
       "status": "legacy-only"
     },
     {
-      "identity": "PATCH /api/master/contacts/:param/verification",
-      "method": "PATCH",
-      "path": "/api/master/contacts/:param/verification",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/master-data-routes.ts",
-          "line": 50,
-          "declaredPath": "/api/master/contacts/:contactId/verification",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "PATCH /api/me/saved-views/:param/:param",
       "method": "PATCH",
       "path": "/api/me/saved-views/:param/:param",
@@ -10843,36 +10213,6 @@
       ],
       "current": [],
       "status": "legacy-only"
-    },
-    {
-      "identity": "PATCH /api/neon/external/business-partner-invitations/:param/requests/:param/correction",
-      "method": "PATCH",
-      "path": "/api/neon/external/business-partner-invitations/:param/requests/:param/correction",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 19,
-          "declaredPath": "/api/neon/external/business-partner-invitations/:journeyKind/requests/:requestId/correction",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "PATCH /api/neon/users/:param/profile",
-      "method": "PATCH",
-      "path": "/api/neon/users/:param/profile",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 42,
-          "declaredPath": "/api/neon/users/:principalId/profile",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
     },
     {
       "identity": "PATCH /api/notifications/preferences",
@@ -11600,7 +10940,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 144,
+          "line": 152,
           "declaredPath": "/api/attachments/:attachmentId/extract",
           "kind": "direct"
         }
@@ -11630,7 +10970,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 140,
+          "line": 148,
           "declaredPath": "/api/attachments/:attachmentId/preview",
           "kind": "direct"
         }
@@ -11645,7 +10985,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 152,
+          "line": 160,
           "declaredPath": "/api/attachments/browse",
           "kind": "direct"
         }
@@ -11675,7 +11015,7 @@
       "current": [
         {
           "source": "server/packages/services/attachments/src/attachment-discovery-routes.ts",
-          "line": 148,
+          "line": 156,
           "declaredPath": "/api/attachments/search",
           "kind": "direct"
         }
@@ -14570,66 +13910,6 @@
       "status": "current-only"
     },
     {
-      "identity": "POST /api/governance/process-documents/cases/:param/request",
-      "method": "POST",
-      "path": "/api/governance/process-documents/cases/:param/request",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/supplier-process-document-runtime.ts",
-          "line": 38,
-          "declaredPath": "/api/governance/process-documents/cases/:id/request",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/governance/process-documents/jobs/:param/download",
-      "method": "POST",
-      "path": "/api/governance/process-documents/jobs/:param/download",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/supplier-process-document-runtime.ts",
-          "line": 38,
-          "declaredPath": "/api/governance/process-documents/jobs/:id/download",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/governance/process-documents/jobs/:param/process",
-      "method": "POST",
-      "path": "/api/governance/process-documents/jobs/:param/process",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/supplier-process-document-runtime.ts",
-          "line": 38,
-          "declaredPath": "/api/governance/process-documents/jobs/:id/process",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/governance/process-documents/jobs/:param/retry",
-      "method": "POST",
-      "path": "/api/governance/process-documents/jobs/:param/retry",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/apps/platform-host/src/composition/supplier-process-document-runtime.ts",
-          "line": 38,
-          "declaredPath": "/api/governance/process-documents/jobs/:id/retry",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "POST /api/governance/process-tasks/cases/:param/cancel",
       "method": "POST",
       "path": "/api/governance/process-tasks/cases/:param/cancel",
@@ -15460,21 +14740,6 @@
       "status": "legacy-only"
     },
     {
-      "identity": "POST /api/master/addresses/:param/deactivate",
-      "method": "POST",
-      "path": "/api/master/addresses/:param/deactivate",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/master-data-routes.ts",
-          "line": 78,
-          "declaredPath": "/api/master/addresses/:addressLinkId/deactivate",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "POST /api/master/addresses/default",
       "method": "POST",
       "path": "/api/master/addresses/default",
@@ -15535,51 +14800,6 @@
       "status": "legacy-only"
     },
     {
-      "identity": "POST /api/master/contacts/:param/deactivate",
-      "method": "POST",
-      "path": "/api/master/contacts/:param/deactivate",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/master-data-routes.ts",
-          "line": 59,
-          "declaredPath": "/api/master/contacts/:contactId/deactivate",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/master/owners/:param/:param/:param/addresses",
-      "method": "POST",
-      "path": "/api/master/owners/:param/:param/:param/addresses",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/master-data-routes.ts",
-          "line": 65,
-          "declaredPath": "/api/master/owners/:entityCode/:ownerTypeId/:ownerId/addresses",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/master/owners/:param/:param/:param/contacts",
-      "method": "POST",
-      "path": "/api/master/owners/:param/:param/:param/contacts",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/master-data-routes.ts",
-          "line": 37,
-          "declaredPath": "/api/master/owners/:entityCode/:ownerTypeId/:ownerId/contacts",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "POST /api/master/owners/:param/:param/addresses",
       "method": "POST",
       "path": "/api/master/owners/:param/:param/addresses",
@@ -15625,171 +14845,6 @@
       "status": "current-only"
     },
     {
-      "identity": "POST /api/mesh/business-partner-bank-disclosures",
-      "method": "POST",
-      "path": "/api/mesh/business-partner-bank-disclosures",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts",
-          "line": 67,
-          "declaredPath": "/api/mesh/business-partner-bank-disclosures",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/mesh/business-partner-bank-disclosures/:param/decisions",
-      "method": "POST",
-      "path": "/api/mesh/business-partner-bank-disclosures/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts",
-          "line": 113,
-          "declaredPath": "/api/mesh/business-partner-bank-disclosures/:disclosureId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/mesh/business-partner-bank-disclosures/:param/revocations",
-      "method": "POST",
-      "path": "/api/mesh/business-partner-bank-disclosures/:param/revocations",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts",
-          "line": 146,
-          "declaredPath": "/api/mesh/business-partner-bank-disclosures/:disclosureId/revocations",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/mesh/business-partner-network-capabilities/:param/decisions",
-      "method": "POST",
-      "path": "/api/mesh/business-partner-network-capabilities/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 194,
-          "declaredPath": "/api/mesh/business-partner-network-capabilities/:capabilityId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/mesh/business-partner-network-relationships",
-      "method": "POST",
-      "path": "/api/mesh/business-partner-network-relationships",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 79,
-          "declaredPath": "/api/mesh/business-partner-network-relationships",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/mesh/business-partner-network-relationships/:param/capabilities",
-      "method": "POST",
-      "path": "/api/mesh/business-partner-network-relationships/:param/capabilities",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 160,
-          "declaredPath": "/api/mesh/business-partner-network-relationships/:relationshipId/capabilities",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/mesh/business-partner-network-relationships/:param/decisions",
-      "method": "POST",
-      "path": "/api/mesh/business-partner-network-relationships/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 131,
-          "declaredPath": "/api/mesh/business-partner-network-relationships/:relationshipId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/mesh/business-partner-profile-publications",
-      "method": "POST",
-      "path": "/api/mesh/business-partner-profile-publications",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts",
-          "line": 65,
-          "declaredPath": "/api/mesh/business-partner-profile-publications",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/mesh/business-partner-profile-publications/:param/withdrawals",
-      "method": "POST",
-      "path": "/api/mesh/business-partner-profile-publications/:param/withdrawals",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts",
-          "line": 110,
-          "declaredPath": "/api/mesh/business-partner-profile-publications/:publicationId/withdrawals",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/mesh/business-partner-registration-exchanges",
-      "method": "POST",
-      "path": "/api/mesh/business-partner-registration-exchanges",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 216,
-          "declaredPath": "/api/mesh/business-partner-registration-exchanges",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/mesh/business-partner-registration-exchanges/:param/decisions",
-      "method": "POST",
-      "path": "/api/mesh/business-partner-registration-exchanges/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts",
-          "line": 263,
-          "declaredPath": "/api/mesh/business-partner-registration-exchanges/:exchangeId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "POST /api/meta-entity-authoring/change-sets",
       "method": "POST",
       "path": "/api/meta-entity-authoring/change-sets",
@@ -15797,7 +14852,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 111,
+          "line": 112,
           "declaredPath": "/api/meta-entity-authoring/change-sets",
           "kind": "direct"
         }
@@ -15842,7 +14897,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 191,
+          "line": 192,
           "declaredPath": "/api/meta-entity-authoring/releases/:id/activate",
           "kind": "direct"
         }
@@ -15857,7 +14912,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 208,
+          "line": 209,
           "declaredPath": "/api/meta-entity-authoring/releases/:id/rollback",
           "kind": "direct"
         }
@@ -16315,546 +15370,6 @@
       "status": "legacy-only"
     },
     {
-      "identity": "POST /api/neon/business-partner-imports",
-      "method": "POST",
-      "path": "/api/neon/business-partner-imports",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-governed-import-routes.ts",
-          "line": 11,
-          "declaredPath": "/api/neon/business-partner-imports",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-intake/protected-values",
-      "method": "POST",
-      "path": "/api/neon/business-partner-intake/protected-values",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 7,
-          "declaredPath": "/api/neon/business-partner-intake/protected-values",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-invitations",
-      "method": "POST",
-      "path": "/api/neon/business-partner-invitations",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 12,
-          "declaredPath": "/api/neon/business-partner-invitations",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-invitations/:param/cancel",
-      "method": "POST",
-      "path": "/api/neon/business-partner-invitations/:param/cancel",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 15,
-          "declaredPath": "/api/neon/business-partner-invitations/:invitationId/cancel",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-invitations/:param/resend",
-      "method": "POST",
-      "path": "/api/neon/business-partner-invitations/:param/resend",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 14,
-          "declaredPath": "/api/neon/business-partner-invitations/:invitationId/resend",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-invitations/:param/support-recovery",
-      "method": "POST",
-      "path": "/api/neon/business-partner-invitations/:param/support-recovery",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 16,
-          "declaredPath": "/api/neon/business-partner-invitations/:invitationId/support-recovery",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-preferences/:param/decisions",
-      "method": "POST",
-      "path": "/api/neon/business-partner-preferences/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 223,
-          "declaredPath": "/api/neon/business-partner-preferences/:preferenceId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-preferences/:param/revocations",
-      "method": "POST",
-      "path": "/api/neon/business-partner-preferences/:param/revocations",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 241,
-          "declaredPath": "/api/neon/business-partner-preferences/:preferenceId/revocations",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-profile-change-previews",
-      "method": "POST",
-      "path": "/api/neon/business-partner-profile-change-previews",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-profile-match-routes.ts",
-          "line": 12,
-          "declaredPath": "/api/neon/business-partner-profile-change-previews",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-profile-change-resolutions",
-      "method": "POST",
-      "path": "/api/neon/business-partner-profile-change-resolutions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-profile-match-routes.ts",
-          "line": 7,
-          "declaredPath": "/api/neon/business-partner-profile-change-resolutions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-profile-events",
-      "method": "POST",
-      "path": "/api/neon/business-partner-profile-events",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-profile-projection-routes.ts",
-          "line": 12,
-          "declaredPath": "/api/neon/business-partner-profile-events",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-profile-events/:param/replays",
-      "method": "POST",
-      "path": "/api/neon/business-partner-profile-events/:param/replays",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-profile-projection-routes.ts",
-          "line": 16,
-          "declaredPath": "/api/neon/business-partner-profile-events/:eventId/replays",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-profile-matches",
-      "method": "POST",
-      "path": "/api/neon/business-partner-profile-matches",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-profile-match-routes.ts",
-          "line": 13,
-          "declaredPath": "/api/neon/business-partner-profile-matches",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-profile-matches/:param/requests",
-      "method": "POST",
-      "path": "/api/neon/business-partner-profile-matches/:param/requests",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-profile-match-routes.ts",
-          "line": 15,
-          "declaredPath": "/api/neon/business-partner-profile-matches/:matchId/requests",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partner-qualifications/:param/decisions",
-      "method": "POST",
-      "path": "/api/neon/business-partner-qualifications/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 144,
-          "declaredPath": "/api/neon/business-partner-qualifications/:qualificationId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/360/banking/reveal",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/360/banking/reveal",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts",
-          "line": 195,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/banking/reveal",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/360/comments",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/360/comments",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts",
-          "line": 125,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/comments",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/360/identifiers-tax/reveal",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/360/identifiers-tax/reveal",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts",
-          "line": 177,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/identifiers-tax/reveal",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/360/identifiers/reveal",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/360/identifiers/reveal",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts",
-          "line": 159,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/360/identifiers/reveal",
-          "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/commodity-classifications/archive",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/commodity-classifications/archive",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner/classification/routes.ts",
-          "line": 63,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/commodity-classifications/archive",
-          "kind": "loop"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/commodity-classifications/declare",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/commodity-classifications/declare",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner/classification/routes.ts",
-          "line": 63,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/commodity-classifications/declare",
-          "kind": "loop"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/commodity-classifications/verify",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/commodity-classifications/verify",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner/classification/routes.ts",
-          "line": 63,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/commodity-classifications/verify",
-          "kind": "loop"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/customer-credit-reviews",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/customer-credit-reviews",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 353,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/customer-credit-reviews",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/customer-designations",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/customer-designations",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 277,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/customer-designations",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/customer-lifecycle",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/customer-lifecycle",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 434,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/customer-lifecycle",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/preferences",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/preferences",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 193,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/preferences",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/protected-bank-registrations",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/protected-bank-registrations",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 12,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/protected-bank-registrations",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/qualifications",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/qualifications",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 102,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/qualifications",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/business-partners/:param/supplier-activation",
-      "method": "POST",
-      "path": "/api/neon/business-partners/:param/supplier-activation",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 97,
-          "declaredPath": "/api/neon/business-partners/:businessPartnerId/supplier-activation",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/customer-credit-reviews/:param/decisions",
-      "method": "POST",
-      "path": "/api/neon/customer-credit-reviews/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 399,
-          "declaredPath": "/api/neon/customer-credit-reviews/:reviewId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/customer-designations/:param/decisions",
-      "method": "POST",
-      "path": "/api/neon/customer-designations/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-eligibility-routes.ts",
-          "line": 316,
-          "declaredPath": "/api/neon/customer-designations/:designationId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/external/business-partner-invitations/:param/accept",
-      "method": "POST",
-      "path": "/api/neon/external/business-partner-invitations/:param/accept",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 17,
-          "declaredPath": "/api/neon/external/business-partner-invitations/:journeyKind/accept",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/external/business-partner-invitations/:param/requests/:param/evidence",
-      "method": "POST",
-      "path": "/api/neon/external/business-partner-invitations/:param/requests/:param/evidence",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 20,
-          "declaredPath": "/api/neon/external/business-partner-invitations/:journeyKind/requests/:requestId/evidence",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/external/business-partner-invitations/:param/requests/:param/evidence/complete",
-      "method": "POST",
-      "path": "/api/neon/external/business-partner-invitations/:param/requests/:param/evidence/complete",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 22,
-          "declaredPath": "/api/neon/external/business-partner-invitations/:journeyKind/requests/:requestId/evidence/complete",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/external/business-partner-invitations/:param/requests/:param/evidence/stage",
-      "method": "POST",
-      "path": "/api/neon/external/business-partner-invitations/:param/requests/:param/evidence/stage",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 21,
-          "declaredPath": "/api/neon/external/business-partner-invitations/:journeyKind/requests/:requestId/evidence/stage",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/external/business-partner-invitations/:param/requests/:param/submit",
-      "method": "POST",
-      "path": "/api/neon/external/business-partner-invitations/:param/requests/:param/submit",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/business-partner-invitation-routes.ts",
-          "line": 23,
-          "declaredPath": "/api/neon/external/business-partner-invitations/:journeyKind/requests/:requestId/submit",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
       "identity": "POST /api/neon/finance/books/:param/periods/:param/transitions",
       "method": "POST",
       "path": "/api/neon/finance/books/:param/periods/:param/transitions",
@@ -17180,546 +15695,6 @@
           "line": 696,
           "declaredPath": "/api/neon/finance/tax/reverse",
           "kind": "contract"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/governed-business-partner-cases",
-      "method": "POST",
-      "path": "/api/neon/governed-business-partner-cases",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/governed-internal-business-partner-routes.ts",
-          "line": 63,
-          "declaredPath": "/api/neon/governed-business-partner-cases",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/governed-business-partner-cases/:param/decisions",
-      "method": "POST",
-      "path": "/api/neon/governed-business-partner-cases/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/governed-internal-business-partner-routes.ts",
-          "line": 114,
-          "declaredPath": "/api/neon/governed-business-partner-cases/:caseId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/governed-business-partner-cases/:param/materialize",
-      "method": "POST",
-      "path": "/api/neon/governed-business-partner-cases/:param/materialize",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/governed-internal-business-partner-routes.ts",
-          "line": 137,
-          "declaredPath": "/api/neon/governed-business-partner-cases/:caseId/materialize",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/governed-business-partner-cases/:param/submit",
-      "method": "POST",
-      "path": "/api/neon/governed-business-partner-cases/:param/submit",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/governed-internal-business-partner-routes.ts",
-          "line": 93,
-          "declaredPath": "/api/neon/governed-business-partner-cases/:caseId/submit",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/hr-setup/calendar-day-changes",
-      "method": "POST",
-      "path": "/api/neon/hr-setup/calendar-day-changes",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 30,
-          "declaredPath": "/api/neon/hr-setup/calendar-day-changes",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/hr-setup/calendar-day-changes/:param/publish",
-      "method": "POST",
-      "path": "/api/neon/hr-setup/calendar-day-changes/:param/publish",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 31,
-          "declaredPath": "/api/neon/hr-setup/calendar-day-changes/:changeId/publish",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/hr-setup/drafts",
-      "method": "POST",
-      "path": "/api/neon/hr-setup/drafts",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 23,
-          "declaredPath": "/api/neon/hr-setup/drafts",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/hr-setup/drafts/:param/publish",
-      "method": "POST",
-      "path": "/api/neon/hr-setup/drafts/:param/publish",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 24,
-          "declaredPath": "/api/neon/hr-setup/drafts/:approvalId/publish",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/hr-setup/org-company-assignments",
-      "method": "POST",
-      "path": "/api/neon/hr-setup/org-company-assignments",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 27,
-          "declaredPath": "/api/neon/hr-setup/org-company-assignments",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/hr-setup/org-company-assignments/:param/publish",
-      "method": "POST",
-      "path": "/api/neon/hr-setup/org-company-assignments/:param/publish",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 28,
-          "declaredPath": "/api/neon/hr-setup/org-company-assignments/:assignmentId/publish",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/hr-setup/policy-assignments",
-      "method": "POST",
-      "path": "/api/neon/hr-setup/policy-assignments",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 34,
-          "declaredPath": "/api/neon/hr-setup/policy-assignments",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/hr-setup/policy-assignments/:param/publish",
-      "method": "POST",
-      "path": "/api/neon/hr-setup/policy-assignments/:param/publish",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 35,
-          "declaredPath": "/api/neon/hr-setup/policy-assignments/:assignmentId/publish",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/hr-setup/positions",
-      "method": "POST",
-      "path": "/api/neon/hr-setup/positions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 21,
-          "declaredPath": "/api/neon/hr-setup/positions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/mesh-bank-account-events",
-      "method": "POST",
-      "path": "/api/neon/mesh-bank-account-events",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 11,
-          "declaredPath": "/api/neon/mesh-bank-account-events",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/mesh-business-partner-account-links",
-      "method": "POST",
-      "path": "/api/neon/mesh-business-partner-account-links",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 8,
-          "declaredPath": "/api/neon/mesh-business-partner-account-links",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/mesh-business-partner-account-links/:param/decisions",
-      "method": "POST",
-      "path": "/api/neon/mesh-business-partner-account-links/:param/decisions",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 10,
-          "declaredPath": "/api/neon/mesh-business-partner-account-links/:linkId/decisions",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/people/:param/restricted-evidence/read",
-      "method": "POST",
-      "path": "/api/neon/people/:param/restricted-evidence/read",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 342,
-          "declaredPath": "/api/neon/people/:personId/restricted-evidence/read",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/protected-bank-registrations/:param/provisional-resolution",
-      "method": "POST",
-      "path": "/api/neon/protected-bank-registrations/:param/provisional-resolution",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts",
-          "line": 14,
-          "declaredPath": "/api/neon/protected-bank-registrations/:bankAccountLinkId/provisional-resolution",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/supplier-workforce/engagements/:param/iam-projections",
-      "method": "POST",
-      "path": "/api/neon/supplier-workforce/engagements/:param/iam-projections",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/worker-engagement-iam-routes.ts",
-          "line": 9,
-          "declaredPath": "/api/neon/supplier-workforce/engagements/:workerEngagementId/iam-projections",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/supplier-workforce/engagements/:param/placements",
-      "method": "POST",
-      "path": "/api/neon/supplier-workforce/engagements/:param/placements",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/worker-engagement-lifecycle-routes.ts",
-          "line": 40,
-          "declaredPath": "/api/neon/supplier-workforce/engagements/:workerEngagementId/placements",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/supplier-workforce/engagements/:param/termination",
-      "method": "POST",
-      "path": "/api/neon/supplier-workforce/engagements/:param/termination",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/worker-engagement-lifecycle-routes.ts",
-          "line": 52,
-          "declaredPath": "/api/neon/supplier-workforce/engagements/:workerEngagementId/termination",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/supplier-workforce/requisitions/:param/publications",
-      "method": "POST",
-      "path": "/api/neon/supplier-workforce/requisitions/:param/publications",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts",
-          "line": 68,
-          "declaredPath": "/api/neon/supplier-workforce/requisitions/:requisitionId/publications",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/users/me/profile-change",
-      "method": "POST",
-      "path": "/api/neon/users/me/profile-change",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 38,
-          "declaredPath": "/api/neon/users/me/profile-change",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/users/me/profile-change/:param/submit",
-      "method": "POST",
-      "path": "/api/neon/users/me/profile-change/:param/submit",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 39,
-          "declaredPath": "/api/neon/users/me/profile-change/:requestId/submit",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/users/profile-changes/:param/decision",
-      "method": "POST",
-      "path": "/api/neon/users/profile-changes/:param/decision",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/hr-stage2-routes.ts",
-          "line": 41,
-          "declaredPath": "/api/neon/users/profile-changes/:requestId/decision",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/workforce-requests",
-      "method": "POST",
-      "path": "/api/neon/workforce-requests",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 45,
-          "declaredPath": "/api/neon/workforce-requests",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/workforce-requests/:param/apply",
-      "method": "POST",
-      "path": "/api/neon/workforce-requests/:param/apply",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 182,
-          "declaredPath": "/api/neon/workforce-requests/:requestId/apply",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/workforce-requests/:param/decision",
-      "method": "POST",
-      "path": "/api/neon/workforce-requests/:param/decision",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 154,
-          "declaredPath": "/api/neon/workforce-requests/:requestId/decision",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/workforce-requests/:param/submit",
-      "method": "POST",
-      "path": "/api/neon/workforce-requests/:param/submit",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 141,
-          "declaredPath": "/api/neon/workforce-requests/:requestId/submit",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/workforce-requests/:param/validate",
-      "method": "POST",
-      "path": "/api/neon/workforce-requests/:param/validate",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 129,
-          "declaredPath": "/api/neon/workforce-requests/:requestId/validate",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/workforce-source-adapters/:param",
-      "method": "POST",
-      "path": "/api/neon/workforce-source-adapters/:param",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 361,
-          "declaredPath": "/api/neon/workforce-source-adapters/:source",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/workforce/:param/iam-projection/retry",
-      "method": "POST",
-      "path": "/api/neon/workforce/:param/iam-projection/retry",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 323,
-          "declaredPath": "/api/neon/workforce/:employeeId/iam-projection/retry",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/workforce/:param/offboarding",
-      "method": "POST",
-      "path": "/api/neon/workforce/:param/offboarding",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 292,
-          "declaredPath": "/api/neon/workforce/:employeeId/offboarding",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/workforce/:param/offboarding/:param/resources/:param/complete",
-      "method": "POST",
-      "path": "/api/neon/workforce/:param/offboarding/:param/resources/:param/complete",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 309,
-          "declaredPath": "/api/neon/workforce/:employeeId/offboarding/:caseId/resources/:itemCode/complete",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/workforce/:param/onboarding-checklist/:param/complete",
-      "method": "POST",
-      "path": "/api/neon/workforce/:param/onboarding-checklist/:param/complete",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 279,
-          "declaredPath": "/api/neon/workforce/:employeeId/onboarding-checklist/:itemCode/complete",
-          "kind": "direct"
-        }
-      ],
-      "status": "current-only"
-    },
-    {
-      "identity": "POST /api/neon/workforce/:param/profile-records",
-      "method": "POST",
-      "path": "/api/neon/workforce/:param/profile-records",
-      "legacy": [],
-      "current": [
-        {
-          "source": "server/packages/services/master-data/src/workforce-routes.ts",
-          "line": 227,
-          "declaredPath": "/api/neon/workforce/:employeeId/profile-records",
-          "kind": "direct"
         }
       ],
       "status": "current-only"
@@ -19469,7 +17444,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/publication/src/business-partner-case-contract-routes.ts",
+          "source": "server/packages/services/publication/src/entity-case-contract-routes.ts",
           "line": 23,
           "declaredPath": "/api/studio/business-partner-case-contracts",
           "kind": "contract"
@@ -19484,7 +17459,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/publication/src/business-partner-case-contract-routes.ts",
+          "source": "server/packages/services/publication/src/entity-case-contract-routes.ts",
           "line": 76,
           "declaredPath": "/api/studio/business-partner-case-contracts/:revisionId/publish",
           "kind": "contract"
@@ -19499,7 +17474,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/publication/src/business-partner-case-contract-routes.ts",
+          "source": "server/packages/services/publication/src/entity-case-contract-routes.ts",
           "line": 42,
           "declaredPath": "/api/studio/business-partner-case-contracts/simulations",
           "kind": "contract"
@@ -19514,7 +17489,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
+          "source": "server/packages/services/publication/src/entity-definition-routes.ts",
           "line": 39,
           "declaredPath": "/api/studio/business-partner-definitions",
           "kind": "contract"
@@ -19529,7 +17504,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
+          "source": "server/packages/services/publication/src/entity-definition-routes.ts",
           "line": 92,
           "declaredPath": "/api/studio/business-partner-definitions/:revisionId/publish",
           "kind": "contract"
@@ -19544,7 +17519,7 @@
       "legacy": [],
       "current": [
         {
-          "source": "server/packages/services/publication/src/business-partner-definition-routes.ts",
+          "source": "server/packages/services/publication/src/entity-definition-routes.ts",
           "line": 58,
           "declaredPath": "/api/studio/business-partner-definitions/simulations",
           "kind": "contract"
@@ -19688,6 +17663,51 @@
       "status": "current-only"
     },
     {
+      "identity": "POST /api/studio/publication-policies",
+      "method": "POST",
+      "path": "/api/studio/publication-policies",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/shared/publication/policy-enrollment-routes.ts",
+          "line": 12,
+          "declaredPath": "/api/studio/publication-policies",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/studio/publication-policies/:param/activate",
+      "method": "POST",
+      "path": "/api/studio/publication-policies/:param/activate",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/shared/publication/policy-enrollment-routes.ts",
+          "line": 12,
+          "declaredPath": "/api/studio/publication-policies/:id/activate",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "POST /api/studio/publication-policies/:param/execute",
+      "method": "POST",
+      "path": "/api/studio/publication-policies/:param/execute",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/shared/publication/workload-routes.ts",
+          "line": 27,
+          "declaredPath": "/api/studio/publication-policies/:id/execute",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "POST /api/studio/task-edit-policies",
       "method": "POST",
       "path": "/api/studio/task-edit-policies",
@@ -19695,7 +17715,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/task-edit-policy-authoring.ts",
-          "line": 102,
+          "line": 105,
           "declaredPath": "/api/studio/task-edit-policies",
           "kind": "contract"
         }
@@ -19710,7 +17730,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/task-edit-policy-authoring.ts",
-          "line": 102,
+          "line": 105,
           "declaredPath": "/api/studio/task-edit-policies/:id/publish",
           "kind": "contract"
         }
@@ -20617,7 +18637,7 @@
       "current": [
         {
           "source": "server/packages/planes/studio/meta-entity-authoring/src/routes.ts",
-          "line": 132,
+          "line": 133,
           "declaredPath": "/api/meta-entity-authoring/change-sets/:id/graph",
           "kind": "direct"
         }

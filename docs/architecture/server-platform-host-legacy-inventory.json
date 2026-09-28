@@ -15,22 +15,22 @@
   },
   "dispositionManifest": "server/architecture/legacy-dispositions.json",
   "summary": {
-    "compose-services:new": 50,
-    "configuration:deferred": 109,
-    "configuration:migrated": 166,
-    "configuration:new": 236,
+    "compose-services:new": 51,
+    "configuration:deferred": 113,
+    "configuration:migrated": 162,
+    "configuration:new": 226,
     "database-commands:deferred": 77,
     "database-commands:migrated": 18,
     "database-commands:new": 98,
     "jobs:deferred": 1,
-    "jobs:new": 73,
+    "jobs:new": 65,
     "operational-scripts:deferred": 191,
     "operational-scripts:migrated": 31,
-    "operational-scripts:new": 345,
+    "operational-scripts:new": 380,
     "processes:migrated": 7,
     "processes:new": 1,
     "routes:deferred": 872,
-    "routes:new": 271,
+    "routes:new": 142,
     "schedules:migrated": 1,
     "schedules:new": 5
   },
@@ -80,13 +80,16 @@
       "currentLocations": [
         "deploy/compose/instance/compose.aws-storage.yaml",
         "deploy/compose/instance/compose.local-contact-challenge.yaml",
+        "deploy/compose/instance/compose.metadata-runtime.yaml",
         "deploy/compose/instance/compose.notification-capture.yaml",
         "deploy/compose/instance/compose.notification-providers.yaml",
         "deploy/compose/instance/compose.observability.yaml",
         "deploy/compose/instance/compose.parity.yaml",
         "deploy/compose/instance/compose.preview.yaml",
         "deploy/compose/instance/compose.publication-authoring.yaml",
-        "deploy/compose/instance/compose.publication-local-trust.yaml"
+        "deploy/compose/instance/compose.publication-local-trust.yaml",
+        "deploy/compose/instance/compose.publication-trust.yaml",
+        "deploy/compose/instance/compose.publication-workload.yaml"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -100,6 +103,18 @@
       "currentLocations": [
         "deploy/compose/atlas/compose.bootstrap.yaml",
         "deploy/compose/atlas/compose.yaml"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "compose-services:control-api",
+      "category": "compose-services",
+      "key": "control-api",
+      "legacyLocations": [],
+      "currentLocations": [
+        "deploy/compose/instance/compose.control-api.yaml"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -652,12 +667,15 @@
       "currentLocations": [
         "deploy/compose/instance/compose.aws-storage.yaml",
         "deploy/compose/instance/compose.local-contact-challenge.yaml",
+        "deploy/compose/instance/compose.metadata-runtime.yaml",
         "deploy/compose/instance/compose.notification-capture.yaml",
         "deploy/compose/instance/compose.notification-providers.yaml",
         "deploy/compose/instance/compose.observability.yaml",
         "deploy/compose/instance/compose.parity.yaml",
         "deploy/compose/instance/compose.preview.yaml",
         "deploy/compose/instance/compose.publication-local-trust.yaml",
+        "deploy/compose/instance/compose.publication-trust.yaml",
+        "deploy/compose/instance/compose.publication-workload.yaml",
         "deploy/compose/instance/compose.publication.yaml"
       ],
       "disposition": "new",
@@ -725,8 +743,7 @@
         "server-backup/src/config.ts"
       ],
       "currentLocations": [
-        "server/.env.example",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/.env.example"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -738,8 +755,7 @@
       "key": "app_s3_profile",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -755,8 +771,7 @@
         "server-backup/src/config.ts"
       ],
       "currentLocations": [
-        "server/.env.example",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/.env.example"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -770,7 +785,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -784,8 +798,7 @@
       "key": "artifacts_writer_s3_profile",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -799,7 +812,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -1058,7 +1070,6 @@
       ],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/apps/platform-host/src/monitoring/error-collector.ts",
         "server/packages/services/publication/src/__tests__/local-definition-preview.test.ts"
       ],
@@ -1166,30 +1177,6 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "configuration:athyper_master_data_db_tests",
-      "category": "configuration",
-      "key": "athyper_master_data_db_tests",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:athyper_master_data_test_database_url",
-      "category": "configuration",
-      "key": "athyper_master_data_test_database_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/__tests__/master-data-repository.postgres.test.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "configuration:athyper_mesh_database_admin_url",
       "category": "configuration",
       "key": "athyper_mesh_database_admin_url",
@@ -1212,11 +1199,8 @@
       "key": "athyper_neon_database_admin_url",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/scripts/db-verification/business-partner-360/manage-business-partner-360-rollout.ts",
-        "server/apps/platform-host/scripts/db-verification/business-partner-360/run-business-partner-360-materialization-evidence.ts",
         "server/apps/platform-host/scripts/db-verification/provisioning/publish-development-business-partner-definition.ts",
         "server/apps/platform-host/scripts/db-verification/provisioning/publish-development-compiled-entity-runtime.ts",
-        "server/apps/platform-host/scripts/db-verification/tests/integration/business-partner-r2-scope.ts",
         "server/db/scripts/business-partner-360/collect-customer-downstream-evidence.ts",
         "server/db/scripts/business-partner-360/record-business-partner-360-rollout-observation.ts",
         "server/db/scripts/business-partner-360/run-business-partner-360-performance-evidence.ts",
@@ -2402,30 +2386,6 @@
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
     },
     {
-      "identity": "configuration:atlas_f5_benchmark",
-      "category": "configuration",
-      "key": "atlas_f5_benchmark",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/platform/ai/src/__tests__/business-partner-list-insights.test.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:atlas_local_inference_config_path",
-      "category": "configuration",
-      "key": "atlas_local_inference_config_path",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "configuration:atlas_rls_role_provision_confirm",
       "category": "configuration",
       "key": "atlas_rls_role_provision_confirm",
@@ -2826,8 +2786,7 @@
         "server-backup/src/kernel/__tests__/auth-flag-validator.test.ts"
       ],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -2968,7 +2927,6 @@
       "key": "authorization_management_policy_path",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -3044,7 +3002,6 @@
       "key": "authorization_writer_connections_path",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -3199,50 +3156,12 @@
       "dueGate": "Gate F precondition"
     },
     {
-      "identity": "configuration:bp360_mesh_live_base_url",
-      "category": "configuration",
-      "key": "bp360_mesh_live_base_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:bp360_mesh_live_credential_reference",
-      "category": "configuration",
-      "key": "bp360_mesh_live_credential_reference",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "configuration:bp360_mesh_timeout_ms",
       "category": "configuration",
       "key": "bp360_mesh_timeout_ms",
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:bp_authorization_deployment_config_path",
-      "category": "configuration",
-      "key": "bp_authorization_deployment_config_path",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/processes/api/index.ts",
-        "server/apps/platform-host/src/processes/worker/index.ts",
-        "server/apps/platform-host/src/scripts/recover-dev-publication.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -3276,18 +3195,6 @@
       "dueGate": "Gate F precondition"
     },
     {
-      "identity": "configuration:business_partner_id",
-      "category": "configuration",
-      "key": "business_partner_id",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/db-verification/business-partner-360/verify-business-partner-360-reads.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "configuration:business_partner_mesh_delivery_enabled",
       "category": "configuration",
       "key": "business_partner_mesh_delivery_enabled",
@@ -3303,18 +3210,6 @@
       "identity": "configuration:business_partner_mesh_reconciliation_enabled",
       "category": "configuration",
       "key": "business_partner_mesh_reconciliation_enabled",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:business_partner_metrics_targets",
-      "category": "configuration",
-      "key": "business_partner_metrics_targets",
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/config/index.ts"
@@ -3349,7 +3244,6 @@
       ],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -3483,6 +3377,42 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "configuration:collection_preparation_postgres_test",
+      "category": "configuration",
+      "key": "collection_preparation_postgres_test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/__tests__/collection-preparation.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:compilation_recovery_policy",
+      "category": "configuration",
+      "key": "compilation_recovery_policy",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/compilation-recovery-source.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:compilation_recovery_postgres_test",
+      "category": "configuration",
+      "key": "compilation_recovery_postgres_test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/compilation-recovery-source.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:compose_project_name",
       "category": "configuration",
       "key": "compose_project_name",
@@ -3497,6 +3427,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "A deployment may rely on an unmapped, renamed, or retired configuration key.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "configuration:control_policy_postgres_test",
+      "category": "configuration",
+      "key": "control_policy_postgres_test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/control-policy-rls.test.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "configuration:credential_master_key",
@@ -3527,12 +3469,12 @@
         "server-backup/packages/adapters/telemetry/src/cronwatch/index.ts",
         "server-backup/src/config.ts"
       ],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "migrated",
+      "currentLocations": [],
+      "disposition": "deferred",
       "owner": "platform-host",
-      "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
+      "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
+      "risk": "A deployment may rely on an unmapped, renamed, or retired configuration key.",
+      "dueGate": "Gate F precondition"
     },
     {
       "identity": "configuration:cronwatch_ping_key",
@@ -3540,7 +3482,6 @@
       "key": "cronwatch_ping_key",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -3574,7 +3515,6 @@
       ],
       "currentLocations": [
         "server/.env.example",
-        "server/apps/platform-host/src/config/index.ts",
         "server/db/prisma/prisma-pull.mjs",
         "server/db/scripts/operations/repair/repair-tenant-ledger-hashes.ts",
         "server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts",
@@ -3608,7 +3548,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -3725,12 +3664,9 @@
       ],
       "currentLocations": [
         "server/.env.example",
-        "server/apps/platform-host/scripts/db-verification/business-partner-360/verify-business-partner-360-reads.ts",
         "server/apps/platform-host/scripts/db-verification/tests/integration/business-partner-case-contract-publication.ts",
-        "server/apps/platform-host/scripts/db-verification/tests/integration/governed-internal-business-partner-http.mjs",
         "server/apps/platform-host/scripts/db-verification/tests/integration/publication-authority-repository.mjs",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/db/prisma/prisma-pull.mjs",
         "server/db/scripts/checks/contracts/meta-entity-audit.ts",
         "server/db/scripts/checks/ddl/identity-header.ts",
@@ -3753,8 +3689,7 @@
         "server/db/scripts/tests/integration/run-sql-file.ts",
         "server/db/scripts/tools/introspection/extract-schema-ddl.ts",
         "server/packages/platform/control-admin/scripts/compare-feature-cohorts.ts",
-        "server/packages/services/master-data/src/__tests__/integration/governed-internal-business-partner-http.mjs",
-        "server/packages/services/publication/src/__tests__/integration/business-partner-case-contract-publication.ts",
+        "server/packages/services/publication/src/__tests__/integration/entity-case-contract-publication.ts",
         "server/packages/services/publication/src/__tests__/integration/publication-authority-repository.mjs",
         "server/production.env.example",
         "server/staging.env.example"
@@ -3922,6 +3857,18 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "configuration:dev_metadata_receipt",
+      "category": "configuration",
+      "key": "dev_metadata_receipt",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/platform/metadata/src/__tests__/dev-publication-resolution.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:docker_container_db",
       "category": "configuration",
       "key": "docker_container_db",
@@ -3979,8 +3926,7 @@
         "server-backup/src/kernel/__tests__/bootstrap.test.ts"
       ],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -3996,8 +3942,7 @@
         "server-backup/src/config.ts"
       ],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -4184,8 +4129,61 @@
       "key": "entity_release_review_config_path",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/processes/worker/index.ts",
+        "server/apps/platform-host/src/kernel/bootstrap.ts",
         "server/apps/platform-host/src/scripts/recover-dev-publication.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:entity_scope_postgres_test",
+      "category": "configuration",
+      "key": "entity_scope_postgres_test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/src/composition/__tests__/persisted-scopes.postgres.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:entity_successor_baseline",
+      "category": "configuration",
+      "key": "entity_successor_baseline",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/successor-release.test.ts",
+        "server/db/scripts/operations/publication/successor-source.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:entity_successor_draft_receipt",
+      "category": "configuration",
+      "key": "entity_successor_draft_receipt",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/successor-activation.test.ts",
+        "server/db/scripts/operations/publication/successor-release.test.ts",
+        "server/db/scripts/operations/publication/successor-source.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:entity_successor_postgres_test",
+      "category": "configuration",
+      "key": "entity_successor_postgres_test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/successor-activation.test.ts",
+        "server/db/scripts/operations/publication/successor-release.test.ts",
+        "server/db/scripts/operations/publication/successor-source.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -4220,7 +4218,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/apps/platform-host/src/monitoring/error-collector.ts",
         "server/db/scripts/checks/ddl/business-partner-live-catalog-parity.ts",
         "server/db/scripts/operations/publication/rehearse-publication-canary.ts",
@@ -4628,8 +4625,7 @@
       "key": "hostname",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/composition/register-platform.ts",
-        "server/apps/platform-host/src/composition/register-services.ts"
+        "server/apps/platform-host/src/composition/register-platform.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -4660,8 +4656,7 @@
       ],
       "currentLocations": [
         "server/.env.example",
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -4738,8 +4733,7 @@
       ],
       "currentLocations": [
         "server/.env.example",
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -4859,7 +4853,6 @@
       "key": "infisical_environment",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -4873,7 +4866,6 @@
       "key": "infisical_secret_path",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -4888,7 +4880,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -4903,7 +4894,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -4918,7 +4908,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -5014,8 +5003,7 @@
       "key": "keycloak_admin_base_url",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -5027,8 +5015,7 @@
       "key": "keycloak_admin_client_id",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -5040,8 +5027,7 @@
       "key": "keycloak_admin_credential_reference",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -5068,7 +5054,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/db/scripts/operations/iam/reconcile-runtime-subjects.ts"
       ],
       "disposition": "new",
@@ -5100,7 +5085,6 @@
       ],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -5119,7 +5103,6 @@
       ],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -5150,8 +5133,7 @@
       "key": "keycloak_issuer_url",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -5174,18 +5156,6 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "configuration:keycloak_jwks_url",
-      "category": "configuration",
-      "key": "keycloak_jwks_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "configuration:keycloak_realm",
       "category": "configuration",
       "key": "keycloak_realm",
@@ -5196,7 +5166,6 @@
       ],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/db/scripts/operations/iam/reconcile-runtime-subjects.ts",
         "server/production.env.example",
         "server/staging.env.example"
@@ -5272,54 +5241,6 @@
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
     },
     {
-      "identity": "configuration:local_contact_challenge_delivery_key",
-      "category": "configuration",
-      "key": "local_contact_challenge_delivery_key",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:local_contact_challenge_enabled",
-      "category": "configuration",
-      "key": "local_contact_challenge_enabled",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:local_contact_challenge_key_id",
-      "category": "configuration",
-      "key": "local_contact_challenge_key_id",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:local_contact_challenge_private_key",
-      "category": "configuration",
-      "key": "local_contact_challenge_private_key",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "configuration:local_development_managed",
       "category": "configuration",
       "key": "local_development_managed",
@@ -5344,7 +5265,6 @@
       ],
       "currentLocations": [
         "server/.env.example",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -5359,18 +5279,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/adapters/communications/src/__tests__/capture.mailpit.test.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:master_data_verification_keys_json",
-      "category": "configuration",
-      "key": "master_data_verification_keys_json",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -5470,7 +5378,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/db/prisma/prisma-pull.mjs",
         "server/db/scripts/provisioning/provision-development-notification-acceptance.ts",
         "server/db/scripts/reports/mesh-authorization-quality.ts",
@@ -5511,18 +5418,6 @@
       "dueGate": "Gate F precondition"
     },
     {
-      "identity": "configuration:mesh_invalidation_listener_database_url",
-      "category": "configuration",
-      "key": "mesh_invalidation_listener_database_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "configuration:mesh_readiness_test_docker",
       "category": "configuration",
       "key": "mesh_readiness_test_docker",
@@ -5535,62 +5430,13 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "configuration:mesh_self_registration_policy_bearer_token",
-      "category": "configuration",
-      "key": "mesh_self_registration_policy_bearer_token",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/composition/register-services.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:mesh_self_registration_policy_url",
-      "category": "configuration",
-      "key": "mesh_self_registration_policy_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/composition/register-services.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "configuration:mesh_worker_database_url",
       "category": "configuration",
       "key": "mesh_worker_database_url",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:mesh_workforce_eligibility_base_url",
-      "category": "configuration",
-      "key": "mesh_workforce_eligibility_base_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/composition/register-services.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:mesh_workforce_eligibility_credential_reference",
-      "category": "configuration",
-      "key": "mesh_workforce_eligibility_credential_reference",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/composition/register-services.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -5792,8 +5638,7 @@
       "key": "meta_whatsapp_access_token",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -5805,20 +5650,7 @@
       "key": "meta_whatsapp_api_version",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:meta_whatsapp_graph_base_url",
-      "category": "configuration",
-      "key": "meta_whatsapp_graph_base_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -5830,8 +5662,7 @@
       "key": "meta_whatsapp_phone_number_id",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -5843,7 +5674,18 @@
       "key": "metadata_compiled_only_planes",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
+        "server/apps/platform-host/src/__tests__/config.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:metadata_format_routing",
+      "category": "configuration",
+      "key": "metadata_format_routing",
+      "legacyLocations": [],
+      "currentLocations": [
         "server/apps/platform-host/src/config/index.ts"
       ],
       "disposition": "new",
@@ -5862,7 +5704,6 @@
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
         "server/apps/platform-host/src/composition/__tests__/register-runtimes.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/apps/platform-host/src/main.ts",
         "server/apps/platform-host/src/monitoring/__tests__/error-collector.test.ts",
         "server/apps/platform-host/src/monitoring/error-collector.ts"
@@ -5989,24 +5830,11 @@
         "server-backup/scripts/db/verify/qualify-p5-e2-operation-scope-shadow.ts"
       ],
       "currentLocations": [
-        "server/apps/platform-host/scripts/db-verification/business-partner-360/verify-business-partner-360-reads.ts",
         "server/db/scripts/provisioning/provision-development-notification-acceptance.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
-    },
-    {
-      "identity": "configuration:neon_invalidation_listener_database_url",
-      "category": "configuration",
-      "key": "neon_invalidation_listener_database_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "configuration:neon_worker_database_url",
@@ -6015,7 +5843,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -6062,7 +5889,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/apps/platform-host/src/main.ts",
         "server/apps/platform-host/src/monitoring/error-collector.ts",
         "server/production.env.example",
@@ -6226,6 +6052,42 @@
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
     },
     {
+      "identity": "configuration:operation_projection_authority_tenant",
+      "category": "configuration",
+      "key": "operation_projection_authority_tenant",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/operation-projection.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:operation_projection_postgres_test",
+      "category": "configuration",
+      "key": "operation_projection_postgres_test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/operation-projection.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:operation_projection_release_id",
+      "category": "configuration",
+      "key": "operation_projection_release_id",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/operation-projection.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "configuration:otel_auto_instrumentations_enabled",
       "category": "configuration",
       "key": "otel_auto_instrumentations_enabled",
@@ -6249,8 +6111,7 @@
         "server-backup/packages/adapters/telemetry/src/otel/index.ts"
       ],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -6267,7 +6128,6 @@
       ],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -6464,18 +6324,6 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "configuration:platform_verification_grafana_url",
-      "category": "configuration",
-      "key": "platform_verification_grafana_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "configuration:port",
       "category": "configuration",
       "key": "port",
@@ -6489,7 +6337,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -6504,18 +6351,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/iam/reconcile-runtime-subjects.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "configuration:preview_renderer_base_url",
-      "category": "configuration",
-      "key": "preview_renderer_base_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -6812,7 +6647,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -6827,7 +6661,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -6897,7 +6730,6 @@
       "key": "publication_runtime_version",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -6912,7 +6744,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -6939,7 +6770,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -6953,8 +6783,7 @@
       "key": "push_fcm_client_email",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -6966,8 +6795,7 @@
       "key": "push_fcm_private_key",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -6981,8 +6809,7 @@
         "server-backup/src/config.ts"
       ],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -7125,7 +6952,6 @@
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
         "server/apps/platform-host/src/composition/__tests__/register-runtimes.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/apps/platform-host/src/scripts/submit-derivative-scan-backfill.test.ts",
         "server/apps/platform-host/src/scripts/submit-derivative-scan-backfill.ts"
       ],
@@ -7183,7 +7009,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7240,7 +7065,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7308,12 +7132,24 @@
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
     },
     {
-      "identity": "configuration:run_bp_dev_sql_check",
+      "identity": "configuration:run_dev_metadata_live_tests",
       "category": "configuration",
-      "key": "run_bp_dev_sql_check",
+      "key": "run_dev_metadata_live_tests",
       "legacyLocations": [],
       "currentLocations": [
-        "server/packages/services/master-data/src/__tests__/protected-storage-sql.test.ts"
+        "server/packages/platform/metadata/src/__tests__/dev-publication-resolution.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:run_dev_metadata_sql_tests",
+      "category": "configuration",
+      "key": "run_dev_metadata_sql_tests",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/packages/platform/metadata/src/__tests__/compiled-source-tenant.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -7375,7 +7211,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7396,8 +7231,7 @@
         "server-backup/staging.env.example"
       ],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -7411,7 +7245,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7427,7 +7260,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7443,7 +7275,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7465,7 +7296,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7564,8 +7394,7 @@
       "key": "s3_public_endpoint",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -7585,7 +7414,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7607,7 +7435,6 @@
       "currentLocations": [
         "server/.env.example",
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7641,8 +7468,7 @@
       "key": "searchcore_api_key",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -7654,8 +7480,7 @@
       "key": "searchcore_document_index",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -7700,7 +7525,6 @@
       ],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/packages/adapters/search-meilisearch/src/__tests__/meilisearch-scoped-key.integration.test.ts"
       ],
       "disposition": "migrated",
@@ -7831,7 +7655,6 @@
         "server-backup/staging.env.example"
       ],
       "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7851,7 +7674,6 @@
       ],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/apps/platform-host/src/monitoring/error-collector.ts",
         "server/db/scripts/operations/publication/rehearse-publication-canary.ts",
         "server/production.env.example",
@@ -7868,7 +7690,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7911,7 +7732,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7925,7 +7745,6 @@
       "key": "ses_event_region",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7967,7 +7786,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7982,7 +7800,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -7997,7 +7814,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -8032,7 +7848,6 @@
       ],
       "currentLocations": [
         "server/.env.example",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -8062,8 +7877,7 @@
         "server-backup/src/config.ts"
       ],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -8119,8 +7933,7 @@
         "server-backup/src/config.ts"
       ],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -8133,12 +7946,12 @@
       "legacyLocations": [
         "server-backup/src/config.ts"
       ],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "migrated",
+      "currentLocations": [],
+      "disposition": "deferred",
       "owner": "platform-host",
-      "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
+      "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
+      "risk": "A deployment may rely on an unmapped, renamed, or retired configuration key.",
+      "dueGate": "Gate F precondition"
     },
     {
       "identity": "configuration:smtp_port",
@@ -8177,12 +7990,12 @@
       "legacyLocations": [
         "server-backup/src/config.ts"
       ],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "migrated",
+      "currentLocations": [],
+      "disposition": "deferred",
       "owner": "platform-host",
-      "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
+      "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
+      "risk": "A deployment may rely on an unmapped, renamed, or retired configuration key.",
+      "dueGate": "Gate F precondition"
     },
     {
       "identity": "configuration:statuswatch_worker_push_url",
@@ -8230,18 +8043,6 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "configuration:studio_invalidation_listener_database_url",
-      "category": "configuration",
-      "key": "studio_invalidation_listener_database_url",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "configuration:studio_worker_database_url",
       "category": "configuration",
       "key": "studio_worker_database_url",
@@ -8255,12 +8056,24 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "configuration:supplier_workforce_policy_coordinates_json",
+      "identity": "configuration:system_publication_policy_id",
       "category": "configuration",
-      "key": "supplier_workforce_policy_coordinates_json",
+      "key": "system_publication_policy_id",
       "legacyLocations": [],
       "currentLocations": [
-        "server/apps/platform-host/src/composition/register-services.ts"
+        "server/db/scripts/operations/publication/system-entity-commands.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "configuration:system_publication_postgres_test",
+      "category": "configuration",
+      "key": "system_publication_postgres_test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/system-entity-commands.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -8288,8 +8101,7 @@
         "server-backup/src/config.ts"
       ],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -8303,8 +8115,7 @@
         "server-backup/src/config.ts"
       ],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -8317,12 +8128,12 @@
       "legacyLocations": [
         "server-backup/src/config.ts"
       ],
-      "currentLocations": [
-        "server/apps/platform-host/src/config/index.ts"
-      ],
-      "disposition": "migrated",
+      "currentLocations": [],
+      "disposition": "deferred",
       "owner": "platform-host",
-      "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
+      "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
+      "risk": "A deployment may rely on an unmapped, renamed, or retired configuration key.",
+      "dueGate": "Gate F precondition"
     },
     {
       "identity": "configuration:twilio_messaging_service_sid",
@@ -8332,8 +8143,7 @@
         "server-backup/src/config.ts"
       ],
       "currentLocations": [
-        "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts"
+        "server/apps/platform-host/src/__tests__/config.test.ts"
       ],
       "disposition": "migrated",
       "owner": "platform-host",
@@ -8377,7 +8187,6 @@
       ],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -8397,7 +8206,6 @@
       ],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -8417,7 +8225,6 @@
       ],
       "currentLocations": [
         "server/apps/platform-host/src/__tests__/config.test.ts",
-        "server/apps/platform-host/src/config/index.ts",
         "server/production.env.example",
         "server/staging.env.example"
       ],
@@ -11226,18 +11033,6 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "jobs:business-partner-invitations-expire",
-      "category": "jobs",
-      "key": "business-partner-invitations-expire",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-jobs.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "jobs:documents.derivative-scan-backfill",
       "category": "jobs",
       "key": "documents.derivative-scan-backfill",
@@ -11478,66 +11273,6 @@
       "followUp": "docs/architecture/server-phase9-jobs-recovery-status-report.md",
       "risk": "Pending work may lack an owning handler, retry policy, or durable migration decision.",
       "dueGate": "Gate F precondition"
-    },
-    {
-      "identity": "jobs:mesh.business-partner.deliver",
-      "category": "jobs",
-      "key": "mesh.business-partner.deliver",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-delivery.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "jobs:mesh.business-partner.delivery",
-      "category": "jobs",
-      "key": "mesh.business-partner.delivery",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-delivery.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "jobs:mesh.business-partner.reconcile",
-      "category": "jobs",
-      "key": "mesh.business-partner.reconcile",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-delivery.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "jobs:neon-business-partner-invitation-maintenance",
-      "category": "jobs",
-      "key": "neon-business-partner-invitation-maintenance",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-jobs.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "jobs:neon-supplier-readiness-maintenance",
-      "category": "jobs",
-      "key": "neon-supplier-readiness-maintenance",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-readiness-jobs.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "jobs:notifications.delivery",
@@ -11858,30 +11593,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/planes/studio/onboarding/src/maintenance.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "jobs:supplier-activations-reevaluate",
-      "category": "jobs",
-      "key": "supplier-activations-reevaluate",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-readiness-jobs.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "jobs:supplier-qualifications-expire",
-      "category": "jobs",
-      "key": "supplier-qualifications-expire",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-readiness-jobs.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -13645,18 +13356,6 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "operational-scripts:business-partner-360-materialization-evidence",
-      "category": "operational-scripts",
-      "key": "business-partner-360-materialization-evidence",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/db-verification/business-partner-360/run-business-partner-360-materialization-evidence.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "operational-scripts:business-partner-360-network.test",
       "category": "operational-scripts",
       "key": "business-partner-360-network.test",
@@ -13687,30 +13386,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/business-partner-360/run-business-partner-360-performance-evidence.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:business-partner-360-reads",
-      "category": "operational-scripts",
-      "key": "business-partner-360-reads",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/db-verification/business-partner-360/verify-business-partner-360-reads.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "operational-scripts:business-partner-360-rollout",
-      "category": "operational-scripts",
-      "key": "business-partner-360-rollout",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/db-verification/business-partner-360/manage-business-partner-360-rollout.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -14043,18 +13718,6 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "operational-scripts:business-partner-r2-scope",
-      "category": "operational-scripts",
-      "key": "business-partner-r2-scope",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/db-verification/tests/integration/business-partner-r2-scope.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "operational-scripts:business-partner-r4-change-case",
       "category": "operational-scripts",
       "key": "business-partner-r4-change-case",
@@ -14303,6 +13966,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "An operator command may be unavailable or may target obsolete paths.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "operational-scripts:capture-dev-publication-baseline",
+      "category": "operational-scripts",
+      "key": "capture-dev-publication-baseline",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/capture-dev-publication-baseline.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:capture-seed-state",
@@ -14598,6 +14273,30 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "operational-scripts:common-collaboration-seed.test",
+      "category": "operational-scripts",
+      "key": "common-collaboration-seed.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/__tests__/authorization/common-collaboration-seed.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:common-reference-catalog.test",
+      "category": "operational-scripts",
+      "key": "common-reference-catalog.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/__tests__/authorization/common-reference-catalog.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:company-profile-overlay",
       "category": "operational-scripts",
       "key": "company-profile-overlay",
@@ -14616,6 +14315,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/platform/control-admin/scripts/compare-feature-cohorts.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:compilation-recovery-source.test",
+      "category": "operational-scripts",
+      "key": "compilation-recovery-source.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/compilation-recovery-source.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -14807,6 +14518,30 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:control-policy-rls",
+      "category": "operational-scripts",
+      "key": "control-policy-rls",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/control-policy-rls.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:control-policy-rls.test",
+      "category": "operational-scripts",
+      "key": "control-policy-rls.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/control-policy-rls.test.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:conversation-rls",
       "category": "operational-scripts",
       "key": "conversation-rls",
@@ -14887,6 +14622,30 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/tests/integration/customer-portal-source-probe.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:cutover-dev-platform-authority",
+      "category": "operational-scripts",
+      "key": "cutover-dev-platform-authority",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/cutover-dev-platform-authority.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:cutover-dev-platform-authority.test",
+      "category": "operational-scripts",
+      "key": "cutover-dev-platform-authority.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/cutover-dev-platform-authority.test.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -15007,6 +14766,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/__tests__/platform/derivative-scan-evidence-migration.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:dev-control-login",
+      "category": "operational-scripts",
+      "key": "dev-control-login",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/verify-dev-control-login.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -15173,6 +14944,18 @@
       "disposition": "migrated",
       "owner": "platform-operations",
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
+    },
+    {
+      "identity": "operational-scripts:enroll-publication-policy",
+      "category": "operational-scripts",
+      "key": "enroll-publication-policy",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/operations/enroll-publication-policy.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:entity-capability-ca01",
@@ -15684,24 +15467,24 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "operational-scripts:governed-internal-business-partner-http",
-      "category": "operational-scripts",
-      "key": "governed-internal-business-partner-http",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/apps/platform-host/scripts/db-verification/tests/integration/governed-internal-business-partner-http.mjs"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "operational-scripts:governed-lifecycle-g0",
       "category": "operational-scripts",
       "key": "governed-lifecycle-g0",
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/checks/ddl/governed-lifecycle-g0.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:grant-dev-reference-view",
+      "category": "operational-scripts",
+      "key": "grant-dev-reference-view",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/grant-dev-reference-view.sql"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -15792,6 +15575,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/tests/integration/identity-replay-live.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:import-dev-reference-product",
+      "category": "operational-scripts",
+      "key": "import-dev-reference-product",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/import-dev-reference-product.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -15916,6 +15711,30 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "operational-scripts:install-compilation-recovery",
+      "category": "operational-scripts",
+      "key": "install-compilation-recovery",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/install-compilation-recovery.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:install-dev-entity-successor",
+      "category": "operational-scripts",
+      "key": "install-dev-entity-successor",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/install-dev-entity-successor.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:install-mesh-authorization-v2-expand",
       "category": "operational-scripts",
       "key": "install-mesh-authorization-v2-expand",
@@ -15978,6 +15797,42 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:inventory-composition",
+      "category": "operational-scripts",
+      "key": "inventory-composition",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/verification/inventory-composition.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:inventory-deleted-exports",
+      "category": "operational-scripts",
+      "key": "inventory-deleted-exports",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/verification/inventory-deleted-exports.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:inventory-dev-entity-product",
+      "category": "operational-scripts",
+      "key": "inventory-dev-entity-product",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/inventory-dev-entity-product.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:inventory-promotion-model",
       "category": "operational-scripts",
       "key": "inventory-promotion-model",
@@ -15996,6 +15851,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/__tests__/authorization/inventory-promotion.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:inventory-publication-exports",
+      "category": "operational-scripts",
+      "key": "inventory-publication-exports",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/apps/platform-host/scripts/verification/inventory-publication-exports.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -16849,6 +16716,18 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "operational-scripts:normalize-dev-trust-names",
+      "category": "operational-scripts",
+      "key": "normalize-dev-trust-names",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/normalize-dev-trust-names.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:numbering",
       "category": "operational-scripts",
       "key": "numbering",
@@ -16895,6 +16774,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/tests/integration/meta-entity/numbering-test-artifacts.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:operation-projection.test",
+      "category": "operational-scripts",
+      "key": "operation-projection.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/operation-projection.test.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -17301,6 +17192,42 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:prepare-compilation-recovery",
+      "category": "operational-scripts",
+      "key": "prepare-compilation-recovery",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/prepare-compilation-recovery.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:prepare-dev-control-api",
+      "category": "operational-scripts",
+      "key": "prepare-dev-control-api",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/prepare-dev-control-api.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:prepare-dev-entity-successor",
+      "category": "operational-scripts",
+      "key": "prepare-dev-entity-successor",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/prepare-dev-entity-successor.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:prepare-p5-e5-successor-change-sets",
       "category": "operational-scripts",
       "key": "prepare-p5-e5-successor-change-sets",
@@ -17327,6 +17254,18 @@
       "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
       "risk": "An operator command may be unavailable or may target obsolete paths.",
       "dueGate": "Gate F precondition"
+    },
+    {
+      "identity": "operational-scripts:prepare-reference-runtime",
+      "category": "operational-scripts",
+      "key": "prepare-reference-runtime",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/provisioning/prepare-reference-runtime.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:presentation-graph-helpers",
@@ -17573,6 +17512,54 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/studio/provision-cirrusatlantic-publication-qa.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:provision-dev-control-client",
+      "category": "operational-scripts",
+      "key": "provision-dev-control-client",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/provision-dev-control-client.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:provision-dev-publication-authority",
+      "category": "operational-scripts",
+      "key": "provision-dev-publication-authority",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/provision-dev-publication-authority.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:provision-dev-publication-authority.test",
+      "category": "operational-scripts",
+      "key": "provision-dev-publication-authority.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/provision-dev-publication-authority.test.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:provision-dev-trust",
+      "category": "operational-scripts",
+      "key": "provision-dev-trust",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/provision-dev-trust.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -18193,6 +18180,30 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "operational-scripts:refresh-dev-test-admin",
+      "category": "operational-scripts",
+      "key": "refresh-dev-test-admin",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/refresh-dev-test-admin.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:refresh-dev-test-admin.test",
+      "category": "operational-scripts",
+      "key": "refresh-dev-test-admin.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/refresh-dev-test-admin.test.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:rehearse-publication-canary",
       "category": "operational-scripts",
       "key": "rehearse-publication-canary",
@@ -18211,6 +18222,18 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/operations/repair/jobs-execution-duplicates/repair.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:repair-dev-account-console-scope",
+      "category": "operational-scripts",
+      "key": "repair-dev-account-console-scope",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/repair-dev-account-console-scope.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -18692,6 +18715,30 @@
       "dueGate": "Gate F precondition"
     },
     {
+      "identity": "operational-scripts:setup-dev-test-admin",
+      "category": "operational-scripts",
+      "key": "setup-dev-test-admin",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/setup-dev-test-admin.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:setup-dev-test-admin.test",
+      "category": "operational-scripts",
+      "key": "setup-dev-test-admin.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/setup-dev-test-admin.test.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:shared-reference",
       "category": "operational-scripts",
       "key": "shared-reference",
@@ -18726,6 +18773,30 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/tests/integration/run-sql-file.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:stage-dev-platform-authority",
+      "category": "operational-scripts",
+      "key": "stage-dev-platform-authority",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/stage-dev-platform-authority.mjs"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:stage-dev-platform-authority.test",
+      "category": "operational-scripts",
+      "key": "stage-dev-platform-authority.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/authorization/stage-dev-platform-authority.test.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -18950,12 +19021,60 @@
       "parityEvidence": "Current-only surface."
     },
     {
+      "identity": "operational-scripts:successor-activation.test",
+      "category": "operational-scripts",
+      "key": "successor-activation.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/successor-activation.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:successor-release.test",
+      "category": "operational-scripts",
+      "key": "successor-release.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/successor-release.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:successor-source.test",
+      "category": "operational-scripts",
+      "key": "successor-source.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/successor-source.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
       "identity": "operational-scripts:supplier-preference-normalized-scope",
       "category": "operational-scripts",
       "key": "supplier-preference-normalized-scope",
       "legacyLocations": [],
       "currentLocations": [
         "server/db/scripts/tests/integration/supplier-preference-normalized-scope.sql"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
+    },
+    {
+      "identity": "operational-scripts:surface-arrangement-dev",
+      "category": "operational-scripts",
+      "key": "surface-arrangement-dev",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/tests/integration/surface-arrangement-dev.mjs"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -19012,6 +19131,18 @@
       "disposition": "migrated",
       "owner": "platform-operations",
       "parityEvidence": "Structural identity in rebuilt inventory; behavioral qualification is required by Gate E."
+    },
+    {
+      "identity": "operational-scripts:system-entity-commands.test",
+      "category": "operational-scripts",
+      "key": "system-entity-commands.test",
+      "legacyLocations": [],
+      "currentLocations": [
+        "server/db/scripts/operations/publication/system-entity-commands.test.ts"
+      ],
+      "disposition": "new",
+      "owner": "rebuilt-server",
+      "parityEvidence": "Current-only surface."
     },
     {
       "identity": "operational-scripts:teardown-packs",
@@ -20953,72 +21084,12 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "routes:get /api/master/owners/:entitycode/:ownertypeid/:ownerid/profile",
-      "category": "routes",
-      "key": "get /api/master/owners/:entitycode/:ownertypeid/:ownerid/profile",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/master-data-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "routes:get /api/me/saved-views",
       "category": "routes",
       "key": "get /api/me/saved-views",
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/platform/preferences/src/saved-view-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/mesh/business-partner-bank-disclosures/:disclosureid",
-      "category": "routes",
-      "key": "get /api/mesh/business-partner-bank-disclosures/:disclosureid",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/mesh/business-partner-network-workspace",
-      "category": "routes",
-      "key": "get /api/mesh/business-partner-network-workspace",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/mesh/business-partner-profile-publications",
-      "category": "routes",
-      "key": "get /api/mesh/business-partner-profile-publications",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/mesh/business-partner-profile-publications/:publicationid",
-      "category": "routes",
-      "key": "get /api/mesh/business-partner-profile-publications/:publicationid",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -21157,444 +21228,12 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "routes:get /api/neon/business-partner-invitation-templates/:journeykind",
-      "category": "routes",
-      "key": "get /api/neon/business-partner-invitation-templates/:journeykind",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/business-partner-invitations/:invitationid",
-      "category": "routes",
-      "key": "get /api/neon/business-partner-invitations/:invitationid",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/business-partner-profile-events/quarantine",
-      "category": "routes",
-      "key": "get /api/neon/business-partner-profile-events/quarantine",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-profile-projection-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/business-partner-profile-events/receipts",
-      "category": "routes",
-      "key": "get /api/neon/business-partner-profile-events/receipts",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-profile-projection-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/business-partner-profile-matches/:matchid",
-      "category": "routes",
-      "key": "get /api/neon/business-partner-profile-matches/:matchid",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-profile-match-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/business-partner-profile-projections",
-      "category": "routes",
-      "key": "get /api/neon/business-partner-profile-projections",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-profile-projection-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/business-partners/:businesspartnerid",
-      "category": "routes",
-      "key": "get /api/neon/business-partners/:businesspartnerid",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-request-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/business-partners/:businesspartnerid/customer-credit-reviews",
-      "category": "routes",
-      "key": "get /api/neon/business-partners/:businesspartnerid/customer-credit-reviews",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/business-partners/:businesspartnerid/customer-designations",
-      "category": "routes",
-      "key": "get /api/neon/business-partners/:businesspartnerid/customer-designations",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/business-partners/:businesspartnerid/eligibility",
-      "category": "routes",
-      "key": "get /api/neon/business-partners/:businesspartnerid/eligibility",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/business-partners/:businesspartnerid/preferences",
-      "category": "routes",
-      "key": "get /api/neon/business-partners/:businesspartnerid/preferences",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "routes:get /api/neon/business-partners/:id/360/summary",
       "category": "routes",
       "key": "get /api/neon/business-partners/:id/360/summary",
       "legacyLocations": [],
       "currentLocations": [
         "server/apps/platform-host/src/composition/__tests__/business-partner-authorization-shadow.test.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/external/${config.path}-registrations/:requestid/status",
-      "category": "routes",
-      "key": "get /api/neon/external/${config.path}-registrations/:requestid/status",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/external/business-partner-invitations/:journeykind/requests/:requestid/status",
-      "category": "routes",
-      "key": "get /api/neon/external/business-partner-invitations/:journeykind/requests/:requestid/status",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/hr-setup/calendar-day-changes",
-      "category": "routes",
-      "key": "get /api/neon/hr-setup/calendar-day-changes",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/hr-setup/catalog",
-      "category": "routes",
-      "key": "get /api/neon/hr-setup/catalog",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/hr-setup/drafts",
-      "category": "routes",
-      "key": "get /api/neon/hr-setup/drafts",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/hr-setup/org-candidates",
-      "category": "routes",
-      "key": "get /api/neon/hr-setup/org-candidates",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/hr-setup/org-company-assignments",
-      "category": "routes",
-      "key": "get /api/neon/hr-setup/org-company-assignments",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/hr-setup/policy-assignments",
-      "category": "routes",
-      "key": "get /api/neon/hr-setup/policy-assignments",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/hr-setup/policy-effective",
-      "category": "routes",
-      "key": "get /api/neon/hr-setup/policy-effective",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/mesh-business-partner-account-links/:linkid",
-      "category": "routes",
-      "key": "get /api/neon/mesh-business-partner-account-links/:linkid",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/protected-bank-registrations/:bankaccountlinkid",
-      "category": "routes",
-      "key": "get /api/neon/protected-bank-registrations/:bankaccountlinkid",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/supplier-workforce/policy-readiness",
-      "category": "routes",
-      "key": "get /api/neon/supplier-workforce/policy-readiness",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/supplier-workforce/requisitions",
-      "category": "routes",
-      "key": "get /api/neon/supplier-workforce/requisitions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/users",
-      "category": "routes",
-      "key": "get /api/neon/users",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/users/:principalid",
-      "category": "routes",
-      "key": "get /api/neon/users/:principalid",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/users/me/profile-change",
-      "category": "routes",
-      "key": "get /api/neon/users/me/profile-change",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/users/profile-changes/review",
-      "category": "routes",
-      "key": "get /api/neon/users/profile-changes/review",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/workforce",
-      "category": "routes",
-      "key": "get /api/neon/workforce",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/workforce-requests",
-      "category": "routes",
-      "key": "get /api/neon/workforce-requests",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/workforce-requests/:requestid",
-      "category": "routes",
-      "key": "get /api/neon/workforce-requests/:requestid",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/workforce/:employeeid",
-      "category": "routes",
-      "key": "get /api/neon/workforce/:employeeid",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/workforce/:employeeid/authority",
-      "category": "routes",
-      "key": "get /api/neon/workforce/:employeeid/authority",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/workforce/:employeeid/onboarding-checklist",
-      "category": "routes",
-      "key": "get /api/neon/workforce/:employeeid/onboarding-checklist",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/workforce/:employeeid/readiness",
-      "category": "routes",
-      "key": "get /api/neon/workforce/:employeeid/readiness",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:get /api/neon/workforce/:employeeid/sections/:section",
-      "category": "routes",
-      "key": "get /api/neon/workforce/:employeeid/sections/:section",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -27509,60 +27148,12 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "routes:patch /api/master/contacts/:contactid/verification",
-      "category": "routes",
-      "key": "patch /api/master/contacts/:contactid/verification",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/master-data-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "routes:patch /api/me/saved-views/:viewid/:action",
       "category": "routes",
       "key": "patch /api/me/saved-views/:viewid/:action",
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/platform/preferences/src/saved-view-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:patch /api/neon/external/${config.path}-registrations/:requestid/correction",
-      "category": "routes",
-      "key": "patch /api/neon/external/${config.path}-registrations/:requestid/correction",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:patch /api/neon/external/business-partner-invitations/:journeykind/requests/:requestid/correction",
-      "category": "routes",
-      "key": "patch /api/neon/external/business-partner-invitations/:journeykind/requests/:requestid/correction",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:patch /api/neon/users/:principalid/profile",
-      "category": "routes",
-      "key": "patch /api/neon/users/:principalid/profile",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -28385,18 +27976,6 @@
       "dueGate": "Gate F precondition"
     },
     {
-      "identity": "routes:post ${path}/${action}",
-      "category": "routes",
-      "key": "post ${path}/${action}",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner/classification/routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "routes:post ${root}/:entity",
       "category": "routes",
       "key": "post ${root}/:entity",
@@ -28908,192 +28487,12 @@
       "parityEvidence": "Current-only surface."
     },
     {
-      "identity": "routes:post /api/master/addresses/:addresslinkid/deactivate",
-      "category": "routes",
-      "key": "post /api/master/addresses/:addresslinkid/deactivate",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/master-data-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/master/contacts/:contactid/deactivate",
-      "category": "routes",
-      "key": "post /api/master/contacts/:contactid/deactivate",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/master-data-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/master/owners/:entitycode/:ownertypeid/:ownerid/addresses",
-      "category": "routes",
-      "key": "post /api/master/owners/:entitycode/:ownertypeid/:ownerid/addresses",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/master-data-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/master/owners/:entitycode/:ownertypeid/:ownerid/contacts",
-      "category": "routes",
-      "key": "post /api/master/owners/:entitycode/:ownertypeid/:ownerid/contacts",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/master-data-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
       "identity": "routes:post /api/me/saved-views/:viewid/clone",
       "category": "routes",
       "key": "post /api/me/saved-views/:viewid/clone",
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/platform/preferences/src/saved-view-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/mesh/business-partner-bank-disclosures",
-      "category": "routes",
-      "key": "post /api/mesh/business-partner-bank-disclosures",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/mesh/business-partner-bank-disclosures/:disclosureid/decisions",
-      "category": "routes",
-      "key": "post /api/mesh/business-partner-bank-disclosures/:disclosureid/decisions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/mesh/business-partner-bank-disclosures/:disclosureid/revocations",
-      "category": "routes",
-      "key": "post /api/mesh/business-partner-bank-disclosures/:disclosureid/revocations",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/mesh/business-partner-network-capabilities/:capabilityid/decisions",
-      "category": "routes",
-      "key": "post /api/mesh/business-partner-network-capabilities/:capabilityid/decisions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/mesh/business-partner-network-relationships",
-      "category": "routes",
-      "key": "post /api/mesh/business-partner-network-relationships",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/mesh/business-partner-network-relationships/:relationshipid/capabilities",
-      "category": "routes",
-      "key": "post /api/mesh/business-partner-network-relationships/:relationshipid/capabilities",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/mesh/business-partner-network-relationships/:relationshipid/decisions",
-      "category": "routes",
-      "key": "post /api/mesh/business-partner-network-relationships/:relationshipid/decisions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/mesh/business-partner-profile-publications",
-      "category": "routes",
-      "key": "post /api/mesh/business-partner-profile-publications",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/mesh/business-partner-profile-publications/:publicationid/withdrawals",
-      "category": "routes",
-      "key": "post /api/mesh/business-partner-profile-publications/:publicationid/withdrawals",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/mesh/business-partner-registration-exchanges",
-      "category": "routes",
-      "key": "post /api/mesh/business-partner-registration-exchanges",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/mesh/business-partner-registration-exchanges/:exchangeid/decisions",
-      "category": "routes",
-      "key": "post /api/mesh/business-partner-registration-exchanges/:exchangeid/decisions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",
@@ -29142,822 +28541,6 @@
       "legacyLocations": [],
       "currentLocations": [
         "server/packages/planes/studio/meta-entity-authoring/src/routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/${config.path}-registration-invitations",
-      "category": "routes",
-      "key": "post /api/neon/${config.path}-registration-invitations",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-imports",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-imports",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-governed-import-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-intake/protected-values",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-intake/protected-values",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-invitations",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-invitations",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-invitations/:invitationid/cancel",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-invitations/:invitationid/cancel",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-invitations/:invitationid/resend",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-invitations/:invitationid/resend",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-invitations/:invitationid/support-recovery",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-invitations/:invitationid/support-recovery",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-preferences/:preferenceid/decisions",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-preferences/:preferenceid/decisions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-preferences/:preferenceid/revocations",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-preferences/:preferenceid/revocations",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-profile-change-previews",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-profile-change-previews",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-profile-match-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-profile-change-resolutions",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-profile-change-resolutions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-profile-match-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-profile-events",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-profile-events",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-profile-projection-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-profile-events/:eventid/replays",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-profile-events/:eventid/replays",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-profile-projection-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-profile-matches",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-profile-matches",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-profile-match-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-profile-matches/:matchid/requests",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-profile-matches/:matchid/requests",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-profile-match-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partner-qualifications/:qualificationid/decisions",
-      "category": "routes",
-      "key": "post /api/neon/business-partner-qualifications/:qualificationid/decisions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partners/:businesspartnerid/customer-credit-reviews",
-      "category": "routes",
-      "key": "post /api/neon/business-partners/:businesspartnerid/customer-credit-reviews",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partners/:businesspartnerid/customer-designations",
-      "category": "routes",
-      "key": "post /api/neon/business-partners/:businesspartnerid/customer-designations",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partners/:businesspartnerid/customer-lifecycle",
-      "category": "routes",
-      "key": "post /api/neon/business-partners/:businesspartnerid/customer-lifecycle",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partners/:businesspartnerid/preferences",
-      "category": "routes",
-      "key": "post /api/neon/business-partners/:businesspartnerid/preferences",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partners/:businesspartnerid/protected-bank-registrations",
-      "category": "routes",
-      "key": "post /api/neon/business-partners/:businesspartnerid/protected-bank-registrations",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partners/:businesspartnerid/qualifications",
-      "category": "routes",
-      "key": "post /api/neon/business-partners/:businesspartnerid/qualifications",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/business-partners/:businesspartnerid/supplier-activation",
-      "category": "routes",
-      "key": "post /api/neon/business-partners/:businesspartnerid/supplier-activation",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/customer-credit-reviews/:reviewid/decisions",
-      "category": "routes",
-      "key": "post /api/neon/customer-credit-reviews/:reviewid/decisions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/customer-designations/:designationid/decisions",
-      "category": "routes",
-      "key": "post /api/neon/customer-designations/:designationid/decisions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-eligibility-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/external/${config.path}-registrations/:requestid/evidence",
-      "category": "routes",
-      "key": "post /api/neon/external/${config.path}-registrations/:requestid/evidence",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/external/${config.path}-registrations/accept",
-      "category": "routes",
-      "key": "post /api/neon/external/${config.path}-registrations/accept",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/external/business-partner-invitations/:journeykind/accept",
-      "category": "routes",
-      "key": "post /api/neon/external/business-partner-invitations/:journeykind/accept",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/external/business-partner-invitations/:journeykind/requests/:requestid/evidence",
-      "category": "routes",
-      "key": "post /api/neon/external/business-partner-invitations/:journeykind/requests/:requestid/evidence",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/external/business-partner-invitations/:journeykind/requests/:requestid/evidence/complete",
-      "category": "routes",
-      "key": "post /api/neon/external/business-partner-invitations/:journeykind/requests/:requestid/evidence/complete",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/external/business-partner-invitations/:journeykind/requests/:requestid/evidence/stage",
-      "category": "routes",
-      "key": "post /api/neon/external/business-partner-invitations/:journeykind/requests/:requestid/evidence/stage",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/external/business-partner-invitations/:journeykind/requests/:requestid/submit",
-      "category": "routes",
-      "key": "post /api/neon/external/business-partner-invitations/:journeykind/requests/:requestid/submit",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/business-partner-invitation-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/governed-business-partner-cases",
-      "category": "routes",
-      "key": "post /api/neon/governed-business-partner-cases",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/governed-internal-business-partner-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/governed-business-partner-cases/:caseid/decisions",
-      "category": "routes",
-      "key": "post /api/neon/governed-business-partner-cases/:caseid/decisions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/governed-internal-business-partner-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/governed-business-partner-cases/:caseid/materialize",
-      "category": "routes",
-      "key": "post /api/neon/governed-business-partner-cases/:caseid/materialize",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/governed-internal-business-partner-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/governed-business-partner-cases/:caseid/submit",
-      "category": "routes",
-      "key": "post /api/neon/governed-business-partner-cases/:caseid/submit",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/governed-internal-business-partner-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/hr-setup/calendar-day-changes",
-      "category": "routes",
-      "key": "post /api/neon/hr-setup/calendar-day-changes",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/hr-setup/calendar-day-changes/:changeid/publish",
-      "category": "routes",
-      "key": "post /api/neon/hr-setup/calendar-day-changes/:changeid/publish",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/hr-setup/drafts",
-      "category": "routes",
-      "key": "post /api/neon/hr-setup/drafts",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/hr-setup/drafts/:approvalid/publish",
-      "category": "routes",
-      "key": "post /api/neon/hr-setup/drafts/:approvalid/publish",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/hr-setup/org-company-assignments",
-      "category": "routes",
-      "key": "post /api/neon/hr-setup/org-company-assignments",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/hr-setup/org-company-assignments/:assignmentid/publish",
-      "category": "routes",
-      "key": "post /api/neon/hr-setup/org-company-assignments/:assignmentid/publish",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/hr-setup/policy-assignments",
-      "category": "routes",
-      "key": "post /api/neon/hr-setup/policy-assignments",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/hr-setup/policy-assignments/:assignmentid/publish",
-      "category": "routes",
-      "key": "post /api/neon/hr-setup/policy-assignments/:assignmentid/publish",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/hr-setup/positions",
-      "category": "routes",
-      "key": "post /api/neon/hr-setup/positions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/mesh-bank-account-events",
-      "category": "routes",
-      "key": "post /api/neon/mesh-bank-account-events",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/mesh-business-partner-account-links",
-      "category": "routes",
-      "key": "post /api/neon/mesh-business-partner-account-links",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/mesh-business-partner-account-links/:linkid/decisions",
-      "category": "routes",
-      "key": "post /api/neon/mesh-business-partner-account-links/:linkid/decisions",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/people/:personid/restricted-evidence/read",
-      "category": "routes",
-      "key": "post /api/neon/people/:personid/restricted-evidence/read",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/protected-bank-registrations/:bankaccountlinkid/provisional-resolution",
-      "category": "routes",
-      "key": "post /api/neon/protected-bank-registrations/:bankaccountlinkid/provisional-resolution",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/supplier-workforce/engagements/:workerengagementid/iam-projections",
-      "category": "routes",
-      "key": "post /api/neon/supplier-workforce/engagements/:workerengagementid/iam-projections",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/worker-engagement-iam-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/supplier-workforce/engagements/:workerengagementid/placements",
-      "category": "routes",
-      "key": "post /api/neon/supplier-workforce/engagements/:workerengagementid/placements",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/worker-engagement-lifecycle-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/supplier-workforce/engagements/:workerengagementid/termination",
-      "category": "routes",
-      "key": "post /api/neon/supplier-workforce/engagements/:workerengagementid/termination",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/worker-engagement-lifecycle-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/supplier-workforce/requisitions/:requisitionid/publications",
-      "category": "routes",
-      "key": "post /api/neon/supplier-workforce/requisitions/:requisitionid/publications",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/users/me/profile-change",
-      "category": "routes",
-      "key": "post /api/neon/users/me/profile-change",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/users/me/profile-change/:requestid/submit",
-      "category": "routes",
-      "key": "post /api/neon/users/me/profile-change/:requestid/submit",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/users/profile-changes/:requestid/decision",
-      "category": "routes",
-      "key": "post /api/neon/users/profile-changes/:requestid/decision",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/hr-stage2-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/workforce-requests",
-      "category": "routes",
-      "key": "post /api/neon/workforce-requests",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/workforce-requests/:requestid/apply",
-      "category": "routes",
-      "key": "post /api/neon/workforce-requests/:requestid/apply",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/workforce-requests/:requestid/decision",
-      "category": "routes",
-      "key": "post /api/neon/workforce-requests/:requestid/decision",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/workforce-requests/:requestid/submit",
-      "category": "routes",
-      "key": "post /api/neon/workforce-requests/:requestid/submit",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/workforce-requests/:requestid/validate",
-      "category": "routes",
-      "key": "post /api/neon/workforce-requests/:requestid/validate",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/workforce-source-adapters/:source",
-      "category": "routes",
-      "key": "post /api/neon/workforce-source-adapters/:source",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/workforce/:employeeid/iam-projection/retry",
-      "category": "routes",
-      "key": "post /api/neon/workforce/:employeeid/iam-projection/retry",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/workforce/:employeeid/offboarding",
-      "category": "routes",
-      "key": "post /api/neon/workforce/:employeeid/offboarding",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/workforce/:employeeid/offboarding/:caseid/resources/:itemcode/complete",
-      "category": "routes",
-      "key": "post /api/neon/workforce/:employeeid/offboarding/:caseid/resources/:itemcode/complete",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/workforce/:employeeid/onboarding-checklist/:itemcode/complete",
-      "category": "routes",
-      "key": "post /api/neon/workforce/:employeeid/onboarding-checklist/:itemcode/complete",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
-      ],
-      "disposition": "new",
-      "owner": "rebuilt-server",
-      "parityEvidence": "Current-only surface."
-    },
-    {
-      "identity": "routes:post /api/neon/workforce/:employeeid/profile-records",
-      "category": "routes",
-      "key": "post /api/neon/workforce/:employeeid/profile-records",
-      "legacyLocations": [],
-      "currentLocations": [
-        "server/packages/services/master-data/src/workforce-routes.ts"
       ],
       "disposition": "new",
       "owner": "rebuilt-server",

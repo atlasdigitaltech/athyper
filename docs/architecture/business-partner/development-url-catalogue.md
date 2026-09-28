@@ -10,11 +10,11 @@ This catalogue covers all operations in that Swagger snapshot, additional backen
 | --- | ---: |
 | Swagger operations | 125 |
 | Swagger paths | 117 |
-| Backend method/path identities extracted from source | 620 |
-| Source identities absent from Swagger | 495 |
-| studio URL entries (including patterns) | 81 |
-| neon URL entries (including patterns) | 145 |
-| mesh URL entries (including patterns) | 65 |
+| Backend method/path identities extracted from source | 446 |
+| Source identities absent from Swagger | 321 |
+| studio URL entries (including patterns) | 82 |
+| neon URL entries (including patterns) | 129 |
+| mesh URL entries (including patterns) | 62 |
 
 ## Jump to
 
@@ -32,17 +32,14 @@ This audit checks every listed App and Runtime entry, including discovery endpoi
 
 | Origin | Method/path entries | Unique identities | Duplicate identity groups | Paths with multiple methods |
 | --- | ---: | ---: | ---: | ---: |
-| https://api.dev.athyper.test | 622 | 622 | 0 | 52 |
-| https://studio.dev.athyper.test | 85 | 85 | 0 | 1 |
-| https://neon.dev.athyper.test | 151 | 149 | 2 | 3 |
-| https://mesh.dev.athyper.test | 69 | 69 | 0 | 1 |
+| https://api.dev.athyper.test | 448 | 448 | 0 | 36 |
+| https://studio.dev.athyper.test | 86 | 86 | 0 | 1 |
+| https://neon.dev.athyper.test | 135 | 135 | 0 | 3 |
+| https://mesh.dev.athyper.test | 66 | 66 | 0 | 1 |
 
 Duplicate identities listed below represent repeated URL shapes, even when their parameter names differ. A generated entity detail template and a concrete Next.js page can describe the same endpoint; this alone does not establish conflicting handlers.
 
-| Origin | Method and normalized path | Listed paths |
-| --- | --- | --- |
-| https://neon.dev.athyper.test | `GET /mdg/business-partner/business-partners/{parameter}` | `/mdg/business-partner/business-partners/{entityId}`<br>`/mdg/business-partner/business-partners/{recordId}` |
-| https://neon.dev.athyper.test | `GET /mdg/business-partner/requests/{parameter}` | `/mdg/business-partner/requests/{entityId}`<br>`/mdg/business-partner/requests/{requestId}` |
+No duplicate identities found.
 
 47 method/path shapes are shared across application origins. Different origins identify different URLs. Multiple HTTP methods on the same path are separate operations, not duplicate identities.
 
@@ -124,6 +121,9 @@ Base URL: [https://studio.dev.athyper.test](https://studio.dev.athyper.test). Pa
 
 - **DELETE, GET, PATCH, POST, PUT** `/api/relay/{path...}`  
   Browser endpoint · [source](../../../apps/studio/app/api/relay/[...path]/route.ts)
+
+- **GET** `/app/entity/{entityCode}/{segments...?}`  
+  Page · [source](../../../apps/studio/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx)
 
 - **GET** [/atlas](https://studio.dev.athyper.test/atlas)  
   Page · [source](../../../apps/studio/app/(shell)/atlas/page.tsx)
@@ -370,9 +370,6 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 - **POST** [/api/auth/touch](https://neon.dev.athyper.test/api/auth/touch)  
   Browser endpoint · [source](../../../apps/neon/app/api/auth/touch/route.ts)
 
-- **GET** [/api/business-partner/discover](https://neon.dev.athyper.test/api/business-partner/discover)  
-  Browser endpoint · [source](../../../apps/neon/app/api/business-partner/discover/route.ts)
-
 - **GET, POST** [/api/governance/named-role-review](https://neon.dev.athyper.test/api/governance/named-role-review)  
   Browser endpoint · [source](../../../apps/neon/app/api/governance/named-role-review/route.ts)
 
@@ -497,73 +494,28 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
   Page · [source](../../../apps/neon/app/(shell)/mdg/authorization-review/page.tsx)
 
 - **GET** [/mdg/business-partner](https://neon.dev.athyper.test/mdg/business-partner)  
-  Page — Business Partners · [source](../../../apps/neon/app/(shell)/mdg/business-partner/page.tsx)
+  Module — Business Partners · [source](../../../apps/neon/lib/catalog-routes.ts)
 
 - **GET** [/mdg/business-partner/business-partners](https://neon.dev.athyper.test/mdg/business-partner/business-partners)  
-  Page — Business Partners · [source](../../../apps/neon/app/(shell)/mdg/business-partner/business-partners/page.tsx)
+  Entity list — Business Partners · [source](../../../apps/neon/lib/catalog-routes.ts)
 
 - **GET** [/mdg/business-partner/business-partners/new](https://neon.dev.athyper.test/mdg/business-partner/business-partners/new)  
-  Page — Business Partners · [source](../../../apps/neon/app/(shell)/mdg/business-partner/business-partners/new/page.tsx)
+  Entity create — Business Partners · [source](../../../apps/neon/lib/catalog-routes.ts)
 
 - **GET** `/mdg/business-partner/business-partners/{entityId}`  
   Entity detail — Business Partners · [source](../../../apps/neon/lib/catalog-routes.ts)
 
-- **GET** `/mdg/business-partner/business-partners/{recordId}`  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/business-partners/[recordId]/page.tsx)
-
-- **GET** [/mdg/business-partner/customer/new](https://neon.dev.athyper.test/mdg/business-partner/customer/new)  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/customer/new/page.tsx)
-
-- **GET** [/mdg/business-partner/mesh-proposals](https://neon.dev.athyper.test/mdg/business-partner/mesh-proposals)  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/mesh-proposals/page.tsx)
-
 - **GET** [/mdg/business-partner/new](https://neon.dev.athyper.test/mdg/business-partner/new)  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/new/page.tsx)
-
-- **GET** [/mdg/business-partner/partners](https://neon.dev.athyper.test/mdg/business-partner/partners)  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/partners/page.tsx)
-
-- **GET** [/mdg/business-partner/person/new](https://neon.dev.athyper.test/mdg/business-partner/person/new)  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/person/new/page.tsx)
-
-- **GET** [/mdg/business-partner/register](https://neon.dev.athyper.test/mdg/business-partner/register)  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/register/page.tsx)
+  Default entity create · [source](../../../apps/neon/lib/catalog-routes.ts)
 
 - **GET** [/mdg/business-partner/requests](https://neon.dev.athyper.test/mdg/business-partner/requests)  
-  Page — Business Partner Requests · [source](../../../apps/neon/app/(shell)/mdg/business-partner/requests/page.tsx)
+  Entity list — Business Partner Requests · [source](../../../apps/neon/lib/catalog-routes.ts)
 
 - **GET** [/mdg/business-partner/requests/new](https://neon.dev.athyper.test/mdg/business-partner/requests/new)  
-  Page — Business Partner Requests · [source](../../../apps/neon/app/(shell)/mdg/business-partner/requests/new/page.tsx)
+  Entity create — Business Partner Requests · [source](../../../apps/neon/lib/catalog-routes.ts)
 
 - **GET** `/mdg/business-partner/requests/{entityId}`  
   Entity detail — Business Partner Requests · [source](../../../apps/neon/lib/catalog-routes.ts)
-
-- **GET** `/mdg/business-partner/requests/{requestId}`  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/requests/[requestId]/page.tsx)
-
-- **GET** `/mdg/business-partner/requests/{requestId}/edit`  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/requests/[requestId]/edit/page.tsx)
-
-- **GET** `/mdg/business-partner/{recordId}`  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx)
-
-- **GET** `/mdg/business-partner/{recordId}/bank-verification`  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/bank-verification/page.tsx)
-
-- **GET** `/mdg/business-partner/{recordId}/banking`  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/banking/page.tsx)
-
-- **GET** `/mdg/business-partner/{recordId}/customer`  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/customer/page.tsx)
-
-- **GET** `/mdg/business-partner/{recordId}/roles/new`  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/roles/new/page.tsx)
-
-- **GET** `/mdg/business-partner/{recordId}/scope/new`  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/scope/new/page.tsx)
-
-- **GET** `/mdg/business-partner/{recordId}/supplier`  
-  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/supplier/page.tsx)
 
 - **GET** [/mdg/data-quality](https://neon.dev.athyper.test/mdg/data-quality)  
   Module — Data Quality & Stewardship · [source](../../../apps/neon/lib/catalog-routes.ts)
@@ -813,6 +765,9 @@ Base URL: [https://mesh.dev.athyper.test](https://mesh.dev.athyper.test). Paths 
 - **DELETE, GET, PATCH, POST, PUT** `/api/relay/{path...}`  
   Browser endpoint · [source](../../../apps/mesh/app/api/relay/[...path]/route.ts)
 
+- **GET** `/app/entity/{entityCode}/{segments...?}`  
+  Page · [source](../../../apps/mesh/app/(shell)/app/entity/[entityCode]/[[...segments]]/page.tsx)
+
 - **GET** [/atlas](https://mesh.dev.athyper.test/atlas)  
   Page · [source](../../../apps/mesh/app/(shell)/atlas/page.tsx)
 
@@ -899,18 +854,6 @@ Base URL: [https://mesh.dev.athyper.test](https://mesh.dev.athyper.test). Paths 
 
 - **GET** [/mdg](https://mesh.dev.athyper.test/mdg)  
   Page · [source](../../../apps/mesh/app/(shell)/mdg/page.tsx)
-
-- **GET** [/mdg/business-partner](https://mesh.dev.athyper.test/mdg/business-partner)  
-  Page · [source](../../../apps/mesh/app/(shell)/mdg/business-partner/page.tsx)
-
-- **GET** [/mdg/business-partner/profile](https://mesh.dev.athyper.test/mdg/business-partner/profile)  
-  Page · [source](../../../apps/mesh/app/(shell)/mdg/business-partner/profile/page.tsx)
-
-- **GET** [/mdg/business-partner/relationships](https://mesh.dev.athyper.test/mdg/business-partner/relationships)  
-  Page · [source](../../../apps/mesh/app/(shell)/mdg/business-partner/relationships/page.tsx)
-
-- **GET** [/mdg/business-partner/requests](https://mesh.dev.athyper.test/mdg/business-partner/requests)  
-  Page · [source](../../../apps/mesh/app/(shell)/mdg/business-partner/requests/page.tsx)
 
 - **GET** [/network-relationships](https://mesh.dev.athyper.test/network-relationships)  
   Workspace — Network & Relationships · [source](../../../apps/mesh/lib/catalog-routes.ts)
@@ -1455,35 +1398,35 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **POST** [/api/studio/business-partner-case-contracts](https://api.dev.athyper.test/api/studio/business-partner-case-contracts)  
   studio.authorBusinessPartnerCaseContract — Author an immutable Business Partner case contract revision  
-  Source match: [source](../../../server/packages/services/publication/src/business-partner-case-contract-routes.ts)
+  Source match: [source](../../../server/packages/services/publication/src/entity-case-contract-routes.ts)
 
 - **POST** [/api/studio/business-partner-case-contracts/simulations](https://api.dev.athyper.test/api/studio/business-partner-case-contracts/simulations)  
   studio.simulateBusinessPartnerCaseContract — Dry-run Business Partner case contract compatibility without publication authority  
-  Source match: [source](../../../server/packages/services/publication/src/business-partner-case-contract-routes.ts)
+  Source match: [source](../../../server/packages/services/publication/src/entity-case-contract-routes.ts)
 
 - **GET** `/api/studio/business-partner-case-contracts/{revisionId}`  
   studio.getBusinessPartnerCaseContract — Get a Business Partner case contract revision  
-  Source match: [source](../../../server/packages/services/publication/src/business-partner-case-contract-routes.ts)
+  Source match: [source](../../../server/packages/services/publication/src/entity-case-contract-routes.ts)
 
 - **POST** `/api/studio/business-partner-case-contracts/{revisionId}/publish`  
   studio.publishBusinessPartnerCaseContract — Approve and queue a signed Business Partner case contract publication  
-  Source match: [source](../../../server/packages/services/publication/src/business-partner-case-contract-routes.ts)
+  Source match: [source](../../../server/packages/services/publication/src/entity-case-contract-routes.ts)
 
 - **POST** [/api/studio/business-partner-definitions](https://api.dev.athyper.test/api/studio/business-partner-definitions)  
   studio.authorBusinessPartnerDefinition — Author an immutable Business Partner definition revision  
-  Source match: [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts)
+  Source match: [source](../../../server/packages/services/publication/src/entity-definition-routes.ts)
 
 - **POST** [/api/studio/business-partner-definitions/simulations](https://api.dev.athyper.test/api/studio/business-partner-definitions/simulations)  
   studio.simulateBusinessPartnerDefinition — Dry-run Business Partner definition compatibility without publication authority  
-  Source match: [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts)
+  Source match: [source](../../../server/packages/services/publication/src/entity-definition-routes.ts)
 
 - **GET** `/api/studio/business-partner-definitions/{revisionId}`  
   studio.getBusinessPartnerDefinition — Get a Business Partner definition revision  
-  Source match: [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts)
+  Source match: [source](../../../server/packages/services/publication/src/entity-definition-routes.ts)
 
 - **POST** `/api/studio/business-partner-definitions/{revisionId}/publish`  
   studio.publishBusinessPartnerDefinition — Approve and queue a signed Business Partner definition publication  
-  Source match: [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts)
+  Source match: [source](../../../server/packages/services/publication/src/entity-definition-routes.ts)
 
 
 ### Studio experience
@@ -1972,6 +1915,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **GET** `/api/entity-runtime/{entityCode}/records/{recordId}/bootstrap`  
   Route contract · [source](../../../server/packages/platform/experience/src/entity-runtime-contracts.ts)
 
+- **GET** `/api/entity-runtime/{entityCode}/records/{recordId}/collaboration/{kind}`  
+  Route contract · [source](../../../server/packages/platform/experience/src/entity-runtime-routes.ts)
+
 - **POST** `/api/entity-runtime/{entityCode}/records/{recordId}/operations/{operationKey}`  
   Route contract · [source](../../../server/packages/platform/experience/src/entity-runtime-contracts.ts)
 
@@ -2067,21 +2013,6 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **DELETE** `/api/governance/legal-holds/{holdId}/resources/{resourceId}`  
   Route contract · [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts)
 
-- **POST** `/api/governance/process-documents/cases/{id}/request`  
-  Route contract · [source](../../../server/apps/platform-host/src/composition/supplier-process-document-runtime.ts)
-
-- **GET** `/api/governance/process-documents/cases/{id}/view`  
-  Route contract · [source](../../../server/apps/platform-host/src/composition/supplier-process-document-runtime.ts)
-
-- **POST** `/api/governance/process-documents/jobs/{id}/download`  
-  Route contract · [source](../../../server/apps/platform-host/src/composition/supplier-process-document-runtime.ts)
-
-- **POST** `/api/governance/process-documents/jobs/{id}/process`  
-  Route contract · [source](../../../server/apps/platform-host/src/composition/supplier-process-document-runtime.ts)
-
-- **POST** `/api/governance/process-documents/jobs/{id}/retry`  
-  Route contract · [source](../../../server/apps/platform-host/src/composition/supplier-process-document-runtime.ts)
-
 - **GET** `/api/governance/process-selection/cases/{caseId}/preview`  
   Route contract · [source](../../../server/packages/platform/governance/src/routes/process-selection-routes.ts)
 
@@ -2157,29 +2088,14 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 ### Source routes: /api/master
 
-- **POST** `/api/master/addresses/{addressLinkId}/deactivate`  
-  Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
+- **PATCH** `/api/master/contacts/{id}/verification`  
+  Raw route · [source](../../../server/apps/platform-host/src/composition/register-contact-verification.ts)
 
-- **POST** `/api/master/contacts/{contactId}/deactivate`  
-  Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
+- **POST** `/api/master/contacts/{id}/verification-challenges`  
+  Raw route · [source](../../../server/apps/platform-host/src/composition/register-contact-verification.ts)
 
-- **PATCH** `/api/master/contacts/{contactId}/verification`  
-  Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
-
-- **POST** `/api/master/contacts/{contactId}/verification-challenges`  
-  Raw route · [source](../../../server/packages/services/master-data/src/local-contact-challenge-routes.ts)
-
-- **POST** `/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/addresses`  
-  Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
-
-- **POST** `/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/contacts`  
-  Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
-
-- **GET** `/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/profile`  
-  Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
-
-- **POST** `/api/master/verification-challenges/{challengeId}/complete`  
-  Raw route · [source](../../../server/packages/services/master-data/src/local-contact-challenge-routes.ts)
+- **POST** `/api/master/verification-challenges/{id}/complete`  
+  Raw route · [source](../../../server/apps/platform-host/src/composition/register-contact-verification.ts)
 
 ### Source routes: /api/me
 
@@ -2194,53 +2110,6 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **POST** `/api/me/saved-views/{viewId}/clone`  
   Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
-
-### Source routes: /api/mesh
-
-- **POST** [/api/mesh/business-partner-bank-disclosures](https://api.dev.athyper.test/api/mesh/business-partner-bank-disclosures)  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts)
-
-- **GET** `/api/mesh/business-partner-bank-disclosures/{disclosureId}`  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts)
-
-- **POST** `/api/mesh/business-partner-bank-disclosures/{disclosureId}/decisions`  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts)
-
-- **POST** `/api/mesh/business-partner-bank-disclosures/{disclosureId}/revocations`  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts)
-
-- **POST** `/api/mesh/business-partner-network-capabilities/{capabilityId}/decisions`  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
-
-- **POST** [/api/mesh/business-partner-network-relationships](https://api.dev.athyper.test/api/mesh/business-partner-network-relationships)  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
-
-- **POST** `/api/mesh/business-partner-network-relationships/{relationshipId}/capabilities`  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
-
-- **POST** `/api/mesh/business-partner-network-relationships/{relationshipId}/decisions`  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
-
-- **GET** [/api/mesh/business-partner-network-workspace](https://api.dev.athyper.test/api/mesh/business-partner-network-workspace)  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
-
-- **GET** [/api/mesh/business-partner-profile-publications](https://api.dev.athyper.test/api/mesh/business-partner-profile-publications)  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts)
-
-- **POST** [/api/mesh/business-partner-profile-publications](https://api.dev.athyper.test/api/mesh/business-partner-profile-publications)  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts)
-
-- **GET** `/api/mesh/business-partner-profile-publications/{publicationId}`  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts)
-
-- **POST** `/api/mesh/business-partner-profile-publications/{publicationId}/withdrawals`  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts)
-
-- **POST** [/api/mesh/business-partner-registration-exchanges](https://api.dev.athyper.test/api/mesh/business-partner-registration-exchanges)  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
-
-- **POST** `/api/mesh/business-partner-registration-exchanges/{exchangeId}/decisions`  
-  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
 
 ### Source routes: /api/meta-entity-authoring
 
@@ -2345,285 +2214,6 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **GET** [/api/neon/business-context-options](https://api.dev.athyper.test/api/neon/business-context-options)  
   Route contract · [source](../../../server/packages/platform/experience/src/routes.ts)
 
-- **GET** [/api/neon/business-partner-cases](https://api.dev.athyper.test/api/neon/business-partner-cases)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** [/api/neon/business-partner-cases](https://api.dev.athyper.test/api/neon/business-partner-cases)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **GET** `/api/neon/business-partner-cases/{requestId}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **PATCH** `/api/neon/business-partner-cases/{requestId}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** `/api/neon/business-partner-cases/{requestId}/decisions`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** `/api/neon/business-partner-cases/{requestId}/materialize`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** `/api/neon/business-partner-cases/{requestId}/submit`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** `/api/neon/business-partner-cases/{requestId}/validate`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **GET** `/api/neon/business-partner-cases/{requestId}/view`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **GET** [/api/neon/business-partner-company-setup-cases](https://api.dev.athyper.test/api/neon/business-partner-company-setup-cases)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** [/api/neon/business-partner-company-setup-cases](https://api.dev.athyper.test/api/neon/business-partner-company-setup-cases)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **GET** `/api/neon/business-partner-company-setup-cases/{requestId}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **PATCH** `/api/neon/business-partner-company-setup-cases/{requestId}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** `/api/neon/business-partner-company-setup-cases/{requestId}/decisions`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** `/api/neon/business-partner-company-setup-cases/{requestId}/materialize`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** `/api/neon/business-partner-company-setup-cases/{requestId}/submit`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** `/api/neon/business-partner-company-setup-cases/{requestId}/validate`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **GET** `/api/neon/business-partner-company-setup-cases/{requestId}/view`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** [/api/neon/business-partner-imports](https://api.dev.athyper.test/api/neon/business-partner-imports)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-governed-import-routes.ts)
-
-- **POST** [/api/neon/business-partner-intake/protected-values](https://api.dev.athyper.test/api/neon/business-partner-intake/protected-values)  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
-
-- **GET** `/api/neon/business-partner-invitation-templates/{journeyKind}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** [/api/neon/business-partner-invitations](https://api.dev.athyper.test/api/neon/business-partner-invitations)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **GET** `/api/neon/business-partner-invitations/{invitationId}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/business-partner-invitations/{invitationId}/cancel`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/business-partner-invitations/{invitationId}/resend`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/business-partner-invitations/{invitationId}/support-recovery`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/business-partner-preferences/{preferenceId}/decisions`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **POST** `/api/neon/business-partner-preferences/{preferenceId}/revocations`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **POST** [/api/neon/business-partner-profile-change-previews](https://api.dev.athyper.test/api/neon/business-partner-profile-change-previews)  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts)
-
-- **POST** [/api/neon/business-partner-profile-change-resolutions](https://api.dev.athyper.test/api/neon/business-partner-profile-change-resolutions)  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts)
-
-- **POST** [/api/neon/business-partner-profile-events](https://api.dev.athyper.test/api/neon/business-partner-profile-events)  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts)
-
-- **POST** `/api/neon/business-partner-profile-events/{eventId}/replays`  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts)
-
-- **GET** [/api/neon/business-partner-profile-events/quarantine](https://api.dev.athyper.test/api/neon/business-partner-profile-events/quarantine)  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts)
-
-- **GET** [/api/neon/business-partner-profile-events/receipts](https://api.dev.athyper.test/api/neon/business-partner-profile-events/receipts)  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts)
-
-- **POST** [/api/neon/business-partner-profile-matches](https://api.dev.athyper.test/api/neon/business-partner-profile-matches)  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts)
-
-- **GET** `/api/neon/business-partner-profile-matches/{matchId}`  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts)
-
-- **POST** `/api/neon/business-partner-profile-matches/{matchId}/requests`  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts)
-
-- **GET** [/api/neon/business-partner-profile-projections](https://api.dev.athyper.test/api/neon/business-partner-profile-projections)  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts)
-
-- **POST** `/api/neon/business-partner-qualifications/{qualificationId}/decisions`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **GET** [/api/neon/business-partner-requests](https://api.dev.athyper.test/api/neon/business-partner-requests)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** [/api/neon/business-partner-requests](https://api.dev.athyper.test/api/neon/business-partner-requests)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **GET** `/api/neon/business-partner-requests/{requestId}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **PATCH** `/api/neon/business-partner-requests/{requestId}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** `/api/neon/business-partner-requests/{requestId}/apply`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** `/api/neon/business-partner-requests/{requestId}/decisions`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** `/api/neon/business-partner-requests/{requestId}/submit`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **POST** `/api/neon/business-partner-requests/{requestId}/validate`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **GET** `/api/neon/business-partner-requests/{requestId}/view`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **GET** `/api/neon/business-partners/{businessPartnerId}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
-
-- **GET** `/api/neon/business-partners/{businessPartnerId}/360/{section}`  
-  Route contract · [source](../../../server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/360/banking/reveal`  
-  Route contract · [source](../../../server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/360/comments`  
-  Route contract · [source](../../../server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/360/identifiers-tax/reveal`  
-  Route contract · [source](../../../server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/360/identifiers/reveal`  
-  Route contract · [source](../../../server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts)
-
-- **GET** `/api/neon/business-partners/{businessPartnerId}/360/summary`  
-  Route contract · [source](../../../server/packages/services/master-data/src/business-partner/legacy-360/route-contracts.ts)
-
-- **GET** `/api/neon/business-partners/{businessPartnerId}/commodity-classifications`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner/classification/routes.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/commodity-classifications/archive`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner/classification/routes.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/commodity-classifications/declare`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner/classification/routes.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/commodity-classifications/verify`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner/classification/routes.ts)
-
-- **GET** `/api/neon/business-partners/{businessPartnerId}/customer-credit-reviews`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/customer-credit-reviews`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **GET** `/api/neon/business-partners/{businessPartnerId}/customer-designations`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/customer-designations`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/customer-lifecycle`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **GET** `/api/neon/business-partners/{businessPartnerId}/eligibility`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **GET** `/api/neon/business-partners/{businessPartnerId}/preferences`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/preferences`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/protected-bank-registrations`  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/qualifications`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **POST** `/api/neon/business-partners/{businessPartnerId}/supplier-activation`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **POST** [/api/neon/candidate-registration-invitations](https://api.dev.athyper.test/api/neon/candidate-registration-invitations)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/customer-credit-reviews/{reviewId}/decisions`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **POST** `/api/neon/customer-designations/{designationId}/decisions`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
-
-- **POST** [/api/neon/customer-registration-invitations](https://api.dev.athyper.test/api/neon/customer-registration-invitations)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/external/business-partner-invitations/{journeyKind}/accept`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **PATCH** `/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/correction`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/evidence`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/evidence/complete`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/evidence/stage`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **GET** `/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/status`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/submit`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **PATCH** `/api/neon/external/candidate-registrations/{requestId}/correction`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/external/candidate-registrations/{requestId}/evidence`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **GET** `/api/neon/external/candidate-registrations/{requestId}/status`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** [/api/neon/external/candidate-registrations/accept](https://api.dev.athyper.test/api/neon/external/candidate-registrations/accept)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **PATCH** `/api/neon/external/customer-registrations/{requestId}/correction`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/external/customer-registrations/{requestId}/evidence`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **GET** `/api/neon/external/customer-registrations/{requestId}/status`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** [/api/neon/external/customer-registrations/accept](https://api.dev.athyper.test/api/neon/external/customer-registrations/accept)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **PATCH** `/api/neon/external/supplier-registrations/{requestId}/correction`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/external/supplier-registrations/{requestId}/evidence`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **GET** `/api/neon/external/supplier-registrations/{requestId}/status`  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** [/api/neon/external/supplier-registrations/accept](https://api.dev.athyper.test/api/neon/external/supplier-registrations/accept)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
 - **POST** `/api/neon/finance/books/{ledgerBookId}/periods/{fiscalPeriodId}/transitions`  
   Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
 
@@ -2711,189 +2301,6 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **POST** [/api/neon/finance/tax/reverse](https://api.dev.athyper.test/api/neon/finance/tax/reverse)  
   Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
 
-- **POST** [/api/neon/governed-business-partner-cases](https://api.dev.athyper.test/api/neon/governed-business-partner-cases)  
-  Raw route · [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts)
-
-- **POST** `/api/neon/governed-business-partner-cases/{caseId}/decisions`  
-  Raw route · [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts)
-
-- **POST** `/api/neon/governed-business-partner-cases/{caseId}/materialize`  
-  Raw route · [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts)
-
-- **POST** `/api/neon/governed-business-partner-cases/{caseId}/submit`  
-  Raw route · [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts)
-
-- **GET** [/api/neon/hr-setup/calendar-day-changes](https://api.dev.athyper.test/api/neon/hr-setup/calendar-day-changes)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** [/api/neon/hr-setup/calendar-day-changes](https://api.dev.athyper.test/api/neon/hr-setup/calendar-day-changes)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** `/api/neon/hr-setup/calendar-day-changes/{changeId}/publish`  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **GET** [/api/neon/hr-setup/catalog](https://api.dev.athyper.test/api/neon/hr-setup/catalog)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **GET** [/api/neon/hr-setup/drafts](https://api.dev.athyper.test/api/neon/hr-setup/drafts)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** [/api/neon/hr-setup/drafts](https://api.dev.athyper.test/api/neon/hr-setup/drafts)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** `/api/neon/hr-setup/drafts/{approvalId}/publish`  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **GET** [/api/neon/hr-setup/org-candidates](https://api.dev.athyper.test/api/neon/hr-setup/org-candidates)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **GET** [/api/neon/hr-setup/org-company-assignments](https://api.dev.athyper.test/api/neon/hr-setup/org-company-assignments)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** [/api/neon/hr-setup/org-company-assignments](https://api.dev.athyper.test/api/neon/hr-setup/org-company-assignments)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** `/api/neon/hr-setup/org-company-assignments/{assignmentId}/publish`  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **GET** [/api/neon/hr-setup/policy-assignments](https://api.dev.athyper.test/api/neon/hr-setup/policy-assignments)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** [/api/neon/hr-setup/policy-assignments](https://api.dev.athyper.test/api/neon/hr-setup/policy-assignments)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** `/api/neon/hr-setup/policy-assignments/{assignmentId}/publish`  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **GET** [/api/neon/hr-setup/policy-effective](https://api.dev.athyper.test/api/neon/hr-setup/policy-effective)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** [/api/neon/hr-setup/positions](https://api.dev.athyper.test/api/neon/hr-setup/positions)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** [/api/neon/mesh-bank-account-events](https://api.dev.athyper.test/api/neon/mesh-bank-account-events)  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
-
-- **POST** [/api/neon/mesh-business-partner-account-links](https://api.dev.athyper.test/api/neon/mesh-business-partner-account-links)  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
-
-- **GET** `/api/neon/mesh-business-partner-account-links/{linkId}`  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
-
-- **POST** `/api/neon/mesh-business-partner-account-links/{linkId}/decisions`  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
-
-- **POST** `/api/neon/people/{personId}/restricted-evidence/read`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **GET** `/api/neon/protected-bank-registrations/{bankAccountLinkId}`  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
-
-- **POST** `/api/neon/protected-bank-registrations/{bankAccountLinkId}/provisional-resolution`  
-  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
-
-- **POST** [/api/neon/supplier-registration-invitations](https://api.dev.athyper.test/api/neon/supplier-registration-invitations)  
-  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
-
-- **POST** `/api/neon/supplier-workforce/engagements/{workerEngagementId}/iam-projections`  
-  Raw route · [source](../../../server/packages/services/master-data/src/worker-engagement-iam-routes.ts)
-
-- **POST** `/api/neon/supplier-workforce/engagements/{workerEngagementId}/placements`  
-  Raw route · [source](../../../server/packages/services/master-data/src/worker-engagement-lifecycle-routes.ts)
-
-- **POST** `/api/neon/supplier-workforce/engagements/{workerEngagementId}/termination`  
-  Raw route · [source](../../../server/packages/services/master-data/src/worker-engagement-lifecycle-routes.ts)
-
-- **GET** [/api/neon/supplier-workforce/policy-readiness](https://api.dev.athyper.test/api/neon/supplier-workforce/policy-readiness)  
-  Raw route · [source](../../../server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts)
-
-- **GET** [/api/neon/supplier-workforce/requisitions](https://api.dev.athyper.test/api/neon/supplier-workforce/requisitions)  
-  Raw route · [source](../../../server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts)
-
-- **POST** `/api/neon/supplier-workforce/requisitions/{requisitionId}/publications`  
-  Raw route · [source](../../../server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts)
-
-- **GET** [/api/neon/users](https://api.dev.athyper.test/api/neon/users)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **GET** `/api/neon/users/{principalId}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **PATCH** `/api/neon/users/{principalId}/profile`  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **GET** [/api/neon/users/me/profile-change](https://api.dev.athyper.test/api/neon/users/me/profile-change)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** [/api/neon/users/me/profile-change](https://api.dev.athyper.test/api/neon/users/me/profile-change)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** `/api/neon/users/me/profile-change/{requestId}/submit`  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** `/api/neon/users/profile-changes/{requestId}/decision`  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **GET** [/api/neon/users/profile-changes/review](https://api.dev.athyper.test/api/neon/users/profile-changes/review)  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **GET** [/api/neon/workforce](https://api.dev.athyper.test/api/neon/workforce)  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **GET** [/api/neon/workforce-requests](https://api.dev.athyper.test/api/neon/workforce-requests)  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **POST** [/api/neon/workforce-requests](https://api.dev.athyper.test/api/neon/workforce-requests)  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **GET** `/api/neon/workforce-requests/{requestId}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **POST** `/api/neon/workforce-requests/{requestId}/apply`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **POST** `/api/neon/workforce-requests/{requestId}/decision`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **POST** `/api/neon/workforce-requests/{requestId}/submit`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **POST** `/api/neon/workforce-requests/{requestId}/validate`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **POST** `/api/neon/workforce-source-adapters/{source}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **GET** `/api/neon/workforce/{employeeId}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **GET** `/api/neon/workforce/{employeeId}/authority`  
-  Raw route · [source](../../../server/packages/services/master-data/src/hr-stage2-routes.ts)
-
-- **POST** `/api/neon/workforce/{employeeId}/iam-projection/retry`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **POST** `/api/neon/workforce/{employeeId}/offboarding`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **POST** `/api/neon/workforce/{employeeId}/offboarding/{caseId}/resources/{itemCode}/complete`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **GET** `/api/neon/workforce/{employeeId}/onboarding-checklist`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **POST** `/api/neon/workforce/{employeeId}/onboarding-checklist/{itemCode}/complete`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **POST** `/api/neon/workforce/{employeeId}/profile-records`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **GET** `/api/neon/workforce/{employeeId}/readiness`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
-- **GET** `/api/neon/workforce/{employeeId}/sections/{section}`  
-  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
-
 ### Source routes: /api/notifications
 
 - **POST** `/api/notifications/{id}/read`  
@@ -2936,6 +2343,11 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **GET** `/api/operations/notifications/deliveries/{id}/timeline`  
   Raw route · [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+### Source routes: /api/platform-control
+
+- **GET** [/api/platform-control/session](https://api.dev.athyper.test/api/platform-control/session)  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/control-plane/session.ts)
 
 ### Source routes: /api/platform
 
@@ -3039,7 +2451,7 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
   Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts)
 
 - **GET** [/api/studio/local-business-partner-preview](https://api.dev.athyper.test/api/studio/local-business-partner-preview)  
-  Route contract · [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts)
+  Route contract · [source](../../../server/packages/services/publication/src/entity-definition-routes.ts)
 
 - **POST** [/api/studio/onboarding/cases](https://api.dev.athyper.test/api/studio/onboarding/cases)  
   Raw route · [source](../../../server/packages/planes/studio/onboarding/src/routes.ts)
@@ -3052,6 +2464,15 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **POST** `/api/studio/onboarding/cases/{caseId}/work-items/{workItemId}/resolve`  
   Raw route · [source](../../../server/packages/planes/studio/onboarding/src/routes.ts)
+
+- **POST** [/api/studio/publication-policies](https://api.dev.athyper.test/api/studio/publication-policies)  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/shared/publication/policy-enrollment-routes.ts)
+
+- **POST** `/api/studio/publication-policies/{id}/activate`  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/shared/publication/policy-enrollment-routes.ts)
+
+- **POST** `/api/studio/publication-policies/{id}/execute`  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/shared/publication/workload-routes.ts)
 
 - **GET** [/api/studio/supplier-task-rule-baselines](https://api.dev.athyper.test/api/studio/supplier-task-rule-baselines)  
   Route contract · [source](../../../server/apps/platform-host/src/composition/task-edit-policy-authoring.ts)

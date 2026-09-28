@@ -4,18 +4,18 @@
   "policyHash": "7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285",
   "source": "governance/config/governance/authorization-data-disposition-policy.v1.json",
   "summary": {
-    "discoveredTables": 747,
+    "discoveredTables": 753,
     "externalObjects": 12,
     "exactTableOverrides": 15,
     "exactRuntimeTableOverrides": 1,
-    "schemaDefaultedTables": 731,
+    "schemaDefaultedTables": 737,
     "byDataClass": {
       "ai_governance_and_runtime": 29,
       "audit_log": 17,
       "authentication_authority": 1,
       "authorization_authority": 21,
       "authorization_cache": 1,
-      "business_master_transactional": 161,
+      "business_master_transactional": 162,
       "business_scope_context_non_authorizing": 2,
       "business_workflow_transactional": 10,
       "database_backup_object": 1,
@@ -33,7 +33,7 @@
       "mesh_owned": 43,
       "mesh_owned_document_object": 1,
       "mesh_provisioning_ledger": 1,
-      "metadata_authority": 35,
+      "metadata_authority": 40,
       "operational_log": 1,
       "operational_state_and_evidence": 20,
       "provisioning_ledger": 1,
@@ -59,12 +59,12 @@
       "migrate_as_relationship_context_only": 1,
       "migrate_authority_without_provider_credentials": 11,
       "migrate_exact_stable_ids": 1,
-      "migrate_in_declared_fk_order": 173,
+      "migrate_in_declared_fk_order": 174,
       "migrate_in_exact_plane_boundary": 21,
       "migrate_or_immutable_archive": 47,
       "migrate_policy_and_audit_archive_runtime": 29,
       "migrate_published_artifacts_and_release_history": 13,
-      "migrate_published_authority_and_rebuild_projections": 35,
+      "migrate_published_authority_and_rebuild_projections": 40,
       "migrate_with_attachment_metadata": 1,
       "migrate_with_document_metadata": 1,
       "migrate_with_mesh_exchange_metadata_in_mesh_boundary": 1,
@@ -9628,6 +9628,24 @@
       "approvalStatus": "pending"
     },
     {
+      "id": "master.principal_surface_arrangement",
+      "schema": "master",
+      "table": "principal_surface_arrangement",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/common/master/22_principal_surface_arrangement.sql",
+          "line": 2
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "business_master_transactional",
+      "disposition": "migrate_in_declared_fk_order",
+      "retention": "business and statutory retention policy",
+      "evidence": "stable-ID map, key ranges, row counts, and canonical checksums",
+      "approvalStatus": "pending"
+    },
+    {
       "id": "master.principal_ui_preference",
       "schema": "master",
       "table": "principal_ui_preference",
@@ -11147,7 +11165,25 @@
       "definitions": [
         {
           "path": "server/db/ddl/planes/studio/metadata/03_tables.sql",
-          "line": 1278
+          "line": 1359
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "metadata_authority",
+      "disposition": "migrate_published_authority_and_rebuild_projections",
+      "retention": "published metadata and governance history retention",
+      "evidence": "release hashes, source counts, and projection rebuild parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "metadata.entity_change_case_binding",
+      "schema": "metadata",
+      "table": "entity_change_case_binding",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/03_tables.sql",
+          "line": 1279
         }
       ],
       "decisionSource": "schema_default",
@@ -11238,6 +11274,24 @@
         {
           "path": "server/db/ddl/planes/studio/metadata/03_tables.sql",
           "line": 1080
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "metadata_authority",
+      "disposition": "migrate_published_authority_and_rebuild_projections",
+      "retention": "published metadata and governance history retention",
+      "evidence": "release hashes, source counts, and projection rebuild parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "metadata.entity_field_reference_binding",
+      "schema": "metadata",
+      "table": "entity_field_reference_binding",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/03_tables.sql",
+          "line": 1312
         }
       ],
       "decisionSource": "schema_default",
@@ -11356,6 +11410,42 @@
       "approvalStatus": "pending"
     },
     {
+      "id": "metadata.entity_materialization_binding",
+      "schema": "metadata",
+      "table": "entity_materialization_binding",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/03_tables.sql",
+          "line": 1330
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "metadata_authority",
+      "disposition": "migrate_published_authority_and_rebuild_projections",
+      "retention": "published metadata and governance history retention",
+      "evidence": "release hashes, source counts, and projection rebuild parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "metadata.entity_materialization_field_mapping",
+      "schema": "metadata",
+      "table": "entity_materialization_field_mapping",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/03_tables.sql",
+          "line": 1344
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "metadata_authority",
+      "disposition": "migrate_published_authority_and_rebuild_projections",
+      "retention": "published metadata and governance history retention",
+      "evidence": "release hashes, source counts, and projection rebuild parity",
+      "approvalStatus": "pending"
+    },
+    {
       "id": "metadata.entity_numbering_binding",
       "schema": "metadata",
       "table": "entity_numbering_binding",
@@ -11382,6 +11472,24 @@
         {
           "path": "server/db/ddl/planes/studio/metadata/03_tables.sql",
           "line": 886
+        }
+      ],
+      "decisionSource": "schema_default",
+      "dataClass": "metadata_authority",
+      "disposition": "migrate_published_authority_and_rebuild_projections",
+      "retention": "published metadata and governance history retention",
+      "evidence": "release hashes, source counts, and projection rebuild parity",
+      "approvalStatus": "pending"
+    },
+    {
+      "id": "metadata.entity_operation_context_requirement",
+      "schema": "metadata",
+      "table": "entity_operation_context_requirement",
+      "objectKind": "table",
+      "definitions": [
+        {
+          "path": "server/db/ddl/planes/studio/metadata/03_tables.sql",
+          "line": 1297
         }
       ],
       "decisionSource": "schema_default",
